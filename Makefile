@@ -7,7 +7,7 @@ deps:
 	go get github.com/google/addlicense
 
 lint:
-	golint -set_exit_status ./asserter/... ./fetcher/...
+	golint -set_exit_status ./asserter/... ./fetcher/... ./gen/...
 
 test:
 	go test -v ./asserter ./fetcher

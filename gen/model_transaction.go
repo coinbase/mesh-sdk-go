@@ -16,7 +16,7 @@
 
 package gen
 
-// Transaction: Transactions contain an array of Operations that are attributable to the same TransactionIdentifier.
+// Transaction Transactions contain an array of Operations that are attributable to the same TransactionIdentifier.
 type Transaction struct {
 	TransactionIdentifier *TransactionIdentifier `json:"transaction_identifier"`
 	Operations            []*Operation           `json:"operations"`

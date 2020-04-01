@@ -16,7 +16,7 @@
 
 package gen
 
-// SubmissionStatus: struct for SubmissionStatus
+// SubmissionStatus struct for SubmissionStatus
 type SubmissionStatus struct {
 	// The `status` is the network-specific status of transaction submission.
 	Status string `json:"status"`

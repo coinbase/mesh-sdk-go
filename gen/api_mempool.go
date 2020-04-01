@@ -27,8 +27,8 @@ var (
 	_ _context.Context
 )
 
-// MempoolApiService MempoolApi service
-type MempoolApiService service
+// MempoolAPIService MempoolAPI service
+type MempoolAPIService service
 
 /*
 Mempool Get All Mempool Transactions
@@ -37,7 +37,7 @@ Get all Transaction Identifiers in the mempool
  * @param mempoolRequest
 @return MempoolResponse
 */
-func (a *MempoolApiService) Mempool(ctx _context.Context, mempoolRequest MempoolRequest) (*MempoolResponse, *_nethttp.Response, error) {
+func (a *MempoolAPIService) Mempool(ctx _context.Context, mempoolRequest MempoolRequest) (*MempoolResponse, *_nethttp.Response, error) {
 	var (
 		localVarHTTPMethod = _nethttp.MethodPost
 		localVarPostBody   interface{}
@@ -111,7 +111,7 @@ Get a transaction in the mempool by its Transaction Identifier.  This is a separ
  * @param mempoolTransactionRequest
 @return MempoolTransactionResponse
 */
-func (a *MempoolApiService) MempoolTransaction(ctx _context.Context, mempoolTransactionRequest MempoolTransactionRequest) (*MempoolTransactionResponse, *_nethttp.Response, error) {
+func (a *MempoolAPIService) MempoolTransaction(ctx _context.Context, mempoolTransactionRequest MempoolTransactionRequest) (*MempoolTransactionResponse, *_nethttp.Response, error) {
 	var (
 		localVarHTTPMethod = _nethttp.MethodPost
 		localVarPostBody   interface{}

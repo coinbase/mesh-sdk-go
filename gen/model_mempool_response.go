@@ -16,7 +16,7 @@
 
 package gen
 
-// MempoolResponse: struct for MempoolResponse
+// MempoolResponse struct for MempoolResponse
 type MempoolResponse struct {
 	TransactionIdentifiers []*TransactionIdentifier `json:"transaction_identifiers"`
 }

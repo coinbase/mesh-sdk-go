@@ -27,8 +27,8 @@ var (
 	_ _context.Context
 )
 
-// ConstructionApiService ConstructionApi service
-type ConstructionApiService service
+// ConstructionAPIService ConstructionAPI service
+type ConstructionAPIService service
 
 /*
 TransactionConstruction Get Transaction Construction Metadata
@@ -37,7 +37,7 @@ Get any information required to construct a transaction for a specific account. 
  * @param transactionConstructionRequest
 @return TransactionConstructionResponse
 */
-func (a *ConstructionApiService) TransactionConstruction(ctx _context.Context, transactionConstructionRequest TransactionConstructionRequest) (*TransactionConstructionResponse, *_nethttp.Response, error) {
+func (a *ConstructionAPIService) TransactionConstruction(ctx _context.Context, transactionConstructionRequest TransactionConstructionRequest) (*TransactionConstructionResponse, *_nethttp.Response, error) {
 	var (
 		localVarHTTPMethod = _nethttp.MethodPost
 		localVarPostBody   interface{}
@@ -111,7 +111,7 @@ Submit a signed transaction in network-specific format
  * @param transactionSubmitRequest
 @return TransactionSubmitResponse
 */
-func (a *ConstructionApiService) TransactionSubmit(ctx _context.Context, transactionSubmitRequest TransactionSubmitRequest) (*TransactionSubmitResponse, *_nethttp.Response, error) {
+func (a *ConstructionAPIService) TransactionSubmit(ctx _context.Context, transactionSubmitRequest TransactionSubmitRequest) (*TransactionSubmitResponse, *_nethttp.Response, error) {
 	var (
 		localVarHTTPMethod = _nethttp.MethodPost
 		localVarPostBody   interface{}

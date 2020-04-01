@@ -34,6 +34,8 @@ import (
 )
 
 const (
+	// APIVersion is the version of the Rosetta API Spec
+	// used to generate this code.
 	APIVersion = "1.2.4"
 )
 
@@ -49,15 +51,15 @@ type APIClient struct {
 
 	// API Services
 
-	AccountApi *AccountApiService
+	AccountAPI *AccountAPIService
 
-	BlockApi *BlockApiService
+	BlockAPI *BlockAPIService
 
-	ConstructionApi *ConstructionApiService
+	ConstructionAPI *ConstructionAPIService
 
-	MempoolApi *MempoolApiService
+	MempoolAPI *MempoolAPIService
 
-	NetworkApi *NetworkApiService
+	NetworkAPI *NetworkAPIService
 }
 
 type service struct {
@@ -76,11 +78,11 @@ func NewAPIClient(cfg *Configuration) *APIClient {
 	c.common.client = c
 
 	// API Services
-	c.AccountApi = (*AccountApiService)(&c.common)
-	c.BlockApi = (*BlockApiService)(&c.common)
-	c.ConstructionApi = (*ConstructionApiService)(&c.common)
-	c.MempoolApi = (*MempoolApiService)(&c.common)
-	c.NetworkApi = (*NetworkApiService)(&c.common)
+	c.AccountAPI = (*AccountAPIService)(&c.common)
+	c.BlockAPI = (*BlockAPIService)(&c.common)
+	c.ConstructionAPI = (*ConstructionAPIService)(&c.common)
+	c.MempoolAPI = (*MempoolAPIService)(&c.common)
+	c.NetworkAPI = (*NetworkAPIService)(&c.common)
 
 	return c
 }
@@ -128,7 +130,7 @@ func typeCheckParameter(obj interface{}, expected string, name string) error {
 
 	// Check the type is as expected.
 	if reflect.TypeOf(obj).String() != expected {
-		return fmt.Errorf("Expected %s to be of type %s but received %s.", name, expected, reflect.TypeOf(obj).String())
+		return fmt.Errorf("expected %s to be of type %s but received %s", name, expected, reflect.TypeOf(obj).String())
 	}
 	return nil
 }
@@ -158,7 +160,7 @@ func parameterToString(obj interface{}, collectionFormat string) string {
 }
 
 // helper for converting interface{} parameters to json strings
-func parameterToJson(obj interface{}) (string, error) {
+func parameterToJSON(obj interface{}) (string, error) {
 	jsonBuf, err := json.Marshal(obj)
 	if err != nil {
 		return "", err
@@ -197,7 +199,7 @@ func (c *APIClient) ChangeBasePath(path string) {
 	c.cfg.BasePath = path
 }
 
-// Allow modification of underlying config for alternate implementations and testing
+// GetConfig allows for modification of underlying config for alternate implementations and testing
 // Caution: modifying the configuration while live can cause data races and potentially unwanted behavior
 func (c *APIClient) GetConfig() *Configuration {
 	return c.cfg
@@ -318,7 +320,7 @@ func setBody(body interface{}, contentType string) (bodyBuf *bytes.Buffer, err e
 	}
 
 	if bodyBuf.Len() == 0 {
-		err = fmt.Errorf("Invalid body type %s\n", contentType)
+		err = fmt.Errorf("invalid body type %s", contentType)
 		return nil, err
 	}
 	return bodyBuf, nil

@@ -16,7 +16,7 @@
 
 package gen
 
-// MempoolTransactionRequest: struct for MempoolTransactionRequest
+// MempoolTransactionRequest struct for MempoolTransactionRequest
 type MempoolTransactionRequest struct {
 	NetworkIdentifier     *NetworkIdentifier     `json:"network_identifier"`
 	TransactionIdentifier *TransactionIdentifier `json:"transaction_identifier"`

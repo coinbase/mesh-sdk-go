@@ -54,6 +54,12 @@ rm gen/.gitignore;
 rm gen/.openapi-generator-ignore;
 rm -rf gen/.openapi-generator;
 
+# Fix linting issues
+sed "${SED_IFLAG[@]}" 's/Api/API/g' gen/*;
+sed "${SED_IFLAG[@]}" 's/Json/JSON/g' gen/*;
+sed "${SED_IFLAG[@]}" 's/Id /ID /g' gen/*;
+sed "${SED_IFLAG[@]}" 's/Url/URL/g' gen/*;
+
 # Remove special characters
 sed "${SED_IFLAG[@]}" 's/&#x60;//g' gen/*;
 sed "${SED_IFLAG[@]}" 's/\&quot;//g' gen/*;

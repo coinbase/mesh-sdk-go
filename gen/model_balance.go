@@ -16,7 +16,7 @@
 
 package gen
 
-// Balance: Balance is the array of Amount controlled by an AccountIdentifier. An underspecified AccountIdentifier may result in many amounts (ex: all ERC-20 balances for a single address).
+// Balance Balance is the array of Amount controlled by an AccountIdentifier. An underspecified AccountIdentifier may result in many amounts (ex: all ERC-20 balances for a single address).
 type Balance struct {
 	AccountIdentifier *AccountIdentifier `json:"account_identifier"`
 	// A single account may have a balance in multiple currencies.

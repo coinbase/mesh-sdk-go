@@ -30,7 +30,7 @@ func (f *Fetcher) UnsafeNetworkStatus(
 	ctx context.Context,
 	metadata *map[string]interface{},
 ) (*rosetta.NetworkStatusResponse, error) {
-	networkStatus, _, err := f.rosettaClient.NetworkApi.NetworkStatus(
+	networkStatus, _, err := f.rosettaClient.NetworkAPI.NetworkStatus(
 		ctx,
 		rosetta.NetworkStatusRequest{
 			Metadata: metadata,

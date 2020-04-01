@@ -27,8 +27,8 @@ var (
 	_ _context.Context
 )
 
-// AccountApiService AccountApi service
-type AccountApiService service
+// AccountAPIService AccountAPI service
+type AccountAPIService service
 
 /*
 AccountBalance Get an Account Balance
@@ -37,7 +37,7 @@ Get an array of all Account Balances for an Account Identifier and the Block Ide
  * @param accountBalanceRequest
 @return AccountBalanceResponse
 */
-func (a *AccountApiService) AccountBalance(ctx _context.Context, accountBalanceRequest AccountBalanceRequest) (*AccountBalanceResponse, *_nethttp.Response, error) {
+func (a *AccountAPIService) AccountBalance(ctx _context.Context, accountBalanceRequest AccountBalanceRequest) (*AccountBalanceResponse, *_nethttp.Response, error) {
 	var (
 		localVarHTTPMethod = _nethttp.MethodPost
 		localVarPostBody   interface{}

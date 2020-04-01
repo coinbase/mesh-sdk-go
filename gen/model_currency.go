@@ -16,7 +16,7 @@
 
 package gen
 
-// Currency: Currency is composed of a cannonical Symbol and Decimals. This Decimals value is used to convert an Amount.Value from atomic units (Satoshis) to standard units (Bitcoins).
+// Currency Currency is composed of a cannonical Symbol and Decimals. This Decimals value is used to convert an Amount.Value from atomic units (Satoshis) to standard units (Bitcoins).
 type Currency struct {
 	// Cannonical symbol associated with a currency.
 	Symbol string `json:"symbol"`

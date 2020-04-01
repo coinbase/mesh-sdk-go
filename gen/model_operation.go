@@ -16,7 +16,7 @@
 
 package gen
 
-// Operation: Operations contain all balance-changing information within a transaction. They are always one-sided (only affect 1 AccountIdentifier) and can succeed or fail independently from a Transaction.
+// Operation Operations contain all balance-changing information within a transaction. They are always one-sided (only affect 1 AccountIdentifier) and can succeed or fail independently from a Transaction.
 type Operation struct {
 	OperationIdentifier *OperationIdentifier `json:"operation_identifier"`
 	// Restrict referenced `related_operations` to identifier indexes `<` the current `operation_identifier.index`. This ensures there exists a clear DAG-structure of relations.  Since `operations` are one-sided, one could imagine relating operations in a single transfer or linking `operations` in a call tree.

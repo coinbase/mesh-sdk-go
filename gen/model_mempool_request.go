@@ -16,7 +16,7 @@
 
 package gen
 
-// MempoolRequest: struct for MempoolRequest
+// MempoolRequest struct for MempoolRequest
 type MempoolRequest struct {
 	NetworkIdentifier *NetworkIdentifier `json:"network_identifier"`
 }

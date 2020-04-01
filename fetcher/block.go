@@ -57,7 +57,7 @@ func (f *Fetcher) fetchChannelTransactions(
 	fetchedTxs chan *rosetta.Transaction,
 ) error {
 	for transactionIdentifier := range txsToFetch {
-		tx, _, err := f.rosettaClient.BlockApi.BlockTransaction(ctx,
+		tx, _, err := f.rosettaClient.BlockAPI.BlockTransaction(ctx,
 			rosetta.BlockTransactionRequest{
 				NetworkIdentifier:     network,
 				BlockIdentifier:       block,
@@ -135,7 +135,7 @@ func (f *Fetcher) UnsafeBlock(
 	network *rosetta.NetworkIdentifier,
 	blockIdentifier *rosetta.PartialBlockIdentifier,
 ) (*rosetta.Block, error) {
-	blockResponse, _, err := f.rosettaClient.BlockApi.Block(ctx, rosetta.BlockRequest{
+	blockResponse, _, err := f.rosettaClient.BlockAPI.Block(ctx, rosetta.BlockRequest{
 		NetworkIdentifier: network,
 		BlockIdentifier:   blockIdentifier,
 	})

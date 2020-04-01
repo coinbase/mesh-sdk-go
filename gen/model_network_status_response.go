@@ -16,7 +16,7 @@
 
 package gen
 
-// NetworkStatusResponse: struct for NetworkStatusResponse
+// NetworkStatusResponse struct for NetworkStatusResponse
 type NetworkStatusResponse struct {
 	NetworkStatus *NetworkStatus `json:"network_status"`
 	// If a node supports multiple sub-networks, their statuses should be returned in this array.

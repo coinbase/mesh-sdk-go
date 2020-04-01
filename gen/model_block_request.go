@@ -16,7 +16,7 @@
 
 package gen
 
-// BlockRequest: struct for BlockRequest
+// BlockRequest struct for BlockRequest
 type BlockRequest struct {
 	NetworkIdentifier *NetworkIdentifier      `json:"network_identifier"`
 	BlockIdentifier   *PartialBlockIdentifier `json:"block_identifier"`

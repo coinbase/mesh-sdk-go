@@ -34,6 +34,12 @@ if you are curious about what exactly is asserted.
 _It is possible, but not recommended, to bypass this assertion using the
 `unsafe` helper methods available in `fetcher/*.go`._
 
+## Development
+* `make deps` to install dependencies
+* `make generate-code` to generate models and helpers
+* `make test` to run tests
+* `make lint` to lint the source code (included generated code)
+
 ## License
 This project is available open source under the terms of the [Apache 2.0 License](https://opensource.org/licenses/Apache-2.0).
 

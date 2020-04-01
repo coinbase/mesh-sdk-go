@@ -16,7 +16,7 @@
 
 package gen
 
-// AccountBalanceRequest: struct for AccountBalanceRequest
+// AccountBalanceRequest struct for AccountBalanceRequest
 type AccountBalanceRequest struct {
 	NetworkIdentifier *NetworkIdentifier `json:"network_identifier"`
 	AccountIdentifier *AccountIdentifier `json:"account_identifier"`

@@ -67,7 +67,7 @@ type ServerVariable struct {
 
 // ServerConfiguration stores the information about a server
 type ServerConfiguration struct {
-	Url         string
+	URL         string
 	Description string
 	Variables   map[string]ServerVariable
 }
@@ -93,7 +93,7 @@ func NewConfiguration(basePath string, userAgent string, httpClient *http.Client
 		Debug:         false,
 		Servers: []ServerConfiguration{
 			{
-				Url:         basePath,
+				URL:         basePath,
 				Description: "No description provided",
 			},
 		},
@@ -111,13 +111,13 @@ func (c *Configuration) AddDefaultHeader(key string, value string) {
 	c.DefaultHeader[key] = value
 }
 
-// ServerUrl returns URL based on server settings
-func (c *Configuration) ServerUrl(index int, variables map[string]string) (string, error) {
+// ServerURL returns URL based on server settings
+func (c *Configuration) ServerURL(index int, variables map[string]string) (string, error) {
 	if index < 0 || len(c.Servers) <= index {
 		return "", fmt.Errorf("Index %v out of range %v", index, len(c.Servers)-1)
 	}
 	server := c.Servers[index]
-	url := server.Url
+	url := server.URL
 
 	// go through variables and replace placeholders
 	for name, variable := range server.Variables {
