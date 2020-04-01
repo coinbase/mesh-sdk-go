@@ -21,6 +21,6 @@ jobs:
     steps:
       - checkout
       - run: make deps
-      - run: make lint
       - run: make test
+      - run: make lint
       - run: make check-license

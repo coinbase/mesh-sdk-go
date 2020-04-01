@@ -36,7 +36,7 @@ _It is possible, but not recommended, to bypass this assertion using the
 
 ## Development
 * `make deps` to install dependencies
-* `make generate-code` to generate models and helpers
+* `make gen` to generate models and helpers
 * `make test` to run tests
 * `make lint` to lint the source code (included generated code)
 
