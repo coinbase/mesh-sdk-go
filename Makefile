@@ -23,5 +23,8 @@ check-license:
 circleci-local:
 	circleci local execute
 
+shellcheck:
+	shellcheck codegen.sh
+
 salus:
 	docker run --rm -t -v ${PWD}:/home/repo coinbase/salus

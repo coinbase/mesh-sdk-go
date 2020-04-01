@@ -13,12 +13,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+OS="$(uname)"
+case "${OS}" in
+    'Linux')
+        OS='linux'
+        SED_IFLAG=(-i'')
+        ;;
+    'Darwin')
+        OS='macos'
+        SED_IFLAG=(-i '')
+        ;;
+    *)
+        echo "Operating system '${OS}' not supported."
+        exit 1
+        ;;
+esac
 
 # Remove existing generated code
 rm -rf gen;
 
 # Generate new code
-docker run --rm -v ${PWD}:/local openapitools/openapi-generator-cli generate \
+docker run --user "$(id -u):$(id -g)" --rm -v "${PWD}":/local openapitools/openapi-generator-cli generate \
   -i /local/spec.json \
   -g go \
   -t /local/templates \
@@ -40,15 +55,18 @@ rm gen/.openapi-generator-ignore;
 rm -rf gen/.openapi-generator;
 
 # Remove special characters
-sed -i '' 's/&#x60;//g' gen/*;
-sed -i '' 's/\&quot;//g' gen/*;
-sed -i '' 's/\&lt;b&gt;//g' gen/*;
-sed -i '' 's/\&lt;\/b&gt;//g' gen/*;
-sed -i '' 's/<code>//g' gen/*;
-sed -i '' 's/<\/code>//g' gen/*;
+sed "${SED_IFLAG[@]}" 's/&#x60;//g' gen/*;
+sed "${SED_IFLAG[@]}" 's/\&quot;//g' gen/*;
+sed "${SED_IFLAG[@]}" 's/\&lt;b&gt;//g' gen/*;
+sed "${SED_IFLAG[@]}" 's/\&lt;\/b&gt;//g' gen/*;
+sed "${SED_IFLAG[@]}" 's/<code>//g' gen/*;
+sed "${SED_IFLAG[@]}" 's/<\/code>//g' gen/*;
 
 # Fix slice containing pointers
-sed -i '' 's/\*\[\]/\[\]\*/g' gen/*;
+sed "${SED_IFLAG[@]}" 's/\*\[\]/\[\]\*/g' gen/*;
 
 # Format generated code
 gofmt -w gen/;
+
+# Ensure license correct
+make add-license;

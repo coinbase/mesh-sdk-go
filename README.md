@@ -1,5 +1,6 @@
-[![Coinbase](https://circleci.com/gh/coinbase/rosetta-sdk-go/tree/master.svg?style=svg)](https://circleci.com/gh/coinbase/rosetta-sdk-go/tree/master)
 # rosetta-sdk-go
+
+[![Coinbase](https://circleci.com/gh/coinbase/rosetta-sdk-go/tree/master.svg?style=svg)](https://circleci.com/gh/coinbase/rosetta-sdk-go/tree/master)
 
 ## What is Rosetta?
 Rosetta is a new project from Coinbase to standardize the process
