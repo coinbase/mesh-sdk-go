@@ -64,8 +64,8 @@ func PartialNetworkIdentifier(identifier *rosetta.PartialNetworkIdentifier) erro
 
 // Peer ensures a rosetta.Peer has a valid peer_id.
 func Peer(peer *rosetta.Peer) error {
-	if peer == nil || peer.PeerId == "" {
-		return errors.New("Peer.PeerId is missing")
+	if peer == nil || peer.PeerID == "" {
+		return errors.New("Peer.PeerID is missing")
 	}
 
 	return nil

@@ -32,7 +32,7 @@ func (f *Fetcher) UnsafeAccountBalance(
 	network *rosetta.NetworkIdentifier,
 	account *rosetta.AccountIdentifier,
 ) (*rosetta.BlockIdentifier, []*rosetta.Balance, error) {
-	balance, _, err := f.rosettaClient.AccountApi.AccountBalance(ctx,
+	balance, _, err := f.rosettaClient.AccountAPI.AccountBalance(ctx,
 		rosetta.AccountBalanceRequest{
 			NetworkIdentifier: network,
 			AccountIdentifier: account,

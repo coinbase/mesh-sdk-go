@@ -16,7 +16,7 @@
 
 package gen
 
-// Block: Blocks contain an array of Transactions that occured at a particular BlockIdentifier.
+// Block Blocks contain an array of Transactions that occured at a particular BlockIdentifier.
 type Block struct {
 	BlockIdentifier       *BlockIdentifier `json:"block_identifier"`
 	ParentBlockIdentifier *BlockIdentifier `json:"parent_block_identifier"`

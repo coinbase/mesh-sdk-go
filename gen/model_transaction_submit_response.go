@@ -16,7 +16,7 @@
 
 package gen
 
-// TransactionSubmitResponse: struct for TransactionSubmitResponse
+// TransactionSubmitResponse struct for TransactionSubmitResponse
 type TransactionSubmitResponse struct {
 	TransactionIdentifier *TransactionIdentifier `json:"transaction_identifier"`
 	// Network-specific transaction submission status

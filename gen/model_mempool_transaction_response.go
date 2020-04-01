@@ -16,7 +16,7 @@
 
 package gen
 
-// MempoolTransactionResponse: struct for MempoolTransactionResponse
+// MempoolTransactionResponse struct for MempoolTransactionResponse
 type MempoolTransactionResponse struct {
 	Transaction *Transaction            `json:"transaction"`
 	Metadata    *map[string]interface{} `json:"metadata,omitempty"`

@@ -16,7 +16,7 @@
 
 package gen
 
-// Options: Options specify supported methods, Operation.Status, Operation.Type, and all possible transaction submission statuses. This Options object is used by clients to validate the correctness of a Rosetta Server implementation. It is expected that these clients will error if they receive some response that contains any of the above information that is not specified here.
+// Options Options specify supported methods, Operation.Status, Operation.Type, and all possible transaction submission statuses. This Options object is used by clients to validate the correctness of a Rosetta Server implementation. It is expected that these clients will error if they receive some response that contains any of the above information that is not specified here.
 type Options struct {
 	// All methods that this implementation supports.
 	Methods []string `json:"methods"`

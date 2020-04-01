@@ -16,7 +16,7 @@
 
 package gen
 
-// NetworkStatus: struct for NetworkStatus
+// NetworkStatus struct for NetworkStatus
 type NetworkStatus struct {
 	NetworkIdentifier  *PartialNetworkIdentifier `json:"network_identifier"`
 	NetworkInformation *NetworkInformation       `json:"network_information"`

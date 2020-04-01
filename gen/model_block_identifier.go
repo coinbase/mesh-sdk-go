@@ -16,7 +16,7 @@
 
 package gen
 
-// BlockIdentifier: The `block_identifier` uniquely identifies a block in a particular network.
+// BlockIdentifier The `block_identifier` uniquely identifies a block in a particular network.
 type BlockIdentifier struct {
 	// This is also known as the block height.
 	Index int64  `json:"index"`

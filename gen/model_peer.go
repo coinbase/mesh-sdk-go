@@ -16,8 +16,8 @@
 
 package gen
 
-// Peer: struct for Peer
+// Peer struct for Peer
 type Peer struct {
-	PeerId   string                  `json:"peer_id"`
+	PeerID   string                  `json:"peer_id"`
 	Metadata *map[string]interface{} `json:"metadata,omitempty"`
 }

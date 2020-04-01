@@ -16,7 +16,7 @@
 
 package gen
 
-// TransactionConstructionRequest: struct for TransactionConstructionRequest
+// TransactionConstructionRequest struct for TransactionConstructionRequest
 type TransactionConstructionRequest struct {
 	NetworkIdentifier *NetworkIdentifier `json:"network_identifier"`
 	AccountIdentifier *AccountIdentifier `json:"account_identifier"`

@@ -29,7 +29,7 @@ func (f *Fetcher) UnsafeMempool(
 	ctx context.Context,
 	network *rosetta.NetworkIdentifier,
 ) ([]*rosetta.TransactionIdentifier, error) {
-	mempool, _, err := f.rosettaClient.MempoolApi.Mempool(ctx, rosetta.MempoolRequest{
+	mempool, _, err := f.rosettaClient.MempoolAPI.Mempool(ctx, rosetta.MempoolRequest{
 		NetworkIdentifier: network,
 	})
 	if err != nil {
@@ -64,7 +64,7 @@ func (f *Fetcher) UnsafeMempoolTransaction(
 	network *rosetta.NetworkIdentifier,
 	transaction *rosetta.TransactionIdentifier,
 ) (*rosetta.Transaction, *map[string]interface{}, error) {
-	mempoolTransaction, _, err := f.rosettaClient.MempoolApi.MempoolTransaction(ctx,
+	mempoolTransaction, _, err := f.rosettaClient.MempoolAPI.MempoolTransaction(ctx,
 		rosetta.MempoolTransactionRequest{
 			NetworkIdentifier:     network,
 			TransactionIdentifier: transaction,

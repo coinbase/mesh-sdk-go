@@ -27,8 +27,8 @@ var (
 	_ _context.Context
 )
 
-// BlockApiService BlockApi service
-type BlockApiService service
+// BlockAPIService BlockAPI service
+type BlockAPIService service
 
 /*
 Block Get a Block
@@ -37,7 +37,7 @@ Get a block by its Block Identifier  If transactions are returned in the same ca
  * @param blockRequest
 @return BlockResponse
 */
-func (a *BlockApiService) Block(ctx _context.Context, blockRequest BlockRequest) (*BlockResponse, *_nethttp.Response, error) {
+func (a *BlockAPIService) Block(ctx _context.Context, blockRequest BlockRequest) (*BlockResponse, *_nethttp.Response, error) {
 	var (
 		localVarHTTPMethod = _nethttp.MethodPost
 		localVarPostBody   interface{}
@@ -111,7 +111,7 @@ Get a transaction in a block by its Transaction Identifier  This method should o
  * @param blockTransactionRequest
 @return BlockTransactionResponse
 */
-func (a *BlockApiService) BlockTransaction(ctx _context.Context, blockTransactionRequest BlockTransactionRequest) (*BlockTransactionResponse, *_nethttp.Response, error) {
+func (a *BlockAPIService) BlockTransaction(ctx _context.Context, blockTransactionRequest BlockTransactionRequest) (*BlockTransactionResponse, *_nethttp.Response, error) {
 	var (
 		localVarHTTPMethod = _nethttp.MethodPost
 		localVarPostBody   interface{}

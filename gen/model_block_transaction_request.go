@@ -16,7 +16,7 @@
 
 package gen
 
-// BlockTransactionRequest: struct for BlockTransactionRequest
+// BlockTransactionRequest struct for BlockTransactionRequest
 type BlockTransactionRequest struct {
 	NetworkIdentifier     *NetworkIdentifier     `json:"network_identifier"`
 	BlockIdentifier       *BlockIdentifier       `json:"block_identifier"`

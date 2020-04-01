@@ -16,7 +16,7 @@
 
 package gen
 
-// NetworkStatusRequest: struct for NetworkStatusRequest
+// NetworkStatusRequest struct for NetworkStatusRequest
 type NetworkStatusRequest struct {
 	Metadata *map[string]interface{} `json:"metadata,omitempty"`
 }

@@ -16,7 +16,7 @@
 
 package gen
 
-// Version: struct for Version
+// Version struct for Version
 type Version struct {
 	// The `rosetta_version` is the version of the Rosetta interface the implementation adheres to. This can be useful for clients looking to reliably parse responses.
 	RosettaVersion string `json:"rosetta_version"`

@@ -16,7 +16,7 @@
 
 package gen
 
-// OperationStatus: struct for OperationStatus
+// OperationStatus struct for OperationStatus
 type OperationStatus struct {
 	// The `status` is the network-specific status of the operation.
 	Status string `json:"status"`
