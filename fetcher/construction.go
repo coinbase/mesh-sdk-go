@@ -27,12 +27,11 @@ import (
 // from the ConstructionMetadata method.
 func (f *Fetcher) ConstructionMetadata(
 	ctx context.Context,
-	client *rosetta.APIClient,
 	network *rosetta.NetworkIdentifier,
 	account *rosetta.AccountIdentifier,
 	method *string,
 ) (*rosetta.Amount, *map[string]interface{}, error) {
-	metadata, _, err := client.ConstructionAPI.TransactionConstruction(ctx,
+	metadata, _, err := f.rosettaClient.ConstructionAPI.TransactionConstruction(ctx,
 		rosetta.TransactionConstructionRequest{
 			NetworkIdentifier: network,
 			AccountIdentifier: account,
@@ -54,14 +53,13 @@ func (f *Fetcher) ConstructionMetadata(
 // from the ConstructionSubmit method.
 func (f *Fetcher) ConstructionSubmit(
 	ctx context.Context,
-	client *rosetta.APIClient,
 	signedTransaction string,
 ) (*rosetta.TransactionIdentifier, *string, *map[string]interface{}, error) {
 	if f.Asserter == nil {
 		return nil, nil, nil, errors.New("asserter not initialized")
 	}
 
-	submitResponse, _, err := client.ConstructionAPI.TransactionSubmit(ctx, rosetta.TransactionSubmitRequest{
+	submitResponse, _, err := f.rosettaClient.ConstructionAPI.TransactionSubmit(ctx, rosetta.TransactionSubmitRequest{
 		SignedTransaction: signedTransaction,
 	})
 	if err != nil {
