@@ -21,6 +21,22 @@ import (
 	rosetta "github.com/coinbase/rosetta-sdk-go/gen"
 )
 
+var (
+	// AllowedMethods are all the methods that are considered
+	// valid in a Options.Methods array.
+	AllowedMethods = []string{
+		"/account/balance",
+		"/account/transactions",
+		"/block",
+		"/block/transaction",
+		"/construction/metadata",
+		"/construction/submit",
+		"/mempool",
+		"/mempool/transaction",
+		"/network/status",
+	}
+)
+
 // SubNetworkIdentifier asserts a rosetta.SubNetworkIdentifer is valid (if not nil).
 func SubNetworkIdentifier(subNetworkIdentifier *rosetta.SubNetworkIdentifier) error {
 	if subNetworkIdentifier == nil {
@@ -131,19 +147,8 @@ func SupportedMethods(methods []string) error {
 		return errors.New("no Options.Methods found")
 	}
 
-	allowedMethods := []string{
-		"/block",
-		"/block/transaction",
-		"/mempool",
-		"/mempool/transaction",
-		"/account/balance",
-		"/account/transactions",
-		"/construction/metadata",
-		"/construction/submit",
-	}
-
 	for _, method := range methods {
-		if !contains(allowedMethods, method) {
+		if !contains(AllowedMethods, method) {
 			return fmt.Errorf("%s is not a valid method", method)
 		}
 	}
