@@ -172,8 +172,9 @@ func TestVersion(t *testing.T) {
 func TestNetworkOptions(t *testing.T) {
 	var (
 		methods = []string{
-			"/block",
 			"/account/balance",
+			"/block",
+			"/network/status",
 		}
 
 		operationStatuses = []*rosetta.OperationStatus{
