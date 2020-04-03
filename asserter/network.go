@@ -132,14 +132,15 @@ func SupportedMethods(methods []string) error {
 	}
 
 	allowedMethods := []string{
-		"/block",
-		"/block/transaction",
-		"/mempool",
-		"/mempool/transaction",
 		"/account/balance",
 		"/account/transactions",
+		"/block",
+		"/block/transaction",
 		"/construction/metadata",
 		"/construction/submit",
+		"/mempool",
+		"/mempool/transaction",
+		"/network/status",
 	}
 
 	for _, method := range methods {
