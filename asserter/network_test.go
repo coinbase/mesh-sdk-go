@@ -58,7 +58,7 @@ func TestNetworkIdentifier(t *testing.T) {
 				Blockchain: "bitcoin",
 				Network:    "mainnet",
 				SubNetworkIdentifier: &rosetta.SubNetworkIdentifier{
-					SubNetwork: "shard 1",
+					Network: "shard 1",
 				},
 			},
 			err: nil,
@@ -69,40 +69,13 @@ func TestNetworkIdentifier(t *testing.T) {
 				Network:              "mainnet",
 				SubNetworkIdentifier: &rosetta.SubNetworkIdentifier{},
 			},
-			err: errors.New("NetworkIdentifier.SubNetworkIdentifier.SubNetwork is missing"),
+			err: errors.New("NetworkIdentifier.SubNetworkIdentifier.Network is missing"),
 		},
 	}
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			err := NetworkIdentifier(test.network)
-			assert.Equal(t, test.err, err)
-		})
-	}
-}
-
-func TestSupportedMethods(t *testing.T) {
-	var tests = map[string]struct {
-		methods []string
-		err     error
-	}{
-		"valid method": {
-			methods: []string{
-				"/block",
-			},
-			err: nil,
-		},
-		"invalid method": {
-			methods: []string{
-				"/steal/money",
-			},
-			err: errors.New("/steal/money is not a valid method"),
-		},
-	}
-
-	for name, test := range tests {
-		t.Run(name, func(t *testing.T) {
-			err := SupportedMethods(test.methods)
 			assert.Equal(t, test.err, err)
 		})
 	}
@@ -134,16 +107,16 @@ func TestVersion(t *testing.T) {
 			},
 			err: nil,
 		},
-		"nil version": {
-			version: nil,
-			err:     errors.New("version is nil"),
-		},
-		"invalid RosettaVersion": {
+		"old RosettaVersion": {
 			version: &rosetta.Version{
 				RosettaVersion: "1.2.2",
 				NodeVersion:    "1.0",
 			},
-			err: errors.New("Version.RosettaVersion 1.2.2 is invalid"),
+			err: nil,
+		},
+		"nil version": {
+			version: nil,
+			err:     errors.New("version is nil"),
 		},
 		"invalid NodeVersion": {
 			version: &rosetta.Version{
@@ -171,12 +144,6 @@ func TestVersion(t *testing.T) {
 
 func TestNetworkOptions(t *testing.T) {
 	var (
-		methods = []string{
-			"/account/balance",
-			"/block",
-			"/network/status",
-		}
-
 		operationStatuses = []*rosetta.OperationStatus{
 			&rosetta.OperationStatus{
 				Status:     "SUCCESS",
@@ -191,17 +158,6 @@ func TestNetworkOptions(t *testing.T) {
 		operationTypes = []string{
 			"PAYMENT",
 		}
-
-		submissionStatuses = []*rosetta.SubmissionStatus{
-			&rosetta.SubmissionStatus{
-				Status:     "MEMPOOL",
-				Successful: true,
-			},
-			&rosetta.SubmissionStatus{
-				Status:     "SIG_FAIL",
-				Successful: false,
-			},
-		}
 	)
 
 	var tests = map[string]struct {
@@ -210,69 +166,34 @@ func TestNetworkOptions(t *testing.T) {
 	}{
 		"valid options": {
 			networkOptions: &rosetta.Options{
-				Methods:            methods,
-				OperationStatuses:  operationStatuses,
-				OperationTypes:     operationTypes,
-				SubmissionStatuses: submissionStatuses,
+				OperationStatuses: operationStatuses,
+				OperationTypes:    operationTypes,
 			},
 		},
 		"nil options": {
 			networkOptions: nil,
 			err:            errors.New("options is nil"),
 		},
-		"no methods": {
-			networkOptions: &rosetta.Options{
-				OperationStatuses:  operationStatuses,
-				OperationTypes:     operationTypes,
-				SubmissionStatuses: submissionStatuses,
-			},
-			err: errors.New("no Options.Methods found"),
-		},
 		"no OperationStatuses": {
 			networkOptions: &rosetta.Options{
-				Methods:            methods,
-				OperationTypes:     operationTypes,
-				SubmissionStatuses: submissionStatuses,
+				OperationTypes: operationTypes,
 			},
 			err: errors.New("no Options.OperationStatuses found"),
 		},
 		"no successful OperationStatuses": {
 			networkOptions: &rosetta.Options{
-				Methods: methods,
 				OperationStatuses: []*rosetta.OperationStatus{
 					operationStatuses[1],
 				},
-				OperationTypes:     operationTypes,
-				SubmissionStatuses: submissionStatuses,
+				OperationTypes: operationTypes,
 			},
 			err: errors.New("no successful Options.OperationStatuses found"),
 		},
 		"no OperationTypes": {
 			networkOptions: &rosetta.Options{
-				Methods:            methods,
-				OperationStatuses:  operationStatuses,
-				SubmissionStatuses: submissionStatuses,
+				OperationStatuses: operationStatuses,
 			},
 			err: errors.New("no Options.OperationTypes found"),
-		},
-		"no SubmissionStatuses": {
-			networkOptions: &rosetta.Options{
-				Methods:           methods,
-				OperationStatuses: operationStatuses,
-				OperationTypes:    operationTypes,
-			},
-			err: errors.New("no Options.SubmissionStatuses found"),
-		},
-		"no successful SubmissionStatuses": {
-			networkOptions: &rosetta.Options{
-				Methods:           methods,
-				OperationStatuses: operationStatuses,
-				OperationTypes:    operationTypes,
-				SubmissionStatuses: []*rosetta.SubmissionStatus{
-					submissionStatuses[1],
-				},
-			},
-			err: errors.New("no successful Options.SubmissionStatuses found"),
 		},
 	}
 

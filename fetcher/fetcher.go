@@ -95,10 +95,13 @@ func (f *Fetcher) InitializeAsserter(
 		return nil, err
 	}
 
-	f.Asserter = asserter.New(
+	f.Asserter, err = asserter.New(
 		ctx,
 		networkResponse,
 	)
+	if err != nil {
+		return nil, err
+	}
 
 	return networkResponse, nil
 }

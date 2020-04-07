@@ -21,30 +21,14 @@ import (
 	rosetta "github.com/coinbase/rosetta-sdk-go/gen"
 )
 
-var (
-	// AllowedMethods are all the methods that are considered
-	// valid in a Options.Methods array.
-	AllowedMethods = []string{
-		"/account/balance",
-		"/account/transactions",
-		"/block",
-		"/block/transaction",
-		"/construction/metadata",
-		"/construction/submit",
-		"/mempool",
-		"/mempool/transaction",
-		"/network/status",
-	}
-)
-
 // SubNetworkIdentifier asserts a rosetta.SubNetworkIdentifer is valid (if not nil).
 func SubNetworkIdentifier(subNetworkIdentifier *rosetta.SubNetworkIdentifier) error {
 	if subNetworkIdentifier == nil {
 		return nil
 	}
 
-	if subNetworkIdentifier.SubNetwork == "" {
-		return errors.New("NetworkIdentifier.SubNetworkIdentifier.SubNetwork is missing")
+	if subNetworkIdentifier.Network == "" {
+		return errors.New("NetworkIdentifier.SubNetworkIdentifier.Network is missing")
 	}
 
 	return nil
@@ -64,37 +48,10 @@ func NetworkIdentifier(network *rosetta.NetworkIdentifier) error {
 	return SubNetworkIdentifier(network.SubNetworkIdentifier)
 }
 
-// PartialNetworkIdentifier ensures a rosetta.PartialNetworkIdentifier has
-// a valid blockchain and network.
-func PartialNetworkIdentifier(identifier *rosetta.PartialNetworkIdentifier) error {
-	if identifier == nil || identifier.Blockchain == "" {
-		return errors.New("PartialNetworkIdentifier.Blockchain is missing")
-	}
-
-	if identifier.Network == "" {
-		return errors.New("PartialNetworkIdentifier.Network is missing")
-	}
-
-	return nil
-}
-
 // Peer ensures a rosetta.Peer has a valid peer_id.
 func Peer(peer *rosetta.Peer) error {
 	if peer == nil || peer.PeerID == "" {
 		return errors.New("Peer.PeerID is missing")
-	}
-
-	return nil
-}
-
-// SubNetworkStatus ensures a rosetta.SubNetworkStatus is valid.
-func SubNetworkStatus(subNetwork *rosetta.SubNetworkStatus) error {
-	if err := SubNetworkIdentifier(subNetwork.SubNetworkIdentifier); err != nil {
-		return err
-	}
-
-	if err := NetworkInformation(subNetwork.NetworkInformation); err != nil {
-		return err
 	}
 
 	return nil
@@ -105,12 +62,6 @@ func SubNetworkStatus(subNetwork *rosetta.SubNetworkStatus) error {
 func Version(version *rosetta.Version) error {
 	if version == nil {
 		return errors.New("version is nil")
-	}
-
-	// Assert RosettaVersion against what client can assert
-	// against. This could be multiple versions.
-	if version.RosettaVersion != rosetta.APIVersion {
-		return fmt.Errorf("Version.RosettaVersion %s is invalid", version.RosettaVersion)
 	}
 
 	if version.NodeVersion == "" {
@@ -134,22 +85,6 @@ func StringArray(arrName string, arr []string) error {
 	for _, s := range arr {
 		if s == "" {
 			return fmt.Errorf("%s has an empty string", arrName)
-		}
-	}
-
-	return nil
-}
-
-// SupportedMethods ensures any methods
-// returned by the Rosetta Interface server are valid.
-func SupportedMethods(methods []string) error {
-	if len(methods) == 0 {
-		return errors.New("no Options.Methods found")
-	}
-
-	for _, method := range methods {
-		if !contains(AllowedMethods, method) {
-			return fmt.Errorf("%s is not a valid method", method)
 		}
 	}
 
@@ -190,7 +125,7 @@ func NetworkStatus(networkStatus *rosetta.NetworkStatus) error {
 		return errors.New("network status is nil")
 	}
 
-	if err := PartialNetworkIdentifier(networkStatus.NetworkIdentifier); err != nil {
+	if err := NetworkIdentifier(networkStatus.NetworkIdentifier); err != nil {
 		return err
 	}
 
@@ -226,39 +161,10 @@ func OperationStatuses(statuses []*rosetta.OperationStatus) error {
 	return nil
 }
 
-// SubmissionStatuses ensures all items in Options.SubmissionStatus
-// are valid and that there exists at least 1 successful status.
-func SubmissionStatuses(statuses []*rosetta.SubmissionStatus) error {
-	if len(statuses) == 0 {
-		return errors.New("no Options.SubmissionStatuses found")
-	}
-
-	foundSuccessful := false
-	for _, status := range statuses {
-		if status.Status == "" {
-			return errors.New("submission status is missing")
-		}
-
-		if status.Successful {
-			foundSuccessful = true
-		}
-	}
-
-	if !foundSuccessful {
-		return errors.New("no successful Options.SubmissionStatuses found")
-	}
-
-	return nil
-}
-
 // NetworkOptions ensures a rosetta.Options object is valid.
 func NetworkOptions(options *rosetta.Options) error {
 	if options == nil {
 		return errors.New("options is nil")
-	}
-
-	if err := SupportedMethods(options.Methods); err != nil {
-		return err
 	}
 
 	if err := OperationStatuses(options.OperationStatuses); err != nil {
@@ -269,25 +175,15 @@ func NetworkOptions(options *rosetta.Options) error {
 		return err
 	}
 
-	if err := SubmissionStatuses(options.SubmissionStatuses); err != nil {
-		return err
-	}
-
 	return nil
 }
 
 // NetworkStatusResponse orchestrates assertions for all
 // components of a rosetta.NetworkStatus.
 func NetworkStatusResponse(response *rosetta.NetworkStatusResponse) error {
-	if err := NetworkStatus(response.NetworkStatus); err != nil {
-		return err
-	}
-
-	if response.SubNetworkStatus != nil {
-		for _, subNetwork := range response.SubNetworkStatus {
-			if err := SubNetworkStatus(subNetwork); err != nil {
-				return err
-			}
+	for _, network := range response.NetworkStatus {
+		if err := NetworkStatus(network); err != nil {
+			return err
 		}
 	}
 

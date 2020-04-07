@@ -16,6 +16,7 @@ package asserter
 
 import (
 	"context"
+	"errors"
 
 	rosetta "github.com/coinbase/rosetta-sdk-go/gen"
 )
@@ -23,20 +24,25 @@ import (
 // Asserter contains all logic to perform static
 // validation on Rosetta Server responses.
 type Asserter struct {
-	operationTypes      []string
-	operationStatusMap  map[string]bool
-	submissionStatusMap map[string]bool
-	genesisIndex        int64
+	operationTypes     []string
+	operationStatusMap map[string]bool
+	genesisIndex       int64
 }
 
 // New constructs a new Asserter.
 func New(
 	ctx context.Context,
 	networkResponse *rosetta.NetworkStatusResponse,
-) *Asserter {
+) (*Asserter, error) {
+	if len(networkResponse.NetworkStatus) == 0 {
+		return nil, errors.New("no available networks in network response")
+	}
+
+	primaryNetwork := networkResponse.NetworkStatus[0]
+
 	asserter := &Asserter{
 		operationTypes: networkResponse.Options.OperationTypes,
-		genesisIndex:   networkResponse.NetworkStatus.NetworkInformation.GenesisBlockIdentifier.Index,
+		genesisIndex:   primaryNetwork.NetworkInformation.GenesisBlockIdentifier.Index,
 	}
 
 	asserter.operationStatusMap = map[string]bool{}
@@ -44,26 +50,12 @@ func New(
 		asserter.operationStatusMap[status.Status] = status.Successful
 	}
 
-	asserter.submissionStatusMap = map[string]bool{}
-	for _, status := range networkResponse.Options.SubmissionStatuses {
-		asserter.submissionStatusMap[status.Status] = status.Successful
-	}
-
-	return asserter
+	return asserter, nil
 }
 
 func (a *Asserter) operationStatuses() []string {
 	statuses := []string{}
 	for k := range a.operationStatusMap {
-		statuses = append(statuses, k)
-	}
-
-	return statuses
-}
-
-func (a *Asserter) submissionStatuses() []string {
-	statuses := []string{}
-	for k := range a.submissionStatusMap {
 		statuses = append(statuses, k)
 	}
 
