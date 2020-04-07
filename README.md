@@ -15,7 +15,7 @@ and wallets to integrate with much less communication overhead
 and network-specific work.
 
 ## Versioning
-- Rosetta version: 1.2.4
+- Rosetta version: 1.3.0
 - Package version: 0.0.1
 
 ## Installation

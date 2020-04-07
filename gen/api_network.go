@@ -30,14 +30,12 @@ var (
 // NetworkAPIService NetworkAPI service
 type NetworkAPIService service
 
-/*
-NetworkStatus Get Network Status
-This method returns the current status of the network the node knows about. This method also returns the methods, operation types, and operation statuses the node supports.
- * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- * @param networkStatusRequest There are not any required fields in this request, yet. It is still specified as a `POST` request to ensure required fields can be added without requiring clients to change from a `GET`(which is currently more ideal) to a `POST` request.
-@return NetworkStatusResponse
-*/
-func (a *NetworkAPIService) NetworkStatus(ctx _context.Context, networkStatusRequest NetworkStatusRequest) (*NetworkStatusResponse, *_nethttp.Response, error) {
+// NetworkStatus This method returns the current status of the network the node knows about. This
+// method also returns the methods, operation types, and operation statuses the node supports.
+func (a *NetworkAPIService) NetworkStatus(
+	ctx _context.Context,
+	networkStatusRequest NetworkStatusRequest,
+) (*NetworkStatusResponse, *_nethttp.Response, error) {
 	var (
 		localVarHTTPMethod = _nethttp.MethodPost
 		localVarPostBody   interface{}
@@ -67,7 +65,13 @@ func (a *NetworkAPIService) NetworkStatus(ctx _context.Context, networkStatusReq
 	// body params
 	localVarPostBody = &networkStatusRequest
 
-	r, err := a.client.prepareRequest(ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams)
+	r, err := a.client.prepareRequest(
+		ctx,
+		localVarPath,
+		localVarHTTPMethod,
+		localVarPostBody,
+		localVarHeaderParams,
+	)
 	if err != nil {
 		return nil, nil, err
 	}

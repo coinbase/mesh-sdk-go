@@ -16,7 +16,8 @@
 
 package gen
 
-// BlockTransactionResponse struct for BlockTransactionResponse
+// BlockTransactionResponse A BlockTransactionResponse contains information about a block
+// transaction.
 type BlockTransactionResponse struct {
 	Transaction *Transaction `json:"transaction"`
 }

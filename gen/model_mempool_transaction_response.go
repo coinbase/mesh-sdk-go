@@ -16,7 +16,9 @@
 
 package gen
 
-// MempoolTransactionResponse struct for MempoolTransactionResponse
+// MempoolTransactionResponse A MempoolTransactionResponse contains an estimate of a mempool
+// transaction. It may not be possible to know the full impact of a transaction in the mempool (ex:
+// fee paid).
 type MempoolTransactionResponse struct {
 	Transaction *Transaction            `json:"transaction"`
 	Metadata    *map[string]interface{} `json:"metadata,omitempty"`

@@ -16,7 +16,8 @@
 
 package gen
 
-// MempoolRequest struct for MempoolRequest
+// MempoolRequest A MempoolRequest is utilized to retrieve all transaction identifiers in the
+// mempool for a particular network_identifier.
 type MempoolRequest struct {
 	NetworkIdentifier *NetworkIdentifier `json:"network_identifier"`
 }
