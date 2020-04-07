@@ -38,7 +38,6 @@ docker run --user "$(id -u):$(id -g)" --rm -v "${PWD}":/local openapitools/opena
   -g go \
   -t /local/templates \
   --additional-properties packageName=gen \
-  --additional-properties packageVersion=0.0.1 \
   -o /local/gen;
 
 # Remove unnecessary files

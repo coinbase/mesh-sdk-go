@@ -16,7 +16,6 @@ and network-specific work.
 
 ## Versioning
 - Rosetta version: 1.3.0
-- Package version: 0.0.1
 
 ## Installation
 
