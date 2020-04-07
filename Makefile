@@ -6,15 +6,16 @@ deps:
 	go get ./...
 	go get github.com/stretchr/testify
 	go get github.com/davecgh/go-spew
-	go get golang.org/x/lint/golint
 	go get github.com/google/addlicense
 	go get github.com/segmentio/golines
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.24.0
 
 gen:
 	./codegen.sh
 
 lint:
-	golint -set_exit_status ${GO_PACKAGES}
+	golangci-lint run -v \
+		-E golint,misspell,gocyclo,gocritic,whitespace,goconst,gocognit,bodyclose,unconvert,lll,unparam,gomnd
 
 test:
 	go test -v ${GO_PACKAGES} 
@@ -27,9 +28,6 @@ check-license:
 
 shorten-lines:
 	golines -w --shorten-comments asserter fetcher gen 
-
-circleci-local:
-	circleci local execute
 
 shellcheck:
 	shellcheck codegen.sh
