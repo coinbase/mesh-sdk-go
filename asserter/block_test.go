@@ -194,7 +194,7 @@ func TestAccountIdentifier(t *testing.T) {
 			identifier: &rosetta.AccountIdentifier{
 				Address: "acct1",
 				SubAccount: &rosetta.SubAccountIdentifier{
-					SubAccount: "acct2",
+					Address: "acct2",
 				},
 			},
 			err: nil,
@@ -203,10 +203,10 @@ func TestAccountIdentifier(t *testing.T) {
 			identifier: &rosetta.AccountIdentifier{
 				Address: "acct1",
 				SubAccount: &rosetta.SubAccountIdentifier{
-					SubAccount: "",
+					Address: "",
 				},
 			},
-			err: errors.New("Account.SubAccount.SubAccount is missing"),
+			err: errors.New("Account.SubAccount.Address is missing"),
 		},
 	}
 
@@ -343,13 +343,15 @@ func TestOperation(t *testing.T) {
 	}
 
 	for name, test := range tests {
-		asserter := New(
+		asserter, err := New(
 			context.Background(),
 			&rosetta.NetworkStatusResponse{
-				NetworkStatus: &rosetta.NetworkStatus{
-					NetworkInformation: &rosetta.NetworkInformation{
-						GenesisBlockIdentifier: &rosetta.BlockIdentifier{
-							Index: 0,
+				NetworkStatus: []*rosetta.NetworkStatus{
+					&rosetta.NetworkStatus{
+						NetworkInformation: &rosetta.NetworkInformation{
+							GenesisBlockIdentifier: &rosetta.BlockIdentifier{
+								Index: 0,
+							},
 						},
 					},
 				},
@@ -370,6 +372,7 @@ func TestOperation(t *testing.T) {
 				},
 			},
 		)
+		assert.NoError(t, err)
 		t.Run(name, func(t *testing.T) {
 			err := asserter.Operation(test.operation, test.index)
 			assert.Equal(t, test.err, err)
@@ -498,24 +501,27 @@ func TestBlock(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			asserter := New(
+			asserter, err := New(
 				context.Background(),
 				&rosetta.NetworkStatusResponse{
-					NetworkStatus: &rosetta.NetworkStatus{
-						NetworkInformation: &rosetta.NetworkInformation{
-							GenesisBlockIdentifier: &rosetta.BlockIdentifier{
-								Index: test.genesisIndex,
+					NetworkStatus: []*rosetta.NetworkStatus{
+						&rosetta.NetworkStatus{
+							NetworkInformation: &rosetta.NetworkInformation{
+								GenesisBlockIdentifier: &rosetta.BlockIdentifier{
+									Index: test.genesisIndex,
+								},
 							},
 						},
 					},
 					Options: &rosetta.Options{
-						SubmissionStatuses: []*rosetta.SubmissionStatus{},
-						OperationStatuses:  []*rosetta.OperationStatus{},
-						OperationTypes:     []string{},
+						OperationStatuses: []*rosetta.OperationStatus{},
+						OperationTypes:    []string{},
 					},
 				},
 			)
-			err := asserter.Block(context.Background(), test.block)
+			assert.NoError(t, err)
+
+			err = asserter.Block(context.Background(), test.block)
 			assert.Equal(t, test.err, err)
 		})
 	}

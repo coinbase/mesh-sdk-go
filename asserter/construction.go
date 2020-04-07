@@ -15,18 +15,15 @@
 package asserter
 
 import (
-	"errors"
-	"fmt"
-
 	rosetta "github.com/coinbase/rosetta-sdk-go/gen"
 )
 
 // TransactionConstruction returns an error if
-// the SuggestedFee is not a valid rosetta.Amount.
+// the NetworkFee is not a valid rosetta.Amount.
 func TransactionConstruction(
 	response *rosetta.TransactionConstructionResponse,
 ) error {
-	return Amount(response.SuggestedFee)
+	return Amount(response.NetworkFee)
 }
 
 // TransactionSubmit returns an error if
@@ -38,14 +35,6 @@ func (a *Asserter) TransactionSubmit(
 ) error {
 	if err := TransactionIdentifier(response.TransactionIdentifier); err != nil {
 		return err
-	}
-
-	if response.Status == "" {
-		return errors.New("Submission.Status is missing")
-	}
-
-	if !contains(a.submissionStatuses(), response.Status) {
-		return fmt.Errorf("Submission.Status %s is invalid", response.Status)
 	}
 
 	return nil

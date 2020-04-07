@@ -147,7 +147,7 @@ func TestContainsAccountIdentifier(t *testing.T) {
 				&rosetta.AccountIdentifier{
 					Address: "acct1",
 					SubAccount: &rosetta.SubAccountIdentifier{
-						SubAccount: "subacct1",
+						Address: "subacct1",
 						Metadata: &map[string]interface{}{
 							"blah": "hello",
 						},
@@ -157,7 +157,7 @@ func TestContainsAccountIdentifier(t *testing.T) {
 			identifier: &rosetta.AccountIdentifier{
 				Address: "acct1",
 				SubAccount: &rosetta.SubAccountIdentifier{
-					SubAccount: "subacct1",
+					Address: "subacct1",
 					Metadata: &map[string]interface{}{
 						"blah": "hello",
 					},
@@ -188,7 +188,7 @@ func TestContainsAccountIdentifier(t *testing.T) {
 				&rosetta.AccountIdentifier{
 					Address: "acct1",
 					SubAccount: &rosetta.SubAccountIdentifier{
-						SubAccount: "subacct2",
+						Address: "subacct2",
 						Metadata: &map[string]interface{}{
 							"blah": "hello",
 						},
@@ -198,7 +198,7 @@ func TestContainsAccountIdentifier(t *testing.T) {
 			identifier: &rosetta.AccountIdentifier{
 				Address: "acct1",
 				SubAccount: &rosetta.SubAccountIdentifier{
-					SubAccount: "subacct1",
+					Address: "subacct1",
 					Metadata: &map[string]interface{}{
 						"blah": "hello",
 					},
@@ -211,7 +211,7 @@ func TestContainsAccountIdentifier(t *testing.T) {
 				&rosetta.AccountIdentifier{
 					Address: "acct1",
 					SubAccount: &rosetta.SubAccountIdentifier{
-						SubAccount: "subacct1",
+						Address: "subacct1",
 						Metadata: &map[string]interface{}{
 							"blah": "hello",
 						},
@@ -221,7 +221,7 @@ func TestContainsAccountIdentifier(t *testing.T) {
 			identifier: &rosetta.AccountIdentifier{
 				Address: "acct1",
 				SubAccount: &rosetta.SubAccountIdentifier{
-					SubAccount: "subacct1",
+					Address: "subacct1",
 					Metadata: &map[string]interface{}{
 						"blah": "bye",
 					},
