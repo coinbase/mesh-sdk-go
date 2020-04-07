@@ -16,7 +16,8 @@
 
 package gen
 
-// MempoolResponse struct for MempoolResponse
+// MempoolResponse A MempoolResponse contains all transaction identifiers in the mempool for a
+// particular network_identifier.
 type MempoolResponse struct {
 	TransactionIdentifiers []*TransactionIdentifier `json:"transaction_identifiers"`
 }

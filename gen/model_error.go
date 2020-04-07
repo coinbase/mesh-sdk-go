@@ -16,8 +16,12 @@
 
 package gen
 
-// Error struct for Error
+// Error Instead of utilizing HTTP status codes to describe node errors (which often do not have a
+// good analog), rich errors are returned using this object.
 type Error struct {
-	Code    int32  `json:"code"`
+	// Code is a network-specific error code. If desired, this code can be equivalent to an HTTP
+	// status code.
+	Code int32 `json:"code"`
+	// Message is a network-specific error message.
 	Message string `json:"message"`
 }

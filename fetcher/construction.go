@@ -59,9 +59,12 @@ func (f *Fetcher) ConstructionSubmit(
 		return nil, nil, nil, errors.New("asserter not initialized")
 	}
 
-	submitResponse, _, err := f.rosettaClient.ConstructionAPI.TransactionSubmit(ctx, rosetta.TransactionSubmitRequest{
-		SignedTransaction: signedTransaction,
-	})
+	submitResponse, _, err := f.rosettaClient.ConstructionAPI.TransactionSubmit(
+		ctx,
+		rosetta.TransactionSubmitRequest{
+			SignedTransaction: signedTransaction,
+		},
+	)
 	if err != nil {
 		return nil, nil, nil, err
 	}

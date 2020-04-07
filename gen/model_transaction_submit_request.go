@@ -16,7 +16,7 @@
 
 package gen
 
-// TransactionSubmitRequest struct for TransactionSubmitRequest
+// TransactionSubmitRequest The transaction submission request includes a signed transaction.
 type TransactionSubmitRequest struct {
 	SignedTransaction string `json:"signed_transaction"`
 }

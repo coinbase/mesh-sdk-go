@@ -76,3 +76,6 @@ gofmt -w gen/;
 
 # Ensure license correct
 make add-license;
+
+# Ensure no long lines
+make shorten-lines;

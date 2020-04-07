@@ -36,14 +36,14 @@ import (
 const (
 	// APIVersion is the version of the Rosetta API Spec
 	// used to generate this code.
-	APIVersion = "1.2.4"
+	APIVersion = "1.3.0"
 )
 
 var (
 	jsonCheck = regexp.MustCompile(`(?i:(?:application|text)/(?:vnd\.[^;]+\+)?json)`)
 )
 
-// APIClient manages communication with the Rosetta API v1.2.4
+// APIClient manages communication with the Rosetta API v1.3.0
 // In most cases there should be only one, shared, APIClient.
 type APIClient struct {
 	cfg    *Configuration
@@ -130,12 +130,18 @@ func typeCheckParameter(obj interface{}, expected string, name string) error {
 
 	// Check the type is as expected.
 	if reflect.TypeOf(obj).String() != expected {
-		return fmt.Errorf("expected %s to be of type %s but received %s", name, expected, reflect.TypeOf(obj).String())
+		return fmt.Errorf(
+			"expected %s to be of type %s but received %s",
+			name,
+			expected,
+			reflect.TypeOf(obj).String(),
+		)
 	}
 	return nil
 }
 
-// parameterToString convert interface{} parameters to string, using a delimiter if format is provided.
+// parameterToString convert interface{} parameters to string, using a delimiter if format is
+// provided.
 func parameterToString(obj interface{}, collectionFormat string) string {
 	var delimiter string
 
@@ -200,7 +206,8 @@ func (c *APIClient) ChangeBasePath(path string) {
 }
 
 // GetConfig allows for modification of underlying config for alternate implementations and testing
-// Caution: modifying the configuration while live can cause data races and potentially unwanted behavior
+// Caution: modifying the configuration while live can cause data races and potentially unwanted
+// behavior
 func (c *APIClient) GetConfig() *Configuration {
 	return c.cfg
 }

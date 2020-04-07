@@ -16,9 +16,11 @@
 
 package gen
 
-// AccountBalanceResponse struct for AccountBalanceResponse
+// AccountBalanceResponse An AccountBalanceResponse is returned on the /account/balance endpoint.
 type AccountBalanceResponse struct {
 	BlockIdentifier *BlockIdentifier `json:"block_identifier"`
-	// A GetAccountBalanceResponse may include multiple uniquely-identified balances. For example, the balance of an account on each shard could be returned or the balance of an account on each ERC-20 contract.
+	// An AccountBalanceResponse may include multiple uniquely-identified balances. For example, the
+	// balance of an account on each shard could be returned or the balance of an account on each
+	// ERC-20 contract.
 	Balances []*Balance `json:"balances"`
 }

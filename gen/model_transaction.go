@@ -16,10 +16,12 @@
 
 package gen
 
-// Transaction Transactions contain an array of Operations that are attributable to the same TransactionIdentifier.
+// Transaction Transactions contain an array of Operations that are attributable to the same
+// TransactionIdentifier.
 type Transaction struct {
 	TransactionIdentifier *TransactionIdentifier `json:"transaction_identifier"`
 	Operations            []*Operation           `json:"operations"`
-	// Transactions that are related to other transactions (like a cross-shard transactioin) should include the `tranaction_identifier` of these transactions in the metadata.
+	// Transactions that are related to other transactions (like a cross-shard transactioin) should
+	// include the tranaction_identifier of these transactions in the metadata.
 	Metadata *map[string]interface{} `json:"metadata,omitempty"`
 }

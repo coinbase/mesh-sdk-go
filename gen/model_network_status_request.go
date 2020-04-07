@@ -16,7 +16,8 @@
 
 package gen
 
-// NetworkStatusRequest struct for NetworkStatusRequest
+// NetworkStatusRequest A NetworkStatusRequest is utilized to retrieve the status of the network. It
+// currently contains only optional metadata.
 type NetworkStatusRequest struct {
 	Metadata *map[string]interface{} `json:"metadata,omitempty"`
 }

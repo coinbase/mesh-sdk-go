@@ -16,10 +16,12 @@
 
 package gen
 
-// NetworkInformation struct for NetworkInformation
+// NetworkInformation NetworkInformation contains basic information about a node's view of a
+// blockchain network.
 type NetworkInformation struct {
 	CurrentBlockIdentifier *BlockIdentifier `json:"current_block_identifier"`
-	// The timestamp of the block in milliseconds since the Unix Epoch. The timestamp is stored in milliseconds because some blockchains produce blocks more often than once a second.
+	// The timestamp of the block in milliseconds since the Unix Epoch. The timestamp is stored in
+	// milliseconds because some blockchains produce blocks more often than once a second.
 	CurrentBlockTimestamp  int64            `json:"current_block_timestamp"`
 	GenesisBlockIdentifier *BlockIdentifier `json:"genesis_block_identifier"`
 	Peers                  []*Peer          `json:"peers"`

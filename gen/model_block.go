@@ -20,7 +20,8 @@ package gen
 type Block struct {
 	BlockIdentifier       *BlockIdentifier `json:"block_identifier"`
 	ParentBlockIdentifier *BlockIdentifier `json:"parent_block_identifier"`
-	// The timestamp of the block in milliseconds since the Unix Epoch. The timestamp is stored in milliseconds because some blockchains produce blocks more often than once a second.
+	// The timestamp of the block in milliseconds since the Unix Epoch. The timestamp is stored in
+	// milliseconds because some blockchains produce blocks more often than once a second.
 	Timestamp    int64                   `json:"timestamp"`
 	Transactions []*Transaction          `json:"transactions"`
 	Metadata     *map[string]interface{} `json:"metadata,omitempty"`

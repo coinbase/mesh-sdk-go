@@ -16,8 +16,15 @@
 
 package gen
 
-// SubAccountIdentifier An account may have state specific to a contract address (ERC-20 token) and/or a stake (delegated balance). The `sub_account_identifier` should specify which state (if applicable) an account instantiation refers to.
+// SubAccountIdentifier An account may have state specific to a contract address (ERC-20 token)
+// and/or a stake (delegated balance). The sub_account_identifier should specify which state (if
+// applicable) an account instantiation refers to.
 type SubAccountIdentifier struct {
-	SubAccount string                  `json:"sub_account"`
-	Metadata   *map[string]interface{} `json:"metadata,omitempty"`
+	// The SubAccount address may be a cryptographic value or some other identifier (ex: bonded)
+	// that uniquely specifies a SubAccount.
+	Address string `json:"address"`
+	// If the SubAccount address is not sufficient to uniquely specify a SubAccount, any other
+	// identifying information can be stored here.  It is important to note that two SubAccounts
+	// with identical addresses but differing metadata will not be considered equal by clients.
+	Metadata *map[string]interface{} `json:"metadata,omitempty"`
 }

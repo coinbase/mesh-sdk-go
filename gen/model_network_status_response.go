@@ -16,12 +16,14 @@
 
 package gen
 
-// NetworkStatusResponse struct for NetworkStatusResponse
+// NetworkStatusResponse A NetworkStatusResponse contains all information required to make reliable
+// requests to the Rosetta Server implementation.
 type NetworkStatusResponse struct {
-	NetworkStatus *NetworkStatus `json:"network_status"`
-	// If a node supports multiple sub-networks, their statuses should be returned in this array.
-	SubNetworkStatus []*SubNetworkStatus     `json:"sub_network_status,omitempty"`
-	Version          *Version                `json:"version"`
-	Options          *Options                `json:"options"`
-	Metadata         *map[string]interface{} `json:"metadata,omitempty"`
+	// The network_status array contains the status of all networks available to query. This
+	// includes all sub-networks that are also accessible (ex: shards).  If a node supports multiple
+	// networks, the first status returned should be the root chain or beacon chain (if applicable).
+	NetworkStatus []*NetworkStatus        `json:"network_status"`
+	Version       *Version                `json:"version"`
+	Options       *Options                `json:"options"`
+	Metadata      *map[string]interface{} `json:"metadata,omitempty"`
 }
