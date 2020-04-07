@@ -203,3 +203,81 @@ func TestNetworkOptions(t *testing.T) {
 		})
 	}
 }
+
+func TestError(t *testing.T) {
+	var tests = map[string]struct {
+		rosettaError *rosetta.Error
+		err          error
+	}{
+		"valid error": {
+			rosettaError: &rosetta.Error{
+				Code:    12,
+				Message: "signature invalid",
+			},
+			err: nil,
+		},
+		"nil error": {
+			rosettaError: nil,
+			err:          errors.New("Error is nil"),
+		},
+		"negative code": {
+			rosettaError: &rosetta.Error{
+				Code:    -1,
+				Message: "signature invalid",
+			},
+			err: errors.New("Error.Code is negative"),
+		},
+		"empty message": {
+			rosettaError: &rosetta.Error{
+				Code: 0,
+			},
+			err: errors.New("Error.Message is missing"),
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, test.err, Error(test.rosettaError))
+		})
+	}
+}
+
+func TestErrors(t *testing.T) {
+	var tests = map[string]struct {
+		rosettaErrors []*rosetta.Error
+		err           error
+	}{
+		"valid errors": {
+			rosettaErrors: []*rosetta.Error{
+				&rosetta.Error{
+					Code:    0,
+					Message: "error 1",
+				},
+				&rosetta.Error{
+					Code:    1,
+					Message: "error 2",
+				},
+			},
+			err: nil,
+		},
+		"duplicate error codes": {
+			rosettaErrors: []*rosetta.Error{
+				&rosetta.Error{
+					Code:    0,
+					Message: "error 1",
+				},
+				&rosetta.Error{
+					Code:    0,
+					Message: "error 2",
+				},
+			},
+			err: errors.New("error code used multiple times"),
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, test.err, Errors(test.rosettaErrors))
+		})
+	}
+}

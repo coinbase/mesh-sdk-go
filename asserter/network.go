@@ -161,6 +161,44 @@ func OperationStatuses(statuses []*rosetta.OperationStatus) error {
 	return nil
 }
 
+// Error ensures a rosetta.Error is valid.
+func Error(err *rosetta.Error) error {
+	if err == nil {
+		return errors.New("Error is nil")
+	}
+
+	if err.Code < 0 {
+		return errors.New("Error.Code is negative")
+	}
+
+	if err.Message == "" {
+		return errors.New("Error.Message is missing")
+	}
+
+	return nil
+}
+
+// Errors ensures each rosetta.Error in a slice is valid
+// and that there is no error code collision.
+func Errors(rosettaErrors []*rosetta.Error) error {
+	statusCodes := map[int32]struct{}{}
+
+	for _, rosettaError := range rosettaErrors {
+		if err := Error(rosettaError); err != nil {
+			return err
+		}
+
+		_, exists := statusCodes[rosettaError.Code]
+		if exists {
+			return errors.New("error code used multiple times")
+		}
+
+		statusCodes[rosettaError.Code] = struct{}{}
+	}
+
+	return nil
+}
+
 // NetworkOptions ensures a rosetta.Options object is valid.
 func NetworkOptions(options *rosetta.Options) error {
 	if options == nil {
@@ -172,6 +210,10 @@ func NetworkOptions(options *rosetta.Options) error {
 	}
 
 	if err := StringArray("Options.OperationTypes", options.OperationTypes); err != nil {
+		return err
+	}
+
+	if err := Errors(options.Errors); err != nil {
 		return err
 	}
 
