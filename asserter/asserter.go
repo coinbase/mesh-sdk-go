@@ -26,6 +26,7 @@ import (
 type Asserter struct {
 	operationTypes     []string
 	operationStatusMap map[string]bool
+	errorTypeMap       map[int32]*rosetta.Error
 	genesisIndex       int64
 }
 
@@ -40,17 +41,40 @@ func New(
 
 	primaryNetwork := networkResponse.NetworkStatus[0]
 
+	return NewOptions(
+		ctx,
+		primaryNetwork.NetworkInformation.GenesisBlockIdentifier,
+		networkResponse.Options.OperationTypes,
+		networkResponse.Options.OperationStatuses,
+		networkResponse.Options.Errors,
+	), nil
+}
+
+// NewOptions constructs a new Asserter using the provided
+// arguments instead of using a rosetta.NetworkStatusResponse.
+func NewOptions(
+	ctx context.Context,
+	genesisBlockIdentifier *rosetta.BlockIdentifier,
+	operationTypes []string,
+	operationStatuses []*rosetta.OperationStatus,
+	errors []*rosetta.Error,
+) *Asserter {
 	asserter := &Asserter{
-		operationTypes: networkResponse.Options.OperationTypes,
-		genesisIndex:   primaryNetwork.NetworkInformation.GenesisBlockIdentifier.Index,
+		operationTypes: operationTypes,
+		genesisIndex:   genesisBlockIdentifier.Index,
 	}
 
 	asserter.operationStatusMap = map[string]bool{}
-	for _, status := range networkResponse.Options.OperationStatuses {
+	for _, status := range operationStatuses {
 		asserter.operationStatusMap[status.Status] = status.Successful
 	}
 
-	return asserter, nil
+	asserter.errorTypeMap = map[int32]*rosetta.Error{}
+	for _, err := range errors {
+		asserter.errorTypeMap[err.Code] = err
+	}
+
+	return asserter
 }
 
 func (a *Asserter) operationStatuses() []string {
@@ -60,4 +84,13 @@ func (a *Asserter) operationStatuses() []string {
 	}
 
 	return statuses
+}
+
+func (a *Asserter) errors() []*rosetta.Error {
+	errors := []*rosetta.Error{}
+	for _, v := range a.errorTypeMap {
+		errors = append(errors, v)
+	}
+
+	return errors
 }
