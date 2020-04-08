@@ -32,7 +32,7 @@ func TestContainsCurrency(t *testing.T) {
 	}{
 		"simple contains": {
 			currencies: []*rosetta.Currency{
-				&rosetta.Currency{
+				{
 					Symbol:   "BTC",
 					Decimals: 8,
 				},
@@ -45,7 +45,7 @@ func TestContainsCurrency(t *testing.T) {
 		},
 		"complex contains": {
 			currencies: []*rosetta.Currency{
-				&rosetta.Currency{
+				{
 					Symbol:   "BTC",
 					Decimals: 8,
 					Metadata: &map[string]interface{}{
@@ -72,7 +72,7 @@ func TestContainsCurrency(t *testing.T) {
 		},
 		"symbol mismatch": {
 			currencies: []*rosetta.Currency{
-				&rosetta.Currency{
+				{
 					Symbol:   "ERX",
 					Decimals: 8,
 				},
@@ -85,7 +85,7 @@ func TestContainsCurrency(t *testing.T) {
 		},
 		"decimal mismatch": {
 			currencies: []*rosetta.Currency{
-				&rosetta.Currency{
+				{
 					Symbol:   "BTC",
 					Decimals: 8,
 				},
@@ -98,7 +98,7 @@ func TestContainsCurrency(t *testing.T) {
 		},
 		"metadata mismatch": {
 			currencies: []*rosetta.Currency{
-				&rosetta.Currency{
+				{
 					Symbol:   "BTC",
 					Decimals: 8,
 					Metadata: &map[string]interface{}{
@@ -133,7 +133,7 @@ func TestContainsAccountIdentifier(t *testing.T) {
 	}{
 		"simple contains": {
 			identifiers: []*rosetta.AccountIdentifier{
-				&rosetta.AccountIdentifier{
+				{
 					Address: "acct1",
 				},
 			},
@@ -144,10 +144,10 @@ func TestContainsAccountIdentifier(t *testing.T) {
 		},
 		"complex contains": {
 			identifiers: []*rosetta.AccountIdentifier{
-				&rosetta.AccountIdentifier{
+				{
 					Address: "acct1",
 					SubAccount: &rosetta.SubAccountIdentifier{
-						SubAccount: "subacct1",
+						Address: "subacct1",
 						Metadata: &map[string]interface{}{
 							"blah": "hello",
 						},
@@ -157,7 +157,7 @@ func TestContainsAccountIdentifier(t *testing.T) {
 			identifier: &rosetta.AccountIdentifier{
 				Address: "acct1",
 				SubAccount: &rosetta.SubAccountIdentifier{
-					SubAccount: "subacct1",
+					Address: "subacct1",
 					Metadata: &map[string]interface{}{
 						"blah": "hello",
 					},
@@ -167,7 +167,7 @@ func TestContainsAccountIdentifier(t *testing.T) {
 		},
 		"simple mismatch": {
 			identifiers: []*rosetta.AccountIdentifier{
-				&rosetta.AccountIdentifier{
+				{
 					Address: "acct1",
 				},
 			},
@@ -185,10 +185,10 @@ func TestContainsAccountIdentifier(t *testing.T) {
 		},
 		"subaccount mismatch": {
 			identifiers: []*rosetta.AccountIdentifier{
-				&rosetta.AccountIdentifier{
+				{
 					Address: "acct1",
 					SubAccount: &rosetta.SubAccountIdentifier{
-						SubAccount: "subacct2",
+						Address: "subacct2",
 						Metadata: &map[string]interface{}{
 							"blah": "hello",
 						},
@@ -198,7 +198,7 @@ func TestContainsAccountIdentifier(t *testing.T) {
 			identifier: &rosetta.AccountIdentifier{
 				Address: "acct1",
 				SubAccount: &rosetta.SubAccountIdentifier{
-					SubAccount: "subacct1",
+					Address: "subacct1",
 					Metadata: &map[string]interface{}{
 						"blah": "hello",
 					},
@@ -208,10 +208,10 @@ func TestContainsAccountIdentifier(t *testing.T) {
 		},
 		"metadata mismatch": {
 			identifiers: []*rosetta.AccountIdentifier{
-				&rosetta.AccountIdentifier{
+				{
 					Address: "acct1",
 					SubAccount: &rosetta.SubAccountIdentifier{
-						SubAccount: "subacct1",
+						Address: "subacct1",
 						Metadata: &map[string]interface{}{
 							"blah": "hello",
 						},
@@ -221,7 +221,7 @@ func TestContainsAccountIdentifier(t *testing.T) {
 			identifier: &rosetta.AccountIdentifier{
 				Address: "acct1",
 				SubAccount: &rosetta.SubAccountIdentifier{
-					SubAccount: "subacct1",
+					Address: "subacct1",
 					Metadata: &map[string]interface{}{
 						"blah": "bye",
 					},
@@ -274,7 +274,7 @@ func TestAccoutBalance(t *testing.T) {
 		"simple balance": {
 			block: validBlock,
 			balances: []*rosetta.Balance{
-				&rosetta.Balance{
+				{
 					AccountIdentifier: validIdentifier,
 					Amounts: []*rosetta.Amount{
 						validAmount,
@@ -286,7 +286,7 @@ func TestAccoutBalance(t *testing.T) {
 		"invalid block": {
 			block: invalidBlock,
 			balances: []*rosetta.Balance{
-				&rosetta.Balance{
+				{
 					AccountIdentifier: validIdentifier,
 					Amounts: []*rosetta.Amount{
 						validAmount,
@@ -298,7 +298,7 @@ func TestAccoutBalance(t *testing.T) {
 		"invalid account identifier": {
 			block: validBlock,
 			balances: []*rosetta.Balance{
-				&rosetta.Balance{
+				{
 					AccountIdentifier: invalidIdentifier,
 					Amounts: []*rosetta.Amount{
 						validAmount,
@@ -310,7 +310,7 @@ func TestAccoutBalance(t *testing.T) {
 		"duplicate currency": {
 			block: validBlock,
 			balances: []*rosetta.Balance{
-				&rosetta.Balance{
+				{
 					AccountIdentifier: validIdentifier,
 					Amounts: []*rosetta.Amount{
 						validAmount,
@@ -323,13 +323,13 @@ func TestAccoutBalance(t *testing.T) {
 		"duplicate identifier": {
 			block: validBlock,
 			balances: []*rosetta.Balance{
-				&rosetta.Balance{
+				{
 					AccountIdentifier: validIdentifier,
 					Amounts: []*rosetta.Amount{
 						validAmount,
 					},
 				},
-				&rosetta.Balance{
+				{
 					AccountIdentifier: validIdentifier,
 					Amounts: []*rosetta.Amount{
 						validAmount,

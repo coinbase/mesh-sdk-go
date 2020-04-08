@@ -30,17 +30,18 @@ var (
 // ConstructionAPIService ConstructionAPI service
 type ConstructionAPIService service
 
-/*
-TransactionConstruction Get Transaction Construction Metadata
-Get any information required to construct a transaction for a specific account. Metadata returned here could be a recent hash to use or an account sequence number.  It is important to clarify that this endpoint should not pre-construct any transactions for the client. All \account-specific\ metadata must be returned as a key-value mapping so that transaction construction can be audited and performed entirely offline. Any \account-agnostic\ metadata does not need to be broken out into a key-value mapping and can be returned as a blob.
- * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- * @param transactionConstructionRequest
-@return TransactionConstructionResponse
-*/
-func (a *ConstructionAPIService) TransactionConstruction(ctx _context.Context, transactionConstructionRequest TransactionConstructionRequest) (*TransactionConstructionResponse, *_nethttp.Response, error) {
+// TransactionConstruction Get any information required to construct a transaction for a specific
+// account. Metadata returned here could be a recent hash to use or an account sequence number.  It
+// is important to clarify that this endpoint should not pre-construct any transactions for the
+// client. All account-specific metadata must be returned as a key-value mapping so that transaction
+// construction can be audited and performed entirely offline. Any account-agnostic metadata does
+// not need to be broken out into a key-value mapping and can be returned as a blob.
+func (a *ConstructionAPIService) TransactionConstruction(
+	ctx _context.Context,
+	transactionConstructionRequest TransactionConstructionRequest,
+) (*TransactionConstructionResponse, *_nethttp.Response, error) {
 	var (
-		localVarHTTPMethod = _nethttp.MethodPost
-		localVarPostBody   interface{}
+		localVarPostBody interface{}
 	)
 
 	// create path and map variables
@@ -67,7 +68,7 @@ func (a *ConstructionAPIService) TransactionConstruction(ctx _context.Context, t
 	// body params
 	localVarPostBody = &transactionConstructionRequest
 
-	r, err := a.client.prepareRequest(ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams)
+	r, err := a.client.prepareRequest(ctx, localVarPath, localVarPostBody, localVarHeaderParams)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -83,7 +84,7 @@ func (a *ConstructionAPIService) TransactionConstruction(ctx _context.Context, t
 		return nil, localVarHTTPResponse, err
 	}
 
-	if localVarHTTPResponse.StatusCode != 200 {
+	if localVarHTTPResponse.StatusCode != _nethttp.StatusOK {
 		newErr := GenericOpenAPIError{
 			body:  localVarBody,
 			error: localVarHTTPResponse.Status,
@@ -104,17 +105,17 @@ func (a *ConstructionAPIService) TransactionConstruction(ctx _context.Context, t
 	return &v, localVarHTTPResponse, nil
 }
 
-/*
-TransactionSubmit Submit a Signed Transaction
-Submit a signed transaction in network-specific format
- * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- * @param transactionSubmitRequest
-@return TransactionSubmitResponse
-*/
-func (a *ConstructionAPIService) TransactionSubmit(ctx _context.Context, transactionSubmitRequest TransactionSubmitRequest) (*TransactionSubmitResponse, *_nethttp.Response, error) {
+// TransactionSubmit Submit a pre-signed transaction to the node. This call should not block on the
+// transaction being included in a block. Rather, it should return immediately with an indication of
+// whether or not the transaction was included in the mempool.  The transaction submission response
+// should only return a 200 status if the submitted transaction could be included in the mempool.
+// Otherwise, it should return an error.
+func (a *ConstructionAPIService) TransactionSubmit(
+	ctx _context.Context,
+	transactionSubmitRequest TransactionSubmitRequest,
+) (*TransactionSubmitResponse, *_nethttp.Response, error) {
 	var (
-		localVarHTTPMethod = _nethttp.MethodPost
-		localVarPostBody   interface{}
+		localVarPostBody interface{}
 	)
 
 	// create path and map variables
@@ -141,7 +142,7 @@ func (a *ConstructionAPIService) TransactionSubmit(ctx _context.Context, transac
 	// body params
 	localVarPostBody = &transactionSubmitRequest
 
-	r, err := a.client.prepareRequest(ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams)
+	r, err := a.client.prepareRequest(ctx, localVarPath, localVarPostBody, localVarHeaderParams)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -157,7 +158,7 @@ func (a *ConstructionAPIService) TransactionSubmit(ctx _context.Context, transac
 		return nil, localVarHTTPResponse, err
 	}
 
-	if localVarHTTPResponse.StatusCode != 200 {
+	if localVarHTTPResponse.StatusCode != _nethttp.StatusOK {
 		newErr := GenericOpenAPIError{
 			body:  localVarBody,
 			error: localVarHTTPResponse.Status,

@@ -16,8 +16,11 @@
 
 package gen
 
-// TransactionConstructionResponse struct for TransactionConstructionResponse
+// TransactionConstructionResponse The transaction construction response should return the network
+// fee to use in transaction construction. This network fee should be the gas price or cost per byte
+// not some calculate value based on the method in the transaction construction request. Any
+// calculations (like the one previously described) should be included in the metadata.
 type TransactionConstructionResponse struct {
-	SuggestedFee *Amount                 `json:"suggested_fee"`
-	Metadata     *map[string]interface{} `json:"metadata,omitempty"`
+	NetworkFee *Amount                 `json:"network_fee"`
+	Metadata   *map[string]interface{} `json:"metadata,omitempty"`
 }

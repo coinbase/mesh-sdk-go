@@ -16,8 +16,11 @@
 
 package gen
 
-// AccountBalanceRequest struct for AccountBalanceRequest
+// AccountBalanceRequest An AccountBalanceRequest is utilized to make a balance request on the
+// /account/balance endpoint. If the block_identifier is populated, a historical balance query
+// should be performed.
 type AccountBalanceRequest struct {
-	NetworkIdentifier *NetworkIdentifier `json:"network_identifier"`
-	AccountIdentifier *AccountIdentifier `json:"account_identifier"`
+	NetworkIdentifier *NetworkIdentifier      `json:"network_identifier"`
+	AccountIdentifier *AccountIdentifier      `json:"account_identifier"`
+	BlockIdentifier   *PartialBlockIdentifier `json:"block_identifier,omitempty"`
 }

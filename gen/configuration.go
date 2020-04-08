@@ -46,7 +46,8 @@ var (
 	ContextAPIKey = contextKey("apikey")
 )
 
-// BasicAuth provides basic http authentication to a request passed via context using ContextBasicAuth
+// BasicAuth provides basic http authentication to a request passed via context using
+// ContextBasicAuth
 type BasicAuth struct {
 	UserName string `json:"userName,omitempty"`
 	Password string `json:"password,omitempty"`
@@ -129,7 +130,12 @@ func (c *Configuration) ServerURL(index int, variables map[string]string) (strin
 				}
 			}
 			if !found {
-				return "", fmt.Errorf("The variable %s in the server URL has invalid value %v. Must be %v", name, value, variable.EnumValues)
+				return "", fmt.Errorf(
+					"The variable %s in the server URL has invalid value %v. Must be %v",
+					name,
+					value,
+					variable.EnumValues,
+				)
 			}
 			url = strings.Replace(url, "{"+name+"}", value, -1)
 		} else {

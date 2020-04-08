@@ -16,7 +16,7 @@
 
 package gen
 
-// BlockRequest struct for BlockRequest
+// BlockRequest A BlockRequest is utilized to make a block request on the /block endpoint.
 type BlockRequest struct {
 	NetworkIdentifier *NetworkIdentifier      `json:"network_identifier"`
 	BlockIdentifier   *PartialBlockIdentifier `json:"block_identifier"`

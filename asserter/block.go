@@ -95,8 +95,8 @@ func AccountIdentifier(account *rosetta.AccountIdentifier) error {
 		return nil
 	}
 
-	if account.SubAccount.SubAccount == "" {
-		return errors.New("Account.SubAccount.SubAccount is missing")
+	if account.SubAccount.Address == "" {
+		return errors.New("Account.SubAccount.Address is missing")
 	}
 
 	return nil

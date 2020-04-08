@@ -16,8 +16,9 @@
 
 package gen
 
-// NetworkStatus struct for NetworkStatus
+// NetworkStatus A NetworkStatus object contains the network_information pertaining to a network
+// specified by the network_identifier.
 type NetworkStatus struct {
-	NetworkIdentifier  *PartialNetworkIdentifier `json:"network_identifier"`
-	NetworkInformation *NetworkInformation       `json:"network_information"`
+	NetworkIdentifier  *NetworkIdentifier  `json:"network_identifier"`
+	NetworkInformation *NetworkInformation `json:"network_information"`
 }

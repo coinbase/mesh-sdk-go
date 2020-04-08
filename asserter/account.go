@@ -97,7 +97,10 @@ func AccountBalance(
 
 		// Ensure an account identifier is used at most once in a balance response
 		if containsAccountIdentifier(accounts, balance.AccountIdentifier) {
-			return fmt.Errorf("account identifier %+v used in balance multiple times", balance.AccountIdentifier)
+			return fmt.Errorf(
+				"account identifier %+v used in balance multiple times",
+				balance.AccountIdentifier,
+			)
 		}
 		accounts = append(accounts, balance.AccountIdentifier)
 

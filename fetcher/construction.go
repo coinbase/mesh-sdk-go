@@ -46,7 +46,7 @@ func (f *Fetcher) ConstructionMetadata(
 		return nil, nil, err
 	}
 
-	return metadata.SuggestedFee, metadata.Metadata, nil
+	return metadata.NetworkFee, metadata.Metadata, nil
 }
 
 // ConstructionSubmit returns the validated response
@@ -54,21 +54,24 @@ func (f *Fetcher) ConstructionMetadata(
 func (f *Fetcher) ConstructionSubmit(
 	ctx context.Context,
 	signedTransaction string,
-) (*rosetta.TransactionIdentifier, *string, *map[string]interface{}, error) {
+) (*rosetta.TransactionIdentifier, *map[string]interface{}, error) {
 	if f.Asserter == nil {
-		return nil, nil, nil, errors.New("asserter not initialized")
+		return nil, nil, errors.New("asserter not initialized")
 	}
 
-	submitResponse, _, err := f.rosettaClient.ConstructionAPI.TransactionSubmit(ctx, rosetta.TransactionSubmitRequest{
-		SignedTransaction: signedTransaction,
-	})
+	submitResponse, _, err := f.rosettaClient.ConstructionAPI.TransactionSubmit(
+		ctx,
+		rosetta.TransactionSubmitRequest{
+			SignedTransaction: signedTransaction,
+		},
+	)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
 	if err := f.Asserter.TransactionSubmit(submitResponse); err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
-	return submitResponse.TransactionIdentifier, &submitResponse.Status, submitResponse.Metadata, nil
+	return submitResponse.TransactionIdentifier, submitResponse.Metadata, nil
 }

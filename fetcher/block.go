@@ -91,7 +91,7 @@ func (f *Fetcher) UnsafeTransactions(
 	block *rosetta.BlockIdentifier,
 	transactionIdentifiers []*rosetta.TransactionIdentifier,
 ) ([]*rosetta.Transaction, error) {
-	if transactionIdentifiers == nil || len(transactionIdentifiers) == 0 {
+	if len(transactionIdentifiers) == 0 {
 		return nil, nil
 	}
 

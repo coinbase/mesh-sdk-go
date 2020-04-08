@@ -38,7 +38,6 @@ docker run --user "$(id -u):$(id -g)" --rm -v "${PWD}":/local openapitools/opena
   -g go \
   -t /local/templates \
   --additional-properties packageName=gen \
-  --additional-properties packageVersion=0.0.1 \
   -o /local/gen;
 
 # Remove unnecessary files
@@ -71,8 +70,16 @@ sed "${SED_IFLAG[@]}" 's/<\/code>//g' gen/*;
 # Fix slice containing pointers
 sed "${SED_IFLAG[@]}" 's/\*\[\]/\[\]\*/g' gen/*;
 
+# Fix misspellings
+sed "${SED_IFLAG[@]}" 's/occured/occurred/g' gen/*;
+sed "${SED_IFLAG[@]}" 's/cannonical/canonical/g' gen/*;
+sed "${SED_IFLAG[@]}" 's/Cannonical/Canonical/g' gen/*;
+
 # Format generated code
 gofmt -w gen/;
 
 # Ensure license correct
 make add-license;
+
+# Ensure no long lines
+make shorten-lines;

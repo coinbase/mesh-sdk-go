@@ -30,17 +30,20 @@ var (
 // AccountAPIService AccountAPI service
 type AccountAPIService service
 
-/*
-AccountBalance Get an Account Balance
-Get an array of all Account Balances for an Account Identifier and the Block Identifier at which the balance lookup was performed.  Some consumers of account balance data need to know at which block the balance was calculated to reconcile account balance changes.  To get all balances associated with an account, it may be necessary to perform multiple balance requests with unique Account Identifiers.  If the client supports it, passing nil AccountIdentifier metadata to the request should fetch all balances.
- * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- * @param accountBalanceRequest
-@return AccountBalanceResponse
-*/
-func (a *AccountAPIService) AccountBalance(ctx _context.Context, accountBalanceRequest AccountBalanceRequest) (*AccountBalanceResponse, *_nethttp.Response, error) {
+// AccountBalance Get an array of all Account Balances for an Account Identifier and the Block
+// Identifier at which the balance lookup was performed.  Some consumers of account balance data
+// need to know at which block the balance was calculated to reconcile account balance changes.  To
+// get all balances associated with an account, it may be necessary to perform multiple balance
+// requests with unique Account Identifiers.  If the client supports it, passing nil
+// AccountIdentifier metadata to the request should fetch all balances (if applicable).  It is also
+// possible to perform a historical balance lookup (if the server supports it) by passing in an
+// optional BlockIdentifier.
+func (a *AccountAPIService) AccountBalance(
+	ctx _context.Context,
+	accountBalanceRequest AccountBalanceRequest,
+) (*AccountBalanceResponse, *_nethttp.Response, error) {
 	var (
-		localVarHTTPMethod = _nethttp.MethodPost
-		localVarPostBody   interface{}
+		localVarPostBody interface{}
 	)
 
 	// create path and map variables
@@ -67,7 +70,7 @@ func (a *AccountAPIService) AccountBalance(ctx _context.Context, accountBalanceR
 	// body params
 	localVarPostBody = &accountBalanceRequest
 
-	r, err := a.client.prepareRequest(ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams)
+	r, err := a.client.prepareRequest(ctx, localVarPath, localVarPostBody, localVarHeaderParams)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -83,7 +86,7 @@ func (a *AccountAPIService) AccountBalance(ctx _context.Context, accountBalanceR
 		return nil, localVarHTTPResponse, err
 	}
 
-	if localVarHTTPResponse.StatusCode != 200 {
+	if localVarHTTPResponse.StatusCode != _nethttp.StatusOK {
 		newErr := GenericOpenAPIError{
 			body:  localVarBody,
 			error: localVarHTTPResponse.Status,

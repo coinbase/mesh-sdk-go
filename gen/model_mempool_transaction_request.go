@@ -16,7 +16,8 @@
 
 package gen
 
-// MempoolTransactionRequest struct for MempoolTransactionRequest
+// MempoolTransactionRequest A MempoolTransactionRequest is utilized to retrieve a transaction from
+// the mempool.
 type MempoolTransactionRequest struct {
 	NetworkIdentifier     *NetworkIdentifier     `json:"network_identifier"`
 	TransactionIdentifier *TransactionIdentifier `json:"transaction_identifier"`
