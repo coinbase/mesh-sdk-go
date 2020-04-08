@@ -37,8 +37,7 @@ func (a *NetworkAPIService) NetworkStatus(
 	networkStatusRequest NetworkStatusRequest,
 ) (*NetworkStatusResponse, *_nethttp.Response, error) {
 	var (
-		localVarHTTPMethod = _nethttp.MethodPost
-		localVarPostBody   interface{}
+		localVarPostBody interface{}
 	)
 
 	// create path and map variables
@@ -65,13 +64,7 @@ func (a *NetworkAPIService) NetworkStatus(
 	// body params
 	localVarPostBody = &networkStatusRequest
 
-	r, err := a.client.prepareRequest(
-		ctx,
-		localVarPath,
-		localVarHTTPMethod,
-		localVarPostBody,
-		localVarHeaderParams,
-	)
+	r, err := a.client.prepareRequest(ctx, localVarPath, localVarPostBody, localVarHeaderParams)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -87,7 +80,7 @@ func (a *NetworkAPIService) NetworkStatus(
 		return nil, localVarHTTPResponse, err
 	}
 
-	if localVarHTTPResponse.StatusCode != 200 {
+	if localVarHTTPResponse.StatusCode != _nethttp.StatusOK {
 		newErr := GenericOpenAPIError{
 			body:  localVarBody,
 			error: localVarHTTPResponse.Status,

@@ -43,8 +43,7 @@ func (a *AccountAPIService) AccountBalance(
 	accountBalanceRequest AccountBalanceRequest,
 ) (*AccountBalanceResponse, *_nethttp.Response, error) {
 	var (
-		localVarHTTPMethod = _nethttp.MethodPost
-		localVarPostBody   interface{}
+		localVarPostBody interface{}
 	)
 
 	// create path and map variables
@@ -71,13 +70,7 @@ func (a *AccountAPIService) AccountBalance(
 	// body params
 	localVarPostBody = &accountBalanceRequest
 
-	r, err := a.client.prepareRequest(
-		ctx,
-		localVarPath,
-		localVarHTTPMethod,
-		localVarPostBody,
-		localVarHeaderParams,
-	)
+	r, err := a.client.prepareRequest(ctx, localVarPath, localVarPostBody, localVarHeaderParams)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -93,7 +86,7 @@ func (a *AccountAPIService) AccountBalance(
 		return nil, localVarHTTPResponse, err
 	}
 
-	if localVarHTTPResponse.StatusCode != 200 {
+	if localVarHTTPResponse.StatusCode != _nethttp.StatusOK {
 		newErr := GenericOpenAPIError{
 			body:  localVarBody,
 			error: localVarHTTPResponse.Status,

@@ -147,7 +147,7 @@ func TestOperationIdentifier(t *testing.T) {
 			index: 1,
 			err:   errors.New("Operation.OperationIdentifier.Index invalid"),
 		},
-		"valid identifer with network index": {
+		"valid identifier with network index": {
 			identifier: &rosetta.OperationIdentifier{
 				Index:        0,
 				NetworkIndex: &validNetworkIndex,
@@ -155,7 +155,7 @@ func TestOperationIdentifier(t *testing.T) {
 			index: 0,
 			err:   nil,
 		},
-		"invalid identifer with network index": {
+		"invalid identifier with network index": {
 			identifier: &rosetta.OperationIdentifier{
 				Index:        0,
 				NetworkIndex: &invalidNetworkIndex,
@@ -190,7 +190,7 @@ func TestAccountIdentifier(t *testing.T) {
 			},
 			err: errors.New("Account.Address is missing"),
 		},
-		"valid identifer with subaccount": {
+		"valid identifier with subaccount": {
 			identifier: &rosetta.AccountIdentifier{
 				Address: "acct1",
 				SubAccount: &rosetta.SubAccountIdentifier{
@@ -199,7 +199,7 @@ func TestAccountIdentifier(t *testing.T) {
 			},
 			err: nil,
 		},
-		"invalid identifer with subaccount": {
+		"invalid identifier with subaccount": {
 			identifier: &rosetta.AccountIdentifier{
 				Address: "acct1",
 				SubAccount: &rosetta.SubAccountIdentifier{

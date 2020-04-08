@@ -36,8 +36,7 @@ func (a *MempoolAPIService) Mempool(
 	mempoolRequest MempoolRequest,
 ) (*MempoolResponse, *_nethttp.Response, error) {
 	var (
-		localVarHTTPMethod = _nethttp.MethodPost
-		localVarPostBody   interface{}
+		localVarPostBody interface{}
 	)
 
 	// create path and map variables
@@ -64,13 +63,7 @@ func (a *MempoolAPIService) Mempool(
 	// body params
 	localVarPostBody = &mempoolRequest
 
-	r, err := a.client.prepareRequest(
-		ctx,
-		localVarPath,
-		localVarHTTPMethod,
-		localVarPostBody,
-		localVarHeaderParams,
-	)
+	r, err := a.client.prepareRequest(ctx, localVarPath, localVarPostBody, localVarHeaderParams)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -86,7 +79,7 @@ func (a *MempoolAPIService) Mempool(
 		return nil, localVarHTTPResponse, err
 	}
 
-	if localVarHTTPResponse.StatusCode != 200 {
+	if localVarHTTPResponse.StatusCode != _nethttp.StatusOK {
 		newErr := GenericOpenAPIError{
 			body:  localVarBody,
 			error: localVarHTTPResponse.Status,
@@ -119,8 +112,7 @@ func (a *MempoolAPIService) MempoolTransaction(
 	mempoolTransactionRequest MempoolTransactionRequest,
 ) (*MempoolTransactionResponse, *_nethttp.Response, error) {
 	var (
-		localVarHTTPMethod = _nethttp.MethodPost
-		localVarPostBody   interface{}
+		localVarPostBody interface{}
 	)
 
 	// create path and map variables
@@ -147,13 +139,7 @@ func (a *MempoolAPIService) MempoolTransaction(
 	// body params
 	localVarPostBody = &mempoolTransactionRequest
 
-	r, err := a.client.prepareRequest(
-		ctx,
-		localVarPath,
-		localVarHTTPMethod,
-		localVarPostBody,
-		localVarHeaderParams,
-	)
+	r, err := a.client.prepareRequest(ctx, localVarPath, localVarPostBody, localVarHeaderParams)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -169,7 +155,7 @@ func (a *MempoolAPIService) MempoolTransaction(
 		return nil, localVarHTTPResponse, err
 	}
 
-	if localVarHTTPResponse.StatusCode != 200 {
+	if localVarHTTPResponse.StatusCode != _nethttp.StatusOK {
 		newErr := GenericOpenAPIError{
 			body:  localVarBody,
 			error: localVarHTTPResponse.Status,

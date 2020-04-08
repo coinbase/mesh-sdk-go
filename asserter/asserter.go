@@ -85,12 +85,3 @@ func (a *Asserter) operationStatuses() []string {
 
 	return statuses
 }
-
-func (a *Asserter) errors() []*rosetta.Error {
-	errors := []*rosetta.Error{}
-	for _, v := range a.errorTypeMap {
-		errors = append(errors, v)
-	}
-
-	return errors
-}

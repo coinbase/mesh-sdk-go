@@ -41,8 +41,7 @@ func (a *ConstructionAPIService) TransactionConstruction(
 	transactionConstructionRequest TransactionConstructionRequest,
 ) (*TransactionConstructionResponse, *_nethttp.Response, error) {
 	var (
-		localVarHTTPMethod = _nethttp.MethodPost
-		localVarPostBody   interface{}
+		localVarPostBody interface{}
 	)
 
 	// create path and map variables
@@ -69,13 +68,7 @@ func (a *ConstructionAPIService) TransactionConstruction(
 	// body params
 	localVarPostBody = &transactionConstructionRequest
 
-	r, err := a.client.prepareRequest(
-		ctx,
-		localVarPath,
-		localVarHTTPMethod,
-		localVarPostBody,
-		localVarHeaderParams,
-	)
+	r, err := a.client.prepareRequest(ctx, localVarPath, localVarPostBody, localVarHeaderParams)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -91,7 +84,7 @@ func (a *ConstructionAPIService) TransactionConstruction(
 		return nil, localVarHTTPResponse, err
 	}
 
-	if localVarHTTPResponse.StatusCode != 200 {
+	if localVarHTTPResponse.StatusCode != _nethttp.StatusOK {
 		newErr := GenericOpenAPIError{
 			body:  localVarBody,
 			error: localVarHTTPResponse.Status,
@@ -122,8 +115,7 @@ func (a *ConstructionAPIService) TransactionSubmit(
 	transactionSubmitRequest TransactionSubmitRequest,
 ) (*TransactionSubmitResponse, *_nethttp.Response, error) {
 	var (
-		localVarHTTPMethod = _nethttp.MethodPost
-		localVarPostBody   interface{}
+		localVarPostBody interface{}
 	)
 
 	// create path and map variables
@@ -150,13 +142,7 @@ func (a *ConstructionAPIService) TransactionSubmit(
 	// body params
 	localVarPostBody = &transactionSubmitRequest
 
-	r, err := a.client.prepareRequest(
-		ctx,
-		localVarPath,
-		localVarHTTPMethod,
-		localVarPostBody,
-		localVarHeaderParams,
-	)
+	r, err := a.client.prepareRequest(ctx, localVarPath, localVarPostBody, localVarHeaderParams)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -172,7 +158,7 @@ func (a *ConstructionAPIService) TransactionSubmit(
 		return nil, localVarHTTPResponse, err
 	}
 
-	if localVarHTTPResponse.StatusCode != 200 {
+	if localVarHTTPResponse.StatusCode != _nethttp.StatusOK {
 		newErr := GenericOpenAPIError{
 			body:  localVarBody,
 			error: localVarHTTPResponse.Status,
