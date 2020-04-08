@@ -4,7 +4,7 @@
 [![Coverage Status](https://coveralls.io/repos/github/coinbase/rosetta-sdk-go/badge.svg)](https://coveralls.io/github/coinbase/rosetta-sdk-go)
 [![Go Report Card](https://goreportcard.com/badge/github.com/coinbase/rosetta-sdk-go)](https://goreportcard.com/report/github.com/coinbase/rosetta-sdk-go)
 [![License](https://img.shields.io/github/license/coinbase/rosetta-sdk-go.svg)](https://github.com/coinbase/rosetta-sdk-go/blob/master/LICENSE.txt)
-[![GoDoc](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=shield)](https://pkg.go.dev/github.com/coinbase/rosetta-sdk-go@v0.0.3?tab=overview)
+[![GoDoc](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=shield)](https://pkg.go.dev/github.com/coinbase/rosetta-sdk-go?tab=overview)
 
 ## What is Rosetta?
 Rosetta is a new project from Coinbase to standardize the process
