@@ -22,7 +22,7 @@ type Version struct {
 	// The rosetta_version is the version of the Rosetta interface the implementation adheres to.
 	// This can be useful for clients looking to reliably parse responses.
 	RosettaVersion string `json:"rosetta_version"`
-	// The node_version is the cannonical version of the node runtime. This can help clients manage
+	// The node_version is the canonical version of the node runtime. This can help clients manage
 	// deployments.
 	NodeVersion string `json:"node_version"`
 	// When a middleware server is used to adhere to the Rosetta interface, it should return its

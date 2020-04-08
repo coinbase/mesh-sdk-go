@@ -43,7 +43,6 @@ type {{#structPrefix}}{{&classname}}{{/structPrefix}}{{{nickname}}}Opts struct {
 // {{operationId}}{{#notes}} {{notes}}{{/notes}}
 func (a *{{{classname}}}Service) {{{nickname}}}(ctx _context.Context{{#hasParams}}, {{/hasParams}}{{#allParams}}{{#required}}{{paramName}} {{{dataType}}}{{#hasMore}}, {{/hasMore}}{{/required}}{{/allParams}}{{#hasOptionalParams}}localVarOptionals *{{#structPrefix}}{{&classname}}{{/structPrefix}}{{{nickname}}}Opts{{/hasOptionalParams}}) ({{#returnType}}*{{{returnType}}}, {{/returnType}}*_nethttp.Response, error) {
 	var (
-		localVarHTTPMethod   = _nethttp.Method{{httpMethod}}
 		localVarPostBody     interface{}
 	)
 
@@ -157,7 +156,7 @@ func (a *{{{classname}}}Service) {{{nickname}}}(ctx _context.Context{{#hasParams
 {{/bodyParams}}
 {{/hasBodyParam}}
 
-	r, err := a.client.prepareRequest(ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams)
+	r, err := a.client.prepareRequest(ctx, localVarPath, localVarPostBody, localVarHeaderParams)
 	if err != nil {
 		return {{#returnType}}nil, {{/returnType}}nil, err
 	}
@@ -173,7 +172,7 @@ func (a *{{{classname}}}Service) {{{nickname}}}(ctx _context.Context{{#hasParams
 		return {{#returnType}}nil, {{/returnType}}localVarHTTPResponse, err
 	}
 
-	if localVarHTTPResponse.StatusCode != 200 {
+	if localVarHTTPResponse.StatusCode != _nethttp.StatusOK {
 		newErr := GenericOpenAPIError{
 			body:  localVarBody,
 			error: localVarHTTPResponse.Status,

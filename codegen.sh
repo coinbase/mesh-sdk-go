@@ -70,6 +70,11 @@ sed "${SED_IFLAG[@]}" 's/<\/code>//g' gen/*;
 # Fix slice containing pointers
 sed "${SED_IFLAG[@]}" 's/\*\[\]/\[\]\*/g' gen/*;
 
+# Fix misspellings
+sed "${SED_IFLAG[@]}" 's/occured/occurred/g' gen/*;
+sed "${SED_IFLAG[@]}" 's/cannonical/canonical/g' gen/*;
+sed "${SED_IFLAG[@]}" 's/Cannonical/Canonical/g' gen/*;
+
 # Format generated code
 gofmt -w gen/;
 

@@ -39,8 +39,7 @@ func (a *BlockAPIService) Block(
 	blockRequest BlockRequest,
 ) (*BlockResponse, *_nethttp.Response, error) {
 	var (
-		localVarHTTPMethod = _nethttp.MethodPost
-		localVarPostBody   interface{}
+		localVarPostBody interface{}
 	)
 
 	// create path and map variables
@@ -67,13 +66,7 @@ func (a *BlockAPIService) Block(
 	// body params
 	localVarPostBody = &blockRequest
 
-	r, err := a.client.prepareRequest(
-		ctx,
-		localVarPath,
-		localVarHTTPMethod,
-		localVarPostBody,
-		localVarHeaderParams,
-	)
+	r, err := a.client.prepareRequest(ctx, localVarPath, localVarPostBody, localVarHeaderParams)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -89,7 +82,7 @@ func (a *BlockAPIService) Block(
 		return nil, localVarHTTPResponse, err
 	}
 
-	if localVarHTTPResponse.StatusCode != 200 {
+	if localVarHTTPResponse.StatusCode != _nethttp.StatusOK {
 		newErr := GenericOpenAPIError{
 			body:  localVarBody,
 			error: localVarHTTPResponse.Status,
@@ -127,8 +120,7 @@ func (a *BlockAPIService) BlockTransaction(
 	blockTransactionRequest BlockTransactionRequest,
 ) (*BlockTransactionResponse, *_nethttp.Response, error) {
 	var (
-		localVarHTTPMethod = _nethttp.MethodPost
-		localVarPostBody   interface{}
+		localVarPostBody interface{}
 	)
 
 	// create path and map variables
@@ -155,13 +147,7 @@ func (a *BlockAPIService) BlockTransaction(
 	// body params
 	localVarPostBody = &blockTransactionRequest
 
-	r, err := a.client.prepareRequest(
-		ctx,
-		localVarPath,
-		localVarHTTPMethod,
-		localVarPostBody,
-		localVarHeaderParams,
-	)
+	r, err := a.client.prepareRequest(ctx, localVarPath, localVarPostBody, localVarHeaderParams)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -177,7 +163,7 @@ func (a *BlockAPIService) BlockTransaction(
 		return nil, localVarHTTPResponse, err
 	}
 
-	if localVarHTTPResponse.StatusCode != 200 {
+	if localVarHTTPResponse.StatusCode != _nethttp.StatusOK {
 		newErr := GenericOpenAPIError{
 			body:  localVarBody,
 			error: localVarHTTPResponse.Status,

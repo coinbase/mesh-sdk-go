@@ -1,6 +1,5 @@
-.PHONY: deps gen lint test add-license check-license circleci-local shellcheck salus shorten-lines
+.PHONY: deps gen lint format check-format test add-license check-license shorten-lines shellcheck salus release
 LICENCE_SCRIPT=addlicense -c "Coinbase, Inc." -l "apache" -v
-GO_PACKAGES=./asserter/... ./fetcher/... ./gen/...
 
 deps:
 	go get ./...
@@ -23,7 +22,7 @@ check-format:
 	! gofmt -s -l . | read
 
 test:
-	go test -v ${GO_PACKAGES} 
+	go test -v ./asserter/... ./fetcher/... ./gen/...
 
 add-license:
 	${LICENCE_SCRIPT} .
@@ -39,3 +38,5 @@ shellcheck:
 
 salus:
 	docker run --rm -t -v ${PWD}:/home/repo coinbase/salus
+
+release: shellcheck gen add-license shorten-lines format test lint salus
