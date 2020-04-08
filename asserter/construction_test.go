@@ -100,7 +100,7 @@ func TestTransactionSubmit(t *testing.T) {
 			context.Background(),
 			&rosetta.NetworkStatusResponse{
 				NetworkStatus: []*rosetta.NetworkStatus{
-					&rosetta.NetworkStatus{
+					{
 						NetworkInformation: &rosetta.NetworkInformation{
 							GenesisBlockIdentifier: &rosetta.BlockIdentifier{
 								Index: 0,
@@ -110,11 +110,11 @@ func TestTransactionSubmit(t *testing.T) {
 				},
 				Options: &rosetta.Options{
 					OperationStatuses: []*rosetta.OperationStatus{
-						&rosetta.OperationStatus{
+						{
 							Status:     "SUCCESS",
 							Successful: true,
 						},
-						&rosetta.OperationStatus{
+						{
 							Status:     "FAILURE",
 							Successful: false,
 						},

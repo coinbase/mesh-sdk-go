@@ -58,6 +58,12 @@ jobs:
     steps:
       - *fast-checkout
       - run: make check-license
+  check-format:
+    executor:
+      name: default
+    steps:
+      - *fast-checkout
+      - run: make check-format
   salus:
     machine: true
     steps:
@@ -76,6 +82,9 @@ workflows:
           requires:
             - setup
       - check-license:
+          requires:
+            - setup
+      - check-format:
           requires:
             - setup
       - salus

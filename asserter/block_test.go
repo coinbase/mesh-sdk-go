@@ -347,7 +347,7 @@ func TestOperation(t *testing.T) {
 			context.Background(),
 			&rosetta.NetworkStatusResponse{
 				NetworkStatus: []*rosetta.NetworkStatus{
-					&rosetta.NetworkStatus{
+					{
 						NetworkInformation: &rosetta.NetworkInformation{
 							GenesisBlockIdentifier: &rosetta.BlockIdentifier{
 								Index: 0,
@@ -357,11 +357,11 @@ func TestOperation(t *testing.T) {
 				},
 				Options: &rosetta.Options{
 					OperationStatuses: []*rosetta.OperationStatus{
-						&rosetta.OperationStatus{
+						{
 							Status:     "SUCCESS",
 							Successful: true,
 						},
-						&rosetta.OperationStatus{
+						{
 							Status:     "FAILURE",
 							Successful: false,
 						},
@@ -492,7 +492,7 @@ func TestBlock(t *testing.T) {
 				ParentBlockIdentifier: validParentBlockIdentifier,
 				Timestamp:             1,
 				Transactions: []*rosetta.Transaction{
-					&rosetta.Transaction{},
+					{},
 				},
 			},
 			err: errors.New("Transaction.TransactionIdentifier.Hash is missing"),
@@ -505,7 +505,7 @@ func TestBlock(t *testing.T) {
 				context.Background(),
 				&rosetta.NetworkStatusResponse{
 					NetworkStatus: []*rosetta.NetworkStatus{
-						&rosetta.NetworkStatus{
+						{
 							NetworkInformation: &rosetta.NetworkInformation{
 								GenesisBlockIdentifier: &rosetta.BlockIdentifier{
 									Index: test.genesisIndex,
