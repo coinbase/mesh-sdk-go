@@ -8,7 +8,6 @@ deps:
 	go get github.com/davecgh/go-spew
 	go get github.com/google/addlicense
 	go get github.com/segmentio/golines
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.24.0
 
 gen:
 	./codegen.sh
@@ -16,6 +15,12 @@ gen:
 lint:
 	golangci-lint run -v \
 		-E golint,misspell,gocyclo,gocritic,whitespace,goconst,gocognit,bodyclose,unconvert,lll,unparam,gomnd
+
+format:
+	gofmt -s -w -l .
+
+check-format:
+	! gofmt -s -l . | read
 
 test:
 	go test -v ${GO_PACKAGES} 

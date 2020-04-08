@@ -145,11 +145,11 @@ func TestVersion(t *testing.T) {
 func TestNetworkOptions(t *testing.T) {
 	var (
 		operationStatuses = []*rosetta.OperationStatus{
-			&rosetta.OperationStatus{
+			{
 				Status:     "SUCCESS",
 				Successful: true,
 			},
-			&rosetta.OperationStatus{
+			{
 				Status:     "FAILURE",
 				Successful: false,
 			},
@@ -249,11 +249,11 @@ func TestErrors(t *testing.T) {
 	}{
 		"valid errors": {
 			rosettaErrors: []*rosetta.Error{
-				&rosetta.Error{
+				{
 					Code:    0,
 					Message: "error 1",
 				},
-				&rosetta.Error{
+				{
 					Code:    1,
 					Message: "error 2",
 				},
@@ -262,11 +262,11 @@ func TestErrors(t *testing.T) {
 		},
 		"duplicate error codes": {
 			rosettaErrors: []*rosetta.Error{
-				&rosetta.Error{
+				{
 					Code:    0,
 					Message: "error 1",
 				},
-				&rosetta.Error{
+				{
 					Code:    0,
 					Message: "error 2",
 				},
