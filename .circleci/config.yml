@@ -64,6 +64,15 @@ jobs:
     steps:
       - *fast-checkout
       - run: make check-format
+  coverage:
+    executor:
+      name: default
+    steps:
+      - *fast-checkout
+      - run: make test-cover
+      - run: mv coverage.html /tmp/artifacts
+      - store_artifacts:
+          path: /tmp/artifacts
   salus:
     machine: true
     steps:
@@ -85,6 +94,9 @@ workflows:
           requires:
             - setup
       - check-format:
+          requires:
+            - setup
+      - coverage:
           requires:
             - setup
       - salus

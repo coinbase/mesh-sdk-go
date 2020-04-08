@@ -1,5 +1,7 @@
-.PHONY: deps gen lint format check-format test add-license check-license shorten-lines shellcheck salus release
+.PHONY: deps gen lint format check-format test test-coverage add-license \
+	check-license shorten-lines shellcheck salus release
 LICENCE_SCRIPT=addlicense -c "Coinbase, Inc." -l "apache" -v
+TEST_SCRIPT=go test -v ./asserter/... ./fetcher/... ./gen/...
 
 deps:
 	go get ./...
@@ -22,7 +24,11 @@ check-format:
 	! gofmt -s -l . | read
 
 test:
-	go test -v ./asserter/... ./fetcher/... ./gen/...
+	${TEST_SCRIPT}
+
+test-cover:	
+	${TEST_SCRIPT} -coverprofile=c.out -covermode=atomic
+	go tool cover -html=c.out -o coverage.html
 
 add-license:
 	${LICENCE_SCRIPT} .
