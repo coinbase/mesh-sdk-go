@@ -16,7 +16,8 @@
 
 package gen
 
-// BlockTransactionRequest struct for BlockTransactionRequest
+// BlockTransactionRequest A BlockTransactionRequest is used to fetch a Transaction included in a
+// block that is not returned in a BlockResponse.
 type BlockTransactionRequest struct {
 	NetworkIdentifier     *NetworkIdentifier     `json:"network_identifier"`
 	BlockIdentifier       *BlockIdentifier       `json:"block_identifier"`

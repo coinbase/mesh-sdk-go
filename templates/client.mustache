@@ -99,60 +99,12 @@ func selectHeaderAccept(accepts []string) string {
 // contains is a case insenstive match, finding needle in a haystack
 func contains(haystack []string, needle string) bool {
 	for _, a := range haystack {
-		if strings.ToLower(a) == strings.ToLower(needle) {
+		if strings.EqualFold(a, needle) {
 			return true
 		}
 	}
 	return false
 }
-
-// Verify optional parameters are of the correct type.
-func typeCheckParameter(obj interface{}, expected string, name string) error {
-	// Make sure there is an object.
-	if obj == nil {
-		return nil
-	}
-
-	// Check the type is as expected.
-	if reflect.TypeOf(obj).String() != expected {
-		return fmt.Errorf("expected %s to be of type %s but received %s", name, expected, reflect.TypeOf(obj).String())
-	}
-	return nil
-}
-
-// parameterToString convert interface{} parameters to string, using a delimiter if format is provided.
-func parameterToString(obj interface{}, collectionFormat string) string {
-	var delimiter string
-
-	switch collectionFormat {
-	case "pipes":
-		delimiter = "|"
-	case "ssv":
-		delimiter = " "
-	case "tsv":
-		delimiter = "\t"
-	case "csv":
-		delimiter = ","
-	}
-
-	if reflect.TypeOf(obj).Kind() == reflect.Slice {
-		return strings.Trim(strings.Replace(fmt.Sprint(obj), " ", delimiter, -1), "[]")
-	} else if t, ok := obj.(time.Time); ok {
-		return t.Format(time.RFC3339)
-	}
-
-	return fmt.Sprintf("%v", obj)
-}
-
-// helper for converting interface{} parameters to json strings
-func parameterToJson(obj interface{}) (string, error) {
-	jsonBuf, err := json.Marshal(obj)
-	if err != nil {
-		return "", err
-	}
-	return string(jsonBuf), err
-}
-
 
 // callAPI do the request.
 func (c *APIClient) callAPI(ctx context.Context, request *http.Request) (*http.Response, error) {
@@ -194,11 +146,10 @@ func (c *APIClient) GetConfig() *Configuration {
 // prepareRequest build the request
 func (c *APIClient) prepareRequest(
 	ctx context.Context,
-	path string, method string,
+	path string,
 	postBody interface{},
 	headerParams map[string]string,
 ) (localVarRequest *http.Request, err error) {
-
 	var body *bytes.Buffer
 
 	// Detect postBody type and post.
@@ -232,7 +183,7 @@ func (c *APIClient) prepareRequest(
 	}
 
 	// Generate a new request
-	localVarRequest, err = http.NewRequest(method, url.String(), body)
+	localVarRequest, err = http.NewRequest(http.MethodPost, url.String(), body)
 	if err != nil {
 		return nil, err
 	}
@@ -276,11 +227,6 @@ func (c *APIClient) decode(v interface{}, b []byte, contentType string) (err err
 		return nil
 	}
 	return errors.New("undefined response type")
-}
-
-// Prevent trying to import "fmt"
-func reportError(format string, a ...interface{}) error {
-	return fmt.Errorf(format, a...)
 }
 
 // Set request body from an interface{}

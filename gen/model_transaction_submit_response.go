@@ -16,10 +16,9 @@
 
 package gen
 
-// TransactionSubmitResponse struct for TransactionSubmitResponse
+// TransactionSubmitResponse A TransactionSubmitResponse contains the transaction_identifier of a
+// submitted transaction that was accepted into the mempool.
 type TransactionSubmitResponse struct {
-	TransactionIdentifier *TransactionIdentifier `json:"transaction_identifier"`
-	// Network-specific transaction submission status
-	Status   string                  `json:"status"`
-	Metadata *map[string]interface{} `json:"metadata,omitempty"`
+	TransactionIdentifier *TransactionIdentifier  `json:"transaction_identifier"`
+	Metadata              *map[string]interface{} `json:"metadata,omitempty"`
 }

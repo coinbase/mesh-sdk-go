@@ -1,6 +1,10 @@
 # rosetta-sdk-go
 
-[![Coinbase](https://circleci.com/gh/coinbase/rosetta-sdk-go/tree/master.svg?style=svg)](https://circleci.com/gh/coinbase/rosetta-sdk-go/tree/master)
+[![Coinbase](https://circleci.com/gh/coinbase/rosetta-sdk-go/tree/master.svg?style=shield)](https://circleci.com/gh/coinbase/rosetta-sdk-go/tree/master)
+[![Coverage Status](https://coveralls.io/repos/github/coinbase/rosetta-sdk-go/badge.svg)](https://coveralls.io/github/coinbase/rosetta-sdk-go)
+[![Go Report Card](https://goreportcard.com/badge/github.com/coinbase/rosetta-sdk-go)](https://goreportcard.com/report/github.com/coinbase/rosetta-sdk-go)
+[![License](https://img.shields.io/github/license/coinbase/rosetta-sdk-go.svg)](https://github.com/coinbase/rosetta-sdk-go/blob/master/LICENSE.txt)
+[![GoDoc](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=shield)](https://pkg.go.dev/github.com/coinbase/rosetta-sdk-go@v0.0.3?tab=overview)
 
 ## What is Rosetta?
 Rosetta is a new project from Coinbase to standardize the process
@@ -16,7 +20,6 @@ and network-specific work.
 
 ## Versioning
 - Rosetta version: {{appVersion}}
-- Package version: {{packageVersion}}
 
 ## Installation
 
@@ -39,6 +42,7 @@ _It is possible, but not recommended, to bypass this assertion using the
 * `make gen` to generate models and helpers
 * `make test` to run tests
 * `make lint` to lint the source code (included generated code)
+* `make release` to check if code passes all tests run by CircleCI
 
 ## License
 This project is available open source under the terms of the [Apache 2.0 License](https://opensource.org/licenses/Apache-2.0).

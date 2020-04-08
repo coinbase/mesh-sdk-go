@@ -1,21 +1,35 @@
-.PHONY: deps gen lint test add-license check-license circleci-local shellcheck salus
+.PHONY: deps gen lint format check-format test test-coverage add-license \
+	check-license shorten-lines shellcheck salus release
 LICENCE_SCRIPT=addlicense -c "Coinbase, Inc." -l "apache" -v
+TEST_SCRIPT=go test -v ./asserter/... ./fetcher/... ./gen/...
 
 deps:
 	go get ./...
 	go get github.com/stretchr/testify
 	go get github.com/davecgh/go-spew
-	go get golang.org/x/lint/golint
 	go get github.com/google/addlicense
+	go get github.com/segmentio/golines
+	go get github.com/mattn/goveralls
 
 gen:
 	./codegen.sh
 
 lint:
-	golint -set_exit_status ./asserter/... ./fetcher/... ./gen/...
+	golangci-lint run -v \
+		-E golint,misspell,gocyclo,gocritic,whitespace,goconst,gocognit,bodyclose,unconvert,lll,unparam,gomnd
+
+format:
+	gofmt -s -w -l .
+
+check-format:
+	! gofmt -s -l . | read
 
 test:
-	go test -v ./asserter ./fetcher
+	${TEST_SCRIPT}
+
+test-cover:	
+	${TEST_SCRIPT} -coverprofile=c.out -covermode=count
+	goveralls -coverprofile=c.out -repotoken ${COVERALLS_TOKEN}
 
 add-license:
 	${LICENCE_SCRIPT} .
@@ -23,11 +37,13 @@ add-license:
 check-license:
 	${LICENCE_SCRIPT} -check .
 
-circleci-local:
-	circleci local execute
+shorten-lines:
+	golines -w --shorten-comments asserter fetcher gen 
 
 shellcheck:
 	shellcheck codegen.sh
 
 salus:
 	docker run --rm -t -v ${PWD}:/home/repo coinbase/salus
+
+release: shellcheck gen add-license shorten-lines format test lint salus

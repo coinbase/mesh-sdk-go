@@ -30,17 +30,13 @@ var (
 // MempoolAPIService MempoolAPI service
 type MempoolAPIService service
 
-/*
-Mempool Get All Mempool Transactions
-Get all Transaction Identifiers in the mempool
- * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- * @param mempoolRequest
-@return MempoolResponse
-*/
-func (a *MempoolAPIService) Mempool(ctx _context.Context, mempoolRequest MempoolRequest) (*MempoolResponse, *_nethttp.Response, error) {
+// Mempool Get all Transaction Identifiers in the mempool
+func (a *MempoolAPIService) Mempool(
+	ctx _context.Context,
+	mempoolRequest MempoolRequest,
+) (*MempoolResponse, *_nethttp.Response, error) {
 	var (
-		localVarHTTPMethod = _nethttp.MethodPost
-		localVarPostBody   interface{}
+		localVarPostBody interface{}
 	)
 
 	// create path and map variables
@@ -67,7 +63,7 @@ func (a *MempoolAPIService) Mempool(ctx _context.Context, mempoolRequest Mempool
 	// body params
 	localVarPostBody = &mempoolRequest
 
-	r, err := a.client.prepareRequest(ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams)
+	r, err := a.client.prepareRequest(ctx, localVarPath, localVarPostBody, localVarHeaderParams)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -83,7 +79,7 @@ func (a *MempoolAPIService) Mempool(ctx _context.Context, mempoolRequest Mempool
 		return nil, localVarHTTPResponse, err
 	}
 
-	if localVarHTTPResponse.StatusCode != 200 {
+	if localVarHTTPResponse.StatusCode != _nethttp.StatusOK {
 		newErr := GenericOpenAPIError{
 			body:  localVarBody,
 			error: localVarHTTPResponse.Status,
@@ -104,17 +100,19 @@ func (a *MempoolAPIService) Mempool(ctx _context.Context, mempoolRequest Mempool
 	return &v, localVarHTTPResponse, nil
 }
 
-/*
-MempoolTransaction Get a Mempool Transaction
-Get a transaction in the mempool by its Transaction Identifier.  This is a separate request than fetching a block transaction (/block/transaction) because some blockchain nodes need to know that a transaction query is for something in the mempool instead of a transaction in a block.  Transactions may not be fully parsable until they are in a block (ex: may not be possible to determine the fee to pay before a transaction is executed). On this endpoint, it is ok that returned transactions are only estimates of what may actually be included in a block.
- * @param ctx _context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
- * @param mempoolTransactionRequest
-@return MempoolTransactionResponse
-*/
-func (a *MempoolAPIService) MempoolTransaction(ctx _context.Context, mempoolTransactionRequest MempoolTransactionRequest) (*MempoolTransactionResponse, *_nethttp.Response, error) {
+// MempoolTransaction Get a transaction in the mempool by its Transaction Identifier. This is a
+// separate request than fetching a block transaction (/block/transaction) because some blockchain
+// nodes need to know that a transaction query is for something in the mempool instead of a
+// transaction in a block.  Transactions may not be fully parsable until they are in a block (ex:
+// may not be possible to determine the fee to pay before a transaction is executed). On this
+// endpoint, it is ok that returned transactions are only estimates of what may actually be included
+// in a block.
+func (a *MempoolAPIService) MempoolTransaction(
+	ctx _context.Context,
+	mempoolTransactionRequest MempoolTransactionRequest,
+) (*MempoolTransactionResponse, *_nethttp.Response, error) {
 	var (
-		localVarHTTPMethod = _nethttp.MethodPost
-		localVarPostBody   interface{}
+		localVarPostBody interface{}
 	)
 
 	// create path and map variables
@@ -141,7 +139,7 @@ func (a *MempoolAPIService) MempoolTransaction(ctx _context.Context, mempoolTran
 	// body params
 	localVarPostBody = &mempoolTransactionRequest
 
-	r, err := a.client.prepareRequest(ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams)
+	r, err := a.client.prepareRequest(ctx, localVarPath, localVarPostBody, localVarHeaderParams)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -157,7 +155,7 @@ func (a *MempoolAPIService) MempoolTransaction(ctx _context.Context, mempoolTran
 		return nil, localVarHTTPResponse, err
 	}
 
-	if localVarHTTPResponse.StatusCode != 200 {
+	if localVarHTTPResponse.StatusCode != _nethttp.StatusOK {
 		newErr := GenericOpenAPIError{
 			body:  localVarBody,
 			error: localVarHTTPResponse.Status,

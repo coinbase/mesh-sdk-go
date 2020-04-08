@@ -16,8 +16,10 @@
 
 package gen
 
-// SubNetworkIdentifier In blockchains with sharded state, the SubNetworkIdentifier is required to query some object on a specific shard. This identifier is optional for all non-sharded blockchains.
+// SubNetworkIdentifier In blockchains with sharded state, the SubNetworkIdentifier is required to
+// query some object on a specific shard. This identifier is optional for all non-sharded
+// blockchains.
 type SubNetworkIdentifier struct {
-	SubNetwork string                  `json:"sub_network"`
-	Metadata   *map[string]interface{} `json:"metadata,omitempty"`
+	Network  string                  `json:"network"`
+	Metadata *map[string]interface{} `json:"metadata,omitempty"`
 }
