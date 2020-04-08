@@ -70,9 +70,6 @@ jobs:
     steps:
       - *fast-checkout
       - run: make test-cover
-      - run: mv coverage.html /tmp/artifacts
-      - store_artifacts:
-          path: /tmp/artifacts
   salus:
     machine: true
     steps:
@@ -100,3 +97,7 @@ workflows:
           requires:
             - setup
       - salus
+
+notify:
+  webhooks:
+    - url: https://coveralls.io/webhook?repo_token=$COVERALLS_TOKEN

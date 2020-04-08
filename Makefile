@@ -9,6 +9,7 @@ deps:
 	go get github.com/davecgh/go-spew
 	go get github.com/google/addlicense
 	go get github.com/segmentio/golines
+	go get github.com/mattn/goveralls
 
 gen:
 	./codegen.sh
@@ -27,8 +28,8 @@ test:
 	${TEST_SCRIPT}
 
 test-cover:	
-	${TEST_SCRIPT} -coverprofile=c.out -covermode=atomic
-	go tool cover -html=c.out -o coverage.html
+	${TEST_SCRIPT} -coverprofile=c.out -covermode=count
+	goveralls -coverprofile=c.out -repotoken ${COVERALLS_TOKEN}
 
 add-license:
 	${LICENCE_SCRIPT} .
