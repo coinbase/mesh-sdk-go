@@ -22,6 +22,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/coinbase/rosetta-sdk-go/asserter"
 	"github.com/coinbase/rosetta-sdk-go/models"
 )
 
@@ -57,11 +58,22 @@ func (c *MempoolAPIController) Routes() Routes {
 // Mempool - Get All Mempool Transactions
 func (c *MempoolAPIController) Mempool(w http.ResponseWriter, r *http.Request) {
 	mempoolRequest := &models.MempoolRequest{}
-	// TODO: Assert required params are present
 	if err := json.NewDecoder(r.Body).Decode(&mempoolRequest); err != nil {
 		err = EncodeJSONResponse(&models.Error{
 			Message: err.Error(),
-		}, http.StatusBadRequest, w)
+		}, http.StatusInternalServerError, w)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		return
+	}
+
+	// Assert that MempoolRequest is correct
+	if err := asserter.MempoolRequest(mempoolRequest); err != nil {
+		err = EncodeJSONResponse(&models.Error{
+			Message: err.Error(),
+		}, http.StatusInternalServerError, w)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -87,11 +99,22 @@ func (c *MempoolAPIController) Mempool(w http.ResponseWriter, r *http.Request) {
 // MempoolTransaction - Get a Mempool Transaction
 func (c *MempoolAPIController) MempoolTransaction(w http.ResponseWriter, r *http.Request) {
 	mempoolTransactionRequest := &models.MempoolTransactionRequest{}
-	// TODO: Assert required params are present
 	if err := json.NewDecoder(r.Body).Decode(&mempoolTransactionRequest); err != nil {
 		err = EncodeJSONResponse(&models.Error{
 			Message: err.Error(),
-		}, http.StatusBadRequest, w)
+		}, http.StatusInternalServerError, w)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		return
+	}
+
+	// Assert that MempoolTransactionRequest is correct
+	if err := asserter.MempoolTransactionRequest(mempoolTransactionRequest); err != nil {
+		err = EncodeJSONResponse(&models.Error{
+			Message: err.Error(),
+		}, http.StatusInternalServerError, w)
 		if err != nil {
 			log.Fatal(err)
 		}

@@ -22,6 +22,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/coinbase/rosetta-sdk-go/asserter"
 	"github.com/coinbase/rosetta-sdk-go/models"
 )
 
@@ -57,11 +58,22 @@ func (c *BlockAPIController) Routes() Routes {
 // Block - Get a Block
 func (c *BlockAPIController) Block(w http.ResponseWriter, r *http.Request) {
 	blockRequest := &models.BlockRequest{}
-	// TODO: Assert required params are present
 	if err := json.NewDecoder(r.Body).Decode(&blockRequest); err != nil {
 		err = EncodeJSONResponse(&models.Error{
 			Message: err.Error(),
-		}, http.StatusBadRequest, w)
+		}, http.StatusInternalServerError, w)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		return
+	}
+
+	// Assert that BlockRequest is correct
+	if err := asserter.BlockRequest(blockRequest); err != nil {
+		err = EncodeJSONResponse(&models.Error{
+			Message: err.Error(),
+		}, http.StatusInternalServerError, w)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -87,11 +99,22 @@ func (c *BlockAPIController) Block(w http.ResponseWriter, r *http.Request) {
 // BlockTransaction - Get a Block Transaction
 func (c *BlockAPIController) BlockTransaction(w http.ResponseWriter, r *http.Request) {
 	blockTransactionRequest := &models.BlockTransactionRequest{}
-	// TODO: Assert required params are present
 	if err := json.NewDecoder(r.Body).Decode(&blockTransactionRequest); err != nil {
 		err = EncodeJSONResponse(&models.Error{
 			Message: err.Error(),
-		}, http.StatusBadRequest, w)
+		}, http.StatusInternalServerError, w)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		return
+	}
+
+	// Assert that BlockTransactionRequest is correct
+	if err := asserter.BlockTransactionRequest(blockTransactionRequest); err != nil {
+		err = EncodeJSONResponse(&models.Error{
+			Message: err.Error(),
+		}, http.StatusInternalServerError, w)
 		if err != nil {
 			log.Fatal(err)
 		}
