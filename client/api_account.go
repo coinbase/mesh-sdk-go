@@ -18,6 +18,7 @@ package client
 
 import (
 	_context "context"
+	"fmt"
 	_ioutil "io/ioutil"
 	_nethttp "net/http"
 
@@ -43,7 +44,7 @@ type AccountAPIService service
 func (a *AccountAPIService) AccountBalance(
 	ctx _context.Context,
 	accountBalanceRequest models.AccountBalanceRequest,
-) (*models.AccountBalanceResponse, *_nethttp.Response, error) {
+) (*models.AccountBalanceResponse, *models.Error, error) {
 	var (
 		localVarPostBody interface{}
 	)
@@ -79,32 +80,30 @@ func (a *AccountAPIService) AccountBalance(
 
 	localVarHTTPResponse, err := a.client.callAPI(ctx, r)
 	if err != nil || localVarHTTPResponse == nil {
-		return nil, localVarHTTPResponse, err
+		return nil, nil, err
 	}
 
 	localVarBody, err := _ioutil.ReadAll(localVarHTTPResponse.Body)
 	defer localVarHTTPResponse.Body.Close()
 	if err != nil {
-		return nil, localVarHTTPResponse, err
+		return nil, nil, err
 	}
 
 	if localVarHTTPResponse.StatusCode != _nethttp.StatusOK {
-		newErr := GenericOpenAPIError{
-			body:  localVarBody,
-			error: localVarHTTPResponse.Status,
+		var v models.Error
+		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+		if err != nil {
+			return nil, nil, err
 		}
-		return nil, localVarHTTPResponse, newErr
+
+		return nil, &v, fmt.Errorf("%+v", v)
 	}
 
 	var v models.AccountBalanceResponse
 	err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 	if err != nil {
-		newErr := GenericOpenAPIError{
-			body:  localVarBody,
-			error: err.Error(),
-		}
-		return nil, localVarHTTPResponse, newErr
+		return nil, nil, err
 	}
 
-	return &v, localVarHTTPResponse, nil
+	return &v, nil, nil
 }
