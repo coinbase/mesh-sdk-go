@@ -22,18 +22,18 @@ import (
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
 
-	rosetta "github.com/coinbase/rosetta-sdk-go/gen"
+	"github.com/coinbase/rosetta-sdk-go/models"
 )
 
 // UnsafeAccountBalance returns the unvalidated response
 // from the AccountBalance method.
 func (f *Fetcher) UnsafeAccountBalance(
 	ctx context.Context,
-	network *rosetta.NetworkIdentifier,
-	account *rosetta.AccountIdentifier,
-) (*rosetta.BlockIdentifier, []*rosetta.Balance, error) {
+	network *models.NetworkIdentifier,
+	account *models.AccountIdentifier,
+) (*models.BlockIdentifier, []*models.Balance, error) {
 	balance, _, err := f.rosettaClient.AccountAPI.AccountBalance(ctx,
-		rosetta.AccountBalanceRequest{
+		models.AccountBalanceRequest{
 			NetworkIdentifier: network,
 			AccountIdentifier: account,
 		},
@@ -49,9 +49,9 @@ func (f *Fetcher) UnsafeAccountBalance(
 // from the AccountBalance method.
 func (f *Fetcher) AccountBalance(
 	ctx context.Context,
-	network *rosetta.NetworkIdentifier,
-	account *rosetta.AccountIdentifier,
-) (*rosetta.BlockIdentifier, []*rosetta.Balance, error) {
+	network *models.NetworkIdentifier,
+	account *models.AccountIdentifier,
+) (*models.BlockIdentifier, []*models.Balance, error) {
 	block, balances, err := f.UnsafeAccountBalance(ctx, network, account)
 	if err != nil {
 		return nil, nil, err
@@ -68,11 +68,11 @@ func (f *Fetcher) AccountBalance(
 // with a specified number of retries and max elapsed time.
 func (f *Fetcher) AccountBalanceRetry(
 	ctx context.Context,
-	network *rosetta.NetworkIdentifier,
-	account *rosetta.AccountIdentifier,
+	network *models.NetworkIdentifier,
+	account *models.AccountIdentifier,
 	maxElapsedTime time.Duration,
 	maxRetries uint64,
-) (*rosetta.BlockIdentifier, []*rosetta.Balance, error) {
+) (*models.BlockIdentifier, []*models.Balance, error) {
 	backoffRetries := backoffRetries(maxElapsedTime, maxRetries)
 
 	for ctx.Err() == nil {

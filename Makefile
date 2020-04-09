@@ -1,7 +1,7 @@
 .PHONY: deps gen lint format check-format test test-coverage add-license \
 	check-license shorten-lines shellcheck salus release
 LICENCE_SCRIPT=addlicense -c "Coinbase, Inc." -l "apache" -v
-TEST_SCRIPT=go test -v ./asserter/... ./fetcher/... ./gen/...
+TEST_SCRIPT=go test -v ./asserter/... ./fetcher/... ./models/... ./client/...
 
 deps:
 	go get ./...
@@ -38,7 +38,7 @@ check-license:
 	${LICENCE_SCRIPT} -check .
 
 shorten-lines:
-	golines -w --shorten-comments asserter fetcher gen 
+	golines -w --shorten-comments asserter fetcher models client 
 
 shellcheck:
 	shellcheck codegen.sh

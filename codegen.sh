@@ -30,14 +30,15 @@ case "${OS}" in
 esac
 
 # Remove existing generated code
-rm -rf gen;
+rm -rf models;
+rm -rf client;
 
-# Generate new code
+# Generate client + models code
 docker run --user "$(id -u):$(id -g)" --rm -v "${PWD}":/local openapitools/openapi-generator-cli generate \
   -i /local/spec.json \
   -g go \
-  -t /local/templates \
-  --additional-properties packageName=gen \
+  -t /local/templates/client \
+  --additional-properties packageName=models\
   -o /local/gen;
 
 # Remove unnecessary files
@@ -77,6 +78,17 @@ sed "${SED_IFLAG[@]}" 's/Cannonical/Canonical/g' gen/*;
 
 # Format generated code
 gofmt -w gen/;
+
+# Move model files to models/
+mkdir models;
+mv gen/model_*.go models/;
+for file in models/model_*.go; do
+    mv "$file" "${file/model_/}"
+done
+
+# Change client files to correct package
+sed "${SED_IFLAG[@]}" 's/package models/package client/g' gen/*;
+mv gen client;
 
 # Ensure license correct
 make add-license;

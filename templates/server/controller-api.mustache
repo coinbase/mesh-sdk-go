@@ -1,0 +1,54 @@
+{{>partial_header}}
+package {{packageName}}
+
+import (
+	"encoding/json"
+	"net/http"
+	"strings"
+)
+
+// A {{classname}}Controller binds http requests to an api service and writes the service results to the http response
+type {{classname}}Controller struct {
+	service {{classname}}Servicer
+}
+
+// New{{classname}}Controller creates a default api controller
+func New{{classname}}Controller(s {{classname}}Servicer) Router {
+	return &{{classname}}Controller{ service: s }
+}
+
+// Routes returns all of the api route for the {{classname}}Controller
+func (c *{{classname}}Controller) Routes() Routes {
+	return Routes{ {{#operations}}{{#operation}}
+		{
+			"{{operationId}}",
+			strings.ToUpper("{{httpMethod}}"),
+			"{{{basePathWithoutHost}}}{{{path}}}",
+			c.{{operationId}},
+		},{{/operation}}{{/operations}}
+	}
+}{{#operations}}{{#operation}}
+
+// {{nickname}} - {{{summary}}}
+func (c *{{classname}}Controller) {{nickname}}(w http.ResponseWriter, r *http.Request) { {{#allParams}}{{#isHeaderParam}}
+	{{paramName}} := r.Header.Get("{{paramName}}"){{/isHeaderParam}}{{#isBodyParam}}
+	{{paramName}} := &{{dataType}}{}
+  // TODO: Assert required params are present
+	if err := json.NewDecoder(r.Body).Decode(&{{paramName}}); err != nil {
+    EncodeJSONResponse(&Error{
+      Message: err.Error(),
+    }, http.StatusBadRequest, w)
+		return
+	}
+	{{/isBodyParam}}{{/allParams}}
+  // TODO: return status code from service
+	result, err := c.service.{{nickname}}({{#allParams}}{{#isBodyParam}}*{{/isBodyParam}}{{paramName}}{{#hasMore}}, {{/hasMore}}{{/allParams}})
+	if err != nil {
+    EncodeJSONResponse(&Error{
+      Message: err.Error(),
+    }, http.StatusInternalServerError, w)
+		return
+	}
+	
+	EncodeJSONResponse(result, http.StatusOK, w)
+}{{/operation}}{{/operations}}

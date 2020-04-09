@@ -21,7 +21,7 @@ import (
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
 
-	rosetta "github.com/coinbase/rosetta-sdk-go/gen"
+	"github.com/coinbase/rosetta-sdk-go/models"
 )
 
 // UnsafeNetworkStatus returns the unvalidated response
@@ -29,10 +29,10 @@ import (
 func (f *Fetcher) UnsafeNetworkStatus(
 	ctx context.Context,
 	metadata *map[string]interface{},
-) (*rosetta.NetworkStatusResponse, error) {
+) (*models.NetworkStatusResponse, error) {
 	networkStatus, _, err := f.rosettaClient.NetworkAPI.NetworkStatus(
 		ctx,
-		rosetta.NetworkStatusRequest{
+		models.NetworkStatusRequest{
 			Metadata: metadata,
 		},
 	)
@@ -48,7 +48,7 @@ func (f *Fetcher) UnsafeNetworkStatus(
 func (f *Fetcher) NetworkStatus(
 	ctx context.Context,
 	metadata *map[string]interface{},
-) (*rosetta.NetworkStatusResponse, error) {
+) (*models.NetworkStatusResponse, error) {
 	networkStatus, err := f.UnsafeNetworkStatus(ctx, metadata)
 	if err != nil {
 		return nil, err
@@ -68,7 +68,7 @@ func (f *Fetcher) NetworkStatusRetry(
 	metadata *map[string]interface{},
 	maxElapsedTime time.Duration,
 	maxRetries uint64,
-) (*rosetta.NetworkStatusResponse, error) {
+) (*models.NetworkStatusResponse, error) {
 	backoffRetries := backoffRetries(maxElapsedTime, maxRetries)
 
 	for ctx.Err() == nil {

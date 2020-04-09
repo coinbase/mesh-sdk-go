@@ -18,17 +18,17 @@ import (
 	"fmt"
 	"reflect"
 
-	rosetta "github.com/coinbase/rosetta-sdk-go/gen"
+	"github.com/coinbase/rosetta-sdk-go/models"
 )
 
 // containsAccountIdentifier returns a boolean indicating if a
-// *rosetta.AccountIdentifier is contained within a slice of
-// *rosetta.AccountIdentifier. The check for equality takes
-// into account everything within the rosetta.AccountIdentifier
+// *models.AccountIdentifier is contained within a slice of
+// *models.AccountIdentifier. The check for equality takes
+// into account everything within the models.AccountIdentifier
 // struct (including the SubAccountIdentifier).
 func containsAccountIdentifier(
-	identifiers []*rosetta.AccountIdentifier,
-	identifier *rosetta.AccountIdentifier,
+	identifiers []*models.AccountIdentifier,
+	identifier *models.AccountIdentifier,
 ) bool {
 	for _, ident := range identifiers {
 		if reflect.DeepEqual(ident, identifier) {
@@ -40,11 +40,11 @@ func containsAccountIdentifier(
 }
 
 // containsCurrency returns a boolean indicating if a
-// *rosetta.Currency is contained within a slice of
-// *rosetta.Currency. The check for equality takes
-// into account everything within the rosetta.Currency
+// *models.Currency is contained within a slice of
+// *models.Currency. The check for equality takes
+// into account everything within the models.Currency
 // struct (including currency.Metadata).
-func containsCurrency(currencies []*rosetta.Currency, currency *rosetta.Currency) bool {
+func containsCurrency(currencies []*models.Currency, currency *models.Currency) bool {
 	for _, curr := range currencies {
 		if reflect.DeepEqual(curr, currency) {
 			return true
@@ -55,12 +55,12 @@ func containsCurrency(currencies []*rosetta.Currency, currency *rosetta.Currency
 }
 
 // assertBalanceAmounts returns an error if a slice
-// of rosetta.Amount returned as an rosetta.AccountIdentifier's
+// of models.Amount returned as an models.AccountIdentifier's
 // balance is invalid. It is considered invalid if the same
 // currency is returned multiple times (these shoould be
-// consolidated) or if a rosetta.Amount is considered invalid.
-func assertBalanceAmounts(amounts []*rosetta.Amount) error {
-	currencies := make([]*rosetta.Currency, 0)
+// consolidated) or if a models.Amount is considered invalid.
+func assertBalanceAmounts(amounts []*models.Amount) error {
+	currencies := make([]*models.Currency, 0)
 	for _, amount := range amounts {
 		// Ensure a currency is used at most once in balance.Amounts
 		if containsCurrency(currencies, amount.Currency) {
@@ -77,19 +77,19 @@ func assertBalanceAmounts(amounts []*rosetta.Amount) error {
 }
 
 // AccountBalance returns an error if the provided
-// rosetta.BlockIdentifier is invalid, if the same
-// rosetta.AccountIdentifier appears in multiple
-// rosetta.Balance structs (should be consolidated),
-// or if a rosetta.Balance is considered invalid.
+// models.BlockIdentifier is invalid, if the same
+// models.AccountIdentifier appears in multiple
+// models.Balance structs (should be consolidated),
+// or if a models.Balance is considered invalid.
 func AccountBalance(
-	block *rosetta.BlockIdentifier,
-	balances []*rosetta.Balance,
+	block *models.BlockIdentifier,
+	balances []*models.Balance,
 ) error {
 	if err := BlockIdentifier(block); err != nil {
 		return err
 	}
 
-	accounts := make([]*rosetta.AccountIdentifier, 0)
+	accounts := make([]*models.AccountIdentifier, 0)
 	for _, balance := range balances {
 		if err := AccountIdentifier(balance.AccountIdentifier); err != nil {
 			return err
