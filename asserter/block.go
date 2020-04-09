@@ -161,6 +161,24 @@ func BlockIdentifier(blockIdentifier *models.BlockIdentifier) error {
 	return nil
 }
 
+// PartialBlockIdentifier ensures a models.PartialBlockIdentifier
+// is well-formatted.
+func PartialBlockIdentifier(blockIdentifier *models.PartialBlockIdentifier) error {
+	if blockIdentifier == nil {
+		return errors.New("PartialBlockIdentifier is nil")
+	}
+
+	if blockIdentifier.Hash != nil && *blockIdentifier.Hash == "" {
+		return nil
+	}
+
+	if blockIdentifier.Index != nil && *blockIdentifier.Index > 0 {
+		return nil
+	}
+
+	return errors.New("neither PartialBlockIdentifier.Hash nor PartialBlockIdentifier.Index is set")
+}
+
 // TransactionIdentifier returns an error if a
 // models.TransactionIdentifier has an invalid hash.
 func TransactionIdentifier(
