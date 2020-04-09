@@ -37,14 +37,14 @@ func TestNetworkIdentifier(t *testing.T) {
 		},
 		"nil network": {
 			network: nil,
-			err:     errors.New("NetworkIdentifier.Blockchain is missing"),
+			err:     errors.New("NetworkIdentifier is nil"),
 		},
 		"invalid blockchain": {
 			network: &models.NetworkIdentifier{
 				Blockchain: "",
 				Network:    "mainnet",
 			},
-			err: errors.New("NetworkIdentifier.Blockchain is missing"),
+			err: errors.New("NetworkIdentifier is nil"),
 		},
 		"invalid network": {
 			network: &models.NetworkIdentifier{

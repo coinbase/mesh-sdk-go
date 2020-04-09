@@ -24,6 +24,46 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestBlockIdentifier(t *testing.T) {
+	var tests = map[string]struct {
+		identifier *models.BlockIdentifier
+		err        error
+	}{
+		"valid identifier": {
+			identifier: &models.BlockIdentifier{
+				Index: int64(1),
+				Hash:  "block 1",
+			},
+			err: nil,
+		},
+		"nil identifier": {
+			identifier: nil,
+			err:        errors.New("BlockIdentifier is nil"),
+		},
+		"invalid index": {
+			identifier: &models.BlockIdentifier{
+				Index: int64(-1),
+				Hash:  "block 1",
+			},
+			err: errors.New("BlockIdentifier.Index is negative"),
+		},
+		"invalid hash": {
+			identifier: &models.BlockIdentifier{
+				Index: int64(1),
+				Hash:  "",
+			},
+			err: errors.New("BlockIdentifier.Hash is missing"),
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			err := BlockIdentifier(test.identifier)
+			assert.Equal(t, test.err, err)
+		})
+	}
+}
+
 func TestAmount(t *testing.T) {
 	var tests = map[string]struct {
 		amount *models.Amount
@@ -425,7 +465,7 @@ func TestBlock(t *testing.T) {
 		},
 		"nil block": {
 			block: nil,
-			err:   errors.New("block is nil"),
+			err:   errors.New("Block is nil"),
 		},
 		"nil block hash": {
 			block: &models.Block{
@@ -434,7 +474,7 @@ func TestBlock(t *testing.T) {
 				Timestamp:             1,
 				Transactions:          []*models.Transaction{validTransaction},
 			},
-			err: errors.New("BlockIdentifier.Hash is missing"),
+			err: errors.New("BlockIdentifier is nil"),
 		},
 		"invalid block hash": {
 			block: &models.Block{
@@ -464,7 +504,7 @@ func TestBlock(t *testing.T) {
 				Timestamp:    1,
 				Transactions: []*models.Transaction{validTransaction},
 			},
-			err: errors.New("Block.BlockIdentifier.Index <= Block.ParentBlockIdentifier.Index"),
+			err: errors.New("BlockIdentifier.Index <= ParentBlockIdentifier.Index"),
 		},
 		"invalid parent block hash": {
 			block: &models.Block{
@@ -476,7 +516,7 @@ func TestBlock(t *testing.T) {
 				Timestamp:    1,
 				Transactions: []*models.Transaction{validTransaction},
 			},
-			err: errors.New("Block.BlockIdentifier.Hash == Block.ParentBlockIdentifier.Hash"),
+			err: errors.New("BlockIdentifier.Hash == ParentBlockIdentifier.Hash"),
 		},
 		"invalid block timestamp": {
 			block: &models.Block{
@@ -495,7 +535,7 @@ func TestBlock(t *testing.T) {
 					{},
 				},
 			},
-			err: errors.New("Transaction.TransactionIdentifier.Hash is missing"),
+			err: errors.New("TransactionIdentifier is nil"),
 		},
 	}
 

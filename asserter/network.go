@@ -37,8 +37,12 @@ func SubNetworkIdentifier(subNetworkIdentifier *models.SubNetworkIdentifier) err
 // NetworkIdentifier ensures a models.NetworkIdentifier has
 // a valid blockchain and network.
 func NetworkIdentifier(network *models.NetworkIdentifier) error {
-	if network == nil || network.Blockchain == "" {
-		return errors.New("NetworkIdentifier.Blockchain is missing")
+	if network == nil {
+		return errors.New("NetworkIdentifier is nil")
+	}
+
+	if network.Blockchain == "" {
+		return errors.New("NetworkIdentifier is nil")
 	}
 
 	if network.Network == "" {
