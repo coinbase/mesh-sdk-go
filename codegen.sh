@@ -95,3 +95,22 @@ make add-license;
 
 # Ensure no long lines
 make shorten-lines;
+
+# Add server code
+docker run --user "$(id -u):$(id -g)" --rm -v "${PWD}":/local openapitools/openapi-generator-cli generate \
+  -i /local/spec.json \
+  -g go-server \
+  -t /local/templates/server \
+  --additional-properties packageName=server\
+  -o /local/server_gen;
+
+# Remove unnecessary files
+rm -rf server_gen/api;
+rm -rf server_gen/.openapi-generator;
+rm server_gen/.openapi-generator-ignore;
+rm server_gen/go.mod;
+rm server_gen/main.go;
+rm server_gen/README.md;
+rm server_gen/Dockerfile;
+mv server_gen/go/* server_gen/.;
+rm -rf server_gen/go;
