@@ -18,6 +18,7 @@ package client
 
 import (
 	_context "context"
+	"fmt"
 	_ioutil "io/ioutil"
 	_nethttp "net/http"
 
@@ -36,7 +37,7 @@ type MempoolAPIService service
 func (a *MempoolAPIService) Mempool(
 	ctx _context.Context,
 	mempoolRequest models.MempoolRequest,
-) (*models.MempoolResponse, *_nethttp.Response, error) {
+) (*models.MempoolResponse, *models.Error, error) {
 	var (
 		localVarPostBody interface{}
 	)
@@ -72,34 +73,32 @@ func (a *MempoolAPIService) Mempool(
 
 	localVarHTTPResponse, err := a.client.callAPI(ctx, r)
 	if err != nil || localVarHTTPResponse == nil {
-		return nil, localVarHTTPResponse, err
+		return nil, nil, err
 	}
 
 	localVarBody, err := _ioutil.ReadAll(localVarHTTPResponse.Body)
 	defer localVarHTTPResponse.Body.Close()
 	if err != nil {
-		return nil, localVarHTTPResponse, err
+		return nil, nil, err
 	}
 
 	if localVarHTTPResponse.StatusCode != _nethttp.StatusOK {
-		newErr := GenericOpenAPIError{
-			body:  localVarBody,
-			error: localVarHTTPResponse.Status,
+		var v models.Error
+		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+		if err != nil {
+			return nil, nil, err
 		}
-		return nil, localVarHTTPResponse, newErr
+
+		return nil, &v, fmt.Errorf("%+v", v)
 	}
 
 	var v models.MempoolResponse
 	err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 	if err != nil {
-		newErr := GenericOpenAPIError{
-			body:  localVarBody,
-			error: err.Error(),
-		}
-		return nil, localVarHTTPResponse, newErr
+		return nil, nil, err
 	}
 
-	return &v, localVarHTTPResponse, nil
+	return &v, nil, nil
 }
 
 // MempoolTransaction Get a transaction in the mempool by its Transaction Identifier. This is a
@@ -112,7 +111,7 @@ func (a *MempoolAPIService) Mempool(
 func (a *MempoolAPIService) MempoolTransaction(
 	ctx _context.Context,
 	mempoolTransactionRequest models.MempoolTransactionRequest,
-) (*models.MempoolTransactionResponse, *_nethttp.Response, error) {
+) (*models.MempoolTransactionResponse, *models.Error, error) {
 	var (
 		localVarPostBody interface{}
 	)
@@ -148,32 +147,30 @@ func (a *MempoolAPIService) MempoolTransaction(
 
 	localVarHTTPResponse, err := a.client.callAPI(ctx, r)
 	if err != nil || localVarHTTPResponse == nil {
-		return nil, localVarHTTPResponse, err
+		return nil, nil, err
 	}
 
 	localVarBody, err := _ioutil.ReadAll(localVarHTTPResponse.Body)
 	defer localVarHTTPResponse.Body.Close()
 	if err != nil {
-		return nil, localVarHTTPResponse, err
+		return nil, nil, err
 	}
 
 	if localVarHTTPResponse.StatusCode != _nethttp.StatusOK {
-		newErr := GenericOpenAPIError{
-			body:  localVarBody,
-			error: localVarHTTPResponse.Status,
+		var v models.Error
+		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+		if err != nil {
+			return nil, nil, err
 		}
-		return nil, localVarHTTPResponse, newErr
+
+		return nil, &v, fmt.Errorf("%+v", v)
 	}
 
 	var v models.MempoolTransactionResponse
 	err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 	if err != nil {
-		newErr := GenericOpenAPIError{
-			body:  localVarBody,
-			error: err.Error(),
-		}
-		return nil, localVarHTTPResponse, newErr
+		return nil, nil, err
 	}
 
-	return &v, localVarHTTPResponse, nil
+	return &v, nil, nil
 }

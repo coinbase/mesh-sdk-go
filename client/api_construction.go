@@ -18,6 +18,7 @@ package client
 
 import (
 	_context "context"
+	"fmt"
 	_ioutil "io/ioutil"
 	_nethttp "net/http"
 
@@ -41,7 +42,7 @@ type ConstructionAPIService service
 func (a *ConstructionAPIService) TransactionConstruction(
 	ctx _context.Context,
 	transactionConstructionRequest models.TransactionConstructionRequest,
-) (*models.TransactionConstructionResponse, *_nethttp.Response, error) {
+) (*models.TransactionConstructionResponse, *models.Error, error) {
 	var (
 		localVarPostBody interface{}
 	)
@@ -77,34 +78,32 @@ func (a *ConstructionAPIService) TransactionConstruction(
 
 	localVarHTTPResponse, err := a.client.callAPI(ctx, r)
 	if err != nil || localVarHTTPResponse == nil {
-		return nil, localVarHTTPResponse, err
+		return nil, nil, err
 	}
 
 	localVarBody, err := _ioutil.ReadAll(localVarHTTPResponse.Body)
 	defer localVarHTTPResponse.Body.Close()
 	if err != nil {
-		return nil, localVarHTTPResponse, err
+		return nil, nil, err
 	}
 
 	if localVarHTTPResponse.StatusCode != _nethttp.StatusOK {
-		newErr := GenericOpenAPIError{
-			body:  localVarBody,
-			error: localVarHTTPResponse.Status,
+		var v models.Error
+		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+		if err != nil {
+			return nil, nil, err
 		}
-		return nil, localVarHTTPResponse, newErr
+
+		return nil, &v, fmt.Errorf("%+v", v)
 	}
 
 	var v models.TransactionConstructionResponse
 	err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 	if err != nil {
-		newErr := GenericOpenAPIError{
-			body:  localVarBody,
-			error: err.Error(),
-		}
-		return nil, localVarHTTPResponse, newErr
+		return nil, nil, err
 	}
 
-	return &v, localVarHTTPResponse, nil
+	return &v, nil, nil
 }
 
 // TransactionSubmit Submit a pre-signed transaction to the node. This call should not block on the
@@ -115,7 +114,7 @@ func (a *ConstructionAPIService) TransactionConstruction(
 func (a *ConstructionAPIService) TransactionSubmit(
 	ctx _context.Context,
 	transactionSubmitRequest models.TransactionSubmitRequest,
-) (*models.TransactionSubmitResponse, *_nethttp.Response, error) {
+) (*models.TransactionSubmitResponse, *models.Error, error) {
 	var (
 		localVarPostBody interface{}
 	)
@@ -151,32 +150,30 @@ func (a *ConstructionAPIService) TransactionSubmit(
 
 	localVarHTTPResponse, err := a.client.callAPI(ctx, r)
 	if err != nil || localVarHTTPResponse == nil {
-		return nil, localVarHTTPResponse, err
+		return nil, nil, err
 	}
 
 	localVarBody, err := _ioutil.ReadAll(localVarHTTPResponse.Body)
 	defer localVarHTTPResponse.Body.Close()
 	if err != nil {
-		return nil, localVarHTTPResponse, err
+		return nil, nil, err
 	}
 
 	if localVarHTTPResponse.StatusCode != _nethttp.StatusOK {
-		newErr := GenericOpenAPIError{
-			body:  localVarBody,
-			error: localVarHTTPResponse.Status,
+		var v models.Error
+		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+		if err != nil {
+			return nil, nil, err
 		}
-		return nil, localVarHTTPResponse, newErr
+
+		return nil, &v, fmt.Errorf("%+v", v)
 	}
 
 	var v models.TransactionSubmitResponse
 	err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 	if err != nil {
-		newErr := GenericOpenAPIError{
-			body:  localVarBody,
-			error: err.Error(),
-		}
-		return nil, localVarHTTPResponse, newErr
+		return nil, nil, err
 	}
 
-	return &v, localVarHTTPResponse, nil
+	return &v, nil, nil
 }

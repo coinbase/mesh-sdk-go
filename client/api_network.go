@@ -18,6 +18,7 @@ package client
 
 import (
 	_context "context"
+	"fmt"
 	_ioutil "io/ioutil"
 	_nethttp "net/http"
 
@@ -37,7 +38,7 @@ type NetworkAPIService service
 func (a *NetworkAPIService) NetworkStatus(
 	ctx _context.Context,
 	networkStatusRequest models.NetworkStatusRequest,
-) (*models.NetworkStatusResponse, *_nethttp.Response, error) {
+) (*models.NetworkStatusResponse, *models.Error, error) {
 	var (
 		localVarPostBody interface{}
 	)
@@ -73,32 +74,30 @@ func (a *NetworkAPIService) NetworkStatus(
 
 	localVarHTTPResponse, err := a.client.callAPI(ctx, r)
 	if err != nil || localVarHTTPResponse == nil {
-		return nil, localVarHTTPResponse, err
+		return nil, nil, err
 	}
 
 	localVarBody, err := _ioutil.ReadAll(localVarHTTPResponse.Body)
 	defer localVarHTTPResponse.Body.Close()
 	if err != nil {
-		return nil, localVarHTTPResponse, err
+		return nil, nil, err
 	}
 
 	if localVarHTTPResponse.StatusCode != _nethttp.StatusOK {
-		newErr := GenericOpenAPIError{
-			body:  localVarBody,
-			error: localVarHTTPResponse.Status,
+		var v models.Error
+		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+		if err != nil {
+			return nil, nil, err
 		}
-		return nil, localVarHTTPResponse, newErr
+
+		return nil, &v, fmt.Errorf("%+v", v)
 	}
 
 	var v models.NetworkStatusResponse
 	err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 	if err != nil {
-		newErr := GenericOpenAPIError{
-			body:  localVarBody,
-			error: err.Error(),
-		}
-		return nil, localVarHTTPResponse, newErr
+		return nil, nil, err
 	}
 
-	return &v, localVarHTTPResponse, nil
+	return &v, nil, nil
 }

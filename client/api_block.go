@@ -18,6 +18,7 @@ package client
 
 import (
 	_context "context"
+	"fmt"
 	_ioutil "io/ioutil"
 	_nethttp "net/http"
 
@@ -39,7 +40,7 @@ type BlockAPIService service
 func (a *BlockAPIService) Block(
 	ctx _context.Context,
 	blockRequest models.BlockRequest,
-) (*models.BlockResponse, *_nethttp.Response, error) {
+) (*models.BlockResponse, *models.Error, error) {
 	var (
 		localVarPostBody interface{}
 	)
@@ -75,34 +76,32 @@ func (a *BlockAPIService) Block(
 
 	localVarHTTPResponse, err := a.client.callAPI(ctx, r)
 	if err != nil || localVarHTTPResponse == nil {
-		return nil, localVarHTTPResponse, err
+		return nil, nil, err
 	}
 
 	localVarBody, err := _ioutil.ReadAll(localVarHTTPResponse.Body)
 	defer localVarHTTPResponse.Body.Close()
 	if err != nil {
-		return nil, localVarHTTPResponse, err
+		return nil, nil, err
 	}
 
 	if localVarHTTPResponse.StatusCode != _nethttp.StatusOK {
-		newErr := GenericOpenAPIError{
-			body:  localVarBody,
-			error: localVarHTTPResponse.Status,
+		var v models.Error
+		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+		if err != nil {
+			return nil, nil, err
 		}
-		return nil, localVarHTTPResponse, newErr
+
+		return nil, &v, fmt.Errorf("%+v", v)
 	}
 
 	var v models.BlockResponse
 	err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 	if err != nil {
-		newErr := GenericOpenAPIError{
-			body:  localVarBody,
-			error: err.Error(),
-		}
-		return nil, localVarHTTPResponse, newErr
+		return nil, nil, err
 	}
 
-	return &v, localVarHTTPResponse, nil
+	return &v, nil, nil
 }
 
 // BlockTransaction Get a transaction in a block by its Transaction Identifier. This method should
@@ -120,7 +119,7 @@ func (a *BlockAPIService) Block(
 func (a *BlockAPIService) BlockTransaction(
 	ctx _context.Context,
 	blockTransactionRequest models.BlockTransactionRequest,
-) (*models.BlockTransactionResponse, *_nethttp.Response, error) {
+) (*models.BlockTransactionResponse, *models.Error, error) {
 	var (
 		localVarPostBody interface{}
 	)
@@ -156,32 +155,30 @@ func (a *BlockAPIService) BlockTransaction(
 
 	localVarHTTPResponse, err := a.client.callAPI(ctx, r)
 	if err != nil || localVarHTTPResponse == nil {
-		return nil, localVarHTTPResponse, err
+		return nil, nil, err
 	}
 
 	localVarBody, err := _ioutil.ReadAll(localVarHTTPResponse.Body)
 	defer localVarHTTPResponse.Body.Close()
 	if err != nil {
-		return nil, localVarHTTPResponse, err
+		return nil, nil, err
 	}
 
 	if localVarHTTPResponse.StatusCode != _nethttp.StatusOK {
-		newErr := GenericOpenAPIError{
-			body:  localVarBody,
-			error: localVarHTTPResponse.Status,
+		var v models.Error
+		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+		if err != nil {
+			return nil, nil, err
 		}
-		return nil, localVarHTTPResponse, newErr
+
+		return nil, &v, fmt.Errorf("%+v", v)
 	}
 
 	var v models.BlockTransactionResponse
 	err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 	if err != nil {
-		newErr := GenericOpenAPIError{
-			body:  localVarBody,
-			error: err.Error(),
-		}
-		return nil, localVarHTTPResponse, newErr
+		return nil, nil, err
 	}
 
-	return &v, localVarHTTPResponse, nil
+	return &v, nil, nil
 }
