@@ -20,16 +20,16 @@ import (
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
 
-	rosetta "github.com/coinbase/rosetta-sdk-go/gen"
+	"github.com/coinbase/rosetta-sdk-go/models"
 )
 
 // UnsafeMempool returns the unvalidated response
 // from the Mempool method.
 func (f *Fetcher) UnsafeMempool(
 	ctx context.Context,
-	network *rosetta.NetworkIdentifier,
-) ([]*rosetta.TransactionIdentifier, error) {
-	mempool, _, err := f.rosettaClient.MempoolAPI.Mempool(ctx, rosetta.MempoolRequest{
+	network *models.NetworkIdentifier,
+) ([]*models.TransactionIdentifier, error) {
+	mempool, _, err := f.rosettaClient.MempoolAPI.Mempool(ctx, models.MempoolRequest{
 		NetworkIdentifier: network,
 	})
 	if err != nil {
@@ -43,8 +43,8 @@ func (f *Fetcher) UnsafeMempool(
 // from the Mempool method.
 func (f *Fetcher) Mempool(
 	ctx context.Context,
-	network *rosetta.NetworkIdentifier,
-) ([]*rosetta.TransactionIdentifier, error) {
+	network *models.NetworkIdentifier,
+) ([]*models.TransactionIdentifier, error) {
 	mempool, err := f.UnsafeMempool(ctx, network)
 	if err != nil {
 		return nil, err
@@ -61,11 +61,11 @@ func (f *Fetcher) Mempool(
 // from the MempoolTransaction method.
 func (f *Fetcher) UnsafeMempoolTransaction(
 	ctx context.Context,
-	network *rosetta.NetworkIdentifier,
-	transaction *rosetta.TransactionIdentifier,
-) (*rosetta.Transaction, *map[string]interface{}, error) {
+	network *models.NetworkIdentifier,
+	transaction *models.TransactionIdentifier,
+) (*models.Transaction, *map[string]interface{}, error) {
 	mempoolTransaction, _, err := f.rosettaClient.MempoolAPI.MempoolTransaction(ctx,
-		rosetta.MempoolTransactionRequest{
+		models.MempoolTransactionRequest{
 			NetworkIdentifier:     network,
 			TransactionIdentifier: transaction,
 		},
@@ -81,9 +81,9 @@ func (f *Fetcher) UnsafeMempoolTransaction(
 // from the MempoolTransaction method.
 func (f *Fetcher) MempoolTransaction(
 	ctx context.Context,
-	network *rosetta.NetworkIdentifier,
-	transaction *rosetta.TransactionIdentifier,
-) (*rosetta.Transaction, *map[string]interface{}, error) {
+	network *models.NetworkIdentifier,
+	transaction *models.TransactionIdentifier,
+) (*models.Transaction, *map[string]interface{}, error) {
 	if f.Asserter == nil {
 		return nil, nil, errors.New("asserter not initialized")
 	}

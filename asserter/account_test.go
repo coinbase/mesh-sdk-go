@@ -19,32 +19,32 @@ import (
 	"fmt"
 	"testing"
 
-	rosetta "github.com/coinbase/rosetta-sdk-go/gen"
+	"github.com/coinbase/rosetta-sdk-go/models"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestContainsCurrency(t *testing.T) {
 	var tests = map[string]struct {
-		currencies []*rosetta.Currency
-		currency   *rosetta.Currency
+		currencies []*models.Currency
+		currency   *models.Currency
 		contains   bool
 	}{
 		"simple contains": {
-			currencies: []*rosetta.Currency{
+			currencies: []*models.Currency{
 				{
 					Symbol:   "BTC",
 					Decimals: 8,
 				},
 			},
-			currency: &rosetta.Currency{
+			currency: &models.Currency{
 				Symbol:   "BTC",
 				Decimals: 8,
 			},
 			contains: true,
 		},
 		"complex contains": {
-			currencies: []*rosetta.Currency{
+			currencies: []*models.Currency{
 				{
 					Symbol:   "BTC",
 					Decimals: 8,
@@ -53,7 +53,7 @@ func TestContainsCurrency(t *testing.T) {
 					},
 				},
 			},
-			currency: &rosetta.Currency{
+			currency: &models.Currency{
 				Symbol:   "BTC",
 				Decimals: 8,
 				Metadata: &map[string]interface{}{
@@ -63,41 +63,41 @@ func TestContainsCurrency(t *testing.T) {
 			contains: true,
 		},
 		"empty": {
-			currencies: []*rosetta.Currency{},
-			currency: &rosetta.Currency{
+			currencies: []*models.Currency{},
+			currency: &models.Currency{
 				Symbol:   "BTC",
 				Decimals: 8,
 			},
 			contains: false,
 		},
 		"symbol mismatch": {
-			currencies: []*rosetta.Currency{
+			currencies: []*models.Currency{
 				{
 					Symbol:   "ERX",
 					Decimals: 8,
 				},
 			},
-			currency: &rosetta.Currency{
+			currency: &models.Currency{
 				Symbol:   "BTC",
 				Decimals: 6,
 			},
 			contains: false,
 		},
 		"decimal mismatch": {
-			currencies: []*rosetta.Currency{
+			currencies: []*models.Currency{
 				{
 					Symbol:   "BTC",
 					Decimals: 8,
 				},
 			},
-			currency: &rosetta.Currency{
+			currency: &models.Currency{
 				Symbol:   "BTC",
 				Decimals: 6,
 			},
 			contains: false,
 		},
 		"metadata mismatch": {
-			currencies: []*rosetta.Currency{
+			currencies: []*models.Currency{
 				{
 					Symbol:   "BTC",
 					Decimals: 8,
@@ -106,7 +106,7 @@ func TestContainsCurrency(t *testing.T) {
 					},
 				},
 			},
-			currency: &rosetta.Currency{
+			currency: &models.Currency{
 				Symbol:   "BTC",
 				Decimals: 8,
 				Metadata: &map[string]interface{}{
@@ -127,26 +127,26 @@ func TestContainsCurrency(t *testing.T) {
 
 func TestContainsAccountIdentifier(t *testing.T) {
 	var tests = map[string]struct {
-		identifiers []*rosetta.AccountIdentifier
-		identifier  *rosetta.AccountIdentifier
+		identifiers []*models.AccountIdentifier
+		identifier  *models.AccountIdentifier
 		contains    bool
 	}{
 		"simple contains": {
-			identifiers: []*rosetta.AccountIdentifier{
+			identifiers: []*models.AccountIdentifier{
 				{
 					Address: "acct1",
 				},
 			},
-			identifier: &rosetta.AccountIdentifier{
+			identifier: &models.AccountIdentifier{
 				Address: "acct1",
 			},
 			contains: true,
 		},
 		"complex contains": {
-			identifiers: []*rosetta.AccountIdentifier{
+			identifiers: []*models.AccountIdentifier{
 				{
 					Address: "acct1",
-					SubAccount: &rosetta.SubAccountIdentifier{
+					SubAccount: &models.SubAccountIdentifier{
 						Address: "subacct1",
 						Metadata: &map[string]interface{}{
 							"blah": "hello",
@@ -154,9 +154,9 @@ func TestContainsAccountIdentifier(t *testing.T) {
 					},
 				},
 			},
-			identifier: &rosetta.AccountIdentifier{
+			identifier: &models.AccountIdentifier{
 				Address: "acct1",
-				SubAccount: &rosetta.SubAccountIdentifier{
+				SubAccount: &models.SubAccountIdentifier{
 					Address: "subacct1",
 					Metadata: &map[string]interface{}{
 						"blah": "hello",
@@ -166,28 +166,28 @@ func TestContainsAccountIdentifier(t *testing.T) {
 			contains: true,
 		},
 		"simple mismatch": {
-			identifiers: []*rosetta.AccountIdentifier{
+			identifiers: []*models.AccountIdentifier{
 				{
 					Address: "acct1",
 				},
 			},
-			identifier: &rosetta.AccountIdentifier{
+			identifier: &models.AccountIdentifier{
 				Address: "acct2",
 			},
 			contains: false,
 		},
 		"empty": {
-			identifiers: []*rosetta.AccountIdentifier{},
-			identifier: &rosetta.AccountIdentifier{
+			identifiers: []*models.AccountIdentifier{},
+			identifier: &models.AccountIdentifier{
 				Address: "acct2",
 			},
 			contains: false,
 		},
 		"subaccount mismatch": {
-			identifiers: []*rosetta.AccountIdentifier{
+			identifiers: []*models.AccountIdentifier{
 				{
 					Address: "acct1",
-					SubAccount: &rosetta.SubAccountIdentifier{
+					SubAccount: &models.SubAccountIdentifier{
 						Address: "subacct2",
 						Metadata: &map[string]interface{}{
 							"blah": "hello",
@@ -195,9 +195,9 @@ func TestContainsAccountIdentifier(t *testing.T) {
 					},
 				},
 			},
-			identifier: &rosetta.AccountIdentifier{
+			identifier: &models.AccountIdentifier{
 				Address: "acct1",
-				SubAccount: &rosetta.SubAccountIdentifier{
+				SubAccount: &models.SubAccountIdentifier{
 					Address: "subacct1",
 					Metadata: &map[string]interface{}{
 						"blah": "hello",
@@ -207,10 +207,10 @@ func TestContainsAccountIdentifier(t *testing.T) {
 			contains: false,
 		},
 		"metadata mismatch": {
-			identifiers: []*rosetta.AccountIdentifier{
+			identifiers: []*models.AccountIdentifier{
 				{
 					Address: "acct1",
-					SubAccount: &rosetta.SubAccountIdentifier{
+					SubAccount: &models.SubAccountIdentifier{
 						Address: "subacct1",
 						Metadata: &map[string]interface{}{
 							"blah": "hello",
@@ -218,9 +218,9 @@ func TestContainsAccountIdentifier(t *testing.T) {
 					},
 				},
 			},
-			identifier: &rosetta.AccountIdentifier{
+			identifier: &models.AccountIdentifier{
 				Address: "acct1",
-				SubAccount: &rosetta.SubAccountIdentifier{
+				SubAccount: &models.SubAccountIdentifier{
 					Address: "subacct1",
 					Metadata: &map[string]interface{}{
 						"blah": "bye",
@@ -240,43 +240,43 @@ func TestContainsAccountIdentifier(t *testing.T) {
 }
 
 func TestAccoutBalance(t *testing.T) {
-	validBlock := &rosetta.BlockIdentifier{
+	validBlock := &models.BlockIdentifier{
 		Index: 1000,
 		Hash:  "jsakdl",
 	}
 
-	invalidBlock := &rosetta.BlockIdentifier{
+	invalidBlock := &models.BlockIdentifier{
 		Index: 1,
 		Hash:  "",
 	}
 
-	validIdentifier := &rosetta.AccountIdentifier{
+	validIdentifier := &models.AccountIdentifier{
 		Address: "acct1",
 	}
 
-	invalidIdentifier := &rosetta.AccountIdentifier{
+	invalidIdentifier := &models.AccountIdentifier{
 		Address: "",
 	}
 
-	validAmount := &rosetta.Amount{
+	validAmount := &models.Amount{
 		Value: "100",
-		Currency: &rosetta.Currency{
+		Currency: &models.Currency{
 			Symbol:   "BTC",
 			Decimals: 8,
 		},
 	}
 
 	var tests = map[string]struct {
-		block    *rosetta.BlockIdentifier
-		balances []*rosetta.Balance
+		block    *models.BlockIdentifier
+		balances []*models.Balance
 		err      error
 	}{
 		"simple balance": {
 			block: validBlock,
-			balances: []*rosetta.Balance{
+			balances: []*models.Balance{
 				{
 					AccountIdentifier: validIdentifier,
-					Amounts: []*rosetta.Amount{
+					Amounts: []*models.Amount{
 						validAmount,
 					},
 				},
@@ -285,10 +285,10 @@ func TestAccoutBalance(t *testing.T) {
 		},
 		"invalid block": {
 			block: invalidBlock,
-			balances: []*rosetta.Balance{
+			balances: []*models.Balance{
 				{
 					AccountIdentifier: validIdentifier,
-					Amounts: []*rosetta.Amount{
+					Amounts: []*models.Amount{
 						validAmount,
 					},
 				},
@@ -297,10 +297,10 @@ func TestAccoutBalance(t *testing.T) {
 		},
 		"invalid account identifier": {
 			block: validBlock,
-			balances: []*rosetta.Balance{
+			balances: []*models.Balance{
 				{
 					AccountIdentifier: invalidIdentifier,
-					Amounts: []*rosetta.Amount{
+					Amounts: []*models.Amount{
 						validAmount,
 					},
 				},
@@ -309,10 +309,10 @@ func TestAccoutBalance(t *testing.T) {
 		},
 		"duplicate currency": {
 			block: validBlock,
-			balances: []*rosetta.Balance{
+			balances: []*models.Balance{
 				{
 					AccountIdentifier: validIdentifier,
-					Amounts: []*rosetta.Amount{
+					Amounts: []*models.Amount{
 						validAmount,
 						validAmount,
 					},
@@ -322,16 +322,16 @@ func TestAccoutBalance(t *testing.T) {
 		},
 		"duplicate identifier": {
 			block: validBlock,
-			balances: []*rosetta.Balance{
+			balances: []*models.Balance{
 				{
 					AccountIdentifier: validIdentifier,
-					Amounts: []*rosetta.Amount{
+					Amounts: []*models.Amount{
 						validAmount,
 					},
 				},
 				{
 					AccountIdentifier: validIdentifier,
-					Amounts: []*rosetta.Amount{
+					Amounts: []*models.Amount{
 						validAmount,
 					},
 				},

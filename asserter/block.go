@@ -20,12 +20,12 @@ import (
 	"fmt"
 	"math/big"
 
-	rosetta "github.com/coinbase/rosetta-sdk-go/gen"
+	"github.com/coinbase/rosetta-sdk-go/models"
 )
 
-// Amount ensures a rosetta.Amount has an
+// Amount ensures a models.Amount has an
 // integer value, specified precision, and symbol.
-func Amount(amount *rosetta.Amount) error {
+func Amount(amount *models.Amount) error {
 	if amount == nil || amount.Value == "" {
 		return errors.New("Amount.Value is missing")
 	}
@@ -63,10 +63,10 @@ func contains(valid []string, value string) bool {
 }
 
 // OperationIdentifier returns an error if index of the
-// rosetta.Operation is out-of-order or if the NetworkIndex is
+// models.Operation is out-of-order or if the NetworkIndex is
 // invalid.
 func OperationIdentifier(
-	identifier *rosetta.OperationIdentifier,
+	identifier *models.OperationIdentifier,
 	index int64,
 ) error {
 	if identifier == nil || identifier.Index != index {
@@ -80,9 +80,9 @@ func OperationIdentifier(
 	return nil
 }
 
-// AccountIdentifier returns an error if a rosetta.AccountIdentifier
+// AccountIdentifier returns an error if a models.AccountIdentifier
 // is missing an address or a provided SubAccount is missing an identifier.
-func AccountIdentifier(account *rosetta.AccountIdentifier) error {
+func AccountIdentifier(account *models.AccountIdentifier) error {
 	if account == nil {
 		return errors.New("Account is nil")
 	}
@@ -102,10 +102,10 @@ func AccountIdentifier(account *rosetta.AccountIdentifier) error {
 	return nil
 }
 
-// OperationSuccessful returns a boolean indicating if a rosetta.Operation is
+// OperationSuccessful returns a boolean indicating if a models.Operation is
 // successful and should be applied in a transaction. This should only be called
 // AFTER an operation has been validated.
-func (a *Asserter) OperationSuccessful(operation *rosetta.Operation) (bool, error) {
+func (a *Asserter) OperationSuccessful(operation *models.Operation) (bool, error) {
 	val, ok := a.operationStatusMap[operation.Status]
 	if !ok {
 		return false, fmt.Errorf("%s not found", operation.Status)
@@ -114,10 +114,10 @@ func (a *Asserter) OperationSuccessful(operation *rosetta.Operation) (bool, erro
 	return val, nil
 }
 
-// Operation ensures a rosetta.Operation has a valid
+// Operation ensures a models.Operation has a valid
 // type, status, and amount.
 func (a *Asserter) Operation(
-	operation *rosetta.Operation,
+	operation *models.Operation,
 	index int64,
 ) error {
 	if operation == nil {
@@ -147,9 +147,9 @@ func (a *Asserter) Operation(
 	return Amount(operation.Amount)
 }
 
-// BlockIdentifier ensures a rosetta.BlockIdentifier
+// BlockIdentifier ensures a models.BlockIdentifier
 // is well-formatted.
-func BlockIdentifier(blockIdentifier *rosetta.BlockIdentifier) error {
+func BlockIdentifier(blockIdentifier *models.BlockIdentifier) error {
 	if blockIdentifier == nil || blockIdentifier.Hash == "" {
 		return errors.New("BlockIdentifier.Hash is missing")
 	}
@@ -162,9 +162,9 @@ func BlockIdentifier(blockIdentifier *rosetta.BlockIdentifier) error {
 }
 
 // TransactionIdentifier returns an error if a
-// rosetta.TransactionIdentifier has an invalid hash.
+// models.TransactionIdentifier has an invalid hash.
 func TransactionIdentifier(
-	transactionIdentifier *rosetta.TransactionIdentifier,
+	transactionIdentifier *models.TransactionIdentifier,
 ) error {
 	if transactionIdentifier == nil || transactionIdentifier.Hash == "" {
 		return errors.New("Transaction.TransactionIdentifier.Hash is missing")
@@ -173,11 +173,11 @@ func TransactionIdentifier(
 	return nil
 }
 
-// Transaction returns an error if the rosetta.TransactionIdentifier
-// is invalid, if any rosetta.Operation within the rosetta.Transaction
+// Transaction returns an error if the models.TransactionIdentifier
+// is invalid, if any models.Operation within the models.Transaction
 // is invalid, or if any operation index is reused within a transaction.
 func (a *Asserter) Transaction(
-	transaction *rosetta.Transaction,
+	transaction *models.Transaction,
 ) error {
 	if transaction == nil {
 		return errors.New("transaction is nil")
@@ -209,7 +209,7 @@ func Timestamp(timestamp int64) error {
 // Block runs a basic set of assertions for each returned block.
 func (a *Asserter) Block(
 	ctx context.Context,
-	block *rosetta.Block,
+	block *models.Block,
 ) error {
 	if block == nil {
 		return errors.New("block is nil")

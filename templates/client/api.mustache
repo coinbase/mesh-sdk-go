@@ -1,0 +1,199 @@
+{{>partial_header}}
+package {{packageName}}
+
+{{#operations}}
+import (
+	_context "context"
+	_ioutil "io/ioutil"
+	_nethttp "net/http"
+  models "github.com/coinbase/rosetta-sdk-go/models"
+{{#imports}}	"{{import}}"
+{{/imports}}
+)
+
+// Linger please
+var (
+	_ _context.Context
+)
+
+// {{classname}}Service {{classname}} service
+type {{classname}}Service service
+{{#operation}}
+
+{{#hasOptionalParams}}
+// {{#structPrefix}}{{&classname}}{{/structPrefix}}{{{nickname}}}Opts Optional parameters for the method '{{{nickname}}}'
+type {{#structPrefix}}{{&classname}}{{/structPrefix}}{{{nickname}}}Opts struct {
+{{#allParams}}
+{{^required}}
+{{#isPrimitiveType}}
+{{^isBinary}}
+    {{vendorExtensions.x-export-param-name}} optional.{{vendorExtensions.x-optional-data-type}}
+{{/isBinary}}
+{{#isBinary}}
+    {{vendorExtensions.x-export-param-name}} optional.Interface
+{{/isBinary}}
+{{/isPrimitiveType}}
+{{^isPrimitiveType}}
+    {{vendorExtensions.x-export-param-name}} optional.Interface
+{{/isPrimitiveType}}
+{{/required}}
+{{/allParams}}
+}
+
+{{/hasOptionalParams}}
+// {{operationId}}{{#notes}} {{notes}}{{/notes}}
+func (a *{{{classname}}}Service) {{{nickname}}}(ctx _context.Context{{#hasParams}}, {{/hasParams}}{{#allParams}}{{#required}}{{paramName}} models.{{{dataType}}}{{#hasMore}}, {{/hasMore}}{{/required}}{{/allParams}}{{#hasOptionalParams}}localVarOptionals *{{#structPrefix}}{{&classname}}{{/structPrefix}}{{{nickname}}}Opts{{/hasOptionalParams}}) ({{#returnType}}*models.{{{returnType}}}, {{/returnType}}*_nethttp.Response, error) {
+	var (
+		localVarPostBody     interface{}
+	)
+
+	// create path and map variables
+	localVarPath := a.client.cfg.BasePath + "{{{path}}}"{{#pathParams}}
+	localVarPath = strings.Replace(localVarPath, "{"+"{{baseName}}"+"}", _neturl.QueryEscape(parameterToString({{paramName}}, "{{#collectionFormat}}{{collectionFormat}}{{/collectionFormat}}")) , -1)
+	{{/pathParams}}
+
+	localVarHeaderParams := make(map[string]string)
+	{{#allParams}}
+	{{#required}}
+	{{#minItems}}
+	if len({{paramName}}) < {{minItems}} {
+		return {{#returnType}}nil, {{/returnType}}nil, reportError("{{paramName}} must have at least {{minItems}} elements")
+	}
+	{{/minItems}}
+	{{#maxItems}}
+	if len({{paramName}}) > {{maxItems}} {
+		return {{#returnType}}nil, {{/returnType}}nil, reportError("{{paramName}} must have less than {{maxItems}} elements")
+	}
+	{{/maxItems}}
+	{{#minLength}}
+	if strlen({{paramName}}) < {{minLength}} {
+		return {{#returnType}}nil, {{/returnType}}nil, reportError("{{paramName}} must have at least {{minLength}} elements")
+	}
+	{{/minLength}}
+	{{#maxLength}}
+	if strlen({{paramName}}) > {{maxLength}} {
+		return {{#returnType}}nil, {{/returnType}}nil, reportError("{{paramName}} must have less than {{maxLength}} elements")
+	}
+	{{/maxLength}}
+	{{#minimum}}
+	{{#isString}}
+	{{paramName}}Txt, err := atoi({{paramName}})
+	if {{paramName}}Txt < {{minimum}} {
+	{{/isString}}
+	{{^isString}}
+	if {{paramName}} < {{minimum}} {
+	{{/isString}}
+		return {{#returnType}}nil, {{/returnType}}nil, reportError("{{paramName}} must be greater than {{minimum}}")
+	}
+	{{/minimum}}
+	{{#maximum}}
+	{{#isString}}
+	{{paramName}}Txt, err := atoi({{paramName}})
+	if {{paramName}}Txt > {{maximum}} {
+	{{/isString}}
+	{{^isString}}
+	if {{paramName}} > {{maximum}} {
+	{{/isString}}
+		return {{#returnType}}nil, {{/returnType}}nil, reportError("{{paramName}} must be less than {{maximum}}")
+	}
+	{{/maximum}}
+	{{/required}}
+	{{/allParams}}
+
+	// to determine the Content-Type header
+{{=<% %>=}}
+	localVarHTTPContentTypes := []string{<%#consumes%>"<%&mediaType%>"<%^-last%>, <%/-last%><%/consumes%>}
+<%={{ }}=%>
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+{{=<% %>=}}
+	localVarHTTPHeaderAccepts := []string{<%#produces%>"<%&mediaType%>"<%^-last%>, <%/-last%><%/produces%>}
+<%={{ }}=%>
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+{{#hasHeaderParams}}
+{{#headerParams}}
+	{{#required}}
+	localVarHeaderParams["{{baseName}}"] = parameterToString({{paramName}}, "{{#collectionFormat}}{{collectionFormat}}{{/collectionFormat}}")
+	{{/required}}
+	{{^required}}
+	if localVarOptionals != nil && localVarOptionals.{{vendorExtensions.x-export-param-name}}.IsSet() {
+		localVarHeaderParams["{{baseName}}"] = parameterToString(localVarOptionals.{{vendorExtensions.x-export-param-name}}.Value(), "{{#collectionFormat}}{{collectionFormat}}{{/collectionFormat}}")
+	}
+	{{/required}}
+{{/headerParams}}
+{{/hasHeaderParams}}
+{{#hasBodyParam}}
+{{#bodyParams}}
+	// body params
+{{#required}}
+	localVarPostBody = &{{paramName}}
+{{/required}}
+{{^required}}
+	if localVarOptionals != nil && localVarOptionals.{{vendorExtensions.x-export-param-name}}.IsSet() {
+		{{#isPrimitiveType}}
+		localVarPostBody = localVarOptionals.{{vendorExtensions.x-export-param-name}}.Value()
+		{{/isPrimitiveType}}
+		{{^isPrimitiveType}}
+		localVarOptional{{vendorExtensions.x-export-param-name}}, localVarOptional{{vendorExtensions.x-export-param-name}}ok := localVarOptionals.{{vendorExtensions.x-export-param-name}}.Value().({{{dataType}}})
+		if !localVarOptional{{vendorExtensions.x-export-param-name}}ok {
+			return {{#returnType}}nil, {{/returnType}}nil, reportError("{{paramName}} should be {{dataType}}")
+		}
+		localVarPostBody = &localVarOptional{{vendorExtensions.x-export-param-name}}
+		{{/isPrimitiveType}}
+	}
+
+{{/required}}
+{{/bodyParams}}
+{{/hasBodyParam}}
+
+	r, err := a.client.prepareRequest(ctx, localVarPath, localVarPostBody, localVarHeaderParams)
+	if err != nil {
+		return {{#returnType}}nil, {{/returnType}}nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(ctx, r)
+	if err != nil || localVarHTTPResponse == nil {
+		return {{#returnType}}nil, {{/returnType}}localVarHTTPResponse, err
+	}
+
+	localVarBody, err := _ioutil.ReadAll(localVarHTTPResponse.Body)
+	defer localVarHTTPResponse.Body.Close()
+	if err != nil {
+		return {{#returnType}}nil, {{/returnType}}localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode != _nethttp.StatusOK {
+		newErr := GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		return {{#returnType}}nil, {{/returnType}}localVarHTTPResponse, newErr
+	}
+
+	{{#returnType}}
+  var v models.{{{returnType}}}
+	err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return {{#returnType}}nil, {{/returnType}}localVarHTTPResponse, newErr
+	}
+
+	{{/returnType}}
+	return {{#returnType}}&v, {{/returnType}}localVarHTTPResponse, nil
+}
+{{/operation}}
+{{/operations}}

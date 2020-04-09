@@ -18,11 +18,11 @@ import (
 	"errors"
 	"fmt"
 
-	rosetta "github.com/coinbase/rosetta-sdk-go/gen"
+	"github.com/coinbase/rosetta-sdk-go/models"
 )
 
-// SubNetworkIdentifier asserts a rosetta.SubNetworkIdentifer is valid (if not nil).
-func SubNetworkIdentifier(subNetworkIdentifier *rosetta.SubNetworkIdentifier) error {
+// SubNetworkIdentifier asserts a models.SubNetworkIdentifer is valid (if not nil).
+func SubNetworkIdentifier(subNetworkIdentifier *models.SubNetworkIdentifier) error {
 	if subNetworkIdentifier == nil {
 		return nil
 	}
@@ -34,9 +34,9 @@ func SubNetworkIdentifier(subNetworkIdentifier *rosetta.SubNetworkIdentifier) er
 	return nil
 }
 
-// NetworkIdentifier ensures a rosetta.NetworkIdentifier has
+// NetworkIdentifier ensures a models.NetworkIdentifier has
 // a valid blockchain and network.
-func NetworkIdentifier(network *rosetta.NetworkIdentifier) error {
+func NetworkIdentifier(network *models.NetworkIdentifier) error {
 	if network == nil || network.Blockchain == "" {
 		return errors.New("NetworkIdentifier.Blockchain is missing")
 	}
@@ -48,8 +48,8 @@ func NetworkIdentifier(network *rosetta.NetworkIdentifier) error {
 	return SubNetworkIdentifier(network.SubNetworkIdentifier)
 }
 
-// Peer ensures a rosetta.Peer has a valid peer_id.
-func Peer(peer *rosetta.Peer) error {
+// Peer ensures a models.Peer has a valid peer_id.
+func Peer(peer *models.Peer) error {
 	if peer == nil || peer.PeerID == "" {
 		return errors.New("Peer.PeerID is missing")
 	}
@@ -59,7 +59,7 @@ func Peer(peer *rosetta.Peer) error {
 
 // Version ensures the version of the node is
 // returned.
-func Version(version *rosetta.Version) error {
+func Version(version *models.Version) error {
 	if version == nil {
 		return errors.New("version is nil")
 	}
@@ -91,9 +91,9 @@ func StringArray(arrName string, arr []string) error {
 	return nil
 }
 
-// NetworkInformation ensures any rosetta.NetworkInformation
-// included in rosetta.NetworkStatus or rosetta.SubNetworkStatus is valid.
-func NetworkInformation(networkInformation *rosetta.NetworkInformation) error {
+// NetworkInformation ensures any models.NetworkInformation
+// included in models.NetworkStatus or models.SubNetworkStatus is valid.
+func NetworkInformation(networkInformation *models.NetworkInformation) error {
 	if networkInformation == nil {
 		return errors.New("network information is nil")
 	}
@@ -119,8 +119,8 @@ func NetworkInformation(networkInformation *rosetta.NetworkInformation) error {
 	return nil
 }
 
-// NetworkStatus ensures a rosetta.NetworkStatus object is valid.
-func NetworkStatus(networkStatus *rosetta.NetworkStatus) error {
+// NetworkStatus ensures a models.NetworkStatus object is valid.
+func NetworkStatus(networkStatus *models.NetworkStatus) error {
 	if networkStatus == nil {
 		return errors.New("network status is nil")
 	}
@@ -138,7 +138,7 @@ func NetworkStatus(networkStatus *rosetta.NetworkStatus) error {
 
 // OperationStatuses ensures all items in Options.OperationStatuses
 // are valid and that there exists at least 1 successful status.
-func OperationStatuses(statuses []*rosetta.OperationStatus) error {
+func OperationStatuses(statuses []*models.OperationStatus) error {
 	if len(statuses) == 0 {
 		return errors.New("no Options.OperationStatuses found")
 	}
@@ -161,8 +161,8 @@ func OperationStatuses(statuses []*rosetta.OperationStatus) error {
 	return nil
 }
 
-// Error ensures a rosetta.Error is valid.
-func Error(err *rosetta.Error) error {
+// Error ensures a models.Error is valid.
+func Error(err *models.Error) error {
 	if err == nil {
 		return errors.New("Error is nil")
 	}
@@ -178,9 +178,9 @@ func Error(err *rosetta.Error) error {
 	return nil
 }
 
-// Errors ensures each rosetta.Error in a slice is valid
+// Errors ensures each models.Error in a slice is valid
 // and that there is no error code collision.
-func Errors(rosettaErrors []*rosetta.Error) error {
+func Errors(rosettaErrors []*models.Error) error {
 	statusCodes := map[int32]struct{}{}
 
 	for _, rosettaError := range rosettaErrors {
@@ -199,8 +199,8 @@ func Errors(rosettaErrors []*rosetta.Error) error {
 	return nil
 }
 
-// NetworkOptions ensures a rosetta.Options object is valid.
-func NetworkOptions(options *rosetta.Options) error {
+// NetworkOptions ensures a models.Options object is valid.
+func NetworkOptions(options *models.Options) error {
 	if options == nil {
 		return errors.New("options is nil")
 	}
@@ -221,8 +221,8 @@ func NetworkOptions(options *rosetta.Options) error {
 }
 
 // NetworkStatusResponse orchestrates assertions for all
-// components of a rosetta.NetworkStatus.
-func NetworkStatusResponse(response *rosetta.NetworkStatusResponse) error {
+// components of a models.NetworkStatus.
+func NetworkStatusResponse(response *models.NetworkStatusResponse) error {
 	for _, network := range response.NetworkStatus {
 		if err := NetworkStatus(network); err != nil {
 			return err
