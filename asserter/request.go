@@ -15,49 +15,95 @@
 package asserter
 
 import (
+	"errors"
+
 	"github.com/coinbase/rosetta-sdk-go/models"
 )
 
 // AccountBalanceRequest ensures that a models.AccountBalanceRequest
 // is well-formatted.
 func AccountBalanceRequest(request *models.AccountBalanceRequest) error {
-	return nil
+	if err := NetworkIdentifier(request.NetworkIdentifier); err != nil {
+		return err
+	}
+
+	if err := AccountIdentifier(request.AccountIdentifier); err != nil {
+		return err
+	}
+
+	if request.BlockIdentifier == nil {
+		return nil
+	}
+
+	return PartialBlockIdentifier(request.BlockIdentifier)
 }
 
 // BlockRequest ensures that a models.BlockRequest
 // is well-formatted.
 func BlockRequest(request *models.BlockRequest) error {
-	return nil
+	if err := NetworkIdentifier(request.NetworkIdentifier); err != nil {
+		return err
+	}
+
+	return PartialBlockIdentifier(request.BlockIdentifier)
 }
 
 // BlockTransactionRequest ensures that a models.BlockTransactionRequest
 // is well-formatted.
 func BlockTransactionRequest(request *models.BlockTransactionRequest) error {
-	return nil
+	if err := NetworkIdentifier(request.NetworkIdentifier); err != nil {
+		return err
+	}
+
+	if err := BlockIdentifier(request.BlockIdentifier); err != nil {
+		return err
+	}
+
+	return TransactionIdentifier(request.TransactionIdentifier)
 }
 
 // TransactionConstructionRequest ensures that a models.TransactionConstructionRequest
 // is well-formatted.
 func TransactionConstructionRequest(request *models.TransactionConstructionRequest) error {
+	if err := NetworkIdentifier(request.NetworkIdentifier); err != nil {
+		return err
+	}
+
+	if err := AccountIdentifier(request.AccountIdentifier); err != nil {
+		return err
+	}
+
+	if request.Method != nil && *request.Method == "" {
+		return errors.New("TransactionConstructionRequest.Method is empty")
+	}
+
 	return nil
 }
 
 // TransactionSubmitRequest ensures that a models.TransactionSubmitRequest
 // is well-formatted.
 func TransactionSubmitRequest(request *models.TransactionSubmitRequest) error {
+	if request.SignedTransaction == "" {
+		return errors.New("TransactionSubmitRequest.SignedTransaction is empty")
+	}
+
 	return nil
 }
 
 // MempoolRequest ensures that a models.MempoolRequest
 // is well-formatted.
 func MempoolRequest(request *models.MempoolRequest) error {
-	return nil
+	return NetworkIdentifier(request.NetworkIdentifier)
 }
 
 // MempoolTransactionRequest ensures that a models.MempoolTransactionRequest
 // is well-formatted.
 func MempoolTransactionRequest(request *models.MempoolTransactionRequest) error {
-	return nil
+	if err := NetworkIdentifier(request.NetworkIdentifier); err != nil {
+		return err
+	}
+
+	return TransactionIdentifier(request.TransactionIdentifier)
 }
 
 // NetworkStatusRequest ensures that a models.NetworkStatusRequest
