@@ -3,8 +3,11 @@ package {{packageName}}
 
 import (
 	"encoding/json"
+  "log"
 	"net/http"
 	"strings"
+
+  "github.com/coinbase/rosetta-sdk-go/models"
 )
 
 // A {{classname}}Controller binds http requests to an api service and writes the service results to the http response
@@ -32,23 +35,30 @@ func (c *{{classname}}Controller) Routes() Routes {
 // {{nickname}} - {{{summary}}}
 func (c *{{classname}}Controller) {{nickname}}(w http.ResponseWriter, r *http.Request) { {{#allParams}}{{#isHeaderParam}}
 	{{paramName}} := r.Header.Get("{{paramName}}"){{/isHeaderParam}}{{#isBodyParam}}
-	{{paramName}} := &{{dataType}}{}
+	{{paramName}} := &models.{{dataType}}{}
   // TODO: Assert required params are present
 	if err := json.NewDecoder(r.Body).Decode(&{{paramName}}); err != nil {
-    EncodeJSONResponse(&Error{
+    err = EncodeJSONResponse(&models.Error{
       Message: err.Error(),
     }, http.StatusBadRequest, w)
-		return
+    if err != nil {
+      log.Fatal(err)
+    }
+
+    return
 	}
 	{{/isBodyParam}}{{/allParams}}
-  // TODO: return status code from service
-	result, err := c.service.{{nickname}}({{#allParams}}{{#isBodyParam}}*{{/isBodyParam}}{{paramName}}{{#hasMore}}, {{/hasMore}}{{/allParams}})
-	if err != nil {
-    EncodeJSONResponse(&Error{
-      Message: err.Error(),
-    }, http.StatusInternalServerError, w)
+	result, serviceErr := c.service.{{nickname}}({{#allParams}}{{#isBodyParam}}*{{/isBodyParam}}{{paramName}}{{#hasMore}}, {{/hasMore}}{{/allParams}})
+	if serviceErr != nil {
+    err := EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
+    if err != nil {
+      log.Fatal(err)
+    }
+
 		return
 	}
 	
-	EncodeJSONResponse(result, http.StatusOK, w)
+	if err := EncodeJSONResponse(result, http.StatusOK, w); err != nil {
+    log.Fatal(err)
+  }
 }{{/operation}}{{/operations}}
