@@ -150,7 +150,11 @@ func (a *Asserter) Operation(
 // BlockIdentifier ensures a models.BlockIdentifier
 // is well-formatted.
 func BlockIdentifier(blockIdentifier *models.BlockIdentifier) error {
-	if blockIdentifier == nil || blockIdentifier.Hash == "" {
+	if blockIdentifier == nil {
+		return errors.New("BlockIdentifier is nil")
+	}
+
+	if blockIdentifier.Hash == "" {
 		return errors.New("BlockIdentifier.Hash is missing")
 	}
 
@@ -184,8 +188,12 @@ func PartialBlockIdentifier(blockIdentifier *models.PartialBlockIdentifier) erro
 func TransactionIdentifier(
 	transactionIdentifier *models.TransactionIdentifier,
 ) error {
-	if transactionIdentifier == nil || transactionIdentifier.Hash == "" {
-		return errors.New("Transaction.TransactionIdentifier.Hash is missing")
+	if transactionIdentifier == nil {
+		return errors.New("TransactionIdentifier is nil")
+	}
+
+	if transactionIdentifier.Hash == "" {
+		return errors.New("TransactionIdentifier.Hash is missing")
 	}
 
 	return nil
@@ -198,7 +206,7 @@ func (a *Asserter) Transaction(
 	transaction *models.Transaction,
 ) error {
 	if transaction == nil {
-		return errors.New("transaction is nil")
+		return errors.New("Transaction is nil")
 	}
 
 	if err := TransactionIdentifier(transaction.TransactionIdentifier); err != nil {
@@ -230,7 +238,7 @@ func (a *Asserter) Block(
 	block *models.Block,
 ) error {
 	if block == nil {
-		return errors.New("block is nil")
+		return errors.New("Block is nil")
 	}
 
 	if err := BlockIdentifier(block.BlockIdentifier); err != nil {
@@ -245,11 +253,11 @@ func (a *Asserter) Block(
 	// genesis index.
 	if a.genesisIndex != block.BlockIdentifier.Index {
 		if block.BlockIdentifier.Hash == block.ParentBlockIdentifier.Hash {
-			return errors.New("Block.BlockIdentifier.Hash == Block.ParentBlockIdentifier.Hash")
+			return errors.New("BlockIdentifier.Hash == ParentBlockIdentifier.Hash")
 		}
 
 		if block.BlockIdentifier.Index <= block.ParentBlockIdentifier.Index {
-			return errors.New("Block.BlockIdentifier.Index <= Block.ParentBlockIdentifier.Index")
+			return errors.New("BlockIdentifier.Index <= ParentBlockIdentifier.Index")
 		}
 	}
 

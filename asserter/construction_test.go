@@ -91,7 +91,7 @@ func TestTransactionSubmit(t *testing.T) {
 		},
 		"invalid transaction identifier": {
 			response: &models.TransactionSubmitResponse{},
-			err:      errors.New("Transaction.TransactionIdentifier.Hash is missing"),
+			err:      errors.New("TransactionIdentifier is nil"),
 		},
 	}
 

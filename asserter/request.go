@@ -23,6 +23,10 @@ import (
 // AccountBalanceRequest ensures that a models.AccountBalanceRequest
 // is well-formatted.
 func AccountBalanceRequest(request *models.AccountBalanceRequest) error {
+	if request == nil {
+		return errors.New("AccountBalanceRequest is nil")
+	}
+
 	if err := NetworkIdentifier(request.NetworkIdentifier); err != nil {
 		return err
 	}
@@ -41,6 +45,10 @@ func AccountBalanceRequest(request *models.AccountBalanceRequest) error {
 // BlockRequest ensures that a models.BlockRequest
 // is well-formatted.
 func BlockRequest(request *models.BlockRequest) error {
+	if request == nil {
+		return errors.New("BlockRequest is nil")
+	}
+
 	if err := NetworkIdentifier(request.NetworkIdentifier); err != nil {
 		return err
 	}
@@ -51,6 +59,10 @@ func BlockRequest(request *models.BlockRequest) error {
 // BlockTransactionRequest ensures that a models.BlockTransactionRequest
 // is well-formatted.
 func BlockTransactionRequest(request *models.BlockTransactionRequest) error {
+	if request == nil {
+		return errors.New("BlockTransactionRequest is nil")
+	}
+
 	if err := NetworkIdentifier(request.NetworkIdentifier); err != nil {
 		return err
 	}
@@ -65,6 +77,10 @@ func BlockTransactionRequest(request *models.BlockTransactionRequest) error {
 // TransactionConstructionRequest ensures that a models.TransactionConstructionRequest
 // is well-formatted.
 func TransactionConstructionRequest(request *models.TransactionConstructionRequest) error {
+	if request == nil {
+		return errors.New("TransactionConstructionRequest is nil")
+	}
+
 	if err := NetworkIdentifier(request.NetworkIdentifier); err != nil {
 		return err
 	}
@@ -83,6 +99,10 @@ func TransactionConstructionRequest(request *models.TransactionConstructionReque
 // TransactionSubmitRequest ensures that a models.TransactionSubmitRequest
 // is well-formatted.
 func TransactionSubmitRequest(request *models.TransactionSubmitRequest) error {
+	if request == nil {
+		return errors.New("TransactionSubmitRequest is nil")
+	}
+
 	if request.SignedTransaction == "" {
 		return errors.New("TransactionSubmitRequest.SignedTransaction is empty")
 	}
@@ -93,12 +113,20 @@ func TransactionSubmitRequest(request *models.TransactionSubmitRequest) error {
 // MempoolRequest ensures that a models.MempoolRequest
 // is well-formatted.
 func MempoolRequest(request *models.MempoolRequest) error {
+	if request == nil {
+		return errors.New("MempoolRequest is nil")
+	}
+
 	return NetworkIdentifier(request.NetworkIdentifier)
 }
 
 // MempoolTransactionRequest ensures that a models.MempoolTransactionRequest
 // is well-formatted.
 func MempoolTransactionRequest(request *models.MempoolTransactionRequest) error {
+	if request == nil {
+		return errors.New("MempoolTransactionRequest is nil")
+	}
+
 	if err := NetworkIdentifier(request.NetworkIdentifier); err != nil {
 		return err
 	}
@@ -109,5 +137,9 @@ func MempoolTransactionRequest(request *models.MempoolTransactionRequest) error 
 // NetworkStatusRequest ensures that a models.NetworkStatusRequest
 // is well-formatted.
 func NetworkStatusRequest(request *models.NetworkStatusRequest) error {
+	if request == nil {
+		return errors.New("NetworkStatusRequest is nil")
+	}
+
 	return nil
 }
