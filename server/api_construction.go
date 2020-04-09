@@ -22,6 +22,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/coinbase/rosetta-sdk-go/asserter"
 	"github.com/coinbase/rosetta-sdk-go/models"
 )
 
@@ -60,11 +61,22 @@ func (c *ConstructionAPIController) TransactionConstruction(
 	r *http.Request,
 ) {
 	transactionConstructionRequest := &models.TransactionConstructionRequest{}
-	// TODO: Assert required params are present
 	if err := json.NewDecoder(r.Body).Decode(&transactionConstructionRequest); err != nil {
 		err = EncodeJSONResponse(&models.Error{
 			Message: err.Error(),
-		}, http.StatusBadRequest, w)
+		}, http.StatusInternalServerError, w)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		return
+	}
+
+	// Assert that TransactionConstructionRequest is correct
+	if err := asserter.TransactionConstructionRequest(transactionConstructionRequest); err != nil {
+		err = EncodeJSONResponse(&models.Error{
+			Message: err.Error(),
+		}, http.StatusInternalServerError, w)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -90,11 +102,22 @@ func (c *ConstructionAPIController) TransactionConstruction(
 // TransactionSubmit - Submit a Signed Transaction
 func (c *ConstructionAPIController) TransactionSubmit(w http.ResponseWriter, r *http.Request) {
 	transactionSubmitRequest := &models.TransactionSubmitRequest{}
-	// TODO: Assert required params are present
 	if err := json.NewDecoder(r.Body).Decode(&transactionSubmitRequest); err != nil {
 		err = EncodeJSONResponse(&models.Error{
 			Message: err.Error(),
-		}, http.StatusBadRequest, w)
+		}, http.StatusInternalServerError, w)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		return
+	}
+
+	// Assert that TransactionSubmitRequest is correct
+	if err := asserter.TransactionSubmitRequest(transactionSubmitRequest); err != nil {
+		err = EncodeJSONResponse(&models.Error{
+			Message: err.Error(),
+		}, http.StatusInternalServerError, w)
 		if err != nil {
 			log.Fatal(err)
 		}
