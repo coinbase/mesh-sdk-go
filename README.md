@@ -18,9 +18,6 @@ in this specification will enable exchanges, block explorers,
 and wallets to integrate with much less communication overhead
 and network-specific work.
 
-## Versioning
-- Rosetta version: 1.3.0
-
 ## Installation
 
 ```shell
