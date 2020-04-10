@@ -23,7 +23,7 @@ import (
 	"strings"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
-	"github.com/coinbase/rosetta-sdk-go/models"
+	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
 // A NetworkAPIController binds http requests to an api service and writes the service results to
@@ -51,9 +51,9 @@ func (c *NetworkAPIController) Routes() Routes {
 
 // NetworkStatus - Get Network Status
 func (c *NetworkAPIController) NetworkStatus(w http.ResponseWriter, r *http.Request) {
-	networkStatusRequest := &models.NetworkStatusRequest{}
+	networkStatusRequest := &types.NetworkStatusRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&networkStatusRequest); err != nil {
-		err = EncodeJSONResponse(&models.Error{
+		err = EncodeJSONResponse(&types.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)
 		if err != nil {
@@ -65,7 +65,7 @@ func (c *NetworkAPIController) NetworkStatus(w http.ResponseWriter, r *http.Requ
 
 	// Assert that NetworkStatusRequest is correct
 	if err := asserter.NetworkStatusRequest(networkStatusRequest); err != nil {
-		err = EncodeJSONResponse(&models.Error{
+		err = EncodeJSONResponse(&types.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)
 		if err != nil {

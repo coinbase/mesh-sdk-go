@@ -18,32 +18,32 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/coinbase/rosetta-sdk-go/models"
+	"github.com/coinbase/rosetta-sdk-go/types"
 
 	"github.com/stretchr/testify/assert"
 )
 
 var (
-	validNetworkIdentifier = &models.NetworkIdentifier{
+	validNetworkIdentifier = &types.NetworkIdentifier{
 		Blockchain: "Bitcoin",
 		Network:    "Mainnet",
 	}
 
-	validAccountIdentifier = &models.AccountIdentifier{
+	validAccountIdentifier = &types.AccountIdentifier{
 		Address: "acct1",
 	}
 
 	validBlockIndex             = int64(1000)
-	validPartialBlockIdentifier = &models.PartialBlockIdentifier{
+	validPartialBlockIdentifier = &types.PartialBlockIdentifier{
 		Index: &validBlockIndex,
 	}
 
-	validBlockIdentifier = &models.BlockIdentifier{
+	validBlockIdentifier = &types.BlockIdentifier{
 		Index: validBlockIndex,
 		Hash:  "block 1",
 	}
 
-	validTransactionIdentifier = &models.TransactionIdentifier{
+	validTransactionIdentifier = &types.TransactionIdentifier{
 		Hash: "tx1",
 	}
 
@@ -52,11 +52,11 @@ var (
 
 func TestAccountBalanceRequest(t *testing.T) {
 	var tests = map[string]struct {
-		request *models.AccountBalanceRequest
+		request *types.AccountBalanceRequest
 		err     error
 	}{
 		"valid request": {
-			request: &models.AccountBalanceRequest{
+			request: &types.AccountBalanceRequest{
 				NetworkIdentifier: validNetworkIdentifier,
 				AccountIdentifier: validAccountIdentifier,
 			},
@@ -67,19 +67,19 @@ func TestAccountBalanceRequest(t *testing.T) {
 			err:     errors.New("AccountBalanceRequest is nil"),
 		},
 		"missing network": {
-			request: &models.AccountBalanceRequest{
+			request: &types.AccountBalanceRequest{
 				AccountIdentifier: validAccountIdentifier,
 			},
 			err: errors.New("NetworkIdentifier is nil"),
 		},
 		"missing account": {
-			request: &models.AccountBalanceRequest{
+			request: &types.AccountBalanceRequest{
 				NetworkIdentifier: validNetworkIdentifier,
 			},
 			err: errors.New("Account is nil"),
 		},
 		"valid historical request": {
-			request: &models.AccountBalanceRequest{
+			request: &types.AccountBalanceRequest{
 				NetworkIdentifier: validNetworkIdentifier,
 				AccountIdentifier: validAccountIdentifier,
 				BlockIdentifier:   validPartialBlockIdentifier,
@@ -87,10 +87,10 @@ func TestAccountBalanceRequest(t *testing.T) {
 			err: nil,
 		},
 		"invalid historical request": {
-			request: &models.AccountBalanceRequest{
+			request: &types.AccountBalanceRequest{
 				NetworkIdentifier: validNetworkIdentifier,
 				AccountIdentifier: validAccountIdentifier,
-				BlockIdentifier:   &models.PartialBlockIdentifier{},
+				BlockIdentifier:   &types.PartialBlockIdentifier{},
 			},
 			err: errors.New("neither PartialBlockIdentifier.Hash nor PartialBlockIdentifier.Index is set"),
 		},
@@ -106,11 +106,11 @@ func TestAccountBalanceRequest(t *testing.T) {
 
 func TestBlockRequest(t *testing.T) {
 	var tests = map[string]struct {
-		request *models.BlockRequest
+		request *types.BlockRequest
 		err     error
 	}{
 		"valid request": {
-			request: &models.BlockRequest{
+			request: &types.BlockRequest{
 				NetworkIdentifier: validNetworkIdentifier,
 				BlockIdentifier:   validPartialBlockIdentifier,
 			},
@@ -121,21 +121,21 @@ func TestBlockRequest(t *testing.T) {
 			err:     errors.New("BlockRequest is nil"),
 		},
 		"missing network": {
-			request: &models.BlockRequest{
+			request: &types.BlockRequest{
 				BlockIdentifier: validPartialBlockIdentifier,
 			},
 			err: errors.New("NetworkIdentifier is nil"),
 		},
 		"missing block identifier": {
-			request: &models.BlockRequest{
+			request: &types.BlockRequest{
 				NetworkIdentifier: validNetworkIdentifier,
 			},
 			err: errors.New("PartialBlockIdentifier is nil"),
 		},
 		"invalid PartialBlockIdentifier request": {
-			request: &models.BlockRequest{
+			request: &types.BlockRequest{
 				NetworkIdentifier: validNetworkIdentifier,
-				BlockIdentifier:   &models.PartialBlockIdentifier{},
+				BlockIdentifier:   &types.PartialBlockIdentifier{},
 			},
 			err: errors.New("neither PartialBlockIdentifier.Hash nor PartialBlockIdentifier.Index is set"),
 		},
@@ -151,11 +151,11 @@ func TestBlockRequest(t *testing.T) {
 
 func TestBlockTransactionRequest(t *testing.T) {
 	var tests = map[string]struct {
-		request *models.BlockTransactionRequest
+		request *types.BlockTransactionRequest
 		err     error
 	}{
 		"valid request": {
-			request: &models.BlockTransactionRequest{
+			request: &types.BlockTransactionRequest{
 				NetworkIdentifier:     validNetworkIdentifier,
 				BlockIdentifier:       validBlockIdentifier,
 				TransactionIdentifier: validTransactionIdentifier,
@@ -167,23 +167,23 @@ func TestBlockTransactionRequest(t *testing.T) {
 			err:     errors.New("BlockTransactionRequest is nil"),
 		},
 		"missing network": {
-			request: &models.BlockTransactionRequest{
+			request: &types.BlockTransactionRequest{
 				BlockIdentifier:       validBlockIdentifier,
 				TransactionIdentifier: validTransactionIdentifier,
 			},
 			err: errors.New("NetworkIdentifier is nil"),
 		},
 		"missing block identifier": {
-			request: &models.BlockTransactionRequest{
+			request: &types.BlockTransactionRequest{
 				NetworkIdentifier:     validNetworkIdentifier,
 				TransactionIdentifier: validTransactionIdentifier,
 			},
 			err: errors.New("BlockIdentifier is nil"),
 		},
 		"invalid BlockIdentifier request": {
-			request: &models.BlockTransactionRequest{
+			request: &types.BlockTransactionRequest{
 				NetworkIdentifier: validNetworkIdentifier,
-				BlockIdentifier:   &models.BlockIdentifier{},
+				BlockIdentifier:   &types.BlockIdentifier{},
 			},
 			err: errors.New("BlockIdentifier.Hash is missing"),
 		},
@@ -199,18 +199,18 @@ func TestBlockTransactionRequest(t *testing.T) {
 
 func TestTransactionConstructionRequest(t *testing.T) {
 	var tests = map[string]struct {
-		request *models.TransactionConstructionRequest
+		request *types.TransactionConstructionRequest
 		err     error
 	}{
 		"valid request": {
-			request: &models.TransactionConstructionRequest{
+			request: &types.TransactionConstructionRequest{
 				NetworkIdentifier: validNetworkIdentifier,
 				AccountIdentifier: validAccountIdentifier,
 			},
 			err: nil,
 		},
 		"valid request with method": {
-			request: &models.TransactionConstructionRequest{
+			request: &types.TransactionConstructionRequest{
 				NetworkIdentifier: validNetworkIdentifier,
 				AccountIdentifier: validAccountIdentifier,
 				Method:            &validMethod,
@@ -222,13 +222,13 @@ func TestTransactionConstructionRequest(t *testing.T) {
 			err:     errors.New("TransactionConstructionRequest is nil"),
 		},
 		"missing network": {
-			request: &models.TransactionConstructionRequest{
+			request: &types.TransactionConstructionRequest{
 				AccountIdentifier: validAccountIdentifier,
 			},
 			err: errors.New("NetworkIdentifier is nil"),
 		},
 		"missing account identifier": {
-			request: &models.TransactionConstructionRequest{
+			request: &types.TransactionConstructionRequest{
 				NetworkIdentifier: validNetworkIdentifier,
 			},
 			err: errors.New("Account is nil"),
@@ -245,11 +245,11 @@ func TestTransactionConstructionRequest(t *testing.T) {
 
 func TestTransactionSubmitRequest(t *testing.T) {
 	var tests = map[string]struct {
-		request *models.TransactionSubmitRequest
+		request *types.TransactionSubmitRequest
 		err     error
 	}{
 		"valid request": {
-			request: &models.TransactionSubmitRequest{
+			request: &types.TransactionSubmitRequest{
 				SignedTransaction: "tx",
 			},
 			err: nil,
@@ -259,7 +259,7 @@ func TestTransactionSubmitRequest(t *testing.T) {
 			err:     errors.New("TransactionSubmitRequest is nil"),
 		},
 		"empty tx": {
-			request: &models.TransactionSubmitRequest{},
+			request: &types.TransactionSubmitRequest{},
 			err:     errors.New("TransactionSubmitRequest.SignedTransaction is empty"),
 		},
 	}
@@ -274,11 +274,11 @@ func TestTransactionSubmitRequest(t *testing.T) {
 
 func TestMempoolRequest(t *testing.T) {
 	var tests = map[string]struct {
-		request *models.MempoolRequest
+		request *types.MempoolRequest
 		err     error
 	}{
 		"valid request": {
-			request: &models.MempoolRequest{
+			request: &types.MempoolRequest{
 				NetworkIdentifier: validNetworkIdentifier,
 			},
 			err: nil,
@@ -288,7 +288,7 @@ func TestMempoolRequest(t *testing.T) {
 			err:     errors.New("MempoolRequest is nil"),
 		},
 		"empty tx": {
-			request: &models.MempoolRequest{},
+			request: &types.MempoolRequest{},
 			err:     errors.New("NetworkIdentifier is nil"),
 		},
 	}
@@ -303,11 +303,11 @@ func TestMempoolRequest(t *testing.T) {
 
 func TestMempoolTransactionRequest(t *testing.T) {
 	var tests = map[string]struct {
-		request *models.MempoolTransactionRequest
+		request *types.MempoolTransactionRequest
 		err     error
 	}{
 		"valid request": {
-			request: &models.MempoolTransactionRequest{
+			request: &types.MempoolTransactionRequest{
 				NetworkIdentifier:     validNetworkIdentifier,
 				TransactionIdentifier: validTransactionIdentifier,
 			},
@@ -318,15 +318,15 @@ func TestMempoolTransactionRequest(t *testing.T) {
 			err:     errors.New("MempoolTransactionRequest is nil"),
 		},
 		"missing network": {
-			request: &models.MempoolTransactionRequest{
+			request: &types.MempoolTransactionRequest{
 				TransactionIdentifier: validTransactionIdentifier,
 			},
 			err: errors.New("NetworkIdentifier is nil"),
 		},
 		"invalid TransactionIdentifier request": {
-			request: &models.MempoolTransactionRequest{
+			request: &types.MempoolTransactionRequest{
 				NetworkIdentifier:     validNetworkIdentifier,
-				TransactionIdentifier: &models.TransactionIdentifier{},
+				TransactionIdentifier: &types.TransactionIdentifier{},
 			},
 			err: errors.New("TransactionIdentifier.Hash is missing"),
 		},
@@ -342,11 +342,11 @@ func TestMempoolTransactionRequest(t *testing.T) {
 
 func TestNetworkStatusRequest(t *testing.T) {
 	var tests = map[string]struct {
-		request *models.NetworkStatusRequest
+		request *types.NetworkStatusRequest
 		err     error
 	}{
 		"valid request": {
-			request: &models.NetworkStatusRequest{},
+			request: &types.NetworkStatusRequest{},
 			err:     nil,
 		},
 		"nil request": {

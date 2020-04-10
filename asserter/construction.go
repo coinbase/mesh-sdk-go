@@ -15,23 +15,23 @@
 package asserter
 
 import (
-	"github.com/coinbase/rosetta-sdk-go/models"
+	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
 // TransactionConstruction returns an error if
-// the NetworkFee is not a valid models.Amount.
+// the NetworkFee is not a valid types.Amount.
 func TransactionConstruction(
-	response *models.TransactionConstructionResponse,
+	response *types.TransactionConstructionResponse,
 ) error {
 	return Amount(response.NetworkFee)
 }
 
 // TransactionSubmit returns an error if
-// the models.TransactionIdentifier in the response is not
+// the types.TransactionIdentifier in the response is not
 // valid or if the Submission.Status is not contained
 // within the provided validStatuses slice.
 func (a *Asserter) TransactionSubmit(
-	response *models.TransactionSubmitResponse,
+	response *types.TransactionSubmitResponse,
 ) error {
 	if err := TransactionIdentifier(response.TransactionIdentifier); err != nil {
 		return err

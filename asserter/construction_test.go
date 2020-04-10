@@ -19,40 +19,40 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/coinbase/rosetta-sdk-go/models"
+	"github.com/coinbase/rosetta-sdk-go/types"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestTransactionConstruction(t *testing.T) {
-	validAmount := &models.Amount{
+	validAmount := &types.Amount{
 		Value: "1",
-		Currency: &models.Currency{
+		Currency: &types.Currency{
 			Symbol:   "BTC",
 			Decimals: 8,
 		},
 	}
 
-	invalidAmount := &models.Amount{
+	invalidAmount := &types.Amount{
 		Value: "",
-		Currency: &models.Currency{
+		Currency: &types.Currency{
 			Symbol:   "BTC",
 			Decimals: 8,
 		},
 	}
 
 	var tests = map[string]struct {
-		response *models.TransactionConstructionResponse
+		response *types.TransactionConstructionResponse
 		err      error
 	}{
 		"valid response": {
-			response: &models.TransactionConstructionResponse{
+			response: &types.TransactionConstructionResponse{
 				NetworkFee: validAmount,
 			},
 			err: nil,
 		},
 		"valid response with metadata": {
-			response: &models.TransactionConstructionResponse{
+			response: &types.TransactionConstructionResponse{
 				NetworkFee: validAmount,
 				Metadata: &map[string]interface{}{
 					"blah": "hello",
@@ -61,7 +61,7 @@ func TestTransactionConstruction(t *testing.T) {
 			err: nil,
 		},
 		"invalid amount": {
-			response: &models.TransactionConstructionResponse{
+			response: &types.TransactionConstructionResponse{
 				NetworkFee: invalidAmount,
 			},
 			err: errors.New("Amount.Value is missing"),
@@ -78,19 +78,19 @@ func TestTransactionConstruction(t *testing.T) {
 
 func TestTransactionSubmit(t *testing.T) {
 	var tests = map[string]struct {
-		response *models.TransactionSubmitResponse
+		response *types.TransactionSubmitResponse
 		err      error
 	}{
 		"valid response": {
-			response: &models.TransactionSubmitResponse{
-				TransactionIdentifier: &models.TransactionIdentifier{
+			response: &types.TransactionSubmitResponse{
+				TransactionIdentifier: &types.TransactionIdentifier{
 					Hash: "tx1",
 				},
 			},
 			err: nil,
 		},
 		"invalid transaction identifier": {
-			response: &models.TransactionSubmitResponse{},
+			response: &types.TransactionSubmitResponse{},
 			err:      errors.New("TransactionIdentifier is nil"),
 		},
 	}
@@ -98,18 +98,18 @@ func TestTransactionSubmit(t *testing.T) {
 	for name, test := range tests {
 		asserter, err := New(
 			context.Background(),
-			&models.NetworkStatusResponse{
-				NetworkStatus: []*models.NetworkStatus{
+			&types.NetworkStatusResponse{
+				NetworkStatus: []*types.NetworkStatus{
 					{
-						NetworkInformation: &models.NetworkInformation{
-							GenesisBlockIdentifier: &models.BlockIdentifier{
+						NetworkInformation: &types.NetworkInformation{
+							GenesisBlockIdentifier: &types.BlockIdentifier{
 								Index: 0,
 							},
 						},
 					},
 				},
-				Options: &models.Options{
-					OperationStatuses: []*models.OperationStatus{
+				Options: &types.Options{
+					OperationStatuses: []*types.OperationStatus{
 						{
 							Status:     "SUCCESS",
 							Successful: true,

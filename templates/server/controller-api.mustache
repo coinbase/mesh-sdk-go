@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"strings"
 
-  "github.com/coinbase/rosetta-sdk-go/models"
+  "github.com/coinbase/rosetta-sdk-go/types"
   "github.com/coinbase/rosetta-sdk-go/asserter"
 )
 
@@ -36,9 +36,9 @@ func (c *{{classname}}Controller) Routes() Routes {
 // {{nickname}} - {{{summary}}}
 func (c *{{classname}}Controller) {{nickname}}(w http.ResponseWriter, r *http.Request) { {{#allParams}}{{#isHeaderParam}}
 	{{paramName}} := r.Header.Get("{{paramName}}"){{/isHeaderParam}}{{#isBodyParam}}
-	{{paramName}} := &models.{{dataType}}{}
+	{{paramName}} := &types.{{dataType}}{}
 	if err := json.NewDecoder(r.Body).Decode(&{{paramName}}); err != nil {
-    err = EncodeJSONResponse(&models.Error{
+    err = EncodeJSONResponse(&types.Error{
       Message: err.Error(),
     }, http.StatusInternalServerError, w)
     if err != nil {
@@ -50,7 +50,7 @@ func (c *{{classname}}Controller) {{nickname}}(w http.ResponseWriter, r *http.Re
 
   // Assert that {{dataType}} is correct
   if err := asserter.{{dataType}}({{paramName}}); err != nil {
-    err = EncodeJSONResponse(&models.Error{
+    err = EncodeJSONResponse(&types.Error{
       Message: err.Error(),
     }, http.StatusInternalServerError, w)
     if err != nil {

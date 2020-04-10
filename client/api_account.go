@@ -22,7 +22,7 @@ import (
 	_ioutil "io/ioutil"
 	_nethttp "net/http"
 
-	models "github.com/coinbase/rosetta-sdk-go/models"
+	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
 // Linger please
@@ -43,8 +43,8 @@ type AccountAPIService service
 // optional BlockIdentifier.
 func (a *AccountAPIService) AccountBalance(
 	ctx _context.Context,
-	accountBalanceRequest *models.AccountBalanceRequest,
-) (*models.AccountBalanceResponse, *models.Error, error) {
+	accountBalanceRequest *types.AccountBalanceRequest,
+) (*types.AccountBalanceResponse, *types.Error, error) {
 	var (
 		localVarPostBody interface{}
 	)
@@ -90,7 +90,7 @@ func (a *AccountAPIService) AccountBalance(
 	}
 
 	if localVarHTTPResponse.StatusCode != _nethttp.StatusOK {
-		var v models.Error
+		var v types.Error
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
 			return nil, nil, err
@@ -99,7 +99,7 @@ func (a *AccountAPIService) AccountBalance(
 		return nil, &v, fmt.Errorf("%+v", v)
 	}
 
-	var v models.AccountBalanceResponse
+	var v types.AccountBalanceResponse
 	err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 	if err != nil {
 		return nil, nil, err

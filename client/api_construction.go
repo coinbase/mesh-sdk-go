@@ -22,7 +22,7 @@ import (
 	_ioutil "io/ioutil"
 	_nethttp "net/http"
 
-	models "github.com/coinbase/rosetta-sdk-go/models"
+	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
 // Linger please
@@ -41,8 +41,8 @@ type ConstructionAPIService service
 // not need to be broken out into a key-value mapping and can be returned as a blob.
 func (a *ConstructionAPIService) TransactionConstruction(
 	ctx _context.Context,
-	transactionConstructionRequest *models.TransactionConstructionRequest,
-) (*models.TransactionConstructionResponse, *models.Error, error) {
+	transactionConstructionRequest *types.TransactionConstructionRequest,
+) (*types.TransactionConstructionResponse, *types.Error, error) {
 	var (
 		localVarPostBody interface{}
 	)
@@ -88,7 +88,7 @@ func (a *ConstructionAPIService) TransactionConstruction(
 	}
 
 	if localVarHTTPResponse.StatusCode != _nethttp.StatusOK {
-		var v models.Error
+		var v types.Error
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
 			return nil, nil, err
@@ -97,7 +97,7 @@ func (a *ConstructionAPIService) TransactionConstruction(
 		return nil, &v, fmt.Errorf("%+v", v)
 	}
 
-	var v models.TransactionConstructionResponse
+	var v types.TransactionConstructionResponse
 	err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 	if err != nil {
 		return nil, nil, err
@@ -113,8 +113,8 @@ func (a *ConstructionAPIService) TransactionConstruction(
 // Otherwise, it should return an error.
 func (a *ConstructionAPIService) TransactionSubmit(
 	ctx _context.Context,
-	transactionSubmitRequest *models.TransactionSubmitRequest,
-) (*models.TransactionSubmitResponse, *models.Error, error) {
+	transactionSubmitRequest *types.TransactionSubmitRequest,
+) (*types.TransactionSubmitResponse, *types.Error, error) {
 	var (
 		localVarPostBody interface{}
 	)
@@ -160,7 +160,7 @@ func (a *ConstructionAPIService) TransactionSubmit(
 	}
 
 	if localVarHTTPResponse.StatusCode != _nethttp.StatusOK {
-		var v models.Error
+		var v types.Error
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
 			return nil, nil, err
@@ -169,7 +169,7 @@ func (a *ConstructionAPIService) TransactionSubmit(
 		return nil, &v, fmt.Errorf("%+v", v)
 	}
 
-	var v models.TransactionSubmitResponse
+	var v types.TransactionSubmitResponse
 	err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 	if err != nil {
 		return nil, nil, err

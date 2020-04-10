@@ -18,17 +18,17 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/coinbase/rosetta-sdk-go/models"
+	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
 // containsAccountIdentifier returns a boolean indicating if a
-// *models.AccountIdentifier is contained within a slice of
-// *models.AccountIdentifier. The check for equality takes
-// into account everything within the models.AccountIdentifier
+// *types.AccountIdentifier is contained within a slice of
+// *types.AccountIdentifier. The check for equality takes
+// into account everything within the types.AccountIdentifier
 // struct (including the SubAccountIdentifier).
 func containsAccountIdentifier(
-	identifiers []*models.AccountIdentifier,
-	identifier *models.AccountIdentifier,
+	identifiers []*types.AccountIdentifier,
+	identifier *types.AccountIdentifier,
 ) bool {
 	for _, ident := range identifiers {
 		if reflect.DeepEqual(ident, identifier) {
@@ -40,11 +40,11 @@ func containsAccountIdentifier(
 }
 
 // containsCurrency returns a boolean indicating if a
-// *models.Currency is contained within a slice of
-// *models.Currency. The check for equality takes
-// into account everything within the models.Currency
+// *types.Currency is contained within a slice of
+// *types.Currency. The check for equality takes
+// into account everything within the types.Currency
 // struct (including currency.Metadata).
-func containsCurrency(currencies []*models.Currency, currency *models.Currency) bool {
+func containsCurrency(currencies []*types.Currency, currency *types.Currency) bool {
 	for _, curr := range currencies {
 		if reflect.DeepEqual(curr, currency) {
 			return true
@@ -55,12 +55,12 @@ func containsCurrency(currencies []*models.Currency, currency *models.Currency) 
 }
 
 // assertBalanceAmounts returns an error if a slice
-// of models.Amount returned as an models.AccountIdentifier's
+// of types.Amount returned as an types.AccountIdentifier's
 // balance is invalid. It is considered invalid if the same
 // currency is returned multiple times (these shoould be
-// consolidated) or if a models.Amount is considered invalid.
-func assertBalanceAmounts(amounts []*models.Amount) error {
-	currencies := make([]*models.Currency, 0)
+// consolidated) or if a types.Amount is considered invalid.
+func assertBalanceAmounts(amounts []*types.Amount) error {
+	currencies := make([]*types.Currency, 0)
 	for _, amount := range amounts {
 		// Ensure a currency is used at most once in balance.Amounts
 		if containsCurrency(currencies, amount.Currency) {
@@ -77,19 +77,19 @@ func assertBalanceAmounts(amounts []*models.Amount) error {
 }
 
 // AccountBalance returns an error if the provided
-// models.BlockIdentifier is invalid, if the same
-// models.AccountIdentifier appears in multiple
-// models.Balance structs (should be consolidated),
-// or if a models.Balance is considered invalid.
+// types.BlockIdentifier is invalid, if the same
+// types.AccountIdentifier appears in multiple
+// types.Balance structs (should be consolidated),
+// or if a types.Balance is considered invalid.
 func AccountBalance(
-	block *models.BlockIdentifier,
-	balances []*models.Balance,
+	block *types.BlockIdentifier,
+	balances []*types.Balance,
 ) error {
 	if err := BlockIdentifier(block); err != nil {
 		return err
 	}
 
-	accounts := make([]*models.AccountIdentifier, 0)
+	accounts := make([]*types.AccountIdentifier, 0)
 	for _, balance := range balances {
 		if err := AccountIdentifier(balance.AccountIdentifier); err != nil {
 			return err

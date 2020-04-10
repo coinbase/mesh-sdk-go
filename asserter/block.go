@@ -19,12 +19,12 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/coinbase/rosetta-sdk-go/models"
+	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
-// Amount ensures a models.Amount has an
+// Amount ensures a types.Amount has an
 // integer value, specified precision, and symbol.
-func Amount(amount *models.Amount) error {
+func Amount(amount *types.Amount) error {
 	if amount == nil || amount.Value == "" {
 		return errors.New("Amount.Value is missing")
 	}
@@ -62,10 +62,10 @@ func contains(valid []string, value string) bool {
 }
 
 // OperationIdentifier returns an error if index of the
-// models.Operation is out-of-order or if the NetworkIndex is
+// types.Operation is out-of-order or if the NetworkIndex is
 // invalid.
 func OperationIdentifier(
-	identifier *models.OperationIdentifier,
+	identifier *types.OperationIdentifier,
 	index int64,
 ) error {
 	if identifier == nil || identifier.Index != index {
@@ -79,9 +79,9 @@ func OperationIdentifier(
 	return nil
 }
 
-// AccountIdentifier returns an error if a models.AccountIdentifier
+// AccountIdentifier returns an error if a types.AccountIdentifier
 // is missing an address or a provided SubAccount is missing an identifier.
-func AccountIdentifier(account *models.AccountIdentifier) error {
+func AccountIdentifier(account *types.AccountIdentifier) error {
 	if account == nil {
 		return errors.New("Account is nil")
 	}
@@ -101,10 +101,10 @@ func AccountIdentifier(account *models.AccountIdentifier) error {
 	return nil
 }
 
-// OperationSuccessful returns a boolean indicating if a models.Operation is
+// OperationSuccessful returns a boolean indicating if a types.Operation is
 // successful and should be applied in a transaction. This should only be called
 // AFTER an operation has been validated.
-func (a *Asserter) OperationSuccessful(operation *models.Operation) (bool, error) {
+func (a *Asserter) OperationSuccessful(operation *types.Operation) (bool, error) {
 	val, ok := a.operationStatusMap[operation.Status]
 	if !ok {
 		return false, fmt.Errorf("%s not found", operation.Status)
@@ -113,10 +113,10 @@ func (a *Asserter) OperationSuccessful(operation *models.Operation) (bool, error
 	return val, nil
 }
 
-// Operation ensures a models.Operation has a valid
+// Operation ensures a types.Operation has a valid
 // type, status, and amount.
 func (a *Asserter) Operation(
-	operation *models.Operation,
+	operation *types.Operation,
 	index int64,
 ) error {
 	if operation == nil {
@@ -146,9 +146,9 @@ func (a *Asserter) Operation(
 	return Amount(operation.Amount)
 }
 
-// BlockIdentifier ensures a models.BlockIdentifier
+// BlockIdentifier ensures a types.BlockIdentifier
 // is well-formatted.
-func BlockIdentifier(blockIdentifier *models.BlockIdentifier) error {
+func BlockIdentifier(blockIdentifier *types.BlockIdentifier) error {
 	if blockIdentifier == nil {
 		return errors.New("BlockIdentifier is nil")
 	}
@@ -164,9 +164,9 @@ func BlockIdentifier(blockIdentifier *models.BlockIdentifier) error {
 	return nil
 }
 
-// PartialBlockIdentifier ensures a models.PartialBlockIdentifier
+// PartialBlockIdentifier ensures a types.PartialBlockIdentifier
 // is well-formatted.
-func PartialBlockIdentifier(blockIdentifier *models.PartialBlockIdentifier) error {
+func PartialBlockIdentifier(blockIdentifier *types.PartialBlockIdentifier) error {
 	if blockIdentifier == nil {
 		return errors.New("PartialBlockIdentifier is nil")
 	}
@@ -183,9 +183,9 @@ func PartialBlockIdentifier(blockIdentifier *models.PartialBlockIdentifier) erro
 }
 
 // TransactionIdentifier returns an error if a
-// models.TransactionIdentifier has an invalid hash.
+// types.TransactionIdentifier has an invalid hash.
 func TransactionIdentifier(
-	transactionIdentifier *models.TransactionIdentifier,
+	transactionIdentifier *types.TransactionIdentifier,
 ) error {
 	if transactionIdentifier == nil {
 		return errors.New("TransactionIdentifier is nil")
@@ -198,11 +198,11 @@ func TransactionIdentifier(
 	return nil
 }
 
-// Transaction returns an error if the models.TransactionIdentifier
-// is invalid, if any models.Operation within the models.Transaction
+// Transaction returns an error if the types.TransactionIdentifier
+// is invalid, if any types.Operation within the types.Transaction
 // is invalid, or if any operation index is reused within a transaction.
 func (a *Asserter) Transaction(
-	transaction *models.Transaction,
+	transaction *types.Transaction,
 ) error {
 	if transaction == nil {
 		return errors.New("Transaction is nil")
@@ -233,7 +233,7 @@ func Timestamp(timestamp int64) error {
 
 // Block runs a basic set of assertions for each returned block.
 func (a *Asserter) Block(
-	block *models.Block,
+	block *types.Block,
 ) error {
 	if block == nil {
 		return errors.New("Block is nil")

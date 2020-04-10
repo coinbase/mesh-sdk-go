@@ -23,7 +23,7 @@ import (
 	"strings"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
-	"github.com/coinbase/rosetta-sdk-go/models"
+	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
 // A BlockAPIController binds http requests to an api service and writes the service results to the
@@ -57,9 +57,9 @@ func (c *BlockAPIController) Routes() Routes {
 
 // Block - Get a Block
 func (c *BlockAPIController) Block(w http.ResponseWriter, r *http.Request) {
-	blockRequest := &models.BlockRequest{}
+	blockRequest := &types.BlockRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&blockRequest); err != nil {
-		err = EncodeJSONResponse(&models.Error{
+		err = EncodeJSONResponse(&types.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)
 		if err != nil {
@@ -71,7 +71,7 @@ func (c *BlockAPIController) Block(w http.ResponseWriter, r *http.Request) {
 
 	// Assert that BlockRequest is correct
 	if err := asserter.BlockRequest(blockRequest); err != nil {
-		err = EncodeJSONResponse(&models.Error{
+		err = EncodeJSONResponse(&types.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)
 		if err != nil {
@@ -98,9 +98,9 @@ func (c *BlockAPIController) Block(w http.ResponseWriter, r *http.Request) {
 
 // BlockTransaction - Get a Block Transaction
 func (c *BlockAPIController) BlockTransaction(w http.ResponseWriter, r *http.Request) {
-	blockTransactionRequest := &models.BlockTransactionRequest{}
+	blockTransactionRequest := &types.BlockTransactionRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&blockTransactionRequest); err != nil {
-		err = EncodeJSONResponse(&models.Error{
+		err = EncodeJSONResponse(&types.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)
 		if err != nil {
@@ -112,7 +112,7 @@ func (c *BlockAPIController) BlockTransaction(w http.ResponseWriter, r *http.Req
 
 	// Assert that BlockTransactionRequest is correct
 	if err := asserter.BlockTransactionRequest(blockTransactionRequest); err != nil {
-		err = EncodeJSONResponse(&models.Error{
+		err = EncodeJSONResponse(&types.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)
 		if err != nil {

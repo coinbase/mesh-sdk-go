@@ -18,11 +18,11 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/coinbase/rosetta-sdk-go/models"
+	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
-// SubNetworkIdentifier asserts a models.SubNetworkIdentifer is valid (if not nil).
-func SubNetworkIdentifier(subNetworkIdentifier *models.SubNetworkIdentifier) error {
+// SubNetworkIdentifier asserts a types.SubNetworkIdentifer is valid (if not nil).
+func SubNetworkIdentifier(subNetworkIdentifier *types.SubNetworkIdentifier) error {
 	if subNetworkIdentifier == nil {
 		return nil
 	}
@@ -34,9 +34,9 @@ func SubNetworkIdentifier(subNetworkIdentifier *models.SubNetworkIdentifier) err
 	return nil
 }
 
-// NetworkIdentifier ensures a models.NetworkIdentifier has
+// NetworkIdentifier ensures a types.NetworkIdentifier has
 // a valid blockchain and network.
-func NetworkIdentifier(network *models.NetworkIdentifier) error {
+func NetworkIdentifier(network *types.NetworkIdentifier) error {
 	if network == nil {
 		return errors.New("NetworkIdentifier is nil")
 	}
@@ -52,8 +52,8 @@ func NetworkIdentifier(network *models.NetworkIdentifier) error {
 	return SubNetworkIdentifier(network.SubNetworkIdentifier)
 }
 
-// Peer ensures a models.Peer has a valid peer_id.
-func Peer(peer *models.Peer) error {
+// Peer ensures a types.Peer has a valid peer_id.
+func Peer(peer *types.Peer) error {
 	if peer == nil || peer.PeerID == "" {
 		return errors.New("Peer.PeerID is missing")
 	}
@@ -63,7 +63,7 @@ func Peer(peer *models.Peer) error {
 
 // Version ensures the version of the node is
 // returned.
-func Version(version *models.Version) error {
+func Version(version *types.Version) error {
 	if version == nil {
 		return errors.New("version is nil")
 	}
@@ -95,9 +95,9 @@ func StringArray(arrName string, arr []string) error {
 	return nil
 }
 
-// NetworkInformation ensures any models.NetworkInformation
-// included in models.NetworkStatus or models.SubNetworkStatus is valid.
-func NetworkInformation(networkInformation *models.NetworkInformation) error {
+// NetworkInformation ensures any types.NetworkInformation
+// included in types.NetworkStatus or types.SubNetworkStatus is valid.
+func NetworkInformation(networkInformation *types.NetworkInformation) error {
 	if networkInformation == nil {
 		return errors.New("network information is nil")
 	}
@@ -123,8 +123,8 @@ func NetworkInformation(networkInformation *models.NetworkInformation) error {
 	return nil
 }
 
-// NetworkStatus ensures a models.NetworkStatus object is valid.
-func NetworkStatus(networkStatus *models.NetworkStatus) error {
+// NetworkStatus ensures a types.NetworkStatus object is valid.
+func NetworkStatus(networkStatus *types.NetworkStatus) error {
 	if networkStatus == nil {
 		return errors.New("network status is nil")
 	}
@@ -142,7 +142,7 @@ func NetworkStatus(networkStatus *models.NetworkStatus) error {
 
 // OperationStatuses ensures all items in Options.OperationStatuses
 // are valid and that there exists at least 1 successful status.
-func OperationStatuses(statuses []*models.OperationStatus) error {
+func OperationStatuses(statuses []*types.OperationStatus) error {
 	if len(statuses) == 0 {
 		return errors.New("no Options.OperationStatuses found")
 	}
@@ -165,8 +165,8 @@ func OperationStatuses(statuses []*models.OperationStatus) error {
 	return nil
 }
 
-// Error ensures a models.Error is valid.
-func Error(err *models.Error) error {
+// Error ensures a types.Error is valid.
+func Error(err *types.Error) error {
 	if err == nil {
 		return errors.New("Error is nil")
 	}
@@ -182,9 +182,9 @@ func Error(err *models.Error) error {
 	return nil
 }
 
-// Errors ensures each models.Error in a slice is valid
+// Errors ensures each types.Error in a slice is valid
 // and that there is no error code collision.
-func Errors(rosettaErrors []*models.Error) error {
+func Errors(rosettaErrors []*types.Error) error {
 	statusCodes := map[int32]struct{}{}
 
 	for _, rosettaError := range rosettaErrors {
@@ -203,8 +203,8 @@ func Errors(rosettaErrors []*models.Error) error {
 	return nil
 }
 
-// NetworkOptions ensures a models.Options object is valid.
-func NetworkOptions(options *models.Options) error {
+// NetworkOptions ensures a types.Options object is valid.
+func NetworkOptions(options *types.Options) error {
 	if options == nil {
 		return errors.New("options is nil")
 	}
@@ -225,8 +225,8 @@ func NetworkOptions(options *models.Options) error {
 }
 
 // NetworkStatusResponse orchestrates assertions for all
-// components of a models.NetworkStatus.
-func NetworkStatusResponse(response *models.NetworkStatusResponse) error {
+// components of a types.NetworkStatus.
+func NetworkStatusResponse(response *types.NetworkStatusResponse) error {
 	for _, network := range response.NetworkStatus {
 		if err := NetworkStatus(network); err != nil {
 			return err

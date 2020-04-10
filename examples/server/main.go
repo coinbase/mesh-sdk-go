@@ -20,8 +20,8 @@ import (
 	"net/http"
 
 	"github.com/coinbase/rosetta-sdk-go/examples/server/services"
-	"github.com/coinbase/rosetta-sdk-go/models"
 	"github.com/coinbase/rosetta-sdk-go/server"
+	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
 const (
@@ -30,7 +30,7 @@ const (
 
 // NewBlockchainRouter creates a Mux http.Handler from a collection
 // of server controllers.
-func NewBlockchainRouter(network *models.NetworkIdentifier) http.Handler {
+func NewBlockchainRouter(network *types.NetworkIdentifier) http.Handler {
 	networkAPIService := services.NewNetworkAPIService(network)
 	networkAPIController := server.NewNetworkAPIController(networkAPIService)
 
@@ -41,7 +41,7 @@ func NewBlockchainRouter(network *models.NetworkIdentifier) http.Handler {
 }
 
 func main() {
-	network := &models.NetworkIdentifier{
+	network := &types.NetworkIdentifier{
 		Blockchain: "Rosetta",
 		Network:    "Testnet",
 	}

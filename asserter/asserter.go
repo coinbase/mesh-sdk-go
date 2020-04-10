@@ -18,7 +18,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/coinbase/rosetta-sdk-go/models"
+	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
 // Asserter contains all logic to perform static
@@ -26,14 +26,14 @@ import (
 type Asserter struct {
 	operationTypes     []string
 	operationStatusMap map[string]bool
-	errorTypeMap       map[int32]*models.Error
+	errorTypeMap       map[int32]*types.Error
 	genesisIndex       int64
 }
 
 // New constructs a new Asserter.
 func New(
 	ctx context.Context,
-	networkResponse *models.NetworkStatusResponse,
+	networkResponse *types.NetworkStatusResponse,
 ) (*Asserter, error) {
 	if len(networkResponse.NetworkStatus) == 0 {
 		return nil, errors.New("no available networks in network response")
@@ -51,13 +51,13 @@ func New(
 }
 
 // NewOptions constructs a new Asserter using the provided
-// arguments instead of using a models.NetworkStatusResponse.
+// arguments instead of using a types.NetworkStatusResponse.
 func NewOptions(
 	ctx context.Context,
-	genesisBlockIdentifier *models.BlockIdentifier,
+	genesisBlockIdentifier *types.BlockIdentifier,
 	operationTypes []string,
-	operationStatuses []*models.OperationStatus,
-	errors []*models.Error,
+	operationStatuses []*types.OperationStatus,
+	errors []*types.Error,
 ) *Asserter {
 	asserter := &Asserter{
 		operationTypes: operationTypes,
@@ -69,7 +69,7 @@ func NewOptions(
 		asserter.operationStatusMap[status.Status] = status.Successful
 	}
 
-	asserter.errorTypeMap = map[int32]*models.Error{}
+	asserter.errorTypeMap = map[int32]*types.Error{}
 	for _, err := range errors {
 		asserter.errorTypeMap[err.Code] = err
 	}

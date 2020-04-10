@@ -15,15 +15,15 @@
 package asserter
 
 import (
-	"github.com/coinbase/rosetta-sdk-go/models"
+	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
 // MempoolTransactions returns an error if any
-// models.TransactionIdentifier returns is missing a hash.
+// types.TransactionIdentifier returns is missing a hash.
 // The correctness of each populated MempoolTransaction is
 // asserted by Transaction.
 func MempoolTransactions(
-	transactions []*models.TransactionIdentifier,
+	transactions []*types.TransactionIdentifier,
 ) error {
 	for _, t := range transactions {
 		if err := TransactionIdentifier(t); err != nil {
