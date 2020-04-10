@@ -26,42 +26,39 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/models"
 )
 
-// A ConstructionAPIController binds http requests to an api service and writes the service results
-// to the http response
-type ConstructionAPIController struct {
-	service ConstructionAPIServicer
+// A BlockAPIController binds http requests to an api service and writes the service results to the
+// http response
+type BlockAPIController struct {
+	service BlockAPIServicer
 }
 
-// NewConstructionAPIController creates a default api controller
-func NewConstructionAPIController(s ConstructionAPIServicer) Router {
-	return &ConstructionAPIController{service: s}
+// NewBlockAPIController creates a default api controller
+func NewBlockAPIController(s BlockAPIServicer) Router {
+	return &BlockAPIController{service: s}
 }
 
-// Routes returns all of the api route for the ConstructionAPIController
-func (c *ConstructionAPIController) Routes() Routes {
+// Routes returns all of the api route for the BlockAPIController
+func (c *BlockAPIController) Routes() Routes {
 	return Routes{
 		{
-			"TransactionConstruction",
+			"Block",
 			strings.ToUpper("Post"),
-			"/construction/metadata",
-			c.TransactionConstruction,
+			"/block",
+			c.Block,
 		},
 		{
-			"TransactionSubmit",
+			"BlockTransaction",
 			strings.ToUpper("Post"),
-			"/construction/submit",
-			c.TransactionSubmit,
+			"/block/transaction",
+			c.BlockTransaction,
 		},
 	}
 }
 
-// TransactionConstruction - Get Transaction Construction Metadata
-func (c *ConstructionAPIController) TransactionConstruction(
-	w http.ResponseWriter,
-	r *http.Request,
-) {
-	transactionConstructionRequest := &models.TransactionConstructionRequest{}
-	if err := json.NewDecoder(r.Body).Decode(&transactionConstructionRequest); err != nil {
+// Block - Get a Block
+func (c *BlockAPIController) Block(w http.ResponseWriter, r *http.Request) {
+	blockRequest := &models.BlockRequest{}
+	if err := json.NewDecoder(r.Body).Decode(&blockRequest); err != nil {
 		err = EncodeJSONResponse(&models.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)
@@ -72,8 +69,8 @@ func (c *ConstructionAPIController) TransactionConstruction(
 		return
 	}
 
-	// Assert that TransactionConstructionRequest is correct
-	if err := asserter.TransactionConstructionRequest(transactionConstructionRequest); err != nil {
+	// Assert that BlockRequest is correct
+	if err := asserter.BlockRequest(blockRequest); err != nil {
 		err = EncodeJSONResponse(&models.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)
@@ -84,7 +81,7 @@ func (c *ConstructionAPIController) TransactionConstruction(
 		return
 	}
 
-	result, serviceErr := c.service.TransactionConstruction(*transactionConstructionRequest)
+	result, serviceErr := c.service.Block(blockRequest)
 	if serviceErr != nil {
 		err := EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
 		if err != nil {
@@ -99,10 +96,10 @@ func (c *ConstructionAPIController) TransactionConstruction(
 	}
 }
 
-// TransactionSubmit - Submit a Signed Transaction
-func (c *ConstructionAPIController) TransactionSubmit(w http.ResponseWriter, r *http.Request) {
-	transactionSubmitRequest := &models.TransactionSubmitRequest{}
-	if err := json.NewDecoder(r.Body).Decode(&transactionSubmitRequest); err != nil {
+// BlockTransaction - Get a Block Transaction
+func (c *BlockAPIController) BlockTransaction(w http.ResponseWriter, r *http.Request) {
+	blockTransactionRequest := &models.BlockTransactionRequest{}
+	if err := json.NewDecoder(r.Body).Decode(&blockTransactionRequest); err != nil {
 		err = EncodeJSONResponse(&models.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)
@@ -113,8 +110,8 @@ func (c *ConstructionAPIController) TransactionSubmit(w http.ResponseWriter, r *
 		return
 	}
 
-	// Assert that TransactionSubmitRequest is correct
-	if err := asserter.TransactionSubmitRequest(transactionSubmitRequest); err != nil {
+	// Assert that BlockTransactionRequest is correct
+	if err := asserter.BlockTransactionRequest(blockTransactionRequest); err != nil {
 		err = EncodeJSONResponse(&models.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)
@@ -125,7 +122,7 @@ func (c *ConstructionAPIController) TransactionSubmit(w http.ResponseWriter, r *
 		return
 	}
 
-	result, serviceErr := c.service.TransactionSubmit(*transactionSubmitRequest)
+	result, serviceErr := c.service.BlockTransaction(blockTransactionRequest)
 	if serviceErr != nil {
 		err := EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
 		if err != nil {

@@ -26,39 +26,42 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/models"
 )
 
-// A MempoolAPIController binds http requests to an api service and writes the service results to
-// the http response
-type MempoolAPIController struct {
-	service MempoolAPIServicer
+// A ConstructionAPIController binds http requests to an api service and writes the service results
+// to the http response
+type ConstructionAPIController struct {
+	service ConstructionAPIServicer
 }
 
-// NewMempoolAPIController creates a default api controller
-func NewMempoolAPIController(s MempoolAPIServicer) Router {
-	return &MempoolAPIController{service: s}
+// NewConstructionAPIController creates a default api controller
+func NewConstructionAPIController(s ConstructionAPIServicer) Router {
+	return &ConstructionAPIController{service: s}
 }
 
-// Routes returns all of the api route for the MempoolAPIController
-func (c *MempoolAPIController) Routes() Routes {
+// Routes returns all of the api route for the ConstructionAPIController
+func (c *ConstructionAPIController) Routes() Routes {
 	return Routes{
 		{
-			"Mempool",
+			"TransactionConstruction",
 			strings.ToUpper("Post"),
-			"/mempool",
-			c.Mempool,
+			"/construction/metadata",
+			c.TransactionConstruction,
 		},
 		{
-			"MempoolTransaction",
+			"TransactionSubmit",
 			strings.ToUpper("Post"),
-			"/mempool/transaction",
-			c.MempoolTransaction,
+			"/construction/submit",
+			c.TransactionSubmit,
 		},
 	}
 }
 
-// Mempool - Get All Mempool Transactions
-func (c *MempoolAPIController) Mempool(w http.ResponseWriter, r *http.Request) {
-	mempoolRequest := &models.MempoolRequest{}
-	if err := json.NewDecoder(r.Body).Decode(&mempoolRequest); err != nil {
+// TransactionConstruction - Get Transaction Construction Metadata
+func (c *ConstructionAPIController) TransactionConstruction(
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	transactionConstructionRequest := &models.TransactionConstructionRequest{}
+	if err := json.NewDecoder(r.Body).Decode(&transactionConstructionRequest); err != nil {
 		err = EncodeJSONResponse(&models.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)
@@ -69,8 +72,8 @@ func (c *MempoolAPIController) Mempool(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Assert that MempoolRequest is correct
-	if err := asserter.MempoolRequest(mempoolRequest); err != nil {
+	// Assert that TransactionConstructionRequest is correct
+	if err := asserter.TransactionConstructionRequest(transactionConstructionRequest); err != nil {
 		err = EncodeJSONResponse(&models.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)
@@ -81,7 +84,7 @@ func (c *MempoolAPIController) Mempool(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, serviceErr := c.service.Mempool(*mempoolRequest)
+	result, serviceErr := c.service.TransactionConstruction(transactionConstructionRequest)
 	if serviceErr != nil {
 		err := EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
 		if err != nil {
@@ -96,10 +99,10 @@ func (c *MempoolAPIController) Mempool(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// MempoolTransaction - Get a Mempool Transaction
-func (c *MempoolAPIController) MempoolTransaction(w http.ResponseWriter, r *http.Request) {
-	mempoolTransactionRequest := &models.MempoolTransactionRequest{}
-	if err := json.NewDecoder(r.Body).Decode(&mempoolTransactionRequest); err != nil {
+// TransactionSubmit - Submit a Signed Transaction
+func (c *ConstructionAPIController) TransactionSubmit(w http.ResponseWriter, r *http.Request) {
+	transactionSubmitRequest := &models.TransactionSubmitRequest{}
+	if err := json.NewDecoder(r.Body).Decode(&transactionSubmitRequest); err != nil {
 		err = EncodeJSONResponse(&models.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)
@@ -110,8 +113,8 @@ func (c *MempoolAPIController) MempoolTransaction(w http.ResponseWriter, r *http
 		return
 	}
 
-	// Assert that MempoolTransactionRequest is correct
-	if err := asserter.MempoolTransactionRequest(mempoolTransactionRequest); err != nil {
+	// Assert that TransactionSubmitRequest is correct
+	if err := asserter.TransactionSubmitRequest(transactionSubmitRequest); err != nil {
 		err = EncodeJSONResponse(&models.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)
@@ -122,7 +125,7 @@ func (c *MempoolAPIController) MempoolTransaction(w http.ResponseWriter, r *http
 		return
 	}
 
-	result, serviceErr := c.service.MempoolTransaction(*mempoolTransactionRequest)
+	result, serviceErr := c.service.TransactionSubmit(transactionSubmitRequest)
 	if serviceErr != nil {
 		err := EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
 		if err != nil {

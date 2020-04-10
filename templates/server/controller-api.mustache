@@ -61,7 +61,7 @@ func (c *{{classname}}Controller) {{nickname}}(w http.ResponseWriter, r *http.Re
   }
 
 	{{/isBodyParam}}{{/allParams}}
-	result, serviceErr := c.service.{{nickname}}({{#allParams}}{{#isBodyParam}}*{{/isBodyParam}}{{paramName}}{{#hasMore}}, {{/hasMore}}{{/allParams}})
+	result, serviceErr := c.service.{{nickname}}({{#allParams}}{{paramName}}{{#hasMore}}, {{/hasMore}}{{/allParams}})
 	if serviceErr != nil {
     err := EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
     if err != nil {

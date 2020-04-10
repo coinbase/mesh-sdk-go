@@ -26,39 +26,39 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/models"
 )
 
-// A BlockAPIController binds http requests to an api service and writes the service results to the
-// http response
-type BlockAPIController struct {
-	service BlockAPIServicer
+// A MempoolAPIController binds http requests to an api service and writes the service results to
+// the http response
+type MempoolAPIController struct {
+	service MempoolAPIServicer
 }
 
-// NewBlockAPIController creates a default api controller
-func NewBlockAPIController(s BlockAPIServicer) Router {
-	return &BlockAPIController{service: s}
+// NewMempoolAPIController creates a default api controller
+func NewMempoolAPIController(s MempoolAPIServicer) Router {
+	return &MempoolAPIController{service: s}
 }
 
-// Routes returns all of the api route for the BlockAPIController
-func (c *BlockAPIController) Routes() Routes {
+// Routes returns all of the api route for the MempoolAPIController
+func (c *MempoolAPIController) Routes() Routes {
 	return Routes{
 		{
-			"Block",
+			"Mempool",
 			strings.ToUpper("Post"),
-			"/block",
-			c.Block,
+			"/mempool",
+			c.Mempool,
 		},
 		{
-			"BlockTransaction",
+			"MempoolTransaction",
 			strings.ToUpper("Post"),
-			"/block/transaction",
-			c.BlockTransaction,
+			"/mempool/transaction",
+			c.MempoolTransaction,
 		},
 	}
 }
 
-// Block - Get a Block
-func (c *BlockAPIController) Block(w http.ResponseWriter, r *http.Request) {
-	blockRequest := &models.BlockRequest{}
-	if err := json.NewDecoder(r.Body).Decode(&blockRequest); err != nil {
+// Mempool - Get All Mempool Transactions
+func (c *MempoolAPIController) Mempool(w http.ResponseWriter, r *http.Request) {
+	mempoolRequest := &models.MempoolRequest{}
+	if err := json.NewDecoder(r.Body).Decode(&mempoolRequest); err != nil {
 		err = EncodeJSONResponse(&models.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)
@@ -69,8 +69,8 @@ func (c *BlockAPIController) Block(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Assert that BlockRequest is correct
-	if err := asserter.BlockRequest(blockRequest); err != nil {
+	// Assert that MempoolRequest is correct
+	if err := asserter.MempoolRequest(mempoolRequest); err != nil {
 		err = EncodeJSONResponse(&models.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)
@@ -81,7 +81,7 @@ func (c *BlockAPIController) Block(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, serviceErr := c.service.Block(*blockRequest)
+	result, serviceErr := c.service.Mempool(mempoolRequest)
 	if serviceErr != nil {
 		err := EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
 		if err != nil {
@@ -96,10 +96,10 @@ func (c *BlockAPIController) Block(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// BlockTransaction - Get a Block Transaction
-func (c *BlockAPIController) BlockTransaction(w http.ResponseWriter, r *http.Request) {
-	blockTransactionRequest := &models.BlockTransactionRequest{}
-	if err := json.NewDecoder(r.Body).Decode(&blockTransactionRequest); err != nil {
+// MempoolTransaction - Get a Mempool Transaction
+func (c *MempoolAPIController) MempoolTransaction(w http.ResponseWriter, r *http.Request) {
+	mempoolTransactionRequest := &models.MempoolTransactionRequest{}
+	if err := json.NewDecoder(r.Body).Decode(&mempoolTransactionRequest); err != nil {
 		err = EncodeJSONResponse(&models.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)
@@ -110,8 +110,8 @@ func (c *BlockAPIController) BlockTransaction(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	// Assert that BlockTransactionRequest is correct
-	if err := asserter.BlockTransactionRequest(blockTransactionRequest); err != nil {
+	// Assert that MempoolTransactionRequest is correct
+	if err := asserter.MempoolTransactionRequest(mempoolTransactionRequest); err != nil {
 		err = EncodeJSONResponse(&models.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)
@@ -122,7 +122,7 @@ func (c *BlockAPIController) BlockTransaction(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	result, serviceErr := c.service.BlockTransaction(*blockTransactionRequest)
+	result, serviceErr := c.service.MempoolTransaction(mempoolTransactionRequest)
 	if serviceErr != nil {
 		err := EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
 		if err != nil {

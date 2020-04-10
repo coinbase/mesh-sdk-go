@@ -26,33 +26,33 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/models"
 )
 
-// A NetworkAPIController binds http requests to an api service and writes the service results to
+// A AccountAPIController binds http requests to an api service and writes the service results to
 // the http response
-type NetworkAPIController struct {
-	service NetworkAPIServicer
+type AccountAPIController struct {
+	service AccountAPIServicer
 }
 
-// NewNetworkAPIController creates a default api controller
-func NewNetworkAPIController(s NetworkAPIServicer) Router {
-	return &NetworkAPIController{service: s}
+// NewAccountAPIController creates a default api controller
+func NewAccountAPIController(s AccountAPIServicer) Router {
+	return &AccountAPIController{service: s}
 }
 
-// Routes returns all of the api route for the NetworkAPIController
-func (c *NetworkAPIController) Routes() Routes {
+// Routes returns all of the api route for the AccountAPIController
+func (c *AccountAPIController) Routes() Routes {
 	return Routes{
 		{
-			"NetworkStatus",
+			"AccountBalance",
 			strings.ToUpper("Post"),
-			"/network/status",
-			c.NetworkStatus,
+			"/account/balance",
+			c.AccountBalance,
 		},
 	}
 }
 
-// NetworkStatus - Get Network Status
-func (c *NetworkAPIController) NetworkStatus(w http.ResponseWriter, r *http.Request) {
-	networkStatusRequest := &models.NetworkStatusRequest{}
-	if err := json.NewDecoder(r.Body).Decode(&networkStatusRequest); err != nil {
+// AccountBalance - Get an Account Balance
+func (c *AccountAPIController) AccountBalance(w http.ResponseWriter, r *http.Request) {
+	accountBalanceRequest := &models.AccountBalanceRequest{}
+	if err := json.NewDecoder(r.Body).Decode(&accountBalanceRequest); err != nil {
 		err = EncodeJSONResponse(&models.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)
@@ -63,8 +63,8 @@ func (c *NetworkAPIController) NetworkStatus(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	// Assert that NetworkStatusRequest is correct
-	if err := asserter.NetworkStatusRequest(networkStatusRequest); err != nil {
+	// Assert that AccountBalanceRequest is correct
+	if err := asserter.AccountBalanceRequest(accountBalanceRequest); err != nil {
 		err = EncodeJSONResponse(&models.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)
@@ -75,7 +75,7 @@ func (c *NetworkAPIController) NetworkStatus(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	result, serviceErr := c.service.NetworkStatus(*networkStatusRequest)
+	result, serviceErr := c.service.AccountBalance(accountBalanceRequest)
 	if serviceErr != nil {
 		err := EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
 		if err != nil {

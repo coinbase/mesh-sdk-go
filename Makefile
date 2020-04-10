@@ -38,7 +38,7 @@ check-license:
 	${LICENCE_SCRIPT} -check .
 
 shorten-lines:
-	golines -w --shorten-comments asserter fetcher models client server
+	golines -w --shorten-comments asserter fetcher models client server examples
 
 shellcheck:
 	shellcheck codegen.sh
