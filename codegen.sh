@@ -107,11 +107,6 @@ for file in models/model_*.go; do
     mv "$file" "${file/model_/}"
 done
 
-# Improve names in server/
-for file in server/api_*.go; do
-    mv "$file" "${file/api_/}"
-done
-
 # Change model files to correct package
 sed "${SED_IFLAG[@]}" 's/package client/package models/g' models/*;
 
@@ -119,6 +114,11 @@ sed "${SED_IFLAG[@]}" 's/package client/package models/g' models/*;
 gofmt -w models/;
 gofmt -w client/;
 gofmt -w server/;
+
+# Copy in READMEs
+cp templates/docs/models.md models/README.md;
+cp templates/docs/client.md client/README.md;
+cp templates/docs/server.md server/README.md;
 
 # Ensure license correct
 make add-license;
