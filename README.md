@@ -18,27 +18,24 @@ in this specification will enable exchanges, block explorers,
 and wallets to integrate with much less communication overhead
 and network-specific work.
 
-## Installation
+## Packages
+* [Models](models/README.md): Auto-generated Rosetta models
+* [Client](client/README.md): Low-level communication with any Rosetta server
+* [Server](server/README.md): Simplified Rosetta server development
+* [Asserter](asserter/README.md): Validation of Rosetta models
+* [Fetcher](fetcher/README.md): Simplified and validated communication with
+any Rosetta server
 
-```shell
-go get github.com/coinbase/rosetta-sdk-go
-```
-
-## Automatic Assertion
-When using the helper methods to access a Rosetta Server (in `fetcher/*.go`),
-responses from the server are automatically checked for adherence to
-the Rosetta Interface. For example, if a `BlockIdentifer` is returned without a
-`Hash`, the fetch will fail. Take a look at the tests in `asserter/*_test.go`
-if you are curious about what exactly is asserted.
-
-_It is possible, but not recommended, to bypass this assertion using the
-`unsafe` helper methods available in `fetcher/*.go`._
+## Examples
+The packages listed above are demoed extensively in
+[examples](examples/README.md) and are utilized throughout the
+[Rosetta Validator](https://github.com/coinbase/rosetta-validator).
 
 ## Development
 * `make deps` to install dependencies
 * `make gen` to generate models and helpers
 * `make test` to run tests
-* `make lint` to lint the source code (included generated code)
+* `make lint` to lint the source code (including generated code)
 * `make release` to check if code passes all tests run by CircleCI
 
 ## License
