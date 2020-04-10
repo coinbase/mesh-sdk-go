@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/coinbase/rosetta-sdk-go/asserter"
 	"github.com/coinbase/rosetta-sdk-go/models"
 
 	"golang.org/x/sync/errgroup"
@@ -58,7 +59,7 @@ func (f *Fetcher) fetchChannelTransactions(
 ) error {
 	for transactionIdentifier := range txsToFetch {
 		tx, _, err := f.rosettaClient.BlockAPI.BlockTransaction(ctx,
-			models.BlockTransactionRequest{
+			&models.BlockTransactionRequest{
 				NetworkIdentifier:     network,
 				BlockIdentifier:       block,
 				TransactionIdentifier: transactionIdentifier,
@@ -135,7 +136,7 @@ func (f *Fetcher) UnsafeBlock(
 	network *models.NetworkIdentifier,
 	blockIdentifier *models.PartialBlockIdentifier,
 ) (*models.Block, error) {
-	blockResponse, _, err := f.rosettaClient.BlockAPI.Block(ctx, models.BlockRequest{
+	blockResponse, _, err := f.rosettaClient.BlockAPI.Block(ctx, &models.BlockRequest{
 		NetworkIdentifier: network,
 		BlockIdentifier:   blockIdentifier,
 	})
@@ -182,7 +183,7 @@ func (f *Fetcher) Block(
 		return nil, err
 	}
 
-	if err := f.Asserter.Block(ctx, block); err != nil {
+	if err := f.Asserter.Block(block); err != nil {
 		return nil, err
 	}
 
@@ -202,6 +203,10 @@ func (f *Fetcher) BlockRetry(
 		return nil, errors.New("asserter not initialized")
 	}
 
+	if err := asserter.PartialBlockIdentifier(blockIdentifier); err != nil {
+		return nil, err
+	}
+
 	backoffRetries := backoffRetries(maxElapsedTime, maxRetries)
 
 	for ctx.Err() == nil {
@@ -214,7 +219,14 @@ func (f *Fetcher) BlockRetry(
 			return block, nil
 		}
 
-		if !tryAgain(fmt.Sprintf("block %d", blockIdentifier.Index), backoffRetries, err) {
+		var blockFetchErr string
+		if blockIdentifier.Index != nil {
+			blockFetchErr = fmt.Sprintf("block %d", *blockIdentifier.Index)
+		} else {
+			blockFetchErr = fmt.Sprintf("block %s", *blockIdentifier.Hash)
+		}
+
+		if !tryAgain(blockFetchErr, backoffRetries, err) {
 			break
 		}
 	}

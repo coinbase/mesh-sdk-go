@@ -43,7 +43,7 @@ type AccountAPIService service
 // optional BlockIdentifier.
 func (a *AccountAPIService) AccountBalance(
 	ctx _context.Context,
-	accountBalanceRequest models.AccountBalanceRequest,
+	accountBalanceRequest *models.AccountBalanceRequest,
 ) (*models.AccountBalanceResponse, *models.Error, error) {
 	var (
 		localVarPostBody interface{}
@@ -71,7 +71,7 @@ func (a *AccountAPIService) AccountBalance(
 		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
 	}
 	// body params
-	localVarPostBody = &accountBalanceRequest
+	localVarPostBody = accountBalanceRequest
 
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarPostBody, localVarHeaderParams)
 	if err != nil {

@@ -561,7 +561,7 @@ func TestBlock(t *testing.T) {
 			)
 			assert.NoError(t, err)
 
-			err = asserter.Block(context.Background(), test.block)
+			err = asserter.Block(test.block)
 			assert.Equal(t, test.err, err)
 		})
 	}
