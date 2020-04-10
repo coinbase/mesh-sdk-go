@@ -1,7 +1,10 @@
 .PHONY: deps gen lint format check-format test test-coverage add-license \
 	check-license shorten-lines shellcheck salus release
 LICENCE_SCRIPT=addlicense -c "Coinbase, Inc." -l "apache" -v
-TEST_SCRIPT=go test -v ./asserter/... ./fetcher/... ./models/... ./client/... ./server/...
+GO_PACKAGES=./asserter/... ./fetcher/... ./models/... ./client/... ./server/...
+GO_FOLDERS=$(shell echo ${GO_PACKAGES} | sed -e "s/\.\///g" | sed -e "s/\/\.\.\.//g")
+TEST_SCRIPT=go test -v ${GO_PACKAGES}
+LINT_SETTINGS=golint,misspell,gocyclo,gocritic,whitespace,goconst,gocognit,bodyclose,unconvert,lll,unparam
 
 deps:
 	go get ./...
@@ -16,12 +19,10 @@ gen:
 
 lint-examples:
 	cd examples; \
-	golangci-lint run -v \
-		-E golint,misspell,gocyclo,gocritic,whitespace,goconst,gocognit,bodyclose,unconvert,lll,unparam
+	golangci-lint run -v -E ${LINT_SETTINGS}
 
 lint: | lint-examples
-	golangci-lint run -v \
-		-E golint,misspell,gocyclo,gocritic,whitespace,goconst,gocognit,bodyclose,unconvert,lll,unparam,gomnd
+	golangci-lint run -v -E ${LINT_SETTINGS},gomnd
 
 format:
 	gofmt -s -w -l .
@@ -43,7 +44,7 @@ check-license:
 	${LICENCE_SCRIPT} -check .
 
 shorten-lines:
-	golines -w --shorten-comments asserter fetcher models client server examples
+	golines -w --shorten-comments ${GO_FOLDERS} examples
 
 shellcheck:
 	shellcheck codegen.sh
