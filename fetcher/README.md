@@ -1,6 +1,6 @@
 # Fetcher
 
-[![GoDoc](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=shield)](https://pkg.go.dev/github.com/coinbase/rosetta-sdk-go/fetcher?tab=overview)
+[![GoDoc](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=shield)](https://pkg.go.dev/github.com/coinbase/rosetta-sdk-go/fetcher?tab=doc)
 
 The Fetcher package provides a simplified client interface to communicate
 with a Rosetta server.
