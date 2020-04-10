@@ -13,6 +13,28 @@ implementation.
 go get github.com/coinbase/rosetta-sdk-go/server
 ```
 
+## Components
+### Router
+The router is a [Mux](https://github.com/gorilla/mux) router that
+routes traffic to the correct controller.
+
+### Controller
+Contollers are automatically generated code that specify an interface
+that a service must implement.
+
+### Services
+Services are implemented by you to populate responses. These services
+are invoked by controllers.
+
+## Recommended Folder Structure
+```
+main.go
+/services
+  block_service.go
+  network_service.go
+  ...
+```
+
 ## Examples
 Check out the [examples](/examples/README.md) to see how easy
 it is to create your own server.

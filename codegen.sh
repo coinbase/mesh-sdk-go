@@ -65,8 +65,8 @@ docker run --user "$(id -u):$(id -g)" --rm -v "${PWD}":/local openapitools/opena
 
 # Remove unnecessary server files
 rm -rf server/api;
-rm -rf server/.openapi-clienterator;
-rm server/.openapi-clienterator-ignore;
+rm -rf server/.openapi-generator;
+rm server/.openapi-generator-ignore;
 rm server/go.mod;
 rm server/main.go;
 rm server/README.md;
