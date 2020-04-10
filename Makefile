@@ -14,7 +14,12 @@ deps:
 gen:
 	./codegen.sh
 
-lint:
+lint-examples:
+	cd examples; \
+	golangci-lint run -v \
+		-E golint,misspell,gocyclo,gocritic,whitespace,goconst,gocognit,bodyclose,unconvert,lll,unparam
+
+lint: | lint-examples
 	golangci-lint run -v \
 		-E golint,misspell,gocyclo,gocritic,whitespace,goconst,gocognit,bodyclose,unconvert,lll,unparam,gomnd
 
