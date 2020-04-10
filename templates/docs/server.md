@@ -1,6 +1,6 @@
 # Server
 
-[![GoDoc](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=shield)](https://pkg.go.dev/github.com/coinbase/rosetta-sdk-go/server?tab=overview)
+[![GoDoc](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=shield)](https://pkg.go.dev/github.com/coinbase/rosetta-sdk-go/server?tab=doc)
 
 The Server package reduces the work required to write your own Rosetta server.
 In short, this package takes care of the basics (boilerplate server code
