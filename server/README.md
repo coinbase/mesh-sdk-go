@@ -36,5 +36,5 @@ main.go
 ```
 
 ## Examples
-Check out the [examples](/examples/README.md) to see how easy
+Check out the [examples](/examples) to see how easy
 it is to create your own server.

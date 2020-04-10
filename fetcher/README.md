@@ -6,7 +6,7 @@ The Fetcher package provides a simplified client interface to communicate
 with a Rosetta server.
 
 If you want a lower-level interface to communicate with a Rosetta server,
-check out the [Client](/client/README.md).
+check out the [Client](/client).
 
 ## Installation
 
@@ -15,5 +15,5 @@ go get github.com/coinbase/rosetta-sdk-go/fetcher
 ```
 
 ## Examples
-Check out the [examples](/examples/README.md) to see how easy
+Check out the [examples](/examples) to see how easy
 it is to connect to a Rosetta server.

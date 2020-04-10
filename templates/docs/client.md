@@ -5,7 +5,7 @@
 The Client package reduces the work required to communicate with a Rosetta server.
 
 If you want a higher-level interface that automatically asserts that server responses
-are correct, check out the [Fetcher](/fetcher/README.md).
+are correct, check out the [Fetcher](/fetcher).
 
 ## Installation
 
@@ -14,5 +14,5 @@ go get github.com/coinbase/rosetta-sdk-go/client
 ```
 
 ## Examples
-Check out the [examples](/examples/README.md) to see how easy
+Check out the [examples](/examples) to see how easy
 it is to connect to a Rosetta server.

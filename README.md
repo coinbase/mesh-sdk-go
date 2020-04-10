@@ -19,16 +19,16 @@ and wallets to integrate with much less communication overhead
 and network-specific work.
 
 ## Packages
-* [Models](models/README.md): Auto-generated Rosetta models
-* [Client](client/README.md): Low-level communication with any Rosetta server
-* [Server](server/README.md): Simplified Rosetta server development
-* [Asserter](asserter/README.md): Validation of Rosetta models
-* [Fetcher](fetcher/README.md): Simplified and validated communication with
+* [Models](models): Auto-generated Rosetta models
+* [Client](client): Low-level communication with any Rosetta server
+* [Server](server): Simplified Rosetta server development
+* [Asserter](asserter): Validation of Rosetta models
+* [Fetcher](fetcher): Simplified and validated communication with
 any Rosetta server
 
 ## Examples
 The packages listed above are demoed extensively in
-[examples](examples/README.md) and are utilized throughout the
+[examples](examples) and are utilized throughout the
 [Rosetta Validator](https://github.com/coinbase/rosetta-validator).
 
 ## Development
