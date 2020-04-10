@@ -19,40 +19,40 @@ import (
 	"errors"
 	"testing"
 
-	rosetta "github.com/coinbase/rosetta-sdk-go/gen"
+	"github.com/coinbase/rosetta-sdk-go/models"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestTransactionConstruction(t *testing.T) {
-	validAmount := &rosetta.Amount{
+	validAmount := &models.Amount{
 		Value: "1",
-		Currency: &rosetta.Currency{
+		Currency: &models.Currency{
 			Symbol:   "BTC",
 			Decimals: 8,
 		},
 	}
 
-	invalidAmount := &rosetta.Amount{
+	invalidAmount := &models.Amount{
 		Value: "",
-		Currency: &rosetta.Currency{
+		Currency: &models.Currency{
 			Symbol:   "BTC",
 			Decimals: 8,
 		},
 	}
 
 	var tests = map[string]struct {
-		response *rosetta.TransactionConstructionResponse
+		response *models.TransactionConstructionResponse
 		err      error
 	}{
 		"valid response": {
-			response: &rosetta.TransactionConstructionResponse{
+			response: &models.TransactionConstructionResponse{
 				NetworkFee: validAmount,
 			},
 			err: nil,
 		},
 		"valid response with metadata": {
-			response: &rosetta.TransactionConstructionResponse{
+			response: &models.TransactionConstructionResponse{
 				NetworkFee: validAmount,
 				Metadata: &map[string]interface{}{
 					"blah": "hello",
@@ -61,7 +61,7 @@ func TestTransactionConstruction(t *testing.T) {
 			err: nil,
 		},
 		"invalid amount": {
-			response: &rosetta.TransactionConstructionResponse{
+			response: &models.TransactionConstructionResponse{
 				NetworkFee: invalidAmount,
 			},
 			err: errors.New("Amount.Value is missing"),
@@ -78,38 +78,38 @@ func TestTransactionConstruction(t *testing.T) {
 
 func TestTransactionSubmit(t *testing.T) {
 	var tests = map[string]struct {
-		response *rosetta.TransactionSubmitResponse
+		response *models.TransactionSubmitResponse
 		err      error
 	}{
 		"valid response": {
-			response: &rosetta.TransactionSubmitResponse{
-				TransactionIdentifier: &rosetta.TransactionIdentifier{
+			response: &models.TransactionSubmitResponse{
+				TransactionIdentifier: &models.TransactionIdentifier{
 					Hash: "tx1",
 				},
 			},
 			err: nil,
 		},
 		"invalid transaction identifier": {
-			response: &rosetta.TransactionSubmitResponse{},
-			err:      errors.New("Transaction.TransactionIdentifier.Hash is missing"),
+			response: &models.TransactionSubmitResponse{},
+			err:      errors.New("TransactionIdentifier is nil"),
 		},
 	}
 
 	for name, test := range tests {
 		asserter, err := New(
 			context.Background(),
-			&rosetta.NetworkStatusResponse{
-				NetworkStatus: []*rosetta.NetworkStatus{
+			&models.NetworkStatusResponse{
+				NetworkStatus: []*models.NetworkStatus{
 					{
-						NetworkInformation: &rosetta.NetworkInformation{
-							GenesisBlockIdentifier: &rosetta.BlockIdentifier{
+						NetworkInformation: &models.NetworkInformation{
+							GenesisBlockIdentifier: &models.BlockIdentifier{
 								Index: 0,
 							},
 						},
 					},
 				},
-				Options: &rosetta.Options{
-					OperationStatuses: []*rosetta.OperationStatus{
+				Options: &models.Options{
+					OperationStatuses: []*models.OperationStatus{
 						{
 							Status:     "SUCCESS",
 							Successful: true,
