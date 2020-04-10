@@ -76,7 +76,7 @@ type NetworkAPIRouter interface {
 // while the service implementation can ignored with the .openapi-generator-ignore file
 // and updated with the logic required for the API.
 type AccountAPIServicer interface {
-	AccountBalance(models.AccountBalanceRequest) (*models.AccountBalanceResponse, *models.Error)
+	AccountBalance(*models.AccountBalanceRequest) (*models.AccountBalanceResponse, *models.Error)
 }
 
 // BlockAPIServicer defines the api actions for the BlockAPI service
@@ -84,9 +84,9 @@ type AccountAPIServicer interface {
 // while the service implementation can ignored with the .openapi-generator-ignore file
 // and updated with the logic required for the API.
 type BlockAPIServicer interface {
-	Block(models.BlockRequest) (*models.BlockResponse, *models.Error)
+	Block(*models.BlockRequest) (*models.BlockResponse, *models.Error)
 	BlockTransaction(
-		models.BlockTransactionRequest,
+		*models.BlockTransactionRequest,
 	) (*models.BlockTransactionResponse, *models.Error)
 }
 
@@ -96,10 +96,10 @@ type BlockAPIServicer interface {
 // and updated with the logic required for the API.
 type ConstructionAPIServicer interface {
 	TransactionConstruction(
-		models.TransactionConstructionRequest,
+		*models.TransactionConstructionRequest,
 	) (*models.TransactionConstructionResponse, *models.Error)
 	TransactionSubmit(
-		models.TransactionSubmitRequest,
+		*models.TransactionSubmitRequest,
 	) (*models.TransactionSubmitResponse, *models.Error)
 }
 
@@ -108,9 +108,9 @@ type ConstructionAPIServicer interface {
 // while the service implementation can ignored with the .openapi-generator-ignore file
 // and updated with the logic required for the API.
 type MempoolAPIServicer interface {
-	Mempool(models.MempoolRequest) (*models.MempoolResponse, *models.Error)
+	Mempool(*models.MempoolRequest) (*models.MempoolResponse, *models.Error)
 	MempoolTransaction(
-		models.MempoolTransactionRequest,
+		*models.MempoolTransactionRequest,
 	) (*models.MempoolTransactionResponse, *models.Error)
 }
 
@@ -119,5 +119,5 @@ type MempoolAPIServicer interface {
 // while the service implementation can ignored with the .openapi-generator-ignore file
 // and updated with the logic required for the API.
 type NetworkAPIServicer interface {
-	NetworkStatus(models.NetworkStatusRequest) (*models.NetworkStatusResponse, *models.Error)
+	NetworkStatus(*models.NetworkStatusRequest) (*models.NetworkStatusResponse, *models.Error)
 }

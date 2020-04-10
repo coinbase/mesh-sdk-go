@@ -107,6 +107,11 @@ for file in models/model_*.go; do
     mv "$file" "${file/model_/}"
 done
 
+# Improve names in server/
+for file in server/api_*.go; do
+    mv "$file" "${file/api_/}"
+done
+
 # Change model files to correct package
 sed "${SED_IFLAG[@]}" 's/package client/package models/g' models/*;
 
