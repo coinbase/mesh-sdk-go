@@ -20,8 +20,8 @@ import (
 	"time"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
-
-	rosetta "github.com/coinbase/rosetta-sdk-go/gen"
+	"github.com/coinbase/rosetta-sdk-go/client"
+	"github.com/coinbase/rosetta-sdk-go/models"
 )
 
 const (
@@ -49,10 +49,10 @@ const (
 type Fetcher struct {
 	// Asserter is a public variable because
 	// it can be used to determine if a retrieved
-	// rosetta.Operation is successful and should
+	// models.Operation is successful and should
 	// be applied.
 	Asserter               *asserter.Asserter
-	rosettaClient          *rosetta.APIClient
+	rosettaClient          *client.APIClient
 	blockConcurrency       uint64
 	transactionConcurrency uint64
 }
@@ -66,8 +66,8 @@ func New(
 	blockConcurrency uint64,
 	transactionConcurrency uint64,
 ) *Fetcher {
-	clientCfg := rosetta.NewConfiguration(serverAddress, userAgent, httpClient)
-	client := rosetta.NewAPIClient(clientCfg)
+	clientCfg := client.NewConfiguration(serverAddress, userAgent, httpClient)
+	client := client.NewAPIClient(clientCfg)
 
 	return &Fetcher{
 		rosettaClient:          client,
@@ -78,12 +78,12 @@ func New(
 
 // InitializeAsserter creates an Asserter for
 // validating responses. The Asserter is created
-// from a rosetta.NetworkStatusResponse. This
+// from a models.NetworkStatusResponse. This
 // method should be called before making any
 // validated client requests.
 func (f *Fetcher) InitializeAsserter(
 	ctx context.Context,
-) (*rosetta.NetworkStatusResponse, error) {
+) (*models.NetworkStatusResponse, error) {
 	// Attempt to fetch network status
 	networkResponse, err := f.NetworkStatusRetry(
 		ctx,

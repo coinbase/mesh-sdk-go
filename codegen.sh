@@ -29,54 +29,96 @@ case "${OS}" in
         ;;
 esac
 
-# Remove existing generated code
-rm -rf gen;
+# Remove existing clienterated code
+rm -rf models;
+rm -rf client;
+rm -rf server;
 
-# Generate new code
+# Generate client + models code
 docker run --user "$(id -u):$(id -g)" --rm -v "${PWD}":/local openapitools/openapi-generator-cli generate \
   -i /local/spec.json \
   -g go \
-  -t /local/templates \
-  --additional-properties packageName=gen \
-  -o /local/gen;
+  -t /local/templates/client \
+  --additional-properties packageName=client\
+  -o /local/client;
 
-# Remove unnecessary files
-mv gen/README.md .;
-mv -n gen/go.mod .;
-rm gen/go.mod;
-rm gen/go.sum;
-rm -rf gen/api;
-rm -rf gen/docs;
-rm gen/git_push.sh;
-rm gen/.travis.yml;
-rm gen/.gitignore;
-rm gen/.openapi-generator-ignore;
-rm -rf gen/.openapi-generator;
+# Remove unnecessary client files
+rm client/go.mod;
+rm client/README.md;
+rm client/go.mod;
+rm client/go.sum;
+rm -rf client/api;
+rm -rf client/docs;
+rm client/git_push.sh;
+rm client/.travis.yml;
+rm client/.gitignore;
+rm client/.openapi-generator-ignore;
+rm -rf client/.openapi-generator;
+
+# Add server code
+docker run --user "$(id -u):$(id -g)" --rm -v "${PWD}":/local openapitools/openapi-generator-cli generate \
+  -i /local/spec.json \
+  -g go-server \
+  -t /local/templates/server \
+  --additional-properties packageName=server\
+  -o /local/server;
+
+# Remove unnecessary server files
+rm -rf server/api;
+rm -rf server/.openapi-generator;
+rm server/.openapi-generator-ignore;
+rm server/go.mod;
+rm server/main.go;
+rm server/README.md;
+rm server/Dockerfile;
+mv server/go/* server/.;
+rm -rf server/go;
+rm server/model_*.go
+rm server/*_service.go
+
 
 # Fix linting issues
-sed "${SED_IFLAG[@]}" 's/Api/API/g' gen/*;
-sed "${SED_IFLAG[@]}" 's/Json/JSON/g' gen/*;
-sed "${SED_IFLAG[@]}" 's/Id /ID /g' gen/*;
-sed "${SED_IFLAG[@]}" 's/Url/URL/g' gen/*;
+sed "${SED_IFLAG[@]}" 's/Api/API/g' client/* server/*;
+sed "${SED_IFLAG[@]}" 's/Json/JSON/g' client/* server/*;
+sed "${SED_IFLAG[@]}" 's/Id /ID /g' client/* server/*;
+sed "${SED_IFLAG[@]}" 's/Url/URL/g' client/* server/*;
 
 # Remove special characters
-sed "${SED_IFLAG[@]}" 's/&#x60;//g' gen/*;
-sed "${SED_IFLAG[@]}" 's/\&quot;//g' gen/*;
-sed "${SED_IFLAG[@]}" 's/\&lt;b&gt;//g' gen/*;
-sed "${SED_IFLAG[@]}" 's/\&lt;\/b&gt;//g' gen/*;
-sed "${SED_IFLAG[@]}" 's/<code>//g' gen/*;
-sed "${SED_IFLAG[@]}" 's/<\/code>//g' gen/*;
+sed "${SED_IFLAG[@]}" 's/&#x60;//g' client/* server/*;
+sed "${SED_IFLAG[@]}" 's/\&quot;//g' client/* server/*;
+sed "${SED_IFLAG[@]}" 's/\&lt;b&gt;//g' client/* server/*;
+sed "${SED_IFLAG[@]}" 's/\&lt;\/b&gt;//g' client/* server/*;
+sed "${SED_IFLAG[@]}" 's/<code>//g' client/* server/*;
+sed "${SED_IFLAG[@]}" 's/<\/code>//g' client/* server/*;
 
 # Fix slice containing pointers
-sed "${SED_IFLAG[@]}" 's/\*\[\]/\[\]\*/g' gen/*;
+sed "${SED_IFLAG[@]}" 's/\*\[\]/\[\]\*/g' client/* server/*;
 
 # Fix misspellings
-sed "${SED_IFLAG[@]}" 's/occured/occurred/g' gen/*;
-sed "${SED_IFLAG[@]}" 's/cannonical/canonical/g' gen/*;
-sed "${SED_IFLAG[@]}" 's/Cannonical/Canonical/g' gen/*;
+sed "${SED_IFLAG[@]}" 's/occured/occurred/g' client/* server/*;
+sed "${SED_IFLAG[@]}" 's/cannonical/canonical/g' client/* server/*;
+sed "${SED_IFLAG[@]}" 's/Cannonical/Canonical/g' client/* server/*;
 
-# Format generated code
-gofmt -w gen/;
+
+# Move model files to models/
+mkdir models;
+mv client/model_*.go models/;
+for file in models/model_*.go; do
+    mv "$file" "${file/model_/}"
+done
+
+# Change model files to correct package
+sed "${SED_IFLAG[@]}" 's/package client/package models/g' models/*;
+
+# Format clienterated code
+gofmt -w models/;
+gofmt -w client/;
+gofmt -w server/;
+
+# Copy in READMEs
+cp templates/docs/models.md models/README.md;
+cp templates/docs/client.md client/README.md;
+cp templates/docs/server.md server/README.md;
 
 # Ensure license correct
 make add-license;
