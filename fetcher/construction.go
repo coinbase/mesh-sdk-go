@@ -32,7 +32,7 @@ func (f *Fetcher) ConstructionMetadata(
 	method *string,
 ) (*models.Amount, *map[string]interface{}, error) {
 	metadata, _, err := f.rosettaClient.ConstructionAPI.TransactionConstruction(ctx,
-		models.TransactionConstructionRequest{
+		&models.TransactionConstructionRequest{
 			NetworkIdentifier: network,
 			AccountIdentifier: account,
 			Method:            method,
@@ -61,7 +61,7 @@ func (f *Fetcher) ConstructionSubmit(
 
 	submitResponse, _, err := f.rosettaClient.ConstructionAPI.TransactionSubmit(
 		ctx,
-		models.TransactionSubmitRequest{
+		&models.TransactionSubmitRequest{
 			SignedTransaction: signedTransaction,
 		},
 	)

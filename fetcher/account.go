@@ -33,7 +33,7 @@ func (f *Fetcher) UnsafeAccountBalance(
 	account *models.AccountIdentifier,
 ) (*models.BlockIdentifier, []*models.Balance, error) {
 	balance, _, err := f.rosettaClient.AccountAPI.AccountBalance(ctx,
-		models.AccountBalanceRequest{
+		&models.AccountBalanceRequest{
 			NetworkIdentifier: network,
 			AccountIdentifier: account,
 		},

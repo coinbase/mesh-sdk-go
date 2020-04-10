@@ -37,7 +37,7 @@ type NetworkAPIService service
 // method also returns the methods, operation types, and operation statuses the node supports.
 func (a *NetworkAPIService) NetworkStatus(
 	ctx _context.Context,
-	networkStatusRequest models.NetworkStatusRequest,
+	networkStatusRequest *models.NetworkStatusRequest,
 ) (*models.NetworkStatusResponse, *models.Error, error) {
 	var (
 		localVarPostBody interface{}
@@ -65,7 +65,7 @@ func (a *NetworkAPIService) NetworkStatus(
 		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
 	}
 	// body params
-	localVarPostBody = &networkStatusRequest
+	localVarPostBody = networkStatusRequest
 
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarPostBody, localVarHeaderParams)
 	if err != nil {

@@ -39,7 +39,7 @@ type BlockAPIService service
 // be done to get all transaction information.
 func (a *BlockAPIService) Block(
 	ctx _context.Context,
-	blockRequest models.BlockRequest,
+	blockRequest *models.BlockRequest,
 ) (*models.BlockResponse, *models.Error, error) {
 	var (
 		localVarPostBody interface{}
@@ -67,7 +67,7 @@ func (a *BlockAPIService) Block(
 		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
 	}
 	// body params
-	localVarPostBody = &blockRequest
+	localVarPostBody = blockRequest
 
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarPostBody, localVarHeaderParams)
 	if err != nil {
@@ -118,7 +118,7 @@ func (a *BlockAPIService) Block(
 // /data directory (on a path that does not conflict with the node).
 func (a *BlockAPIService) BlockTransaction(
 	ctx _context.Context,
-	blockTransactionRequest models.BlockTransactionRequest,
+	blockTransactionRequest *models.BlockTransactionRequest,
 ) (*models.BlockTransactionResponse, *models.Error, error) {
 	var (
 		localVarPostBody interface{}
@@ -146,7 +146,7 @@ func (a *BlockAPIService) BlockTransaction(
 		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
 	}
 	// body params
-	localVarPostBody = &blockTransactionRequest
+	localVarPostBody = blockTransactionRequest
 
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarPostBody, localVarHeaderParams)
 	if err != nil {

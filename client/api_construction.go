@@ -41,7 +41,7 @@ type ConstructionAPIService service
 // not need to be broken out into a key-value mapping and can be returned as a blob.
 func (a *ConstructionAPIService) TransactionConstruction(
 	ctx _context.Context,
-	transactionConstructionRequest models.TransactionConstructionRequest,
+	transactionConstructionRequest *models.TransactionConstructionRequest,
 ) (*models.TransactionConstructionResponse, *models.Error, error) {
 	var (
 		localVarPostBody interface{}
@@ -69,7 +69,7 @@ func (a *ConstructionAPIService) TransactionConstruction(
 		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
 	}
 	// body params
-	localVarPostBody = &transactionConstructionRequest
+	localVarPostBody = transactionConstructionRequest
 
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarPostBody, localVarHeaderParams)
 	if err != nil {
@@ -113,7 +113,7 @@ func (a *ConstructionAPIService) TransactionConstruction(
 // Otherwise, it should return an error.
 func (a *ConstructionAPIService) TransactionSubmit(
 	ctx _context.Context,
-	transactionSubmitRequest models.TransactionSubmitRequest,
+	transactionSubmitRequest *models.TransactionSubmitRequest,
 ) (*models.TransactionSubmitResponse, *models.Error, error) {
 	var (
 		localVarPostBody interface{}
@@ -141,7 +141,7 @@ func (a *ConstructionAPIService) TransactionSubmit(
 		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
 	}
 	// body params
-	localVarPostBody = &transactionSubmitRequest
+	localVarPostBody = transactionSubmitRequest
 
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarPostBody, localVarHeaderParams)
 	if err != nil {

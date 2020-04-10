@@ -32,7 +32,7 @@ func (f *Fetcher) UnsafeNetworkStatus(
 ) (*models.NetworkStatusResponse, error) {
 	networkStatus, _, err := f.rosettaClient.NetworkAPI.NetworkStatus(
 		ctx,
-		models.NetworkStatusRequest{
+		&models.NetworkStatusRequest{
 			Metadata: metadata,
 		},
 	)

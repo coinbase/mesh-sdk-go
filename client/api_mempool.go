@@ -36,7 +36,7 @@ type MempoolAPIService service
 // Mempool Get all Transaction Identifiers in the mempool
 func (a *MempoolAPIService) Mempool(
 	ctx _context.Context,
-	mempoolRequest models.MempoolRequest,
+	mempoolRequest *models.MempoolRequest,
 ) (*models.MempoolResponse, *models.Error, error) {
 	var (
 		localVarPostBody interface{}
@@ -64,7 +64,7 @@ func (a *MempoolAPIService) Mempool(
 		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
 	}
 	// body params
-	localVarPostBody = &mempoolRequest
+	localVarPostBody = mempoolRequest
 
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarPostBody, localVarHeaderParams)
 	if err != nil {
@@ -110,7 +110,7 @@ func (a *MempoolAPIService) Mempool(
 // in a block.
 func (a *MempoolAPIService) MempoolTransaction(
 	ctx _context.Context,
-	mempoolTransactionRequest models.MempoolTransactionRequest,
+	mempoolTransactionRequest *models.MempoolTransactionRequest,
 ) (*models.MempoolTransactionResponse, *models.Error, error) {
 	var (
 		localVarPostBody interface{}
@@ -138,7 +138,7 @@ func (a *MempoolAPIService) MempoolTransaction(
 		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
 	}
 	// body params
-	localVarPostBody = &mempoolTransactionRequest
+	localVarPostBody = mempoolTransactionRequest
 
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarPostBody, localVarHeaderParams)
 	if err != nil {

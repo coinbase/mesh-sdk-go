@@ -15,7 +15,6 @@
 package asserter
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"math/big"
@@ -234,7 +233,6 @@ func Timestamp(timestamp int64) error {
 
 // Block runs a basic set of assertions for each returned block.
 func (a *Asserter) Block(
-	ctx context.Context,
 	block *models.Block,
 ) error {
 	if block == nil {
