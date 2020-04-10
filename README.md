@@ -19,10 +19,10 @@ and wallets to integrate with much less communication overhead
 and network-specific work.
 
 ## Packages
-* [Models](models): Auto-generated Rosetta models
+* [Types](types): Auto-generated Rosetta types
 * [Client](client): Low-level communication with any Rosetta server
 * [Server](server): Simplified Rosetta server development
-* [Asserter](asserter): Validation of Rosetta models
+* [Asserter](asserter): Validation of Rosetta types
 * [Fetcher](fetcher): Simplified and validated communication with
 any Rosetta server
 
@@ -33,7 +33,7 @@ The packages listed above are demoed extensively in
 
 ## Development
 * `make deps` to install dependencies
-* `make gen` to generate models and helpers
+* `make gen` to generate types and helpers
 * `make test` to run tests
 * `make lint` to lint the source code (including generated code)
 * `make release` to check if code passes all tests run by CircleCI

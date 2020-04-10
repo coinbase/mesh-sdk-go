@@ -30,11 +30,11 @@ case "${OS}" in
 esac
 
 # Remove existing clienterated code
-rm -rf models;
+rm -rf types;
 rm -rf client;
 rm -rf server;
 
-# Generate client + models code
+# Generate client + types code
 docker run --user "$(id -u):$(id -g)" --rm -v "${PWD}":/local openapitools/openapi-generator-cli generate \
   -i /local/spec.json \
   -g go \
@@ -100,23 +100,23 @@ sed "${SED_IFLAG[@]}" 's/cannonical/canonical/g' client/* server/*;
 sed "${SED_IFLAG[@]}" 's/Cannonical/Canonical/g' client/* server/*;
 
 
-# Move model files to models/
-mkdir models;
-mv client/model_*.go models/;
-for file in models/model_*.go; do
+# Move model files to types/
+mkdir types;
+mv client/model_*.go types/;
+for file in types/model_*.go; do
     mv "$file" "${file/model_/}"
 done
 
 # Change model files to correct package
-sed "${SED_IFLAG[@]}" 's/package client/package models/g' models/*;
+sed "${SED_IFLAG[@]}" 's/package client/package types/g' types/*;
 
 # Format clienterated code
-gofmt -w models/;
+gofmt -w types/;
 gofmt -w client/;
 gofmt -w server/;
 
 # Copy in READMEs
-cp templates/docs/models.md models/README.md;
+cp templates/docs/types.md types/README.md;
 cp templates/docs/client.md client/README.md;
 cp templates/docs/server.md server/README.md;
 

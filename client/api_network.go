@@ -22,7 +22,7 @@ import (
 	_ioutil "io/ioutil"
 	_nethttp "net/http"
 
-	models "github.com/coinbase/rosetta-sdk-go/models"
+	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
 // Linger please
@@ -37,8 +37,8 @@ type NetworkAPIService service
 // method also returns the methods, operation types, and operation statuses the node supports.
 func (a *NetworkAPIService) NetworkStatus(
 	ctx _context.Context,
-	networkStatusRequest *models.NetworkStatusRequest,
-) (*models.NetworkStatusResponse, *models.Error, error) {
+	networkStatusRequest *types.NetworkStatusRequest,
+) (*types.NetworkStatusResponse, *types.Error, error) {
 	var (
 		localVarPostBody interface{}
 	)
@@ -84,7 +84,7 @@ func (a *NetworkAPIService) NetworkStatus(
 	}
 
 	if localVarHTTPResponse.StatusCode != _nethttp.StatusOK {
-		var v models.Error
+		var v types.Error
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
 			return nil, nil, err
@@ -93,7 +93,7 @@ func (a *NetworkAPIService) NetworkStatus(
 		return nil, &v, fmt.Errorf("%+v", v)
 	}
 
-	var v models.NetworkStatusResponse
+	var v types.NetworkStatusResponse
 	err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 	if err != nil {
 		return nil, nil, err

@@ -1,7 +1,7 @@
 .PHONY: deps gen lint format check-format test test-coverage add-license \
 	check-license shorten-lines shellcheck salus release
 LICENCE_SCRIPT=addlicense -c "Coinbase, Inc." -l "apache" -v
-GO_PACKAGES=./asserter/... ./fetcher/... ./models/... ./client/... ./server/...
+GO_PACKAGES=./asserter/... ./fetcher/... ./types/... ./client/... ./server/...
 GO_FOLDERS=$(shell echo ${GO_PACKAGES} | sed -e "s/\.\///g" | sed -e "s/\/\.\.\.//g")
 TEST_SCRIPT=go test -v ${GO_PACKAGES}
 LINT_SETTINGS=golint,misspell,gocyclo,gocritic,whitespace,goconst,gocognit,bodyclose,unconvert,lll,unparam

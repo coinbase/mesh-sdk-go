@@ -21,19 +21,19 @@ import (
 	"time"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
-	"github.com/coinbase/rosetta-sdk-go/models"
+	"github.com/coinbase/rosetta-sdk-go/types"
 
 	"golang.org/x/sync/errgroup"
 )
 
 // addTransactionIdentifiers appends a slice of
-// models.TransactionIdentifiers to a channel.
-// When all models.TransactionIdentifiers are added,
+// types.TransactionIdentifiers to a channel.
+// When all types.TransactionIdentifiers are added,
 // the channel is closed.
 func addTransactionIdentifiers(
 	ctx context.Context,
-	txsToFetch chan *models.TransactionIdentifier,
-	identifiers []*models.TransactionIdentifier,
+	txsToFetch chan *types.TransactionIdentifier,
+	identifiers []*types.TransactionIdentifier,
 ) error {
 	defer close(txsToFetch)
 	for _, txHash := range identifiers {
@@ -52,14 +52,14 @@ func addTransactionIdentifiers(
 // channel or there is an error.
 func (f *Fetcher) fetchChannelTransactions(
 	ctx context.Context,
-	network *models.NetworkIdentifier,
-	block *models.BlockIdentifier,
-	txsToFetch chan *models.TransactionIdentifier,
-	fetchedTxs chan *models.Transaction,
+	network *types.NetworkIdentifier,
+	block *types.BlockIdentifier,
+	txsToFetch chan *types.TransactionIdentifier,
+	fetchedTxs chan *types.Transaction,
 ) error {
 	for transactionIdentifier := range txsToFetch {
 		tx, _, err := f.rosettaClient.BlockAPI.BlockTransaction(ctx,
-			&models.BlockTransactionRequest{
+			&types.BlockTransactionRequest{
 				NetworkIdentifier:     network,
 				BlockIdentifier:       block,
 				TransactionIdentifier: transactionIdentifier,
@@ -82,22 +82,22 @@ func (f *Fetcher) fetchChannelTransactions(
 
 // UnsafeTransactions returns the unvalidated response
 // from the BlockTransaction method. UnsafeTransactions
-// fetches all provided models.TransactionIdentifiers
+// fetches all provided types.TransactionIdentifiers
 // concurrently (with the number of threads specified
 // by txConcurrency). If any fetch fails, this function
 // will return an error.
 func (f *Fetcher) UnsafeTransactions(
 	ctx context.Context,
-	network *models.NetworkIdentifier,
-	block *models.BlockIdentifier,
-	transactionIdentifiers []*models.TransactionIdentifier,
-) ([]*models.Transaction, error) {
+	network *types.NetworkIdentifier,
+	block *types.BlockIdentifier,
+	transactionIdentifiers []*types.TransactionIdentifier,
+) ([]*types.Transaction, error) {
 	if len(transactionIdentifiers) == 0 {
 		return nil, nil
 	}
 
-	txsToFetch := make(chan *models.TransactionIdentifier)
-	fetchedTxs := make(chan *models.Transaction)
+	txsToFetch := make(chan *types.TransactionIdentifier)
+	fetchedTxs := make(chan *types.Transaction)
 	g, ctx := errgroup.WithContext(ctx)
 	g.Go(func() error {
 		return addTransactionIdentifiers(ctx, txsToFetch, transactionIdentifiers)
@@ -114,7 +114,7 @@ func (f *Fetcher) UnsafeTransactions(
 		close(fetchedTxs)
 	}()
 
-	txs := make([]*models.Transaction, 0)
+	txs := make([]*types.Transaction, 0)
 	for tx := range fetchedTxs {
 		txs = append(txs, tx)
 	}
@@ -133,10 +133,10 @@ func (f *Fetcher) UnsafeTransactions(
 // block.
 func (f *Fetcher) UnsafeBlock(
 	ctx context.Context,
-	network *models.NetworkIdentifier,
-	blockIdentifier *models.PartialBlockIdentifier,
-) (*models.Block, error) {
-	blockResponse, _, err := f.rosettaClient.BlockAPI.Block(ctx, &models.BlockRequest{
+	network *types.NetworkIdentifier,
+	blockIdentifier *types.PartialBlockIdentifier,
+) (*types.Block, error) {
+	blockResponse, _, err := f.rosettaClient.BlockAPI.Block(ctx, &types.BlockRequest{
 		NetworkIdentifier: network,
 		BlockIdentifier:   blockIdentifier,
 	})
@@ -171,9 +171,9 @@ func (f *Fetcher) UnsafeBlock(
 // block.
 func (f *Fetcher) Block(
 	ctx context.Context,
-	network *models.NetworkIdentifier,
-	blockIdentifier *models.PartialBlockIdentifier,
-) (*models.Block, error) {
+	network *types.NetworkIdentifier,
+	blockIdentifier *types.PartialBlockIdentifier,
+) (*types.Block, error) {
 	if f.Asserter == nil {
 		return nil, errors.New("asserter not initialized")
 	}
@@ -194,11 +194,11 @@ func (f *Fetcher) Block(
 // with a specified number of retries and max elapsed time.
 func (f *Fetcher) BlockRetry(
 	ctx context.Context,
-	network *models.NetworkIdentifier,
-	blockIdentifier *models.PartialBlockIdentifier,
+	network *types.NetworkIdentifier,
+	blockIdentifier *types.PartialBlockIdentifier,
 	maxElapsedTime time.Duration,
 	maxRetries uint64,
-) (*models.Block, error) {
+) (*types.Block, error) {
 	if f.Asserter == nil {
 		return nil, errors.New("asserter not initialized")
 	}
@@ -237,7 +237,7 @@ func (f *Fetcher) BlockRetry(
 // BlockAndLatency is utilized to track the latency
 // of concurrent block fetches.
 type BlockAndLatency struct {
-	Block   *models.Block
+	Block   *types.Block
 	Latency float64
 }
 
@@ -268,7 +268,7 @@ func addBlockIndicies(
 // error.
 func (f *Fetcher) fetchChannelBlocks(
 	ctx context.Context,
-	network *models.NetworkIdentifier,
+	network *types.NetworkIdentifier,
 	blockIndicies chan int64,
 	results chan *BlockAndLatency,
 ) error {
@@ -277,7 +277,7 @@ func (f *Fetcher) fetchChannelBlocks(
 		block, err := f.BlockRetry(
 			ctx,
 			network,
-			&models.PartialBlockIdentifier{
+			&types.PartialBlockIdentifier{
 				Index: &b,
 			},
 			DefaultElapsedTime,
@@ -307,7 +307,7 @@ func (f *Fetcher) fetchChannelBlocks(
 // by any callers.
 func (f *Fetcher) BlockRange(
 	ctx context.Context,
-	network *models.NetworkIdentifier,
+	network *types.NetworkIdentifier,
 	startIndex int64,
 	endIndex int64,
 ) (map[int64]*BlockAndLatency, error) {
