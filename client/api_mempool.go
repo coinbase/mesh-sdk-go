@@ -22,7 +22,7 @@ import (
 	_ioutil "io/ioutil"
 	_nethttp "net/http"
 
-	models "github.com/coinbase/rosetta-sdk-go/models"
+	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
 // Linger please
@@ -36,8 +36,8 @@ type MempoolAPIService service
 // Mempool Get all Transaction Identifiers in the mempool
 func (a *MempoolAPIService) Mempool(
 	ctx _context.Context,
-	mempoolRequest *models.MempoolRequest,
-) (*models.MempoolResponse, *models.Error, error) {
+	mempoolRequest *types.MempoolRequest,
+) (*types.MempoolResponse, *types.Error, error) {
 	var (
 		localVarPostBody interface{}
 	)
@@ -83,7 +83,7 @@ func (a *MempoolAPIService) Mempool(
 	}
 
 	if localVarHTTPResponse.StatusCode != _nethttp.StatusOK {
-		var v models.Error
+		var v types.Error
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
 			return nil, nil, err
@@ -92,7 +92,7 @@ func (a *MempoolAPIService) Mempool(
 		return nil, &v, fmt.Errorf("%+v", v)
 	}
 
-	var v models.MempoolResponse
+	var v types.MempoolResponse
 	err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 	if err != nil {
 		return nil, nil, err
@@ -110,8 +110,8 @@ func (a *MempoolAPIService) Mempool(
 // in a block.
 func (a *MempoolAPIService) MempoolTransaction(
 	ctx _context.Context,
-	mempoolTransactionRequest *models.MempoolTransactionRequest,
-) (*models.MempoolTransactionResponse, *models.Error, error) {
+	mempoolTransactionRequest *types.MempoolTransactionRequest,
+) (*types.MempoolTransactionResponse, *types.Error, error) {
 	var (
 		localVarPostBody interface{}
 	)
@@ -157,7 +157,7 @@ func (a *MempoolAPIService) MempoolTransaction(
 	}
 
 	if localVarHTTPResponse.StatusCode != _nethttp.StatusOK {
-		var v models.Error
+		var v types.Error
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
 			return nil, nil, err
@@ -166,7 +166,7 @@ func (a *MempoolAPIService) MempoolTransaction(
 		return nil, &v, fmt.Errorf("%+v", v)
 	}
 
-	var v models.MempoolTransactionResponse
+	var v types.MempoolTransactionResponse
 	err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 	if err != nil {
 		return nil, nil, err

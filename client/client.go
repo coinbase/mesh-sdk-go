@@ -32,12 +32,6 @@ import (
 	"strings"
 )
 
-const (
-	// APIVersion is the version of the Rosetta API Spec
-	// used to generate this code.
-	APIVersion = "1.3.0"
-)
-
 var (
 	jsonCheck = regexp.MustCompile(`(?i:(?:application|text)/(?:vnd\.[^;]+\+)?json)`)
 )

@@ -23,7 +23,7 @@ import (
 	"strings"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
-	"github.com/coinbase/rosetta-sdk-go/models"
+	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
 // A MempoolAPIController binds http requests to an api service and writes the service results to
@@ -57,9 +57,9 @@ func (c *MempoolAPIController) Routes() Routes {
 
 // Mempool - Get All Mempool Transactions
 func (c *MempoolAPIController) Mempool(w http.ResponseWriter, r *http.Request) {
-	mempoolRequest := &models.MempoolRequest{}
+	mempoolRequest := &types.MempoolRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&mempoolRequest); err != nil {
-		err = EncodeJSONResponse(&models.Error{
+		err = EncodeJSONResponse(&types.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)
 		if err != nil {
@@ -71,7 +71,7 @@ func (c *MempoolAPIController) Mempool(w http.ResponseWriter, r *http.Request) {
 
 	// Assert that MempoolRequest is correct
 	if err := asserter.MempoolRequest(mempoolRequest); err != nil {
-		err = EncodeJSONResponse(&models.Error{
+		err = EncodeJSONResponse(&types.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)
 		if err != nil {
@@ -98,9 +98,9 @@ func (c *MempoolAPIController) Mempool(w http.ResponseWriter, r *http.Request) {
 
 // MempoolTransaction - Get a Mempool Transaction
 func (c *MempoolAPIController) MempoolTransaction(w http.ResponseWriter, r *http.Request) {
-	mempoolTransactionRequest := &models.MempoolTransactionRequest{}
+	mempoolTransactionRequest := &types.MempoolTransactionRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&mempoolTransactionRequest); err != nil {
-		err = EncodeJSONResponse(&models.Error{
+		err = EncodeJSONResponse(&types.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)
 		if err != nil {
@@ -112,7 +112,7 @@ func (c *MempoolAPIController) MempoolTransaction(w http.ResponseWriter, r *http
 
 	// Assert that MempoolTransactionRequest is correct
 	if err := asserter.MempoolTransactionRequest(mempoolTransactionRequest); err != nil {
-		err = EncodeJSONResponse(&models.Error{
+		err = EncodeJSONResponse(&types.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)
 		if err != nil {

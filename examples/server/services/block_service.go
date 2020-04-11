@@ -15,17 +15,17 @@
 package services
 
 import (
-	"github.com/coinbase/rosetta-sdk-go/models"
 	"github.com/coinbase/rosetta-sdk-go/server"
+	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
 // BlockAPIService implements the server.BlockAPIServicer interface.
 type BlockAPIService struct {
-	network *models.NetworkIdentifier
+	network *types.NetworkIdentifier
 }
 
 // NewBlockAPIService creates a new instance of a BlockAPIService.
-func NewBlockAPIService(network *models.NetworkIdentifier) server.BlockAPIServicer {
+func NewBlockAPIService(network *types.NetworkIdentifier) server.BlockAPIServicer {
 	return &BlockAPIService{
 		network: network,
 	}
@@ -33,59 +33,59 @@ func NewBlockAPIService(network *models.NetworkIdentifier) server.BlockAPIServic
 
 // Block implements the /block endpoint.
 func (s *BlockAPIService) Block(
-	request *models.BlockRequest,
-) (*models.BlockResponse, *models.Error) {
-	return &models.BlockResponse{
-		Block: &models.Block{
-			BlockIdentifier: &models.BlockIdentifier{
+	request *types.BlockRequest,
+) (*types.BlockResponse, *types.Error) {
+	return &types.BlockResponse{
+		Block: &types.Block{
+			BlockIdentifier: &types.BlockIdentifier{
 				Index: 1000,
 				Hash:  "block 1000",
 			},
-			ParentBlockIdentifier: &models.BlockIdentifier{
+			ParentBlockIdentifier: &types.BlockIdentifier{
 				Index: 999,
 				Hash:  "block 999",
 			},
 			Timestamp: 1586483189000,
-			Transactions: []*models.Transaction{
+			Transactions: []*types.Transaction{
 				{
-					TransactionIdentifier: &models.TransactionIdentifier{
+					TransactionIdentifier: &types.TransactionIdentifier{
 						Hash: "transaction 0",
 					},
-					Operations: []*models.Operation{
+					Operations: []*types.Operation{
 						{
-							OperationIdentifier: &models.OperationIdentifier{
+							OperationIdentifier: &types.OperationIdentifier{
 								Index: 0,
 							},
 							Type:   "Transfer",
 							Status: "Success",
-							Account: &models.AccountIdentifier{
+							Account: &types.AccountIdentifier{
 								Address: "account 0",
 							},
-							Amount: &models.Amount{
+							Amount: &types.Amount{
 								Value: "-1000",
-								Currency: &models.Currency{
+								Currency: &types.Currency{
 									Symbol:   "ROS",
 									Decimals: 2,
 								},
 							},
 						},
 						{
-							OperationIdentifier: &models.OperationIdentifier{
+							OperationIdentifier: &types.OperationIdentifier{
 								Index: 1,
 							},
-							RelatedOperations: []*models.OperationIdentifier{
+							RelatedOperations: []*types.OperationIdentifier{
 								{
 									Index: 0,
 								},
 							},
 							Type:   "Transfer",
 							Status: "Reverted",
-							Account: &models.AccountIdentifier{
+							Account: &types.AccountIdentifier{
 								Address: "account 1",
 							},
-							Amount: &models.Amount{
+							Amount: &types.Amount{
 								Value: "1000",
-								Currency: &models.Currency{
+								Currency: &types.Currency{
 									Symbol:   "ROS",
 									Decimals: 2,
 								},
@@ -95,7 +95,7 @@ func (s *BlockAPIService) Block(
 				},
 			},
 		},
-		OtherTransactions: []*models.TransactionIdentifier{
+		OtherTransactions: []*types.TransactionIdentifier{
 			{
 				Hash: "transaction 1",
 			},
@@ -105,26 +105,26 @@ func (s *BlockAPIService) Block(
 
 // BlockTransaction implements the /block/transaction endpoint.
 func (s *BlockAPIService) BlockTransaction(
-	request *models.BlockTransactionRequest,
-) (*models.BlockTransactionResponse, *models.Error) {
-	return &models.BlockTransactionResponse{
-		Transaction: &models.Transaction{
-			TransactionIdentifier: &models.TransactionIdentifier{
+	request *types.BlockTransactionRequest,
+) (*types.BlockTransactionResponse, *types.Error) {
+	return &types.BlockTransactionResponse{
+		Transaction: &types.Transaction{
+			TransactionIdentifier: &types.TransactionIdentifier{
 				Hash: "transaction 1",
 			},
-			Operations: []*models.Operation{
+			Operations: []*types.Operation{
 				{
-					OperationIdentifier: &models.OperationIdentifier{
+					OperationIdentifier: &types.OperationIdentifier{
 						Index: 0,
 					},
 					Type:   "Reward",
 					Status: "Success",
-					Account: &models.AccountIdentifier{
+					Account: &types.AccountIdentifier{
 						Address: "account 2",
 					},
-					Amount: &models.Amount{
+					Amount: &types.Amount{
 						Value: "1000",
-						Currency: &models.Currency{
+						Currency: &types.Currency{
 							Symbol:   "ROS",
 							Decimals: 2,
 						},

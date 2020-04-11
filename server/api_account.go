@@ -23,7 +23,7 @@ import (
 	"strings"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
-	"github.com/coinbase/rosetta-sdk-go/models"
+	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
 // A AccountAPIController binds http requests to an api service and writes the service results to
@@ -51,9 +51,9 @@ func (c *AccountAPIController) Routes() Routes {
 
 // AccountBalance - Get an Account Balance
 func (c *AccountAPIController) AccountBalance(w http.ResponseWriter, r *http.Request) {
-	accountBalanceRequest := &models.AccountBalanceRequest{}
+	accountBalanceRequest := &types.AccountBalanceRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&accountBalanceRequest); err != nil {
-		err = EncodeJSONResponse(&models.Error{
+		err = EncodeJSONResponse(&types.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)
 		if err != nil {
@@ -65,7 +65,7 @@ func (c *AccountAPIController) AccountBalance(w http.ResponseWriter, r *http.Req
 
 	// Assert that AccountBalanceRequest is correct
 	if err := asserter.AccountBalanceRequest(accountBalanceRequest); err != nil {
-		err = EncodeJSONResponse(&models.Error{
+		err = EncodeJSONResponse(&types.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)
 		if err != nil {

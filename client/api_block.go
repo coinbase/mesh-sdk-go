@@ -22,7 +22,7 @@ import (
 	_ioutil "io/ioutil"
 	_nethttp "net/http"
 
-	models "github.com/coinbase/rosetta-sdk-go/models"
+	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
 // Linger please
@@ -39,8 +39,8 @@ type BlockAPIService service
 // be done to get all transaction information.
 func (a *BlockAPIService) Block(
 	ctx _context.Context,
-	blockRequest *models.BlockRequest,
-) (*models.BlockResponse, *models.Error, error) {
+	blockRequest *types.BlockRequest,
+) (*types.BlockResponse, *types.Error, error) {
 	var (
 		localVarPostBody interface{}
 	)
@@ -86,7 +86,7 @@ func (a *BlockAPIService) Block(
 	}
 
 	if localVarHTTPResponse.StatusCode != _nethttp.StatusOK {
-		var v models.Error
+		var v types.Error
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
 			return nil, nil, err
@@ -95,7 +95,7 @@ func (a *BlockAPIService) Block(
 		return nil, &v, fmt.Errorf("%+v", v)
 	}
 
-	var v models.BlockResponse
+	var v types.BlockResponse
 	err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 	if err != nil {
 		return nil, nil, err
@@ -118,8 +118,8 @@ func (a *BlockAPIService) Block(
 // /data directory (on a path that does not conflict with the node).
 func (a *BlockAPIService) BlockTransaction(
 	ctx _context.Context,
-	blockTransactionRequest *models.BlockTransactionRequest,
-) (*models.BlockTransactionResponse, *models.Error, error) {
+	blockTransactionRequest *types.BlockTransactionRequest,
+) (*types.BlockTransactionResponse, *types.Error, error) {
 	var (
 		localVarPostBody interface{}
 	)
@@ -165,7 +165,7 @@ func (a *BlockAPIService) BlockTransaction(
 	}
 
 	if localVarHTTPResponse.StatusCode != _nethttp.StatusOK {
-		var v models.Error
+		var v types.Error
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
 			return nil, nil, err
@@ -174,7 +174,7 @@ func (a *BlockAPIService) BlockTransaction(
 		return nil, &v, fmt.Errorf("%+v", v)
 	}
 
-	var v models.BlockTransactionResponse
+	var v types.BlockTransactionResponse
 	err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 	if err != nil {
 		return nil, nil, err

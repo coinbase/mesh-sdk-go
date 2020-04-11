@@ -17,12 +17,12 @@ package asserter
 import (
 	"errors"
 
-	"github.com/coinbase/rosetta-sdk-go/models"
+	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
-// AccountBalanceRequest ensures that a models.AccountBalanceRequest
+// AccountBalanceRequest ensures that a types.AccountBalanceRequest
 // is well-formatted.
-func AccountBalanceRequest(request *models.AccountBalanceRequest) error {
+func AccountBalanceRequest(request *types.AccountBalanceRequest) error {
 	if request == nil {
 		return errors.New("AccountBalanceRequest is nil")
 	}
@@ -42,9 +42,9 @@ func AccountBalanceRequest(request *models.AccountBalanceRequest) error {
 	return PartialBlockIdentifier(request.BlockIdentifier)
 }
 
-// BlockRequest ensures that a models.BlockRequest
+// BlockRequest ensures that a types.BlockRequest
 // is well-formatted.
-func BlockRequest(request *models.BlockRequest) error {
+func BlockRequest(request *types.BlockRequest) error {
 	if request == nil {
 		return errors.New("BlockRequest is nil")
 	}
@@ -56,9 +56,9 @@ func BlockRequest(request *models.BlockRequest) error {
 	return PartialBlockIdentifier(request.BlockIdentifier)
 }
 
-// BlockTransactionRequest ensures that a models.BlockTransactionRequest
+// BlockTransactionRequest ensures that a types.BlockTransactionRequest
 // is well-formatted.
-func BlockTransactionRequest(request *models.BlockTransactionRequest) error {
+func BlockTransactionRequest(request *types.BlockTransactionRequest) error {
 	if request == nil {
 		return errors.New("BlockTransactionRequest is nil")
 	}
@@ -74,9 +74,9 @@ func BlockTransactionRequest(request *models.BlockTransactionRequest) error {
 	return TransactionIdentifier(request.TransactionIdentifier)
 }
 
-// TransactionConstructionRequest ensures that a models.TransactionConstructionRequest
+// TransactionConstructionRequest ensures that a types.TransactionConstructionRequest
 // is well-formatted.
-func TransactionConstructionRequest(request *models.TransactionConstructionRequest) error {
+func TransactionConstructionRequest(request *types.TransactionConstructionRequest) error {
 	if request == nil {
 		return errors.New("TransactionConstructionRequest is nil")
 	}
@@ -96,9 +96,9 @@ func TransactionConstructionRequest(request *models.TransactionConstructionReque
 	return nil
 }
 
-// TransactionSubmitRequest ensures that a models.TransactionSubmitRequest
+// TransactionSubmitRequest ensures that a types.TransactionSubmitRequest
 // is well-formatted.
-func TransactionSubmitRequest(request *models.TransactionSubmitRequest) error {
+func TransactionSubmitRequest(request *types.TransactionSubmitRequest) error {
 	if request == nil {
 		return errors.New("TransactionSubmitRequest is nil")
 	}
@@ -110,9 +110,9 @@ func TransactionSubmitRequest(request *models.TransactionSubmitRequest) error {
 	return nil
 }
 
-// MempoolRequest ensures that a models.MempoolRequest
+// MempoolRequest ensures that a types.MempoolRequest
 // is well-formatted.
-func MempoolRequest(request *models.MempoolRequest) error {
+func MempoolRequest(request *types.MempoolRequest) error {
 	if request == nil {
 		return errors.New("MempoolRequest is nil")
 	}
@@ -120,9 +120,9 @@ func MempoolRequest(request *models.MempoolRequest) error {
 	return NetworkIdentifier(request.NetworkIdentifier)
 }
 
-// MempoolTransactionRequest ensures that a models.MempoolTransactionRequest
+// MempoolTransactionRequest ensures that a types.MempoolTransactionRequest
 // is well-formatted.
-func MempoolTransactionRequest(request *models.MempoolTransactionRequest) error {
+func MempoolTransactionRequest(request *types.MempoolTransactionRequest) error {
 	if request == nil {
 		return errors.New("MempoolTransactionRequest is nil")
 	}
@@ -134,9 +134,9 @@ func MempoolTransactionRequest(request *models.MempoolTransactionRequest) error 
 	return TransactionIdentifier(request.TransactionIdentifier)
 }
 
-// NetworkStatusRequest ensures that a models.NetworkStatusRequest
+// NetworkStatusRequest ensures that a types.NetworkStatusRequest
 // is well-formatted.
-func NetworkStatusRequest(request *models.NetworkStatusRequest) error {
+func NetworkStatusRequest(request *types.NetworkStatusRequest) error {
 	if request == nil {
 		return errors.New("NetworkStatusRequest is nil")
 	}
