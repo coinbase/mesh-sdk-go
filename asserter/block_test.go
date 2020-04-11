@@ -19,18 +19,18 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/coinbase/rosetta-sdk-go/models"
+	"github.com/coinbase/rosetta-sdk-go/types"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestBlockIdentifier(t *testing.T) {
 	var tests = map[string]struct {
-		identifier *models.BlockIdentifier
+		identifier *types.BlockIdentifier
 		err        error
 	}{
 		"valid identifier": {
-			identifier: &models.BlockIdentifier{
+			identifier: &types.BlockIdentifier{
 				Index: int64(1),
 				Hash:  "block 1",
 			},
@@ -41,14 +41,14 @@ func TestBlockIdentifier(t *testing.T) {
 			err:        errors.New("BlockIdentifier is nil"),
 		},
 		"invalid index": {
-			identifier: &models.BlockIdentifier{
+			identifier: &types.BlockIdentifier{
 				Index: int64(-1),
 				Hash:  "block 1",
 			},
 			err: errors.New("BlockIdentifier.Index is negative"),
 		},
 		"invalid hash": {
-			identifier: &models.BlockIdentifier{
+			identifier: &types.BlockIdentifier{
 				Index: int64(1),
 				Hash:  "",
 			},
@@ -66,13 +66,13 @@ func TestBlockIdentifier(t *testing.T) {
 
 func TestAmount(t *testing.T) {
 	var tests = map[string]struct {
-		amount *models.Amount
+		amount *types.Amount
 		err    error
 	}{
 		"valid amount": {
-			amount: &models.Amount{
+			amount: &types.Amount{
 				Value: "100000",
-				Currency: &models.Currency{
+				Currency: &types.Currency{
 					Symbol:   "BTC",
 					Decimals: 1,
 				},
@@ -80,9 +80,9 @@ func TestAmount(t *testing.T) {
 			err: nil,
 		},
 		"valid negative amount": {
-			amount: &models.Amount{
+			amount: &types.Amount{
 				Value: "-100000",
-				Currency: &models.Currency{
+				Currency: &types.Currency{
 					Symbol:   "BTC",
 					Decimals: 1,
 				},
@@ -94,15 +94,15 @@ func TestAmount(t *testing.T) {
 			err:    errors.New("Amount.Value is missing"),
 		},
 		"nil currency": {
-			amount: &models.Amount{
+			amount: &types.Amount{
 				Value: "100000",
 			},
 			err: errors.New("Amount.Currency is nil"),
 		},
 		"invalid non-number": {
-			amount: &models.Amount{
+			amount: &types.Amount{
 				Value: "blah",
-				Currency: &models.Currency{
+				Currency: &types.Currency{
 					Symbol:   "BTC",
 					Decimals: 1,
 				},
@@ -110,9 +110,9 @@ func TestAmount(t *testing.T) {
 			err: errors.New("Amount.Value not an integer blah"),
 		},
 		"invalid integer format": {
-			amount: &models.Amount{
+			amount: &types.Amount{
 				Value: "1.0",
-				Currency: &models.Currency{
+				Currency: &types.Currency{
 					Symbol:   "BTC",
 					Decimals: 1,
 				},
@@ -120,9 +120,9 @@ func TestAmount(t *testing.T) {
 			err: errors.New("Amount.Value not an integer 1.0"),
 		},
 		"invalid non-integer": {
-			amount: &models.Amount{
+			amount: &types.Amount{
 				Value: "1.1",
-				Currency: &models.Currency{
+				Currency: &types.Currency{
 					Symbol:   "BTC",
 					Decimals: 1,
 				},
@@ -130,18 +130,18 @@ func TestAmount(t *testing.T) {
 			err: errors.New("Amount.Value not an integer 1.1"),
 		},
 		"invalid symbol": {
-			amount: &models.Amount{
+			amount: &types.Amount{
 				Value: "11",
-				Currency: &models.Currency{
+				Currency: &types.Currency{
 					Decimals: 1,
 				},
 			},
 			err: errors.New("Amount.Currency.Symbol is empty"),
 		},
 		"invalid decimals": {
-			amount: &models.Amount{
+			amount: &types.Amount{
 				Value: "111",
-				Currency: &models.Currency{
+				Currency: &types.Currency{
 					Symbol: "BTC",
 				},
 			},
@@ -164,12 +164,12 @@ func TestOperationIdentifier(t *testing.T) {
 	)
 
 	var tests = map[string]struct {
-		identifier *models.OperationIdentifier
+		identifier *types.OperationIdentifier
 		index      int64
 		err        error
 	}{
 		"valid identifier": {
-			identifier: &models.OperationIdentifier{
+			identifier: &types.OperationIdentifier{
 				Index: 0,
 			},
 			index: 0,
@@ -181,14 +181,14 @@ func TestOperationIdentifier(t *testing.T) {
 			err:        errors.New("Operation.OperationIdentifier.Index invalid"),
 		},
 		"out-of-order index": {
-			identifier: &models.OperationIdentifier{
+			identifier: &types.OperationIdentifier{
 				Index: 0,
 			},
 			index: 1,
 			err:   errors.New("Operation.OperationIdentifier.Index invalid"),
 		},
 		"valid identifier with network index": {
-			identifier: &models.OperationIdentifier{
+			identifier: &types.OperationIdentifier{
 				Index:        0,
 				NetworkIndex: &validNetworkIndex,
 			},
@@ -196,7 +196,7 @@ func TestOperationIdentifier(t *testing.T) {
 			err:   nil,
 		},
 		"invalid identifier with network index": {
-			identifier: &models.OperationIdentifier{
+			identifier: &types.OperationIdentifier{
 				Index:        0,
 				NetworkIndex: &invalidNetworkIndex,
 			},
@@ -215,34 +215,34 @@ func TestOperationIdentifier(t *testing.T) {
 
 func TestAccountIdentifier(t *testing.T) {
 	var tests = map[string]struct {
-		identifier *models.AccountIdentifier
+		identifier *types.AccountIdentifier
 		err        error
 	}{
 		"valid identifier": {
-			identifier: &models.AccountIdentifier{
+			identifier: &types.AccountIdentifier{
 				Address: "acct1",
 			},
 			err: nil,
 		},
 		"invalid address": {
-			identifier: &models.AccountIdentifier{
+			identifier: &types.AccountIdentifier{
 				Address: "",
 			},
 			err: errors.New("Account.Address is missing"),
 		},
 		"valid identifier with subaccount": {
-			identifier: &models.AccountIdentifier{
+			identifier: &types.AccountIdentifier{
 				Address: "acct1",
-				SubAccount: &models.SubAccountIdentifier{
+				SubAccount: &types.SubAccountIdentifier{
 					Address: "acct2",
 				},
 			},
 			err: nil,
 		},
 		"invalid identifier with subaccount": {
-			identifier: &models.AccountIdentifier{
+			identifier: &types.AccountIdentifier{
 				Address: "acct1",
-				SubAccount: &models.SubAccountIdentifier{
+				SubAccount: &types.SubAccountIdentifier{
 					Address: "",
 				},
 			},
@@ -260,28 +260,28 @@ func TestAccountIdentifier(t *testing.T) {
 
 func TestOperation(t *testing.T) {
 	var (
-		validAmount = &models.Amount{
+		validAmount = &types.Amount{
 			Value: "1000",
-			Currency: &models.Currency{
+			Currency: &types.Currency{
 				Symbol:   "BTC",
 				Decimals: 8,
 			},
 		}
 
-		validAccount = &models.AccountIdentifier{
+		validAccount = &types.AccountIdentifier{
 			Address: "test",
 		}
 	)
 
 	var tests = map[string]struct {
-		operation  *models.Operation
+		operation  *types.Operation
 		index      int64
 		successful bool
 		err        error
 	}{
 		"valid operation": {
-			operation: &models.Operation{
-				OperationIdentifier: &models.OperationIdentifier{
+			operation: &types.Operation{
+				OperationIdentifier: &types.OperationIdentifier{
 					Index: int64(1),
 				},
 				Type:    "PAYMENT",
@@ -294,8 +294,8 @@ func TestOperation(t *testing.T) {
 			err:        nil,
 		},
 		"valid operation no account": {
-			operation: &models.Operation{
-				OperationIdentifier: &models.OperationIdentifier{
+			operation: &types.Operation{
+				OperationIdentifier: &types.OperationIdentifier{
 					Index: int64(1),
 				},
 				Type:   "PAYMENT",
@@ -311,8 +311,8 @@ func TestOperation(t *testing.T) {
 			err:       errors.New("Operation is nil"),
 		},
 		"invalid operation no account": {
-			operation: &models.Operation{
-				OperationIdentifier: &models.OperationIdentifier{
+			operation: &types.Operation{
+				OperationIdentifier: &types.OperationIdentifier{
 					Index: int64(1),
 				},
 				Type:   "PAYMENT",
@@ -323,21 +323,21 @@ func TestOperation(t *testing.T) {
 			err:   errors.New("Account is nil"),
 		},
 		"invalid operation empty account": {
-			operation: &models.Operation{
-				OperationIdentifier: &models.OperationIdentifier{
+			operation: &types.Operation{
+				OperationIdentifier: &types.OperationIdentifier{
 					Index: int64(1),
 				},
 				Type:    "PAYMENT",
 				Status:  "SUCCESS",
-				Account: &models.AccountIdentifier{},
+				Account: &types.AccountIdentifier{},
 				Amount:  validAmount,
 			},
 			index: int64(1),
 			err:   errors.New("Account.Address is missing"),
 		},
 		"invalid operation invalid index": {
-			operation: &models.Operation{
-				OperationIdentifier: &models.OperationIdentifier{
+			operation: &types.Operation{
+				OperationIdentifier: &types.OperationIdentifier{
 					Index: int64(1),
 				},
 				Type:   "PAYMENT",
@@ -347,8 +347,8 @@ func TestOperation(t *testing.T) {
 			err:   errors.New("Operation.OperationIdentifier.Index invalid"),
 		},
 		"invalid operation invalid type": {
-			operation: &models.Operation{
-				OperationIdentifier: &models.OperationIdentifier{
+			operation: &types.Operation{
+				OperationIdentifier: &types.OperationIdentifier{
 					Index: int64(1),
 				},
 				Type:   "STAKE",
@@ -358,8 +358,8 @@ func TestOperation(t *testing.T) {
 			err:   errors.New("Operation.Type STAKE is invalid"),
 		},
 		"unsuccessful operation": {
-			operation: &models.Operation{
-				OperationIdentifier: &models.OperationIdentifier{
+			operation: &types.Operation{
+				OperationIdentifier: &types.OperationIdentifier{
 					Index: int64(1),
 				},
 				Type:   "PAYMENT",
@@ -370,8 +370,8 @@ func TestOperation(t *testing.T) {
 			err:        nil,
 		},
 		"invalid operation invalid status": {
-			operation: &models.Operation{
-				OperationIdentifier: &models.OperationIdentifier{
+			operation: &types.Operation{
+				OperationIdentifier: &types.OperationIdentifier{
 					Index: int64(1),
 				},
 				Type:   "PAYMENT",
@@ -385,18 +385,18 @@ func TestOperation(t *testing.T) {
 	for name, test := range tests {
 		asserter, err := New(
 			context.Background(),
-			&models.NetworkStatusResponse{
-				NetworkStatus: []*models.NetworkStatus{
+			&types.NetworkStatusResponse{
+				NetworkStatus: []*types.NetworkStatus{
 					{
-						NetworkInformation: &models.NetworkInformation{
-							GenesisBlockIdentifier: &models.BlockIdentifier{
+						NetworkInformation: &types.NetworkInformation{
+							GenesisBlockIdentifier: &types.BlockIdentifier{
 								Index: 0,
 							},
 						},
 					},
 				},
-				Options: &models.Options{
-					OperationStatuses: []*models.OperationStatus{
+				Options: &types.Options{
+					OperationStatuses: []*types.OperationStatus{
 						{
 							Status:     "SUCCESS",
 							Successful: true,
@@ -426,39 +426,39 @@ func TestOperation(t *testing.T) {
 }
 
 func TestBlock(t *testing.T) {
-	validBlockIdentifier := &models.BlockIdentifier{
+	validBlockIdentifier := &types.BlockIdentifier{
 		Hash:  "blah",
 		Index: 100,
 	}
-	validParentBlockIdentifier := &models.BlockIdentifier{
+	validParentBlockIdentifier := &types.BlockIdentifier{
 		Hash:  "blah parent",
 		Index: 99,
 	}
-	validTransaction := &models.Transaction{
-		TransactionIdentifier: &models.TransactionIdentifier{
+	validTransaction := &types.Transaction{
+		TransactionIdentifier: &types.TransactionIdentifier{
 			Hash: "blah",
 		},
 	}
 	var tests = map[string]struct {
-		block        *models.Block
+		block        *types.Block
 		genesisIndex int64
 		err          error
 	}{
 		"valid block": {
-			block: &models.Block{
+			block: &types.Block{
 				BlockIdentifier:       validBlockIdentifier,
 				ParentBlockIdentifier: validParentBlockIdentifier,
 				Timestamp:             1,
-				Transactions:          []*models.Transaction{validTransaction},
+				Transactions:          []*types.Transaction{validTransaction},
 			},
 			err: nil,
 		},
 		"genesis block": {
-			block: &models.Block{
+			block: &types.Block{
 				BlockIdentifier:       validBlockIdentifier,
 				ParentBlockIdentifier: validBlockIdentifier,
 				Timestamp:             1,
-				Transactions:          []*models.Transaction{validTransaction},
+				Transactions:          []*types.Transaction{validTransaction},
 			},
 			genesisIndex: validBlockIdentifier.Index,
 			err:          nil,
@@ -468,70 +468,70 @@ func TestBlock(t *testing.T) {
 			err:   errors.New("Block is nil"),
 		},
 		"nil block hash": {
-			block: &models.Block{
+			block: &types.Block{
 				BlockIdentifier:       nil,
 				ParentBlockIdentifier: validParentBlockIdentifier,
 				Timestamp:             1,
-				Transactions:          []*models.Transaction{validTransaction},
+				Transactions:          []*types.Transaction{validTransaction},
 			},
 			err: errors.New("BlockIdentifier is nil"),
 		},
 		"invalid block hash": {
-			block: &models.Block{
-				BlockIdentifier:       &models.BlockIdentifier{},
+			block: &types.Block{
+				BlockIdentifier:       &types.BlockIdentifier{},
 				ParentBlockIdentifier: validParentBlockIdentifier,
 				Timestamp:             1,
-				Transactions:          []*models.Transaction{validTransaction},
+				Transactions:          []*types.Transaction{validTransaction},
 			},
 			err: errors.New("BlockIdentifier.Hash is missing"),
 		},
 		"block previous hash missing": {
-			block: &models.Block{
+			block: &types.Block{
 				BlockIdentifier:       validBlockIdentifier,
-				ParentBlockIdentifier: &models.BlockIdentifier{},
+				ParentBlockIdentifier: &types.BlockIdentifier{},
 				Timestamp:             1,
-				Transactions:          []*models.Transaction{validTransaction},
+				Transactions:          []*types.Transaction{validTransaction},
 			},
 			err: errors.New("BlockIdentifier.Hash is missing"),
 		},
 		"invalid parent block index": {
-			block: &models.Block{
+			block: &types.Block{
 				BlockIdentifier: validBlockIdentifier,
-				ParentBlockIdentifier: &models.BlockIdentifier{
+				ParentBlockIdentifier: &types.BlockIdentifier{
 					Hash:  validParentBlockIdentifier.Hash,
 					Index: validBlockIdentifier.Index,
 				},
 				Timestamp:    1,
-				Transactions: []*models.Transaction{validTransaction},
+				Transactions: []*types.Transaction{validTransaction},
 			},
 			err: errors.New("BlockIdentifier.Index <= ParentBlockIdentifier.Index"),
 		},
 		"invalid parent block hash": {
-			block: &models.Block{
+			block: &types.Block{
 				BlockIdentifier: validBlockIdentifier,
-				ParentBlockIdentifier: &models.BlockIdentifier{
+				ParentBlockIdentifier: &types.BlockIdentifier{
 					Hash:  validBlockIdentifier.Hash,
 					Index: validParentBlockIdentifier.Index,
 				},
 				Timestamp:    1,
-				Transactions: []*models.Transaction{validTransaction},
+				Transactions: []*types.Transaction{validTransaction},
 			},
 			err: errors.New("BlockIdentifier.Hash == ParentBlockIdentifier.Hash"),
 		},
 		"invalid block timestamp": {
-			block: &models.Block{
+			block: &types.Block{
 				BlockIdentifier:       validBlockIdentifier,
 				ParentBlockIdentifier: validParentBlockIdentifier,
-				Transactions:          []*models.Transaction{validTransaction},
+				Transactions:          []*types.Transaction{validTransaction},
 			},
 			err: errors.New("Timestamp is invalid 0"),
 		},
 		"invalid block transaction": {
-			block: &models.Block{
+			block: &types.Block{
 				BlockIdentifier:       validBlockIdentifier,
 				ParentBlockIdentifier: validParentBlockIdentifier,
 				Timestamp:             1,
-				Transactions: []*models.Transaction{
+				Transactions: []*types.Transaction{
 					{},
 				},
 			},
@@ -543,18 +543,18 @@ func TestBlock(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			asserter, err := New(
 				context.Background(),
-				&models.NetworkStatusResponse{
-					NetworkStatus: []*models.NetworkStatus{
+				&types.NetworkStatusResponse{
+					NetworkStatus: []*types.NetworkStatus{
 						{
-							NetworkInformation: &models.NetworkInformation{
-								GenesisBlockIdentifier: &models.BlockIdentifier{
+							NetworkInformation: &types.NetworkInformation{
+								GenesisBlockIdentifier: &types.BlockIdentifier{
 									Index: test.genesisIndex,
 								},
 							},
 						},
 					},
-					Options: &models.Options{
-						OperationStatuses: []*models.OperationStatus{},
+					Options: &types.Options{
+						OperationStatuses: []*types.OperationStatus{},
 						OperationTypes:    []string{},
 					},
 				},

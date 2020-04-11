@@ -20,19 +20,19 @@ import (
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
 
-	"github.com/coinbase/rosetta-sdk-go/models"
+	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
 // ConstructionMetadata returns the validated response
 // from the ConstructionMetadata method.
 func (f *Fetcher) ConstructionMetadata(
 	ctx context.Context,
-	network *models.NetworkIdentifier,
-	account *models.AccountIdentifier,
+	network *types.NetworkIdentifier,
+	account *types.AccountIdentifier,
 	method *string,
-) (*models.Amount, *map[string]interface{}, error) {
+) (*types.Amount, *map[string]interface{}, error) {
 	metadata, _, err := f.rosettaClient.ConstructionAPI.TransactionConstruction(ctx,
-		&models.TransactionConstructionRequest{
+		&types.TransactionConstructionRequest{
 			NetworkIdentifier: network,
 			AccountIdentifier: account,
 			Method:            method,
@@ -54,14 +54,14 @@ func (f *Fetcher) ConstructionMetadata(
 func (f *Fetcher) ConstructionSubmit(
 	ctx context.Context,
 	signedTransaction string,
-) (*models.TransactionIdentifier, *map[string]interface{}, error) {
+) (*types.TransactionIdentifier, *map[string]interface{}, error) {
 	if f.Asserter == nil {
 		return nil, nil, errors.New("asserter not initialized")
 	}
 
 	submitResponse, _, err := f.rosettaClient.ConstructionAPI.TransactionSubmit(
 		ctx,
-		&models.TransactionSubmitRequest{
+		&types.TransactionSubmitRequest{
 			SignedTransaction: signedTransaction,
 		},
 	)

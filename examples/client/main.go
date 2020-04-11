@@ -23,7 +23,7 @@ import (
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
 	"github.com/coinbase/rosetta-sdk-go/client"
-	"github.com/coinbase/rosetta-sdk-go/models"
+	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
 const (
@@ -56,7 +56,7 @@ func main() {
 	// Step 2: Fetch the network status
 	networkStatusResponse, rosettaErr, err := client.NetworkAPI.NetworkStatus(
 		ctx,
-		&models.NetworkStatusRequest{},
+		&types.NetworkStatusRequest{},
 	)
 	if rosettaErr != nil {
 		log.Printf("Rosetta Error: %+v\n", rosettaErr)
@@ -94,9 +94,9 @@ func main() {
 	primaryNetwork := networkStatusResponse.NetworkStatus[0]
 	block, rosettaErr, err := client.BlockAPI.Block(
 		ctx,
-		&models.BlockRequest{
+		&types.BlockRequest{
 			NetworkIdentifier: primaryNetwork.NetworkIdentifier,
-			BlockIdentifier: &models.PartialBlockIdentifier{
+			BlockIdentifier: &types.PartialBlockIdentifier{
 				Index: &primaryNetwork.NetworkInformation.CurrentBlockIdentifier.Index,
 			},
 		},

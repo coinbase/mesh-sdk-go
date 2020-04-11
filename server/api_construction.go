@@ -23,7 +23,7 @@ import (
 	"strings"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
-	"github.com/coinbase/rosetta-sdk-go/models"
+	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
 // A ConstructionAPIController binds http requests to an api service and writes the service results
@@ -60,9 +60,9 @@ func (c *ConstructionAPIController) TransactionConstruction(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	transactionConstructionRequest := &models.TransactionConstructionRequest{}
+	transactionConstructionRequest := &types.TransactionConstructionRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&transactionConstructionRequest); err != nil {
-		err = EncodeJSONResponse(&models.Error{
+		err = EncodeJSONResponse(&types.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)
 		if err != nil {
@@ -74,7 +74,7 @@ func (c *ConstructionAPIController) TransactionConstruction(
 
 	// Assert that TransactionConstructionRequest is correct
 	if err := asserter.TransactionConstructionRequest(transactionConstructionRequest); err != nil {
-		err = EncodeJSONResponse(&models.Error{
+		err = EncodeJSONResponse(&types.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)
 		if err != nil {
@@ -101,9 +101,9 @@ func (c *ConstructionAPIController) TransactionConstruction(
 
 // TransactionSubmit - Submit a Signed Transaction
 func (c *ConstructionAPIController) TransactionSubmit(w http.ResponseWriter, r *http.Request) {
-	transactionSubmitRequest := &models.TransactionSubmitRequest{}
+	transactionSubmitRequest := &types.TransactionSubmitRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&transactionSubmitRequest); err != nil {
-		err = EncodeJSONResponse(&models.Error{
+		err = EncodeJSONResponse(&types.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)
 		if err != nil {
@@ -115,7 +115,7 @@ func (c *ConstructionAPIController) TransactionSubmit(w http.ResponseWriter, r *
 
 	// Assert that TransactionSubmitRequest is correct
 	if err := asserter.TransactionSubmitRequest(transactionSubmitRequest); err != nil {
-		err = EncodeJSONResponse(&models.Error{
+		err = EncodeJSONResponse(&types.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)
 		if err != nil {

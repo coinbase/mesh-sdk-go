@@ -15,17 +15,17 @@
 package services
 
 import (
-	"github.com/coinbase/rosetta-sdk-go/models"
 	"github.com/coinbase/rosetta-sdk-go/server"
+	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
 // NetworkAPIService implements the server.NetworkAPIServicer interface.
 type NetworkAPIService struct {
-	network *models.NetworkIdentifier
+	network *types.NetworkIdentifier
 }
 
 // NewNetworkAPIService creates a new instance of a NetworkAPIService.
-func NewNetworkAPIService(network *models.NetworkIdentifier) server.NetworkAPIServicer {
+func NewNetworkAPIService(network *types.NetworkIdentifier) server.NetworkAPIServicer {
 	return &NetworkAPIService{
 		network: network,
 	}
@@ -33,23 +33,23 @@ func NewNetworkAPIService(network *models.NetworkIdentifier) server.NetworkAPISe
 
 // NetworkStatus implements the /network/status endpoint.
 func (s *NetworkAPIService) NetworkStatus(
-	*models.NetworkStatusRequest,
-) (*models.NetworkStatusResponse, *models.Error) {
-	return &models.NetworkStatusResponse{
-		NetworkStatus: []*models.NetworkStatus{
+	*types.NetworkStatusRequest,
+) (*types.NetworkStatusResponse, *types.Error) {
+	return &types.NetworkStatusResponse{
+		NetworkStatus: []*types.NetworkStatus{
 			{
 				NetworkIdentifier: s.network,
-				NetworkInformation: &models.NetworkInformation{
-					CurrentBlockIdentifier: &models.BlockIdentifier{
+				NetworkInformation: &types.NetworkInformation{
+					CurrentBlockIdentifier: &types.BlockIdentifier{
 						Index: 1000,
 						Hash:  "block 1000",
 					},
 					CurrentBlockTimestamp: int64(1586483189000),
-					GenesisBlockIdentifier: &models.BlockIdentifier{
+					GenesisBlockIdentifier: &types.BlockIdentifier{
 						Index: 0,
 						Hash:  "block 0",
 					},
-					Peers: []*models.Peer{
+					Peers: []*types.Peer{
 						{
 							PeerID: "peer 1",
 						},
@@ -57,12 +57,12 @@ func (s *NetworkAPIService) NetworkStatus(
 				},
 			},
 		},
-		Version: &models.Version{
+		Version: &types.Version{
 			RosettaVersion: "1.3.0",
 			NodeVersion:    "0.0.1",
 		},
-		Options: &models.Options{
-			OperationStatuses: []*models.OperationStatus{
+		Options: &types.Options{
+			OperationStatuses: []*types.OperationStatus{
 				{
 					Status:     "Success",
 					Successful: true,
@@ -76,7 +76,7 @@ func (s *NetworkAPIService) NetworkStatus(
 				"Transfer",
 				"Reward",
 			},
-			Errors: []*models.Error{
+			Errors: []*types.Error{
 				{
 					Code:    1,
 					Message: "not implemented",

@@ -18,7 +18,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/coinbase/rosetta-sdk-go/models"
+	"github.com/coinbase/rosetta-sdk-go/types"
 
 	"github.com/cenkalti/backoff"
 )
@@ -27,9 +27,9 @@ import (
 // from a BlockIdentifier. This is useful when making block requests
 // with the fetcher.
 func PartialBlockIdentifier(
-	blockIdentifier *models.BlockIdentifier,
-) *models.PartialBlockIdentifier {
-	return &models.PartialBlockIdentifier{
+	blockIdentifier *types.BlockIdentifier,
+) *types.PartialBlockIdentifier {
+	return &types.PartialBlockIdentifier{
 		Hash:  &blockIdentifier.Hash,
 		Index: &blockIdentifier.Index,
 	}

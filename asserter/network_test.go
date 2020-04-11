@@ -18,18 +18,18 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/coinbase/rosetta-sdk-go/models"
+	"github.com/coinbase/rosetta-sdk-go/types"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestNetworkIdentifier(t *testing.T) {
 	var tests = map[string]struct {
-		network *models.NetworkIdentifier
+		network *types.NetworkIdentifier
 		err     error
 	}{
 		"valid network": {
-			network: &models.NetworkIdentifier{
+			network: &types.NetworkIdentifier{
 				Blockchain: "bitcoin",
 				Network:    "mainnet",
 			},
@@ -40,34 +40,34 @@ func TestNetworkIdentifier(t *testing.T) {
 			err:     errors.New("NetworkIdentifier is nil"),
 		},
 		"invalid blockchain": {
-			network: &models.NetworkIdentifier{
+			network: &types.NetworkIdentifier{
 				Blockchain: "",
 				Network:    "mainnet",
 			},
 			err: errors.New("NetworkIdentifier is nil"),
 		},
 		"invalid network": {
-			network: &models.NetworkIdentifier{
+			network: &types.NetworkIdentifier{
 				Blockchain: "bitcoin",
 				Network:    "",
 			},
 			err: errors.New("NetworkIdentifier.Network is missing"),
 		},
 		"valid sub_network": {
-			network: &models.NetworkIdentifier{
+			network: &types.NetworkIdentifier{
 				Blockchain: "bitcoin",
 				Network:    "mainnet",
-				SubNetworkIdentifier: &models.SubNetworkIdentifier{
+				SubNetworkIdentifier: &types.SubNetworkIdentifier{
 					Network: "shard 1",
 				},
 			},
 			err: nil,
 		},
 		"invalid sub_network": {
-			network: &models.NetworkIdentifier{
+			network: &types.NetworkIdentifier{
 				Blockchain:           "bitcoin",
 				Network:              "mainnet",
-				SubNetworkIdentifier: &models.SubNetworkIdentifier{},
+				SubNetworkIdentifier: &types.SubNetworkIdentifier{},
 			},
 			err: errors.New("NetworkIdentifier.SubNetworkIdentifier.Network is missing"),
 		},
@@ -89,18 +89,18 @@ func TestVersion(t *testing.T) {
 	)
 
 	var tests = map[string]struct {
-		version *models.Version
+		version *types.Version
 		err     error
 	}{
 		"valid version": {
-			version: &models.Version{
+			version: &types.Version{
 				RosettaVersion: validRosettaVersion,
 				NodeVersion:    "1.0",
 			},
 			err: nil,
 		},
 		"valid version with middleware": {
-			version: &models.Version{
+			version: &types.Version{
 				RosettaVersion:    validRosettaVersion,
 				NodeVersion:       "1.0",
 				MiddlewareVersion: &middlewareVersion,
@@ -108,7 +108,7 @@ func TestVersion(t *testing.T) {
 			err: nil,
 		},
 		"old RosettaVersion": {
-			version: &models.Version{
+			version: &types.Version{
 				RosettaVersion: "1.2.2",
 				NodeVersion:    "1.0",
 			},
@@ -119,13 +119,13 @@ func TestVersion(t *testing.T) {
 			err:     errors.New("version is nil"),
 		},
 		"invalid NodeVersion": {
-			version: &models.Version{
+			version: &types.Version{
 				RosettaVersion: validRosettaVersion,
 			},
 			err: errors.New("Version.NodeVersion is missing"),
 		},
 		"invalid MiddlewareVersion": {
-			version: &models.Version{
+			version: &types.Version{
 				RosettaVersion:    validRosettaVersion,
 				NodeVersion:       "1.0",
 				MiddlewareVersion: &invalidMiddlewareVersion,
@@ -144,7 +144,7 @@ func TestVersion(t *testing.T) {
 
 func TestNetworkOptions(t *testing.T) {
 	var (
-		operationStatuses = []*models.OperationStatus{
+		operationStatuses = []*types.OperationStatus{
 			{
 				Status:     "SUCCESS",
 				Successful: true,
@@ -161,11 +161,11 @@ func TestNetworkOptions(t *testing.T) {
 	)
 
 	var tests = map[string]struct {
-		networkOptions *models.Options
+		networkOptions *types.Options
 		err            error
 	}{
 		"valid options": {
-			networkOptions: &models.Options{
+			networkOptions: &types.Options{
 				OperationStatuses: operationStatuses,
 				OperationTypes:    operationTypes,
 			},
@@ -175,14 +175,14 @@ func TestNetworkOptions(t *testing.T) {
 			err:            errors.New("options is nil"),
 		},
 		"no OperationStatuses": {
-			networkOptions: &models.Options{
+			networkOptions: &types.Options{
 				OperationTypes: operationTypes,
 			},
 			err: errors.New("no Options.OperationStatuses found"),
 		},
 		"no successful OperationStatuses": {
-			networkOptions: &models.Options{
-				OperationStatuses: []*models.OperationStatus{
+			networkOptions: &types.Options{
+				OperationStatuses: []*types.OperationStatus{
 					operationStatuses[1],
 				},
 				OperationTypes: operationTypes,
@@ -190,7 +190,7 @@ func TestNetworkOptions(t *testing.T) {
 			err: errors.New("no successful Options.OperationStatuses found"),
 		},
 		"no OperationTypes": {
-			networkOptions: &models.Options{
+			networkOptions: &types.Options{
 				OperationStatuses: operationStatuses,
 			},
 			err: errors.New("no Options.OperationTypes found"),
@@ -206,11 +206,11 @@ func TestNetworkOptions(t *testing.T) {
 
 func TestError(t *testing.T) {
 	var tests = map[string]struct {
-		rosettaError *models.Error
+		rosettaError *types.Error
 		err          error
 	}{
 		"valid error": {
-			rosettaError: &models.Error{
+			rosettaError: &types.Error{
 				Code:    12,
 				Message: "signature invalid",
 			},
@@ -221,14 +221,14 @@ func TestError(t *testing.T) {
 			err:          errors.New("Error is nil"),
 		},
 		"negative code": {
-			rosettaError: &models.Error{
+			rosettaError: &types.Error{
 				Code:    -1,
 				Message: "signature invalid",
 			},
 			err: errors.New("Error.Code is negative"),
 		},
 		"empty message": {
-			rosettaError: &models.Error{
+			rosettaError: &types.Error{
 				Code: 0,
 			},
 			err: errors.New("Error.Message is missing"),
@@ -244,11 +244,11 @@ func TestError(t *testing.T) {
 
 func TestErrors(t *testing.T) {
 	var tests = map[string]struct {
-		rosettaErrors []*models.Error
+		rosettaErrors []*types.Error
 		err           error
 	}{
 		"valid errors": {
-			rosettaErrors: []*models.Error{
+			rosettaErrors: []*types.Error{
 				{
 					Code:    0,
 					Message: "error 1",
@@ -261,7 +261,7 @@ func TestErrors(t *testing.T) {
 			err: nil,
 		},
 		"duplicate error codes": {
-			rosettaErrors: []*models.Error{
+			rosettaErrors: []*types.Error{
 				{
 					Code:    0,
 					Message: "error 1",

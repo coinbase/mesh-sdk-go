@@ -19,32 +19,32 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/coinbase/rosetta-sdk-go/models"
+	"github.com/coinbase/rosetta-sdk-go/types"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestContainsCurrency(t *testing.T) {
 	var tests = map[string]struct {
-		currencies []*models.Currency
-		currency   *models.Currency
+		currencies []*types.Currency
+		currency   *types.Currency
 		contains   bool
 	}{
 		"simple contains": {
-			currencies: []*models.Currency{
+			currencies: []*types.Currency{
 				{
 					Symbol:   "BTC",
 					Decimals: 8,
 				},
 			},
-			currency: &models.Currency{
+			currency: &types.Currency{
 				Symbol:   "BTC",
 				Decimals: 8,
 			},
 			contains: true,
 		},
 		"complex contains": {
-			currencies: []*models.Currency{
+			currencies: []*types.Currency{
 				{
 					Symbol:   "BTC",
 					Decimals: 8,
@@ -53,7 +53,7 @@ func TestContainsCurrency(t *testing.T) {
 					},
 				},
 			},
-			currency: &models.Currency{
+			currency: &types.Currency{
 				Symbol:   "BTC",
 				Decimals: 8,
 				Metadata: &map[string]interface{}{
@@ -63,41 +63,41 @@ func TestContainsCurrency(t *testing.T) {
 			contains: true,
 		},
 		"empty": {
-			currencies: []*models.Currency{},
-			currency: &models.Currency{
+			currencies: []*types.Currency{},
+			currency: &types.Currency{
 				Symbol:   "BTC",
 				Decimals: 8,
 			},
 			contains: false,
 		},
 		"symbol mismatch": {
-			currencies: []*models.Currency{
+			currencies: []*types.Currency{
 				{
 					Symbol:   "ERX",
 					Decimals: 8,
 				},
 			},
-			currency: &models.Currency{
+			currency: &types.Currency{
 				Symbol:   "BTC",
 				Decimals: 6,
 			},
 			contains: false,
 		},
 		"decimal mismatch": {
-			currencies: []*models.Currency{
+			currencies: []*types.Currency{
 				{
 					Symbol:   "BTC",
 					Decimals: 8,
 				},
 			},
-			currency: &models.Currency{
+			currency: &types.Currency{
 				Symbol:   "BTC",
 				Decimals: 6,
 			},
 			contains: false,
 		},
 		"metadata mismatch": {
-			currencies: []*models.Currency{
+			currencies: []*types.Currency{
 				{
 					Symbol:   "BTC",
 					Decimals: 8,
@@ -106,7 +106,7 @@ func TestContainsCurrency(t *testing.T) {
 					},
 				},
 			},
-			currency: &models.Currency{
+			currency: &types.Currency{
 				Symbol:   "BTC",
 				Decimals: 8,
 				Metadata: &map[string]interface{}{
@@ -127,26 +127,26 @@ func TestContainsCurrency(t *testing.T) {
 
 func TestContainsAccountIdentifier(t *testing.T) {
 	var tests = map[string]struct {
-		identifiers []*models.AccountIdentifier
-		identifier  *models.AccountIdentifier
+		identifiers []*types.AccountIdentifier
+		identifier  *types.AccountIdentifier
 		contains    bool
 	}{
 		"simple contains": {
-			identifiers: []*models.AccountIdentifier{
+			identifiers: []*types.AccountIdentifier{
 				{
 					Address: "acct1",
 				},
 			},
-			identifier: &models.AccountIdentifier{
+			identifier: &types.AccountIdentifier{
 				Address: "acct1",
 			},
 			contains: true,
 		},
 		"complex contains": {
-			identifiers: []*models.AccountIdentifier{
+			identifiers: []*types.AccountIdentifier{
 				{
 					Address: "acct1",
-					SubAccount: &models.SubAccountIdentifier{
+					SubAccount: &types.SubAccountIdentifier{
 						Address: "subacct1",
 						Metadata: &map[string]interface{}{
 							"blah": "hello",
@@ -154,9 +154,9 @@ func TestContainsAccountIdentifier(t *testing.T) {
 					},
 				},
 			},
-			identifier: &models.AccountIdentifier{
+			identifier: &types.AccountIdentifier{
 				Address: "acct1",
-				SubAccount: &models.SubAccountIdentifier{
+				SubAccount: &types.SubAccountIdentifier{
 					Address: "subacct1",
 					Metadata: &map[string]interface{}{
 						"blah": "hello",
@@ -166,28 +166,28 @@ func TestContainsAccountIdentifier(t *testing.T) {
 			contains: true,
 		},
 		"simple mismatch": {
-			identifiers: []*models.AccountIdentifier{
+			identifiers: []*types.AccountIdentifier{
 				{
 					Address: "acct1",
 				},
 			},
-			identifier: &models.AccountIdentifier{
+			identifier: &types.AccountIdentifier{
 				Address: "acct2",
 			},
 			contains: false,
 		},
 		"empty": {
-			identifiers: []*models.AccountIdentifier{},
-			identifier: &models.AccountIdentifier{
+			identifiers: []*types.AccountIdentifier{},
+			identifier: &types.AccountIdentifier{
 				Address: "acct2",
 			},
 			contains: false,
 		},
 		"subaccount mismatch": {
-			identifiers: []*models.AccountIdentifier{
+			identifiers: []*types.AccountIdentifier{
 				{
 					Address: "acct1",
-					SubAccount: &models.SubAccountIdentifier{
+					SubAccount: &types.SubAccountIdentifier{
 						Address: "subacct2",
 						Metadata: &map[string]interface{}{
 							"blah": "hello",
@@ -195,9 +195,9 @@ func TestContainsAccountIdentifier(t *testing.T) {
 					},
 				},
 			},
-			identifier: &models.AccountIdentifier{
+			identifier: &types.AccountIdentifier{
 				Address: "acct1",
-				SubAccount: &models.SubAccountIdentifier{
+				SubAccount: &types.SubAccountIdentifier{
 					Address: "subacct1",
 					Metadata: &map[string]interface{}{
 						"blah": "hello",
@@ -207,10 +207,10 @@ func TestContainsAccountIdentifier(t *testing.T) {
 			contains: false,
 		},
 		"metadata mismatch": {
-			identifiers: []*models.AccountIdentifier{
+			identifiers: []*types.AccountIdentifier{
 				{
 					Address: "acct1",
-					SubAccount: &models.SubAccountIdentifier{
+					SubAccount: &types.SubAccountIdentifier{
 						Address: "subacct1",
 						Metadata: &map[string]interface{}{
 							"blah": "hello",
@@ -218,9 +218,9 @@ func TestContainsAccountIdentifier(t *testing.T) {
 					},
 				},
 			},
-			identifier: &models.AccountIdentifier{
+			identifier: &types.AccountIdentifier{
 				Address: "acct1",
-				SubAccount: &models.SubAccountIdentifier{
+				SubAccount: &types.SubAccountIdentifier{
 					Address: "subacct1",
 					Metadata: &map[string]interface{}{
 						"blah": "bye",
@@ -240,43 +240,43 @@ func TestContainsAccountIdentifier(t *testing.T) {
 }
 
 func TestAccoutBalance(t *testing.T) {
-	validBlock := &models.BlockIdentifier{
+	validBlock := &types.BlockIdentifier{
 		Index: 1000,
 		Hash:  "jsakdl",
 	}
 
-	invalidBlock := &models.BlockIdentifier{
+	invalidBlock := &types.BlockIdentifier{
 		Index: 1,
 		Hash:  "",
 	}
 
-	validIdentifier := &models.AccountIdentifier{
+	validIdentifier := &types.AccountIdentifier{
 		Address: "acct1",
 	}
 
-	invalidIdentifier := &models.AccountIdentifier{
+	invalidIdentifier := &types.AccountIdentifier{
 		Address: "",
 	}
 
-	validAmount := &models.Amount{
+	validAmount := &types.Amount{
 		Value: "100",
-		Currency: &models.Currency{
+		Currency: &types.Currency{
 			Symbol:   "BTC",
 			Decimals: 8,
 		},
 	}
 
 	var tests = map[string]struct {
-		block    *models.BlockIdentifier
-		balances []*models.Balance
+		block    *types.BlockIdentifier
+		balances []*types.Balance
 		err      error
 	}{
 		"simple balance": {
 			block: validBlock,
-			balances: []*models.Balance{
+			balances: []*types.Balance{
 				{
 					AccountIdentifier: validIdentifier,
-					Amounts: []*models.Amount{
+					Amounts: []*types.Amount{
 						validAmount,
 					},
 				},
@@ -285,10 +285,10 @@ func TestAccoutBalance(t *testing.T) {
 		},
 		"invalid block": {
 			block: invalidBlock,
-			balances: []*models.Balance{
+			balances: []*types.Balance{
 				{
 					AccountIdentifier: validIdentifier,
-					Amounts: []*models.Amount{
+					Amounts: []*types.Amount{
 						validAmount,
 					},
 				},
@@ -297,10 +297,10 @@ func TestAccoutBalance(t *testing.T) {
 		},
 		"invalid account identifier": {
 			block: validBlock,
-			balances: []*models.Balance{
+			balances: []*types.Balance{
 				{
 					AccountIdentifier: invalidIdentifier,
-					Amounts: []*models.Amount{
+					Amounts: []*types.Amount{
 						validAmount,
 					},
 				},
@@ -309,10 +309,10 @@ func TestAccoutBalance(t *testing.T) {
 		},
 		"duplicate currency": {
 			block: validBlock,
-			balances: []*models.Balance{
+			balances: []*types.Balance{
 				{
 					AccountIdentifier: validIdentifier,
-					Amounts: []*models.Amount{
+					Amounts: []*types.Amount{
 						validAmount,
 						validAmount,
 					},
@@ -322,16 +322,16 @@ func TestAccoutBalance(t *testing.T) {
 		},
 		"duplicate identifier": {
 			block: validBlock,
-			balances: []*models.Balance{
+			balances: []*types.Balance{
 				{
 					AccountIdentifier: validIdentifier,
-					Amounts: []*models.Amount{
+					Amounts: []*types.Amount{
 						validAmount,
 					},
 				},
 				{
 					AccountIdentifier: validIdentifier,
-					Amounts: []*models.Amount{
+					Amounts: []*types.Amount{
 						validAmount,
 					},
 				},

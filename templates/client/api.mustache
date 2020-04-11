@@ -6,7 +6,8 @@ import (
 	_context "context"
 	_ioutil "io/ioutil"
 	_nethttp "net/http"
-  models "github.com/coinbase/rosetta-sdk-go/models"
+
+  "github.com/coinbase/rosetta-sdk-go/types"
 {{#imports}}	"{{import}}"
 {{/imports}}
 )
@@ -21,7 +22,7 @@ type {{classname}}Service service
 {{#operation}}
 
 // {{operationId}}{{#notes}} {{notes}}{{/notes}}
-func (a *{{{classname}}}Service) {{{nickname}}}(ctx _context.Context{{#hasParams}}, {{/hasParams}}{{#allParams}}{{#required}}{{paramName}} *models.{{{dataType}}}{{#hasMore}}, {{/hasMore}}{{/required}}{{/allParams}}{{#hasOptionalParams}}localVarOptionals *{{#structPrefix}}{{&classname}}{{/structPrefix}}{{{nickname}}}Opts{{/hasOptionalParams}}) ({{#returnType}}*models.{{{returnType}}}, {{/returnType}} *models.Error, error) {
+func (a *{{{classname}}}Service) {{{nickname}}}(ctx _context.Context{{#hasParams}}, {{/hasParams}}{{#allParams}}{{#required}}{{paramName}} *types.{{{dataType}}}{{#hasMore}}, {{/hasMore}}{{/required}}{{/allParams}}{{#hasOptionalParams}}localVarOptionals *{{#structPrefix}}{{&classname}}{{/structPrefix}}{{{nickname}}}Opts{{/hasOptionalParams}}) ({{#returnType}}*types.{{{returnType}}}, {{/returnType}} *types.Error, error) {
 	var (
 		localVarPostBody     interface{}
 	)
@@ -87,7 +88,7 @@ func (a *{{{classname}}}Service) {{{nickname}}}(ctx _context.Context{{#hasParams
 	}
 
 	if localVarHTTPResponse.StatusCode != _nethttp.StatusOK {
-    var v models.Error
+    var v types.Error
     err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
     if err != nil {
       return nil, nil, err 
@@ -97,7 +98,7 @@ func (a *{{{classname}}}Service) {{{nickname}}}(ctx _context.Context{{#hasParams
 	}
 
 	{{#returnType}}
-  var v models.{{{returnType}}}
+  var v types.{{{returnType}}}
 	err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 	if err != nil {
 		return nil, nil, err

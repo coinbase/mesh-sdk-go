@@ -4,7 +4,7 @@ package {{packageName}}
 import (
 	"net/http"
 
-  "github.com/coinbase/rosetta-sdk-go/models"
+  "github.com/coinbase/rosetta-sdk-go/types"
 )
 
 {{#apiInfo}}{{#apis}}
@@ -21,5 +21,5 @@ type {{classname}}Router interface { {{#operations}}{{#operation}}
 // while the service implementation can ignored with the .openapi-generator-ignore file 
 // and updated with the logic required for the API.
 type {{classname}}Servicer interface { {{#operations}}{{#operation}}
-	{{operationId}}({{#allParams}}*models.{{dataType}}{{#hasMore}}, {{/hasMore}}{{/allParams}}) (*models.{{returnType}}, *models.Error){{/operation}}{{/operations}}
+	{{operationId}}({{#allParams}}*types.{{dataType}}{{#hasMore}}, {{/hasMore}}{{/allParams}}) (*types.{{returnType}}, *types.Error){{/operation}}{{/operations}}
 }{{/apis}}{{/apiInfo}}
