@@ -18,22 +18,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/coinbase/rosetta-sdk-go/types"
-
 	"github.com/cenkalti/backoff"
 )
-
-// PartialBlockIdentifier constructs a PartialBlockIdentifier
-// from a BlockIdentifier. This is useful when making block requests
-// with the fetcher.
-func PartialBlockIdentifier(
-	blockIdentifier *types.BlockIdentifier,
-) *types.PartialBlockIdentifier {
-	return &types.PartialBlockIdentifier{
-		Hash:  &blockIdentifier.Hash,
-		Index: &blockIdentifier.Index,
-	}
-}
 
 // backoffRetries creates the backoff.BackOff struct used by all
 // *Retry functions in the fetcher.
