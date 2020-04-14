@@ -14,16 +14,26 @@
 
 package types
 
-// ConstructPartialBlockIdentifier constructs a *PartialBlockIdentifier
-// from a *BlockIdentifier.
-//
-// It is useful to have this helper when making block requests
-// with the fetcher.
-func ConstructPartialBlockIdentifier(
-	blockIdentifier *BlockIdentifier,
-) *PartialBlockIdentifier {
-	return &PartialBlockIdentifier{
-		Hash:  &blockIdentifier.Hash,
-		Index: &blockIdentifier.Index,
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
+
+func TestConstructPartialBlockIdentifier(t *testing.T) {
+	blockIdentifier := &BlockIdentifier{
+		Index: 1,
+		Hash:  "block 1",
 	}
+
+	partialBlockIdentifier := &PartialBlockIdentifier{
+		Index: &blockIdentifier.Index,
+		Hash:  &blockIdentifier.Hash,
+	}
+
+	assert.Equal(
+		t,
+		partialBlockIdentifier,
+		ConstructPartialBlockIdentifier(blockIdentifier),
+	)
 }
