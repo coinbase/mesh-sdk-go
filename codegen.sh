@@ -32,19 +32,19 @@ esac
 # Remove existing clienterated code
 mkdir tmp;
 DIRS=( types client server )
-FILES=( README.md utils.go utils_test.go )
+IGNORED_FILES=( README.md utils.go utils_test.go )
 
 for dir in "${DIRS[@]}"
 do
   rm -rf tmp/*;
-  for file in "${FILES[@]}"
+  for file in "${IGNORED_FILES[@]}"
   do
     [ -f "${dir:?}"/"${file:?}" ] && mv "${dir:?}"/"${file:?}" tmp;
   done
 
   rm -rf "${dir:?}"/*;
 
-  for file in "${FILES[@]}"
+  for file in "${IGNORED_FILES[@]}"
   do
     [ -f tmp/"${file:?}" ] && mv tmp/"${file:?}" "${dir:?}"/"${file:?}";
   done

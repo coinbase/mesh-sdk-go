@@ -111,7 +111,7 @@ func main() {
 	block, err := newFetcher.BlockRetry(
 		ctx,
 		primaryNetwork.NetworkIdentifier,
-		types.PartialBlockIdentifierUtil(
+		types.ConstructPartialBlockIdentifier(
 			primaryNetwork.NetworkInformation.CurrentBlockIdentifier,
 		),
 		maxElapsedTime,
