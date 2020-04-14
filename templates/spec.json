@@ -1,7 +1,7 @@
 {
  "openapi":"3.0.2",
  "info": {
-   "version":"1.3.0",
+   "version":"1.3.1",
    "title":"Rosetta",
    "description":"A Standard for Blockchain Interaction",
    "license": {
@@ -10,21 +10,62 @@
     }
   },
  "paths": {
+   "/network/list": {
+     "post": {
+       "summary":"Get List of Available Networks",
+       "description":"This endpoint returns a list of NetworkIdentifiers that the Rosetta server can handle.",
+       "operationId":"networkList",
+       "tags": [
+         "Network"
+        ],
+       "requestBody": {
+         "required": true,
+         "content": {
+           "application/json": {
+             "schema": {
+               "$ref":"#/components/schemas/MetadataRequest"
+              }
+            }
+          }
+        },
+       "responses": {
+         "200": {
+           "description":"Expected response to a valid request",
+           "content": {
+             "application/json": {
+               "schema": {
+                 "$ref":"#/components/schemas/NetworkListResponse"
+                }
+              }
+            }
+          },
+         "default": {
+           "description":"unexpected error",
+           "content": {
+             "application/json": {
+               "schema": {
+                 "$ref":"#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
    "/network/status": {
      "post": {
        "summary":"Get Network Status",
-       "description":"This method returns the current status of the network the node knows about. This method also returns the methods, operation types, and operation statuses the node supports.",
+       "description":"This endpoint returns the current status of the network requested. Any NetworkIdentifier returned by /network/list should be accessible here.",
        "operationId":"networkStatus",
        "tags": [
          "Network"
         ],
        "requestBody": {
-         "description":"There are not any required fields in this request, yet. It is still specified as a POST request to ensure required fields can be added without requiring clients to change from a GET(which is currently more ideal) to a POST request.",
          "required": true,
          "content": {
            "application/json": {
              "schema": {
-               "$ref":"#/components/schemas/NetworkStatusRequest"
+               "$ref":"#/components/schemas/NetworkRequest"
               }
             }
           }
@@ -36,6 +77,48 @@
              "application/json": {
                "schema": {
                  "$ref":"#/components/schemas/NetworkStatusResponse"
+                }
+              }
+            }
+          },
+         "default": {
+           "description":"unexpected error",
+           "content": {
+             "application/json": {
+               "schema": {
+                 "$ref":"#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+   "/network/options": {
+     "post": {
+       "summary":"Get Network Options",
+       "description":"This endpoint returns the version information and allowed network-specific types for a NetworkIdentifier. Any NetworkIdentifier returned by /network/list should be accessible here.  Because options are retrievable in the context of a NetworkIdentifier, it is possible to define unique options for each network.",
+       "operationId":"networkOptions",
+       "tags": [
+         "Network"
+        ],
+       "requestBody": {
+         "required": true,
+         "content": {
+           "application/json": {
+             "schema": {
+               "$ref":"#/components/schemas/NetworkRequest"
+              }
+            }
+          }
+        },
+       "responses": {
+         "200": {
+           "description":"Expected response to a valid request",
+           "content": {
+             "application/json": {
+               "schema": {
+                 "$ref":"#/components/schemas/NetworkOptionsResponse"
                 }
               }
             }
@@ -98,7 +181,7 @@
    "/block/transaction": {
      "post": {
        "summary":"Get a Block Transaction",
-       "description":"Get a transaction in a block by its Transaction Identifier. This method should only be used when querying a node for a block does not return all transactions contained within it.  All transactions returned by this method must be appended to any transactions returned by the /block method by consumers of this data. Fetching a transaction by hash is considered an Explorer Method (which is classified under the Future Work section).  Calling this method requires reference to a BlockIdentifier because transaction parsing can change depending on which block contains the transaction. For example, in Bitcoin it is necessary to know which block contains a transaction to determine the destination of fee payments. Without specifying a block identifier, the node would have to infer which block to use (which could change during a re-org).  Implementations that require fetching previous transactions to populate the response (ex: Previous UTXOs in Bitcoin) may find it useful to run a cache within the Rosetta server in the /data directory (on a path that does not conflict with the node).",
+       "description":"Get a transaction in a block by its Transaction Identifier. This endpoint should only be used when querying a node for a block does not return all transactions contained within it.  All transactions returned by this endpoint must be appended to any transactions returned by the /block method by consumers of this data. Fetching a transaction by hash is considered an Explorer Method (which is classified under the Future Work section).  Calling this endpoint requires reference to a BlockIdentifier because transaction parsing can change depending on which block contains the transaction. For example, in Bitcoin it is necessary to know which block contains a transaction to determine the destination of fee payments. Without specifying a block identifier, the node would have to infer which block to use (which could change during a re-org).  Implementations that require fetching previous transactions to populate the response (ex: Previous UTXOs in Bitcoin) may find it useful to run a cache within the Rosetta server in the /data directory (on a path that does not conflict with the node).",
        "operationId":"blockTransaction",
        "tags": [
          "Block"
@@ -266,8 +349,8 @@
    "/construction/metadata": {
      "post": {
        "summary":"Get Transaction Construction Metadata",
-       "description":"Get any information required to construct a transaction for a specific account. Metadata returned here could be a recent hash to use or an account sequence number.  It is important to clarify that this endpoint should not pre-construct any transactions for the client. All account-specific metadata must be returned as a key-value mapping so that transaction construction can be audited and performed entirely offline. Any account-agnostic metadata does not need to be broken out into a key-value mapping and can be returned as a blob.",
-       "operationId":"transactionConstruction",
+       "description":"Get any information required to construct a transaction for a specific network. Metadata returned here could be a recent hash to use, an account sequence number, or even arbitrary chain state. It is up to the client to correctly populate the options object with any network-specific details to ensure the correct metadata is retrieved.  It is important to clarify that this endpoint should not pre-construct any transactions for the client (this should happen in the SDK). This endpoint is left purposely unstructured because of the wide scope of metadata that could be required.  In a future version of the spec, we plan to pass an array of Rosetta Operations to specify which metadata should be received and to create a transaction in an accompanying SDK. This will help to insulate the client from chain-specific details that are currently required here.",
+       "operationId":"constructionMetadata",
        "tags": [
          "Construction"
         ],
@@ -276,7 +359,7 @@
          "content": {
            "application/json": {
              "schema": {
-               "$ref":"#/components/schemas/TransactionConstructionRequest"
+               "$ref":"#/components/schemas/ConstructionMetadataRequest"
               }
             }
           }
@@ -287,7 +370,7 @@
            "content": {
              "application/json": {
                "schema": {
-                 "$ref":"#/components/schemas/TransactionConstructionResponse"
+                 "$ref":"#/components/schemas/ConstructionMetadataResponse"
                 }
               }
             }
@@ -309,7 +392,7 @@
      "post": {
        "summary":"Submit a Signed Transaction",
        "description":"Submit a pre-signed transaction to the node. This call should not block on the transaction being included in a block. Rather, it should return immediately with an indication of whether or not the transaction was included in the mempool.  The transaction submission response should only return a 200 status if the submitted transaction could be included in the mempool. Otherwise, it should return an error.",
-       "operationId":"transactionSubmit",
+       "operationId":"constructionSubmit",
        "tags": [
          "Construction"
         ],
@@ -318,7 +401,7 @@
          "content": {
            "application/json": {
              "schema": {
-               "$ref":"#/components/schemas/TransactionSubmitRequest"
+               "$ref":"#/components/schemas/ConstructionSubmitRequest"
               }
             }
           }
@@ -329,7 +412,7 @@
            "content": {
              "application/json": {
                "schema": {
-                 "$ref":"#/components/schemas/TransactionSubmitResponse"
+                 "$ref":"#/components/schemas/ConstructionSubmitResponse"
                 }
               }
             }
@@ -503,7 +586,7 @@
         }
       },
      "Block": {
-       "description":"Blocks contain an array of Transactions that occured at a particular BlockIdentifier.",
+       "description":"Blocks contain an array of Transactions that occurred at a particular BlockIdentifier.",
        "type":"object",
        "required": [
          "block_identifier",
@@ -637,7 +720,7 @@
         }
       },
      "Currency": {
-       "description":"Currency is composed of a cannonical Symbol and Decimals. This Decimals value is used to convert an Amount.Value from atomic units (Satoshis) to standard units (Bitcoins).",
+       "description":"Currency is composed of a canonical Symbol and Decimals. This Decimals value is used to convert an Amount.Value from atomic units (Satoshis) to standard units (Bitcoins).",
        "type":"object",
        "required": [
          "symbol",
@@ -645,7 +728,7 @@
         ],
        "properties": {
          "symbol": {
-           "description":"Cannonical symbol associated with a currency.",
+           "description":"Canonical symbol associated with a currency.",
            "type":"string",
            "example":"BTC"
           },
@@ -661,33 +744,6 @@
            "type":"object",
            "example": {
              "Issuer":"Satoshi"
-            }
-          }
-        }
-      },
-     "Balance": {
-       "description":"Balance is the array of Amount controlled by an AccountIdentifier. An underspecified AccountIdentifier may result in many amounts (ex: all ERC-20 balances for a single address).",
-       "type":"object",
-       "required": [
-         "account_identifier",
-         "amounts"
-        ],
-       "properties": {
-         "account_identifier": {
-           "$ref":"#/components/schemas/AccountIdentifier"
-          },
-         "amounts": {
-           "description":"A single account may have a balance in multiple currencies.",
-           "type":"array",
-           "items": {
-             "$ref":"#/components/schemas/Amount"
-            }
-          },
-         "metadata": {
-           "description":"Account-based blockchains that utilize a nonce or sequence number should include that number in the metadata. This number could be unique to the identifier or global across the account address.",
-           "type":"object",
-           "example": {
-             "sequence_number": 23
             }
           }
         }
@@ -722,7 +778,7 @@
            "example":"1.2.5"
           },
          "node_version": {
-           "description":"The node_version is the cannonical version of the node runtime. This can help clients manage deployments.",
+           "description":"The node_version is the canonical version of the node runtime. This can help clients manage deployments.",
            "type":"string",
            "example":"1.0.2"
           },
@@ -737,51 +793,8 @@
           }
         }
       },
-     "NetworkInformation": {
-       "description":"NetworkInformation contains basic information about a node's view of a blockchain network.",
-       "type":"object",
-       "required": [
-         "current_block_identifier",
-         "current_block_timestamp",
-         "genesis_block_identifier",
-         "peers"
-        ],
-       "properties": {
-         "current_block_identifier": {
-           "$ref":"#/components/schemas/BlockIdentifier"
-          },
-         "current_block_timestamp": {
-           "$ref":"#/components/schemas/Timestamp"
-          },
-         "genesis_block_identifier": {
-           "$ref":"#/components/schemas/BlockIdentifier"
-          },
-         "peers": {
-           "type":"array",
-           "items": {
-             "$ref":"#/components/schemas/Peer"
-            }
-          }
-        }
-      },
-     "NetworkStatus": {
-       "description":"A NetworkStatus object contains the network_information pertaining to a network specified by the network_identifier.",
-       "type":"object",
-       "required": [
-         "network_identifier",
-         "network_information"
-        ],
-       "properties": {
-         "network_identifier": {
-           "$ref":"#/components/schemas/NetworkIdentifier"
-          },
-         "network_information": {
-           "$ref":"#/components/schemas/NetworkInformation"
-          }
-        }
-      },
-     "Options": {
-       "description":"Options specify supported Operation status, Operation types, and all possible error statuses. This Options object is used by clients to validate the correctness of a Rosetta Server implementation. It is expected that these clients will error if they receive some response that contains any of the above information that is not specified here.",
+     "Allow": {
+       "description":"Allow specifies supported Operation status, Operation types, and all possible error statuses. This Allow object is used by clients to validate the correctness of a Rosetta Server implementation. It is expected that these clients will error if they receive some response that contains any of the above information that is not specified here.",
        "type":"object",
        "required": [
          "operation_statuses",
@@ -862,7 +875,7 @@
         }
       },
      "AccountBalanceResponse": {
-       "description":"An AccountBalanceResponse is returned on the /account/balance endpoint.",
+       "description":"An AccountBalanceResponse is returned on the /account/balance endpoint. If an account has a balance for each AccountIdentifier describing it (ex: an ERC-20 token balance on a few smart contracts), an account balance request must be made with each AccountIdentifier.",
        "type":"object",
        "required": [
          "block_identifier",
@@ -873,10 +886,17 @@
            "$ref":"#/components/schemas/BlockIdentifier"
           },
          "balances": {
-           "description":"An AccountBalanceResponse may include multiple uniquely-identified balances. For example, the balance of an account on each shard could be returned or the balance of an account on each ERC-20 contract.",
            "type":"array",
+           "description":"A single account may have a balance in multiple currencies.",
            "items": {
-             "$ref":"#/components/schemas/Balance"
+             "$ref":"#/components/schemas/Amount"
+            }
+          },
+         "metadata": {
+           "description":"Account-based blockchains that utilize a nonce or sequence number should include that number in the metadata. This number could be unique to the identifier or global across the account address.",
+           "type":"object",
+           "example": {
+             "sequence_number": 23
             }
           }
         }
@@ -1010,8 +1030,8 @@
           }
         }
       },
-     "NetworkStatusRequest": {
-       "description":"A NetworkStatusRequest is utilized to retrieve the status of the network. It currently contains only optional metadata.",
+     "MetadataRequest": {
+       "description":"A MetadataRequest is utilized in any request where the only argument is optional metadata.",
        "type":"object",
        "properties": {
          "metadata": {
@@ -1019,66 +1039,103 @@
           }
         }
       },
-     "NetworkStatusResponse": {
-       "description":"A NetworkStatusResponse contains all information required to make reliable requests to the Rosetta Server implementation.",
+     "NetworkListResponse": {
+       "description":"A NetworkListResponse contains all NetworkIdentifiers that the node can serve information for.",
        "type":"object",
        "required": [
-         "network_status",
-         "version",
-         "options"
+         "network_identifiers"
         ],
        "properties": {
-         "network_status": {
-           "description":"The network_status array contains the status of all networks available to query. This includes all sub-networks that are also accessible (ex: shards).  If a node supports multiple networks, the first status returned should be the root chain or beacon chain (if applicable).",
+         "network_identifiers": {
            "type":"array",
            "items": {
-             "$ref":"#/components/schemas/NetworkStatus"
-            }
-          },
-         "version": {
-           "$ref":"#/components/schemas/Version"
-          },
-         "options": {
-           "$ref":"#/components/schemas/Options"
-          },
-         "metadata": {
-           "type":"object",
-           "example": {
-             "peer_id":"0x52bc44d5378309ee2abf1539bf71de1b7d7be3b5"
+             "$ref":"#/components/schemas/NetworkIdentifier"
             }
           }
         }
       },
-     "TransactionConstructionRequest": {
-       "description":"A TransactionConstructionRequest is utilized to get information required to construct a transaction. Optionally, the client can provide a method to reduce the amount of information that may need to be returned to the client to construct any transaction.",
+     "NetworkRequest": {
+       "description":"A NetworkRequest is utilized to retrieve some data specific exclusively to a NetworkIdentifier.",
        "type":"object",
        "required": [
-         "network_identifier",
-         "account_identifier"
+         "network_identifier"
         ],
        "properties": {
          "network_identifier": {
            "$ref":"#/components/schemas/NetworkIdentifier"
           },
-         "account_identifier": {
-           "$ref":"#/components/schemas/AccountIdentifier"
-          },
-         "method": {
-           "description":"Some blockchains require different metadata for different types of transaction construction (ex: delegation versus a transfer).  Instead of requiring a blockchain node to return all possible types of metadata for construction (which may require multiple node fetches), the client can specify a method to limit the metadata returned to only the subset required.",
-           "type":"string"
+         "metadata": {
+           "type":"object"
           }
         }
       },
-     "TransactionConstructionResponse": {
-       "description":"The transaction construction response should return the network fee to use in transaction construction. This network fee should be the gas price or cost per byte not some calculate value based on the method in the transaction construction request. Any calculations (like the one previously described) should be included in the metadata.",
+     "NetworkStatusResponse": {
+       "description":"NetworkStatusResponse contains basic information about the node's view of a blockchain network.",
        "type":"object",
        "required": [
-         "network_fee"
+         "current_block_identifier",
+         "current_block_timestamp",
+         "genesis_block_identifier",
+         "peers"
         ],
        "properties": {
-         "network_fee": {
-           "$ref":"#/components/schemas/Amount"
+         "current_block_identifier": {
+           "$ref":"#/components/schemas/BlockIdentifier"
           },
+         "current_block_timestamp": {
+           "$ref":"#/components/schemas/Timestamp"
+          },
+         "genesis_block_identifier": {
+           "$ref":"#/components/schemas/BlockIdentifier"
+          },
+         "peers": {
+           "type":"array",
+           "items": {
+             "$ref":"#/components/schemas/Peer"
+            }
+          }
+        }
+      },
+     "NetworkOptionsResponse": {
+       "description":"NetworkOptionsResponse contains information about the versioning of the node and the allowed operation statuses, operation types, and errors.",
+       "type":"object",
+       "required": [
+         "version",
+         "allow"
+        ],
+       "properties": {
+         "version": {
+           "$ref":"#/components/schemas/Version"
+          },
+         "allow": {
+           "$ref":"#/components/schemas/Allow"
+          }
+        }
+      },
+     "ConstructionMetadataRequest": {
+       "description":"A ConstructionMetadataRequest is utilized to get information required to construct a transaction. The Options object used to specify which metadata to return is left purposely unstructured to allow flexibility for implementers.",
+       "type":"object",
+       "required": [
+         "network_identifier",
+         "options"
+        ],
+       "properties": {
+         "network_identifier": {
+           "$ref":"#/components/schemas/NetworkIdentifier"
+          },
+         "options": {
+           "description":"Some blockchains require different metadata for different types of transaction construction (ex: delegation versus a transfer). Instead of requiring a blockchain node to return all possible types of metadata for construction (which may require multiple node fetches), the client can populate an options object to limit the metadata returned to only the subset required.",
+           "type":"object"
+          }
+        }
+      },
+     "ConstructionMetadataResponse": {
+       "description":"The ConstructionMetadataResponse returns network-specific metadata used for transaction construction. It is likely that the client will not inspect this metadata before passing it to a client SDK that uses it for construction.",
+       "type":"object",
+       "required": [
+         "metadata"
+        ],
+       "properties": {
          "metadata": {
            "type":"object",
            "example": {
@@ -1088,19 +1145,23 @@
           }
         }
       },
-     "TransactionSubmitRequest": {
+     "ConstructionSubmitRequest": {
        "description":"The transaction submission request includes a signed transaction.",
        "type":"object",
        "required": [
+         "network_identifier",
          "signed_transaction"
         ],
        "properties": {
+         "network_identifier": {
+           "$ref":"#/components/schemas/NetworkIdentifier"
+          },
          "signed_transaction": {
            "type":"string"
           }
         }
       },
-     "TransactionSubmitResponse": {
+     "ConstructionSubmitResponse": {
        "description":"A TransactionSubmitResponse contains the transaction_identifier of a submitted transaction that was accepted into the mempool.",
        "type":"object",
        "required": [
@@ -1120,7 +1181,8 @@
        "type":"object",
        "required": [
          "code",
-         "message"
+         "message",
+         "retriable"
         ],
        "properties": {
          "code": {
@@ -1132,6 +1194,10 @@
          "message": {
            "description":"Message is a network-specific error message.",
            "type":"string"
+          },
+         "retriable": {
+           "description":"An error is retriable if the same request may succeed if submitted again.",
+           "type":"boolean"
           }
         }
       }
