@@ -30,52 +30,73 @@ case "${OS}" in
 esac
 
 # Remove existing clienterated code
-rm -rf types;
-rm -rf client;
-rm -rf server;
+mkdir tmp;
+DIRS=( types client server )
+IGNORED_FILES=( README.md utils.go utils_test.go )
+
+for dir in "${DIRS[@]}"
+do
+  rm -rf tmp/*;
+  for file in "${IGNORED_FILES[@]}"
+  do
+    [ -f "${dir:?}"/"${file:?}" ] && mv "${dir:?}"/"${file:?}" tmp;
+  done
+
+  rm -rf "${dir:?}"/*;
+
+  for file in "${IGNORED_FILES[@]}"
+  do
+    [ -f tmp/"${file:?}" ] && mv tmp/"${file:?}" "${dir:?}"/"${file:?}";
+  done
+done
+
+rm -rf tmp;
 
 # Generate client + types code
 docker run --user "$(id -u):$(id -g)" --rm -v "${PWD}":/local openapitools/openapi-generator-cli generate \
-  -i /local/spec.json \
+  -i /local/templates/spec.json \
   -g go \
   -t /local/templates/client \
   --additional-properties packageName=client\
-  -o /local/client;
+  -o /local/client_tmp;
 
 # Remove unnecessary client files
-rm client/go.mod;
-rm client/README.md;
-rm client/go.mod;
-rm client/go.sum;
-rm -rf client/api;
-rm -rf client/docs;
-rm client/git_push.sh;
-rm client/.travis.yml;
-rm client/.gitignore;
-rm client/.openapi-generator-ignore;
-rm -rf client/.openapi-generator;
+rm client_tmp/go.mod;
+rm client_tmp/README.md;
+rm client_tmp/go.mod;
+rm client_tmp/go.sum;
+rm -rf client_tmp/api;
+rm -rf client_tmp/docs;
+rm client_tmp/git_push.sh;
+rm client_tmp/.travis.yml;
+rm client_tmp/.gitignore;
+rm client_tmp/.openapi-generator-ignore;
+rm -rf client_tmp/.openapi-generator;
+mv client_tmp/* client;
+rm -rf client_tmp;
 
 # Add server code
 docker run --user "$(id -u):$(id -g)" --rm -v "${PWD}":/local openapitools/openapi-generator-cli generate \
-  -i /local/spec.json \
+  -i /local/templates/spec.json \
   -g go-server \
   -t /local/templates/server \
   --additional-properties packageName=server\
-  -o /local/server;
+  -o /local/server_tmp;
 
 # Remove unnecessary server files
-rm -rf server/api;
-rm -rf server/.openapi-generator;
-rm server/.openapi-generator-ignore;
-rm server/go.mod;
-rm server/main.go;
-rm server/README.md;
-rm server/Dockerfile;
-mv server/go/* server/.;
-rm -rf server/go;
-rm server/model_*.go
-rm server/*_service.go
-
+rm -rf server_tmp/api;
+rm -rf server_tmp/.openapi-generator;
+rm server_tmp/.openapi-generator-ignore;
+rm server_tmp/go.mod;
+rm server_tmp/main.go;
+rm server_tmp/README.md;
+rm server_tmp/Dockerfile;
+mv server_tmp/go/* server_tmp/.;
+rm -rf server_tmp/go;
+rm server_tmp/model_*.go
+rm server_tmp/*_service.go
+mv server_tmp/* server;
+rm -rf server_tmp;
 
 # Fix linting issues
 sed "${SED_IFLAG[@]}" 's/Api/API/g' client/* server/*;
@@ -99,9 +120,7 @@ sed "${SED_IFLAG[@]}" 's/occured/occurred/g' client/* server/*;
 sed "${SED_IFLAG[@]}" 's/cannonical/canonical/g' client/* server/*;
 sed "${SED_IFLAG[@]}" 's/Cannonical/Canonical/g' client/* server/*;
 
-
 # Move model files to types/
-mkdir types;
 mv client/model_*.go types/;
 for file in types/model_*.go; do
     mv "$file" "${file/model_/}"
@@ -114,11 +133,6 @@ sed "${SED_IFLAG[@]}" 's/package client/package types/g' types/*;
 gofmt -w types/;
 gofmt -w client/;
 gofmt -w server/;
-
-# Copy in READMEs
-cp templates/docs/types.md types/README.md;
-cp templates/docs/client.md client/README.md;
-cp templates/docs/server.md server/README.md;
 
 # Ensure license correct
 make add-license;
