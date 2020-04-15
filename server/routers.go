@@ -80,9 +80,11 @@ func NewRouter(routers ...Router) http.Handler {
 
 // EncodeJSONResponse uses the json encoder to write an interface to the http response with an
 // optional status code
-func EncodeJSONResponse(i interface{}, status int, w http.ResponseWriter) error {
+func EncodeJSONResponse(i interface{}, status int, w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.WriteHeader(status)
 
-	return json.NewEncoder(w).Encode(i)
+	if err := json.NewEncoder(w).Encode(i); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }

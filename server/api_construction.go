@@ -18,7 +18,6 @@ package server
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 	"strings"
 
@@ -59,80 +58,58 @@ func (c *ConstructionAPIController) Routes() Routes {
 func (c *ConstructionAPIController) ConstructionMetadata(w http.ResponseWriter, r *http.Request) {
 	constructionMetadataRequest := &types.ConstructionMetadataRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&constructionMetadataRequest); err != nil {
-		err = EncodeJSONResponse(&types.Error{
+		EncodeJSONResponse(&types.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)
-		if err != nil {
-			log.Fatal(err)
-		}
 
 		return
 	}
 
 	// Assert that ConstructionMetadataRequest is correct
 	if err := asserter.ConstructionMetadataRequest(constructionMetadataRequest); err != nil {
-		err = EncodeJSONResponse(&types.Error{
+		EncodeJSONResponse(&types.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)
-		if err != nil {
-			log.Fatal(err)
-		}
 
 		return
 	}
 
 	result, serviceErr := c.service.ConstructionMetadata(constructionMetadataRequest)
 	if serviceErr != nil {
-		err := EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
-		if err != nil {
-			log.Fatal(err)
-		}
+		EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
 
 		return
 	}
 
-	if err := EncodeJSONResponse(result, http.StatusOK, w); err != nil {
-		log.Fatal(err)
-	}
+	EncodeJSONResponse(result, http.StatusOK, w)
 }
 
 // ConstructionSubmit - Submit a Signed Transaction
 func (c *ConstructionAPIController) ConstructionSubmit(w http.ResponseWriter, r *http.Request) {
 	constructionSubmitRequest := &types.ConstructionSubmitRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&constructionSubmitRequest); err != nil {
-		err = EncodeJSONResponse(&types.Error{
+		EncodeJSONResponse(&types.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)
-		if err != nil {
-			log.Fatal(err)
-		}
 
 		return
 	}
 
 	// Assert that ConstructionSubmitRequest is correct
 	if err := asserter.ConstructionSubmitRequest(constructionSubmitRequest); err != nil {
-		err = EncodeJSONResponse(&types.Error{
+		EncodeJSONResponse(&types.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)
-		if err != nil {
-			log.Fatal(err)
-		}
 
 		return
 	}
 
 	result, serviceErr := c.service.ConstructionSubmit(constructionSubmitRequest)
 	if serviceErr != nil {
-		err := EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
-		if err != nil {
-			log.Fatal(err)
-		}
+		EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
 
 		return
 	}
 
-	if err := EncodeJSONResponse(result, http.StatusOK, w); err != nil {
-		log.Fatal(err)
-	}
+	EncodeJSONResponse(result, http.StatusOK, w)
 }

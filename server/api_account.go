@@ -18,7 +18,6 @@ package server
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 	"strings"
 
@@ -53,39 +52,28 @@ func (c *AccountAPIController) Routes() Routes {
 func (c *AccountAPIController) AccountBalance(w http.ResponseWriter, r *http.Request) {
 	accountBalanceRequest := &types.AccountBalanceRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&accountBalanceRequest); err != nil {
-		err = EncodeJSONResponse(&types.Error{
+		EncodeJSONResponse(&types.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)
-		if err != nil {
-			log.Fatal(err)
-		}
 
 		return
 	}
 
 	// Assert that AccountBalanceRequest is correct
 	if err := asserter.AccountBalanceRequest(accountBalanceRequest); err != nil {
-		err = EncodeJSONResponse(&types.Error{
+		EncodeJSONResponse(&types.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)
-		if err != nil {
-			log.Fatal(err)
-		}
 
 		return
 	}
 
 	result, serviceErr := c.service.AccountBalance(accountBalanceRequest)
 	if serviceErr != nil {
-		err := EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
-		if err != nil {
-			log.Fatal(err)
-		}
+		EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
 
 		return
 	}
 
-	if err := EncodeJSONResponse(result, http.StatusOK, w); err != nil {
-		log.Fatal(err)
-	}
+	EncodeJSONResponse(result, http.StatusOK, w)
 }

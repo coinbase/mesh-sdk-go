@@ -3,7 +3,6 @@ package {{packageName}}
 
 import (
 	"encoding/json"
-  "log"
 	"net/http"
 	"strings"
 
@@ -38,24 +37,18 @@ func (c *{{classname}}Controller) {{nickname}}(w http.ResponseWriter, r *http.Re
 	{{paramName}} := r.Header.Get("{{paramName}}"){{/isHeaderParam}}{{#isBodyParam}}
 	{{paramName}} := &types.{{dataType}}{}
 	if err := json.NewDecoder(r.Body).Decode(&{{paramName}}); err != nil {
-    err = EncodeJSONResponse(&types.Error{
+    EncodeJSONResponse(&types.Error{
       Message: err.Error(),
     }, http.StatusInternalServerError, w)
-    if err != nil {
-      log.Fatal(err)
-    }
 
     return
 	}
 
   // Assert that {{dataType}} is correct
   if err := asserter.{{dataType}}({{paramName}}); err != nil {
-    err = EncodeJSONResponse(&types.Error{
+    EncodeJSONResponse(&types.Error{
       Message: err.Error(),
     }, http.StatusInternalServerError, w)
-    if err != nil {
-      log.Fatal(err)
-    }
 
     return
   }
@@ -63,15 +56,10 @@ func (c *{{classname}}Controller) {{nickname}}(w http.ResponseWriter, r *http.Re
 	{{/isBodyParam}}{{/allParams}}
 	result, serviceErr := c.service.{{nickname}}({{#allParams}}{{paramName}}{{#hasMore}}, {{/hasMore}}{{/allParams}})
 	if serviceErr != nil {
-    err := EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
-    if err != nil {
-      log.Fatal(err)
-    }
+    EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
 
 		return
 	}
 	
-	if err := EncodeJSONResponse(result, http.StatusOK, w); err != nil {
-    log.Fatal(err)
-  }
+	EncodeJSONResponse(result, http.StatusOK, w)
 }{{/operation}}{{/operations}}
