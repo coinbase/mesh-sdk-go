@@ -46,8 +46,6 @@ var (
 	validTransactionIdentifier = &types.TransactionIdentifier{
 		Hash: "tx1",
 	}
-
-	validMethod = "transfer"
 )
 
 func TestAccountBalanceRequest(t *testing.T) {

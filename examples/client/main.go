@@ -53,7 +53,7 @@ func main() {
 
 	client := client.NewAPIClient(clientCfg)
 
-	// Step 2: Get all avaliable networks
+	// Step 2: Get all available networks
 	networkList, rosettaErr, err := client.NetworkAPI.NetworkList(
 		ctx,
 		&types.MetadataRequest{},
