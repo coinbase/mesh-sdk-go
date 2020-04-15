@@ -74,7 +74,7 @@ func (c *MempoolAPIController) Mempool(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, serviceErr := c.service.Mempool(mempoolRequest)
+	result, serviceErr := c.service.Mempool(r.Context(), mempoolRequest)
 	if serviceErr != nil {
 		EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
 
@@ -104,7 +104,7 @@ func (c *MempoolAPIController) MempoolTransaction(w http.ResponseWriter, r *http
 		return
 	}
 
-	result, serviceErr := c.service.MempoolTransaction(mempoolTransactionRequest)
+	result, serviceErr := c.service.MempoolTransaction(r.Context(), mempoolTransactionRequest)
 	if serviceErr != nil {
 		EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
 

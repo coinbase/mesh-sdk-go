@@ -15,6 +15,8 @@
 package services
 
 import (
+	"context"
+
 	"github.com/coinbase/rosetta-sdk-go/server"
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
@@ -33,7 +35,8 @@ func NewNetworkAPIService(network *types.NetworkIdentifier) server.NetworkAPISer
 
 // NetworkList implements the /network/list endpoint
 func (s *NetworkAPIService) NetworkList(
-	*types.MetadataRequest,
+	ctx context.Context,
+	request *types.MetadataRequest,
 ) (*types.NetworkListResponse, *types.Error) {
 	return &types.NetworkListResponse{
 		NetworkIdentifiers: []*types.NetworkIdentifier{
@@ -44,7 +47,8 @@ func (s *NetworkAPIService) NetworkList(
 
 // NetworkStatus implements the /network/status endpoint.
 func (s *NetworkAPIService) NetworkStatus(
-	*types.NetworkRequest,
+	ctx context.Context,
+	request *types.NetworkRequest,
 ) (*types.NetworkStatusResponse, *types.Error) {
 	return &types.NetworkStatusResponse{
 		CurrentBlockIdentifier: &types.BlockIdentifier{
@@ -66,7 +70,8 @@ func (s *NetworkAPIService) NetworkStatus(
 
 // NetworkOptions implements the /network/options endpoint.
 func (s *NetworkAPIService) NetworkOptions(
-	*types.NetworkRequest,
+	ctx context.Context,
+	request *types.NetworkRequest,
 ) (*types.NetworkOptionsResponse, *types.Error) {
 	return &types.NetworkOptionsResponse{
 		Version: &types.Version{

@@ -105,4 +105,26 @@ func main() {
 		log.Fatal(err)
 	}
 	log.Printf("Current Block: %s\n", string(prettyBlock))
+
+	// Step 6: Get a range of blocks
+	blockMap, err := newFetcher.BlockRange(
+		ctx,
+		primaryNetwork,
+		networkStatus.GenesisBlockIdentifier.Index,
+		networkStatus.GenesisBlockIdentifier.Index+10,
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Step 7: Print the block range
+	prettyBlockRange, err := json.MarshalIndent(
+		blockMap,
+		"",
+		" ",
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("Block Range: %s\n", string(prettyBlockRange))
 }

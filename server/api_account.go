@@ -68,7 +68,7 @@ func (c *AccountAPIController) AccountBalance(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	result, serviceErr := c.service.AccountBalance(accountBalanceRequest)
+	result, serviceErr := c.service.AccountBalance(r.Context(), accountBalanceRequest)
 	if serviceErr != nil {
 		EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
 
