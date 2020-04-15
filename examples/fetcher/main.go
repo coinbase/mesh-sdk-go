@@ -47,7 +47,17 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Step 3: Print the network status response
+	// Step 3: Print the primary network and network status
+	prettyPrimaryNetwork, err := json.MarshalIndent(
+		primaryNetwork,
+		"",
+		" ",
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("Primary Network: %s\n", string(prettyPrimaryNetwork))
+
 	prettyNetworkStatus, err := json.MarshalIndent(
 		networkStatus,
 		"",
