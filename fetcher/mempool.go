@@ -16,7 +16,6 @@ package fetcher
 
 import (
 	"context"
-	"errors"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
 
@@ -54,10 +53,6 @@ func (f *Fetcher) MempoolTransaction(
 	network *types.NetworkIdentifier,
 	transaction *types.TransactionIdentifier,
 ) (*types.Transaction, *map[string]interface{}, error) {
-	if f.Asserter == nil {
-		return nil, nil, errors.New("asserter not initialized")
-	}
-
 	response, _, err := f.rosettaClient.MempoolAPI.MempoolTransaction(
 		ctx,
 		&types.MempoolTransactionRequest{

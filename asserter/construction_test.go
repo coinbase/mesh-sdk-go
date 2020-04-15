@@ -15,7 +15,6 @@
 package asserter
 
 import (
-	"context"
 	"errors"
 	"testing"
 
@@ -69,49 +68,8 @@ func TestConstructionSubmit(t *testing.T) {
 	}
 
 	for name, test := range tests {
-		asserter, err := NewWithResponses(
-			context.Background(),
-			&types.NetworkStatusResponse{
-				GenesisBlockIdentifier: &types.BlockIdentifier{
-					Index: 0,
-					Hash:  "block 0",
-				},
-				CurrentBlockIdentifier: &types.BlockIdentifier{
-					Index: 100,
-					Hash:  "block 100",
-				},
-				CurrentBlockTimestamp: 100,
-				Peers: []*types.Peer{
-					{
-						PeerID: "peer 1",
-					},
-				},
-			},
-			&types.NetworkOptionsResponse{
-				Version: &types.Version{
-					RosettaVersion: "1.3.1",
-					NodeVersion:    "1.0",
-				},
-				Allow: &types.Allow{
-					OperationStatuses: []*types.OperationStatus{
-						{
-							Status:     "SUCCESS",
-							Successful: true,
-						},
-						{
-							Status:     "FAILURE",
-							Successful: false,
-						},
-					},
-					OperationTypes: []string{
-						"PAYMENT",
-					},
-				},
-			},
-		)
-		assert.NoError(t, err)
 		t.Run(name, func(t *testing.T) {
-			err := asserter.ConstructionSubmit(test.response)
+			err := ConstructionSubmit(test.response)
 			assert.Equal(t, test.err, err)
 		})
 	}
