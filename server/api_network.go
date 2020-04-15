@@ -80,7 +80,7 @@ func (c *NetworkAPIController) NetworkList(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	result, serviceErr := c.service.NetworkList(metadataRequest)
+	result, serviceErr := c.service.NetworkList(r.Context(), metadataRequest)
 	if serviceErr != nil {
 		EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
 
@@ -110,7 +110,7 @@ func (c *NetworkAPIController) NetworkOptions(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	result, serviceErr := c.service.NetworkOptions(networkRequest)
+	result, serviceErr := c.service.NetworkOptions(r.Context(), networkRequest)
 	if serviceErr != nil {
 		EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
 
@@ -140,7 +140,7 @@ func (c *NetworkAPIController) NetworkStatus(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	result, serviceErr := c.service.NetworkStatus(networkRequest)
+	result, serviceErr := c.service.NetworkStatus(r.Context(), networkRequest)
 	if serviceErr != nil {
 		EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
 

@@ -15,6 +15,7 @@
 package services
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -36,6 +37,7 @@ func NewBlockAPIService(network *types.NetworkIdentifier) server.BlockAPIService
 
 // Block implements the /block endpoint.
 func (s *BlockAPIService) Block(
+	ctx context.Context,
 	request *types.BlockRequest,
 ) (*types.BlockResponse, *types.Error) {
 	if *request.BlockIdentifier.Index != 1000 {
@@ -130,6 +132,7 @@ func (s *BlockAPIService) Block(
 
 // BlockTransaction implements the /block/transaction endpoint.
 func (s *BlockAPIService) BlockTransaction(
+	ctx context.Context,
 	request *types.BlockTransactionRequest,
 ) (*types.BlockTransactionResponse, *types.Error) {
 	return &types.BlockTransactionResponse{

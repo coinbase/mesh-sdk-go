@@ -113,6 +113,9 @@ func main() {
 		networkStatus.GenesisBlockIdentifier.Index,
 		networkStatus.GenesisBlockIdentifier.Index+10,
 	)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Step 7: Print the block range
 	prettyBlockRange, err := json.MarshalIndent(
