@@ -17,7 +17,6 @@ package fetcher
 import (
 	"context"
 	"errors"
-	"time"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
 
@@ -55,10 +54,11 @@ func (f *Fetcher) NetworkStatusRetry(
 	ctx context.Context,
 	network *types.NetworkIdentifier,
 	metadata *map[string]interface{},
-	maxElapsedTime time.Duration,
-	maxRetries uint64,
 ) (*types.NetworkStatusResponse, error) {
-	backoffRetries := backoffRetries(maxElapsedTime, maxRetries)
+	backoffRetries := backoffRetries(
+		f.retryElapsedTime,
+		f.maxRetries,
+	)
 
 	for ctx.Err() == nil {
 		networkStatus, err := f.NetworkStatus(
@@ -106,10 +106,11 @@ func (f *Fetcher) NetworkList(
 func (f *Fetcher) NetworkListRetry(
 	ctx context.Context,
 	metadata *map[string]interface{},
-	maxElapsedTime time.Duration,
-	maxRetries uint64,
 ) (*types.NetworkListResponse, error) {
-	backoffRetries := backoffRetries(maxElapsedTime, maxRetries)
+	backoffRetries := backoffRetries(
+		f.retryElapsedTime,
+		f.maxRetries,
+	)
 
 	for ctx.Err() == nil {
 		networkList, err := f.NetworkList(
@@ -159,10 +160,11 @@ func (f *Fetcher) NetworkOptionsRetry(
 	ctx context.Context,
 	network *types.NetworkIdentifier,
 	metadata *map[string]interface{},
-	maxElapsedTime time.Duration,
-	maxRetries uint64,
 ) (*types.NetworkOptionsResponse, error) {
-	backoffRetries := backoffRetries(maxElapsedTime, maxRetries)
+	backoffRetries := backoffRetries(
+		f.retryElapsedTime,
+		f.maxRetries,
+	)
 
 	for ctx.Err() == nil {
 		networkOptions, err := f.NetworkOptions(

@@ -115,11 +115,6 @@ sed "${SED_IFLAG[@]}" 's/<\/code>//g' client/* server/*;
 # Fix slice containing pointers
 sed "${SED_IFLAG[@]}" 's/\*\[\]/\[\]\*/g' client/* server/*;
 
-# Fix misspellings
-sed "${SED_IFLAG[@]}" 's/occured/occurred/g' client/* server/*;
-sed "${SED_IFLAG[@]}" 's/cannonical/canonical/g' client/* server/*;
-sed "${SED_IFLAG[@]}" 's/Cannonical/Canonical/g' client/* server/*;
-
 # Move model files to types/
 mv client/model_*.go types/;
 for file in types/model_*.go; do
