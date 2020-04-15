@@ -16,7 +16,6 @@ package asserter
 
 import (
 	"context"
-	"errors"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
@@ -30,29 +29,27 @@ type Asserter struct {
 	genesisIndex       int64
 }
 
-// New constructs a new Asserter.
-func New(
+// NewWithResponses constructs a new Asserter
+// from a NetworkStatusResponse and
+// NetworkOptionsResponse.
+func NewWithResponses(
 	ctx context.Context,
-	networkResponse *types.NetworkStatusResponse,
+	networkStatus *types.NetworkStatusResponse,
+	networkOptions *types.NetworkOptionsResponse,
 ) (*Asserter, error) {
-	if len(networkResponse.NetworkStatus) == 0 {
-		return nil, errors.New("no available networks in network response")
-	}
-
-	primaryNetwork := networkResponse.NetworkStatus[0]
-
-	return NewOptions(
+	return NewWithOptions(
 		ctx,
-		primaryNetwork.NetworkInformation.GenesisBlockIdentifier,
-		networkResponse.Options.OperationTypes,
-		networkResponse.Options.OperationStatuses,
-		networkResponse.Options.Errors,
+		networkStatus.GenesisBlockIdentifier,
+		networkOptions.Allow.OperationTypes,
+		networkOptions.Allow.OperationStatuses,
+		networkOptions.Allow.Errors,
 	), nil
 }
 
-// NewOptions constructs a new Asserter using the provided
-// arguments instead of using a types.NetworkStatusResponse.
-func NewOptions(
+// NewWithOptions constructs a new Asserter using the provided
+// arguments instead of using a NetworkStatusResponse and a
+// NetworkOptionsResponse.
+func NewWithOptions(
 	ctx context.Context,
 	genesisBlockIdentifier *types.BlockIdentifier,
 	operationTypes []string,

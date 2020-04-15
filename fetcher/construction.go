@@ -28,25 +28,23 @@ import (
 func (f *Fetcher) ConstructionMetadata(
 	ctx context.Context,
 	network *types.NetworkIdentifier,
-	account *types.AccountIdentifier,
-	method *string,
-) (*types.Amount, *map[string]interface{}, error) {
-	metadata, _, err := f.rosettaClient.ConstructionAPI.TransactionConstruction(ctx,
-		&types.TransactionConstructionRequest{
+	options *map[string]interface{},
+) (*map[string]interface{}, error) {
+	metadata, _, err := f.rosettaClient.ConstructionAPI.ConstructionMetadata(ctx,
+		&types.ConstructionMetadataRequest{
 			NetworkIdentifier: network,
-			AccountIdentifier: account,
-			Method:            method,
+			Options:           options,
 		},
 	)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	if err := asserter.TransactionConstruction(metadata); err != nil {
-		return nil, nil, err
+	if err := asserter.ConstructionMetadata(metadata); err != nil {
+		return nil, err
 	}
 
-	return metadata.NetworkFee, metadata.Metadata, nil
+	return metadata.Metadata, nil
 }
 
 // ConstructionSubmit returns the validated response
@@ -59,9 +57,9 @@ func (f *Fetcher) ConstructionSubmit(
 		return nil, nil, errors.New("asserter not initialized")
 	}
 
-	submitResponse, _, err := f.rosettaClient.ConstructionAPI.TransactionSubmit(
+	submitResponse, _, err := f.rosettaClient.ConstructionAPI.ConstructionSubmit(
 		ctx,
-		&types.TransactionSubmitRequest{
+		&types.ConstructionSubmitRequest{
 			SignedTransaction: signedTransaction,
 		},
 	)
@@ -69,7 +67,7 @@ func (f *Fetcher) ConstructionSubmit(
 		return nil, nil, err
 	}
 
-	if err := f.Asserter.TransactionSubmit(submitResponse); err != nil {
+	if err := f.Asserter.ConstructionSubmit(submitResponse); err != nil {
 		return nil, nil, err
 	}
 

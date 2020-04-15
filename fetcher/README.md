@@ -3,7 +3,8 @@
 [![GoDoc](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=shield)](https://pkg.go.dev/github.com/coinbase/rosetta-sdk-go/fetcher?tab=doc)
 
 The Fetcher package provides a simplified client interface to communicate
-with a Rosetta server.
+with a Rosetta server. It also provides automatic retries and concurrent block
+fetches.
 
 If you want a lower-level interface to communicate with a Rosetta server,
 check out the [Client](/client).
@@ -14,6 +15,20 @@ check out the [Client](/client).
 go get github.com/coinbase/rosetta-sdk-go/fetcher
 ```
 
-## Examples
+## Create a Fetcher
+Creating a basic Fetcher is as easy as providing a context and Rosetta server URL:
+```go
+fetcher := fetcher.New(ctx, serverURL)
+```
+
+It is also possible to provide a series of optional arguments that override
+default behavior. For example, it is possible to override the concurrency
+for making block requests:
+```go
+fetcher := fetcher.New(ctx, serverURL, fetcher.WithBlockConcurrency(10))
+```
+
+## More Examples
 Check out the [examples](/examples) to see how easy
 it is to connect to a Rosetta server.
+

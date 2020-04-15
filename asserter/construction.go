@@ -15,23 +15,29 @@
 package asserter
 
 import (
+	"errors"
+
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
-// TransactionConstruction returns an error if
+// ConstructionMetadata returns an error if
 // the NetworkFee is not a valid types.Amount.
-func TransactionConstruction(
-	response *types.TransactionConstructionResponse,
+func ConstructionMetadata(
+	response *types.ConstructionMetadataResponse,
 ) error {
-	return Amount(response.NetworkFee)
+	if response.Metadata == nil {
+		return errors.New("Metadata is nil")
+	}
+
+	return nil
 }
 
-// TransactionSubmit returns an error if
+// ConstructionSubmit returns an error if
 // the types.TransactionIdentifier in the response is not
 // valid or if the Submission.Status is not contained
 // within the provided validStatuses slice.
-func (a *Asserter) TransactionSubmit(
-	response *types.TransactionSubmitResponse,
+func (a *Asserter) ConstructionSubmit(
+	response *types.ConstructionSubmitResponse,
 ) error {
 	if err := TransactionIdentifier(response.TransactionIdentifier); err != nil {
 		return err

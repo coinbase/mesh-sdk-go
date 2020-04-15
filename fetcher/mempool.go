@@ -23,13 +23,13 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
-// UnsafeMempool returns the unvalidated response
+// Mempool returns the validated response
 // from the Mempool method.
-func (f *Fetcher) UnsafeMempool(
+func (f *Fetcher) Mempool(
 	ctx context.Context,
 	network *types.NetworkIdentifier,
 ) ([]*types.TransactionIdentifier, error) {
-	mempool, _, err := f.rosettaClient.MempoolAPI.Mempool(
+	response, _, err := f.rosettaClient.MempoolAPI.Mempool(
 		ctx,
 		&types.MempoolRequest{
 			NetworkIdentifier: network,
@@ -39,46 +39,12 @@ func (f *Fetcher) UnsafeMempool(
 		return nil, err
 	}
 
-	return mempool.TransactionIdentifiers, nil
-}
-
-// Mempool returns the validated response
-// from the Mempool method.
-func (f *Fetcher) Mempool(
-	ctx context.Context,
-	network *types.NetworkIdentifier,
-) ([]*types.TransactionIdentifier, error) {
-	mempool, err := f.UnsafeMempool(ctx, network)
-	if err != nil {
-		return nil, err
-	}
-
+	mempool := response.TransactionIdentifiers
 	if err := asserter.MempoolTransactions(mempool); err != nil {
 		return nil, err
 	}
 
 	return mempool, nil
-}
-
-// UnsafeMempoolTransaction returns the unvalidated response
-// from the MempoolTransaction method.
-func (f *Fetcher) UnsafeMempoolTransaction(
-	ctx context.Context,
-	network *types.NetworkIdentifier,
-	transaction *types.TransactionIdentifier,
-) (*types.Transaction, *map[string]interface{}, error) {
-	mempoolTransaction, _, err := f.rosettaClient.MempoolAPI.MempoolTransaction(
-		ctx,
-		&types.MempoolTransactionRequest{
-			NetworkIdentifier:     network,
-			TransactionIdentifier: transaction,
-		},
-	)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return mempoolTransaction.Transaction, mempoolTransaction.Metadata, nil
 }
 
 // MempoolTransaction returns the validated response
@@ -92,14 +58,21 @@ func (f *Fetcher) MempoolTransaction(
 		return nil, nil, errors.New("asserter not initialized")
 	}
 
-	mempoolTransaction, metadata, err := f.UnsafeMempoolTransaction(ctx, network, transaction)
+	response, _, err := f.rosettaClient.MempoolAPI.MempoolTransaction(
+		ctx,
+		&types.MempoolTransactionRequest{
+			NetworkIdentifier:     network,
+			TransactionIdentifier: transaction,
+		},
+	)
 	if err != nil {
 		return nil, nil, err
 	}
 
+	mempoolTransaction := response.Transaction
 	if err := f.Asserter.Transaction(mempoolTransaction); err != nil {
 		return nil, nil, err
 	}
 
-	return mempoolTransaction, metadata, nil
+	return mempoolTransaction, response.Metadata, nil
 }

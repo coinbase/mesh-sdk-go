@@ -16,14 +16,9 @@
 
 package types
 
-// Balance Balance is the array of Amount controlled by an AccountIdentifier. An underspecified
-// AccountIdentifier may result in many amounts (ex: all ERC-20 balances for a single address).
-type Balance struct {
-	AccountIdentifier *AccountIdentifier `json:"account_identifier"`
-	// A single account may have a balance in multiple currencies.
-	Amounts []*Amount `json:"amounts"`
-	// Account-based blockchains that utilize a nonce or sequence number should include that number
-	// in the metadata. This number could be unique to the identifier or global across the account
-	// address.
-	Metadata *map[string]interface{} `json:"metadata,omitempty"`
+// ConstructionMetadataResponse The ConstructionMetadataResponse returns network-specific metadata
+// used for transaction construction. It is likely that the client will not inspect this metadata
+// before passing it to a client SDK that uses it for construction.
+type ConstructionMetadataResponse struct {
+	Metadata *map[string]interface{} `json:"metadata"`
 }

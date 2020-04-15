@@ -196,8 +196,6 @@ func (f *Fetcher) BlockRetry(
 	ctx context.Context,
 	network *types.NetworkIdentifier,
 	blockIdentifier *types.PartialBlockIdentifier,
-	maxElapsedTime time.Duration,
-	maxRetries uint64,
 ) (*types.Block, error) {
 	if f.Asserter == nil {
 		return nil, errors.New("asserter not initialized")
@@ -207,7 +205,10 @@ func (f *Fetcher) BlockRetry(
 		return nil, err
 	}
 
-	backoffRetries := backoffRetries(maxElapsedTime, maxRetries)
+	backoffRetries := backoffRetries(
+		f.retryElapsedTime,
+		f.maxRetries,
+	)
 
 	for ctx.Err() == nil {
 		block, err := f.Block(
@@ -280,8 +281,6 @@ func (f *Fetcher) fetchChannelBlocks(
 			&types.PartialBlockIdentifier{
 				Index: &b,
 			},
-			DefaultElapsedTime,
-			DefaultRetries,
 		)
 		if err != nil {
 			return err

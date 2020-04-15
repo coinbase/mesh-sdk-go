@@ -18,21 +18,20 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
-// UnsafeAccountBalance returns the unvalidated response
+// AccountBalance returns the validated response
 // from the AccountBalance method.
-func (f *Fetcher) UnsafeAccountBalance(
+func (f *Fetcher) AccountBalance(
 	ctx context.Context,
 	network *types.NetworkIdentifier,
 	account *types.AccountIdentifier,
-) (*types.BlockIdentifier, []*types.Balance, error) {
-	balance, _, err := f.rosettaClient.AccountAPI.AccountBalance(ctx,
+) (*types.BlockIdentifier, []*types.Amount, error) {
+	response, _, err := f.rosettaClient.AccountAPI.AccountBalance(ctx,
 		&types.AccountBalanceRequest{
 			NetworkIdentifier: network,
 			AccountIdentifier: account,
@@ -42,21 +41,8 @@ func (f *Fetcher) UnsafeAccountBalance(
 		return nil, nil, err
 	}
 
-	return balance.BlockIdentifier, balance.Balances, nil
-}
-
-// AccountBalance returns the validated response
-// from the AccountBalance method.
-func (f *Fetcher) AccountBalance(
-	ctx context.Context,
-	network *types.NetworkIdentifier,
-	account *types.AccountIdentifier,
-) (*types.BlockIdentifier, []*types.Balance, error) {
-	block, balances, err := f.UnsafeAccountBalance(ctx, network, account)
-	if err != nil {
-		return nil, nil, err
-	}
-
+	block := response.BlockIdentifier
+	balances := response.Balances
 	if err := asserter.AccountBalance(block, balances); err != nil {
 		return nil, nil, err
 	}
@@ -70,10 +56,11 @@ func (f *Fetcher) AccountBalanceRetry(
 	ctx context.Context,
 	network *types.NetworkIdentifier,
 	account *types.AccountIdentifier,
-	maxElapsedTime time.Duration,
-	maxRetries uint64,
-) (*types.BlockIdentifier, []*types.Balance, error) {
-	backoffRetries := backoffRetries(maxElapsedTime, maxRetries)
+) (*types.BlockIdentifier, []*types.Amount, error) {
+	backoffRetries := backoffRetries(
+		f.retryElapsedTime,
+		f.maxRetries,
+	)
 
 	for ctx.Err() == nil {
 		block, balances, err := f.AccountBalance(

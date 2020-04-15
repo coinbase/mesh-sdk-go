@@ -17,39 +17,26 @@ package fetcher
 import (
 	"context"
 	"errors"
-	"time"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
-// UnsafeNetworkStatus returns the unvalidated response
-// from the NetworkStatus method.
-func (f *Fetcher) UnsafeNetworkStatus(
-	ctx context.Context,
-	metadata *map[string]interface{},
-) (*types.NetworkStatusResponse, error) {
-	networkStatus, _, err := f.rosettaClient.NetworkAPI.NetworkStatus(
-		ctx,
-		&types.NetworkStatusRequest{
-			Metadata: metadata,
-		},
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	return networkStatus, nil
-}
-
 // NetworkStatus returns the validated response
 // from the NetworkStatus method.
 func (f *Fetcher) NetworkStatus(
 	ctx context.Context,
+	network *types.NetworkIdentifier,
 	metadata *map[string]interface{},
 ) (*types.NetworkStatusResponse, error) {
-	networkStatus, err := f.UnsafeNetworkStatus(ctx, metadata)
+	networkStatus, _, err := f.rosettaClient.NetworkAPI.NetworkStatus(
+		ctx,
+		&types.NetworkRequest{
+			NetworkIdentifier: network,
+			Metadata:          metadata,
+		},
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -65,22 +52,134 @@ func (f *Fetcher) NetworkStatus(
 // with a specified number of retries and max elapsed time.
 func (f *Fetcher) NetworkStatusRetry(
 	ctx context.Context,
+	network *types.NetworkIdentifier,
 	metadata *map[string]interface{},
-	maxElapsedTime time.Duration,
-	maxRetries uint64,
 ) (*types.NetworkStatusResponse, error) {
-	backoffRetries := backoffRetries(maxElapsedTime, maxRetries)
+	backoffRetries := backoffRetries(
+		f.retryElapsedTime,
+		f.maxRetries,
+	)
 
 	for ctx.Err() == nil {
-		networkStatus, err := f.NetworkStatus(ctx, metadata)
+		networkStatus, err := f.NetworkStatus(
+			ctx,
+			network,
+			metadata,
+		)
 		if err == nil {
 			return networkStatus, nil
 		}
 
-		if !tryAgain("network", backoffRetries, err) {
+		if !tryAgain("NetworkStatus", backoffRetries, err) {
 			break
 		}
 	}
 
-	return nil, errors.New("exhausted retries for network")
+	return nil, errors.New("exhausted retries for NetworkStatus")
+}
+
+// NetworkList returns the validated response
+// from the NetworList method.
+func (f *Fetcher) NetworkList(
+	ctx context.Context,
+	metadata *map[string]interface{},
+) (*types.NetworkListResponse, error) {
+	networkList, _, err := f.rosettaClient.NetworkAPI.NetworkList(
+		ctx,
+		&types.MetadataRequest{
+			Metadata: metadata,
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := asserter.NetworkListResponse(networkList); err != nil {
+		return nil, err
+	}
+
+	return networkList, nil
+}
+
+// NetworkListRetry retrieves the validated NetworkList
+// with a specified number of retries and max elapsed time.
+func (f *Fetcher) NetworkListRetry(
+	ctx context.Context,
+	metadata *map[string]interface{},
+) (*types.NetworkListResponse, error) {
+	backoffRetries := backoffRetries(
+		f.retryElapsedTime,
+		f.maxRetries,
+	)
+
+	for ctx.Err() == nil {
+		networkList, err := f.NetworkList(
+			ctx,
+			metadata,
+		)
+		if err == nil {
+			return networkList, nil
+		}
+
+		if !tryAgain("NetworkList", backoffRetries, err) {
+			break
+		}
+	}
+
+	return nil, errors.New("exhausted retries for NetworkList")
+}
+
+// NetworkOptions returns the validated response
+// from the NetworList method.
+func (f *Fetcher) NetworkOptions(
+	ctx context.Context,
+	network *types.NetworkIdentifier,
+	metadata *map[string]interface{},
+) (*types.NetworkOptionsResponse, error) {
+	NetworkOptions, _, err := f.rosettaClient.NetworkAPI.NetworkOptions(
+		ctx,
+		&types.NetworkRequest{
+			NetworkIdentifier: network,
+			Metadata:          metadata,
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := asserter.NetworkOptionsResponse(NetworkOptions); err != nil {
+		return nil, err
+	}
+
+	return NetworkOptions, nil
+}
+
+// NetworkOptionsRetry retrieves the validated NetworkOptions
+// with a specified number of retries and max elapsed time.
+func (f *Fetcher) NetworkOptionsRetry(
+	ctx context.Context,
+	network *types.NetworkIdentifier,
+	metadata *map[string]interface{},
+) (*types.NetworkOptionsResponse, error) {
+	backoffRetries := backoffRetries(
+		f.retryElapsedTime,
+		f.maxRetries,
+	)
+
+	for ctx.Err() == nil {
+		networkOptions, err := f.NetworkOptions(
+			ctx,
+			network,
+			metadata,
+		)
+		if err == nil {
+			return networkOptions, nil
+		}
+
+		if !tryAgain("NetworkOptions", backoffRetries, err) {
+			break
+		}
+	}
+
+	return nil, errors.New("exhausted retries for NetworkOptions")
 }

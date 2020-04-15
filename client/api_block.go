@@ -104,11 +104,11 @@ func (a *BlockAPIService) Block(
 	return &v, nil, nil
 }
 
-// BlockTransaction Get a transaction in a block by its Transaction Identifier. This method should
+// BlockTransaction Get a transaction in a block by its Transaction Identifier. This endpoint should
 // only be used when querying a node for a block does not return all transactions contained within
-// it.  All transactions returned by this method must be appended to any transactions returned by
+// it.  All transactions returned by this endpoint must be appended to any transactions returned by
 // the /block method by consumers of this data. Fetching a transaction by hash is considered an
-// Explorer Method (which is classified under the Future Work section).  Calling this method
+// Explorer Method (which is classified under the Future Work section).  Calling this endpoint
 // requires reference to a BlockIdentifier because transaction parsing can change depending on which
 // block contains the transaction. For example, in Bitcoin it is necessary to know which block
 // contains a transaction to determine the destination of fee payments. Without specifying a block

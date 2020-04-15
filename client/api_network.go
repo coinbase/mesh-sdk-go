@@ -33,11 +33,151 @@ var (
 // NetworkAPIService NetworkAPI service
 type NetworkAPIService service
 
-// NetworkStatus This method returns the current status of the network the node knows about. This
-// method also returns the methods, operation types, and operation statuses the node supports.
+// NetworkList This endpoint returns a list of NetworkIdentifiers that the Rosetta server can
+// handle.
+func (a *NetworkAPIService) NetworkList(
+	ctx _context.Context,
+	metadataRequest *types.MetadataRequest,
+) (*types.NetworkListResponse, *types.Error, error) {
+	var (
+		localVarPostBody interface{}
+	)
+
+	// create path and map variables
+	localVarPath := a.client.cfg.BasePath + "/network/list"
+	localVarHeaderParams := make(map[string]string)
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{"application/json"}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	// body params
+	localVarPostBody = metadataRequest
+
+	r, err := a.client.prepareRequest(ctx, localVarPath, localVarPostBody, localVarHeaderParams)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(ctx, r)
+	if err != nil || localVarHTTPResponse == nil {
+		return nil, nil, err
+	}
+
+	localVarBody, err := _ioutil.ReadAll(localVarHTTPResponse.Body)
+	defer localVarHTTPResponse.Body.Close()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if localVarHTTPResponse.StatusCode != _nethttp.StatusOK {
+		var v types.Error
+		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+		if err != nil {
+			return nil, nil, err
+		}
+
+		return nil, &v, fmt.Errorf("%+v", v)
+	}
+
+	var v types.NetworkListResponse
+	err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return &v, nil, nil
+}
+
+// NetworkOptions This endpoint returns the version information and allowed network-specific types
+// for a NetworkIdentifier. Any NetworkIdentifier returned by /network/list should be accessible
+// here.  Because options are retrievable in the context of a NetworkIdentifier, it is possible to
+// define unique options for each network.
+func (a *NetworkAPIService) NetworkOptions(
+	ctx _context.Context,
+	networkRequest *types.NetworkRequest,
+) (*types.NetworkOptionsResponse, *types.Error, error) {
+	var (
+		localVarPostBody interface{}
+	)
+
+	// create path and map variables
+	localVarPath := a.client.cfg.BasePath + "/network/options"
+	localVarHeaderParams := make(map[string]string)
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{"application/json"}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	// body params
+	localVarPostBody = networkRequest
+
+	r, err := a.client.prepareRequest(ctx, localVarPath, localVarPostBody, localVarHeaderParams)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(ctx, r)
+	if err != nil || localVarHTTPResponse == nil {
+		return nil, nil, err
+	}
+
+	localVarBody, err := _ioutil.ReadAll(localVarHTTPResponse.Body)
+	defer localVarHTTPResponse.Body.Close()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if localVarHTTPResponse.StatusCode != _nethttp.StatusOK {
+		var v types.Error
+		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+		if err != nil {
+			return nil, nil, err
+		}
+
+		return nil, &v, fmt.Errorf("%+v", v)
+	}
+
+	var v types.NetworkOptionsResponse
+	err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return &v, nil, nil
+}
+
+// NetworkStatus This endpoint returns the current status of the network requested. Any
+// NetworkIdentifier returned by /network/list should be accessible here.
 func (a *NetworkAPIService) NetworkStatus(
 	ctx _context.Context,
-	networkStatusRequest *types.NetworkStatusRequest,
+	networkRequest *types.NetworkRequest,
 ) (*types.NetworkStatusResponse, *types.Error, error) {
 	var (
 		localVarPostBody interface{}
@@ -65,7 +205,7 @@ func (a *NetworkAPIService) NetworkStatus(
 		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
 	}
 	// body params
-	localVarPostBody = networkStatusRequest
+	localVarPostBody = networkRequest
 
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarPostBody, localVarHeaderParams)
 	if err != nil {
