@@ -69,7 +69,7 @@ func TestConstructionSubmit(t *testing.T) {
 	}
 
 	for name, test := range tests {
-		asserter, err := New(
+		asserter, err := NewWithResponses(
 			context.Background(),
 			&types.NetworkStatusResponse{
 				GenesisBlockIdentifier: &types.BlockIdentifier{

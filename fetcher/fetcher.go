@@ -38,12 +38,20 @@ const (
 	// blocks a Fetcher will try to get concurrently.
 	DefaultBlockConcurrency = 8
 
+	// DefaultHTTPTimeout is the default timeout for
+	// HTTP requests.
+	DefaultHTTPTimeout = 10 * time.Second
+
 	// DefaultTransactionConcurrency is the default
 	// number of transactions a Fetcher will try to
 	// get concurrently when populating a block (if
 	// transactions are not included in the original
 	// block fetch).
 	DefaultTransactionConcurrency = 8
+
+	// DefaultUserAgent is the default userAgent
+	// to populate on requests to a Rosetta server.
+	DefaultUserAgent = "rosetta-sdk-go"
 )
 
 // Fetcher contains all logic to communicate with a Rosetta Server.
@@ -56,48 +64,71 @@ type Fetcher struct {
 	rosettaClient          *client.APIClient
 	blockConcurrency       uint64
 	transactionConcurrency uint64
+	maxRetries             uint64
+	retryElapsedTime       time.Duration
 }
 
-// New constructs a new Fetcher.
+// New constructs a new Fetcher with provided options.
 func New(
 	ctx context.Context,
 	serverAddress string,
-	userAgent string,
-	httpClient *http.Client,
-	blockConcurrency uint64,
-	transactionConcurrency uint64,
+	options ...Option,
 ) *Fetcher {
-	clientCfg := client.NewConfiguration(serverAddress, userAgent, httpClient)
+	// Create default fetcher
+	clientCfg := client.NewConfiguration(
+		serverAddress,
+		DefaultUserAgent,
+		&http.Client{
+			Timeout: DefaultHTTPTimeout,
+		})
 	client := client.NewAPIClient(clientCfg)
 
-	return &Fetcher{
+	f := &Fetcher{
 		rosettaClient:          client,
-		blockConcurrency:       blockConcurrency,
-		transactionConcurrency: transactionConcurrency,
+		blockConcurrency:       DefaultBlockConcurrency,
+		transactionConcurrency: DefaultTransactionConcurrency,
+		maxRetries:             DefaultRetries,
+		retryElapsedTime:       DefaultElapsedTime,
 	}
+
+	// Override defaults with any provided options
+	for _, opt := range options {
+		opt(f)
+	}
+
+	return f
 }
 
 // InitializeAsserter creates an Asserter for
 // validating responses. The Asserter is created
-// from a types.NetworkStatusResponse. This
-// method should be called before making any
+// by fetching the NetworkStatus and NetworkOptions
+// from a Rosetta server.
+//
+// If there is more than one network supported by the
+// Rosetta server, the first network returned by NetworkList
+// is used as the default network.
+//
+// This method should be called before making any
 // validated client requests.
 func (f *Fetcher) InitializeAsserter(
 	ctx context.Context,
-) (*types.NetworkStatusResponse, error) {
+) (
+	*types.NetworkIdentifier,
+	*types.NetworkStatusResponse,
+	error,
+) {
+	if f.Asserter != nil {
+		return nil, nil, errors.New("asserter already initialized")
+	}
+
 	// Attempt to fetch network list
-	networkList, err := f.NetworkListRetry(
-		ctx,
-		nil,
-		DefaultElapsedTime,
-		DefaultRetries,
-	)
+	networkList, err := f.NetworkListRetry(ctx, nil)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if len(networkList.NetworkIdentifiers) == 0 {
-		return nil, errors.New("no networks available")
+		return nil, nil, errors.New("no networks available")
 	}
 	primaryNetwork := networkList.NetworkIdentifiers[0]
 
@@ -106,11 +137,9 @@ func (f *Fetcher) InitializeAsserter(
 		ctx,
 		primaryNetwork,
 		nil,
-		DefaultElapsedTime,
-		DefaultRetries,
 	)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// Attempt to fetch network options
@@ -118,21 +147,19 @@ func (f *Fetcher) InitializeAsserter(
 		ctx,
 		primaryNetwork,
 		nil,
-		DefaultElapsedTime,
-		DefaultRetries,
 	)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	f.Asserter, err = asserter.New(
+	f.Asserter, err = asserter.NewWithResponses(
 		ctx,
 		networkStatus,
 		networkOptions,
 	)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return networkStatus, nil
+	return primaryNetwork, networkStatus, nil
 }

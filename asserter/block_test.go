@@ -383,7 +383,7 @@ func TestOperation(t *testing.T) {
 	}
 
 	for name, test := range tests {
-		asserter, err := New(
+		asserter, err := NewWithResponses(
 			context.Background(),
 			&types.NetworkStatusResponse{
 				GenesisBlockIdentifier: &types.BlockIdentifier{
@@ -537,7 +537,7 @@ func TestBlock(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			asserter, err := New(
+			asserter, err := NewWithResponses(
 				context.Background(),
 				&types.NetworkStatusResponse{
 					GenesisBlockIdentifier: &types.BlockIdentifier{

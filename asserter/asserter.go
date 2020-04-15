@@ -29,13 +29,15 @@ type Asserter struct {
 	genesisIndex       int64
 }
 
-// New constructs a new Asserter.
-func New(
+// NewWithResponses constructs a new Asserter
+// from a NetworkStatusResponse and
+// NetworkOptionsResponse.
+func NewWithResponses(
 	ctx context.Context,
 	networkStatus *types.NetworkStatusResponse,
 	networkOptions *types.NetworkOptionsResponse,
 ) (*Asserter, error) {
-	return NewOptions(
+	return NewWithOptions(
 		ctx,
 		networkStatus.GenesisBlockIdentifier,
 		networkOptions.Allow.OperationTypes,
@@ -44,9 +46,10 @@ func New(
 	), nil
 }
 
-// NewOptions constructs a new Asserter using the provided
-// arguments instead of using a types.NetworkStatusResponse.
-func NewOptions(
+// NewWithOptions constructs a new Asserter using the provided
+// arguments instead of using a NetworkStatusResponse and a
+// NetworkOptionsResponse.
+func NewWithOptions(
 	ctx context.Context,
 	genesisBlockIdentifier *types.BlockIdentifier,
 	operationTypes []string,
