@@ -105,6 +105,10 @@ func AccountIdentifier(account *types.AccountIdentifier) error {
 // successful and should be applied in a transaction. This should only be called
 // AFTER an operation has been validated.
 func (a *Asserter) OperationSuccessful(operation *types.Operation) (bool, error) {
+	if a == nil {
+		return false, errors.New("must initialize asserter")
+	}
+
 	val, ok := a.operationStatusMap[operation.Status]
 	if !ok {
 		return false, fmt.Errorf("%s not found", operation.Status)
@@ -119,6 +123,10 @@ func (a *Asserter) Operation(
 	operation *types.Operation,
 	index int64,
 ) error {
+	if a == nil {
+		return errors.New("must initialize asserter")
+	}
+
 	if operation == nil {
 		return errors.New("Operation is nil")
 	}
@@ -204,6 +212,10 @@ func TransactionIdentifier(
 func (a *Asserter) Transaction(
 	transaction *types.Transaction,
 ) error {
+	if a == nil {
+		return errors.New("must initialize asserter")
+	}
+
 	if transaction == nil {
 		return errors.New("Transaction is nil")
 	}
@@ -235,6 +247,10 @@ func Timestamp(timestamp int64) error {
 func (a *Asserter) Block(
 	block *types.Block,
 ) error {
+	if a == nil {
+		return errors.New("must initialize asserter")
+	}
+
 	if block == nil {
 		return errors.New("Block is nil")
 	}

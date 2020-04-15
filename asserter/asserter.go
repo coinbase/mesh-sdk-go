@@ -37,6 +37,14 @@ func NewWithResponses(
 	networkStatus *types.NetworkStatusResponse,
 	networkOptions *types.NetworkOptionsResponse,
 ) (*Asserter, error) {
+	if err := NetworkStatusResponse(networkStatus); err != nil {
+		return nil, err
+	}
+
+	if err := NetworkOptionsResponse(networkOptions); err != nil {
+		return nil, err
+	}
+
 	return NewWithOptions(
 		ctx,
 		networkStatus.GenesisBlockIdentifier,

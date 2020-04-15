@@ -17,6 +17,7 @@ package asserter
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
@@ -388,9 +389,24 @@ func TestOperation(t *testing.T) {
 			&types.NetworkStatusResponse{
 				GenesisBlockIdentifier: &types.BlockIdentifier{
 					Index: 0,
+					Hash:  "block 0",
+				},
+				CurrentBlockIdentifier: &types.BlockIdentifier{
+					Index: 100,
+					Hash:  "block 100",
+				},
+				CurrentBlockTimestamp: 100,
+				Peers: []*types.Peer{
+					{
+						PeerID: "peer 1",
+					},
 				},
 			},
 			&types.NetworkOptionsResponse{
+				Version: &types.Version{
+					RosettaVersion: "1.3.1",
+					NodeVersion:    "1.0",
+				},
 				Allow: &types.Allow{
 					OperationStatuses: []*types.OperationStatus{
 						{
@@ -408,7 +424,9 @@ func TestOperation(t *testing.T) {
 				},
 			},
 		)
+		assert.NotNil(t, asserter)
 		assert.NoError(t, err)
+
 		t.Run(name, func(t *testing.T) {
 			err := asserter.Operation(test.operation, test.index)
 			assert.Equal(t, test.err, err)
@@ -542,19 +560,45 @@ func TestBlock(t *testing.T) {
 				&types.NetworkStatusResponse{
 					GenesisBlockIdentifier: &types.BlockIdentifier{
 						Index: test.genesisIndex,
+						Hash:  fmt.Sprintf("block %d", test.genesisIndex),
+					},
+					CurrentBlockIdentifier: &types.BlockIdentifier{
+						Index: 100,
+						Hash:  "block 100",
+					},
+					CurrentBlockTimestamp: 100,
+					Peers: []*types.Peer{
+						{
+							PeerID: "peer 1",
+						},
 					},
 				},
 				&types.NetworkOptionsResponse{
+					Version: &types.Version{
+						RosettaVersion: "1.3.1",
+						NodeVersion:    "1.0",
+					},
 					Allow: &types.Allow{
-						OperationStatuses: []*types.OperationStatus{},
-						OperationTypes:    []string{},
+						OperationStatuses: []*types.OperationStatus{
+							{
+								Status:     "SUCCESS",
+								Successful: true,
+							},
+							{
+								Status:     "FAILURE",
+								Successful: false,
+							},
+						},
+						OperationTypes: []string{
+							"PAYMENT",
+						},
 					},
 				},
 			)
+			assert.NotNil(t, asserter)
 			assert.NoError(t, err)
 
-			err = asserter.Block(test.block)
-			assert.Equal(t, test.err, err)
+			assert.Equal(t, test.err, asserter.Block(test.block))
 		})
 	}
 }
