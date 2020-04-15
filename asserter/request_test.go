@@ -33,6 +33,7 @@ var (
 		Address: "acct1",
 	}
 
+	genesisBlockIndex           = int64(0)
 	validBlockIndex             = int64(1000)
 	validPartialBlockIdentifier = &types.PartialBlockIdentifier{
 		Index: &validBlockIndex,
@@ -111,6 +112,15 @@ func TestBlockRequest(t *testing.T) {
 			request: &types.BlockRequest{
 				NetworkIdentifier: validNetworkIdentifier,
 				BlockIdentifier:   validPartialBlockIdentifier,
+			},
+			err: nil,
+		},
+		"valid request for block 0": {
+			request: &types.BlockRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+				BlockIdentifier: &types.PartialBlockIdentifier{
+					Index: &genesisBlockIndex,
+				},
 			},
 			err: nil,
 		},

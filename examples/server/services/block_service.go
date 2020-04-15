@@ -15,6 +15,9 @@
 package services
 
 import (
+	"fmt"
+	"time"
+
 	"github.com/coinbase/rosetta-sdk-go/server"
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
@@ -35,6 +38,28 @@ func NewBlockAPIService(network *types.NetworkIdentifier) server.BlockAPIService
 func (s *BlockAPIService) Block(
 	request *types.BlockRequest,
 ) (*types.BlockResponse, *types.Error) {
+	if *request.BlockIdentifier.Index != 1000 {
+		previousBlockIndex := *request.BlockIdentifier.Index - 1
+		if previousBlockIndex < 0 {
+			previousBlockIndex = 0
+		}
+
+		return &types.BlockResponse{
+			Block: &types.Block{
+				BlockIdentifier: &types.BlockIdentifier{
+					Index: *request.BlockIdentifier.Index,
+					Hash:  fmt.Sprintf("block %d", *request.BlockIdentifier.Index),
+				},
+				ParentBlockIdentifier: &types.BlockIdentifier{
+					Index: previousBlockIndex,
+					Hash:  fmt.Sprintf("block %d", previousBlockIndex),
+				},
+				Timestamp:    time.Now().UnixNano() / 1000000,
+				Transactions: []*types.Transaction{},
+			},
+		}, nil
+	}
+
 	return &types.BlockResponse{
 		Block: &types.Block{
 			BlockIdentifier: &types.BlockIdentifier{
