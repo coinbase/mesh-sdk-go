@@ -74,9 +74,24 @@ func TestConstructionSubmit(t *testing.T) {
 			&types.NetworkStatusResponse{
 				GenesisBlockIdentifier: &types.BlockIdentifier{
 					Index: 0,
+					Hash:  "block 0",
+				},
+				CurrentBlockIdentifier: &types.BlockIdentifier{
+					Index: 100,
+					Hash:  "block 100",
+				},
+				CurrentBlockTimestamp: 100,
+				Peers: []*types.Peer{
+					{
+						PeerID: "peer 1",
+					},
 				},
 			},
 			&types.NetworkOptionsResponse{
+				Version: &types.Version{
+					RosettaVersion: "1.3.1",
+					NodeVersion:    "1.0",
+				},
 				Allow: &types.Allow{
 					OperationStatuses: []*types.OperationStatus{
 						{
