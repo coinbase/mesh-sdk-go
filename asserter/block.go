@@ -199,11 +199,11 @@ func PartialBlockIdentifier(blockIdentifier *types.PartialBlockIdentifier) error
 		return errors.New("PartialBlockIdentifier is nil")
 	}
 
-	if blockIdentifier.Hash != nil && *blockIdentifier.Hash == "" {
+	if blockIdentifier.Hash != nil && *blockIdentifier.Hash != "" {
 		return nil
 	}
 
-	if blockIdentifier.Index != nil && *blockIdentifier.Index > 0 {
+	if blockIdentifier.Index != nil && *blockIdentifier.Index >= 0 {
 		return nil
 	}
 
