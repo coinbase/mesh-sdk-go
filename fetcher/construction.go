@@ -16,7 +16,6 @@ package fetcher
 
 import (
 	"context"
-	"errors"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
 
@@ -53,10 +52,6 @@ func (f *Fetcher) ConstructionSubmit(
 	ctx context.Context,
 	signedTransaction string,
 ) (*types.TransactionIdentifier, *map[string]interface{}, error) {
-	if f.Asserter == nil {
-		return nil, nil, errors.New("asserter not initialized")
-	}
-
 	submitResponse, _, err := f.rosettaClient.ConstructionAPI.ConstructionSubmit(
 		ctx,
 		&types.ConstructionSubmitRequest{
@@ -67,7 +62,7 @@ func (f *Fetcher) ConstructionSubmit(
 		return nil, nil, err
 	}
 
-	if err := f.Asserter.ConstructionSubmit(submitResponse); err != nil {
+	if err := asserter.ConstructionSubmit(submitResponse); err != nil {
 		return nil, nil, err
 	}
 

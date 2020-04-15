@@ -36,7 +36,7 @@ func ConstructionMetadata(
 // the types.TransactionIdentifier in the response is not
 // valid or if the Submission.Status is not contained
 // within the provided validStatuses slice.
-func (a *Asserter) ConstructionSubmit(
+func ConstructionSubmit(
 	response *types.ConstructionSubmitResponse,
 ) error {
 	if err := TransactionIdentifier(response.TransactionIdentifier); err != nil {

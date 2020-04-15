@@ -15,7 +15,6 @@
 package asserter
 
 import (
-	"context"
 	"errors"
 	"testing"
 
@@ -69,34 +68,8 @@ func TestConstructionSubmit(t *testing.T) {
 	}
 
 	for name, test := range tests {
-		asserter, err := NewWithResponses(
-			context.Background(),
-			&types.NetworkStatusResponse{
-				GenesisBlockIdentifier: &types.BlockIdentifier{
-					Index: 0,
-				},
-			},
-			&types.NetworkOptionsResponse{
-				Allow: &types.Allow{
-					OperationStatuses: []*types.OperationStatus{
-						{
-							Status:     "SUCCESS",
-							Successful: true,
-						},
-						{
-							Status:     "FAILURE",
-							Successful: false,
-						},
-					},
-					OperationTypes: []string{
-						"PAYMENT",
-					},
-				},
-			},
-		)
-		assert.NoError(t, err)
 		t.Run(name, func(t *testing.T) {
-			err := asserter.ConstructionSubmit(test.response)
+			err := ConstructionSubmit(test.response)
 			assert.Equal(t, test.err, err)
 		})
 	}

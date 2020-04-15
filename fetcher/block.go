@@ -174,10 +174,6 @@ func (f *Fetcher) Block(
 	network *types.NetworkIdentifier,
 	blockIdentifier *types.PartialBlockIdentifier,
 ) (*types.Block, error) {
-	if f.Asserter == nil {
-		return nil, errors.New("asserter not initialized")
-	}
-
 	block, err := f.UnsafeBlock(ctx, network, blockIdentifier)
 	if err != nil {
 		return nil, err
@@ -197,10 +193,6 @@ func (f *Fetcher) BlockRetry(
 	network *types.NetworkIdentifier,
 	blockIdentifier *types.PartialBlockIdentifier,
 ) (*types.Block, error) {
-	if f.Asserter == nil {
-		return nil, errors.New("asserter not initialized")
-	}
-
 	if err := asserter.PartialBlockIdentifier(blockIdentifier); err != nil {
 		return nil, err
 	}
