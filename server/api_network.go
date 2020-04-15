@@ -18,7 +18,6 @@ package server
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 	"strings"
 
@@ -65,121 +64,88 @@ func (c *NetworkAPIController) Routes() Routes {
 func (c *NetworkAPIController) NetworkList(w http.ResponseWriter, r *http.Request) {
 	metadataRequest := &types.MetadataRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&metadataRequest); err != nil {
-		err = EncodeJSONResponse(&types.Error{
+		EncodeJSONResponse(&types.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)
-		if err != nil {
-			log.Fatal(err)
-		}
 
 		return
 	}
 
 	// Assert that MetadataRequest is correct
 	if err := asserter.MetadataRequest(metadataRequest); err != nil {
-		err = EncodeJSONResponse(&types.Error{
+		EncodeJSONResponse(&types.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)
-		if err != nil {
-			log.Fatal(err)
-		}
 
 		return
 	}
 
 	result, serviceErr := c.service.NetworkList(metadataRequest)
 	if serviceErr != nil {
-		err := EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
-		if err != nil {
-			log.Fatal(err)
-		}
+		EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
 
 		return
 	}
 
-	if err := EncodeJSONResponse(result, http.StatusOK, w); err != nil {
-		log.Fatal(err)
-	}
+	EncodeJSONResponse(result, http.StatusOK, w)
 }
 
 // NetworkOptions - Get Network Options
 func (c *NetworkAPIController) NetworkOptions(w http.ResponseWriter, r *http.Request) {
 	networkRequest := &types.NetworkRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&networkRequest); err != nil {
-		err = EncodeJSONResponse(&types.Error{
+		EncodeJSONResponse(&types.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)
-		if err != nil {
-			log.Fatal(err)
-		}
 
 		return
 	}
 
 	// Assert that NetworkRequest is correct
 	if err := asserter.NetworkRequest(networkRequest); err != nil {
-		err = EncodeJSONResponse(&types.Error{
+		EncodeJSONResponse(&types.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)
-		if err != nil {
-			log.Fatal(err)
-		}
 
 		return
 	}
 
 	result, serviceErr := c.service.NetworkOptions(networkRequest)
 	if serviceErr != nil {
-		err := EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
-		if err != nil {
-			log.Fatal(err)
-		}
+		EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
 
 		return
 	}
 
-	if err := EncodeJSONResponse(result, http.StatusOK, w); err != nil {
-		log.Fatal(err)
-	}
+	EncodeJSONResponse(result, http.StatusOK, w)
 }
 
 // NetworkStatus - Get Network Status
 func (c *NetworkAPIController) NetworkStatus(w http.ResponseWriter, r *http.Request) {
 	networkRequest := &types.NetworkRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&networkRequest); err != nil {
-		err = EncodeJSONResponse(&types.Error{
+		EncodeJSONResponse(&types.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)
-		if err != nil {
-			log.Fatal(err)
-		}
 
 		return
 	}
 
 	// Assert that NetworkRequest is correct
 	if err := asserter.NetworkRequest(networkRequest); err != nil {
-		err = EncodeJSONResponse(&types.Error{
+		EncodeJSONResponse(&types.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)
-		if err != nil {
-			log.Fatal(err)
-		}
 
 		return
 	}
 
 	result, serviceErr := c.service.NetworkStatus(networkRequest)
 	if serviceErr != nil {
-		err := EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
-		if err != nil {
-			log.Fatal(err)
-		}
+		EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
 
 		return
 	}
 
-	if err := EncodeJSONResponse(result, http.StatusOK, w); err != nil {
-		log.Fatal(err)
-	}
+	EncodeJSONResponse(result, http.StatusOK, w)
 }
