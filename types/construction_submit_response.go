@@ -16,8 +16,9 @@
 
 package types
 
-// NetworkStatusRequest A NetworkStatusRequest is utilized to retrieve the status of the network. It
-// currently contains only optional metadata.
-type NetworkStatusRequest struct {
-	Metadata *map[string]interface{} `json:"metadata,omitempty"`
+// ConstructionSubmitResponse A TransactionSubmitResponse contains the transaction_identifier of a
+// submitted transaction that was accepted into the mempool.
+type ConstructionSubmitResponse struct {
+	TransactionIdentifier *TransactionIdentifier  `json:"transaction_identifier"`
+	Metadata              *map[string]interface{} `json:"metadata,omitempty"`
 }

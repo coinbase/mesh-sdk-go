@@ -31,7 +31,7 @@ func (f *Fetcher) UnsafeAccountBalance(
 	ctx context.Context,
 	network *types.NetworkIdentifier,
 	account *types.AccountIdentifier,
-) (*types.BlockIdentifier, []*types.Balance, error) {
+) (*types.BlockIdentifier, []*types.Amount, error) {
 	balance, _, err := f.rosettaClient.AccountAPI.AccountBalance(ctx,
 		&types.AccountBalanceRequest{
 			NetworkIdentifier: network,
@@ -51,7 +51,7 @@ func (f *Fetcher) AccountBalance(
 	ctx context.Context,
 	network *types.NetworkIdentifier,
 	account *types.AccountIdentifier,
-) (*types.BlockIdentifier, []*types.Balance, error) {
+) (*types.BlockIdentifier, []*types.Amount, error) {
 	block, balances, err := f.UnsafeAccountBalance(ctx, network, account)
 	if err != nil {
 		return nil, nil, err
@@ -72,7 +72,7 @@ func (f *Fetcher) AccountBalanceRetry(
 	account *types.AccountIdentifier,
 	maxElapsedTime time.Duration,
 	maxRetries uint64,
-) (*types.BlockIdentifier, []*types.Balance, error) {
+) (*types.BlockIdentifier, []*types.Amount, error) {
 	backoffRetries := backoffRetries(maxElapsedTime, maxRetries)
 
 	for ctx.Err() == nil {

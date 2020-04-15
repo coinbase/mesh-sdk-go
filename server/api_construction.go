@@ -41,27 +41,24 @@ func NewConstructionAPIController(s ConstructionAPIServicer) Router {
 func (c *ConstructionAPIController) Routes() Routes {
 	return Routes{
 		{
-			"TransactionConstruction",
+			"ConstructionMetadata",
 			strings.ToUpper("Post"),
 			"/construction/metadata",
-			c.TransactionConstruction,
+			c.ConstructionMetadata,
 		},
 		{
-			"TransactionSubmit",
+			"ConstructionSubmit",
 			strings.ToUpper("Post"),
 			"/construction/submit",
-			c.TransactionSubmit,
+			c.ConstructionSubmit,
 		},
 	}
 }
 
-// TransactionConstruction - Get Transaction Construction Metadata
-func (c *ConstructionAPIController) TransactionConstruction(
-	w http.ResponseWriter,
-	r *http.Request,
-) {
-	transactionConstructionRequest := &types.TransactionConstructionRequest{}
-	if err := json.NewDecoder(r.Body).Decode(&transactionConstructionRequest); err != nil {
+// ConstructionMetadata - Get Transaction Construction Metadata
+func (c *ConstructionAPIController) ConstructionMetadata(w http.ResponseWriter, r *http.Request) {
+	constructionMetadataRequest := &types.ConstructionMetadataRequest{}
+	if err := json.NewDecoder(r.Body).Decode(&constructionMetadataRequest); err != nil {
 		err = EncodeJSONResponse(&types.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)
@@ -72,8 +69,8 @@ func (c *ConstructionAPIController) TransactionConstruction(
 		return
 	}
 
-	// Assert that TransactionConstructionRequest is correct
-	if err := asserter.TransactionConstructionRequest(transactionConstructionRequest); err != nil {
+	// Assert that ConstructionMetadataRequest is correct
+	if err := asserter.ConstructionMetadataRequest(constructionMetadataRequest); err != nil {
 		err = EncodeJSONResponse(&types.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)
@@ -84,7 +81,7 @@ func (c *ConstructionAPIController) TransactionConstruction(
 		return
 	}
 
-	result, serviceErr := c.service.TransactionConstruction(transactionConstructionRequest)
+	result, serviceErr := c.service.ConstructionMetadata(constructionMetadataRequest)
 	if serviceErr != nil {
 		err := EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
 		if err != nil {
@@ -99,10 +96,10 @@ func (c *ConstructionAPIController) TransactionConstruction(
 	}
 }
 
-// TransactionSubmit - Submit a Signed Transaction
-func (c *ConstructionAPIController) TransactionSubmit(w http.ResponseWriter, r *http.Request) {
-	transactionSubmitRequest := &types.TransactionSubmitRequest{}
-	if err := json.NewDecoder(r.Body).Decode(&transactionSubmitRequest); err != nil {
+// ConstructionSubmit - Submit a Signed Transaction
+func (c *ConstructionAPIController) ConstructionSubmit(w http.ResponseWriter, r *http.Request) {
+	constructionSubmitRequest := &types.ConstructionSubmitRequest{}
+	if err := json.NewDecoder(r.Body).Decode(&constructionSubmitRequest); err != nil {
 		err = EncodeJSONResponse(&types.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)
@@ -113,8 +110,8 @@ func (c *ConstructionAPIController) TransactionSubmit(w http.ResponseWriter, r *
 		return
 	}
 
-	// Assert that TransactionSubmitRequest is correct
-	if err := asserter.TransactionSubmitRequest(transactionSubmitRequest); err != nil {
+	// Assert that ConstructionSubmitRequest is correct
+	if err := asserter.ConstructionSubmitRequest(constructionSubmitRequest); err != nil {
 		err = EncodeJSONResponse(&types.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)
@@ -125,7 +122,7 @@ func (c *ConstructionAPIController) TransactionSubmit(w http.ResponseWriter, r *
 		return
 	}
 
-	result, serviceErr := c.service.TransactionSubmit(transactionSubmitRequest)
+	result, serviceErr := c.service.ConstructionSubmit(constructionSubmitRequest)
 	if serviceErr != nil {
 		err := EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
 		if err != nil {

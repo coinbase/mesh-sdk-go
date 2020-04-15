@@ -33,16 +33,20 @@ var (
 // ConstructionAPIService ConstructionAPI service
 type ConstructionAPIService service
 
-// TransactionConstruction Get any information required to construct a transaction for a specific
-// account. Metadata returned here could be a recent hash to use or an account sequence number.  It
-// is important to clarify that this endpoint should not pre-construct any transactions for the
-// client. All account-specific metadata must be returned as a key-value mapping so that transaction
-// construction can be audited and performed entirely offline. Any account-agnostic metadata does
-// not need to be broken out into a key-value mapping and can be returned as a blob.
-func (a *ConstructionAPIService) TransactionConstruction(
+// ConstructionMetadata Get any information required to construct a transaction for a specific
+// network. Metadata returned here could be a recent hash to use, an account sequence number, or
+// even arbitrary chain state. It is up to the client to correctly populate the options object with
+// any network-specific details to ensure the correct metadata is retrieved.  It is important to
+// clarify that this endpoint should not pre-construct any transactions for the client (this should
+// happen in the SDK). This endpoint is left purposely unstructured because of the wide scope of
+// metadata that could be required.  In a future version of the spec, we plan to pass an array of
+// Rosetta Operations to specify which metadata should be received and to create a transaction in an
+// accompanying SDK. This will help to insulate the client from chain-specific details that are
+// currently required here.
+func (a *ConstructionAPIService) ConstructionMetadata(
 	ctx _context.Context,
-	transactionConstructionRequest *types.TransactionConstructionRequest,
-) (*types.TransactionConstructionResponse, *types.Error, error) {
+	constructionMetadataRequest *types.ConstructionMetadataRequest,
+) (*types.ConstructionMetadataResponse, *types.Error, error) {
 	var (
 		localVarPostBody interface{}
 	)
@@ -69,7 +73,7 @@ func (a *ConstructionAPIService) TransactionConstruction(
 		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
 	}
 	// body params
-	localVarPostBody = transactionConstructionRequest
+	localVarPostBody = constructionMetadataRequest
 
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarPostBody, localVarHeaderParams)
 	if err != nil {
@@ -97,7 +101,7 @@ func (a *ConstructionAPIService) TransactionConstruction(
 		return nil, &v, fmt.Errorf("%+v", v)
 	}
 
-	var v types.TransactionConstructionResponse
+	var v types.ConstructionMetadataResponse
 	err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 	if err != nil {
 		return nil, nil, err
@@ -106,15 +110,15 @@ func (a *ConstructionAPIService) TransactionConstruction(
 	return &v, nil, nil
 }
 
-// TransactionSubmit Submit a pre-signed transaction to the node. This call should not block on the
+// ConstructionSubmit Submit a pre-signed transaction to the node. This call should not block on the
 // transaction being included in a block. Rather, it should return immediately with an indication of
 // whether or not the transaction was included in the mempool.  The transaction submission response
 // should only return a 200 status if the submitted transaction could be included in the mempool.
 // Otherwise, it should return an error.
-func (a *ConstructionAPIService) TransactionSubmit(
+func (a *ConstructionAPIService) ConstructionSubmit(
 	ctx _context.Context,
-	transactionSubmitRequest *types.TransactionSubmitRequest,
-) (*types.TransactionSubmitResponse, *types.Error, error) {
+	constructionSubmitRequest *types.ConstructionSubmitRequest,
+) (*types.ConstructionSubmitResponse, *types.Error, error) {
 	var (
 		localVarPostBody interface{}
 	)
@@ -141,7 +145,7 @@ func (a *ConstructionAPIService) TransactionSubmit(
 		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
 	}
 	// body params
-	localVarPostBody = transactionSubmitRequest
+	localVarPostBody = constructionSubmitRequest
 
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarPostBody, localVarHeaderParams)
 	if err != nil {
@@ -169,7 +173,7 @@ func (a *ConstructionAPIService) TransactionSubmit(
 		return nil, &v, fmt.Errorf("%+v", v)
 	}
 
-	var v types.TransactionSubmitResponse
+	var v types.ConstructionSubmitResponse
 	err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 	if err != nil {
 		return nil, nil, err

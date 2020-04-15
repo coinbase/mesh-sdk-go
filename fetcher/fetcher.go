@@ -16,6 +16,7 @@ package fetcher
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"time"
 
@@ -84,9 +85,38 @@ func New(
 func (f *Fetcher) InitializeAsserter(
 	ctx context.Context,
 ) (*types.NetworkStatusResponse, error) {
-	// Attempt to fetch network status
-	networkResponse, err := f.NetworkStatusRetry(
+	// Attempt to fetch network list
+	networkList, err := f.NetworkListRetry(
 		ctx,
+		nil,
+		DefaultElapsedTime,
+		DefaultRetries,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(networkList.NetworkIdentifiers) == 0 {
+		return nil, errors.New("no networks available")
+	}
+	primaryNetwork := networkList.NetworkIdentifiers[0]
+
+	// Attempt to fetch network status
+	networkStatus, err := f.NetworkStatusRetry(
+		ctx,
+		primaryNetwork,
+		nil,
+		DefaultElapsedTime,
+		DefaultRetries,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	// Attempt to fetch network options
+	networkOptions, err := f.NetworkOptionsRetry(
+		ctx,
+		primaryNetwork,
 		nil,
 		DefaultElapsedTime,
 		DefaultRetries,
@@ -97,11 +127,12 @@ func (f *Fetcher) InitializeAsserter(
 
 	f.Asserter, err = asserter.New(
 		ctx,
-		networkResponse,
+		networkStatus,
+		networkOptions,
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	return networkResponse, nil
+	return networkStatus, nil
 }

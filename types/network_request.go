@@ -16,9 +16,9 @@
 
 package types
 
-// TransactionSubmitResponse A TransactionSubmitResponse contains the transaction_identifier of a
-// submitted transaction that was accepted into the mempool.
-type TransactionSubmitResponse struct {
-	TransactionIdentifier *TransactionIdentifier  `json:"transaction_identifier"`
-	Metadata              *map[string]interface{} `json:"metadata,omitempty"`
+// NetworkRequest A NetworkRequest is utilized to retrieve some data specific exclusively to a
+// NetworkIdentifier.
+type NetworkRequest struct {
+	NetworkIdentifier *NetworkIdentifier      `json:"network_identifier"`
+	Metadata          *map[string]interface{} `json:"metadata,omitempty"`
 }

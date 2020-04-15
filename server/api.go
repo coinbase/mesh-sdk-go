@@ -48,8 +48,8 @@ type BlockAPIRouter interface {
 // pass the data to a ConstructionAPIServicer to perform the required actions, then write the
 // service results to the http response.
 type ConstructionAPIRouter interface {
-	TransactionConstruction(http.ResponseWriter, *http.Request)
-	TransactionSubmit(http.ResponseWriter, *http.Request)
+	ConstructionMetadata(http.ResponseWriter, *http.Request)
+	ConstructionSubmit(http.ResponseWriter, *http.Request)
 }
 
 // MempoolAPIRouter defines the required methods for binding the api requests to a responses for the
@@ -68,6 +68,8 @@ type MempoolAPIRouter interface {
 // pass the data to a NetworkAPIServicer to perform the required actions, then write the service
 // results to the http response.
 type NetworkAPIRouter interface {
+	NetworkList(http.ResponseWriter, *http.Request)
+	NetworkOptions(http.ResponseWriter, *http.Request)
 	NetworkStatus(http.ResponseWriter, *http.Request)
 }
 
@@ -93,12 +95,12 @@ type BlockAPIServicer interface {
 // while the service implementation can ignored with the .openapi-generator-ignore file
 // and updated with the logic required for the API.
 type ConstructionAPIServicer interface {
-	TransactionConstruction(
-		*types.TransactionConstructionRequest,
-	) (*types.TransactionConstructionResponse, *types.Error)
-	TransactionSubmit(
-		*types.TransactionSubmitRequest,
-	) (*types.TransactionSubmitResponse, *types.Error)
+	ConstructionMetadata(
+		*types.ConstructionMetadataRequest,
+	) (*types.ConstructionMetadataResponse, *types.Error)
+	ConstructionSubmit(
+		*types.ConstructionSubmitRequest,
+	) (*types.ConstructionSubmitResponse, *types.Error)
 }
 
 // MempoolAPIServicer defines the api actions for the MempoolAPI service
@@ -117,5 +119,7 @@ type MempoolAPIServicer interface {
 // while the service implementation can ignored with the .openapi-generator-ignore file
 // and updated with the logic required for the API.
 type NetworkAPIServicer interface {
-	NetworkStatus(*types.NetworkStatusRequest) (*types.NetworkStatusResponse, *types.Error)
+	NetworkList(*types.MetadataRequest) (*types.NetworkListResponse, *types.Error)
+	NetworkOptions(*types.NetworkRequest) (*types.NetworkOptionsResponse, *types.Error)
+	NetworkStatus(*types.NetworkRequest) (*types.NetworkStatusResponse, *types.Error)
 }

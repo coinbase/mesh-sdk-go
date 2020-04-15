@@ -16,11 +16,15 @@
 
 package types
 
-// AccountBalanceResponse An AccountBalanceResponse is returned on the /account/balance endpoint.
+// AccountBalanceResponse An AccountBalanceResponse is returned on the /account/balance endpoint. If
+// an account has a balance for each AccountIdentifier describing it (ex: an ERC-20 token balance on
+// a few smart contracts), an account balance request must be made with each AccountIdentifier.
 type AccountBalanceResponse struct {
 	BlockIdentifier *BlockIdentifier `json:"block_identifier"`
-	// An AccountBalanceResponse may include multiple uniquely-identified balances. For example, the
-	// balance of an account on each shard could be returned or the balance of an account on each
-	// ERC-20 contract.
-	Balances []*Balance `json:"balances"`
+	// A single account may have a balance in multiple currencies.
+	Balances []*Amount `json:"balances"`
+	// Account-based blockchains that utilize a nonce or sequence number should include that number
+	// in the metadata. This number could be unique to the identifier or global across the account
+	// address.
+	Metadata *map[string]interface{} `json:"metadata,omitempty"`
 }

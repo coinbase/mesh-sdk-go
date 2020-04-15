@@ -24,4 +24,6 @@ type Error struct {
 	Code int32 `json:"code"`
 	// Message is a network-specific error message.
 	Message string `json:"message"`
+	// An error is retriable if the same request may succeed if submitted again.
+	Retriable bool `json:"retriable"`
 }
