@@ -17,6 +17,7 @@
 package server
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
@@ -78,7 +79,10 @@ type NetworkAPIRouter interface {
 // while the service implementation can ignored with the .openapi-generator-ignore file
 // and updated with the logic required for the API.
 type AccountAPIServicer interface {
-	AccountBalance(*types.AccountBalanceRequest) (*types.AccountBalanceResponse, *types.Error)
+	AccountBalance(
+		context.Context,
+		*types.AccountBalanceRequest,
+	) (*types.AccountBalanceResponse, *types.Error)
 }
 
 // BlockAPIServicer defines the api actions for the BlockAPI service
@@ -86,8 +90,11 @@ type AccountAPIServicer interface {
 // while the service implementation can ignored with the .openapi-generator-ignore file
 // and updated with the logic required for the API.
 type BlockAPIServicer interface {
-	Block(*types.BlockRequest) (*types.BlockResponse, *types.Error)
-	BlockTransaction(*types.BlockTransactionRequest) (*types.BlockTransactionResponse, *types.Error)
+	Block(context.Context, *types.BlockRequest) (*types.BlockResponse, *types.Error)
+	BlockTransaction(
+		context.Context,
+		*types.BlockTransactionRequest,
+	) (*types.BlockTransactionResponse, *types.Error)
 }
 
 // ConstructionAPIServicer defines the api actions for the ConstructionAPI service
@@ -96,9 +103,11 @@ type BlockAPIServicer interface {
 // and updated with the logic required for the API.
 type ConstructionAPIServicer interface {
 	ConstructionMetadata(
+		context.Context,
 		*types.ConstructionMetadataRequest,
 	) (*types.ConstructionMetadataResponse, *types.Error)
 	ConstructionSubmit(
+		context.Context,
 		*types.ConstructionSubmitRequest,
 	) (*types.ConstructionSubmitResponse, *types.Error)
 }
@@ -108,8 +117,9 @@ type ConstructionAPIServicer interface {
 // while the service implementation can ignored with the .openapi-generator-ignore file
 // and updated with the logic required for the API.
 type MempoolAPIServicer interface {
-	Mempool(*types.MempoolRequest) (*types.MempoolResponse, *types.Error)
+	Mempool(context.Context, *types.MempoolRequest) (*types.MempoolResponse, *types.Error)
 	MempoolTransaction(
+		context.Context,
 		*types.MempoolTransactionRequest,
 	) (*types.MempoolTransactionResponse, *types.Error)
 }
@@ -119,7 +129,13 @@ type MempoolAPIServicer interface {
 // while the service implementation can ignored with the .openapi-generator-ignore file
 // and updated with the logic required for the API.
 type NetworkAPIServicer interface {
-	NetworkList(*types.MetadataRequest) (*types.NetworkListResponse, *types.Error)
-	NetworkOptions(*types.NetworkRequest) (*types.NetworkOptionsResponse, *types.Error)
-	NetworkStatus(*types.NetworkRequest) (*types.NetworkStatusResponse, *types.Error)
+	NetworkList(context.Context, *types.MetadataRequest) (*types.NetworkListResponse, *types.Error)
+	NetworkOptions(
+		context.Context,
+		*types.NetworkRequest,
+	) (*types.NetworkOptionsResponse, *types.Error)
+	NetworkStatus(
+		context.Context,
+		*types.NetworkRequest,
+	) (*types.NetworkStatusResponse, *types.Error)
 }

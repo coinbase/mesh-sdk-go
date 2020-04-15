@@ -74,7 +74,7 @@ func (c *BlockAPIController) Block(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, serviceErr := c.service.Block(blockRequest)
+	result, serviceErr := c.service.Block(r.Context(), blockRequest)
 	if serviceErr != nil {
 		EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
 
@@ -104,7 +104,7 @@ func (c *BlockAPIController) BlockTransaction(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	result, serviceErr := c.service.BlockTransaction(blockTransactionRequest)
+	result, serviceErr := c.service.BlockTransaction(r.Context(), blockTransactionRequest)
 	if serviceErr != nil {
 		EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
 

@@ -74,7 +74,7 @@ func (c *ConstructionAPIController) ConstructionMetadata(w http.ResponseWriter, 
 		return
 	}
 
-	result, serviceErr := c.service.ConstructionMetadata(constructionMetadataRequest)
+	result, serviceErr := c.service.ConstructionMetadata(r.Context(), constructionMetadataRequest)
 	if serviceErr != nil {
 		EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
 
@@ -104,7 +104,7 @@ func (c *ConstructionAPIController) ConstructionSubmit(w http.ResponseWriter, r 
 		return
 	}
 
-	result, serviceErr := c.service.ConstructionSubmit(constructionSubmitRequest)
+	result, serviceErr := c.service.ConstructionSubmit(r.Context(), constructionSubmitRequest)
 	if serviceErr != nil {
 		EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
 
