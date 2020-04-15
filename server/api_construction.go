@@ -18,7 +18,6 @@ package server
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 	"strings"
 
@@ -41,101 +40,76 @@ func NewConstructionAPIController(s ConstructionAPIServicer) Router {
 func (c *ConstructionAPIController) Routes() Routes {
 	return Routes{
 		{
-			"TransactionConstruction",
+			"ConstructionMetadata",
 			strings.ToUpper("Post"),
 			"/construction/metadata",
-			c.TransactionConstruction,
+			c.ConstructionMetadata,
 		},
 		{
-			"TransactionSubmit",
+			"ConstructionSubmit",
 			strings.ToUpper("Post"),
 			"/construction/submit",
-			c.TransactionSubmit,
+			c.ConstructionSubmit,
 		},
 	}
 }
 
-// TransactionConstruction - Get Transaction Construction Metadata
-func (c *ConstructionAPIController) TransactionConstruction(
-	w http.ResponseWriter,
-	r *http.Request,
-) {
-	transactionConstructionRequest := &types.TransactionConstructionRequest{}
-	if err := json.NewDecoder(r.Body).Decode(&transactionConstructionRequest); err != nil {
-		err = EncodeJSONResponse(&types.Error{
+// ConstructionMetadata - Get Transaction Construction Metadata
+func (c *ConstructionAPIController) ConstructionMetadata(w http.ResponseWriter, r *http.Request) {
+	constructionMetadataRequest := &types.ConstructionMetadataRequest{}
+	if err := json.NewDecoder(r.Body).Decode(&constructionMetadataRequest); err != nil {
+		EncodeJSONResponse(&types.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)
-		if err != nil {
-			log.Fatal(err)
-		}
 
 		return
 	}
 
-	// Assert that TransactionConstructionRequest is correct
-	if err := asserter.TransactionConstructionRequest(transactionConstructionRequest); err != nil {
-		err = EncodeJSONResponse(&types.Error{
+	// Assert that ConstructionMetadataRequest is correct
+	if err := asserter.ConstructionMetadataRequest(constructionMetadataRequest); err != nil {
+		EncodeJSONResponse(&types.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)
-		if err != nil {
-			log.Fatal(err)
-		}
 
 		return
 	}
 
-	result, serviceErr := c.service.TransactionConstruction(transactionConstructionRequest)
+	result, serviceErr := c.service.ConstructionMetadata(constructionMetadataRequest)
 	if serviceErr != nil {
-		err := EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
-		if err != nil {
-			log.Fatal(err)
-		}
+		EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
 
 		return
 	}
 
-	if err := EncodeJSONResponse(result, http.StatusOK, w); err != nil {
-		log.Fatal(err)
-	}
+	EncodeJSONResponse(result, http.StatusOK, w)
 }
 
-// TransactionSubmit - Submit a Signed Transaction
-func (c *ConstructionAPIController) TransactionSubmit(w http.ResponseWriter, r *http.Request) {
-	transactionSubmitRequest := &types.TransactionSubmitRequest{}
-	if err := json.NewDecoder(r.Body).Decode(&transactionSubmitRequest); err != nil {
-		err = EncodeJSONResponse(&types.Error{
+// ConstructionSubmit - Submit a Signed Transaction
+func (c *ConstructionAPIController) ConstructionSubmit(w http.ResponseWriter, r *http.Request) {
+	constructionSubmitRequest := &types.ConstructionSubmitRequest{}
+	if err := json.NewDecoder(r.Body).Decode(&constructionSubmitRequest); err != nil {
+		EncodeJSONResponse(&types.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)
-		if err != nil {
-			log.Fatal(err)
-		}
 
 		return
 	}
 
-	// Assert that TransactionSubmitRequest is correct
-	if err := asserter.TransactionSubmitRequest(transactionSubmitRequest); err != nil {
-		err = EncodeJSONResponse(&types.Error{
+	// Assert that ConstructionSubmitRequest is correct
+	if err := asserter.ConstructionSubmitRequest(constructionSubmitRequest); err != nil {
+		EncodeJSONResponse(&types.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)
-		if err != nil {
-			log.Fatal(err)
-		}
 
 		return
 	}
 
-	result, serviceErr := c.service.TransactionSubmit(transactionSubmitRequest)
+	result, serviceErr := c.service.ConstructionSubmit(constructionSubmitRequest)
 	if serviceErr != nil {
-		err := EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
-		if err != nil {
-			log.Fatal(err)
-		}
+		EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
 
 		return
 	}
 
-	if err := EncodeJSONResponse(result, http.StatusOK, w); err != nil {
-		log.Fatal(err)
-	}
+	EncodeJSONResponse(result, http.StatusOK, w)
 }

@@ -18,8 +18,6 @@ import (
 	"context"
 	"encoding/json"
 	"log"
-	"net/http"
-	"time"
 
 	"github.com/coinbase/rosetta-sdk-go/fetcher"
 	"github.com/coinbase/rosetta-sdk-go/types"
@@ -28,31 +26,6 @@ import (
 const (
 	// serverURL is the URL of a Rosetta Server.
 	serverURL = "http://localhost:8080"
-
-	// agent is the user-agent on requests to the
-	// Rosetta Server.
-	agent = "rosetta-sdk-go"
-
-	// defaultTimeout is the default timeout for
-	// HTTP requests.
-	defaultTimeout = 5 * time.Second
-
-	// blockConcurrency is the number of blocks to
-	// fetch concurrently in a call to fetcher.SyncBlockRange.
-	blockConcurrency = 4
-
-	// transactionConcurrency is the number of transactions to
-	// fetch concurrently (if BlockResponse.OtherTransactions
-	// is populated) in a call to fetcher.SyncBlockRange.
-	transactionConcurrency = 4
-
-	// maxElapsedTime is the maximum amount of time we will
-	// spend retrying failed requests.
-	maxElapsedTime = 1 * time.Minute
-
-	// maxRetries is the maximum number of times we will
-	// retry a failed request.
-	maxRetries = 10
 )
 
 func main() {
@@ -62,12 +35,6 @@ func main() {
 	newFetcher := fetcher.New(
 		ctx,
 		serverURL,
-		agent,
-		&http.Client{
-			Timeout: defaultTimeout,
-		},
-		blockConcurrency,
-		transactionConcurrency,
 	)
 
 	// Step 2: Initialize the fetcher's asserter
@@ -75,21 +42,31 @@ func main() {
 	// Behind the scenes this makes a call to get the
 	// network status and uses the response to inform
 	// the asserter what are valid responses.
-	networkStatusResponse, err := newFetcher.InitializeAsserter(ctx)
+	primaryNetwork, networkStatus, err := newFetcher.InitializeAsserter(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// Step 3: Print the network status response
-	prettyNetworkStatusResponse, err := json.MarshalIndent(
-		networkStatusResponse,
+	// Step 3: Print the primary network and network status
+	prettyPrimaryNetwork, err := json.MarshalIndent(
+		primaryNetwork,
 		"",
 		" ",
 	)
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Printf("Network Status Response: %s\n", string(prettyNetworkStatusResponse))
+	log.Printf("Primary Network: %s\n", string(prettyPrimaryNetwork))
+
+	prettyNetworkStatus, err := json.MarshalIndent(
+		networkStatus,
+		"",
+		" ",
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("Network Status: %s\n", string(prettyNetworkStatus))
 
 	// Step 4: Fetch the current block with retries (automatically
 	// asserted for correctness)
@@ -107,15 +84,12 @@ func main() {
 	// the client directly, you will need to implement a mechanism
 	// to fully populate the block by fetching all these
 	// transactions.
-	primaryNetwork := networkStatusResponse.NetworkStatus[0]
 	block, err := newFetcher.BlockRetry(
 		ctx,
-		primaryNetwork.NetworkIdentifier,
+		primaryNetwork,
 		types.ConstructPartialBlockIdentifier(
-			primaryNetwork.NetworkInformation.CurrentBlockIdentifier,
+			networkStatus.CurrentBlockIdentifier,
 		),
-		maxElapsedTime,
-		maxRetries,
 	)
 	if err != nil {
 		log.Fatal(err)

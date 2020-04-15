@@ -18,7 +18,6 @@ package server
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 	"strings"
 
@@ -59,80 +58,58 @@ func (c *MempoolAPIController) Routes() Routes {
 func (c *MempoolAPIController) Mempool(w http.ResponseWriter, r *http.Request) {
 	mempoolRequest := &types.MempoolRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&mempoolRequest); err != nil {
-		err = EncodeJSONResponse(&types.Error{
+		EncodeJSONResponse(&types.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)
-		if err != nil {
-			log.Fatal(err)
-		}
 
 		return
 	}
 
 	// Assert that MempoolRequest is correct
 	if err := asserter.MempoolRequest(mempoolRequest); err != nil {
-		err = EncodeJSONResponse(&types.Error{
+		EncodeJSONResponse(&types.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)
-		if err != nil {
-			log.Fatal(err)
-		}
 
 		return
 	}
 
 	result, serviceErr := c.service.Mempool(mempoolRequest)
 	if serviceErr != nil {
-		err := EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
-		if err != nil {
-			log.Fatal(err)
-		}
+		EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
 
 		return
 	}
 
-	if err := EncodeJSONResponse(result, http.StatusOK, w); err != nil {
-		log.Fatal(err)
-	}
+	EncodeJSONResponse(result, http.StatusOK, w)
 }
 
 // MempoolTransaction - Get a Mempool Transaction
 func (c *MempoolAPIController) MempoolTransaction(w http.ResponseWriter, r *http.Request) {
 	mempoolTransactionRequest := &types.MempoolTransactionRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&mempoolTransactionRequest); err != nil {
-		err = EncodeJSONResponse(&types.Error{
+		EncodeJSONResponse(&types.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)
-		if err != nil {
-			log.Fatal(err)
-		}
 
 		return
 	}
 
 	// Assert that MempoolTransactionRequest is correct
 	if err := asserter.MempoolTransactionRequest(mempoolTransactionRequest); err != nil {
-		err = EncodeJSONResponse(&types.Error{
+		EncodeJSONResponse(&types.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)
-		if err != nil {
-			log.Fatal(err)
-		}
 
 		return
 	}
 
 	result, serviceErr := c.service.MempoolTransaction(mempoolTransactionRequest)
 	if serviceErr != nil {
-		err := EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
-		if err != nil {
-			log.Fatal(err)
-		}
+		EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
 
 		return
 	}
 
-	if err := EncodeJSONResponse(result, http.StatusOK, w); err != nil {
-		log.Fatal(err)
-	}
+	EncodeJSONResponse(result, http.StatusOK, w)
 }

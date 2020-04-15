@@ -16,9 +16,8 @@
 
 package types
 
-// NetworkStatus A NetworkStatus object contains the network_information pertaining to a network
-// specified by the network_identifier.
-type NetworkStatus struct {
-	NetworkIdentifier  *NetworkIdentifier  `json:"network_identifier"`
-	NetworkInformation *NetworkInformation `json:"network_information"`
+// ConstructionSubmitRequest The transaction submission request includes a signed transaction.
+type ConstructionSubmitRequest struct {
+	NetworkIdentifier *NetworkIdentifier `json:"network_identifier"`
+	SignedTransaction string             `json:"signed_transaction"`
 }

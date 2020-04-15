@@ -74,37 +74,33 @@ func BlockTransactionRequest(request *types.BlockTransactionRequest) error {
 	return TransactionIdentifier(request.TransactionIdentifier)
 }
 
-// TransactionConstructionRequest ensures that a types.TransactionConstructionRequest
+// ConstructionMetadataRequest ensures that a types.ConstructionMetadataRequest
 // is well-formatted.
-func TransactionConstructionRequest(request *types.TransactionConstructionRequest) error {
+func ConstructionMetadataRequest(request *types.ConstructionMetadataRequest) error {
 	if request == nil {
-		return errors.New("TransactionConstructionRequest is nil")
+		return errors.New("ConstructionMetadataRequest is nil")
 	}
 
 	if err := NetworkIdentifier(request.NetworkIdentifier); err != nil {
 		return err
 	}
 
-	if err := AccountIdentifier(request.AccountIdentifier); err != nil {
-		return err
-	}
-
-	if request.Method != nil && *request.Method == "" {
-		return errors.New("TransactionConstructionRequest.Method is empty")
+	if request.Options == nil {
+		return errors.New("ConstructionMetadataRequest.Options is nil")
 	}
 
 	return nil
 }
 
-// TransactionSubmitRequest ensures that a types.TransactionSubmitRequest
+// ConstructionSubmitRequest ensures that a types.ConstructionSubmitRequest
 // is well-formatted.
-func TransactionSubmitRequest(request *types.TransactionSubmitRequest) error {
+func ConstructionSubmitRequest(request *types.ConstructionSubmitRequest) error {
 	if request == nil {
-		return errors.New("TransactionSubmitRequest is nil")
+		return errors.New("ConstructionSubmitRequest is nil")
 	}
 
 	if request.SignedTransaction == "" {
-		return errors.New("TransactionSubmitRequest.SignedTransaction is empty")
+		return errors.New("ConstructionSubmitRequest.SignedTransaction is empty")
 	}
 
 	return nil
@@ -134,12 +130,22 @@ func MempoolTransactionRequest(request *types.MempoolTransactionRequest) error {
 	return TransactionIdentifier(request.TransactionIdentifier)
 }
 
-// NetworkStatusRequest ensures that a types.NetworkStatusRequest
+// MetadataRequest ensures that a types.MetadataRequest
 // is well-formatted.
-func NetworkStatusRequest(request *types.NetworkStatusRequest) error {
+func MetadataRequest(request *types.MetadataRequest) error {
 	if request == nil {
-		return errors.New("NetworkStatusRequest is nil")
+		return errors.New("MetadataRequest is nil")
 	}
 
 	return nil
+}
+
+// NetworkRequest ensures that a types.NetworkRequest
+// is well-formatted.
+func NetworkRequest(request *types.NetworkRequest) error {
+	if request == nil {
+		return errors.New("NetworkRequest is nil")
+	}
+
+	return NetworkIdentifier(request.NetworkIdentifier)
 }

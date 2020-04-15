@@ -24,65 +24,38 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestTransactionConstruction(t *testing.T) {
-	validAmount := &types.Amount{
-		Value: "1",
-		Currency: &types.Currency{
-			Symbol:   "BTC",
-			Decimals: 8,
-		},
-	}
-
-	invalidAmount := &types.Amount{
-		Value: "",
-		Currency: &types.Currency{
-			Symbol:   "BTC",
-			Decimals: 8,
-		},
-	}
-
+func TestConstructionMetadata(t *testing.T) {
 	var tests = map[string]struct {
-		response *types.TransactionConstructionResponse
+		response *types.ConstructionMetadataResponse
 		err      error
 	}{
 		"valid response": {
-			response: &types.TransactionConstructionResponse{
-				NetworkFee: validAmount,
+			response: &types.ConstructionMetadataResponse{
+				Metadata: &map[string]interface{}{},
 			},
 			err: nil,
 		},
-		"valid response with metadata": {
-			response: &types.TransactionConstructionResponse{
-				NetworkFee: validAmount,
-				Metadata: &map[string]interface{}{
-					"blah": "hello",
-				},
-			},
-			err: nil,
-		},
-		"invalid amount": {
-			response: &types.TransactionConstructionResponse{
-				NetworkFee: invalidAmount,
-			},
-			err: errors.New("Amount.Value is missing"),
+		"invalid metadata": {
+			response: &types.ConstructionMetadataResponse{},
+			err:      errors.New("Metadata is nil"),
 		},
 	}
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			err := TransactionConstruction(test.response)
+			err := ConstructionMetadata(test.response)
 			assert.Equal(t, test.err, err)
 		})
 	}
 }
 
-func TestTransactionSubmit(t *testing.T) {
+func TestConstructionSubmit(t *testing.T) {
 	var tests = map[string]struct {
-		response *types.TransactionSubmitResponse
+		response *types.ConstructionSubmitResponse
 		err      error
 	}{
 		"valid response": {
-			response: &types.TransactionSubmitResponse{
+			response: &types.ConstructionSubmitResponse{
 				TransactionIdentifier: &types.TransactionIdentifier{
 					Hash: "tx1",
 				},
@@ -90,25 +63,21 @@ func TestTransactionSubmit(t *testing.T) {
 			err: nil,
 		},
 		"invalid transaction identifier": {
-			response: &types.TransactionSubmitResponse{},
+			response: &types.ConstructionSubmitResponse{},
 			err:      errors.New("TransactionIdentifier is nil"),
 		},
 	}
 
 	for name, test := range tests {
-		asserter, err := New(
+		asserter, err := NewWithResponses(
 			context.Background(),
 			&types.NetworkStatusResponse{
-				NetworkStatus: []*types.NetworkStatus{
-					{
-						NetworkInformation: &types.NetworkInformation{
-							GenesisBlockIdentifier: &types.BlockIdentifier{
-								Index: 0,
-							},
-						},
-					},
+				GenesisBlockIdentifier: &types.BlockIdentifier{
+					Index: 0,
 				},
-				Options: &types.Options{
+			},
+			&types.NetworkOptionsResponse{
+				Allow: &types.Allow{
 					OperationStatuses: []*types.OperationStatus{
 						{
 							Status:     "SUCCESS",
@@ -127,7 +96,7 @@ func TestTransactionSubmit(t *testing.T) {
 		)
 		assert.NoError(t, err)
 		t.Run(name, func(t *testing.T) {
-			err := asserter.TransactionSubmit(test.response)
+			err := asserter.ConstructionSubmit(test.response)
 			assert.Equal(t, test.err, err)
 		})
 	}

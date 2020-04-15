@@ -31,37 +31,49 @@ func NewNetworkAPIService(network *types.NetworkIdentifier) server.NetworkAPISer
 	}
 }
 
+// NetworkList implements the /network/list endpoint
+func (s *NetworkAPIService) NetworkList(
+	*types.MetadataRequest,
+) (*types.NetworkListResponse, *types.Error) {
+	return &types.NetworkListResponse{
+		NetworkIdentifiers: []*types.NetworkIdentifier{
+			s.network,
+		},
+	}, nil
+}
+
 // NetworkStatus implements the /network/status endpoint.
 func (s *NetworkAPIService) NetworkStatus(
-	*types.NetworkStatusRequest,
+	*types.NetworkRequest,
 ) (*types.NetworkStatusResponse, *types.Error) {
 	return &types.NetworkStatusResponse{
-		NetworkStatus: []*types.NetworkStatus{
+		CurrentBlockIdentifier: &types.BlockIdentifier{
+			Index: 1000,
+			Hash:  "block 1000",
+		},
+		CurrentBlockTimestamp: int64(1586483189000),
+		GenesisBlockIdentifier: &types.BlockIdentifier{
+			Index: 0,
+			Hash:  "block 0",
+		},
+		Peers: []*types.Peer{
 			{
-				NetworkIdentifier: s.network,
-				NetworkInformation: &types.NetworkInformation{
-					CurrentBlockIdentifier: &types.BlockIdentifier{
-						Index: 1000,
-						Hash:  "block 1000",
-					},
-					CurrentBlockTimestamp: int64(1586483189000),
-					GenesisBlockIdentifier: &types.BlockIdentifier{
-						Index: 0,
-						Hash:  "block 0",
-					},
-					Peers: []*types.Peer{
-						{
-							PeerID: "peer 1",
-						},
-					},
-				},
+				PeerID: "peer 1",
 			},
 		},
+	}, nil
+}
+
+// NetworkOptions implements the /network/options endpoint.
+func (s *NetworkAPIService) NetworkOptions(
+	*types.NetworkRequest,
+) (*types.NetworkOptionsResponse, *types.Error) {
+	return &types.NetworkOptionsResponse{
 		Version: &types.Version{
 			RosettaVersion: "1.3.0",
 			NodeVersion:    "0.0.1",
 		},
-		Options: &types.Options{
+		Allow: &types.Allow{
 			OperationStatuses: []*types.OperationStatus{
 				{
 					Status:     "Success",
@@ -78,8 +90,9 @@ func (s *NetworkAPIService) NetworkStatus(
 			},
 			Errors: []*types.Error{
 				{
-					Code:    1,
-					Message: "not implemented",
+					Code:      1,
+					Message:   "not implemented",
+					Retriable: false,
 				},
 			},
 		},

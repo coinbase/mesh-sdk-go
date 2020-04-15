@@ -16,11 +16,11 @@
 
 package types
 
-// Options Options specify supported Operation status, Operation types, and all possible error
-// statuses. This Options object is used by clients to validate the correctness of a Rosetta Server
+// Allow Allow specifies supported Operation status, Operation types, and all possible error
+// statuses. This Allow object is used by clients to validate the correctness of a Rosetta Server
 // implementation. It is expected that these clients will error if they receive some response that
 // contains any of the above information that is not specified here.
-type Options struct {
+type Allow struct {
 	// All Operation.Status this implementation supports. Any status that is returned during parsing
 	// that is not listed here will cause client validation to error.
 	OperationStatuses []*OperationStatus `json:"operation_statuses"`

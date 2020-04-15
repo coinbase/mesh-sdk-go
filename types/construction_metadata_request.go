@@ -16,15 +16,15 @@
 
 package types
 
-// TransactionConstructionRequest A TransactionConstructionRequest is utilized to get information
-// required to construct a transaction. Optionally, the client can provide a method to reduce the
-// amount of information that may need to be returned to the client to construct any transaction.
-type TransactionConstructionRequest struct {
+// ConstructionMetadataRequest A ConstructionMetadataRequest is utilized to get information required
+// to construct a transaction. The Options object used to specify which metadata to return is left
+// purposely unstructured to allow flexibility for implementers.
+type ConstructionMetadataRequest struct {
 	NetworkIdentifier *NetworkIdentifier `json:"network_identifier"`
-	AccountIdentifier *AccountIdentifier `json:"account_identifier"`
 	// Some blockchains require different metadata for different types of transaction construction
-	// (ex: delegation versus a transfer).  Instead of requiring a blockchain node to return all
+	// (ex: delegation versus a transfer). Instead of requiring a blockchain node to return all
 	// possible types of metadata for construction (which may require multiple node fetches), the
-	// client can specify a method to limit the metadata returned to only the subset required.
-	Method *string `json:"method,omitempty"`
+	// client can populate an options object to limit the metadata returned to only the subset
+	// required.
+	Options *map[string]interface{} `json:"options"`
 }
