@@ -106,7 +106,7 @@ func AccountIdentifier(account *types.AccountIdentifier) error {
 // AFTER an operation has been validated.
 func (a *Asserter) OperationSuccessful(operation *types.Operation) (bool, error) {
 	if a == nil {
-		return false, errors.New("must initialize asserter")
+		return false, ErrAsserterNotInitialized
 	}
 
 	val, ok := a.operationStatusMap[operation.Status]
@@ -117,6 +117,21 @@ func (a *Asserter) OperationSuccessful(operation *types.Operation) (bool, error)
 	return val, nil
 }
 
+// operationStatuses returns all operation statuses the
+// asserter consider valid.
+func (a *Asserter) operationStatuses() ([]string, error) {
+	if a == nil {
+		return nil, ErrAsserterNotInitialized
+	}
+
+	statuses := []string{}
+	for k := range a.operationStatusMap {
+		statuses = append(statuses, k)
+	}
+
+	return statuses, nil
+}
+
 // Operation ensures a types.Operation has a valid
 // type, status, and amount.
 func (a *Asserter) Operation(
@@ -124,7 +139,7 @@ func (a *Asserter) Operation(
 	index int64,
 ) error {
 	if a == nil {
-		return errors.New("must initialize asserter")
+		return ErrAsserterNotInitialized
 	}
 
 	if operation == nil {
@@ -139,7 +154,12 @@ func (a *Asserter) Operation(
 		return fmt.Errorf("Operation.Type %s is invalid", operation.Type)
 	}
 
-	if operation.Status == "" || !contains(a.operationStatuses(), operation.Status) {
+	validOperationStatuses, err := a.operationStatuses()
+	if err != nil {
+		return err
+	}
+
+	if operation.Status == "" || !contains(validOperationStatuses, operation.Status) {
 		return fmt.Errorf("Operation.Status %s is invalid", operation.Status)
 	}
 
@@ -213,7 +233,7 @@ func (a *Asserter) Transaction(
 	transaction *types.Transaction,
 ) error {
 	if a == nil {
-		return errors.New("must initialize asserter")
+		return ErrAsserterNotInitialized
 	}
 
 	if transaction == nil {
@@ -248,7 +268,7 @@ func (a *Asserter) Block(
 	block *types.Block,
 ) error {
 	if a == nil {
-		return errors.New("must initialize asserter")
+		return ErrAsserterNotInitialized
 	}
 
 	if block == nil {
