@@ -53,10 +53,10 @@ func main() {
 
 	client := client.NewAPIClient(clientCfg)
 
-	// Step 2: Fetch the network status
-	networkStatusResponse, rosettaErr, err := client.NetworkAPI.NetworkStatus(
+	// Step 2: Get all avaliable networks
+	networkList, rosettaErr, err := client.NetworkAPI.NetworkList(
 		ctx,
-		&types.NetworkStatusRequest{},
+		&types.MetadataRequest{},
 	)
 	if rosettaErr != nil {
 		log.Printf("Rosetta Error: %+v\n", rosettaErr)
@@ -65,40 +65,24 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Step 3: Print the response
-	prettyNetworkStatusResponse, err := json.MarshalIndent(networkStatusResponse, "", " ")
+	if len(networkList.NetworkIdentifiers) == 0 {
+		log.Fatal("no available networks")
+	}
+
+	primaryNetwork := networkList.NetworkIdentifiers[0]
+
+	// Step 3: Print the primary network
+	prettyPrimaryNetwork, err := json.MarshalIndent(primaryNetwork, "", " ")
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Printf("Network Status Response: %s\n", string(prettyNetworkStatusResponse))
+	log.Printf("Primary Network: %s\n", string(prettyPrimaryNetwork))
 
-	// Step 4: Assert the response is valid
-	err = asserter.NetworkStatusResponse(networkStatusResponse)
-	if err != nil {
-		log.Fatalf("Assertion Error: %s\n", err.Error())
-	}
-
-	// Step 5: Create an asserter using the NetworkStatusResponse
-	//
-	// This will be used later to assert that a fetched block is
-	// valid.
-	asserter, err := asserter.New(
+	// Step 4: Fetch the network status
+	networkStatus, rosettaErr, err := client.NetworkAPI.NetworkStatus(
 		ctx,
-		networkStatusResponse,
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Step 6: Fetch the current block
-	primaryNetwork := networkStatusResponse.NetworkStatus[0]
-	block, rosettaErr, err := client.BlockAPI.Block(
-		ctx,
-		&types.BlockRequest{
-			NetworkIdentifier: primaryNetwork.NetworkIdentifier,
-			BlockIdentifier: &types.PartialBlockIdentifier{
-				Index: &primaryNetwork.NetworkInformation.CurrentBlockIdentifier.Index,
-			},
+		&types.NetworkRequest{
+			NetworkIdentifier: primaryNetwork,
 		},
 	)
 	if rosettaErr != nil {
@@ -108,14 +92,85 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Step 7: Print the block
+	// Step 5: Print the response
+	prettyNetworkStatus, err := json.MarshalIndent(networkStatus, "", " ")
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("Network Status: %s\n", string(prettyNetworkStatus))
+
+	// Step 6: Assert the response is valid
+	err = asserter.NetworkStatusResponse(networkStatus)
+	if err != nil {
+		log.Fatalf("Assertion Error: %s\n", err.Error())
+	}
+
+	// Step 7: Fetch the network options
+	networkOptions, rosettaErr, err := client.NetworkAPI.NetworkOptions(
+		ctx,
+		&types.NetworkRequest{
+			NetworkIdentifier: primaryNetwork,
+		},
+	)
+	if rosettaErr != nil {
+		log.Printf("Rosetta Error: %+v\n", rosettaErr)
+	}
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Step 8: Print the response
+	prettyNetworkOptions, err := json.MarshalIndent(networkOptions, "", " ")
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("Network Options: %s\n", string(prettyNetworkOptions))
+
+	// Step 9: Assert the response is valid
+	err = asserter.NetworkOptionsResponse(networkOptions)
+	if err != nil {
+		log.Fatalf("Assertion Error: %s\n", err.Error())
+	}
+
+	// Step 10: Create an asserter using the retrieved NetworkStatus and
+	// NetworkOptions.
+	//
+	// This will be used later to assert that a fetched block is
+	// valid.
+	asserter, err := asserter.NewWithResponses(
+		ctx,
+		networkStatus,
+		networkOptions,
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Step 11: Fetch the current block
+	block, rosettaErr, err := client.BlockAPI.Block(
+		ctx,
+		&types.BlockRequest{
+			NetworkIdentifier: primaryNetwork,
+			BlockIdentifier: types.ConstructPartialBlockIdentifier(
+				networkStatus.CurrentBlockIdentifier,
+			),
+		},
+	)
+	if rosettaErr != nil {
+		log.Printf("Rosetta Error: %+v\n", rosettaErr)
+	}
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Step 12: Print the block
 	prettyBlock, err := json.MarshalIndent(block.Block, "", " ")
 	if err != nil {
 		log.Fatal(err)
 	}
 	log.Printf("Current Block: %s\n", string(prettyBlock))
 
-	// Step 8: Assert the block response is valid
+	// Step 13: Assert the block response is valid
 	//
 	// It is important to note that this only ensures
 	// required fields are populated and that operations
@@ -128,7 +183,7 @@ func main() {
 		log.Fatalf("Assertion Error: %s\n", err.Error())
 	}
 
-	// Step 9: Print remaining transactions to fetch
+	// Step 14: Print remaining transactions to fetch
 	//
 	// If you want the client to automatically fetch these, consider
 	// using the fetcher package.
