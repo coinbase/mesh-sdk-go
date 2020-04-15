@@ -43,7 +43,7 @@ func NetworkIdentifier(network *types.NetworkIdentifier) error {
 	}
 
 	if network.Blockchain == "" {
-		return errors.New("NetworkIdentifier is nil")
+		return errors.New("NetworkIdentifier.Blockchain is missing")
 	}
 
 	if network.Network == "" {
@@ -247,6 +247,10 @@ func NetworkListResponse(response *types.NetworkListResponse) error {
 
 	seen := make([]*types.NetworkIdentifier, 0)
 	for _, network := range response.NetworkIdentifiers {
+		if err := NetworkIdentifier(network); err != nil {
+			return err
+		}
+
 		if containsNetworkIdentifier(seen, network) {
 			return errors.New("NetworkListResponse.Networks contains duplicates")
 		}

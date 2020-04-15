@@ -44,7 +44,7 @@ func TestNetworkIdentifier(t *testing.T) {
 				Blockchain: "",
 				Network:    "mainnet",
 			},
-			err: errors.New("NetworkIdentifier is nil"),
+			err: errors.New("NetworkIdentifier.Blockchain is missing"),
 		},
 		"invalid network": {
 			network: &types.NetworkIdentifier{
@@ -278,6 +278,72 @@ func TestErrors(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			assert.Equal(t, test.err, Errors(test.rosettaErrors))
+		})
+	}
+}
+
+func TestNetworkListResponse(t *testing.T) {
+	var (
+		network1 = &types.NetworkIdentifier{
+			Blockchain: "blockchain 1",
+			Network:    "network 1",
+		}
+		network1Sub = &types.NetworkIdentifier{
+			Blockchain: "blockchain 1",
+			Network:    "network 1",
+			SubNetworkIdentifier: &types.SubNetworkIdentifier{
+				Network: "subnetwork",
+			},
+		}
+		network2 = &types.NetworkIdentifier{
+			Blockchain: "blockchain 2",
+			Network:    "network 2",
+		}
+		network3 = &types.NetworkIdentifier{
+			Network: "network 2",
+		}
+	)
+
+	var tests = map[string]struct {
+		networkListResponse *types.NetworkListResponse
+		err                 error
+	}{
+		"valid network list": {
+			networkListResponse: &types.NetworkListResponse{
+				NetworkIdentifiers: []*types.NetworkIdentifier{
+					network1,
+					network1Sub,
+					network2,
+				},
+			},
+			err: nil,
+		},
+		"nil network list": {
+			networkListResponse: nil,
+			err:                 errors.New("NetworkListResponse is nil"),
+		},
+		"network list duplicate": {
+			networkListResponse: &types.NetworkListResponse{
+				NetworkIdentifiers: []*types.NetworkIdentifier{
+					network1Sub,
+					network1Sub,
+				},
+			},
+			err: errors.New("NetworkListResponse.Networks contains duplicates"),
+		},
+		"invalid network": {
+			networkListResponse: &types.NetworkListResponse{
+				NetworkIdentifiers: []*types.NetworkIdentifier{
+					network3,
+				},
+			},
+			err: errors.New("NetworkIdentifier.Blockchain is missing"),
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, test.err, NetworkListResponse(test.networkListResponse))
 		})
 	}
 }
