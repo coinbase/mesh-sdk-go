@@ -125,120 +125,6 @@ func TestContainsCurrency(t *testing.T) {
 	}
 }
 
-func TestContainsAccountIdentifier(t *testing.T) {
-	var tests = map[string]struct {
-		identifiers []*types.AccountIdentifier
-		identifier  *types.AccountIdentifier
-		contains    bool
-	}{
-		"simple contains": {
-			identifiers: []*types.AccountIdentifier{
-				{
-					Address: "acct1",
-				},
-			},
-			identifier: &types.AccountIdentifier{
-				Address: "acct1",
-			},
-			contains: true,
-		},
-		"complex contains": {
-			identifiers: []*types.AccountIdentifier{
-				{
-					Address: "acct1",
-					SubAccount: &types.SubAccountIdentifier{
-						Address: "subacct1",
-						Metadata: &map[string]interface{}{
-							"blah": "hello",
-						},
-					},
-				},
-			},
-			identifier: &types.AccountIdentifier{
-				Address: "acct1",
-				SubAccount: &types.SubAccountIdentifier{
-					Address: "subacct1",
-					Metadata: &map[string]interface{}{
-						"blah": "hello",
-					},
-				},
-			},
-			contains: true,
-		},
-		"simple mismatch": {
-			identifiers: []*types.AccountIdentifier{
-				{
-					Address: "acct1",
-				},
-			},
-			identifier: &types.AccountIdentifier{
-				Address: "acct2",
-			},
-			contains: false,
-		},
-		"empty": {
-			identifiers: []*types.AccountIdentifier{},
-			identifier: &types.AccountIdentifier{
-				Address: "acct2",
-			},
-			contains: false,
-		},
-		"subaccount mismatch": {
-			identifiers: []*types.AccountIdentifier{
-				{
-					Address: "acct1",
-					SubAccount: &types.SubAccountIdentifier{
-						Address: "subacct2",
-						Metadata: &map[string]interface{}{
-							"blah": "hello",
-						},
-					},
-				},
-			},
-			identifier: &types.AccountIdentifier{
-				Address: "acct1",
-				SubAccount: &types.SubAccountIdentifier{
-					Address: "subacct1",
-					Metadata: &map[string]interface{}{
-						"blah": "hello",
-					},
-				},
-			},
-			contains: false,
-		},
-		"metadata mismatch": {
-			identifiers: []*types.AccountIdentifier{
-				{
-					Address: "acct1",
-					SubAccount: &types.SubAccountIdentifier{
-						Address: "subacct1",
-						Metadata: &map[string]interface{}{
-							"blah": "hello",
-						},
-					},
-				},
-			},
-			identifier: &types.AccountIdentifier{
-				Address: "acct1",
-				SubAccount: &types.SubAccountIdentifier{
-					Address: "subacct1",
-					Metadata: &map[string]interface{}{
-						"blah": "bye",
-					},
-				},
-			},
-			contains: false,
-		},
-	}
-
-	for name, test := range tests {
-		t.Run(name, func(t *testing.T) {
-			exists := containsAccountIdentifier(test.identifiers, test.identifier)
-			assert.Equal(t, test.contains, exists)
-		})
-	}
-}
-
 func TestAccoutBalance(t *testing.T) {
 	validBlock := &types.BlockIdentifier{
 		Index: 1000,
@@ -248,14 +134,6 @@ func TestAccoutBalance(t *testing.T) {
 	invalidBlock := &types.BlockIdentifier{
 		Index: 1,
 		Hash:  "",
-	}
-
-	validIdentifier := &types.AccountIdentifier{
-		Address: "acct1",
-	}
-
-	invalidIdentifier := &types.AccountIdentifier{
-		Address: "",
 	}
 
 	validAmount := &types.Amount{
@@ -268,75 +146,30 @@ func TestAccoutBalance(t *testing.T) {
 
 	var tests = map[string]struct {
 		block    *types.BlockIdentifier
-		balances []*types.Balance
+		balances []*types.Amount
 		err      error
 	}{
 		"simple balance": {
 			block: validBlock,
-			balances: []*types.Balance{
-				{
-					AccountIdentifier: validIdentifier,
-					Amounts: []*types.Amount{
-						validAmount,
-					},
-				},
+			balances: []*types.Amount{
+				validAmount,
 			},
 			err: nil,
 		},
 		"invalid block": {
 			block: invalidBlock,
-			balances: []*types.Balance{
-				{
-					AccountIdentifier: validIdentifier,
-					Amounts: []*types.Amount{
-						validAmount,
-					},
-				},
+			balances: []*types.Amount{
+				validAmount,
 			},
 			err: errors.New("BlockIdentifier.Hash is missing"),
 		},
-		"invalid account identifier": {
-			block: validBlock,
-			balances: []*types.Balance{
-				{
-					AccountIdentifier: invalidIdentifier,
-					Amounts: []*types.Amount{
-						validAmount,
-					},
-				},
-			},
-			err: errors.New("Account.Address is missing"),
-		},
 		"duplicate currency": {
 			block: validBlock,
-			balances: []*types.Balance{
-				{
-					AccountIdentifier: validIdentifier,
-					Amounts: []*types.Amount{
-						validAmount,
-						validAmount,
-					},
-				},
+			balances: []*types.Amount{
+				validAmount,
+				validAmount,
 			},
 			err: fmt.Errorf("currency %+v used in balance multiple times", validAmount.Currency),
-		},
-		"duplicate identifier": {
-			block: validBlock,
-			balances: []*types.Balance{
-				{
-					AccountIdentifier: validIdentifier,
-					Amounts: []*types.Amount{
-						validAmount,
-					},
-				},
-				{
-					AccountIdentifier: validIdentifier,
-					Amounts: []*types.Amount{
-						validAmount,
-					},
-				},
-			},
-			err: fmt.Errorf("account identifier %+v used in balance multiple times", validIdentifier),
 		},
 	}
 

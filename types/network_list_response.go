@@ -16,11 +16,8 @@
 
 package types
 
-// TransactionConstructionResponse The transaction construction response should return the network
-// fee to use in transaction construction. This network fee should be the gas price or cost per byte
-// not some calculate value based on the method in the transaction construction request. Any
-// calculations (like the one previously described) should be included in the metadata.
-type TransactionConstructionResponse struct {
-	NetworkFee *Amount                 `json:"network_fee"`
-	Metadata   *map[string]interface{} `json:"metadata,omitempty"`
+// NetworkListResponse A NetworkListResponse contains all NetworkIdentifiers that the node can serve
+// information for.
+type NetworkListResponse struct {
+	NetworkIdentifiers []*NetworkIdentifier `json:"network_identifiers"`
 }

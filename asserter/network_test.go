@@ -142,7 +142,7 @@ func TestVersion(t *testing.T) {
 	}
 }
 
-func TestNetworkOptions(t *testing.T) {
+func TestAllow(t *testing.T) {
 	var (
 		operationStatuses = []*types.OperationStatus{
 			{
@@ -161,45 +161,45 @@ func TestNetworkOptions(t *testing.T) {
 	)
 
 	var tests = map[string]struct {
-		networkOptions *types.Options
-		err            error
+		allow *types.Allow
+		err   error
 	}{
-		"valid options": {
-			networkOptions: &types.Options{
+		"valid Allow": {
+			allow: &types.Allow{
 				OperationStatuses: operationStatuses,
 				OperationTypes:    operationTypes,
 			},
 		},
-		"nil options": {
-			networkOptions: nil,
-			err:            errors.New("options is nil"),
+		"nil Allow": {
+			allow: nil,
+			err:   errors.New("Allow is nil"),
 		},
 		"no OperationStatuses": {
-			networkOptions: &types.Options{
+			allow: &types.Allow{
 				OperationTypes: operationTypes,
 			},
-			err: errors.New("no Options.OperationStatuses found"),
+			err: errors.New("no Allow.OperationStatuses found"),
 		},
 		"no successful OperationStatuses": {
-			networkOptions: &types.Options{
+			allow: &types.Allow{
 				OperationStatuses: []*types.OperationStatus{
 					operationStatuses[1],
 				},
 				OperationTypes: operationTypes,
 			},
-			err: errors.New("no successful Options.OperationStatuses found"),
+			err: errors.New("no successful Allow.OperationStatuses found"),
 		},
 		"no OperationTypes": {
-			networkOptions: &types.Options{
+			allow: &types.Allow{
 				OperationStatuses: operationStatuses,
 			},
-			err: errors.New("no Options.OperationTypes found"),
+			err: errors.New("no Allow.OperationTypes found"),
 		},
 	}
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			assert.Equal(t, test.err, NetworkOptions(test.networkOptions))
+			assert.Equal(t, test.err, Allow(test.allow))
 		})
 	}
 }

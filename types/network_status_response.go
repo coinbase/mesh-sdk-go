@@ -16,14 +16,13 @@
 
 package types
 
-// NetworkStatusResponse A NetworkStatusResponse contains all information required to make reliable
-// requests to the Rosetta Server implementation.
+// NetworkStatusResponse NetworkStatusResponse contains basic information about the node's view of a
+// blockchain network.
 type NetworkStatusResponse struct {
-	// The network_status array contains the status of all networks available to query. This
-	// includes all sub-networks that are also accessible (ex: shards).  If a node supports multiple
-	// networks, the first status returned should be the root chain or beacon chain (if applicable).
-	NetworkStatus []*NetworkStatus        `json:"network_status"`
-	Version       *Version                `json:"version"`
-	Options       *Options                `json:"options"`
-	Metadata      *map[string]interface{} `json:"metadata,omitempty"`
+	CurrentBlockIdentifier *BlockIdentifier `json:"current_block_identifier"`
+	// The timestamp of the block in milliseconds since the Unix Epoch. The timestamp is stored in
+	// milliseconds because some blockchains produce blocks more often than once a second.
+	CurrentBlockTimestamp  int64            `json:"current_block_timestamp"`
+	GenesisBlockIdentifier *BlockIdentifier `json:"genesis_block_identifier"`
+	Peers                  []*Peer          `json:"peers"`
 }

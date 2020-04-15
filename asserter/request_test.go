@@ -197,76 +197,68 @@ func TestBlockTransactionRequest(t *testing.T) {
 	}
 }
 
-func TestTransactionConstructionRequest(t *testing.T) {
+func TestConstructionMetadataRequest(t *testing.T) {
 	var tests = map[string]struct {
-		request *types.TransactionConstructionRequest
+		request *types.ConstructionMetadataRequest
 		err     error
 	}{
 		"valid request": {
-			request: &types.TransactionConstructionRequest{
+			request: &types.ConstructionMetadataRequest{
 				NetworkIdentifier: validNetworkIdentifier,
-				AccountIdentifier: validAccountIdentifier,
-			},
-			err: nil,
-		},
-		"valid request with method": {
-			request: &types.TransactionConstructionRequest{
-				NetworkIdentifier: validNetworkIdentifier,
-				AccountIdentifier: validAccountIdentifier,
-				Method:            &validMethod,
+				Options:           &map[string]interface{}{},
 			},
 			err: nil,
 		},
 		"nil request": {
 			request: nil,
-			err:     errors.New("TransactionConstructionRequest is nil"),
+			err:     errors.New("ConstructionMetadataRequest is nil"),
 		},
 		"missing network": {
-			request: &types.TransactionConstructionRequest{
-				AccountIdentifier: validAccountIdentifier,
+			request: &types.ConstructionMetadataRequest{
+				Options: &map[string]interface{}{},
 			},
 			err: errors.New("NetworkIdentifier is nil"),
 		},
-		"missing account identifier": {
-			request: &types.TransactionConstructionRequest{
+		"missing options": {
+			request: &types.ConstructionMetadataRequest{
 				NetworkIdentifier: validNetworkIdentifier,
 			},
-			err: errors.New("Account is nil"),
+			err: errors.New("ConstructionMetadataRequest.Options is nil"),
 		},
 	}
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			err := TransactionConstructionRequest(test.request)
+			err := ConstructionMetadataRequest(test.request)
 			assert.Equal(t, test.err, err)
 		})
 	}
 }
 
-func TestTransactionSubmitRequest(t *testing.T) {
+func TestConstructionSubmitRequest(t *testing.T) {
 	var tests = map[string]struct {
-		request *types.TransactionSubmitRequest
+		request *types.ConstructionSubmitRequest
 		err     error
 	}{
 		"valid request": {
-			request: &types.TransactionSubmitRequest{
+			request: &types.ConstructionSubmitRequest{
 				SignedTransaction: "tx",
 			},
 			err: nil,
 		},
 		"nil request": {
 			request: nil,
-			err:     errors.New("TransactionSubmitRequest is nil"),
+			err:     errors.New("ConstructionSubmitRequest is nil"),
 		},
 		"empty tx": {
-			request: &types.TransactionSubmitRequest{},
-			err:     errors.New("TransactionSubmitRequest.SignedTransaction is empty"),
+			request: &types.ConstructionSubmitRequest{},
+			err:     errors.New("ConstructionSubmitRequest.SignedTransaction is empty"),
 		},
 	}
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			err := TransactionSubmitRequest(test.request)
+			err := ConstructionSubmitRequest(test.request)
 			assert.Equal(t, test.err, err)
 		})
 	}
@@ -340,24 +332,53 @@ func TestMempoolTransactionRequest(t *testing.T) {
 	}
 }
 
-func TestNetworkStatusRequest(t *testing.T) {
+func TestMetadataRequest(t *testing.T) {
 	var tests = map[string]struct {
-		request *types.NetworkStatusRequest
+		request *types.MetadataRequest
 		err     error
 	}{
 		"valid request": {
-			request: &types.NetworkStatusRequest{},
+			request: &types.MetadataRequest{},
 			err:     nil,
 		},
 		"nil request": {
 			request: nil,
-			err:     errors.New("NetworkStatusRequest is nil"),
+			err:     errors.New("MetadataRequest is nil"),
 		},
 	}
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			err := NetworkStatusRequest(test.request)
+			err := MetadataRequest(test.request)
+			assert.Equal(t, test.err, err)
+		})
+	}
+}
+
+func TestNetworkRequest(t *testing.T) {
+	var tests = map[string]struct {
+		request *types.NetworkRequest
+		err     error
+	}{
+		"valid request": {
+			request: &types.NetworkRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+			},
+			err: nil,
+		},
+		"nil request": {
+			request: nil,
+			err:     errors.New("NetworkRequest is nil"),
+		},
+		"missing network": {
+			request: &types.NetworkRequest{},
+			err:     errors.New("NetworkIdentifier is nil"),
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			err := NetworkRequest(test.request)
 			assert.Equal(t, test.err, err)
 		})
 	}

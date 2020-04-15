@@ -21,24 +21,6 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
-// containsAccountIdentifier returns a boolean indicating if a
-// *types.AccountIdentifier is contained within a slice of
-// *types.AccountIdentifier. The check for equality takes
-// into account everything within the types.AccountIdentifier
-// struct (including the SubAccountIdentifier).
-func containsAccountIdentifier(
-	identifiers []*types.AccountIdentifier,
-	identifier *types.AccountIdentifier,
-) bool {
-	for _, ident := range identifiers {
-		if reflect.DeepEqual(ident, identifier) {
-			return true
-		}
-	}
-
-	return false
-}
-
 // containsCurrency returns a boolean indicating if a
 // *types.Currency is contained within a slice of
 // *types.Currency. The check for equality takes
@@ -83,31 +65,11 @@ func assertBalanceAmounts(amounts []*types.Amount) error {
 // or if a types.Balance is considered invalid.
 func AccountBalance(
 	block *types.BlockIdentifier,
-	balances []*types.Balance,
+	balances []*types.Amount,
 ) error {
 	if err := BlockIdentifier(block); err != nil {
 		return err
 	}
 
-	accounts := make([]*types.AccountIdentifier, 0)
-	for _, balance := range balances {
-		if err := AccountIdentifier(balance.AccountIdentifier); err != nil {
-			return err
-		}
-
-		// Ensure an account identifier is used at most once in a balance response
-		if containsAccountIdentifier(accounts, balance.AccountIdentifier) {
-			return fmt.Errorf(
-				"account identifier %+v used in balance multiple times",
-				balance.AccountIdentifier,
-			)
-		}
-		accounts = append(accounts, balance.AccountIdentifier)
-
-		if err := assertBalanceAmounts(balance.Amounts); err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return assertBalanceAmounts(balances)
 }

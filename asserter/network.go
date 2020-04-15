@@ -17,6 +17,7 @@ package asserter
 import (
 	"errors"
 	"fmt"
+	"reflect"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
@@ -95,46 +96,29 @@ func StringArray(arrName string, arr []string) error {
 	return nil
 }
 
-// NetworkInformation ensures any types.NetworkInformation
-// included in types.NetworkStatus or types.SubNetworkStatus is valid.
-func NetworkInformation(networkInformation *types.NetworkInformation) error {
-	if networkInformation == nil {
-		return errors.New("network information is nil")
+// NetworkStatusResponse ensures any types.NetworkStatusResponse
+// is valid.
+func NetworkStatusResponse(response *types.NetworkStatusResponse) error {
+	if response == nil {
+		return errors.New("network status response is nil")
 	}
 
-	if err := BlockIdentifier(networkInformation.CurrentBlockIdentifier); err != nil {
+	if err := BlockIdentifier(response.CurrentBlockIdentifier); err != nil {
 		return err
 	}
 
-	if err := Timestamp(networkInformation.CurrentBlockTimestamp); err != nil {
+	if err := Timestamp(response.CurrentBlockTimestamp); err != nil {
 		return err
 	}
 
-	if err := BlockIdentifier(networkInformation.GenesisBlockIdentifier); err != nil {
+	if err := BlockIdentifier(response.GenesisBlockIdentifier); err != nil {
 		return err
 	}
 
-	for _, peer := range networkInformation.Peers {
+	for _, peer := range response.Peers {
 		if err := Peer(peer); err != nil {
 			return err
 		}
-	}
-
-	return nil
-}
-
-// NetworkStatus ensures a types.NetworkStatus object is valid.
-func NetworkStatus(networkStatus *types.NetworkStatus) error {
-	if networkStatus == nil {
-		return errors.New("network status is nil")
-	}
-
-	if err := NetworkIdentifier(networkStatus.NetworkIdentifier); err != nil {
-		return err
-	}
-
-	if err := NetworkInformation(networkStatus.NetworkInformation); err != nil {
-		return err
 	}
 
 	return nil
@@ -144,7 +128,7 @@ func NetworkStatus(networkStatus *types.NetworkStatus) error {
 // are valid and that there exists at least 1 successful status.
 func OperationStatuses(statuses []*types.OperationStatus) error {
 	if len(statuses) == 0 {
-		return errors.New("no Options.OperationStatuses found")
+		return errors.New("no Allow.OperationStatuses found")
 	}
 
 	foundSuccessful := false
@@ -159,7 +143,7 @@ func OperationStatuses(statuses []*types.OperationStatus) error {
 	}
 
 	if !foundSuccessful {
-		return errors.New("no successful Options.OperationStatuses found")
+		return errors.New("no successful Allow.OperationStatuses found")
 	}
 
 	return nil
@@ -203,42 +187,71 @@ func Errors(rosettaErrors []*types.Error) error {
 	return nil
 }
 
-// NetworkOptions ensures a types.Options object is valid.
-func NetworkOptions(options *types.Options) error {
-	if options == nil {
-		return errors.New("options is nil")
+// Allow ensures a types.Allow object is valid.
+func Allow(allowed *types.Allow) error {
+	if allowed == nil {
+		return errors.New("Allow is nil")
 	}
 
-	if err := OperationStatuses(options.OperationStatuses); err != nil {
+	if err := OperationStatuses(allowed.OperationStatuses); err != nil {
 		return err
 	}
 
-	if err := StringArray("Options.OperationTypes", options.OperationTypes); err != nil {
+	if err := StringArray("Allow.OperationTypes", allowed.OperationTypes); err != nil {
 		return err
 	}
 
-	if err := Errors(options.Errors); err != nil {
+	if err := Errors(allowed.Errors); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-// NetworkStatusResponse orchestrates assertions for all
-// components of a types.NetworkStatus.
-func NetworkStatusResponse(response *types.NetworkStatusResponse) error {
-	for _, network := range response.NetworkStatus {
-		if err := NetworkStatus(network); err != nil {
-			return err
+// NetworkOptionsResponse ensures a types.NetworkOptionsResponse object is valid.
+func NetworkOptionsResponse(options *types.NetworkOptionsResponse) error {
+	if options == nil {
+		return errors.New("options is nil")
+	}
+
+	if err := Version(options.Version); err != nil {
+		return err
+	}
+
+	return Allow(options.Allow)
+}
+
+// containsNetworkIdentifier returns a boolean indicating if a
+// *types.NetworkIdentifier is contained within a slice of
+// *types.NetworkIdentifier. The check for equality takes
+// into account everything within the types.NetworkIdentifier
+// struct (including currency.Metadata).
+func containsNetworkIdentifier(
+	networks []*types.NetworkIdentifier,
+	network *types.NetworkIdentifier,
+) bool {
+	for _, net := range networks {
+		if reflect.DeepEqual(net, network) {
+			return true
 		}
 	}
 
-	if err := Version(response.Version); err != nil {
-		return err
+	return false
+}
+
+// NetworkListResponse ensures a types.NetworkListResponse object is valid.
+func NetworkListResponse(response *types.NetworkListResponse) error {
+	if response == nil {
+		return errors.New("NetworkListResponse is nil")
 	}
 
-	if err := NetworkOptions(response.Options); err != nil {
-		return err
+	seen := make([]*types.NetworkIdentifier, 0)
+	for _, network := range response.NetworkIdentifiers {
+		if containsNetworkIdentifier(seen, network) {
+			return errors.New("NetworkListResponse.Networks contains duplicates")
+		}
+
+		seen = append(seen, network)
 	}
 
 	return nil

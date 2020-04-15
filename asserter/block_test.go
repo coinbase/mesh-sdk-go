@@ -386,16 +386,12 @@ func TestOperation(t *testing.T) {
 		asserter, err := New(
 			context.Background(),
 			&types.NetworkStatusResponse{
-				NetworkStatus: []*types.NetworkStatus{
-					{
-						NetworkInformation: &types.NetworkInformation{
-							GenesisBlockIdentifier: &types.BlockIdentifier{
-								Index: 0,
-							},
-						},
-					},
+				GenesisBlockIdentifier: &types.BlockIdentifier{
+					Index: 0,
 				},
-				Options: &types.Options{
+			},
+			&types.NetworkOptionsResponse{
+				Allow: &types.Allow{
 					OperationStatuses: []*types.OperationStatus{
 						{
 							Status:     "SUCCESS",
@@ -544,16 +540,12 @@ func TestBlock(t *testing.T) {
 			asserter, err := New(
 				context.Background(),
 				&types.NetworkStatusResponse{
-					NetworkStatus: []*types.NetworkStatus{
-						{
-							NetworkInformation: &types.NetworkInformation{
-								GenesisBlockIdentifier: &types.BlockIdentifier{
-									Index: test.genesisIndex,
-								},
-							},
-						},
+					GenesisBlockIdentifier: &types.BlockIdentifier{
+						Index: test.genesisIndex,
 					},
-					Options: &types.Options{
+				},
+				&types.NetworkOptionsResponse{
+					Allow: &types.Allow{
 						OperationStatuses: []*types.OperationStatus{},
 						OperationTypes:    []string{},
 					},

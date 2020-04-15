@@ -16,7 +16,8 @@
 
 package types
 
-// TransactionSubmitRequest The transaction submission request includes a signed transaction.
-type TransactionSubmitRequest struct {
-	SignedTransaction string `json:"signed_transaction"`
+// MetadataRequest A MetadataRequest is utilized in any request where the only argument is optional
+// metadata.
+type MetadataRequest struct {
+	Metadata *map[string]interface{} `json:"metadata,omitempty"`
 }
