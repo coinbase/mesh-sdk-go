@@ -16,8 +16,15 @@ package asserter
 
 import (
 	"context"
+	"errors"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
+)
+
+var (
+	// ErrAsserterNotInitialized is returned when some call in the asserter
+	// package requires the asserter to be initialized first.
+	ErrAsserterNotInitialized = errors.New("asserter not initialized")
 )
 
 // Asserter contains all logic to perform static
@@ -37,6 +44,14 @@ func NewWithResponses(
 	networkStatus *types.NetworkStatusResponse,
 	networkOptions *types.NetworkOptionsResponse,
 ) (*Asserter, error) {
+	if err := NetworkStatusResponse(networkStatus); err != nil {
+		return nil, err
+	}
+
+	if err := NetworkOptionsResponse(networkOptions); err != nil {
+		return nil, err
+	}
+
 	return NewWithOptions(
 		ctx,
 		networkStatus.GenesisBlockIdentifier,
@@ -72,13 +87,4 @@ func NewWithOptions(
 	}
 
 	return asserter
-}
-
-func (a *Asserter) operationStatuses() []string {
-	statuses := []string{}
-	for k := range a.operationStatusMap {
-		statuses = append(statuses, k)
-	}
-
-	return statuses
 }
