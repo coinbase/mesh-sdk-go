@@ -126,56 +126,124 @@ func TestContainsCurrency(t *testing.T) {
 }
 
 func TestAccoutBalance(t *testing.T) {
-	validBlock := &types.BlockIdentifier{
-		Index: 1000,
-		Hash:  "jsakdl",
-	}
+	var (
+		validBlock = &types.BlockIdentifier{
+			Index: 1000,
+			Hash:  "jsakdl",
+		}
 
-	invalidBlock := &types.BlockIdentifier{
-		Index: 1,
-		Hash:  "",
-	}
+		invalidBlock = &types.BlockIdentifier{
+			Index: 1,
+			Hash:  "",
+		}
 
-	validAmount := &types.Amount{
-		Value: "100",
-		Currency: &types.Currency{
-			Symbol:   "BTC",
-			Decimals: 8,
-		},
-	}
+		invalidIndex = int64(1001)
+		invalidHash  = "ajsdk"
+
+		validAmount = &types.Amount{
+			Value: "100",
+			Currency: &types.Currency{
+				Symbol:   "BTC",
+				Decimals: 8,
+			},
+		}
+	)
 
 	var tests = map[string]struct {
-		block    *types.BlockIdentifier
-		balances []*types.Amount
-		err      error
+		requestBlock  *types.PartialBlockIdentifier
+		responseBlock *types.BlockIdentifier
+		balances      []*types.Amount
+		err           error
 	}{
 		"simple balance": {
-			block: validBlock,
+			responseBlock: validBlock,
 			balances: []*types.Amount{
 				validAmount,
 			},
 			err: nil,
 		},
 		"invalid block": {
-			block: invalidBlock,
+			responseBlock: invalidBlock,
 			balances: []*types.Amount{
 				validAmount,
 			},
 			err: errors.New("BlockIdentifier.Hash is missing"),
 		},
 		"duplicate currency": {
-			block: validBlock,
+			responseBlock: validBlock,
 			balances: []*types.Amount{
 				validAmount,
 				validAmount,
 			},
 			err: fmt.Errorf("currency %+v used in balance multiple times", validAmount.Currency),
 		},
+		"valid historical request index": {
+			requestBlock: &types.PartialBlockIdentifier{
+				Index: &validBlock.Index,
+			},
+			responseBlock: validBlock,
+			balances: []*types.Amount{
+				validAmount,
+			},
+			err: nil,
+		},
+		"valid historical request hash": {
+			requestBlock: &types.PartialBlockIdentifier{
+				Hash: &validBlock.Hash,
+			},
+			responseBlock: validBlock,
+			balances: []*types.Amount{
+				validAmount,
+			},
+			err: nil,
+		},
+		"valid historical request": {
+			requestBlock:  types.ConstructPartialBlockIdentifier(validBlock),
+			responseBlock: validBlock,
+			balances: []*types.Amount{
+				validAmount,
+			},
+			err: nil,
+		},
+		"invalid historical request index": {
+			requestBlock: &types.PartialBlockIdentifier{
+				Hash:  &validBlock.Hash,
+				Index: &invalidIndex,
+			},
+			responseBlock: validBlock,
+			balances: []*types.Amount{
+				validAmount,
+			},
+			err: fmt.Errorf(
+				"request block index %d does not match response block index %d",
+				invalidIndex,
+				validBlock.Index,
+			),
+		},
+		"invalid historical request hash": {
+			requestBlock: &types.PartialBlockIdentifier{
+				Hash:  &invalidHash,
+				Index: &validBlock.Index,
+			},
+			responseBlock: validBlock,
+			balances: []*types.Amount{
+				validAmount,
+			},
+			err: fmt.Errorf(
+				"request block hash %s does not match response block hash %s",
+				invalidHash,
+				validBlock.Hash,
+			),
+		},
 	}
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			err := AccountBalance(test.block, test.balances)
+			err := AccountBalanceResponse(
+				test.requestBlock,
+				test.responseBlock,
+				test.balances,
+			)
 			assert.Equal(t, test.err, err)
 		})
 	}
