@@ -50,11 +50,13 @@ func (f *Fetcher) ConstructionMetadata(
 // from the ConstructionSubmit method.
 func (f *Fetcher) ConstructionSubmit(
 	ctx context.Context,
+	network *types.NetworkIdentifier,
 	signedTransaction string,
 ) (*types.TransactionIdentifier, *map[string]interface{}, error) {
 	submitResponse, _, err := f.rosettaClient.ConstructionAPI.ConstructionSubmit(
 		ctx,
 		&types.ConstructionSubmitRequest{
+			NetworkIdentifier: network,
 			SignedTransaction: signedTransaction,
 		},
 	)
