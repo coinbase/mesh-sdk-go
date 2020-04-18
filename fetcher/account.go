@@ -25,51 +25,61 @@ import (
 )
 
 // AccountBalance returns the validated response
-// from the AccountBalance method.
+// from the AccountBalance method. If a block
+// is provided, a historical lookup is performed.
 func (f *Fetcher) AccountBalance(
 	ctx context.Context,
 	network *types.NetworkIdentifier,
 	account *types.AccountIdentifier,
-) (*types.BlockIdentifier, []*types.Amount, error) {
+	block *types.PartialBlockIdentifier,
+) (*types.BlockIdentifier, []*types.Amount, *map[string]interface{}, error) {
 	response, _, err := f.rosettaClient.AccountAPI.AccountBalance(ctx,
 		&types.AccountBalanceRequest{
 			NetworkIdentifier: network,
 			AccountIdentifier: account,
+			BlockIdentifier:   block,
 		},
 	)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
-	block := response.BlockIdentifier
+	responseBlock := response.BlockIdentifier
 	balances := response.Balances
-	if err := asserter.AccountBalance(block, balances); err != nil {
-		return nil, nil, err
+	if err := asserter.AccountBalanceResponse(
+		block,
+		responseBlock,
+		balances,
+	); err != nil {
+		return nil, nil, nil, err
 	}
 
-	return block, balances, nil
+	return responseBlock, balances, response.Metadata, nil
 }
 
 // AccountBalanceRetry retrieves the validated AccountBalance
 // with a specified number of retries and max elapsed time.
+// If a block is provided, a historical lookup is performed.
 func (f *Fetcher) AccountBalanceRetry(
 	ctx context.Context,
 	network *types.NetworkIdentifier,
 	account *types.AccountIdentifier,
-) (*types.BlockIdentifier, []*types.Amount, error) {
+	block *types.PartialBlockIdentifier,
+) (*types.BlockIdentifier, []*types.Amount, *map[string]interface{}, error) {
 	backoffRetries := backoffRetries(
 		f.retryElapsedTime,
 		f.maxRetries,
 	)
 
 	for ctx.Err() == nil {
-		block, balances, err := f.AccountBalance(
+		responseBlock, balances, metadata, err := f.AccountBalance(
 			ctx,
 			network,
 			account,
+			block,
 		)
 		if err == nil {
-			return block, balances, nil
+			return responseBlock, balances, metadata, nil
 		}
 
 		if !tryAgain(fmt.Sprintf("account %s", account.Address), backoffRetries, err) {
@@ -77,5 +87,5 @@ func (f *Fetcher) AccountBalanceRetry(
 		}
 	}
 
-	return nil, nil, errors.New("exhausted retries for account")
+	return nil, nil, nil, errors.New("exhausted retries for account")
 }
