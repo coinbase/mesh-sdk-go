@@ -58,18 +58,42 @@ func assertBalanceAmounts(amounts []*types.Amount) error {
 	return nil
 }
 
-// AccountBalance returns an error if the provided
-// types.BlockIdentifier is invalid, if the same
-// types.AccountIdentifier appears in multiple
-// types.Balance structs (should be consolidated),
-// or if a types.Balance is considered invalid.
-func AccountBalance(
-	block *types.BlockIdentifier,
+// AccountBalanceResponse returns an error if the provided
+// types.BlockIdentifier is invalid, if the requestBlock
+// is not nil and not equal to the response block, or
+// if the same currency is present in multiple amounts.
+func AccountBalanceResponse(
+	requestBlock *types.PartialBlockIdentifier,
+	responseBlock *types.BlockIdentifier,
 	balances []*types.Amount,
 ) error {
-	if err := BlockIdentifier(block); err != nil {
+	if err := BlockIdentifier(responseBlock); err != nil {
 		return err
 	}
 
-	return assertBalanceAmounts(balances)
+	if err := assertBalanceAmounts(balances); err != nil {
+		return err
+	}
+
+	if requestBlock == nil {
+		return nil
+	}
+
+	if requestBlock.Hash != nil && *requestBlock.Hash != responseBlock.Hash {
+		return fmt.Errorf(
+			"request block hash %s does not match response block hash %s",
+			*requestBlock.Hash,
+			responseBlock.Hash,
+		)
+	}
+
+	if requestBlock.Index != nil && *requestBlock.Index != responseBlock.Index {
+		return fmt.Errorf(
+			"request block index %d does not match response block index %d",
+			*requestBlock.Index,
+			responseBlock.Index,
+		)
+	}
+
+	return nil
 }
