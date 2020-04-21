@@ -26,5 +26,5 @@ type SubAccountIdentifier struct {
 	// If the SubAccount address is not sufficient to uniquely specify a SubAccount, any other
 	// identifying information can be stored here.  It is important to note that two SubAccounts
 	// with identical addresses but differing metadata will not be considered equal by clients.
-	Metadata *map[string]interface{} `json:"metadata,omitempty"`
+	Metadata map[string]interface{} `json:"metadata,omitempty"`
 }

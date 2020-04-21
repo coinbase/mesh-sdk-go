@@ -48,7 +48,7 @@ func TestContainsCurrency(t *testing.T) {
 				{
 					Symbol:   "BTC",
 					Decimals: 8,
-					Metadata: &map[string]interface{}{
+					Metadata: map[string]interface{}{
 						"blah": "hello",
 					},
 				},
@@ -56,7 +56,7 @@ func TestContainsCurrency(t *testing.T) {
 			currency: &types.Currency{
 				Symbol:   "BTC",
 				Decimals: 8,
-				Metadata: &map[string]interface{}{
+				Metadata: map[string]interface{}{
 					"blah": "hello",
 				},
 			},
@@ -101,7 +101,7 @@ func TestContainsCurrency(t *testing.T) {
 				{
 					Symbol:   "BTC",
 					Decimals: 8,
-					Metadata: &map[string]interface{}{
+					Metadata: map[string]interface{}{
 						"blah": "hello",
 					},
 				},
@@ -109,7 +109,7 @@ func TestContainsCurrency(t *testing.T) {
 			currency: &types.Currency{
 				Symbol:   "BTC",
 				Decimals: 8,
-				Metadata: &map[string]interface{}{
+				Metadata: map[string]interface{}{
 					"blah": "bye",
 				},
 			},

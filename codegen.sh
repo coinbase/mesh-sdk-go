@@ -118,6 +118,9 @@ sed "${SED_IFLAG[@]}" 's/<\/code>//g' client/* server/*;
 # Fix slice containing pointers
 sed "${SED_IFLAG[@]}" 's/\*\[\]/\[\]\*/g' client/* server/*;
 
+# Fix map pointers
+sed "${SED_IFLAG[@]}" 's/\*map/map/g' client/* server/*;
+
 # Move model files to types/
 mv client/model_*.go types/;
 for file in types/model_*.go; do

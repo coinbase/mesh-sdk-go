@@ -52,7 +52,7 @@ func (f *Fetcher) MempoolTransaction(
 	ctx context.Context,
 	network *types.NetworkIdentifier,
 	transaction *types.TransactionIdentifier,
-) (*types.Transaction, *map[string]interface{}, error) {
+) (*types.Transaction, map[string]interface{}, error) {
 	response, _, err := f.rosettaClient.MempoolAPI.MempoolTransaction(
 		ctx,
 		&types.MempoolTransactionRequest{

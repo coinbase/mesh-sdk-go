@@ -26,5 +26,5 @@ type AccountIdentifier struct {
 	SubAccount *SubAccountIdentifier `json:"sub_account,omitempty"`
 	// Blockchains that utilize a username model (where the address is not a derivative of a
 	// cryptographic public key) should specify the public key(s) owned by the address in metadata.
-	Metadata *map[string]interface{} `json:"metadata,omitempty"`
+	Metadata map[string]interface{} `json:"metadata,omitempty"`
 }

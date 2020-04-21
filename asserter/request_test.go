@@ -213,7 +213,7 @@ func TestConstructionMetadataRequest(t *testing.T) {
 		"valid request": {
 			request: &types.ConstructionMetadataRequest{
 				NetworkIdentifier: validNetworkIdentifier,
-				Options:           &map[string]interface{}{},
+				Options:           map[string]interface{}{},
 			},
 			err: nil,
 		},
@@ -223,7 +223,7 @@ func TestConstructionMetadataRequest(t *testing.T) {
 		},
 		"missing network": {
 			request: &types.ConstructionMetadataRequest{
-				Options: &map[string]interface{}{},
+				Options: map[string]interface{}{},
 			},
 			err: errors.New("NetworkIdentifier is nil"),
 		},

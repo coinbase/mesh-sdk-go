@@ -20,5 +20,5 @@ package types
 // used for transaction construction. It is likely that the client will not inspect this metadata
 // before passing it to a client SDK that uses it for construction.
 type ConstructionMetadataResponse struct {
-	Metadata *map[string]interface{} `json:"metadata"`
+	Metadata map[string]interface{} `json:"metadata"`
 }
