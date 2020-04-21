@@ -15,8 +15,8 @@
 package asserter
 
 import (
-	"context"
 	"errors"
+	"fmt"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
@@ -63,7 +63,7 @@ func NewWithResponses(
 		networkOptions.Allow.OperationTypes,
 		networkOptions.Allow.OperationStatuses,
 		networkOptions.Allow.Errors,
-	), nil
+	)
 }
 
 // NewWithFile constructs a new Asserter using a specification
@@ -92,7 +92,15 @@ func NewWithOptions(
 	operationTypes []string,
 	operationStatuses []*types.OperationStatus,
 	errors []*types.Error,
-) *Asserter {
+) (*Asserter, error) {
+	if err := NetworkIdentifier(network); err != nil {
+		return nil, err
+	}
+
+	if err := BlockIdentifier(genesisBlockIdentifier); err != nil {
+		return nil, err
+	}
+
 	asserter := &Asserter{
 		network:        network,
 		operationTypes: operationTypes,
@@ -109,10 +117,16 @@ func NewWithOptions(
 		asserter.errorTypeMap[err.Code] = err
 	}
 
-	return asserter
+	return asserter, nil
 }
 
-func (a *Asserter) Configuration(ctx context.Context) (*types.NetworkIdentifier, *types.BlockIdentifier, []string, []*types.OperationStatus, []*types.Error) {
+// Configuration returns all variables currently set in an Asserter.
+// This function will error if it is called on an uninitialized asserter.
+func (a *Asserter) Configuration() (*types.NetworkIdentifier, *types.BlockIdentifier, []string, []*types.OperationStatus, []*types.Error, error) {
+	if a == nil {
+		return nil, nil, nil, nil, nil, ErrAsserterNotInitialized
+	}
+
 	operationStatuses := []*types.OperationStatus{}
 	for k, v := range a.operationStatusMap {
 		operationStatuses = append(operationStatuses, &types.OperationStatus{
@@ -126,5 +140,21 @@ func (a *Asserter) Configuration(ctx context.Context) (*types.NetworkIdentifier,
 		errors = append(errors, v)
 	}
 
-	return a.network, a.genesisBlock, a.operationTypes, operationStatuses, errors
+	return a.network, a.genesisBlock, a.operationTypes, operationStatuses, errors, nil
+}
+
+// OperationSuccessful returns a boolean indicating if a types.Operation is
+// successful and should be applied in a transaction. This should only be called
+// AFTER an operation has been validated.
+func (a *Asserter) OperationSuccessful(operation *types.Operation) (bool, error) {
+	if a == nil {
+		return false, ErrAsserterNotInitialized
+	}
+
+	val, ok := a.operationStatusMap[operation.Status]
+	if !ok {
+		return false, fmt.Errorf("%s not found", operation.Status)
+	}
+
+	return val, nil
 }

@@ -49,18 +49,6 @@ func Amount(amount *types.Amount) error {
 	return nil
 }
 
-// contains checks if a string is contained in a slice
-// of strings.
-func contains(valid []string, value string) bool {
-	for _, v := range valid {
-		if v == value {
-			return true
-		}
-	}
-
-	return false
-}
-
 // OperationIdentifier returns an error if index of the
 // types.Operation is out-of-order or if the NetworkIndex is
 // invalid.
@@ -101,35 +89,48 @@ func AccountIdentifier(account *types.AccountIdentifier) error {
 	return nil
 }
 
-// OperationSuccessful returns a boolean indicating if a types.Operation is
-// successful and should be applied in a transaction. This should only be called
-// AFTER an operation has been validated.
-func (a *Asserter) OperationSuccessful(operation *types.Operation) (bool, error) {
-	if a == nil {
-		return false, ErrAsserterNotInitialized
+// contains checks if a string is contained in a slice
+// of strings.
+func contains(valid []string, value string) bool {
+	for _, v := range valid {
+		if v == value {
+			return true
+		}
 	}
 
-	val, ok := a.operationStatusMap[operation.Status]
-	if !ok {
-		return false, fmt.Errorf("%s not found", operation.Status)
-	}
-
-	return val, nil
+	return false
 }
 
-// operationStatuses returns all operation statuses the
-// asserter consider valid.
-func (a *Asserter) operationStatuses() ([]string, error) {
+// OperationStatus returns an error if an operation.Status
+// is not valid.
+func (a *Asserter) OperationStatus(status string) error {
 	if a == nil {
-		return nil, ErrAsserterNotInitialized
+		return ErrAsserterNotInitialized
 	}
 
-	statuses := []string{}
-	for k := range a.operationStatusMap {
-		statuses = append(statuses, k)
+	if status == "" {
+		return errors.New("operation.Status is empty")
 	}
 
-	return statuses, nil
+	if _, ok := a.operationStatusMap[status]; !ok {
+		return fmt.Errorf("Operation.Status %s is invalid", status)
+	}
+
+	return nil
+}
+
+// OperationType returns an error if an operation.Type
+// is not valid.
+func (a *Asserter) OperationType(t string) error {
+	if a == nil {
+		return ErrAsserterNotInitialized
+	}
+
+	if t == "" || !contains(a.operationTypes, t) {
+		return fmt.Errorf("Operation.Type %s is invalid", t)
+	}
+
+	return nil
 }
 
 // Operation ensures a types.Operation has a valid
@@ -150,17 +151,12 @@ func (a *Asserter) Operation(
 		return err
 	}
 
-	if operation.Type == "" || !contains(a.operationTypes, operation.Type) {
-		return fmt.Errorf("Operation.Type %s is invalid", operation.Type)
-	}
-
-	validOperationStatuses, err := a.operationStatuses()
-	if err != nil {
+	if err := a.OperationType(operation.Type); err != nil {
 		return err
 	}
 
-	if operation.Status == "" || !contains(validOperationStatuses, operation.Status) {
-		return fmt.Errorf("Operation.Status %s is invalid", operation.Status)
+	if err := a.OperationStatus(operation.Status); err != nil {
+		return err
 	}
 
 	if operation.Amount == nil {
