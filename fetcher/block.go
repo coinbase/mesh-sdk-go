@@ -18,7 +18,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
 	"github.com/coinbase/rosetta-sdk-go/types"
@@ -227,13 +226,6 @@ func (f *Fetcher) BlockRetry(
 	return nil, errors.New("exhausted retries for block")
 }
 
-// BlockAndLatency is utilized to track the latency
-// of concurrent block fetches.
-type BlockAndLatency struct {
-	Block   *types.Block
-	Latency float64
-}
-
 // addIndicies appends a range of indicies (from
 // startIndex to endIndex, inclusive) to the
 // blockIndicies channel. When all indicies are added,
@@ -263,10 +255,9 @@ func (f *Fetcher) fetchChannelBlocks(
 	ctx context.Context,
 	network *types.NetworkIdentifier,
 	blockIndicies chan int64,
-	results chan *BlockAndLatency,
+	results chan *types.Block,
 ) error {
 	for b := range blockIndicies {
-		start := time.Now()
 		block, err := f.BlockRetry(
 			ctx,
 			network,
@@ -279,10 +270,7 @@ func (f *Fetcher) fetchChannelBlocks(
 		}
 
 		select {
-		case results <- &BlockAndLatency{
-			Block:   block,
-			Latency: time.Since(start).Seconds(),
-		}:
+		case results <- block:
 		case <-ctx.Done():
 			return ctx.Err()
 		}
@@ -301,9 +289,9 @@ func (f *Fetcher) BlockRange(
 	network *types.NetworkIdentifier,
 	startIndex int64,
 	endIndex int64,
-) (map[int64]*BlockAndLatency, error) {
+) (map[int64]*types.Block, error) {
 	blockIndicies := make(chan int64)
-	results := make(chan *BlockAndLatency)
+	results := make(chan *types.Block)
 	g, ctx := errgroup.WithContext(ctx)
 	g.Go(func() error {
 		return addBlockIndicies(ctx, blockIndicies, startIndex, endIndex)
@@ -322,9 +310,9 @@ func (f *Fetcher) BlockRange(
 		close(results)
 	}()
 
-	m := make(map[int64]*BlockAndLatency)
+	m := make(map[int64]*types.Block)
 	for b := range results {
-		m[b.Block.BlockIdentifier.Index] = b
+		m[b.BlockIdentifier.Index] = b
 	}
 
 	err := g.Wait()
