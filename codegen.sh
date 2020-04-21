@@ -53,7 +53,9 @@ done
 rm -rf tmp;
 
 # Generate client + types code
-docker run --user "$(id -u):$(id -g)" --rm -v "${PWD}":/local openapitools/openapi-generator-cli generate \
+GENERATOR_VERSION='v4.3.0'
+docker run --user "$(id -u):$(id -g)" --rm -v "${PWD}":/local \
+  openapitools/openapi-generator-cli:${GENERATOR_VERSION} generate \
   -i /local/templates/spec.json \
   -g go \
   -t /local/templates/client \
@@ -76,7 +78,8 @@ mv client_tmp/* client;
 rm -rf client_tmp;
 
 # Add server code
-docker run --user "$(id -u):$(id -g)" --rm -v "${PWD}":/local openapitools/openapi-generator-cli generate \
+docker run --user "$(id -u):$(id -g)" --rm -v "${PWD}":/local \
+  openapitools/openapi-generator-cli:${GENERATOR_VERSION} generate \
   -i /local/templates/spec.json \
   -g go-server \
   -t /local/templates/server \
