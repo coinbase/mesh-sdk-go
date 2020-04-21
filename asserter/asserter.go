@@ -15,6 +15,7 @@
 package asserter
 
 import (
+	"context"
 	"errors"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
@@ -29,19 +30,25 @@ var (
 // Asserter contains all logic to perform static
 // validation on Rosetta Server responses.
 type Asserter struct {
+	network            *types.NetworkIdentifier
 	operationTypes     []string
 	operationStatusMap map[string]bool
 	errorTypeMap       map[int32]*types.Error
-	genesisIndex       int64
+	genesisBlock       *types.BlockIdentifier
 }
 
 // NewWithResponses constructs a new Asserter
 // from a NetworkStatusResponse and
 // NetworkOptionsResponse.
 func NewWithResponses(
+	network *types.NetworkIdentifier,
 	networkStatus *types.NetworkStatusResponse,
 	networkOptions *types.NetworkOptionsResponse,
 ) (*Asserter, error) {
+	if err := NetworkIdentifier(network); err != nil {
+		return nil, err
+	}
+
 	if err := NetworkStatusResponse(networkStatus); err != nil {
 		return nil, err
 	}
@@ -51,6 +58,7 @@ func NewWithResponses(
 	}
 
 	return NewWithOptions(
+		network,
 		networkStatus.GenesisBlockIdentifier,
 		networkOptions.Allow.OperationTypes,
 		networkOptions.Allow.OperationStatuses,
@@ -76,16 +84,19 @@ func NewWithFile(
 
 // NewWithOptions constructs a new Asserter using the provided
 // arguments instead of using a NetworkStatusResponse and a
-// NetworkOptionsResponse.
+// NetworkOptionsResponse. NewWithOptions does not check the
+// correctness of inputs.
 func NewWithOptions(
+	network *types.NetworkIdentifier,
 	genesisBlockIdentifier *types.BlockIdentifier,
 	operationTypes []string,
 	operationStatuses []*types.OperationStatus,
 	errors []*types.Error,
 ) *Asserter {
 	asserter := &Asserter{
+		network:        network,
 		operationTypes: operationTypes,
-		genesisIndex:   genesisBlockIdentifier.Index,
+		genesisBlock:   genesisBlockIdentifier,
 	}
 
 	asserter.operationStatusMap = map[string]bool{}
@@ -99,4 +110,21 @@ func NewWithOptions(
 	}
 
 	return asserter
+}
+
+func (a *Asserter) Configuration(ctx context.Context) (*types.NetworkIdentifier, *types.BlockIdentifier, []string, []*types.OperationStatus, []*types.Error) {
+	operationStatuses := []*types.OperationStatus{}
+	for k, v := range a.operationStatusMap {
+		operationStatuses = append(operationStatuses, &types.OperationStatus{
+			Status:     k,
+			Successful: v,
+		})
+	}
+
+	errors := []*types.Error{}
+	for _, v := range a.errorTypeMap {
+		errors = append(errors, v)
+	}
+
+	return a.network, a.genesisBlock, a.operationTypes, operationStatuses, errors
 }

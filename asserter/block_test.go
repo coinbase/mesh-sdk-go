@@ -384,6 +384,10 @@ func TestOperation(t *testing.T) {
 
 	for name, test := range tests {
 		asserter, err := NewWithResponses(
+			&types.NetworkIdentifier{
+				Blockchain: "hello",
+				Network:    "world",
+			},
 			&types.NetworkStatusResponse{
 				GenesisBlockIdentifier: &types.BlockIdentifier{
 					Index: 0,
@@ -554,6 +558,10 @@ func TestBlock(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			asserter, err := NewWithResponses(
+				&types.NetworkIdentifier{
+					Blockchain: "hello",
+					Network:    "world",
+				},
 				&types.NetworkStatusResponse{
 					GenesisBlockIdentifier: &types.BlockIdentifier{
 						Index: test.genesisIndex,

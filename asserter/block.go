@@ -285,7 +285,7 @@ func (a *Asserter) Block(
 
 	// Only apply some assertions if the block index is not the
 	// genesis index.
-	if a.genesisIndex != block.BlockIdentifier.Index {
+	if a.genesisBlock.Index != block.BlockIdentifier.Index {
 		if block.BlockIdentifier.Hash == block.ParentBlockIdentifier.Hash {
 			return errors.New("BlockIdentifier.Hash == ParentBlockIdentifier.Hash")
 		}
