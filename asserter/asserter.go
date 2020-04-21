@@ -15,8 +15,10 @@
 package asserter
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
@@ -66,20 +68,40 @@ func NewWithResponses(
 	)
 }
 
+// FileConfiguration is the structure of the JSON configuration file.
+type FileConfiguration struct {
+	NetworkIdentifier        *types.NetworkIdentifier `json:"network_identifier"`
+	GenesisBlockIdentifier   *types.BlockIdentifier   `json:"genesis_block_identifier"`
+	AllowedOperationTypes    []string                 `json:"allowed_operation_types"`
+	AllowedOperationStatuses []*types.OperationStatus `json:"allowed_operation_statuses"`
+	AllowedErrors            []*types.Error           `json:"allowed_errors"`
+}
+
 // NewWithFile constructs a new Asserter using a specification
 // file instead of responses. This can be useful for running reliable
 // systems that error when updates to the server (more error types,
 // more operations, etc.) significantly change how to parse the chain.
+// The filePath provided is parsed relative to the current directory.
 func NewWithFile(
 	filePath string,
 ) (*Asserter, error) {
-	// load file
+	content, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		return nil, err
+	}
 
-	// parse items
+	config := &FileConfiguration{}
+	if err := json.Unmarshal(content, config); err != nil {
+		return nil, err
+	}
 
-	// run NewWithOptions
-
-	return nil, errors.New("not implemented")
+	return NewWithOptions(
+		config.NetworkIdentifier,
+		config.GenesisBlockIdentifier,
+		config.AllowedOperationTypes,
+		config.AllowedOperationStatuses,
+		config.AllowedErrors,
+	)
 }
 
 // NewWithOptions constructs a new Asserter using the provided
@@ -98,6 +120,14 @@ func NewWithOptions(
 	}
 
 	if err := BlockIdentifier(genesisBlockIdentifier); err != nil {
+		return nil, err
+	}
+
+	if err := OperationStatuses(operationStatuses); err != nil {
+		return nil, err
+	}
+
+	if err := OperationTypes(operationTypes); err != nil {
 		return nil, err
 	}
 

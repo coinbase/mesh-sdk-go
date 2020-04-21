@@ -15,7 +15,11 @@
 package asserter
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
+	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
@@ -23,8 +27,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewWithResponses(t *testing.T) {
+func TestNew(t *testing.T) {
 	var (
+		validNetwork = &types.NetworkIdentifier{
+			Blockchain: "hello",
+			Network:    "world",
+		}
+
 		validNetworkStatus = &types.NetworkStatusResponse{
 			GenesisBlockIdentifier: &types.BlockIdentifier{
 				Index: 0,
@@ -43,9 +52,9 @@ func TestNewWithResponses(t *testing.T) {
 		}
 
 		invalidNetworkStatus = &types.NetworkStatusResponse{
-			GenesisBlockIdentifier: &types.BlockIdentifier{
-				Index: 0,
-				Hash:  "block 0",
+			CurrentBlockIdentifier: &types.BlockIdentifier{
+				Index: 100,
+				Hash:  "block 100",
 			},
 			CurrentBlockTimestamp: 100,
 			Peers: []*types.Peer{
@@ -81,11 +90,38 @@ func TestNewWithResponses(t *testing.T) {
 		}
 
 		invalidNetworkOptions = &types.NetworkOptionsResponse{
+			Version: &types.Version{
+				RosettaVersion: "1.2.3",
+				NodeVersion:    "1.0",
+			},
+			Allow: &types.Allow{
+				OperationTypes: []string{
+					"Transfer",
+				},
+				Errors: []*types.Error{
+					{
+						Code:      1,
+						Message:   "error",
+						Retriable: true,
+					},
+				},
+			},
+		}
+
+		duplicateStatuses = &types.NetworkOptionsResponse{
+			Version: &types.Version{
+				RosettaVersion: "1.2.3",
+				NodeVersion:    "1.0",
+			},
 			Allow: &types.Allow{
 				OperationStatuses: []*types.OperationStatus{
 					{
 						Status:     "Success",
 						Successful: true,
+					},
+					{
+						Status:     "Success",
+						Successful: false,
 					},
 				},
 				OperationTypes: []string{
@@ -100,50 +136,139 @@ func TestNewWithResponses(t *testing.T) {
 				},
 			},
 		}
+
+		duplicateTypes = &types.NetworkOptionsResponse{
+			Version: &types.Version{
+				RosettaVersion: "1.2.3",
+				NodeVersion:    "1.0",
+			},
+			Allow: &types.Allow{
+				OperationStatuses: []*types.OperationStatus{
+					{
+						Status:     "Success",
+						Successful: true,
+					},
+				},
+				OperationTypes: []string{
+					"Transfer",
+					"Transfer",
+				},
+				Errors: []*types.Error{
+					{
+						Code:      1,
+						Message:   "error",
+						Retriable: true,
+					},
+				},
+			},
+		}
 	)
 
 	var tests = map[string]struct {
+		network        *types.NetworkIdentifier
 		networkStatus  *types.NetworkStatusResponse
 		networkOptions *types.NetworkOptionsResponse
 
 		err error
 	}{
 		"valid responses": {
+			network:        validNetwork,
 			networkStatus:  validNetworkStatus,
 			networkOptions: validNetworkOptions,
 
 			err: nil,
 		},
 		"invalid network status": {
+			network:        validNetwork,
 			networkStatus:  invalidNetworkStatus,
 			networkOptions: validNetworkOptions,
 
 			err: errors.New("BlockIdentifier is nil"),
 		},
 		"invalid network options": {
+			network:        validNetwork,
 			networkStatus:  validNetworkStatus,
 			networkOptions: invalidNetworkOptions,
 
-			err: errors.New("version is nil"),
+			err: errors.New("no Allow.OperationStatuses found"),
+		},
+		"duplicate operation statuses": {
+			network:        validNetwork,
+			networkStatus:  validNetworkStatus,
+			networkOptions: duplicateStatuses,
+
+			err: errors.New("Allow.OperationStatuses contains a duplicate Success"),
+		},
+		"duplicate operation types": {
+			network:        validNetwork,
+			networkStatus:  validNetworkStatus,
+			networkOptions: duplicateTypes,
+
+			err: errors.New("Allow.OperationTypes contains a duplicate Transfer"),
 		},
 	}
 
 	for name, test := range tests {
-		t.Run(name, func(t *testing.T) {
+		t.Run(fmt.Sprintf("%s with responses", name), func(t *testing.T) {
 			asserter, err := NewWithResponses(
-				&types.NetworkIdentifier{
-					Blockchain: "hello",
-					Network:    "world",
-				},
+				test.network,
 				test.networkStatus,
 				test.networkOptions,
 			)
 
-			if err == nil {
-				assert.NotNil(t, asserter)
+			assert.Equal(t, test.err, err)
+
+			if test.err != nil {
+				return
 			}
 
+			assert.NotNil(t, asserter)
+			network, genesis, opTypes, opStatuses, errors, err := asserter.Configuration()
+			assert.NoError(t, err)
+			assert.Equal(t, test.network, network)
+			assert.Equal(t, test.networkStatus.GenesisBlockIdentifier, genesis)
+			assert.ElementsMatch(t, test.networkOptions.Allow.OperationTypes, opTypes)
+			assert.ElementsMatch(t, test.networkOptions.Allow.OperationStatuses, opStatuses)
+			assert.ElementsMatch(t, test.networkOptions.Allow.Errors, errors)
+		})
+
+		t.Run(fmt.Sprintf("%s with file", name), func(t *testing.T) {
+			fileConfig := FileConfiguration{
+				NetworkIdentifier:        test.network,
+				GenesisBlockIdentifier:   test.networkStatus.GenesisBlockIdentifier,
+				AllowedOperationTypes:    test.networkOptions.Allow.OperationTypes,
+				AllowedOperationStatuses: test.networkOptions.Allow.OperationStatuses,
+				AllowedErrors:            test.networkOptions.Allow.Errors,
+			}
+			tmpfile, err := ioutil.TempFile("", "test.json")
+			assert.NoError(t, err)
+			defer os.Remove(tmpfile.Name())
+
+			file, err := json.MarshalIndent(fileConfig, "", " ")
+			assert.NoError(t, err)
+
+			_, err = tmpfile.Write(file)
+			assert.NoError(t, err)
+			assert.NoError(t, tmpfile.Close())
+
+			asserter, err := NewWithFile(
+				tmpfile.Name(),
+			)
+
 			assert.Equal(t, test.err, err)
+
+			if test.err != nil {
+				return
+			}
+
+			assert.NotNil(t, asserter)
+			network, genesis, opTypes, opStatuses, errors, err := asserter.Configuration()
+			assert.NoError(t, err)
+			assert.Equal(t, test.network, network)
+			assert.Equal(t, test.networkStatus.GenesisBlockIdentifier, genesis)
+			assert.ElementsMatch(t, test.networkOptions.Allow.OperationTypes, opTypes)
+			assert.ElementsMatch(t, test.networkOptions.Allow.OperationStatuses, opStatuses)
+			assert.ElementsMatch(t, test.networkOptions.Allow.Errors, errors)
 		})
 	}
 }

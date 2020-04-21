@@ -81,16 +81,23 @@ func Version(version *types.Version) error {
 }
 
 // StringArray ensures all strings in an array
-// are non-empty strings.
+// are non-empty strings and not duplicates.
 func StringArray(arrName string, arr []string) error {
 	if len(arr) == 0 {
 		return fmt.Errorf("no %s found", arrName)
 	}
 
-	for _, s := range arr {
+	parsed := make([]string, len(arr))
+	for i, s := range arr {
 		if s == "" {
 			return fmt.Errorf("%s has an empty string", arrName)
 		}
+
+		if contains(parsed, s) {
+			return fmt.Errorf("%s contains a duplicate %s", arrName, s)
+		}
+
+		parsed[i] = s
 	}
 
 	return nil
@@ -124,15 +131,16 @@ func NetworkStatusResponse(response *types.NetworkStatusResponse) error {
 	return nil
 }
 
-// OperationStatuses ensures all items in Options.OperationStatuses
+// OperationStatuses ensures all items in Options.Allow.OperationStatuses
 // are valid and that there exists at least 1 successful status.
 func OperationStatuses(statuses []*types.OperationStatus) error {
 	if len(statuses) == 0 {
 		return errors.New("no Allow.OperationStatuses found")
 	}
 
+	statusStatuses := make([]string, len(statuses))
 	foundSuccessful := false
-	for _, status := range statuses {
+	for i, status := range statuses {
 		if status.Status == "" {
 			return errors.New("Operation.Status is missing")
 		}
@@ -140,13 +148,21 @@ func OperationStatuses(statuses []*types.OperationStatus) error {
 		if status.Successful {
 			foundSuccessful = true
 		}
+
+		statusStatuses[i] = status.Status
 	}
 
 	if !foundSuccessful {
 		return errors.New("no successful Allow.OperationStatuses found")
 	}
 
-	return nil
+	return StringArray("Allow.OperationStatuses", statusStatuses)
+}
+
+// OperationTypes ensures all items in Options.Allow.OperationStatuses
+// are valid and that there are no repeats.
+func OperationTypes(types []string) error {
+	return StringArray("Allow.OperationTypes", types)
 }
 
 // Error ensures a types.Error is valid.
@@ -197,7 +213,7 @@ func Allow(allowed *types.Allow) error {
 		return err
 	}
 
-	if err := StringArray("Allow.OperationTypes", allowed.OperationTypes); err != nil {
+	if err := OperationTypes(allowed.OperationTypes); err != nil {
 		return err
 	}
 
