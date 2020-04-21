@@ -15,7 +15,6 @@
 package asserter
 
 import (
-	"context"
 	"errors"
 	"testing"
 
@@ -132,7 +131,6 @@ func TestNewWithResponses(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			asserter, err := NewWithResponses(
-				context.Background(),
 				test.networkStatus,
 				test.networkOptions,
 			)

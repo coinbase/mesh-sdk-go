@@ -15,7 +15,6 @@
 package asserter
 
 import (
-	"context"
 	"errors"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
@@ -40,7 +39,6 @@ type Asserter struct {
 // from a NetworkStatusResponse and
 // NetworkOptionsResponse.
 func NewWithResponses(
-	ctx context.Context,
 	networkStatus *types.NetworkStatusResponse,
 	networkOptions *types.NetworkOptionsResponse,
 ) (*Asserter, error) {
@@ -53,7 +51,6 @@ func NewWithResponses(
 	}
 
 	return NewWithOptions(
-		ctx,
 		networkStatus.GenesisBlockIdentifier,
 		networkOptions.Allow.OperationTypes,
 		networkOptions.Allow.OperationStatuses,
@@ -61,11 +58,26 @@ func NewWithResponses(
 	), nil
 }
 
+// NewWithFile constructs a new Asserter using a specification
+// file instead of responses. This can be useful for running reliable
+// systems that error when updates to the server (more error types,
+// more operations, etc.) significantly change how to parse the chain.
+func NewWithFile(
+	filePath string,
+) (*Asserter, error) {
+	// load file
+
+	// parse items
+
+	// run NewWithOptions
+
+	return nil, errors.New("not implemented")
+}
+
 // NewWithOptions constructs a new Asserter using the provided
 // arguments instead of using a NetworkStatusResponse and a
 // NetworkOptionsResponse.
 func NewWithOptions(
-	ctx context.Context,
 	genesisBlockIdentifier *types.BlockIdentifier,
 	operationTypes []string,
 	operationStatuses []*types.OperationStatus,

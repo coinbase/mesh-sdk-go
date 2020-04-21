@@ -70,7 +70,6 @@ type Fetcher struct {
 
 // New constructs a new Fetcher with provided options.
 func New(
-	ctx context.Context,
 	serverAddress string,
 	options ...Option,
 ) *Fetcher {
@@ -153,7 +152,6 @@ func (f *Fetcher) InitializeAsserter(
 	}
 
 	f.Asserter, err = asserter.NewWithResponses(
-		ctx,
 		networkStatus,
 		networkOptions,
 	)

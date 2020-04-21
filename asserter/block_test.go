@@ -15,7 +15,6 @@
 package asserter
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"testing"
@@ -385,7 +384,6 @@ func TestOperation(t *testing.T) {
 
 	for name, test := range tests {
 		asserter, err := NewWithResponses(
-			context.Background(),
 			&types.NetworkStatusResponse{
 				GenesisBlockIdentifier: &types.BlockIdentifier{
 					Index: 0,
@@ -556,7 +554,6 @@ func TestBlock(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			asserter, err := NewWithResponses(
-				context.Background(),
 				&types.NetworkStatusResponse{
 					GenesisBlockIdentifier: &types.BlockIdentifier{
 						Index: test.genesisIndex,
