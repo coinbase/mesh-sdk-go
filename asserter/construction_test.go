@@ -30,7 +30,7 @@ func TestConstructionMetadata(t *testing.T) {
 	}{
 		"valid response": {
 			response: &types.ConstructionMetadataResponse{
-				Metadata: &map[string]interface{}{},
+				Metadata: map[string]interface{}{},
 			},
 			err: nil,
 		},

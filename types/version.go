@@ -30,5 +30,5 @@ type Version struct {
 	MiddlewareVersion *string `json:"middleware_version,omitempty"`
 	// Any other information that may be useful about versioning of dependent services should be
 	// returned here.
-	Metadata *map[string]interface{} `json:"metadata,omitempty"`
+	Metadata map[string]interface{} `json:"metadata,omitempty"`
 }
