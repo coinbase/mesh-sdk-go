@@ -33,7 +33,6 @@ func main() {
 
 	// Step 1: Create a new fetcher
 	newFetcher := fetcher.New(
-		ctx,
 		serverURL,
 	)
 

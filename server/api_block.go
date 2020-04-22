@@ -28,12 +28,19 @@ import (
 // A BlockAPIController binds http requests to an api service and writes the service results to the
 // http response
 type BlockAPIController struct {
-	service BlockAPIServicer
+	service  BlockAPIServicer
+	asserter *asserter.Asserter
 }
 
 // NewBlockAPIController creates a default api controller
-func NewBlockAPIController(s BlockAPIServicer) Router {
-	return &BlockAPIController{service: s}
+func NewBlockAPIController(
+	s BlockAPIServicer,
+	asserter *asserter.Asserter,
+) Router {
+	return &BlockAPIController{
+		service:  s,
+		asserter: asserter,
+	}
 }
 
 // Routes returns all of the api route for the BlockAPIController
@@ -66,7 +73,7 @@ func (c *BlockAPIController) Block(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Assert that BlockRequest is correct
-	if err := asserter.BlockRequest(blockRequest); err != nil {
+	if err := c.asserter.BlockRequest(blockRequest); err != nil {
 		EncodeJSONResponse(&types.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)
@@ -96,7 +103,7 @@ func (c *BlockAPIController) BlockTransaction(w http.ResponseWriter, r *http.Req
 	}
 
 	// Assert that BlockTransactionRequest is correct
-	if err := asserter.BlockTransactionRequest(blockTransactionRequest); err != nil {
+	if err := c.asserter.BlockTransactionRequest(blockTransactionRequest); err != nil {
 		EncodeJSONResponse(&types.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)

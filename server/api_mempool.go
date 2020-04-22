@@ -28,12 +28,19 @@ import (
 // A MempoolAPIController binds http requests to an api service and writes the service results to
 // the http response
 type MempoolAPIController struct {
-	service MempoolAPIServicer
+	service  MempoolAPIServicer
+	asserter *asserter.Asserter
 }
 
 // NewMempoolAPIController creates a default api controller
-func NewMempoolAPIController(s MempoolAPIServicer) Router {
-	return &MempoolAPIController{service: s}
+func NewMempoolAPIController(
+	s MempoolAPIServicer,
+	asserter *asserter.Asserter,
+) Router {
+	return &MempoolAPIController{
+		service:  s,
+		asserter: asserter,
+	}
 }
 
 // Routes returns all of the api route for the MempoolAPIController
@@ -66,7 +73,7 @@ func (c *MempoolAPIController) Mempool(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Assert that MempoolRequest is correct
-	if err := asserter.MempoolRequest(mempoolRequest); err != nil {
+	if err := c.asserter.MempoolRequest(mempoolRequest); err != nil {
 		EncodeJSONResponse(&types.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)
@@ -96,7 +103,7 @@ func (c *MempoolAPIController) MempoolTransaction(w http.ResponseWriter, r *http
 	}
 
 	// Assert that MempoolTransactionRequest is correct
-	if err := asserter.MempoolTransactionRequest(mempoolTransactionRequest); err != nil {
+	if err := c.asserter.MempoolTransactionRequest(mempoolTransactionRequest); err != nil {
 		EncodeJSONResponse(&types.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)

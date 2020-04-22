@@ -22,6 +22,16 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
+const (
+	// MinUnixEpoch is the unix epoch time in milliseconds of
+	// 01/01/2000 at 12:00:00 AM.
+	MinUnixEpoch = 946713600000
+
+	// MaxUnixEpoch is the unix epoch time in milliseconds of
+	// 01/01/2040 at 12:00:00 AM.
+	MaxUnixEpoch = 2209017600000
+)
+
 // Amount ensures a types.Amount has an
 // integer value, specified precision, and symbol.
 func Amount(amount *types.Amount) error {
@@ -47,18 +57,6 @@ func Amount(amount *types.Amount) error {
 	}
 
 	return nil
-}
-
-// contains checks if a string is contained in a slice
-// of strings.
-func contains(valid []string, value string) bool {
-	for _, v := range valid {
-		if v == value {
-			return true
-		}
-	}
-
-	return false
 }
 
 // OperationIdentifier returns an error if index of the
@@ -101,35 +99,48 @@ func AccountIdentifier(account *types.AccountIdentifier) error {
 	return nil
 }
 
-// OperationSuccessful returns a boolean indicating if a types.Operation is
-// successful and should be applied in a transaction. This should only be called
-// AFTER an operation has been validated.
-func (a *Asserter) OperationSuccessful(operation *types.Operation) (bool, error) {
-	if a == nil {
-		return false, ErrAsserterNotInitialized
+// contains checks if a string is contained in a slice
+// of strings.
+func contains(valid []string, value string) bool {
+	for _, v := range valid {
+		if v == value {
+			return true
+		}
 	}
 
-	val, ok := a.operationStatusMap[operation.Status]
-	if !ok {
-		return false, fmt.Errorf("%s not found", operation.Status)
-	}
-
-	return val, nil
+	return false
 }
 
-// operationStatuses returns all operation statuses the
-// asserter consider valid.
-func (a *Asserter) operationStatuses() ([]string, error) {
+// OperationStatus returns an error if an operation.Status
+// is not valid.
+func (a *Asserter) OperationStatus(status string) error {
 	if a == nil {
-		return nil, ErrAsserterNotInitialized
+		return ErrAsserterNotInitialized
 	}
 
-	statuses := []string{}
-	for k := range a.operationStatusMap {
-		statuses = append(statuses, k)
+	if status == "" {
+		return errors.New("operation.Status is empty")
 	}
 
-	return statuses, nil
+	if _, ok := a.operationStatusMap[status]; !ok {
+		return fmt.Errorf("Operation.Status %s is invalid", status)
+	}
+
+	return nil
+}
+
+// OperationType returns an error if an operation.Type
+// is not valid.
+func (a *Asserter) OperationType(t string) error {
+	if a == nil {
+		return ErrAsserterNotInitialized
+	}
+
+	if t == "" || !contains(a.operationTypes, t) {
+		return fmt.Errorf("Operation.Type %s is invalid", t)
+	}
+
+	return nil
 }
 
 // Operation ensures a types.Operation has a valid
@@ -150,17 +161,12 @@ func (a *Asserter) Operation(
 		return err
 	}
 
-	if operation.Type == "" || !contains(a.operationTypes, operation.Type) {
-		return fmt.Errorf("Operation.Type %s is invalid", operation.Type)
-	}
-
-	validOperationStatuses, err := a.operationStatuses()
-	if err != nil {
+	if err := a.OperationType(operation.Type); err != nil {
 		return err
 	}
 
-	if operation.Status == "" || !contains(validOperationStatuses, operation.Status) {
-		return fmt.Errorf("Operation.Status %s is invalid", operation.Status)
+	if err := a.OperationStatus(operation.Status); err != nil {
+		return err
 	}
 
 	if operation.Amount == nil {
@@ -256,11 +262,14 @@ func (a *Asserter) Transaction(
 // Timestamp returns an error if the timestamp
 // on a block is less than or equal to 0.
 func Timestamp(timestamp int64) error {
-	if timestamp <= 0 {
-		return fmt.Errorf("Timestamp is invalid %d", timestamp)
+	switch {
+	case timestamp < MinUnixEpoch:
+		return fmt.Errorf("Timestamp %d is before 01/01/2000", timestamp)
+	case timestamp > MaxUnixEpoch:
+		return fmt.Errorf("Timestamp %d is after 01/01/2040", timestamp)
+	default:
+		return nil
 	}
-
-	return nil
 }
 
 // Block runs a basic set of assertions for each returned block.
@@ -285,7 +294,7 @@ func (a *Asserter) Block(
 
 	// Only apply some assertions if the block index is not the
 	// genesis index.
-	if a.genesisIndex != block.BlockIdentifier.Index {
+	if a.genesisBlock.Index != block.BlockIdentifier.Index {
 		if block.BlockIdentifier.Hash == block.ParentBlockIdentifier.Hash {
 			return errors.New("BlockIdentifier.Hash == ParentBlockIdentifier.Hash")
 		}
@@ -293,10 +302,10 @@ func (a *Asserter) Block(
 		if block.BlockIdentifier.Index <= block.ParentBlockIdentifier.Index {
 			return errors.New("BlockIdentifier.Index <= ParentBlockIdentifier.Index")
 		}
-	}
 
-	if err := Timestamp(block.Timestamp); err != nil {
-		return err
+		if err := Timestamp(block.Timestamp); err != nil {
+			return err
+		}
 	}
 
 	for _, transaction := range block.Transactions {

@@ -16,18 +16,65 @@ package asserter
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
+// SupportedNetworks returns an error if there is an invalid
+// types.NetworkIdentifier or there is a duplicate.
+func SupportedNetworks(supportedNetworks []*types.NetworkIdentifier) error {
+	if len(supportedNetworks) == 0 {
+		return errors.New("no supported networks")
+	}
+
+	parsed := make([]*types.NetworkIdentifier, len(supportedNetworks))
+	for i, network := range supportedNetworks {
+		if err := NetworkIdentifier(network); err != nil {
+			return err
+		}
+
+		if containsNetworkIdentifier(parsed, network) {
+			return fmt.Errorf("supported network duplicate %+v", network)
+		}
+		parsed[i] = network
+	}
+
+	return nil
+}
+
+// SupportedNetwork returns a boolean indicating if the requestNetwork
+// is allowed. This should be called after the requestNetwork is asserted.
+func (a *Asserter) SupportedNetwork(
+	requestNetwork *types.NetworkIdentifier,
+) error {
+	if a == nil {
+		return ErrAsserterNotInitialized
+	}
+
+	if !containsNetworkIdentifier(a.supportedNetworks, requestNetwork) {
+		return fmt.Errorf("%+v is not supported", requestNetwork)
+	}
+
+	return nil
+}
+
 // AccountBalanceRequest ensures that a types.AccountBalanceRequest
 // is well-formatted.
-func AccountBalanceRequest(request *types.AccountBalanceRequest) error {
+func (a *Asserter) AccountBalanceRequest(request *types.AccountBalanceRequest) error {
+	if a == nil {
+		return ErrAsserterNotInitialized
+	}
+
 	if request == nil {
 		return errors.New("AccountBalanceRequest is nil")
 	}
 
 	if err := NetworkIdentifier(request.NetworkIdentifier); err != nil {
+		return err
+	}
+
+	if err := a.SupportedNetwork(request.NetworkIdentifier); err != nil {
 		return err
 	}
 
@@ -44,7 +91,11 @@ func AccountBalanceRequest(request *types.AccountBalanceRequest) error {
 
 // BlockRequest ensures that a types.BlockRequest
 // is well-formatted.
-func BlockRequest(request *types.BlockRequest) error {
+func (a *Asserter) BlockRequest(request *types.BlockRequest) error {
+	if a == nil {
+		return ErrAsserterNotInitialized
+	}
+
 	if request == nil {
 		return errors.New("BlockRequest is nil")
 	}
@@ -53,17 +104,29 @@ func BlockRequest(request *types.BlockRequest) error {
 		return err
 	}
 
+	if err := a.SupportedNetwork(request.NetworkIdentifier); err != nil {
+		return err
+	}
+
 	return PartialBlockIdentifier(request.BlockIdentifier)
 }
 
 // BlockTransactionRequest ensures that a types.BlockTransactionRequest
 // is well-formatted.
-func BlockTransactionRequest(request *types.BlockTransactionRequest) error {
+func (a *Asserter) BlockTransactionRequest(request *types.BlockTransactionRequest) error {
+	if a == nil {
+		return ErrAsserterNotInitialized
+	}
+
 	if request == nil {
 		return errors.New("BlockTransactionRequest is nil")
 	}
 
 	if err := NetworkIdentifier(request.NetworkIdentifier); err != nil {
+		return err
+	}
+
+	if err := a.SupportedNetwork(request.NetworkIdentifier); err != nil {
 		return err
 	}
 
@@ -76,12 +139,20 @@ func BlockTransactionRequest(request *types.BlockTransactionRequest) error {
 
 // ConstructionMetadataRequest ensures that a types.ConstructionMetadataRequest
 // is well-formatted.
-func ConstructionMetadataRequest(request *types.ConstructionMetadataRequest) error {
+func (a *Asserter) ConstructionMetadataRequest(request *types.ConstructionMetadataRequest) error {
+	if a == nil {
+		return ErrAsserterNotInitialized
+	}
+
 	if request == nil {
 		return errors.New("ConstructionMetadataRequest is nil")
 	}
 
 	if err := NetworkIdentifier(request.NetworkIdentifier); err != nil {
+		return err
+	}
+
+	if err := a.SupportedNetwork(request.NetworkIdentifier); err != nil {
 		return err
 	}
 
@@ -94,9 +165,21 @@ func ConstructionMetadataRequest(request *types.ConstructionMetadataRequest) err
 
 // ConstructionSubmitRequest ensures that a types.ConstructionSubmitRequest
 // is well-formatted.
-func ConstructionSubmitRequest(request *types.ConstructionSubmitRequest) error {
+func (a *Asserter) ConstructionSubmitRequest(request *types.ConstructionSubmitRequest) error {
+	if a == nil {
+		return ErrAsserterNotInitialized
+	}
+
 	if request == nil {
 		return errors.New("ConstructionSubmitRequest is nil")
+	}
+
+	if err := NetworkIdentifier(request.NetworkIdentifier); err != nil {
+		return err
+	}
+
+	if err := a.SupportedNetwork(request.NetworkIdentifier); err != nil {
+		return err
 	}
 
 	if request.SignedTransaction == "" {
@@ -108,17 +191,29 @@ func ConstructionSubmitRequest(request *types.ConstructionSubmitRequest) error {
 
 // MempoolRequest ensures that a types.MempoolRequest
 // is well-formatted.
-func MempoolRequest(request *types.MempoolRequest) error {
+func (a *Asserter) MempoolRequest(request *types.MempoolRequest) error {
+	if a == nil {
+		return ErrAsserterNotInitialized
+	}
+
 	if request == nil {
 		return errors.New("MempoolRequest is nil")
 	}
 
-	return NetworkIdentifier(request.NetworkIdentifier)
+	if err := NetworkIdentifier(request.NetworkIdentifier); err != nil {
+		return err
+	}
+
+	return a.SupportedNetwork(request.NetworkIdentifier)
 }
 
 // MempoolTransactionRequest ensures that a types.MempoolTransactionRequest
 // is well-formatted.
-func MempoolTransactionRequest(request *types.MempoolTransactionRequest) error {
+func (a *Asserter) MempoolTransactionRequest(request *types.MempoolTransactionRequest) error {
+	if a == nil {
+		return ErrAsserterNotInitialized
+	}
+
 	if request == nil {
 		return errors.New("MempoolTransactionRequest is nil")
 	}
@@ -127,12 +222,20 @@ func MempoolTransactionRequest(request *types.MempoolTransactionRequest) error {
 		return err
 	}
 
+	if err := a.SupportedNetwork(request.NetworkIdentifier); err != nil {
+		return err
+	}
+
 	return TransactionIdentifier(request.TransactionIdentifier)
 }
 
 // MetadataRequest ensures that a types.MetadataRequest
 // is well-formatted.
-func MetadataRequest(request *types.MetadataRequest) error {
+func (a *Asserter) MetadataRequest(request *types.MetadataRequest) error {
+	if a == nil {
+		return ErrAsserterNotInitialized
+	}
+
 	if request == nil {
 		return errors.New("MetadataRequest is nil")
 	}
@@ -142,10 +245,18 @@ func MetadataRequest(request *types.MetadataRequest) error {
 
 // NetworkRequest ensures that a types.NetworkRequest
 // is well-formatted.
-func NetworkRequest(request *types.NetworkRequest) error {
+func (a *Asserter) NetworkRequest(request *types.NetworkRequest) error {
+	if a == nil {
+		return ErrAsserterNotInitialized
+	}
+
 	if request == nil {
 		return errors.New("NetworkRequest is nil")
 	}
 
-	return NetworkIdentifier(request.NetworkIdentifier)
+	if err := NetworkIdentifier(request.NetworkIdentifier); err != nil {
+		return err
+	}
+
+	return a.SupportedNetwork(request.NetworkIdentifier)
 }
