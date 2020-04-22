@@ -25,11 +25,11 @@ import (
 const (
 	// MinUnixEpoch is the unix epoch time in milliseconds of
 	// 01/01/2000 at 12:00:00 AM.
-	MinUnixEpoch = int64(946713600000)
+	MinUnixEpoch = 946713600000
 
 	// MaxUnixEpoch is the unix epoch time in milliseconds of
 	// 01/01/2040 at 12:00:00 AM.
-	MaxUnixEpoch = int64(2209017600000)
+	MaxUnixEpoch = 2209017600000
 )
 
 // Amount ensures a types.Amount has an
@@ -262,11 +262,12 @@ func (a *Asserter) Transaction(
 // Timestamp returns an error if the timestamp
 // on a block is less than or equal to 0.
 func Timestamp(timestamp int64) error {
-	if timestamp < MinUnixEpoch {
+	switch {
+	case timestamp < MinUnixEpoch:
 		return fmt.Errorf("Timestamp %d is before 01/01/2000", timestamp)
-	} else if timestamp > MaxUnixEpoch {
+	case timestamp > MaxUnixEpoch:
 		return fmt.Errorf("Timestamp %d is after 01/01/2040", timestamp)
-	} else {
+	default:
 		return nil
 	}
 }

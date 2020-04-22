@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"path"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
@@ -85,7 +86,7 @@ type FileConfiguration struct {
 func NewWithFile(
 	filePath string,
 ) (*Asserter, error) {
-	content, err := ioutil.ReadFile(filePath)
+	content, err := ioutil.ReadFile(path.Clean(filePath))
 	if err != nil {
 		return nil, err
 	}
@@ -152,7 +153,14 @@ func NewWithOptions(
 
 // Configuration returns all variables currently set in an Asserter.
 // This function will error if it is called on an uninitialized asserter.
-func (a *Asserter) Configuration() (*types.NetworkIdentifier, *types.BlockIdentifier, []string, []*types.OperationStatus, []*types.Error, error) {
+func (a *Asserter) Configuration() (
+	*types.NetworkIdentifier,
+	*types.BlockIdentifier,
+	[]string,
+	[]*types.OperationStatus,
+	[]*types.Error,
+	error,
+) {
 	if a == nil {
 		return nil, nil, nil, nil, nil, ErrAsserterNotInitialized
 	}
