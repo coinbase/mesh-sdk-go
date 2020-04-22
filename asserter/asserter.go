@@ -15,8 +15,11 @@
 package asserter
 
 import (
-	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"io/ioutil"
+	"path"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
@@ -30,20 +33,43 @@ var (
 // Asserter contains all logic to perform static
 // validation on Rosetta Server responses.
 type Asserter struct {
+	// These variables are used for response assertion.
+	network            *types.NetworkIdentifier
 	operationTypes     []string
 	operationStatusMap map[string]bool
 	errorTypeMap       map[int32]*types.Error
-	genesisIndex       int64
+	genesisBlock       *types.BlockIdentifier
+
+	// These variables are used for request assertion.
+	supportedNetworks []*types.NetworkIdentifier
 }
 
-// NewWithResponses constructs a new Asserter
+// NewServer constructs a new Asserter for use in the
+// server package.
+func NewServer(
+	supportedNetworks []*types.NetworkIdentifier,
+) (*Asserter, error) {
+	if err := SupportedNetworks(supportedNetworks); err != nil {
+		return nil, err
+	}
+
+	return &Asserter{
+		supportedNetworks: supportedNetworks,
+	}, nil
+}
+
+// NewClientWithResponses constructs a new Asserter
 // from a NetworkStatusResponse and
 // NetworkOptionsResponse.
-func NewWithResponses(
-	ctx context.Context,
+func NewClientWithResponses(
+	network *types.NetworkIdentifier,
 	networkStatus *types.NetworkStatusResponse,
 	networkOptions *types.NetworkOptionsResponse,
 ) (*Asserter, error) {
+	if err := NetworkIdentifier(network); err != nil {
+		return nil, err
+	}
+
 	if err := NetworkStatusResponse(networkStatus); err != nil {
 		return nil, err
 	}
@@ -52,28 +78,81 @@ func NewWithResponses(
 		return nil, err
 	}
 
-	return NewWithOptions(
-		ctx,
+	return NewClientWithOptions(
+		network,
 		networkStatus.GenesisBlockIdentifier,
 		networkOptions.Allow.OperationTypes,
 		networkOptions.Allow.OperationStatuses,
 		networkOptions.Allow.Errors,
-	), nil
+	)
 }
 
-// NewWithOptions constructs a new Asserter using the provided
+// FileConfiguration is the structure of the JSON configuration file.
+type FileConfiguration struct {
+	NetworkIdentifier        *types.NetworkIdentifier `json:"network_identifier"`
+	GenesisBlockIdentifier   *types.BlockIdentifier   `json:"genesis_block_identifier"`
+	AllowedOperationTypes    []string                 `json:"allowed_operation_types"`
+	AllowedOperationStatuses []*types.OperationStatus `json:"allowed_operation_statuses"`
+	AllowedErrors            []*types.Error           `json:"allowed_errors"`
+}
+
+// NewClientWithFile constructs a new Asserter using a specification
+// file instead of responses. This can be useful for running reliable
+// systems that error when updates to the server (more error types,
+// more operations, etc.) significantly change how to parse the chain.
+// The filePath provided is parsed relative to the current directory.
+func NewClientWithFile(
+	filePath string,
+) (*Asserter, error) {
+	content, err := ioutil.ReadFile(path.Clean(filePath))
+	if err != nil {
+		return nil, err
+	}
+
+	config := &FileConfiguration{}
+	if err := json.Unmarshal(content, config); err != nil {
+		return nil, err
+	}
+
+	return NewClientWithOptions(
+		config.NetworkIdentifier,
+		config.GenesisBlockIdentifier,
+		config.AllowedOperationTypes,
+		config.AllowedOperationStatuses,
+		config.AllowedErrors,
+	)
+}
+
+// NewClientWithOptions constructs a new Asserter using the provided
 // arguments instead of using a NetworkStatusResponse and a
 // NetworkOptionsResponse.
-func NewWithOptions(
-	ctx context.Context,
+func NewClientWithOptions(
+	network *types.NetworkIdentifier,
 	genesisBlockIdentifier *types.BlockIdentifier,
 	operationTypes []string,
 	operationStatuses []*types.OperationStatus,
 	errors []*types.Error,
-) *Asserter {
+) (*Asserter, error) {
+	if err := NetworkIdentifier(network); err != nil {
+		return nil, err
+	}
+
+	if err := BlockIdentifier(genesisBlockIdentifier); err != nil {
+		return nil, err
+	}
+
+	if err := OperationStatuses(operationStatuses); err != nil {
+		return nil, err
+	}
+
+	if err := OperationTypes(operationTypes); err != nil {
+		return nil, err
+	}
+
 	asserter := &Asserter{
+		network:        network,
 		operationTypes: operationTypes,
-		genesisIndex:   genesisBlockIdentifier.Index,
+		genesisBlock:   genesisBlockIdentifier,
 	}
 
 	asserter.operationStatusMap = map[string]bool{}
@@ -86,5 +165,51 @@ func NewWithOptions(
 		asserter.errorTypeMap[err.Code] = err
 	}
 
-	return asserter
+	return asserter, nil
+}
+
+// ClientConfiguration returns all variables currently set in an Asserter.
+// This function will error if it is called on an uninitialized asserter.
+func (a *Asserter) ClientConfiguration() (
+	*types.NetworkIdentifier,
+	*types.BlockIdentifier,
+	[]string,
+	[]*types.OperationStatus,
+	[]*types.Error,
+	error,
+) {
+	if a == nil {
+		return nil, nil, nil, nil, nil, ErrAsserterNotInitialized
+	}
+
+	operationStatuses := []*types.OperationStatus{}
+	for k, v := range a.operationStatusMap {
+		operationStatuses = append(operationStatuses, &types.OperationStatus{
+			Status:     k,
+			Successful: v,
+		})
+	}
+
+	errors := []*types.Error{}
+	for _, v := range a.errorTypeMap {
+		errors = append(errors, v)
+	}
+
+	return a.network, a.genesisBlock, a.operationTypes, operationStatuses, errors, nil
+}
+
+// OperationSuccessful returns a boolean indicating if a types.Operation is
+// successful and should be applied in a transaction. This should only be called
+// AFTER an operation has been validated.
+func (a *Asserter) OperationSuccessful(operation *types.Operation) (bool, error) {
+	if a == nil {
+		return false, ErrAsserterNotInitialized
+	}
+
+	val, ok := a.operationStatusMap[operation.Status]
+	if !ok {
+		return false, fmt.Errorf("%s not found", operation.Status)
+	}
+
+	return val, nil
 }

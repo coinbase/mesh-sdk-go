@@ -20,6 +20,6 @@ package types
 // query some object on a specific shard. This identifier is optional for all non-sharded
 // blockchains.
 type SubNetworkIdentifier struct {
-	Network  string                  `json:"network"`
-	Metadata *map[string]interface{} `json:"metadata,omitempty"`
+	Network  string                 `json:"network"`
+	Metadata map[string]interface{} `json:"metadata,omitempty"`
 }

@@ -26,5 +26,5 @@ type ConstructionMetadataRequest struct {
 	// possible types of metadata for construction (which may require multiple node fetches), the
 	// client can populate an options object to limit the metadata returned to only the subset
 	// required.
-	Options *map[string]interface{} `json:"options"`
+	Options map[string]interface{} `json:"options"`
 }

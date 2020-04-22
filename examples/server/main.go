@@ -19,6 +19,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/coinbase/rosetta-sdk-go/asserter"
 	"github.com/coinbase/rosetta-sdk-go/examples/server/services"
 	"github.com/coinbase/rosetta-sdk-go/server"
 	"github.com/coinbase/rosetta-sdk-go/types"
@@ -30,12 +31,21 @@ const (
 
 // NewBlockchainRouter creates a Mux http.Handler from a collection
 // of server controllers.
-func NewBlockchainRouter(network *types.NetworkIdentifier) http.Handler {
+func NewBlockchainRouter(
+	network *types.NetworkIdentifier,
+	asserter *asserter.Asserter,
+) http.Handler {
 	networkAPIService := services.NewNetworkAPIService(network)
-	networkAPIController := server.NewNetworkAPIController(networkAPIService)
+	networkAPIController := server.NewNetworkAPIController(
+		networkAPIService,
+		asserter,
+	)
 
 	blockAPIService := services.NewBlockAPIService(network)
-	blockAPIController := server.NewBlockAPIController(blockAPIService)
+	blockAPIController := server.NewBlockAPIController(
+		blockAPIService,
+		asserter,
+	)
 
 	return server.NewRouter(networkAPIController, blockAPIController)
 }
@@ -46,7 +56,14 @@ func main() {
 		Network:    "Testnet",
 	}
 
-	router := NewBlockchainRouter(network)
+	// The asserter automatically rejects incorrectly formatted
+	// requests.
+	asserter, err := asserter.NewServer([]*types.NetworkIdentifier{network})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	router := NewBlockchainRouter(network, asserter)
 	log.Printf("Listening on port %d\n", serverPort)
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", serverPort), router))
 }
