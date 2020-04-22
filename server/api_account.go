@@ -28,12 +28,19 @@ import (
 // A AccountAPIController binds http requests to an api service and writes the service results to
 // the http response
 type AccountAPIController struct {
-	service AccountAPIServicer
+	service  AccountAPIServicer
+	asserter *asserter.Asserter
 }
 
 // NewAccountAPIController creates a default api controller
-func NewAccountAPIController(s AccountAPIServicer) Router {
-	return &AccountAPIController{service: s}
+func NewAccountAPIController(
+	s AccountAPIServicer,
+	asserter *asserter.Asserter,
+) Router {
+	return &AccountAPIController{
+		service:  s,
+		asserter: asserter,
+	}
 }
 
 // Routes returns all of the api route for the AccountAPIController
@@ -60,7 +67,7 @@ func (c *AccountAPIController) AccountBalance(w http.ResponseWriter, r *http.Req
 	}
 
 	// Assert that AccountBalanceRequest is correct
-	if err := asserter.AccountBalanceRequest(accountBalanceRequest); err != nil {
+	if err := c.asserter.AccountBalanceRequest(accountBalanceRequest); err != nil {
 		EncodeJSONResponse(&types.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)

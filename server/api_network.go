@@ -28,12 +28,19 @@ import (
 // A NetworkAPIController binds http requests to an api service and writes the service results to
 // the http response
 type NetworkAPIController struct {
-	service NetworkAPIServicer
+	service  NetworkAPIServicer
+	asserter *asserter.Asserter
 }
 
 // NewNetworkAPIController creates a default api controller
-func NewNetworkAPIController(s NetworkAPIServicer) Router {
-	return &NetworkAPIController{service: s}
+func NewNetworkAPIController(
+	s NetworkAPIServicer,
+	asserter *asserter.Asserter,
+) Router {
+	return &NetworkAPIController{
+		service:  s,
+		asserter: asserter,
+	}
 }
 
 // Routes returns all of the api route for the NetworkAPIController
@@ -72,7 +79,7 @@ func (c *NetworkAPIController) NetworkList(w http.ResponseWriter, r *http.Reques
 	}
 
 	// Assert that MetadataRequest is correct
-	if err := asserter.MetadataRequest(metadataRequest); err != nil {
+	if err := c.asserter.MetadataRequest(metadataRequest); err != nil {
 		EncodeJSONResponse(&types.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)
@@ -102,7 +109,7 @@ func (c *NetworkAPIController) NetworkOptions(w http.ResponseWriter, r *http.Req
 	}
 
 	// Assert that NetworkRequest is correct
-	if err := asserter.NetworkRequest(networkRequest); err != nil {
+	if err := c.asserter.NetworkRequest(networkRequest); err != nil {
 		EncodeJSONResponse(&types.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)
@@ -132,7 +139,7 @@ func (c *NetworkAPIController) NetworkStatus(w http.ResponseWriter, r *http.Requ
 	}
 
 	// Assert that NetworkRequest is correct
-	if err := asserter.NetworkRequest(networkRequest); err != nil {
+	if err := c.asserter.NetworkRequest(networkRequest); err != nil {
 		EncodeJSONResponse(&types.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)
