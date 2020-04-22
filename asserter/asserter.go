@@ -33,11 +33,29 @@ var (
 // Asserter contains all logic to perform static
 // validation on Rosetta Server responses.
 type Asserter struct {
+	// These variables are used for response assertion.
 	network            *types.NetworkIdentifier
 	operationTypes     []string
 	operationStatusMap map[string]bool
 	errorTypeMap       map[int32]*types.Error
 	genesisBlock       *types.BlockIdentifier
+
+	// These variables are used for request assertion.
+	supportedNetworks []*types.NetworkIdentifier
+}
+
+// NewServer constructs a new Asserter for use in the
+// server package.
+func NewServer(
+	supportedNetworks []*types.NetworkIdentifier,
+) (*Asserter, error) {
+	if err := SupportedNetworks(supportedNetworks); err != nil {
+		return nil, err
+	}
+
+	return &Asserter{
+		supportedNetworks: supportedNetworks,
+	}, nil
 }
 
 // NewWithResponses constructs a new Asserter
