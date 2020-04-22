@@ -397,7 +397,7 @@ func TestOperation(t *testing.T) {
 					Index: 100,
 					Hash:  "block 100",
 				},
-				CurrentBlockTimestamp: 100,
+				CurrentBlockTimestamp: MinUnixEpoch + 1,
 				Peers: []*types.Peer{
 					{
 						PeerID: "peer 1",
@@ -464,7 +464,7 @@ func TestBlock(t *testing.T) {
 			block: &types.Block{
 				BlockIdentifier:       validBlockIdentifier,
 				ParentBlockIdentifier: validParentBlockIdentifier,
-				Timestamp:             1,
+				Timestamp:             MinUnixEpoch + 1,
 				Transactions:          []*types.Transaction{validTransaction},
 			},
 			err: nil,
@@ -473,7 +473,6 @@ func TestBlock(t *testing.T) {
 			block: &types.Block{
 				BlockIdentifier:       validBlockIdentifier,
 				ParentBlockIdentifier: validBlockIdentifier,
-				Timestamp:             1,
 				Transactions:          []*types.Transaction{validTransaction},
 			},
 			genesisIndex: validBlockIdentifier.Index,
@@ -487,7 +486,7 @@ func TestBlock(t *testing.T) {
 			block: &types.Block{
 				BlockIdentifier:       nil,
 				ParentBlockIdentifier: validParentBlockIdentifier,
-				Timestamp:             1,
+				Timestamp:             MinUnixEpoch + 1,
 				Transactions:          []*types.Transaction{validTransaction},
 			},
 			err: errors.New("BlockIdentifier is nil"),
@@ -496,7 +495,7 @@ func TestBlock(t *testing.T) {
 			block: &types.Block{
 				BlockIdentifier:       &types.BlockIdentifier{},
 				ParentBlockIdentifier: validParentBlockIdentifier,
-				Timestamp:             1,
+				Timestamp:             MinUnixEpoch + 1,
 				Transactions:          []*types.Transaction{validTransaction},
 			},
 			err: errors.New("BlockIdentifier.Hash is missing"),
@@ -505,7 +504,7 @@ func TestBlock(t *testing.T) {
 			block: &types.Block{
 				BlockIdentifier:       validBlockIdentifier,
 				ParentBlockIdentifier: &types.BlockIdentifier{},
-				Timestamp:             1,
+				Timestamp:             MinUnixEpoch + 1,
 				Transactions:          []*types.Transaction{validTransaction},
 			},
 			err: errors.New("BlockIdentifier.Hash is missing"),
@@ -517,7 +516,7 @@ func TestBlock(t *testing.T) {
 					Hash:  validParentBlockIdentifier.Hash,
 					Index: validBlockIdentifier.Index,
 				},
-				Timestamp:    1,
+				Timestamp:    MinUnixEpoch + 1,
 				Transactions: []*types.Transaction{validTransaction},
 			},
 			err: errors.New("BlockIdentifier.Index <= ParentBlockIdentifier.Index"),
@@ -529,24 +528,33 @@ func TestBlock(t *testing.T) {
 					Hash:  validBlockIdentifier.Hash,
 					Index: validParentBlockIdentifier.Index,
 				},
-				Timestamp:    1,
+				Timestamp:    MinUnixEpoch + 1,
 				Transactions: []*types.Transaction{validTransaction},
 			},
 			err: errors.New("BlockIdentifier.Hash == ParentBlockIdentifier.Hash"),
 		},
-		"invalid block timestamp": {
+		"invalid block timestamp less than MinUnixEpoch": {
 			block: &types.Block{
 				BlockIdentifier:       validBlockIdentifier,
 				ParentBlockIdentifier: validParentBlockIdentifier,
 				Transactions:          []*types.Transaction{validTransaction},
 			},
-			err: errors.New("Timestamp is invalid 0"),
+			err: errors.New("Timestamp 0 is before 01/01/2000"),
+		},
+		"invalid block timestamp greater than MaxUnixEpoch": {
+			block: &types.Block{
+				BlockIdentifier:       validBlockIdentifier,
+				ParentBlockIdentifier: validParentBlockIdentifier,
+				Transactions:          []*types.Transaction{validTransaction},
+				Timestamp:             MaxUnixEpoch + 1,
+			},
+			err: errors.New("Timestamp 2209017600001 is after 01/01/2040"),
 		},
 		"invalid block transaction": {
 			block: &types.Block{
 				BlockIdentifier:       validBlockIdentifier,
 				ParentBlockIdentifier: validParentBlockIdentifier,
-				Timestamp:             1,
+				Timestamp:             MinUnixEpoch + 1,
 				Transactions: []*types.Transaction{
 					{},
 				},
@@ -571,7 +579,7 @@ func TestBlock(t *testing.T) {
 						Index: 100,
 						Hash:  "block 100",
 					},
-					CurrentBlockTimestamp: 100,
+					CurrentBlockTimestamp: MinUnixEpoch + 1,
 					Peers: []*types.Peer{
 						{
 							PeerID: "peer 1",
