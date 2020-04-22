@@ -58,10 +58,10 @@ func NewServer(
 	}, nil
 }
 
-// NewWithResponses constructs a new Asserter
+// NewClientWithResponses constructs a new Asserter
 // from a NetworkStatusResponse and
 // NetworkOptionsResponse.
-func NewWithResponses(
+func NewClientWithResponses(
 	network *types.NetworkIdentifier,
 	networkStatus *types.NetworkStatusResponse,
 	networkOptions *types.NetworkOptionsResponse,
@@ -78,7 +78,7 @@ func NewWithResponses(
 		return nil, err
 	}
 
-	return NewWithOptions(
+	return NewClientWithOptions(
 		network,
 		networkStatus.GenesisBlockIdentifier,
 		networkOptions.Allow.OperationTypes,
@@ -96,12 +96,12 @@ type FileConfiguration struct {
 	AllowedErrors            []*types.Error           `json:"allowed_errors"`
 }
 
-// NewWithFile constructs a new Asserter using a specification
+// NewClientWithFile constructs a new Asserter using a specification
 // file instead of responses. This can be useful for running reliable
 // systems that error when updates to the server (more error types,
 // more operations, etc.) significantly change how to parse the chain.
 // The filePath provided is parsed relative to the current directory.
-func NewWithFile(
+func NewClientWithFile(
 	filePath string,
 ) (*Asserter, error) {
 	content, err := ioutil.ReadFile(path.Clean(filePath))
@@ -114,7 +114,7 @@ func NewWithFile(
 		return nil, err
 	}
 
-	return NewWithOptions(
+	return NewClientWithOptions(
 		config.NetworkIdentifier,
 		config.GenesisBlockIdentifier,
 		config.AllowedOperationTypes,
@@ -123,11 +123,10 @@ func NewWithFile(
 	)
 }
 
-// NewWithOptions constructs a new Asserter using the provided
+// NewClientWithOptions constructs a new Asserter using the provided
 // arguments instead of using a NetworkStatusResponse and a
-// NetworkOptionsResponse. NewWithOptions does not check the
-// correctness of inputs.
-func NewWithOptions(
+// NetworkOptionsResponse.
+func NewClientWithOptions(
 	network *types.NetworkIdentifier,
 	genesisBlockIdentifier *types.BlockIdentifier,
 	operationTypes []string,
@@ -169,9 +168,9 @@ func NewWithOptions(
 	return asserter, nil
 }
 
-// Configuration returns all variables currently set in an Asserter.
+// ClientConfiguration returns all variables currently set in an Asserter.
 // This function will error if it is called on an uninitialized asserter.
-func (a *Asserter) Configuration() (
+func (a *Asserter) ClientConfiguration() (
 	*types.NetworkIdentifier,
 	*types.BlockIdentifier,
 	[]string,

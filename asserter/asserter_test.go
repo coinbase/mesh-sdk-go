@@ -210,7 +210,7 @@ func TestNew(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(fmt.Sprintf("%s with responses", name), func(t *testing.T) {
-			asserter, err := NewWithResponses(
+			asserter, err := NewClientWithResponses(
 				test.network,
 				test.networkStatus,
 				test.networkOptions,
@@ -223,7 +223,7 @@ func TestNew(t *testing.T) {
 			}
 
 			assert.NotNil(t, asserter)
-			network, genesis, opTypes, opStatuses, errors, err := asserter.Configuration()
+			network, genesis, opTypes, opStatuses, errors, err := asserter.ClientConfiguration()
 			assert.NoError(t, err)
 			assert.Equal(t, test.network, network)
 			assert.Equal(t, test.networkStatus.GenesisBlockIdentifier, genesis)
@@ -251,7 +251,7 @@ func TestNew(t *testing.T) {
 			assert.NoError(t, err)
 			assert.NoError(t, tmpfile.Close())
 
-			asserter, err := NewWithFile(
+			asserter, err := NewClientWithFile(
 				tmpfile.Name(),
 			)
 
@@ -262,7 +262,7 @@ func TestNew(t *testing.T) {
 			}
 
 			assert.NotNil(t, asserter)
-			network, genesis, opTypes, opStatuses, errors, err := asserter.Configuration()
+			network, genesis, opTypes, opStatuses, errors, err := asserter.ClientConfiguration()
 			assert.NoError(t, err)
 			assert.Equal(t, test.network, network)
 			assert.Equal(t, test.networkStatus.GenesisBlockIdentifier, genesis)
