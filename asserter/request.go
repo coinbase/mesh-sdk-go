@@ -34,7 +34,7 @@ func SupportedNetworks(supportedNetworks []*types.NetworkIdentifier) error {
 			return err
 		}
 
-		if !containsNetworkIdentifier(parsed, network) {
+		if containsNetworkIdentifier(parsed, network) {
 			return fmt.Errorf("supported network duplicate %+v", *network)
 		}
 		parsed[i] = network
@@ -53,7 +53,7 @@ func (a *Asserter) SupportedNetwork(
 	}
 
 	if !containsNetworkIdentifier(a.supportedNetworks, requestNetwork) {
-		return fmt.Errorf("%+v is not supported", *requestNetwork)
+		return fmt.Errorf("%+v is not supported", requestNetwork)
 	}
 
 	return nil

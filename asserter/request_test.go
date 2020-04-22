@@ -16,6 +16,7 @@ package asserter
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
@@ -27,6 +28,11 @@ var (
 	validNetworkIdentifier = &types.NetworkIdentifier{
 		Blockchain: "Bitcoin",
 		Network:    "Mainnet",
+	}
+
+	wrongNetworkIdentifier = &types.NetworkIdentifier{
+		Blockchain: "Bitcoin",
+		Network:    "Testnet",
 	}
 
 	validAccountIdentifier = &types.AccountIdentifier{
@@ -60,6 +66,13 @@ func TestAccountBalanceRequest(t *testing.T) {
 				AccountIdentifier: validAccountIdentifier,
 			},
 			err: nil,
+		},
+		"invalid request wrong network": {
+			request: &types.AccountBalanceRequest{
+				NetworkIdentifier: wrongNetworkIdentifier,
+				AccountIdentifier: validAccountIdentifier,
+			},
+			err: fmt.Errorf("%+v is not supported", wrongNetworkIdentifier),
 		},
 		"nil request": {
 			request: nil,
@@ -97,7 +110,11 @@ func TestAccountBalanceRequest(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			err := AccountBalanceRequest(test.request)
+			a, err := NewServer([]*types.NetworkIdentifier{validNetworkIdentifier})
+			assert.NoError(t, err)
+			assert.NotNil(t, a)
+
+			err = a.AccountBalanceRequest(test.request)
 			assert.Equal(t, test.err, err)
 		})
 	}
@@ -123,6 +140,13 @@ func TestBlockRequest(t *testing.T) {
 				},
 			},
 			err: nil,
+		},
+		"invalid request wrong network": {
+			request: &types.BlockRequest{
+				NetworkIdentifier: wrongNetworkIdentifier,
+				BlockIdentifier:   validPartialBlockIdentifier,
+			},
+			err: fmt.Errorf("%+v is not supported", wrongNetworkIdentifier),
 		},
 		"nil request": {
 			request: nil,
@@ -151,7 +175,11 @@ func TestBlockRequest(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			err := BlockRequest(test.request)
+			a, err := NewServer([]*types.NetworkIdentifier{validNetworkIdentifier})
+			assert.NoError(t, err)
+			assert.NotNil(t, a)
+
+			err = a.BlockRequest(test.request)
 			assert.Equal(t, test.err, err)
 		})
 	}
@@ -169,6 +197,14 @@ func TestBlockTransactionRequest(t *testing.T) {
 				TransactionIdentifier: validTransactionIdentifier,
 			},
 			err: nil,
+		},
+		"invalid request wrong network": {
+			request: &types.BlockTransactionRequest{
+				NetworkIdentifier:     wrongNetworkIdentifier,
+				BlockIdentifier:       validBlockIdentifier,
+				TransactionIdentifier: validTransactionIdentifier,
+			},
+			err: fmt.Errorf("%+v is not supported", wrongNetworkIdentifier),
 		},
 		"nil request": {
 			request: nil,
@@ -199,7 +235,11 @@ func TestBlockTransactionRequest(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			err := BlockTransactionRequest(test.request)
+			a, err := NewServer([]*types.NetworkIdentifier{validNetworkIdentifier})
+			assert.NoError(t, err)
+			assert.NotNil(t, a)
+
+			err = a.BlockTransactionRequest(test.request)
 			assert.Equal(t, test.err, err)
 		})
 	}
@@ -216,6 +256,13 @@ func TestConstructionMetadataRequest(t *testing.T) {
 				Options:           map[string]interface{}{},
 			},
 			err: nil,
+		},
+		"invalid request wrong network": {
+			request: &types.ConstructionMetadataRequest{
+				NetworkIdentifier: wrongNetworkIdentifier,
+				Options:           map[string]interface{}{},
+			},
+			err: fmt.Errorf("%+v is not supported", wrongNetworkIdentifier),
 		},
 		"nil request": {
 			request: nil,
@@ -237,7 +284,11 @@ func TestConstructionMetadataRequest(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			err := ConstructionMetadataRequest(test.request)
+			a, err := NewServer([]*types.NetworkIdentifier{validNetworkIdentifier})
+			assert.NoError(t, err)
+			assert.NotNil(t, a)
+
+			err = a.ConstructionMetadataRequest(test.request)
 			assert.Equal(t, test.err, err)
 		})
 	}
@@ -250,9 +301,17 @@ func TestConstructionSubmitRequest(t *testing.T) {
 	}{
 		"valid request": {
 			request: &types.ConstructionSubmitRequest{
+				NetworkIdentifier: validNetworkIdentifier,
 				SignedTransaction: "tx",
 			},
 			err: nil,
+		},
+		"invalid request wrong network": {
+			request: &types.ConstructionSubmitRequest{
+				NetworkIdentifier: wrongNetworkIdentifier,
+				SignedTransaction: "tx",
+			},
+			err: fmt.Errorf("%+v is not supported", wrongNetworkIdentifier),
 		},
 		"nil request": {
 			request: nil,
@@ -260,13 +319,17 @@ func TestConstructionSubmitRequest(t *testing.T) {
 		},
 		"empty tx": {
 			request: &types.ConstructionSubmitRequest{},
-			err:     errors.New("ConstructionSubmitRequest.SignedTransaction is empty"),
+			err:     errors.New("NetworkIdentifier is nil"),
 		},
 	}
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			err := ConstructionSubmitRequest(test.request)
+			a, err := NewServer([]*types.NetworkIdentifier{validNetworkIdentifier})
+			assert.NoError(t, err)
+			assert.NotNil(t, a)
+
+			err = a.ConstructionSubmitRequest(test.request)
 			assert.Equal(t, test.err, err)
 		})
 	}
@@ -283,6 +346,12 @@ func TestMempoolRequest(t *testing.T) {
 			},
 			err: nil,
 		},
+		"invalid request wrong network": {
+			request: &types.MempoolRequest{
+				NetworkIdentifier: wrongNetworkIdentifier,
+			},
+			err: fmt.Errorf("%+v is not supported", wrongNetworkIdentifier),
+		},
 		"nil request": {
 			request: nil,
 			err:     errors.New("MempoolRequest is nil"),
@@ -295,7 +364,11 @@ func TestMempoolRequest(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			err := MempoolRequest(test.request)
+			a, err := NewServer([]*types.NetworkIdentifier{validNetworkIdentifier})
+			assert.NoError(t, err)
+			assert.NotNil(t, a)
+
+			err = a.MempoolRequest(test.request)
 			assert.Equal(t, test.err, err)
 		})
 	}
@@ -312,6 +385,13 @@ func TestMempoolTransactionRequest(t *testing.T) {
 				TransactionIdentifier: validTransactionIdentifier,
 			},
 			err: nil,
+		},
+		"invalid request wrong network": {
+			request: &types.MempoolTransactionRequest{
+				NetworkIdentifier:     wrongNetworkIdentifier,
+				TransactionIdentifier: validTransactionIdentifier,
+			},
+			err: fmt.Errorf("%+v is not supported", wrongNetworkIdentifier),
 		},
 		"nil request": {
 			request: nil,
@@ -334,7 +414,11 @@ func TestMempoolTransactionRequest(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			err := MempoolTransactionRequest(test.request)
+			a, err := NewServer([]*types.NetworkIdentifier{validNetworkIdentifier})
+			assert.NoError(t, err)
+			assert.NotNil(t, a)
+
+			err = a.MempoolTransactionRequest(test.request)
 			assert.Equal(t, test.err, err)
 		})
 	}
@@ -357,7 +441,11 @@ func TestMetadataRequest(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			err := MetadataRequest(test.request)
+			a, err := NewServer([]*types.NetworkIdentifier{validNetworkIdentifier})
+			assert.NoError(t, err)
+			assert.NotNil(t, a)
+
+			err = a.MetadataRequest(test.request)
 			assert.Equal(t, test.err, err)
 		})
 	}
@@ -374,6 +462,12 @@ func TestNetworkRequest(t *testing.T) {
 			},
 			err: nil,
 		},
+		"invalid request wrong network": {
+			request: &types.NetworkRequest{
+				NetworkIdentifier: wrongNetworkIdentifier,
+			},
+			err: fmt.Errorf("%+v is not supported", wrongNetworkIdentifier),
+		},
 		"nil request": {
 			request: nil,
 			err:     errors.New("NetworkRequest is nil"),
@@ -386,7 +480,11 @@ func TestNetworkRequest(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			err := NetworkRequest(test.request)
+			a, err := NewServer([]*types.NetworkIdentifier{validNetworkIdentifier})
+			assert.NoError(t, err)
+			assert.NotNil(t, a)
+
+			err = a.NetworkRequest(test.request)
 			assert.Equal(t, test.err, err)
 		})
 	}

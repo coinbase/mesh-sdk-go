@@ -28,12 +28,19 @@ import (
 // A ConstructionAPIController binds http requests to an api service and writes the service results
 // to the http response
 type ConstructionAPIController struct {
-	service ConstructionAPIServicer
+	service  ConstructionAPIServicer
+	asserter *asserter.Asserter
 }
 
 // NewConstructionAPIController creates a default api controller
-func NewConstructionAPIController(s ConstructionAPIServicer) Router {
-	return &ConstructionAPIController{service: s}
+func NewConstructionAPIController(
+	s ConstructionAPIServicer,
+	asserter *asserter.Asserter,
+) Router {
+	return &ConstructionAPIController{
+		service:  s,
+		asserter: asserter,
+	}
 }
 
 // Routes returns all of the api route for the ConstructionAPIController
@@ -66,7 +73,7 @@ func (c *ConstructionAPIController) ConstructionMetadata(w http.ResponseWriter, 
 	}
 
 	// Assert that ConstructionMetadataRequest is correct
-	if err := asserter.ConstructionMetadataRequest(constructionMetadataRequest); err != nil {
+	if err := c.asserter.ConstructionMetadataRequest(constructionMetadataRequest); err != nil {
 		EncodeJSONResponse(&types.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)
@@ -96,7 +103,7 @@ func (c *ConstructionAPIController) ConstructionSubmit(w http.ResponseWriter, r 
 	}
 
 	// Assert that ConstructionSubmitRequest is correct
-	if err := asserter.ConstructionSubmitRequest(constructionSubmitRequest); err != nil {
+	if err := c.asserter.ConstructionSubmitRequest(constructionSubmitRequest); err != nil {
 		EncodeJSONResponse(&types.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)

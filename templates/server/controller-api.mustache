@@ -13,11 +13,18 @@ import (
 // A {{classname}}Controller binds http requests to an api service and writes the service results to the http response
 type {{classname}}Controller struct {
 	service {{classname}}Servicer
+  asserter *asserter.Asserter
 }
 
 // New{{classname}}Controller creates a default api controller
-func New{{classname}}Controller(s {{classname}}Servicer) Router {
-	return &{{classname}}Controller{ service: s }
+func New{{classname}}Controller(
+  s {{classname}}Servicer,
+  asserter *asserter.Asserter,
+) Router {
+	return &{{classname}}Controller{
+    service: s,
+    asserter: asserter,
+  }
 }
 
 // Routes returns all of the api route for the {{classname}}Controller
@@ -45,7 +52,7 @@ func (c *{{classname}}Controller) {{nickname}}(w http.ResponseWriter, r *http.Re
 	}
 
   // Assert that {{dataType}} is correct
-  if err := asserter.{{dataType}}({{paramName}}); err != nil {
+  if err := c.asserter.{{dataType}}({{paramName}}); err != nil {
     EncodeJSONResponse(&types.Error{
       Message: err.Error(),
     }, http.StatusInternalServerError, w)
