@@ -35,7 +35,7 @@ func SupportedNetworks(supportedNetworks []*types.NetworkIdentifier) error {
 		}
 
 		if containsNetworkIdentifier(parsed, network) {
-			return fmt.Errorf("supported network duplicate %+v", *network)
+			return fmt.Errorf("supported network duplicate %+v", network)
 		}
 		parsed[i] = network
 	}
@@ -210,6 +210,10 @@ func (a *Asserter) MempoolRequest(request *types.MempoolRequest) error {
 // MempoolTransactionRequest ensures that a types.MempoolTransactionRequest
 // is well-formatted.
 func (a *Asserter) MempoolTransactionRequest(request *types.MempoolTransactionRequest) error {
+	if a == nil {
+		return ErrAsserterNotInitialized
+	}
+
 	if request == nil {
 		return errors.New("MempoolTransactionRequest is nil")
 	}

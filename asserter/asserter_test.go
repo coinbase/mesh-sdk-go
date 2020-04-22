@@ -271,4 +271,29 @@ func TestNew(t *testing.T) {
 			assert.ElementsMatch(t, test.networkOptions.Allow.Errors, errors)
 		})
 	}
+
+	t.Run("non-existent file", func(t *testing.T) {
+		asserter, err := NewClientWithFile(
+			"blah",
+		)
+		assert.Error(t, err)
+		assert.Nil(t, asserter)
+	})
+
+	t.Run("file not formatted correctly", func(t *testing.T) {
+		tmpfile, err := ioutil.TempFile("", "test.json")
+		assert.NoError(t, err)
+		defer os.Remove(tmpfile.Name())
+
+		_, err = tmpfile.Write([]byte("blah"))
+		assert.NoError(t, err)
+		assert.NoError(t, tmpfile.Close())
+
+		asserter, err := NewClientWithFile(
+			tmpfile.Name(),
+		)
+
+		assert.Nil(t, asserter)
+		assert.Error(t, err)
+	})
 }

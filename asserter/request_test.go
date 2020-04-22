@@ -55,6 +55,47 @@ var (
 	}
 )
 
+func TestSupportedNetworks(t *testing.T) {
+	var tests = map[string]struct {
+		networks []*types.NetworkIdentifier
+
+		err error
+	}{
+		"valid networks": {
+			networks: []*types.NetworkIdentifier{
+				validNetworkIdentifier,
+				wrongNetworkIdentifier,
+			},
+			err: nil,
+		},
+		"no valid networks": {
+			networks: []*types.NetworkIdentifier{},
+			err:      errors.New("no supported networks"),
+		},
+		"invalid network": {
+			networks: []*types.NetworkIdentifier{
+				{
+					Blockchain: "blah",
+				},
+			},
+			err: errors.New("NetworkIdentifier.Network is missing"),
+		},
+		"duplicate networks": {
+			networks: []*types.NetworkIdentifier{
+				validNetworkIdentifier,
+				validNetworkIdentifier,
+			},
+			err: fmt.Errorf("supported network duplicate %+v", validNetworkIdentifier),
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, test.err, SupportedNetworks(test.networks))
+		})
+	}
+}
+
 func TestAccountBalanceRequest(t *testing.T) {
 	var tests = map[string]struct {
 		request *types.AccountBalanceRequest
