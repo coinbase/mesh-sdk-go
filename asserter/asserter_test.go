@@ -43,7 +43,7 @@ func TestNew(t *testing.T) {
 				Index: 100,
 				Hash:  "block 100",
 			},
-			CurrentBlockTimestamp: 100,
+			CurrentBlockTimestamp: MinUnixEpoch + 1,
 			Peers: []*types.Peer{
 				{
 					PeerID: "peer 1",
@@ -56,7 +56,7 @@ func TestNew(t *testing.T) {
 				Index: 100,
 				Hash:  "block 100",
 			},
-			CurrentBlockTimestamp: 100,
+			CurrentBlockTimestamp: MinUnixEpoch + 1,
 			Peers: []*types.Peer{
 				{
 					PeerID: "peer 1",

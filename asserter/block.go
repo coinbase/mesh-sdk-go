@@ -22,6 +22,16 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
+const (
+	// MinUnixEpoch is the unix epoch time in milliseconds of
+	// 01/01/2000 at 12:00:00 AM.
+	MinUnixEpoch = int64(946713600000)
+
+	// MaxUnixEpoch is the unix epoch time in milliseconds of
+	// 01/01/2040 at 12:00:00 AM.
+	MaxUnixEpoch = int64(2209017600000)
+)
+
 // Amount ensures a types.Amount has an
 // integer value, specified precision, and symbol.
 func Amount(amount *types.Amount) error {
@@ -252,11 +262,13 @@ func (a *Asserter) Transaction(
 // Timestamp returns an error if the timestamp
 // on a block is less than or equal to 0.
 func Timestamp(timestamp int64) error {
-	if timestamp <= 0 {
-		return fmt.Errorf("Timestamp is invalid %d", timestamp)
+	if timestamp < MinUnixEpoch {
+		return fmt.Errorf("Timestamp %d is before 01/01/2000", timestamp)
+	} else if timestamp > MaxUnixEpoch {
+		return fmt.Errorf("Timestamp %d is after 01/01/2040", timestamp)
+	} else {
+		return nil
 	}
-
-	return nil
 }
 
 // Block runs a basic set of assertions for each returned block.
@@ -289,10 +301,10 @@ func (a *Asserter) Block(
 		if block.BlockIdentifier.Index <= block.ParentBlockIdentifier.Index {
 			return errors.New("BlockIdentifier.Index <= ParentBlockIdentifier.Index")
 		}
-	}
 
-	if err := Timestamp(block.Timestamp); err != nil {
-		return err
+		if err := Timestamp(block.Timestamp); err != nil {
+			return err
+		}
 	}
 
 	for _, transaction := range block.Transactions {
