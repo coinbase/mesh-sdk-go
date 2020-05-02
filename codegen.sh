@@ -138,6 +138,8 @@ done
 sed "${SED_IFLAG[@]}" 's/package client/package types/g' types/*;
 
 # Format client generated code
+FORMAT_GEN="gofmt -w /local/types; gofmt -w /local/client; gofmt -w /local/server"
+GOLANG_VERSION=1.13
 docker run --rm -v "${PWD}":/local \
-  golang:1.13 sh -c \
-  "cd /local; make gen-deps; gofmt -w /local/types; gofmt -w /local/client; gofmt -w /local/server; make add-license; make shorten-lines;"
+  golang:${GOLANG_VERSION} sh -c \
+  "cd /local; make gen-deps; ${FORMAT_GEN}; make add-license; make shorten-lines;"
