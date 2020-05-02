@@ -57,7 +57,7 @@ ROSETTA_SPEC_VERSION=v1.3.1
 curl -L https://github.com/coinbase/rosetta-specifications/releases/download/${ROSETTA_SPEC_VERSION}/api.json -o api.json;
 
 # Generate client + types code
-GENERATOR_VERSION='v4.3.0'
+GENERATOR_VERSION=v4.3.0
 docker run --user "$(id -u):$(id -g)" --rm -v "${PWD}":/local \
   openapitools/openapi-generator-cli:${GENERATOR_VERSION} generate \
   -i /local/api.json \
@@ -137,13 +137,7 @@ done
 # Change model files to correct package
 sed "${SED_IFLAG[@]}" 's/package client/package types/g' types/*;
 
-# Format clienterated code
-gofmt -w types/;
-gofmt -w client/;
-gofmt -w server/;
-
-# Ensure license correct
-make add-license;
-
-# Ensure no long lines
-make shorten-lines;
+# Format client generated code
+docker run --rm -v "${PWD}":/local \
+  golang:1.13 sh -c \
+  "cd /local; make gen-deps; gofmt -w /local/types; gofmt -w /local/client; gofmt -w /local/server; make add-license; make shorten-lines;"

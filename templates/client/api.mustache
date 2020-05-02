@@ -3,9 +3,10 @@ package {{packageName}}
 
 {{#operations}}
 import (
-	_context "context"
-	_ioutil "io/ioutil"
-	_nethttp "net/http"
+  _context "context"
+  _ioutil "io/ioutil"
+  _nethttp "net/http"
+  "fmt"
 
   "github.com/coinbase/rosetta-sdk-go/types"
 {{#imports}}	"{{import}}"
