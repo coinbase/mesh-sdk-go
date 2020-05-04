@@ -30,7 +30,7 @@ case "${OS}" in
 esac
 
 # Remove existing clienterated code
-mkdir tmp;
+mkdir -p tmp;
 DIRS=( types client server )
 IGNORED_FILES=( README.md utils.go utils_test.go )
 
@@ -52,27 +52,31 @@ done
 
 rm -rf tmp;
 
+# Download spec file from releases
+ROSETTA_SPEC_VERSION=v1.3.1
+curl -L https://github.com/coinbase/rosetta-specifications/releases/download/${ROSETTA_SPEC_VERSION}/api.json -o api.json;
+
 # Generate client + types code
-GENERATOR_VERSION='v4.3.0'
+GENERATOR_VERSION=v4.3.0
 docker run --user "$(id -u):$(id -g)" --rm -v "${PWD}":/local \
   openapitools/openapi-generator-cli:${GENERATOR_VERSION} generate \
-  -i /local/templates/spec.json \
+  -i /local/api.json \
   -g go \
   -t /local/templates/client \
   --additional-properties packageName=client\
   -o /local/client_tmp;
 
 # Remove unnecessary client files
-rm client_tmp/go.mod;
-rm client_tmp/README.md;
-rm client_tmp/go.mod;
-rm client_tmp/go.sum;
+rm -f client_tmp/go.mod;
+rm -f client_tmp/README.md;
+rm -f client_tmp/go.mod;
+rm -f client_tmp/go.sum;
 rm -rf client_tmp/api;
 rm -rf client_tmp/docs;
-rm client_tmp/git_push.sh;
-rm client_tmp/.travis.yml;
-rm client_tmp/.gitignore;
-rm client_tmp/.openapi-generator-ignore;
+rm -f client_tmp/git_push.sh;
+rm -f client_tmp/.travis.yml;
+rm -f client_tmp/.gitignore;
+rm -f client_tmp/.openapi-generator-ignore;
 rm -rf client_tmp/.openapi-generator;
 mv client_tmp/* client;
 rm -rf client_tmp;
@@ -80,7 +84,7 @@ rm -rf client_tmp;
 # Add server code
 docker run --user "$(id -u):$(id -g)" --rm -v "${PWD}":/local \
   openapitools/openapi-generator-cli:${GENERATOR_VERSION} generate \
-  -i /local/templates/spec.json \
+  -i /local/api.json \
   -g go-server \
   -t /local/templates/server \
   --additional-properties packageName=server\
@@ -89,17 +93,20 @@ docker run --user "$(id -u):$(id -g)" --rm -v "${PWD}":/local \
 # Remove unnecessary server files
 rm -rf server_tmp/api;
 rm -rf server_tmp/.openapi-generator;
-rm server_tmp/.openapi-generator-ignore;
-rm server_tmp/go.mod;
-rm server_tmp/main.go;
-rm server_tmp/README.md;
-rm server_tmp/Dockerfile;
+rm -f server_tmp/.openapi-generator-ignore;
+rm -f server_tmp/go.mod;
+rm -f server_tmp/main.go;
+rm -f server_tmp/README.md;
+rm -f server_tmp/Dockerfile;
 mv server_tmp/go/* server_tmp/.;
 rm -rf server_tmp/go;
-rm server_tmp/model_*.go
-rm server_tmp/*_service.go
+rm -f server_tmp/model_*.go
+rm -f server_tmp/*_service.go
 mv server_tmp/* server;
 rm -rf server_tmp;
+
+# Remove spec file
+rm -f api.json;
 
 # Fix linting issues
 sed "${SED_IFLAG[@]}" 's/Api/API/g' client/* server/*;
@@ -130,13 +137,9 @@ done
 # Change model files to correct package
 sed "${SED_IFLAG[@]}" 's/package client/package types/g' types/*;
 
-# Format clienterated code
-gofmt -w types/;
-gofmt -w client/;
-gofmt -w server/;
-
-# Ensure license correct
-make add-license;
-
-# Ensure no long lines
-make shorten-lines;
+# Format client generated code
+FORMAT_GEN="gofmt -w /local/types; gofmt -w /local/client; gofmt -w /local/server"
+GOLANG_VERSION=1.13
+docker run --rm -v "${PWD}":/local \
+  golang:${GOLANG_VERSION} sh -c \
+  "cd /local; make gen-deps; ${FORMAT_GEN}; make add-license; make shorten-lines;"
