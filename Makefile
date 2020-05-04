@@ -1,21 +1,25 @@
-.PHONY: deps gen lint format check-format test test-coverage add-license \
+.PHONY: gen-deps deps gen lint format check-format test test-coverage add-license \
 	check-license shorten-lines shellcheck salus release
 LICENCE_SCRIPT=addlicense -c "Coinbase, Inc." -l "apache" -v
 GO_PACKAGES=./asserter/... ./fetcher/... ./types/... ./client/... ./server/...
 GO_FOLDERS=$(shell echo ${GO_PACKAGES} | sed -e "s/\.\///g" | sed -e "s/\/\.\.\.//g")
+GO_INSTALL=GO111MODULE=off go get
 TEST_SCRIPT=go test -v ${GO_PACKAGES}
 LINT_SETTINGS=golint,misspell,gocyclo,gocritic,whitespace,goconst,gocognit,bodyclose,unconvert,lll,unparam
 
-deps:
+deps: | gen-deps
 	go get ./...
-	go get github.com/stretchr/testify
-	go get github.com/davecgh/go-spew
-	go get github.com/google/addlicense
-	go get github.com/segmentio/golines
-	go get github.com/mattn/goveralls
+	${GO_INSTALL} github.com/mattn/goveralls
+
+gen-deps:
+	${GO_INSTALL} github.com/google/addlicense
+	${GO_INSTALL} github.com/segmentio/golines
 
 gen:
 	./codegen.sh
+
+check-gen: | gen
+	git diff --exit-code
 
 lint-examples:
 	cd examples; \
@@ -52,4 +56,4 @@ shellcheck:
 salus:
 	docker run --rm -t -v ${PWD}:/home/repo coinbase/salus
 
-release: shellcheck gen add-license shorten-lines format test lint salus
+release: shellcheck check-gen check-license check-format test lint salus

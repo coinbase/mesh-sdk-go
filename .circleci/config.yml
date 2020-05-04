@@ -74,7 +74,12 @@ jobs:
     machine: true
     steps:
       - checkout
-      - run: docker run -t -v $(pwd):/home/repo coinbase/salus
+      - run: make salus
+  check-gen:
+    machine: true
+    steps:
+      - checkout
+      - run: make check-gen
 
 workflows:
   version: 2
@@ -97,6 +102,7 @@ workflows:
           requires:
             - setup
       - salus
+      - check-gen
 
 notify:
   webhooks:
