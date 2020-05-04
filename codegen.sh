@@ -30,7 +30,7 @@ case "${OS}" in
 esac
 
 # Remove existing clienterated code
-mkdir tmp;
+mkdir -p tmp;
 DIRS=( types client server )
 IGNORED_FILES=( README.md utils.go utils_test.go )
 
@@ -67,16 +67,16 @@ docker run --user "$(id -u):$(id -g)" --rm -v "${PWD}":/local \
   -o /local/client_tmp;
 
 # Remove unnecessary client files
-rm client_tmp/go.mod;
-rm client_tmp/README.md;
-rm client_tmp/go.mod;
-rm client_tmp/go.sum;
+rm -f client_tmp/go.mod;
+rm -f client_tmp/README.md;
+rm -f client_tmp/go.mod;
+rm -f client_tmp/go.sum;
 rm -rf client_tmp/api;
 rm -rf client_tmp/docs;
-rm client_tmp/git_push.sh;
-rm client_tmp/.travis.yml;
-rm client_tmp/.gitignore;
-rm client_tmp/.openapi-generator-ignore;
+rm -f client_tmp/git_push.sh;
+rm -f client_tmp/.travis.yml;
+rm -f client_tmp/.gitignore;
+rm -f client_tmp/.openapi-generator-ignore;
 rm -rf client_tmp/.openapi-generator;
 mv client_tmp/* client;
 rm -rf client_tmp;
@@ -93,20 +93,20 @@ docker run --user "$(id -u):$(id -g)" --rm -v "${PWD}":/local \
 # Remove unnecessary server files
 rm -rf server_tmp/api;
 rm -rf server_tmp/.openapi-generator;
-rm server_tmp/.openapi-generator-ignore;
-rm server_tmp/go.mod;
-rm server_tmp/main.go;
-rm server_tmp/README.md;
-rm server_tmp/Dockerfile;
+rm -f server_tmp/.openapi-generator-ignore;
+rm -f server_tmp/go.mod;
+rm -f server_tmp/main.go;
+rm -f server_tmp/README.md;
+rm -f server_tmp/Dockerfile;
 mv server_tmp/go/* server_tmp/.;
 rm -rf server_tmp/go;
-rm server_tmp/model_*.go
-rm server_tmp/*_service.go
+rm -f server_tmp/model_*.go
+rm -f server_tmp/*_service.go
 mv server_tmp/* server;
 rm -rf server_tmp;
 
 # Remove spec file
-rm api.json;
+rm -f api.json;
 
 # Fix linting issues
 sed "${SED_IFLAG[@]}" 's/Api/API/g' client/* server/*;
