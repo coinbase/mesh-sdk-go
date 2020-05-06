@@ -345,3 +345,43 @@ func TestCurrencyString(t *testing.T) {
 		})
 	}
 }
+
+func TestJSONRawMessage(t *testing.T) {
+	var tests = map[string]struct {
+		i      interface{}
+		result json.RawMessage
+		err    bool
+	}{
+		"simple": {
+			i: &Currency{
+				Symbol:   "BTC",
+				Decimals: 8,
+			},
+			result: json.RawMessage(`{"symbol":"BTC","decimals":8}`),
+		},
+		"nested": {
+			i: &Currency{
+				Symbol:   "BTC",
+				Decimals: 8,
+				Metadata: json.RawMessage(`{"issuer":"satoshi"}`),
+			},
+			result: json.RawMessage(`{"symbol":"BTC","decimals":8,"metadata":{"issuer":"satoshi"}}`),
+		},
+		"nil": {
+			i:   nil,
+			err: true,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			m, err := JSONRawMessage(test.i)
+			assert.Equal(t, test.result, m)
+			if test.err {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}

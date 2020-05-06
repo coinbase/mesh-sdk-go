@@ -17,6 +17,7 @@ package types
 import (
 	"crypto/sha256"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"math/big"
@@ -181,4 +182,18 @@ func PrettyPrintStruct(val interface{}) string {
 	}
 
 	return string(prettyStruct)
+}
+
+// JSONRawMessage returns a json.RawMessage given an interface.
+func JSONRawMessage(i interface{}) (json.RawMessage, error) {
+	if i == nil {
+		return nil, errors.New("interface is nil")
+	}
+
+	v, err := json.Marshal(i)
+	if err != nil {
+		return nil, err
+	}
+
+	return json.RawMessage(v), nil
 }
