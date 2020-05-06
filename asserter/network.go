@@ -17,7 +17,6 @@ package asserter
 import (
 	"errors"
 	"fmt"
-	"reflect"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
@@ -247,7 +246,7 @@ func containsNetworkIdentifier(
 	network *types.NetworkIdentifier,
 ) bool {
 	for _, net := range networks {
-		if reflect.DeepEqual(net, network) {
+		if types.Hash(net) == types.Hash(network) {
 			return true
 		}
 	}
