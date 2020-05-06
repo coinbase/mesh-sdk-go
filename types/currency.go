@@ -16,6 +16,8 @@
 
 package types
 
+import "encoding/json"
+
 // Currency Currency is composed of a canonical Symbol and Decimals. This Decimals value is used to
 // convert an Amount.Value from atomic units (Satoshis) to standard units (Bitcoins).
 type Currency struct {
@@ -27,5 +29,5 @@ type Currency struct {
 	Decimals int32 `json:"decimals"`
 	// Any additional information related to the currency itself.  For example, it would be useful
 	// to populate this object with the contract address of an ERC-20 token.
-	Metadata map[string]interface{} `json:"metadata,omitempty"`
+	Metadata json.RawMessage `json:"metadata,omitempty"`
 }
