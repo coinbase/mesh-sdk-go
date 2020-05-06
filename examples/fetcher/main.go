@@ -16,7 +16,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"log"
 
 	"github.com/coinbase/rosetta-sdk-go/fetcher"
@@ -47,25 +46,8 @@ func main() {
 	}
 
 	// Step 3: Print the primary network and network status
-	prettyPrimaryNetwork, err := json.MarshalIndent(
-		primaryNetwork,
-		"",
-		" ",
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
-	log.Printf("Primary Network: %s\n", string(prettyPrimaryNetwork))
-
-	prettyNetworkStatus, err := json.MarshalIndent(
-		networkStatus,
-		"",
-		" ",
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
-	log.Printf("Network Status: %s\n", string(prettyNetworkStatus))
+	log.Printf("Primary Network: %s\n", types.PrettyPrintStruct(primaryNetwork))
+	log.Printf("Network Status: %s\n", types.PrettyPrintStruct(networkStatus))
 
 	// Step 4: Fetch the current block with retries (automatically
 	// asserted for correctness)
@@ -95,15 +77,7 @@ func main() {
 	}
 
 	// Step 5: Print the block
-	prettyBlock, err := json.MarshalIndent(
-		block,
-		"",
-		" ",
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
-	log.Printf("Current Block: %s\n", string(prettyBlock))
+	log.Printf("Current Block: %s\n", types.PrettyPrintStruct(block))
 
 	// Step 6: Get a range of blocks
 	blockMap, err := newFetcher.BlockRange(
@@ -117,13 +91,5 @@ func main() {
 	}
 
 	// Step 7: Print the block range
-	prettyBlockRange, err := json.MarshalIndent(
-		blockMap,
-		"",
-		" ",
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
-	log.Printf("Block Range: %s\n", string(prettyBlockRange))
+	log.Printf("Block Range: %s\n", types.PrettyPrintStruct(blockMap))
 }

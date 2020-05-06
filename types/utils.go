@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math/big"
 )
 
 // ConstructPartialBlockIdentifier constructs a *PartialBlockIdentifier
@@ -76,4 +77,107 @@ func Hash(i interface{}) string {
 	}
 
 	return hashBytes(c)
+}
+
+// AddValues adds string amounts using
+// big.Int.
+func AddValues(
+	a string,
+	b string,
+) (string, error) {
+	aVal, ok := new(big.Int).SetString(a, 10)
+	if !ok {
+		return "", fmt.Errorf("%s is not an integer", a)
+	}
+
+	bVal, ok := new(big.Int).SetString(b, 10)
+	if !ok {
+		return "", fmt.Errorf("%s is not an integer", b)
+	}
+
+	newVal := new(big.Int).Add(aVal, bVal)
+	return newVal.String(), nil
+}
+
+// SubtractValues subtracts a-b using
+// big.Int.
+func SubtractValues(
+	a string,
+	b string,
+) (string, error) {
+	aVal, ok := new(big.Int).SetString(a, 10)
+	if !ok {
+		return "", fmt.Errorf("%s is not an integer", a)
+	}
+
+	bVal, ok := new(big.Int).SetString(b, 10)
+	if !ok {
+		return "", fmt.Errorf("%s is not an integer", b)
+	}
+
+	newVal := new(big.Int).Sub(aVal, bVal)
+	return newVal.String(), nil
+}
+
+// AccountString returns a human-readable representation of a
+// *types.AccountIdentifier.
+func AccountString(account *AccountIdentifier) (string, error) {
+	if account.SubAccount == nil {
+		return account.Address, nil
+	}
+
+	if account.SubAccount.Metadata == nil {
+		return fmt.Sprintf(
+			"%s:%s",
+			account.Address,
+			account.SubAccount.Address,
+		), nil
+	}
+
+	var m map[string]interface{}
+	if err := json.Unmarshal(account.SubAccount.Metadata, &m); err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf(
+		"%s:%s:%+v",
+		account.Address,
+		account.SubAccount.Address,
+		m,
+	), nil
+}
+
+// CurrencyString returns a human-readable representation
+// of a *types.Currency.
+func CurrencyString(currency *Currency) (string, error) {
+	if currency.Metadata == nil {
+		return fmt.Sprintf("%s:%d", currency.Symbol, currency.Decimals), nil
+	}
+
+	var m map[string]interface{}
+	if err := json.Unmarshal(currency.Metadata, &m); err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf(
+		"%s:%d:%+v",
+		currency.Symbol,
+		currency.Decimals,
+		m,
+	), nil
+}
+
+// PrettyPrintStruct marshals a struct to JSON and returns
+// it as a string.
+func PrettyPrintStruct(val interface{}) string {
+	prettyStruct, err := json.MarshalIndent(
+		val,
+		"",
+		" ",
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return string(prettyStruct)
 }
