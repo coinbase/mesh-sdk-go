@@ -15,6 +15,7 @@
 package asserter
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
@@ -65,6 +66,7 @@ func AccountBalanceResponse(
 	requestBlock *types.PartialBlockIdentifier,
 	responseBlock *types.BlockIdentifier,
 	balances []*types.Amount,
+	metadata json.RawMessage,
 ) error {
 	if err := BlockIdentifier(responseBlock); err != nil {
 		return err
@@ -94,5 +96,5 @@ func AccountBalanceResponse(
 		)
 	}
 
-	return nil
+	return JSONObject(metadata)
 }
