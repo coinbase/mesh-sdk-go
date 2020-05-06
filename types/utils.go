@@ -51,7 +51,8 @@ func hashBytes(data []byte) string {
 // Hash returns a deterministic hash for any interface.
 // This works because Golang's JSON marshaler sorts all map keys, recursively.
 // Source: https://golang.org/pkg/encoding/json/#Marshal
-// Inspiration: https://github.com/onsi/gomega/blob/c0be49994280db30b6b68390f67126d773bc5558/matchers/match_json_matcher.go#L16
+// Inspiration:
+// https://github.com/onsi/gomega/blob/c0be49994280db30b6b68390f67126d773bc5558/matchers/match_json_matcher.go#L16
 //
 // It is important to note that any interface that is a slice
 // or contains slices will not be equal if the slice ordering is
