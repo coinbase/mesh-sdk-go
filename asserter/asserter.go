@@ -87,8 +87,10 @@ func NewClientWithResponses(
 	)
 }
 
-// FileConfiguration is the structure of the JSON configuration file.
-type FileConfiguration struct {
+// Configuration is the static configuration of an Asserter. This
+// configuration can be exported by the Asserter and used to instantiate an
+// Asserter.
+type Configuration struct {
 	NetworkIdentifier        *types.NetworkIdentifier `json:"network_identifier"`
 	GenesisBlockIdentifier   *types.BlockIdentifier   `json:"genesis_block_identifier"`
 	AllowedOperationTypes    []string                 `json:"allowed_operation_types"`
@@ -109,7 +111,7 @@ func NewClientWithFile(
 		return nil, err
 	}
 
-	config := &FileConfiguration{}
+	config := &Configuration{}
 	if err := json.Unmarshal(content, config); err != nil {
 		return nil, err
 	}
@@ -170,16 +172,9 @@ func NewClientWithOptions(
 
 // ClientConfiguration returns all variables currently set in an Asserter.
 // This function will error if it is called on an uninitialized asserter.
-func (a *Asserter) ClientConfiguration() (
-	*types.NetworkIdentifier,
-	*types.BlockIdentifier,
-	[]string,
-	[]*types.OperationStatus,
-	[]*types.Error,
-	error,
-) {
+func (a *Asserter) ClientConfiguration() (*Configuration, error) {
 	if a == nil {
-		return nil, nil, nil, nil, nil, ErrAsserterNotInitialized
+		return nil, ErrAsserterNotInitialized
 	}
 
 	operationStatuses := []*types.OperationStatus{}
@@ -195,7 +190,13 @@ func (a *Asserter) ClientConfiguration() (
 		errors = append(errors, v)
 	}
 
-	return a.network, a.genesisBlock, a.operationTypes, operationStatuses, errors, nil
+	return &Configuration{
+		NetworkIdentifier:        a.network,
+		GenesisBlockIdentifier:   a.genesisBlock,
+		AllowedOperationTypes:    a.operationTypes,
+		AllowedOperationStatuses: operationStatuses,
+		AllowedErrors:            errors,
+	}, nil
 }
 
 // OperationSuccessful returns a boolean indicating if a types.Operation is
