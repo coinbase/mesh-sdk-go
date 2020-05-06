@@ -16,9 +16,11 @@
 
 package types
 
+import "encoding/json"
+
 // ConstructionMetadataResponse The ConstructionMetadataResponse returns network-specific metadata
 // used for transaction construction. It is likely that the client will not inspect this metadata
 // before passing it to a client SDK that uses it for construction.
 type ConstructionMetadataResponse struct {
-	Metadata map[string]interface{} `json:"metadata"`
+	Metadata json.RawMessage `json:"metadata"`
 }

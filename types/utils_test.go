@@ -15,6 +15,8 @@
 package types
 
 import (
+	"encoding/json"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -36,4 +38,350 @@ func TestConstructPartialBlockIdentifier(t *testing.T) {
 		partialBlockIdentifier,
 		ConstructPartialBlockIdentifier(blockIdentifier),
 	)
+}
+
+func TestHash(t *testing.T) {
+	var tests = map[string][]interface{}{
+		"simple": []interface{}{
+			1,
+			1,
+		},
+		"complex": []interface{}{
+			map[string]interface{}{
+				"a":     "b",
+				"b":     "c",
+				"c":     "d",
+				"blahz": json.RawMessage(`{"test":6, "wha":{"sweet":3, "nice":true}, "neat0":"hello"}`),
+				"d": map[string]interface{}{
+					"t":    "p",
+					"e":    2,
+					"k":    "l",
+					"blah": json.RawMessage(`{"test":2, "neat":"hello", "cool":{"sweet":3, "nice":true}}`),
+				},
+			},
+			map[string]interface{}{
+				"b":     "c",
+				"blahz": json.RawMessage(`{"wha":{"sweet":3, "nice":true},"test":6, "neat0":"hello"}`),
+				"a":     "b",
+				"d": map[string]interface{}{
+					"e":    2,
+					"k":    "l",
+					"t":    "p",
+					"blah": json.RawMessage(`{"test":2, "neat":"hello", "cool":{"nice":true, "sweet":3}}`),
+				},
+				"c": "d",
+			},
+			map[string]interface{}{
+				"a": "b",
+				"d": map[string]interface{}{
+					"k":    "l",
+					"t":    "p",
+					"blah": json.RawMessage(`{"test":2, "cool":{"nice":true, "sweet":3}, "neat":"hello"}`),
+					"e":    2,
+				},
+				"c":     "d",
+				"blahz": json.RawMessage(`{"wha":{"nice":true, "sweet":3},"test":6, "neat0":"hello"}`),
+				"b":     "c",
+			},
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			var val string
+			for _, v := range test {
+				if val == "" {
+					val = Hash(v)
+				} else {
+					assert.Equal(t, val, Hash(v))
+				}
+			}
+		})
+	}
+}
+
+func TestAddValues(t *testing.T) {
+	var tests = map[string]struct {
+		a      string
+		b      string
+		result string
+		err    error
+	}{
+		"simple": {
+			a:      "1",
+			b:      "1",
+			result: "2",
+			err:    nil,
+		},
+		"large": {
+			a:      "1000000000000000000000000",
+			b:      "100000000000000000000000000000000",
+			result: "100000001000000000000000000000000",
+			err:    nil,
+		},
+		"decimal": {
+			a:      "10000000000000000000000.01",
+			b:      "100000000000000000000000000000000",
+			result: "",
+			err:    errors.New("10000000000000000000000.01 is not an integer"),
+		},
+		"negative": {
+			a:      "-13213",
+			b:      "12332",
+			result: "-881",
+			err:    nil,
+		},
+		"invalid number": {
+			a:      "-13213",
+			b:      "hello",
+			result: "",
+			err:    errors.New("hello is not an integer"),
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			result, err := AddValues(test.a, test.b)
+			assert.Equal(t, test.err, err)
+			assert.Equal(t, test.result, result)
+		})
+	}
+}
+
+func TestSubtractValues(t *testing.T) {
+	var tests = map[string]struct {
+		a      string
+		b      string
+		result string
+		err    error
+	}{
+		"simple": {
+			a:      "1",
+			b:      "1",
+			result: "0",
+			err:    nil,
+		},
+		"large": {
+			a:      "1000000000000000000000000",
+			b:      "100000000000000000000000000000000",
+			result: "-99999999000000000000000000000000",
+			err:    nil,
+		},
+		"decimal": {
+			a:      "10000000000000000000000.01",
+			b:      "100000000000000000000000000000000",
+			result: "",
+			err:    errors.New("10000000000000000000000.01 is not an integer"),
+		},
+		"negative": {
+			a:      "-13213",
+			b:      "12332",
+			result: "-25545",
+			err:    nil,
+		},
+		"invalid number": {
+			a:      "-13213",
+			b:      "hello",
+			result: "",
+			err:    errors.New("hello is not an integer"),
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			result, err := SubtractValues(test.a, test.b)
+			assert.Equal(t, test.err, err)
+			assert.Equal(t, test.result, result)
+		})
+	}
+}
+
+func TestGetAccountString(t *testing.T) {
+	var tests = map[string]struct {
+		account *AccountIdentifier
+		err     bool
+		key     string
+	}{
+		"simple account": {
+			account: &AccountIdentifier{
+				Address: "hello",
+			},
+			key: "hello",
+		},
+		"subaccount": {
+			account: &AccountIdentifier{
+				Address: "hello",
+				SubAccount: &SubAccountIdentifier{
+					Address: "stake",
+				},
+			},
+			key: "hello:stake",
+		},
+		"subaccount with string metadata": {
+			account: &AccountIdentifier{
+				Address: "hello",
+				SubAccount: &SubAccountIdentifier{
+					Address: "stake",
+					Metadata: json.RawMessage(`{ 
+						"cool": "neat"
+					}`),
+				},
+			},
+			key: "hello:stake:map[cool:neat]",
+		},
+		"subaccount with number metadata": {
+			account: &AccountIdentifier{
+				Address: "hello",
+				SubAccount: &SubAccountIdentifier{
+					Address: "stake",
+					Metadata: json.RawMessage(`{
+						"cool": 1
+					}`),
+				},
+			},
+			key: "hello:stake:map[cool:1]",
+		},
+		"subaccount with complex metadata": {
+			account: &AccountIdentifier{
+				Address: "hello",
+				SubAccount: &SubAccountIdentifier{
+					Address: "stake",
+					Metadata: json.RawMessage(`{
+						"cool":    1,
+						"awesome": "neat"
+					}`),
+				},
+			},
+			key: "hello:stake:map[awesome:neat cool:1]",
+		},
+		"subaccount with invalid metadata": {
+			account: &AccountIdentifier{
+				Address: "hello",
+				SubAccount: &SubAccountIdentifier{
+					Address:  "stake",
+					Metadata: json.RawMessage(`stuff`),
+				},
+			},
+			err: true,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			accountString, err := AccountString(test.account)
+			if test.err {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			assert.Equal(t, test.key, accountString)
+		})
+	}
+}
+
+func TestCurrencyString(t *testing.T) {
+	var tests = map[string]struct {
+		currency *Currency
+		key      string
+		err      bool
+	}{
+		"simple currency": {
+			currency: &Currency{
+				Symbol:   "BTC",
+				Decimals: 8,
+			},
+			key: "BTC:8",
+		},
+		"currency with string metadata": {
+			currency: &Currency{
+				Symbol:   "BTC",
+				Decimals: 8,
+				Metadata: json.RawMessage(`{
+					"issuer": "satoshi"
+				}`),
+			},
+			key: "BTC:8:map[issuer:satoshi]",
+		},
+		"currency with number metadata": {
+			currency: &Currency{
+				Symbol:   "BTC",
+				Decimals: 8,
+				Metadata: json.RawMessage(`{
+					"issuer": 1
+				}`),
+			},
+			key: "BTC:8:map[issuer:1]",
+		},
+		"currency with complex metadata": {
+			currency: &Currency{
+				Symbol:   "BTC",
+				Decimals: 8,
+				Metadata: json.RawMessage(`{
+					"issuer": "satoshi",
+					"count":  10
+				}`),
+			},
+			key: "BTC:8:map[count:10 issuer:satoshi]",
+		},
+		"currency with invalid metadata": {
+			currency: &Currency{
+				Symbol:   "BTC",
+				Decimals: 8,
+				Metadata: json.RawMessage(`stuff`),
+			},
+			err: true,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			currencyString, err := CurrencyString(test.currency)
+			if test.err {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			assert.Equal(t, test.key, currencyString)
+		})
+	}
+}
+
+func TestJSONRawMessage(t *testing.T) {
+	var tests = map[string]struct {
+		i      interface{}
+		result json.RawMessage
+		err    bool
+	}{
+		"simple": {
+			i: &Currency{
+				Symbol:   "BTC",
+				Decimals: 8,
+			},
+			result: json.RawMessage(`{"symbol":"BTC","decimals":8}`),
+		},
+		"nested": {
+			i: &Currency{
+				Symbol:   "BTC",
+				Decimals: 8,
+				Metadata: json.RawMessage(`{"issuer":"satoshi"}`),
+			},
+			result: json.RawMessage(`{"symbol":"BTC","decimals":8,"metadata":{"issuer":"satoshi"}}`),
+		},
+		"nil": {
+			i:   nil,
+			err: true,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			m, err := JSONRawMessage(test.i)
+			assert.Equal(t, test.result, m)
+			if test.err {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
 }

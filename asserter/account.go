@@ -15,8 +15,8 @@
 package asserter
 
 import (
+	"encoding/json"
 	"fmt"
-	"reflect"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
@@ -28,7 +28,7 @@ import (
 // struct (including currency.Metadata).
 func containsCurrency(currencies []*types.Currency, currency *types.Currency) bool {
 	for _, curr := range currencies {
-		if reflect.DeepEqual(curr, currency) {
+		if types.Hash(curr) == types.Hash(currency) {
 			return true
 		}
 	}
@@ -66,6 +66,7 @@ func AccountBalanceResponse(
 	requestBlock *types.PartialBlockIdentifier,
 	responseBlock *types.BlockIdentifier,
 	balances []*types.Amount,
+	metadata json.RawMessage,
 ) error {
 	if err := BlockIdentifier(responseBlock); err != nil {
 		return err
@@ -95,5 +96,5 @@ func AccountBalanceResponse(
 		)
 	}
 
-	return nil
+	return JSONObject(metadata)
 }

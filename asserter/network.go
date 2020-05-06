@@ -17,7 +17,6 @@ package asserter
 import (
 	"errors"
 	"fmt"
-	"reflect"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
@@ -32,7 +31,7 @@ func SubNetworkIdentifier(subNetworkIdentifier *types.SubNetworkIdentifier) erro
 		return errors.New("NetworkIdentifier.SubNetworkIdentifier.Network is missing")
 	}
 
-	return nil
+	return JSONObject(subNetworkIdentifier.Metadata)
 }
 
 // NetworkIdentifier ensures a types.NetworkIdentifier has
@@ -59,7 +58,7 @@ func Peer(peer *types.Peer) error {
 		return errors.New("Peer.PeerID is missing")
 	}
 
-	return nil
+	return JSONObject(peer.Metadata)
 }
 
 // Version ensures the version of the node is
@@ -77,7 +76,7 @@ func Version(version *types.Version) error {
 		return errors.New("Version.MiddlewareVersion is missing")
 	}
 
-	return nil
+	return JSONObject(version.Metadata)
 }
 
 // StringArray ensures all strings in an array
@@ -247,7 +246,7 @@ func containsNetworkIdentifier(
 	network *types.NetworkIdentifier,
 ) bool {
 	for _, net := range networks {
-		if reflect.DeepEqual(net, network) {
+		if types.Hash(net) == types.Hash(network) {
 			return true
 		}
 	}
