@@ -126,7 +126,7 @@ sed "${SED_IFLAG[@]}" 's/<\/code>//g' client/* server/*;
 sed "${SED_IFLAG[@]}" 's/\*\[\]/\[\]\*/g' client/* server/*;
 
 # Fix map pointers
-sed "${SED_IFLAG[@]}" 's/\*map/map/g' client/* server/*;
+sed "${SED_IFLAG[@]}" 's/\*map\[string\]interface{}/json\.RawMessage/g' client/* server/*;
 
 # Move model files to types/
 mv client/model_*.go types/;
