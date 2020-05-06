@@ -16,6 +16,7 @@ package fetcher
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
@@ -28,7 +29,7 @@ import (
 func (f *Fetcher) NetworkStatus(
 	ctx context.Context,
 	network *types.NetworkIdentifier,
-	metadata map[string]interface{},
+	metadata json.RawMessage,
 ) (*types.NetworkStatusResponse, error) {
 	networkStatus, _, err := f.rosettaClient.NetworkAPI.NetworkStatus(
 		ctx,
@@ -53,7 +54,7 @@ func (f *Fetcher) NetworkStatus(
 func (f *Fetcher) NetworkStatusRetry(
 	ctx context.Context,
 	network *types.NetworkIdentifier,
-	metadata map[string]interface{},
+	metadata json.RawMessage,
 ) (*types.NetworkStatusResponse, error) {
 	backoffRetries := backoffRetries(
 		f.retryElapsedTime,
@@ -82,7 +83,7 @@ func (f *Fetcher) NetworkStatusRetry(
 // from the NetworList method.
 func (f *Fetcher) NetworkList(
 	ctx context.Context,
-	metadata map[string]interface{},
+	metadata json.RawMessage,
 ) (*types.NetworkListResponse, error) {
 	networkList, _, err := f.rosettaClient.NetworkAPI.NetworkList(
 		ctx,
@@ -105,7 +106,7 @@ func (f *Fetcher) NetworkList(
 // with a specified number of retries and max elapsed time.
 func (f *Fetcher) NetworkListRetry(
 	ctx context.Context,
-	metadata map[string]interface{},
+	metadata json.RawMessage,
 ) (*types.NetworkListResponse, error) {
 	backoffRetries := backoffRetries(
 		f.retryElapsedTime,
@@ -134,7 +135,7 @@ func (f *Fetcher) NetworkListRetry(
 func (f *Fetcher) NetworkOptions(
 	ctx context.Context,
 	network *types.NetworkIdentifier,
-	metadata map[string]interface{},
+	metadata json.RawMessage,
 ) (*types.NetworkOptionsResponse, error) {
 	NetworkOptions, _, err := f.rosettaClient.NetworkAPI.NetworkOptions(
 		ctx,
@@ -159,7 +160,7 @@ func (f *Fetcher) NetworkOptions(
 func (f *Fetcher) NetworkOptionsRetry(
 	ctx context.Context,
 	network *types.NetworkIdentifier,
-	metadata map[string]interface{},
+	metadata json.RawMessage,
 ) (*types.NetworkOptionsResponse, error) {
 	backoffRetries := backoffRetries(
 		f.retryElapsedTime,

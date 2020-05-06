@@ -16,7 +16,6 @@ package asserter
 
 import (
 	"fmt"
-	"reflect"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
@@ -28,7 +27,7 @@ import (
 // struct (including currency.Metadata).
 func containsCurrency(currencies []*types.Currency, currency *types.Currency) bool {
 	for _, curr := range currencies {
-		if reflect.DeepEqual(curr, currency) {
+		if types.Hash(curr) == types.Hash(currency) {
 			return true
 		}
 	}

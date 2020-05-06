@@ -15,6 +15,7 @@
 package asserter
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"testing"
@@ -48,17 +49,28 @@ func TestContainsCurrency(t *testing.T) {
 				{
 					Symbol:   "BTC",
 					Decimals: 8,
-					Metadata: map[string]interface{}{
-						"blah": "hello",
-					},
+					Metadata: json.RawMessage(`{"blah": "hello"}`),
 				},
 			},
 			currency: &types.Currency{
 				Symbol:   "BTC",
 				Decimals: 8,
-				Metadata: map[string]interface{}{
-					"blah": "hello",
+				Metadata: json.RawMessage(`{"blah": "hello"}`),
+			},
+			contains: true,
+		},
+		"more complex contains": {
+			currencies: []*types.Currency{
+				{
+					Symbol:   "BTC",
+					Decimals: 8,
+					Metadata: json.RawMessage(`{"blah2":"bye", "blah": "hello"}`),
 				},
+			},
+			currency: &types.Currency{
+				Symbol:   "BTC",
+				Decimals: 8,
+				Metadata: json.RawMessage(`{"blah": "hello", "blah2": "bye"}`),
 			},
 			contains: true,
 		},
@@ -101,17 +113,13 @@ func TestContainsCurrency(t *testing.T) {
 				{
 					Symbol:   "BTC",
 					Decimals: 8,
-					Metadata: map[string]interface{}{
-						"blah": "hello",
-					},
+					Metadata: json.RawMessage(`{"blah": "hello"}`),
 				},
 			},
 			currency: &types.Currency{
 				Symbol:   "BTC",
 				Decimals: 8,
-				Metadata: map[string]interface{}{
-					"blah": "bye",
-				},
+				Metadata: json.RawMessage(`{"blah": "bye"}`),
 			},
 			contains: false,
 		},

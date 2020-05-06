@@ -15,6 +15,7 @@
 package types
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -36,4 +37,64 @@ func TestConstructPartialBlockIdentifier(t *testing.T) {
 		partialBlockIdentifier,
 		ConstructPartialBlockIdentifier(blockIdentifier),
 	)
+}
+
+func TestHash(t *testing.T) {
+	var tests = map[string][]interface{}{
+		"simple": []interface{}{
+			1,
+			1,
+		},
+		"complex": []interface{}{
+			map[string]interface{}{
+				"a":     "b",
+				"b":     "c",
+				"c":     "d",
+				"blahz": json.RawMessage(`{"test":6, "wha":{"sweet":3, "nice":true}, "neat0":"hello"}`),
+				"d": map[string]interface{}{
+					"t":    "p",
+					"e":    2,
+					"k":    "l",
+					"blah": json.RawMessage(`{"test":2, "neat":"hello", "cool":{"sweet":3, "nice":true}}`),
+				},
+			},
+			map[string]interface{}{
+				"b":     "c",
+				"blahz": json.RawMessage(`{"wha":{"sweet":3, "nice":true},"test":6, "neat0":"hello"}`),
+				"a":     "b",
+				"d": map[string]interface{}{
+					"e":    2,
+					"k":    "l",
+					"t":    "p",
+					"blah": json.RawMessage(`{"test":2, "neat":"hello", "cool":{"nice":true, "sweet":3}}`),
+				},
+				"c": "d",
+			},
+			map[string]interface{}{
+				"a": "b",
+				"d": map[string]interface{}{
+					"k":    "l",
+					"t":    "p",
+					"blah": json.RawMessage(`{"test":2, "cool":{"nice":true, "sweet":3}, "neat":"hello"}`),
+					"e":    2,
+				},
+				"c":     "d",
+				"blahz": json.RawMessage(`{"wha":{"nice":true, "sweet":3},"test":6, "neat0":"hello"}`),
+				"b":     "c",
+			},
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			var val string
+			for _, v := range test {
+				if val == "" {
+					val = Hash(v)
+				} else {
+					assert.Equal(t, val, Hash(v))
+				}
+			}
+		})
+	}
 }
