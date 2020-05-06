@@ -16,7 +16,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"log"
 	"net/http"
 	"time"
@@ -72,11 +71,7 @@ func main() {
 	primaryNetwork := networkList.NetworkIdentifiers[0]
 
 	// Step 3: Print the primary network
-	prettyPrimaryNetwork, err := json.MarshalIndent(primaryNetwork, "", " ")
-	if err != nil {
-		log.Fatal(err)
-	}
-	log.Printf("Primary Network: %s\n", string(prettyPrimaryNetwork))
+	log.Printf("Primary Network: %s\n", types.PrettyPrintStruct(primaryNetwork))
 
 	// Step 4: Fetch the network status
 	networkStatus, rosettaErr, err := client.NetworkAPI.NetworkStatus(
@@ -93,11 +88,7 @@ func main() {
 	}
 
 	// Step 5: Print the response
-	prettyNetworkStatus, err := json.MarshalIndent(networkStatus, "", " ")
-	if err != nil {
-		log.Fatal(err)
-	}
-	log.Printf("Network Status: %s\n", string(prettyNetworkStatus))
+	log.Printf("Network Status: %s\n", types.PrettyPrintStruct(networkStatus))
 
 	// Step 6: Assert the response is valid
 	err = asserter.NetworkStatusResponse(networkStatus)
@@ -120,11 +111,7 @@ func main() {
 	}
 
 	// Step 8: Print the response
-	prettyNetworkOptions, err := json.MarshalIndent(networkOptions, "", " ")
-	if err != nil {
-		log.Fatal(err)
-	}
-	log.Printf("Network Options: %s\n", string(prettyNetworkOptions))
+	log.Printf("Network Options: %s\n", types.PrettyPrintStruct(networkOptions))
 
 	// Step 9: Assert the response is valid
 	err = asserter.NetworkOptionsResponse(networkOptions)
@@ -164,11 +151,7 @@ func main() {
 	}
 
 	// Step 12: Print the block
-	prettyBlock, err := json.MarshalIndent(block.Block, "", " ")
-	if err != nil {
-		log.Fatal(err)
-	}
-	log.Printf("Current Block: %s\n", string(prettyBlock))
+	log.Printf("Current Block: %s\n", types.PrettyPrintStruct(block.Block))
 
 	// Step 13: Assert the block response is valid
 	//
