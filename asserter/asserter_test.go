@@ -226,9 +226,21 @@ func TestNew(t *testing.T) {
 			configuration, err := asserter.ClientConfiguration()
 			assert.NoError(t, err)
 			assert.Equal(t, test.network, configuration.NetworkIdentifier)
-			assert.Equal(t, test.networkStatus.GenesisBlockIdentifier, configuration.GenesisBlockIdentifier)
-			assert.ElementsMatch(t, test.networkOptions.Allow.OperationTypes, configuration.AllowedOperationTypes)
-			assert.ElementsMatch(t, test.networkOptions.Allow.OperationStatuses, configuration.AllowedOperationStatuses)
+			assert.Equal(
+				t,
+				test.networkStatus.GenesisBlockIdentifier,
+				configuration.GenesisBlockIdentifier,
+			)
+			assert.ElementsMatch(
+				t,
+				test.networkOptions.Allow.OperationTypes,
+				configuration.AllowedOperationTypes,
+			)
+			assert.ElementsMatch(
+				t,
+				test.networkOptions.Allow.OperationStatuses,
+				configuration.AllowedOperationStatuses,
+			)
 			assert.ElementsMatch(t, test.networkOptions.Allow.Errors, configuration.AllowedErrors)
 		})
 
@@ -265,9 +277,21 @@ func TestNew(t *testing.T) {
 			configuration, err := asserter.ClientConfiguration()
 			assert.NoError(t, err)
 			assert.Equal(t, test.network, configuration.NetworkIdentifier)
-			assert.Equal(t, test.networkStatus.GenesisBlockIdentifier, configuration.GenesisBlockIdentifier)
-			assert.ElementsMatch(t, test.networkOptions.Allow.OperationTypes, configuration.AllowedOperationTypes)
-			assert.ElementsMatch(t, test.networkOptions.Allow.OperationStatuses, configuration.AllowedOperationStatuses)
+			assert.Equal(
+				t,
+				test.networkStatus.GenesisBlockIdentifier,
+				configuration.GenesisBlockIdentifier,
+			)
+			assert.ElementsMatch(
+				t,
+				test.networkOptions.Allow.OperationTypes,
+				configuration.AllowedOperationTypes,
+			)
+			assert.ElementsMatch(
+				t,
+				test.networkOptions.Allow.OperationStatuses,
+				configuration.AllowedOperationStatuses,
+			)
 			assert.ElementsMatch(t, test.networkOptions.Allow.Errors, configuration.AllowedErrors)
 		})
 	}
