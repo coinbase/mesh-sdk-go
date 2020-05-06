@@ -51,6 +51,7 @@ func (f *Fetcher) AccountBalance(
 		block,
 		responseBlock,
 		balances,
+		response.Metadata,
 	); err != nil {
 		return nil, nil, nil, err
 	}

@@ -21,7 +21,7 @@ import (
 )
 
 // ConstructionMetadata returns an error if
-// the NetworkFee is not a valid types.Amount.
+// the metadata is not a JSON object.
 func ConstructionMetadata(
 	response *types.ConstructionMetadataResponse,
 ) error {
@@ -29,7 +29,7 @@ func ConstructionMetadata(
 		return errors.New("Metadata is nil")
 	}
 
-	return nil
+	return JSONObject(response.Metadata)
 }
 
 // ConstructionSubmit returns an error if
@@ -43,5 +43,5 @@ func ConstructionSubmit(
 		return err
 	}
 
-	return nil
+	return JSONObject(response.Metadata)
 }

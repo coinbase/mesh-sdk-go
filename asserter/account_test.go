@@ -161,6 +161,7 @@ func TestAccoutBalance(t *testing.T) {
 		requestBlock  *types.PartialBlockIdentifier
 		responseBlock *types.BlockIdentifier
 		balances      []*types.Amount
+		metadata      json.RawMessage
 		err           error
 	}{
 		"simple balance": {
@@ -211,7 +212,8 @@ func TestAccoutBalance(t *testing.T) {
 			balances: []*types.Amount{
 				validAmount,
 			},
-			err: nil,
+			metadata: json.RawMessage(`{"sequence":1}`),
+			err:      nil,
 		},
 		"invalid historical request index": {
 			requestBlock: &types.PartialBlockIdentifier{
@@ -251,6 +253,7 @@ func TestAccoutBalance(t *testing.T) {
 				test.requestBlock,
 				test.responseBlock,
 				test.balances,
+				test.metadata,
 			)
 			assert.Equal(t, test.err, err)
 		})

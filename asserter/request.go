@@ -160,7 +160,7 @@ func (a *Asserter) ConstructionMetadataRequest(request *types.ConstructionMetada
 		return errors.New("ConstructionMetadataRequest.Options is nil")
 	}
 
-	return nil
+	return JSONObject(request.Options)
 }
 
 // ConstructionSubmitRequest ensures that a types.ConstructionSubmitRequest
@@ -240,7 +240,7 @@ func (a *Asserter) MetadataRequest(request *types.MetadataRequest) error {
 		return errors.New("MetadataRequest is nil")
 	}
 
-	return nil
+	return JSONObject(request.Metadata)
 }
 
 // NetworkRequest ensures that a types.NetworkRequest
@@ -258,5 +258,9 @@ func (a *Asserter) NetworkRequest(request *types.NetworkRequest) error {
 		return err
 	}
 
-	return a.SupportedNetwork(request.NetworkIdentifier)
+	if err := a.SupportedNetwork(request.NetworkIdentifier); err != nil {
+		return err
+	}
+
+	return JSONObject(request.Metadata)
 }
