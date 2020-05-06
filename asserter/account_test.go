@@ -15,6 +15,7 @@
 package asserter
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"testing"
@@ -48,17 +49,28 @@ func TestContainsCurrency(t *testing.T) {
 				{
 					Symbol:   "BTC",
 					Decimals: 8,
-					Metadata: map[string]interface{}{
-						"blah": "hello",
-					},
+					Metadata: json.RawMessage(`{"blah": "hello"}`),
 				},
 			},
 			currency: &types.Currency{
 				Symbol:   "BTC",
 				Decimals: 8,
-				Metadata: map[string]interface{}{
-					"blah": "hello",
+				Metadata: json.RawMessage(`{"blah": "hello"}`),
+			},
+			contains: true,
+		},
+		"more complex contains": {
+			currencies: []*types.Currency{
+				{
+					Symbol:   "BTC",
+					Decimals: 8,
+					Metadata: json.RawMessage(`{"blah2":"bye", "blah": "hello"}`),
 				},
+			},
+			currency: &types.Currency{
+				Symbol:   "BTC",
+				Decimals: 8,
+				Metadata: json.RawMessage(`{"blah": "hello", "blah2": "bye"}`),
 			},
 			contains: true,
 		},
@@ -101,17 +113,13 @@ func TestContainsCurrency(t *testing.T) {
 				{
 					Symbol:   "BTC",
 					Decimals: 8,
-					Metadata: map[string]interface{}{
-						"blah": "hello",
-					},
+					Metadata: json.RawMessage(`{"blah": "hello"}`),
 				},
 			},
 			currency: &types.Currency{
 				Symbol:   "BTC",
 				Decimals: 8,
-				Metadata: map[string]interface{}{
-					"blah": "bye",
-				},
+				Metadata: json.RawMessage(`{"blah": "bye"}`),
 			},
 			contains: false,
 		},
@@ -153,6 +161,7 @@ func TestAccoutBalance(t *testing.T) {
 		requestBlock  *types.PartialBlockIdentifier
 		responseBlock *types.BlockIdentifier
 		balances      []*types.Amount
+		metadata      json.RawMessage
 		err           error
 	}{
 		"simple balance": {
@@ -203,7 +212,8 @@ func TestAccoutBalance(t *testing.T) {
 			balances: []*types.Amount{
 				validAmount,
 			},
-			err: nil,
+			metadata: json.RawMessage(`{"sequence":1}`),
+			err:      nil,
 		},
 		"invalid historical request index": {
 			requestBlock: &types.PartialBlockIdentifier{
@@ -243,6 +253,7 @@ func TestAccoutBalance(t *testing.T) {
 				test.requestBlock,
 				test.responseBlock,
 				test.balances,
+				test.metadata,
 			)
 			assert.Equal(t, test.err, err)
 		})

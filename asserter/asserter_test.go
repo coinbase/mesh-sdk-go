@@ -223,17 +223,29 @@ func TestNew(t *testing.T) {
 			}
 
 			assert.NotNil(t, asserter)
-			network, genesis, opTypes, opStatuses, errors, err := asserter.ClientConfiguration()
+			configuration, err := asserter.ClientConfiguration()
 			assert.NoError(t, err)
-			assert.Equal(t, test.network, network)
-			assert.Equal(t, test.networkStatus.GenesisBlockIdentifier, genesis)
-			assert.ElementsMatch(t, test.networkOptions.Allow.OperationTypes, opTypes)
-			assert.ElementsMatch(t, test.networkOptions.Allow.OperationStatuses, opStatuses)
-			assert.ElementsMatch(t, test.networkOptions.Allow.Errors, errors)
+			assert.Equal(t, test.network, configuration.NetworkIdentifier)
+			assert.Equal(
+				t,
+				test.networkStatus.GenesisBlockIdentifier,
+				configuration.GenesisBlockIdentifier,
+			)
+			assert.ElementsMatch(
+				t,
+				test.networkOptions.Allow.OperationTypes,
+				configuration.AllowedOperationTypes,
+			)
+			assert.ElementsMatch(
+				t,
+				test.networkOptions.Allow.OperationStatuses,
+				configuration.AllowedOperationStatuses,
+			)
+			assert.ElementsMatch(t, test.networkOptions.Allow.Errors, configuration.AllowedErrors)
 		})
 
 		t.Run(fmt.Sprintf("%s with file", name), func(t *testing.T) {
-			fileConfig := FileConfiguration{
+			fileConfig := &Configuration{
 				NetworkIdentifier:        test.network,
 				GenesisBlockIdentifier:   test.networkStatus.GenesisBlockIdentifier,
 				AllowedOperationTypes:    test.networkOptions.Allow.OperationTypes,
@@ -262,13 +274,25 @@ func TestNew(t *testing.T) {
 			}
 
 			assert.NotNil(t, asserter)
-			network, genesis, opTypes, opStatuses, errors, err := asserter.ClientConfiguration()
+			configuration, err := asserter.ClientConfiguration()
 			assert.NoError(t, err)
-			assert.Equal(t, test.network, network)
-			assert.Equal(t, test.networkStatus.GenesisBlockIdentifier, genesis)
-			assert.ElementsMatch(t, test.networkOptions.Allow.OperationTypes, opTypes)
-			assert.ElementsMatch(t, test.networkOptions.Allow.OperationStatuses, opStatuses)
-			assert.ElementsMatch(t, test.networkOptions.Allow.Errors, errors)
+			assert.Equal(t, test.network, configuration.NetworkIdentifier)
+			assert.Equal(
+				t,
+				test.networkStatus.GenesisBlockIdentifier,
+				configuration.GenesisBlockIdentifier,
+			)
+			assert.ElementsMatch(
+				t,
+				test.networkOptions.Allow.OperationTypes,
+				configuration.AllowedOperationTypes,
+			)
+			assert.ElementsMatch(
+				t,
+				test.networkOptions.Allow.OperationStatuses,
+				configuration.AllowedOperationStatuses,
+			)
+			assert.ElementsMatch(t, test.networkOptions.Allow.Errors, configuration.AllowedErrors)
 		})
 	}
 

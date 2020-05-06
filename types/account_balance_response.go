@@ -16,6 +16,8 @@
 
 package types
 
+import "encoding/json"
+
 // AccountBalanceResponse An AccountBalanceResponse is returned on the /account/balance endpoint. If
 // an account has a balance for each AccountIdentifier describing it (ex: an ERC-20 token balance on
 // a few smart contracts), an account balance request must be made with each AccountIdentifier.
@@ -26,5 +28,5 @@ type AccountBalanceResponse struct {
 	// Account-based blockchains that utilize a nonce or sequence number should include that number
 	// in the metadata. This number could be unique to the identifier or global across the account
 	// address.
-	Metadata map[string]interface{} `json:"metadata,omitempty"`
+	Metadata json.RawMessage `json:"metadata,omitempty"`
 }

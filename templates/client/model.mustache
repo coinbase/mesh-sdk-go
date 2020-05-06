@@ -1,15 +1,7 @@
 {{>partial_header}}
 package {{packageName}}
 {{#models}}
-{{#imports}}
-{{#-first}}
-import (
-{{/-first}}
-	"{{import}}"
-{{#-last}}
-)
-{{/-last}}
-{{/imports}}
+import "encoding/json"
 {{#model}}
 {{#isEnum}}
 // {{{classname}}} {{#description}}{{{.}}}{{/description}}{{^description}}the model '{{{classname}}}'{{/description}}

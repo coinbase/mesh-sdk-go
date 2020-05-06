@@ -14,6 +14,7 @@ deps: | gen-deps
 gen-deps:
 	${GO_INSTALL} github.com/google/addlicense
 	${GO_INSTALL} github.com/segmentio/golines
+	${GO_INSTALL} golang.org/x/tools/cmd/goimports
 
 gen:
 	./codegen.sh
@@ -30,9 +31,11 @@ lint: | lint-examples
 
 format:
 	gofmt -s -w -l .
+	goimports -w .
 
 check-format:
 	! gofmt -s -l . | read
+	! goimports -l . | read
 
 test:
 	${TEST_SCRIPT}
