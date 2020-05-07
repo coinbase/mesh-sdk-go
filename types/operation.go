@@ -16,8 +16,6 @@
 
 package types
 
-import "encoding/json"
-
 // Operation Operations contain all balance-changing information within a transaction. They are
 // always one-sided (only affect 1 AccountIdentifier) and can succeed or fail independently from a
 // Transaction.
@@ -36,8 +34,8 @@ type Operation struct {
 	// because blockchains with smart contracts may have transactions that partially apply.
 	// Blockchains with atomic transactions (all operations succeed or all operations fail) will
 	// have the same status for each operation.
-	Status   string             `json:"status"`
-	Account  *AccountIdentifier `json:"account,omitempty"`
-	Amount   *Amount            `json:"amount,omitempty"`
-	Metadata json.RawMessage    `json:"metadata,omitempty"`
+	Status   string                 `json:"status"`
+	Account  *AccountIdentifier     `json:"account,omitempty"`
+	Amount   *Amount                `json:"amount,omitempty"`
+	Metadata map[string]interface{} `json:"metadata,omitempty"`
 }

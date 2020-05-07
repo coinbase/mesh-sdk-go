@@ -42,11 +42,11 @@ func TestConstructPartialBlockIdentifier(t *testing.T) {
 
 func TestHash(t *testing.T) {
 	var tests = map[string][]interface{}{
-		"simple": []interface{}{
+		"simple": {
 			1,
 			1,
 		},
-		"complex": []interface{}{
+		"complex": {
 			map[string]interface{}{
 				"a":     "b",
 				"b":     "c",
@@ -222,9 +222,9 @@ func TestGetAccountString(t *testing.T) {
 				Address: "hello",
 				SubAccount: &SubAccountIdentifier{
 					Address: "stake",
-					Metadata: json.RawMessage(`{ 
-						"cool": "neat"
-					}`),
+					Metadata: map[string]interface{}{
+						"cool": "neat",
+					},
 				},
 			},
 			key: "hello:stake:map[cool:neat]",
@@ -234,9 +234,9 @@ func TestGetAccountString(t *testing.T) {
 				Address: "hello",
 				SubAccount: &SubAccountIdentifier{
 					Address: "stake",
-					Metadata: json.RawMessage(`{
-						"cool": 1
-					}`),
+					Metadata: map[string]interface{}{
+						"cool": 1,
+					},
 				},
 			},
 			key: "hello:stake:map[cool:1]",
@@ -246,34 +246,19 @@ func TestGetAccountString(t *testing.T) {
 				Address: "hello",
 				SubAccount: &SubAccountIdentifier{
 					Address: "stake",
-					Metadata: json.RawMessage(`{
+					Metadata: map[string]interface{}{
 						"cool":    1,
-						"awesome": "neat"
-					}`),
+						"awesome": "neat",
+					},
 				},
 			},
 			key: "hello:stake:map[awesome:neat cool:1]",
-		},
-		"subaccount with invalid metadata": {
-			account: &AccountIdentifier{
-				Address: "hello",
-				SubAccount: &SubAccountIdentifier{
-					Address:  "stake",
-					Metadata: json.RawMessage(`stuff`),
-				},
-			},
-			err: true,
 		},
 	}
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			accountString, err := AccountString(test.account)
-			if test.err {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-			}
+			accountString := AccountString(test.account)
 			assert.Equal(t, test.key, accountString)
 		})
 	}
@@ -283,7 +268,6 @@ func TestCurrencyString(t *testing.T) {
 	var tests = map[string]struct {
 		currency *Currency
 		key      string
-		err      bool
 	}{
 		"simple currency": {
 			currency: &Currency{
@@ -296,9 +280,9 @@ func TestCurrencyString(t *testing.T) {
 			currency: &Currency{
 				Symbol:   "BTC",
 				Decimals: 8,
-				Metadata: json.RawMessage(`{
-					"issuer": "satoshi"
-				}`),
+				Metadata: map[string]interface{}{
+					"issuer": "satoshi",
+				},
 			},
 			key: "BTC:8:map[issuer:satoshi]",
 		},
@@ -306,9 +290,9 @@ func TestCurrencyString(t *testing.T) {
 			currency: &Currency{
 				Symbol:   "BTC",
 				Decimals: 8,
-				Metadata: json.RawMessage(`{
-					"issuer": 1
-				}`),
+				Metadata: map[string]interface{}{
+					"issuer": 1,
+				},
 			},
 			key: "BTC:8:map[issuer:1]",
 		},
@@ -316,72 +300,19 @@ func TestCurrencyString(t *testing.T) {
 			currency: &Currency{
 				Symbol:   "BTC",
 				Decimals: 8,
-				Metadata: json.RawMessage(`{
+				Metadata: map[string]interface{}{
 					"issuer": "satoshi",
-					"count":  10
-				}`),
+					"count":  10,
+				},
 			},
 			key: "BTC:8:map[count:10 issuer:satoshi]",
 		},
-		"currency with invalid metadata": {
-			currency: &Currency{
-				Symbol:   "BTC",
-				Decimals: 8,
-				Metadata: json.RawMessage(`stuff`),
-			},
-			err: true,
-		},
 	}
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			currencyString, err := CurrencyString(test.currency)
-			if test.err {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-			}
+			currencyString := CurrencyString(test.currency)
 			assert.Equal(t, test.key, currencyString)
-		})
-	}
-}
-
-func TestJSONRawMessage(t *testing.T) {
-	var tests = map[string]struct {
-		i      interface{}
-		result json.RawMessage
-		err    bool
-	}{
-		"simple": {
-			i: &Currency{
-				Symbol:   "BTC",
-				Decimals: 8,
-			},
-			result: json.RawMessage(`{"symbol":"BTC","decimals":8}`),
-		},
-		"nested": {
-			i: &Currency{
-				Symbol:   "BTC",
-				Decimals: 8,
-				Metadata: json.RawMessage(`{"issuer":"satoshi"}`),
-			},
-			result: json.RawMessage(`{"symbol":"BTC","decimals":8,"metadata":{"issuer":"satoshi"}}`),
-		},
-		"nil": {
-			i:   nil,
-			err: true,
-		},
-	}
-
-	for name, test := range tests {
-		t.Run(name, func(t *testing.T) {
-			m, err := JSONRawMessage(test.i)
-			assert.Equal(t, test.result, m)
-			if test.err {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-			}
 		})
 	}
 }

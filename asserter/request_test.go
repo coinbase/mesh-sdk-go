@@ -15,7 +15,6 @@
 package asserter
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"testing"
@@ -295,14 +294,14 @@ func TestConstructionMetadataRequest(t *testing.T) {
 		"valid request": {
 			request: &types.ConstructionMetadataRequest{
 				NetworkIdentifier: validNetworkIdentifier,
-				Options:           json.RawMessage(`{}`),
+				Options:           map[string]interface{}{},
 			},
 			err: nil,
 		},
 		"invalid request wrong network": {
 			request: &types.ConstructionMetadataRequest{
 				NetworkIdentifier: wrongNetworkIdentifier,
-				Options:           json.RawMessage(`{}`),
+				Options:           map[string]interface{}{},
 			},
 			err: fmt.Errorf("%+v is not supported", wrongNetworkIdentifier),
 		},
@@ -312,7 +311,7 @@ func TestConstructionMetadataRequest(t *testing.T) {
 		},
 		"missing network": {
 			request: &types.ConstructionMetadataRequest{
-				Options: json.RawMessage(`{}`),
+				Options: map[string]interface{}{},
 			},
 			err: errors.New("NetworkIdentifier is nil"),
 		},

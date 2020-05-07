@@ -15,7 +15,6 @@
 package asserter
 
 import (
-	"encoding/json"
 	"errors"
 	"testing"
 
@@ -31,7 +30,7 @@ func TestConstructionMetadata(t *testing.T) {
 	}{
 		"valid response": {
 			response: &types.ConstructionMetadataResponse{
-				Metadata: json.RawMessage(`{}`),
+				Metadata: map[string]interface{}{},
 			},
 			err: nil,
 		},

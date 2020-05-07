@@ -16,12 +16,10 @@
 
 package types
 
-import "encoding/json"
-
 // SubNetworkIdentifier In blockchains with sharded state, the SubNetworkIdentifier is required to
 // query some object on a specific shard. This identifier is optional for all non-sharded
 // blockchains.
 type SubNetworkIdentifier struct {
-	Network  string          `json:"network"`
-	Metadata json.RawMessage `json:"metadata,omitempty"`
+	Network  string                 `json:"network"`
+	Metadata map[string]interface{} `json:"metadata,omitempty"`
 }
