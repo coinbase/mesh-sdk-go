@@ -17,10 +17,11 @@ package types
 import (
 	"crypto/sha256"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"math/big"
+
+	"github.com/mitchellh/mapstructure"
 )
 
 // ConstructPartialBlockIdentifier constructs a *PartialBlockIdentifier
@@ -123,9 +124,9 @@ func SubtractValues(
 
 // AccountString returns a human-readable representation of a
 // *types.AccountIdentifier.
-func AccountString(account *AccountIdentifier) (string, error) {
+func AccountString(account *AccountIdentifier) string {
 	if account.SubAccount == nil {
-		return account.Address, nil
+		return account.Address
 	}
 
 	if account.SubAccount.Metadata == nil {
@@ -133,40 +134,30 @@ func AccountString(account *AccountIdentifier) (string, error) {
 			"%s:%s",
 			account.Address,
 			account.SubAccount.Address,
-		), nil
-	}
-
-	var m map[string]interface{}
-	if err := json.Unmarshal(account.SubAccount.Metadata, &m); err != nil {
-		return "", err
+		)
 	}
 
 	return fmt.Sprintf(
 		"%s:%s:%+v",
 		account.Address,
 		account.SubAccount.Address,
-		m,
-	), nil
+		account.SubAccount.Metadata,
+	)
 }
 
 // CurrencyString returns a human-readable representation
 // of a *types.Currency.
-func CurrencyString(currency *Currency) (string, error) {
+func CurrencyString(currency *Currency) string {
 	if currency.Metadata == nil {
-		return fmt.Sprintf("%s:%d", currency.Symbol, currency.Decimals), nil
-	}
-
-	var m map[string]interface{}
-	if err := json.Unmarshal(currency.Metadata, &m); err != nil {
-		return "", err
+		return fmt.Sprintf("%s:%d", currency.Symbol, currency.Decimals)
 	}
 
 	return fmt.Sprintf(
 		"%s:%d:%+v",
 		currency.Symbol,
 		currency.Decimals,
-		m,
-	), nil
+		currency.Metadata,
+	)
 }
 
 // PrettyPrintStruct marshals a struct to JSON and returns
@@ -184,16 +175,41 @@ func PrettyPrintStruct(val interface{}) string {
 	return string(prettyStruct)
 }
 
-// JSONRawMessage returns a json.RawMessage given an interface.
-func JSONRawMessage(i interface{}) (json.RawMessage, error) {
-	if i == nil {
-		return nil, errors.New("interface is nil")
+// MarshalMap attempts to marshal an interface into a map[string]interface{}.
+// This function is used similarly to json.Marshal.
+func MarshalMap(input interface{}) (map[string]interface{}, error) {
+	if input == nil {
+		return nil, nil
 	}
 
-	v, err := json.Marshal(i)
+	// Only create output if input is not nil, otherwise we will
+	// return a map for a nil input.
+	output := map[string]interface{}{}
+	decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
+		TagName: "json",
+		Result:  &output,
+	})
 	if err != nil {
 		return nil, err
 	}
 
-	return json.RawMessage(v), nil
+	if err := decoder.Decode(input); err != nil {
+		return nil, err
+	}
+
+	return output, nil
+}
+
+// UnmarshalMap attempts to unmarshal a map[string]interface{} into an
+// interface. This function is used similarly to json.Unmarshal.
+func UnmarshalMap(metadata map[string]interface{}, output interface{}) error {
+	decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
+		TagName: "json",
+		Result:  output,
+	})
+	if err != nil {
+		return err
+	}
+
+	return decoder.Decode(metadata)
 }

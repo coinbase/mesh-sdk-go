@@ -16,7 +16,6 @@ package fetcher
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -33,7 +32,7 @@ func (f *Fetcher) AccountBalance(
 	network *types.NetworkIdentifier,
 	account *types.AccountIdentifier,
 	block *types.PartialBlockIdentifier,
-) (*types.BlockIdentifier, []*types.Amount, json.RawMessage, error) {
+) (*types.BlockIdentifier, []*types.Amount, map[string]interface{}, error) {
 	response, _, err := f.rosettaClient.AccountAPI.AccountBalance(ctx,
 		&types.AccountBalanceRequest{
 			NetworkIdentifier: network,
@@ -51,7 +50,6 @@ func (f *Fetcher) AccountBalance(
 		block,
 		responseBlock,
 		balances,
-		response.Metadata,
 	); err != nil {
 		return nil, nil, nil, err
 	}
@@ -67,7 +65,7 @@ func (f *Fetcher) AccountBalanceRetry(
 	network *types.NetworkIdentifier,
 	account *types.AccountIdentifier,
 	block *types.PartialBlockIdentifier,
-) (*types.BlockIdentifier, []*types.Amount, json.RawMessage, error) {
+) (*types.BlockIdentifier, []*types.Amount, map[string]interface{}, error) {
 	backoffRetries := backoffRetries(
 		f.retryElapsedTime,
 		f.maxRetries,

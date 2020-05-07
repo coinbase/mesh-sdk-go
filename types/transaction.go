@@ -16,8 +16,6 @@
 
 package types
 
-import "encoding/json"
-
 // Transaction Transactions contain an array of Operations that are attributable to the same
 // TransactionIdentifier.
 type Transaction struct {
@@ -25,5 +23,5 @@ type Transaction struct {
 	Operations            []*Operation           `json:"operations"`
 	// Transactions that are related to other transactions (like a cross-shard transactioin) should
 	// include the tranaction_identifier of these transactions in the metadata.
-	Metadata json.RawMessage `json:"metadata,omitempty"`
+	Metadata map[string]interface{} `json:"metadata,omitempty"`
 }

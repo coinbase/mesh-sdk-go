@@ -1,7 +1,6 @@
 {{>partial_header}}
 package {{packageName}}
 {{#models}}
-import "encoding/json"
 {{#model}}
 {{#isEnum}}
 // {{{classname}}} {{#description}}{{{.}}}{{/description}}{{^description}}the model '{{{classname}}}'{{/description}}
