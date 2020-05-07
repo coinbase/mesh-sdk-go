@@ -316,3 +316,184 @@ func TestCurrencyString(t *testing.T) {
 		})
 	}
 }
+
+func TestMarshalMap(t *testing.T) {
+	var tests = map[string]struct {
+		input  interface{}
+		result map[string]interface{}
+
+		err bool
+	}{
+		"currency": {
+			input: &Currency{
+				Symbol:   "BTC",
+				Decimals: 8,
+				Metadata: map[string]interface{}{
+					"issuer": "test",
+				},
+			},
+			result: map[string]interface{}{
+				"symbol":   "BTC",
+				"decimals": int32(8),
+				"metadata": map[string]interface{}{
+					"issuer": "test",
+				},
+			},
+		},
+		"block": {
+			input: &Block{
+				BlockIdentifier: &BlockIdentifier{
+					Index: 100,
+					Hash:  "block 100",
+				},
+				ParentBlockIdentifier: &BlockIdentifier{
+					Index: 99,
+					Hash:  "block 99",
+				},
+				Timestamp:    1000,
+				Transactions: []*Transaction{},
+			},
+			result: map[string]interface{}{
+				"block_identifier": &BlockIdentifier{
+					Index: 100,
+					Hash:  "block 100",
+				},
+				"parent_block_identifier": &BlockIdentifier{
+					Index: 99,
+					Hash:  "block 99",
+				},
+				"timestamp":    int64(1000),
+				"transactions": []*Transaction{},
+			},
+		},
+		"nil": {
+			input:  nil,
+			result: nil,
+		},
+		"non-map": {
+			input:  []string{"hello", "hi"},
+			result: nil,
+			err:    true,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			result, err := MarshalMap(test.input)
+			if test.err {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			assert.Equal(t, test.result, result)
+		})
+	}
+}
+
+func TestUnmarshalMap(t *testing.T) {
+	var tests = map[string]struct {
+		input        map[string]interface{}
+		outputStruct interface{}
+		result       interface{}
+
+		err error
+	}{
+		"simple": {
+			input: map[string]interface{}{
+				"symbol":   "BTC",
+				"decimals": 8,
+				"metadata": map[string]interface{}{
+					"issuer": "test",
+				},
+			},
+			outputStruct: &Currency{},
+			result: &Currency{
+				Symbol:   "BTC",
+				Decimals: 8,
+				Metadata: map[string]interface{}{
+					"issuer": "test",
+				},
+			},
+			err: nil,
+		},
+		"block": {
+			input: map[string]interface{}{
+				"block_identifier": &BlockIdentifier{
+					Index: 100,
+					Hash:  "block 100",
+				},
+				"parent_block_identifier": &BlockIdentifier{
+					Index: 99,
+					Hash:  "block 99",
+				},
+				"timestamp":    1000,
+				"transactions": []*Transaction{},
+			},
+			outputStruct: &Block{},
+			result: &Block{
+				BlockIdentifier: &BlockIdentifier{
+					Index: 100,
+					Hash:  "block 100",
+				},
+				ParentBlockIdentifier: &BlockIdentifier{
+					Index: 99,
+					Hash:  "block 99",
+				},
+				Timestamp:    1000,
+				Transactions: []*Transaction{},
+			},
+			err: nil,
+		},
+		"block raw": {
+			input: map[string]interface{}{
+				"block_identifier": map[string]interface{}{
+					"index": 100,
+					"hash":  "block 100",
+				},
+				"parent_block_identifier": map[string]interface{}{
+					"index": 99,
+					"hash":  "block 99",
+				},
+				"timestamp": 1000,
+			},
+			outputStruct: &Block{},
+			result: &Block{
+				BlockIdentifier: &BlockIdentifier{
+					Index: 100,
+					Hash:  "block 100",
+				},
+				ParentBlockIdentifier: &BlockIdentifier{
+					Index: 99,
+					Hash:  "block 99",
+				},
+				Timestamp: 1000,
+			},
+			err: nil,
+		},
+		"struct mismatch": {
+			input: map[string]interface{}{
+				"block_identifier": &BlockIdentifier{
+					Index: 100,
+					Hash:  "block 100",
+				},
+				"parent_block_identifier": &BlockIdentifier{
+					Index: 99,
+					Hash:  "block 99",
+				},
+				"timestamp":    1000,
+				"transactions": []*Transaction{},
+			},
+			outputStruct: &Currency{},
+			result:       &Currency{},
+			err:          nil,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			err := UnmarshalMap(test.input, &test.outputStruct)
+			assert.Equal(t, test.err, err)
+			assert.Equal(t, test.result, test.outputStruct)
+		})
+	}
+}

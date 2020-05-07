@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"log"
 	"math/big"
+
+	"github.com/mitchellh/mapstructure"
 )
 
 // ConstructPartialBlockIdentifier constructs a *PartialBlockIdentifier
@@ -171,4 +173,43 @@ func PrettyPrintStruct(val interface{}) string {
 	}
 
 	return string(prettyStruct)
+}
+
+// MarshalMap attempts to marshal an interface into a map[string]interface{}.
+// This function is used similarly to json.Marshal.
+func MarshalMap(input interface{}) (map[string]interface{}, error) {
+	if input == nil {
+		return nil, nil
+	}
+
+	// Only create output if input is not nil, otherwise we will
+	// return a map for a nil input.
+	output := map[string]interface{}{}
+	decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
+		TagName: "json",
+		Result:  &output,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if err := decoder.Decode(input); err != nil {
+		return nil, err
+	}
+
+	return output, nil
+}
+
+// UnmarshalMap attempts to unmarshal a map[string]interface{} into an
+// interface. This function is used similarly to json.Unmarshal.
+func UnmarshalMap(metadata map[string]interface{}, output interface{}) error {
+	decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
+		TagName: "json",
+		Result:  output,
+	})
+	if err != nil {
+		return err
+	}
+
+	return decoder.Decode(metadata)
 }
