@@ -56,7 +56,7 @@ func Amount(amount *types.Amount) error {
 		return errors.New("Amount.Currency.Decimals must be > 0")
 	}
 
-	return JSONObject(amount.Currency.Metadata)
+	return nil
 }
 
 // OperationIdentifier returns an error if index of the
@@ -96,7 +96,7 @@ func AccountIdentifier(account *types.AccountIdentifier) error {
 		return errors.New("Account.SubAccount.Address is missing")
 	}
 
-	return JSONObject(account.SubAccount.Metadata)
+	return nil
 }
 
 // contains checks if a string is contained in a slice
@@ -181,7 +181,7 @@ func (a *Asserter) Operation(
 		return err
 	}
 
-	return JSONObject(operation.Metadata)
+	return nil
 }
 
 // BlockIdentifier ensures a types.BlockIdentifier
@@ -260,7 +260,7 @@ func (a *Asserter) Transaction(
 		}
 	}
 
-	return JSONObject(transaction.Metadata)
+	return nil
 }
 
 // Timestamp returns an error if the timestamp
@@ -318,5 +318,5 @@ func (a *Asserter) Block(
 		}
 	}
 
-	return JSONObject(block.Metadata)
+	return nil
 }

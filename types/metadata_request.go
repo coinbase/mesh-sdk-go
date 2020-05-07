@@ -16,10 +16,8 @@
 
 package types
 
-import "encoding/json"
-
 // MetadataRequest A MetadataRequest is utilized in any request where the only argument is optional
 // metadata.
 type MetadataRequest struct {
-	Metadata json.RawMessage `json:"metadata,omitempty"`
+	Metadata map[string]interface{} `json:"metadata,omitempty"`
 }

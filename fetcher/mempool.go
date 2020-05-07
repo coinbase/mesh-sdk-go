@@ -16,7 +16,6 @@ package fetcher
 
 import (
 	"context"
-	"encoding/json"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
 
@@ -53,7 +52,7 @@ func (f *Fetcher) MempoolTransaction(
 	ctx context.Context,
 	network *types.NetworkIdentifier,
 	transaction *types.TransactionIdentifier,
-) (*types.Transaction, json.RawMessage, error) {
+) (*types.Transaction, map[string]interface{}, error) {
 	response, _, err := f.rosettaClient.MempoolAPI.MempoolTransaction(
 		ctx,
 		&types.MempoolTransactionRequest{

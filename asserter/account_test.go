@@ -15,7 +15,6 @@
 package asserter
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"testing"
@@ -49,13 +48,13 @@ func TestContainsCurrency(t *testing.T) {
 				{
 					Symbol:   "BTC",
 					Decimals: 8,
-					Metadata: json.RawMessage(`{"blah": "hello"}`),
+					Metadata: map[string]interface{}{"blah": "hello"},
 				},
 			},
 			currency: &types.Currency{
 				Symbol:   "BTC",
 				Decimals: 8,
-				Metadata: json.RawMessage(`{"blah": "hello"}`),
+				Metadata: map[string]interface{}{"blah": "hello"},
 			},
 			contains: true,
 		},
@@ -64,13 +63,13 @@ func TestContainsCurrency(t *testing.T) {
 				{
 					Symbol:   "BTC",
 					Decimals: 8,
-					Metadata: json.RawMessage(`{"blah2":"bye", "blah": "hello"}`),
+					Metadata: map[string]interface{}{"blah2": "bye", "blah": "hello"},
 				},
 			},
 			currency: &types.Currency{
 				Symbol:   "BTC",
 				Decimals: 8,
-				Metadata: json.RawMessage(`{"blah": "hello", "blah2": "bye"}`),
+				Metadata: map[string]interface{}{"blah": "hello", "blah2": "bye"},
 			},
 			contains: true,
 		},
@@ -113,13 +112,13 @@ func TestContainsCurrency(t *testing.T) {
 				{
 					Symbol:   "BTC",
 					Decimals: 8,
-					Metadata: json.RawMessage(`{"blah": "hello"}`),
+					Metadata: map[string]interface{}{"blah": "hello"},
 				},
 			},
 			currency: &types.Currency{
 				Symbol:   "BTC",
 				Decimals: 8,
-				Metadata: json.RawMessage(`{"blah": "bye"}`),
+				Metadata: map[string]interface{}{"blah": "bye"},
 			},
 			contains: false,
 		},
@@ -161,7 +160,7 @@ func TestAccoutBalance(t *testing.T) {
 		requestBlock  *types.PartialBlockIdentifier
 		responseBlock *types.BlockIdentifier
 		balances      []*types.Amount
-		metadata      json.RawMessage
+		metadata      map[string]interface{}
 		err           error
 	}{
 		"simple balance": {
@@ -212,7 +211,7 @@ func TestAccoutBalance(t *testing.T) {
 			balances: []*types.Amount{
 				validAmount,
 			},
-			metadata: json.RawMessage(`{"sequence":1}`),
+			metadata: map[string]interface{}{"sequence": 1},
 			err:      nil,
 		},
 		"invalid historical request index": {
@@ -253,7 +252,6 @@ func TestAccoutBalance(t *testing.T) {
 				test.requestBlock,
 				test.responseBlock,
 				test.balances,
-				test.metadata,
 			)
 			assert.Equal(t, test.err, err)
 		})

@@ -29,7 +29,7 @@ func ConstructionMetadata(
 		return errors.New("Metadata is nil")
 	}
 
-	return JSONObject(response.Metadata)
+	return nil
 }
 
 // ConstructionSubmit returns an error if
@@ -43,5 +43,5 @@ func ConstructionSubmit(
 		return err
 	}
 
-	return JSONObject(response.Metadata)
+	return nil
 }

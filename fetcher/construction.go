@@ -16,7 +16,6 @@ package fetcher
 
 import (
 	"context"
-	"encoding/json"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
 
@@ -28,8 +27,8 @@ import (
 func (f *Fetcher) ConstructionMetadata(
 	ctx context.Context,
 	network *types.NetworkIdentifier,
-	options json.RawMessage,
-) (json.RawMessage, error) {
+	options map[string]interface{},
+) (map[string]interface{}, error) {
 	metadata, _, err := f.rosettaClient.ConstructionAPI.ConstructionMetadata(ctx,
 		&types.ConstructionMetadataRequest{
 			NetworkIdentifier: network,
@@ -53,7 +52,7 @@ func (f *Fetcher) ConstructionSubmit(
 	ctx context.Context,
 	network *types.NetworkIdentifier,
 	signedTransaction string,
-) (*types.TransactionIdentifier, json.RawMessage, error) {
+) (*types.TransactionIdentifier, map[string]interface{}, error) {
 	submitResponse, _, err := f.rosettaClient.ConstructionAPI.ConstructionSubmit(
 		ctx,
 		&types.ConstructionSubmitRequest{

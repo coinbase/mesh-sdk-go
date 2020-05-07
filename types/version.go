@@ -16,8 +16,6 @@
 
 package types
 
-import "encoding/json"
-
 // Version The Version object is utilized to inform the client of the versions of different
 // components of the Rosetta implementation.
 type Version struct {
@@ -32,5 +30,5 @@ type Version struct {
 	MiddlewareVersion *string `json:"middleware_version,omitempty"`
 	// Any other information that may be useful about versioning of dependent services should be
 	// returned here.
-	Metadata json.RawMessage `json:"metadata,omitempty"`
+	Metadata map[string]interface{} `json:"metadata,omitempty"`
 }
