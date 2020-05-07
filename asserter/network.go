@@ -31,7 +31,7 @@ func SubNetworkIdentifier(subNetworkIdentifier *types.SubNetworkIdentifier) erro
 		return errors.New("NetworkIdentifier.SubNetworkIdentifier.Network is missing")
 	}
 
-	return JSONObject(subNetworkIdentifier.Metadata)
+	return nil
 }
 
 // NetworkIdentifier ensures a types.NetworkIdentifier has
@@ -58,7 +58,7 @@ func Peer(peer *types.Peer) error {
 		return errors.New("Peer.PeerID is missing")
 	}
 
-	return JSONObject(peer.Metadata)
+	return nil
 }
 
 // Version ensures the version of the node is
@@ -76,7 +76,7 @@ func Version(version *types.Version) error {
 		return errors.New("Version.MiddlewareVersion is missing")
 	}
 
-	return JSONObject(version.Metadata)
+	return nil
 }
 
 // StringArray ensures all strings in an array
