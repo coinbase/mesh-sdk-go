@@ -1,0 +1,119 @@
+package parser
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	"github.com/coinbase/rosetta-sdk-go/types"
+)
+
+// BalanceChange represents a balance change that affected
+// a *types.AccountIdentifier and a *types.Currency.
+type BalanceChange struct {
+	Account    *types.AccountIdentifier `json:"account_identifier,omitempty"`
+	Currency   *types.Currency          `json:"currency,omitempty"`
+	Block      *types.BlockIdentifier   `json:"block_identifier,omitempty"`
+	Difference string                   `json:"difference,omitempty"`
+}
+
+// exemptOperation is a function that returns a boolean indicating
+// if the operation should be skipped eventhough it passes other
+// checks indiciating it should be considered a balance change.
+type exemptOperation func(*types.Operation) bool
+
+// skipOperation returns a boolean indicating whether
+// an operation should be processed. An operation will
+// not be processed if it is considered unsuccessful.
+func (p *Parser) skipOperation(op *types.Operation) (bool, error) {
+	successful, err := p.Asserter.OperationSuccessful(op)
+	if err != nil {
+		// Should only occur if responses not validated
+		return false, err
+	}
+
+	if !successful {
+		return true, nil
+	}
+
+	if op.Account == nil {
+		return true, nil
+	}
+
+	// In some cases, it may be desirable to exempt certain operations from
+	// balance changes.
+	if p.ExemptFunc != nil && p.ExemptFunc(op) {
+		log.Printf("Skipping exempt operation %s\n", types.PrettyPrintStruct(op))
+		return true, nil
+	}
+
+	return false, nil
+}
+
+// BalanceChanges returns all balance changes for
+// a particular block. All balance changes for a
+// particular account are summed into a single
+// BalanceChanges struct. If a block is being
+// orphaned, the opposite of each balance change is
+// returned.
+func (p *Parser) BalanceChanges(
+	ctx context.Context,
+	block *types.Block,
+	blockRemoved bool,
+) ([]*BalanceChange, error) {
+	balanceChanges := map[string]*BalanceChange{}
+	for _, tx := range block.Transactions {
+		for _, op := range tx.Operations {
+			skip, err := p.skipOperation(op)
+			if err != nil {
+				return nil, err
+			}
+			if skip {
+				continue
+			}
+
+			amount := op.Amount
+			blockIdentifier := block.BlockIdentifier
+			if blockRemoved {
+				negatedValue, err := types.NegateValue(amount.Value)
+				if err != nil {
+					return nil, err
+				}
+				amount.Value = negatedValue
+				blockIdentifier = block.ParentBlockIdentifier
+			}
+
+			// Merge values by account and currency
+			key := fmt.Sprintf(
+				"%s/%s",
+				types.Hash(op.Account),
+				types.Hash(op.Amount.Currency),
+			)
+
+			val, ok := balanceChanges[key]
+			if !ok {
+				balanceChanges[key] = &BalanceChange{
+					Account:    op.Account,
+					Currency:   op.Amount.Currency,
+					Difference: amount.Value,
+					Block:      blockIdentifier,
+				}
+				continue
+			}
+
+			newDifference, err := types.AddValues(val.Difference, amount.Value)
+			if err != nil {
+				return nil, err
+			}
+			val.Difference = newDifference
+			balanceChanges[key] = val
+		}
+	}
+
+	allChanges := []*BalanceChange{}
+	for _, change := range balanceChanges {
+		allChanges = append(allChanges, change)
+	}
+
+	return allChanges, nil
+}
