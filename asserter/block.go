@@ -52,8 +52,8 @@ func Amount(amount *types.Amount) error {
 		return errors.New("Amount.Currency.Symbol is empty")
 	}
 
-	if amount.Currency.Decimals <= 0 {
-		return errors.New("Amount.Currency.Decimals must be > 0")
+	if amount.Currency.Decimals < 0 {
+		return errors.New("Amount.Currency.Decimals must be >= 0")
 	}
 
 	return nil
