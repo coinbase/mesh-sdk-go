@@ -106,7 +106,7 @@ func TestBalanceChanges(t *testing.T) {
 		orphan        bool
 		changes       []*BalanceChange
 		allowedStatus []*types.OperationStatus
-		exemptFunc    exemptOperation
+		exemptFunc    ExemptOperation
 		err           error
 	}{
 		"simple block": {
