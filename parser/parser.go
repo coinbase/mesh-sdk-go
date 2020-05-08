@@ -21,11 +21,11 @@ import (
 // Parser provides support for parsing Rosetta blocks.
 type Parser struct {
 	Asserter   *asserter.Asserter
-	ExemptFunc exemptOperation
+	ExemptFunc ExemptOperation
 }
 
 // New creates a new Parser.
-func New(asserter *asserter.Asserter, exemptFunc exemptOperation) *Parser {
+func New(asserter *asserter.Asserter, exemptFunc ExemptOperation) *Parser {
 	return &Parser{
 		Asserter:   asserter,
 		ExemptFunc: exemptFunc,

@@ -31,10 +31,10 @@ type BalanceChange struct {
 	Difference string                   `json:"difference,omitempty"`
 }
 
-// exemptOperation is a function that returns a boolean indicating
+// ExemptOperation is a function that returns a boolean indicating
 // if the operation should be skipped eventhough it passes other
 // checks indiciating it should be considered a balance change.
-type exemptOperation func(*types.Operation) bool
+type ExemptOperation func(*types.Operation) bool
 
 // skipOperation returns a boolean indicating whether
 // an operation should be processed. An operation will
