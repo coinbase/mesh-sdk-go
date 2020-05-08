@@ -122,6 +122,18 @@ func SubtractValues(
 	return newVal.String(), nil
 }
 
+// NegateValue flips the sign of a value.
+func NegateValue(
+	val string,
+) (string, error) {
+	existing, ok := new(big.Int).SetString(val, 10)
+	if !ok {
+		return "", fmt.Errorf("%s is not an integer", val)
+	}
+
+	return new(big.Int).Neg(existing).String(), nil
+}
+
 // AccountString returns a human-readable representation of a
 // *types.AccountIdentifier.
 func AccountString(account *AccountIdentifier) string {

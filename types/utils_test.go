@@ -196,6 +196,43 @@ func TestSubtractValues(t *testing.T) {
 	}
 }
 
+func TestNegateValue(t *testing.T) {
+	var tests = map[string]struct {
+		val    string
+		result string
+		err    error
+	}{
+		"positive number": {
+			val:    "100",
+			result: "-100",
+			err:    nil,
+		},
+		"negative number": {
+			val:    "-100",
+			result: "100",
+			err:    nil,
+		},
+		"decimal number": {
+			val:    "-100.1",
+			result: "",
+			err:    errors.New("-100.1 is not an integer"),
+		},
+		"non-number": {
+			val:    "hello",
+			result: "",
+			err:    errors.New("hello is not an integer"),
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			result, err := NegateValue(test.val)
+			assert.Equal(t, test.result, result)
+			assert.Equal(t, test.err, err)
+		})
+	}
+}
+
 func TestGetAccountString(t *testing.T) {
 	var tests = map[string]struct {
 		account *AccountIdentifier
