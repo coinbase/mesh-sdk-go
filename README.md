@@ -25,6 +25,7 @@ and network-specific work.
 * [Asserter](asserter): Validation of Rosetta types
 * [Fetcher](fetcher): Simplified and validated communication with
 any Rosetta server
+* [Parser](parser): Tool for parsing Rosetta blocks
 
 ## Examples
 The packages listed above are demoed extensively in

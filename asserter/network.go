@@ -92,7 +92,7 @@ func StringArray(arrName string, arr []string) error {
 			return fmt.Errorf("%s has an empty string", arrName)
 		}
 
-		if contains(parsed, s) {
+		if containsString(parsed, s) {
 			return fmt.Errorf("%s contains a duplicate %s", arrName, s)
 		}
 

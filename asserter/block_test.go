@@ -79,6 +79,15 @@ func TestAmount(t *testing.T) {
 			},
 			err: nil,
 		},
+		"valid amount no decimals": {
+			amount: &types.Amount{
+				Value: "100000",
+				Currency: &types.Currency{
+					Symbol: "BTC",
+				},
+			},
+			err: nil,
+		},
 		"valid negative amount": {
 			amount: &types.Amount{
 				Value: "-100000",
@@ -142,10 +151,11 @@ func TestAmount(t *testing.T) {
 			amount: &types.Amount{
 				Value: "111",
 				Currency: &types.Currency{
-					Symbol: "BTC",
+					Symbol:   "BTC",
+					Decimals: -1,
 				},
 			},
-			err: errors.New("Amount.Currency.Decimals must be > 0"),
+			err: errors.New("Amount.Currency.Decimals must be >= 0"),
 		},
 	}
 
@@ -185,7 +195,7 @@ func TestOperationIdentifier(t *testing.T) {
 				Index: 0,
 			},
 			index: 1,
-			err:   errors.New("Operation.OperationIdentifier.Index invalid"),
+			err:   errors.New("Operation.OperationIdentifier.Index 0 is out of order, expected 1"),
 		},
 		"valid identifier with network index": {
 			identifier: &types.OperationIdentifier{
@@ -344,7 +354,7 @@ func TestOperation(t *testing.T) {
 				Status: "SUCCESS",
 			},
 			index: int64(2),
-			err:   errors.New("Operation.OperationIdentifier.Index invalid"),
+			err:   errors.New("Operation.OperationIdentifier.Index 1 is out of order, expected 2"),
 		},
 		"invalid operation invalid type": {
 			operation: &types.Operation{
@@ -450,9 +460,163 @@ func TestBlock(t *testing.T) {
 		Hash:  "blah parent",
 		Index: 99,
 	}
+	validAmount := &types.Amount{
+		Value: "1000",
+		Currency: &types.Currency{
+			Symbol:   "BTC",
+			Decimals: 8,
+		},
+	}
+	validAccount := &types.AccountIdentifier{
+		Address: "test",
+	}
 	validTransaction := &types.Transaction{
 		TransactionIdentifier: &types.TransactionIdentifier{
 			Hash: "blah",
+		},
+		Operations: []*types.Operation{
+			{
+				OperationIdentifier: &types.OperationIdentifier{
+					Index: int64(0),
+				},
+				Type:    "PAYMENT",
+				Status:  "SUCCESS",
+				Account: validAccount,
+				Amount:  validAmount,
+			},
+			{
+				OperationIdentifier: &types.OperationIdentifier{
+					Index: int64(1),
+				},
+				RelatedOperations: []*types.OperationIdentifier{
+					{
+						Index: int64(0),
+					},
+				},
+				Type:    "PAYMENT",
+				Status:  "SUCCESS",
+				Account: validAccount,
+				Amount:  validAmount,
+			},
+		},
+	}
+	outOfOrderTransaction := &types.Transaction{
+		TransactionIdentifier: &types.TransactionIdentifier{
+			Hash: "blah",
+		},
+		Operations: []*types.Operation{
+			{
+				OperationIdentifier: &types.OperationIdentifier{
+					Index: int64(1),
+				},
+				RelatedOperations: []*types.OperationIdentifier{
+					{
+						Index: int64(0),
+					},
+				},
+				Type:    "PAYMENT",
+				Status:  "SUCCESS",
+				Account: validAccount,
+				Amount:  validAmount,
+			},
+			{
+				OperationIdentifier: &types.OperationIdentifier{
+					Index: int64(0),
+				},
+				Type:    "PAYMENT",
+				Status:  "SUCCESS",
+				Account: validAccount,
+				Amount:  validAmount,
+			},
+		},
+	}
+	relatedToSelfTransaction := &types.Transaction{
+		TransactionIdentifier: &types.TransactionIdentifier{
+			Hash: "blah",
+		},
+		Operations: []*types.Operation{
+			{
+				OperationIdentifier: &types.OperationIdentifier{
+					Index: int64(0),
+				},
+				RelatedOperations: []*types.OperationIdentifier{
+					{
+						Index: int64(0),
+					},
+				},
+				Type:    "PAYMENT",
+				Status:  "SUCCESS",
+				Account: validAccount,
+				Amount:  validAmount,
+			},
+		},
+	}
+	relatedToLaterTransaction := &types.Transaction{
+		TransactionIdentifier: &types.TransactionIdentifier{
+			Hash: "blah",
+		},
+		Operations: []*types.Operation{
+			{
+				OperationIdentifier: &types.OperationIdentifier{
+					Index: int64(0),
+				},
+				RelatedOperations: []*types.OperationIdentifier{
+					{
+						Index: int64(1),
+					},
+				},
+				Type:    "PAYMENT",
+				Status:  "SUCCESS",
+				Account: validAccount,
+				Amount:  validAmount,
+			},
+			{
+				OperationIdentifier: &types.OperationIdentifier{
+					Index: int64(1),
+				},
+				RelatedOperations: []*types.OperationIdentifier{
+					{
+						Index: int64(0),
+					},
+				},
+				Type:    "PAYMENT",
+				Status:  "SUCCESS",
+				Account: validAccount,
+				Amount:  validAmount,
+			},
+		},
+	}
+	relatedDuplicateTransaction := &types.Transaction{
+		TransactionIdentifier: &types.TransactionIdentifier{
+			Hash: "blah",
+		},
+		Operations: []*types.Operation{
+			{
+				OperationIdentifier: &types.OperationIdentifier{
+					Index: int64(0),
+				},
+				Type:    "PAYMENT",
+				Status:  "SUCCESS",
+				Account: validAccount,
+				Amount:  validAmount,
+			},
+			{
+				OperationIdentifier: &types.OperationIdentifier{
+					Index: int64(1),
+				},
+				RelatedOperations: []*types.OperationIdentifier{
+					{
+						Index: int64(0),
+					},
+					{
+						Index: int64(0),
+					},
+				},
+				Type:    "PAYMENT",
+				Status:  "SUCCESS",
+				Account: validAccount,
+				Amount:  validAmount,
+			},
 		},
 	}
 	var tests = map[string]struct {
@@ -477,6 +641,42 @@ func TestBlock(t *testing.T) {
 			},
 			genesisIndex: validBlockIdentifier.Index,
 			err:          nil,
+		},
+		"out of order transaction operations": {
+			block: &types.Block{
+				BlockIdentifier:       validBlockIdentifier,
+				ParentBlockIdentifier: validParentBlockIdentifier,
+				Timestamp:             MinUnixEpoch + 1,
+				Transactions:          []*types.Transaction{outOfOrderTransaction},
+			},
+			err: errors.New("Operation.OperationIdentifier.Index 1 is out of order, expected 0"),
+		},
+		"related to self transaction operations": {
+			block: &types.Block{
+				BlockIdentifier:       validBlockIdentifier,
+				ParentBlockIdentifier: validParentBlockIdentifier,
+				Timestamp:             MinUnixEpoch + 1,
+				Transactions:          []*types.Transaction{relatedToSelfTransaction},
+			},
+			err: errors.New("related operation index 0 >= operation index 0"),
+		},
+		"related to later transaction operations": {
+			block: &types.Block{
+				BlockIdentifier:       validBlockIdentifier,
+				ParentBlockIdentifier: validParentBlockIdentifier,
+				Timestamp:             MinUnixEpoch + 1,
+				Transactions:          []*types.Transaction{relatedToLaterTransaction},
+			},
+			err: errors.New("related operation index 1 >= operation index 0"),
+		},
+		"duplicate related transaction operations": {
+			block: &types.Block{
+				BlockIdentifier:       validBlockIdentifier,
+				ParentBlockIdentifier: validParentBlockIdentifier,
+				Timestamp:             MinUnixEpoch + 1,
+				Transactions:          []*types.Transaction{relatedDuplicateTransaction},
+			},
+			err: errors.New("found duplicate related operation index 0 for operation index 1"),
 		},
 		"nil block": {
 			block: nil,
