@@ -40,6 +40,23 @@ func TestBalanceChanges(t *testing.T) {
 			Currency: currency,
 		}
 
+		emptyAccountAndAmount = &types.Operation{
+			OperationIdentifier: &types.OperationIdentifier{
+				Index: 0,
+			},
+			Type:   "Transfer",
+			Status: "Success",
+		}
+
+		emptyAmount = &types.Operation{
+			OperationIdentifier: &types.OperationIdentifier{
+				Index: 0,
+			},
+			Type:    "Transfer",
+			Status:  "Success",
+			Account: recipient,
+		}
+
 		recipientOperation = &types.Operation{
 			OperationIdentifier: &types.OperationIdentifier{
 				Index: 0,
@@ -65,6 +82,8 @@ func TestBalanceChanges(t *testing.T) {
 				Hash: "tx1",
 			},
 			Operations: []*types.Operation{
+				emptyAccountAndAmount,
+				emptyAmount,
 				recipientOperation,
 				recipientFailureOperation,
 			},
