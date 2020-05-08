@@ -1,20 +1,23 @@
-.PHONY: gen-deps deps gen lint format check-format test test-coverage add-license \
+.PHONY: deps gen lint format check-format test test-coverage add-license \
 	check-license shorten-lines shellcheck salus release
-LICENCE_SCRIPT=addlicense -c "Coinbase, Inc." -l "apache" -v
+
+# To run the the following packages as commands,
+# it is necessary to use `go run <pkg>`. Running `go get` does
+# not install any binaries that could be used to run
+# the commands directly.
+ADDLICENSE_CMD=go run github.com/google/addlicense
+ADDLICENCE_SCRIPT=${ADDLICENSE_CMD} -c "Coinbase, Inc." -l "apache" -v
+GOIMPORTS_CMD=go run golang.org/x/tools/cmd/goimports
+GOLINES_CMD=go run github.com/segmentio/golines
+GOVERALLS_CMD=go run github.com/mattn/goveralls
+
 GO_PACKAGES=./asserter/... ./fetcher/... ./types/... ./client/... ./server/... ./parser/...
 GO_FOLDERS=$(shell echo ${GO_PACKAGES} | sed -e "s/\.\///g" | sed -e "s/\/\.\.\.//g")
-GO_INSTALL=GO111MODULE=off go get
 TEST_SCRIPT=go test -v ${GO_PACKAGES}
 LINT_SETTINGS=golint,misspell,gocyclo,gocritic,whitespace,goconst,gocognit,bodyclose,unconvert,lll,unparam
 
-deps: | gen-deps
+deps:
 	go get ./...
-	${GO_INSTALL} github.com/mattn/goveralls
-
-gen-deps:
-	${GO_INSTALL} github.com/google/addlicense
-	${GO_INSTALL} github.com/segmentio/golines
-	${GO_INSTALL} golang.org/x/tools/cmd/goimports
 
 gen:
 	./codegen.sh
@@ -31,27 +34,27 @@ lint: | lint-examples
 
 format:
 	gofmt -s -w -l .
-	goimports -w .
+	${GOIMPORTS_CMD} -w .
 
 check-format:
 	! gofmt -s -l . | read
-	! goimports -l . | read
+	! ${GOIMPORTS_CMD} -l . | read
 
 test:
 	${TEST_SCRIPT}
 
 test-cover:	
 	${TEST_SCRIPT} -coverprofile=c.out -covermode=count
-	goveralls -coverprofile=c.out -repotoken ${COVERALLS_TOKEN}
+	${GOVERALLS_CMD} -coverprofile=c.out -repotoken ${COVERALLS_TOKEN}
 
 add-license:
-	${LICENCE_SCRIPT} .
+	${ADDLICENCE_SCRIPT} .
 
 check-license:
-	${LICENCE_SCRIPT} -check .
+	${ADDLICENCE_SCRIPT} -check .
 
 shorten-lines:
-	golines -w --shorten-comments ${GO_FOLDERS} examples
+	${GOLINES_CMD} -w --shorten-comments ${GO_FOLDERS} examples
 
 shellcheck:
 	shellcheck codegen.sh
