@@ -54,6 +54,10 @@ func (p *Parser) skipOperation(op *types.Operation) (bool, error) {
 		return true, nil
 	}
 
+	if op.Amount == nil {
+		return true, nil
+	}
+
 	// In some cases, it may be desirable to exempt certain operations from
 	// balance changes.
 	if p.ExemptFunc != nil && p.ExemptFunc(op) {
