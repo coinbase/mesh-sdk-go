@@ -79,6 +79,15 @@ func TestAmount(t *testing.T) {
 			},
 			err: nil,
 		},
+		"valid amount no decimals": {
+			amount: &types.Amount{
+				Value: "100000",
+				Currency: &types.Currency{
+					Symbol: "BTC",
+				},
+			},
+			err: nil,
+		},
 		"valid negative amount": {
 			amount: &types.Amount{
 				Value: "-100000",
@@ -142,10 +151,11 @@ func TestAmount(t *testing.T) {
 			amount: &types.Amount{
 				Value: "111",
 				Currency: &types.Currency{
-					Symbol: "BTC",
+					Symbol:   "BTC",
+					Decimals: -1,
 				},
 			},
-			err: errors.New("Amount.Currency.Decimals must be > 0"),
+			err: errors.New("Amount.Currency.Decimals must be >= 0"),
 		},
 	}
 
