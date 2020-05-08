@@ -66,8 +66,16 @@ func OperationIdentifier(
 	identifier *types.OperationIdentifier,
 	index int64,
 ) error {
-	if identifier == nil || identifier.Index != index {
+	if identifier == nil {
 		return errors.New("Operation.OperationIdentifier.Index invalid")
+	}
+
+	if identifier.Index != index {
+		return fmt.Errorf(
+			"Operation.OperationIdentifier.Index %d is out of order, expected %d",
+			identifier.Index,
+			index,
+		)
 	}
 
 	if identifier.NetworkIndex != nil && *identifier.NetworkIndex < 0 {
@@ -99,9 +107,21 @@ func AccountIdentifier(account *types.AccountIdentifier) error {
 	return nil
 }
 
-// contains checks if a string is contained in a slice
+// containsString checks if an string is contained in a slice
 // of strings.
-func contains(valid []string, value string) bool {
+func containsString(valid []string, value string) bool {
+	for _, v := range valid {
+		if v == value {
+			return true
+		}
+	}
+
+	return false
+}
+
+// containsInt64 checks if an int64 is contained in a slice
+// of Int64.
+func containsInt64(valid []int64, value int64) bool {
 	for _, v := range valid {
 		if v == value {
 			return true
@@ -136,7 +156,7 @@ func (a *Asserter) OperationType(t string) error {
 		return ErrAsserterNotInitialized
 	}
 
-	if t == "" || !contains(a.operationTypes, t) {
+	if t == "" || !containsString(a.operationTypes, t) {
 		return fmt.Errorf("Operation.Type %s is invalid", t)
 	}
 
@@ -255,8 +275,32 @@ func (a *Asserter) Transaction(
 	}
 
 	for i, op := range transaction.Operations {
+		// Ensure operations are sorted
 		if err := a.Operation(op, int64(i)); err != nil {
 			return err
+		}
+
+		// Ensure an operation's related_operations are only
+		// operations with an index less than the operation
+		// and that there are no duplicates.
+		relatedIndexes := []int64{}
+		for _, relatedOp := range op.RelatedOperations {
+			if relatedOp.Index >= op.OperationIdentifier.Index {
+				return fmt.Errorf(
+					"related operation index %d >= operation index %d",
+					relatedOp.Index,
+					op.OperationIdentifier.Index,
+				)
+			}
+
+			if containsInt64(relatedIndexes, relatedOp.Index) {
+				return fmt.Errorf(
+					"found duplicate related operation index %d for operation index %d",
+					relatedOp.Index,
+					op.OperationIdentifier.Index,
+				)
+			}
+			relatedIndexes = append(relatedIndexes, relatedOp.Index)
 		}
 	}
 
