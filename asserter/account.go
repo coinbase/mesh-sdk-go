@@ -20,12 +20,12 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
-// containsCurrency returns a boolean indicating if a
+// ContainsCurrency returns a boolean indicating if a
 // *types.Currency is contained within a slice of
 // *types.Currency. The check for equality takes
 // into account everything within the types.Currency
 // struct (including currency.Metadata).
-func containsCurrency(currencies []*types.Currency, currency *types.Currency) bool {
+func ContainsCurrency(currencies []*types.Currency, currency *types.Currency) bool {
 	for _, curr := range currencies {
 		if types.Hash(curr) == types.Hash(currency) {
 			return true
@@ -44,7 +44,7 @@ func assertBalanceAmounts(amounts []*types.Amount) error {
 	currencies := make([]*types.Currency, 0)
 	for _, amount := range amounts {
 		// Ensure a currency is used at most once in balance.Amounts
-		if containsCurrency(currencies, amount.Currency) {
+		if ContainsCurrency(currencies, amount.Currency) {
 			return fmt.Errorf("currency %+v used in balance multiple times", amount.Currency)
 		}
 		currencies = append(currencies, amount.Currency)
