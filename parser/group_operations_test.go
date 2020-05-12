@@ -22,6 +22,71 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestSortOperationGroups(t *testing.T) {
+	m := map[int]*OperationGroup{
+		2: {
+			Operations: []*types.Operation{
+				{
+					OperationIdentifier: &types.OperationIdentifier{
+						Index: 2,
+					},
+				},
+			},
+		},
+		0: {
+			Operations: []*types.Operation{
+				{
+					OperationIdentifier: &types.OperationIdentifier{
+						Index: 1,
+					},
+					RelatedOperations: []*types.OperationIdentifier{
+						{
+							Index: 0,
+						},
+					},
+				},
+				{
+					OperationIdentifier: &types.OperationIdentifier{
+						Index: 0,
+					},
+				},
+			},
+		},
+	}
+
+	sortedGroups := sortOperationGroups(3, m)
+	assert.Equal(t, []*OperationGroup{
+		{
+			Operations: []*types.Operation{
+				{
+					OperationIdentifier: &types.OperationIdentifier{
+						Index: 0,
+					},
+				},
+				{
+					OperationIdentifier: &types.OperationIdentifier{
+						Index: 1,
+					},
+					RelatedOperations: []*types.OperationIdentifier{
+						{
+							Index: 0,
+						},
+					},
+				},
+			},
+		},
+		{
+			Operations: []*types.Operation{
+				{
+					OperationIdentifier: &types.OperationIdentifier{
+						Index: 2,
+					},
+				},
+			},
+		},
+	}, sortedGroups)
+}
+
 func TestGroupOperations(t *testing.T) {
 	var tests = map[string]struct {
 		transaction *types.Transaction

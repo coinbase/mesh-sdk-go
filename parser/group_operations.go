@@ -15,6 +15,8 @@
 package parser
 
 import (
+	"sort"
+
 	"github.com/coinbase/rosetta-sdk-go/asserter"
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
@@ -66,11 +68,36 @@ func addOperationToGroup(
 	}
 }
 
+func sortOperationGroups(opLen int, opGroups map[int]*OperationGroup) []*OperationGroup {
+	sliceGroups := []*OperationGroup{}
+
+	// Golang map ordering is non-deterministic.
+	// Return groups sorted by lowest op in group
+	for i := 0; i < opLen; i++ {
+		v, ok := opGroups[i]
+		if !ok {
+			continue
+		}
+
+		// Sort all operations by index in a group
+		sort.Slice(v.Operations, func(i, j int) bool {
+			return v.Operations[i].OperationIdentifier.Index < v.Operations[j].OperationIdentifier.Index
+		})
+
+		sliceGroups = append(sliceGroups, v)
+	}
+
+	return sliceGroups
+}
+
 // GroupOperations parses all of a transaction's opertations and returns a slice
 // of each group of related operations. This should ONLY be called on operations
 // that have already been asserted for correctness. Assertion ensures there are
 // no duplicate operation indexes, operations are sorted, and that operations
 // only reference operations with an index less than theirs.
+//
+// OperationGroups are returned in ascending order based on the lowest
+// operation index in the group.
 func GroupOperations(transaction *types.Transaction) []*OperationGroup {
 	ops := transaction.Operations
 	opGroups := map[int]*OperationGroup{} // using a map makes group merges much easier
@@ -103,6 +130,10 @@ func GroupOperations(transaction *types.Transaction) []*OperationGroup {
 			}
 		}
 
+		// Ensure first index is lowest because all other groups
+		// will be merged into it.
+		sort.Ints(groupsToMerge)
+
 		mergedGroupIndex := groupsToMerge[0]
 		mergedGroup := opGroups[mergedGroupIndex]
 
@@ -123,12 +154,5 @@ func GroupOperations(transaction *types.Transaction) []*OperationGroup {
 		}
 	}
 
-	return func() []*OperationGroup {
-		sliceGroups := []*OperationGroup{}
-		for _, v := range opGroups {
-			sliceGroups = append(sliceGroups, v)
-		}
-
-		return sliceGroups
-	}()
+	return sortOperationGroups(len(ops), opGroups)
 }
