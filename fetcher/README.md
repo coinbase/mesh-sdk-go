@@ -31,4 +31,3 @@ fetcher := fetcher.New(ctx, serverURL, fetcher.WithBlockConcurrency(10))
 ## More Examples
 Check out the [examples](/examples) to see how easy
 it is to connect to a Rosetta server.
-
