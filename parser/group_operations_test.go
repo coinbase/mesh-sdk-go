@@ -39,6 +39,11 @@ func TestGroupOperations(t *testing.T) {
 							Index: 0,
 						},
 						Type: "op 0",
+						Amount: &types.Amount{
+							Currency: &types.Currency{
+								Symbol: "BTC",
+							},
+						},
 					},
 					{
 						OperationIdentifier: &types.OperationIdentifier{
@@ -63,11 +68,22 @@ func TestGroupOperations(t *testing.T) {
 								Index: 0,
 							},
 							Type: "op 0",
+							Amount: &types.Amount{
+								Currency: &types.Currency{
+									Symbol: "BTC",
+								},
+							},
+						},
+					},
+					Currencies: []*types.Currency{
+						{
+							Symbol: "BTC",
 						},
 					},
 				},
 				{
-					Type: "op 1",
+					Type:             "op 1",
+					NilAmountPresent: true,
 					Operations: []*types.Operation{
 						{
 							OperationIdentifier: &types.OperationIdentifier{
@@ -76,9 +92,11 @@ func TestGroupOperations(t *testing.T) {
 							Type: "op 1",
 						},
 					},
+					Currencies: []*types.Currency{},
 				},
 				{
-					Type: "op 2",
+					Type:             "op 2",
+					NilAmountPresent: true,
 					Operations: []*types.Operation{
 						{
 							OperationIdentifier: &types.OperationIdentifier{
@@ -87,6 +105,7 @@ func TestGroupOperations(t *testing.T) {
 							Type: "op 2",
 						},
 					},
+					Currencies: []*types.Currency{},
 				},
 			},
 		},
@@ -98,6 +117,11 @@ func TestGroupOperations(t *testing.T) {
 							Index: 0,
 						},
 						Type: "type 0",
+						Amount: &types.Amount{
+							Currency: &types.Currency{
+								Symbol: "BTC",
+							},
+						},
 					},
 					{
 						OperationIdentifier: &types.OperationIdentifier{
@@ -110,6 +134,11 @@ func TestGroupOperations(t *testing.T) {
 							Index: 2,
 						},
 						Type: "type 2",
+						Amount: &types.Amount{
+							Currency: &types.Currency{
+								Symbol: "BTC",
+							},
+						},
 					},
 					{
 						OperationIdentifier: &types.OperationIdentifier{
@@ -119,6 +148,11 @@ func TestGroupOperations(t *testing.T) {
 							{Index: 2},
 						},
 						Type: "type 2",
+						Amount: &types.Amount{
+							Currency: &types.Currency{
+								Symbol: "ETH",
+							},
+						},
 					},
 					{
 						OperationIdentifier: &types.OperationIdentifier{
@@ -137,6 +171,11 @@ func TestGroupOperations(t *testing.T) {
 							{Index: 0},
 						},
 						Type: "type 0",
+						Amount: &types.Amount{
+							Currency: &types.Currency{
+								Symbol: "BTC",
+							},
+						},
 					},
 				},
 			},
@@ -149,6 +188,11 @@ func TestGroupOperations(t *testing.T) {
 								Index: 0,
 							},
 							Type: "type 0",
+							Amount: &types.Amount{
+								Currency: &types.Currency{
+									Symbol: "BTC",
+								},
+							},
 						},
 						{
 							OperationIdentifier: &types.OperationIdentifier{
@@ -158,11 +202,22 @@ func TestGroupOperations(t *testing.T) {
 								{Index: 0},
 							},
 							Type: "type 0",
+							Amount: &types.Amount{
+								Currency: &types.Currency{
+									Symbol: "BTC",
+								},
+							},
+						},
+					},
+					Currencies: []*types.Currency{
+						{
+							Symbol: "BTC",
 						},
 					},
 				},
 				{
-					Type: "type 1",
+					Type:             "type 1",
+					NilAmountPresent: true,
 					Operations: []*types.Operation{
 						{
 							OperationIdentifier: &types.OperationIdentifier{
@@ -171,15 +226,30 @@ func TestGroupOperations(t *testing.T) {
 							Type: "type 1",
 						},
 					},
+					Currencies: []*types.Currency{},
 				},
 				{
-					Type: "",
+					Type:             "",
+					NilAmountPresent: true,
+					Currencies: []*types.Currency{
+						{
+							Symbol: "BTC",
+						},
+						{
+							Symbol: "ETH",
+						},
+					},
 					Operations: []*types.Operation{
 						{
 							OperationIdentifier: &types.OperationIdentifier{
 								Index: 2,
 							},
 							Type: "type 2",
+							Amount: &types.Amount{
+								Currency: &types.Currency{
+									Symbol: "BTC",
+								},
+							},
 						},
 						{
 							OperationIdentifier: &types.OperationIdentifier{
@@ -189,6 +259,11 @@ func TestGroupOperations(t *testing.T) {
 								{Index: 2},
 							},
 							Type: "type 2",
+							Amount: &types.Amount{
+								Currency: &types.Currency{
+									Symbol: "ETH",
+								},
+							},
 						},
 						{
 							OperationIdentifier: &types.OperationIdentifier{
