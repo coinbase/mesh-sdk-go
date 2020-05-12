@@ -22,6 +22,127 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestSortOperationGroups(t *testing.T) {
+	m := map[int]*OperationGroup{
+		2: {
+			Operations: []*types.Operation{
+				{
+					OperationIdentifier: &types.OperationIdentifier{
+						Index: 2,
+					},
+				},
+			},
+		},
+		4: {
+			Operations: []*types.Operation{
+				{
+					OperationIdentifier: &types.OperationIdentifier{
+						Index: 4,
+					},
+				},
+			},
+		},
+		0: {
+			Operations: []*types.Operation{
+				{
+					OperationIdentifier: &types.OperationIdentifier{
+						Index: 1,
+					},
+					RelatedOperations: []*types.OperationIdentifier{
+						{
+							Index: 0,
+						},
+					},
+				},
+				{
+					OperationIdentifier: &types.OperationIdentifier{
+						Index: 3,
+					},
+					RelatedOperations: []*types.OperationIdentifier{
+						{
+							Index: 1,
+						},
+					},
+				},
+				{
+					OperationIdentifier: &types.OperationIdentifier{
+						Index: 0,
+					},
+				},
+			},
+		},
+		5: {
+			Operations: []*types.Operation{
+				{
+					OperationIdentifier: &types.OperationIdentifier{
+						Index: 5,
+					},
+				},
+			},
+		},
+	}
+
+	sortedGroups := sortOperationGroups(6, m)
+	assert.Equal(t, []*OperationGroup{
+		{
+			Operations: []*types.Operation{
+				{
+					OperationIdentifier: &types.OperationIdentifier{
+						Index: 0,
+					},
+				},
+				{
+					OperationIdentifier: &types.OperationIdentifier{
+						Index: 1,
+					},
+					RelatedOperations: []*types.OperationIdentifier{
+						{
+							Index: 0,
+						},
+					},
+				},
+				{
+					OperationIdentifier: &types.OperationIdentifier{
+						Index: 3,
+					},
+					RelatedOperations: []*types.OperationIdentifier{
+						{
+							Index: 1,
+						},
+					},
+				},
+			},
+		},
+		{
+			Operations: []*types.Operation{
+				{
+					OperationIdentifier: &types.OperationIdentifier{
+						Index: 2,
+					},
+				},
+			},
+		},
+		{
+			Operations: []*types.Operation{
+				{
+					OperationIdentifier: &types.OperationIdentifier{
+						Index: 4,
+					},
+				},
+			},
+		},
+		{
+			Operations: []*types.Operation{
+				{
+					OperationIdentifier: &types.OperationIdentifier{
+						Index: 5,
+					},
+				},
+			},
+		},
+	}, sortedGroups)
+}
+
 func TestGroupOperations(t *testing.T) {
 	var tests = map[string]struct {
 		transaction *types.Transaction
