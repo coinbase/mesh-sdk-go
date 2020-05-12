@@ -108,7 +108,16 @@ func sortOperationGroups(opLen int, opGroups map[int]*OperationGroup) []*Operati
 // are also sorted.
 func GroupOperations(transaction *types.Transaction) []*OperationGroup {
 	ops := transaction.Operations
-	opGroups := map[int]*OperationGroup{} // using a map makes group merges much easier
+
+	// We use a map of ints to keep track of *OperationGroup instead of a slice
+	// because merging groups involves removing and combing many items. While we
+	// could manipulate a slice (leaving holes where groups were merged), it
+	// seemed less complex to manipulate a map.
+	//
+	// Nonetheless, either solution avoids modifying up to `n` opAssignments
+	// whenever 2 groups merge (this occurs when merging groups in a slice without
+	// leaving holes).
+	opGroups := map[int]*OperationGroup{}
 	opAssignments := make([]int, len(ops))
 	for i, op := range ops {
 		// Create new group
