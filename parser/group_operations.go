@@ -15,6 +15,8 @@
 package parser
 
 import (
+	"sort"
+
 	"github.com/coinbase/rosetta-sdk-go/asserter"
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
@@ -39,6 +41,7 @@ func containsInt(valid []int, value int) bool {
 	return false
 }
 
+// addOperationToGroup appends a *types.Operation to an *OperationGroup.
 func addOperationToGroup(
 	destination *OperationGroup,
 	destinationIndex int,
@@ -66,14 +69,55 @@ func addOperationToGroup(
 	}
 }
 
+// sortOperationGroups returns a slice of OperationGroups sorted by the lowest
+// OperationIdentifier.Index in each group. This function also sorts all
+// operations in each OperationGroup by OperationIdentifier.Index. It can be
+// useful to consumers to have a deterministic ordering of groups and ops within
+// each group.
+func sortOperationGroups(opLen int, opGroups map[int]*OperationGroup) []*OperationGroup {
+	sliceGroups := []*OperationGroup{}
+
+	// Golang map ordering is non-deterministic.
+	// Return groups sorted by lowest op in group
+	for i := 0; i < opLen; i++ {
+		v, ok := opGroups[i]
+		if !ok {
+			continue
+		}
+
+		// Sort all operations by index in a group
+		sort.Slice(v.Operations, func(i, j int) bool {
+			return v.Operations[i].OperationIdentifier.Index < v.Operations[j].OperationIdentifier.Index
+		})
+
+		sliceGroups = append(sliceGroups, v)
+	}
+
+	return sliceGroups
+}
+
 // GroupOperations parses all of a transaction's opertations and returns a slice
-// of each group of related operations. This should ONLY be called on operations
-// that have already been asserted for correctness. Assertion ensures there are
-// no duplicate operation indexes, operations are sorted, and that operations
-// only reference operations with an index less than theirs.
+// of each group of related operations (assuming transitive relatedness). This
+// should ONLY be called on operations that have already been asserted for
+// correctness. Assertion ensures there are no duplicate operation indexes,
+// operations are sorted, and that operations only reference operations with
+// an index less than theirs.
+//
+// OperationGroups are returned in ascending order based on the lowest
+// OperationIdentifier.Index in the group. The operations in each OperationGroup
+// are also sorted.
 func GroupOperations(transaction *types.Transaction) []*OperationGroup {
 	ops := transaction.Operations
-	opGroups := map[int]*OperationGroup{} // using a map makes group merges much easier
+
+	// We use a map of ints to keep track of *OperationGroup instead of a slice
+	// because merging groups involves removing and combing many items. While we
+	// could manipulate a slice (leaving holes where groups were merged), it
+	// seemed less complex to manipulate a map.
+	//
+	// Nonetheless, either solution avoids modifying up to `n` opAssignments
+	// whenever 2 groups merge (this occurs when merging groups in a slice without
+	// leaving holes).
+	opGroups := map[int]*OperationGroup{}
 	opAssignments := make([]int, len(ops))
 	for i, op := range ops {
 		// Create new group
@@ -103,6 +147,10 @@ func GroupOperations(transaction *types.Transaction) []*OperationGroup {
 			}
 		}
 
+		// Ensure first index is lowest because all other groups
+		// will be merged into it.
+		sort.Ints(groupsToMerge)
+
 		mergedGroupIndex := groupsToMerge[0]
 		mergedGroup := opGroups[mergedGroupIndex]
 
@@ -123,12 +171,5 @@ func GroupOperations(transaction *types.Transaction) []*OperationGroup {
 		}
 	}
 
-	return func() []*OperationGroup {
-		sliceGroups := []*OperationGroup{}
-		for _, v := range opGroups {
-			sliceGroups = append(sliceGroups, v)
-		}
-
-		return sliceGroups
-	}()
+	return sortOperationGroups(len(ops), opGroups)
 }
