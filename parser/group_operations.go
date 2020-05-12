@@ -15,6 +15,7 @@
 package parser
 
 import (
+	"github.com/coinbase/rosetta-sdk-go/asserter"
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
@@ -22,8 +23,10 @@ import (
 // If all operations in a group have the same operation.Type,
 // the Type is also populated.
 type OperationGroup struct {
-	Type       string
-	Operations []*types.Operation
+	Type               string
+	Operations         []*types.Operation
+	Currencies         []*types.Currency
+	NilCurrencyPresent bool
 }
 
 func containsInt(valid []int, value int) bool {
@@ -42,11 +45,25 @@ func addOperationToGroup(
 	assignments *[]int,
 	op *types.Operation,
 ) {
+	// Remove group type if different
 	if op.Type != destination.Type && destination.Type != "" {
 		destination.Type = ""
 	}
+
+	// Update op assignment
 	destination.Operations = append(destination.Operations, op)
 	(*assignments)[op.OperationIdentifier.Index] = destinationIndex
+
+	// Handle nil currency
+	if op.Amount == nil {
+		destination.NilCurrencyPresent = true
+		return
+	}
+
+	// Add op to currency if amount is not nil
+	if !asserter.ContainsCurrency(destination.Currencies, op.Amount.Currency) {
+		destination.Currencies = append(destination.Currencies, op.Amount.Currency)
+	}
 }
 
 // GroupOperations parses all of a transaction's opertations and returns a slice
@@ -66,6 +83,14 @@ func GroupOperations(transaction *types.Transaction) []*OperationGroup {
 				Type:       op.Type,
 				Operations: []*types.Operation{op},
 			}
+
+			if op.Amount != nil {
+				opGroups[key].Currencies = []*types.Currency{op.Amount.Currency}
+			} else {
+				opGroups[key].Currencies = []*types.Currency{}
+				opGroups[key].NilCurrencyPresent = true
+			}
+
 			opAssignments[i] = key
 			continue
 		}

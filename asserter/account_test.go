@@ -126,7 +126,7 @@ func TestContainsCurrency(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			exists := containsCurrency(test.currencies, test.currency)
+			exists := ContainsCurrency(test.currencies, test.currency)
 			assert.Equal(t, test.contains, exists)
 		})
 	}
