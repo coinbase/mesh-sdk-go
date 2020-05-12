@@ -23,10 +23,10 @@ import (
 // If all operations in a group have the same operation.Type,
 // the Type is also populated.
 type OperationGroup struct {
-	Type               string
-	Operations         []*types.Operation
-	Currencies         []*types.Currency
-	NilCurrencyPresent bool
+	Type             string
+	Operations       []*types.Operation
+	Currencies       []*types.Currency
+	NilAmountPresent bool
 }
 
 func containsInt(valid []int, value int) bool {
@@ -56,7 +56,7 @@ func addOperationToGroup(
 
 	// Handle nil currency
 	if op.Amount == nil {
-		destination.NilCurrencyPresent = true
+		destination.NilAmountPresent = true
 		return
 	}
 
@@ -88,7 +88,7 @@ func GroupOperations(transaction *types.Transaction) []*OperationGroup {
 				opGroups[key].Currencies = []*types.Currency{op.Amount.Currency}
 			} else {
 				opGroups[key].Currencies = []*types.Currency{}
-				opGroups[key].NilCurrencyPresent = true
+				opGroups[key].NilAmountPresent = true
 			}
 
 			opAssignments[i] = key

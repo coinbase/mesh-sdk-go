@@ -82,8 +82,8 @@ func TestGroupOperations(t *testing.T) {
 					},
 				},
 				{
-					Type:               "op 1",
-					NilCurrencyPresent: true,
+					Type:             "op 1",
+					NilAmountPresent: true,
 					Operations: []*types.Operation{
 						{
 							OperationIdentifier: &types.OperationIdentifier{
@@ -95,8 +95,8 @@ func TestGroupOperations(t *testing.T) {
 					Currencies: []*types.Currency{},
 				},
 				{
-					Type:               "op 2",
-					NilCurrencyPresent: true,
+					Type:             "op 2",
+					NilAmountPresent: true,
 					Operations: []*types.Operation{
 						{
 							OperationIdentifier: &types.OperationIdentifier{
@@ -216,8 +216,8 @@ func TestGroupOperations(t *testing.T) {
 					},
 				},
 				{
-					Type:               "type 1",
-					NilCurrencyPresent: true,
+					Type:             "type 1",
+					NilAmountPresent: true,
 					Operations: []*types.Operation{
 						{
 							OperationIdentifier: &types.OperationIdentifier{
@@ -229,8 +229,8 @@ func TestGroupOperations(t *testing.T) {
 					Currencies: []*types.Currency{},
 				},
 				{
-					Type:               "",
-					NilCurrencyPresent: true,
+					Type:             "",
+					NilAmountPresent: true,
 					Currencies: []*types.Currency{
 						{
 							Symbol: "BTC",
