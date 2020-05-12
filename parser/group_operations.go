@@ -41,6 +41,7 @@ func containsInt(valid []int, value int) bool {
 	return false
 }
 
+// addOperationToGroup appends a *types.Operation to an *OperationGroup.
 func addOperationToGroup(
 	destination *OperationGroup,
 	destinationIndex int,
@@ -68,6 +69,11 @@ func addOperationToGroup(
 	}
 }
 
+// sortOperationGroups returns a slice of OperationGroups sorted by the lowest
+// OperationIdentifier.Index in each group. This function also sorts all
+// operations in each OperationGroup by OperationIdentifier.Index. It can be
+// useful to consumers to have a deterministic ordering of groups and ops within
+// each group.
 func sortOperationGroups(opLen int, opGroups map[int]*OperationGroup) []*OperationGroup {
 	sliceGroups := []*OperationGroup{}
 
@@ -91,13 +97,15 @@ func sortOperationGroups(opLen int, opGroups map[int]*OperationGroup) []*Operati
 }
 
 // GroupOperations parses all of a transaction's opertations and returns a slice
-// of each group of related operations. This should ONLY be called on operations
-// that have already been asserted for correctness. Assertion ensures there are
-// no duplicate operation indexes, operations are sorted, and that operations
-// only reference operations with an index less than theirs.
+// of each group of related operations (assuming transitive relatedness). This
+// should ONLY be called on operations that have already been asserted for
+// correctness. Assertion ensures there are no duplicate operation indexes,
+// operations are sorted, and that operations only reference operations with
+// an index less than theirs.
 //
 // OperationGroups are returned in ascending order based on the lowest
-// operation index in the group.
+// OperationIdentifier.Index in the group. The operations in each OperationGroup
+// are also sorted.
 func GroupOperations(transaction *types.Transaction) []*OperationGroup {
 	ops := transaction.Operations
 	opGroups := map[int]*OperationGroup{} // using a map makes group merges much easier
