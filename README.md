@@ -7,7 +7,7 @@
 [![GoDoc](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=shield)](https://pkg.go.dev/github.com/coinbase/rosetta-sdk-go?tab=overview)
 
 ## What is Rosetta?
-Rosetta is a new project from Coinbase to standardize the process
+Rosetta is a new project to standardize the process
 of deploying and interacting with blockchains. With an explicit
 specification to adhere to, all parties involved in blockchain
 development can spend less time figuring out how to integrate
@@ -26,11 +26,13 @@ and network-specific work.
 * [Fetcher](fetcher): Simplified and validated communication with
 any Rosetta server
 * [Parser](parser): Tool for parsing Rosetta blocks
+* [Syncer](syncer): Sync Rosetta blocks with customizable handling
+* [Reconciler](reconciler): Compare derived balances with node balances
 
 ## Examples
 The packages listed above are demoed extensively in
 [examples](examples) and are utilized throughout the
-[Rosetta Validator](https://github.com/coinbase/rosetta-validator).
+[rosetta-cli](https://github.com/coinbase/rosetta-cli).
 
 ## Development
 * `make deps` to install dependencies
