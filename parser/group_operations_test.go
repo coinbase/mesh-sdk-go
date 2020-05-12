@@ -33,6 +33,15 @@ func TestSortOperationGroups(t *testing.T) {
 				},
 			},
 		},
+		4: {
+			Operations: []*types.Operation{
+				{
+					OperationIdentifier: &types.OperationIdentifier{
+						Index: 4,
+					},
+				},
+			},
+		},
 		0: {
 			Operations: []*types.Operation{
 				{
@@ -47,14 +56,33 @@ func TestSortOperationGroups(t *testing.T) {
 				},
 				{
 					OperationIdentifier: &types.OperationIdentifier{
+						Index: 3,
+					},
+					RelatedOperations: []*types.OperationIdentifier{
+						{
+							Index: 1,
+						},
+					},
+				},
+				{
+					OperationIdentifier: &types.OperationIdentifier{
 						Index: 0,
+					},
+				},
+			},
+		},
+		5: {
+			Operations: []*types.Operation{
+				{
+					OperationIdentifier: &types.OperationIdentifier{
+						Index: 5,
 					},
 				},
 			},
 		},
 	}
 
-	sortedGroups := sortOperationGroups(3, m)
+	sortedGroups := sortOperationGroups(6, m)
 	assert.Equal(t, []*OperationGroup{
 		{
 			Operations: []*types.Operation{
@@ -73,6 +101,16 @@ func TestSortOperationGroups(t *testing.T) {
 						},
 					},
 				},
+				{
+					OperationIdentifier: &types.OperationIdentifier{
+						Index: 3,
+					},
+					RelatedOperations: []*types.OperationIdentifier{
+						{
+							Index: 1,
+						},
+					},
+				},
 			},
 		},
 		{
@@ -80,6 +118,24 @@ func TestSortOperationGroups(t *testing.T) {
 				{
 					OperationIdentifier: &types.OperationIdentifier{
 						Index: 2,
+					},
+				},
+			},
+		},
+		{
+			Operations: []*types.Operation{
+				{
+					OperationIdentifier: &types.OperationIdentifier{
+						Index: 4,
+					},
+				},
+			},
+		},
+		{
+			Operations: []*types.Operation{
+				{
+					OperationIdentifier: &types.OperationIdentifier{
+						Index: 5,
 					},
 				},
 			},
