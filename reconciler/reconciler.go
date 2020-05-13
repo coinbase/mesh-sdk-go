@@ -431,7 +431,7 @@ func (r *Reconciler) accountReconciliation(
 				// Don't wait to check if we are very far behind
 				log.Printf(
 					"Skipping reconciliation for %s: %d blocks behind\n",
-					simpleAccountCurrency(accountCurrency),
+					types.PrettyPrintStruct(accountCurrency),
 					diff,
 				)
 
@@ -529,21 +529,6 @@ func (r *Reconciler) inactiveAccountQueue(
 	}
 
 	return nil
-}
-
-// simpleAccountCurrency returns a string that is a simple
-// representation of an AccountCurrency struct.
-func simpleAccountCurrency(
-	accountCurrency *AccountCurrency,
-) string {
-	acctString := accountCurrency.Account.Address
-	if accountCurrency.Account.SubAccount != nil {
-		acctString += accountCurrency.Account.SubAccount.Address
-	}
-
-	acctString += accountCurrency.Currency.Symbol
-
-	return acctString
 }
 
 // reconcileActiveAccounts selects an account
