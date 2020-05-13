@@ -27,10 +27,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func templateReconciler() *Reconciler {
-	return New(nil, nil, nil, nil)
-}
-
 func TestNewReconciler(t *testing.T) {
 	var (
 		accountCurrency = &AccountCurrency{
@@ -488,6 +484,195 @@ func TestCompareBalance(t *testing.T) {
 		assert.Equal(t, int64(2), headIndex)
 		assert.Error(t, err)
 	})
+}
+
+func TestInactiveAccountQueue(t *testing.T) {
+	var (
+		handler = &MockReconcilerHandler{}
+		r       = New(nil, nil, handler, nil)
+		block   = &types.BlockIdentifier{
+			Hash:  "block 1",
+			Index: 1,
+		}
+		accountCurrency = &AccountCurrency{
+			Account: &types.AccountIdentifier{
+				Address: "addr 1",
+			},
+			Currency: &types.Currency{
+				Symbol:   "BTC",
+				Decimals: 8,
+			},
+		}
+		block2 = &types.BlockIdentifier{
+			Hash:  "block 2",
+			Index: 2,
+		}
+		accountCurrency2 = &AccountCurrency{
+			Account: &types.AccountIdentifier{
+				Address: "addr 2",
+			},
+			Currency: &types.Currency{
+				Symbol:   "BTC",
+				Decimals: 8,
+			},
+		}
+	)
+
+	t.Run("new account in active reconciliation", func(t *testing.T) {
+		err := r.inactiveAccountQueue(
+			context.Background(),
+			false,
+			accountCurrency,
+			block,
+		)
+		assert.Nil(t, err)
+		assert.Equal(t, handler.LastAccountCurrency, accountCurrency)
+		assert.ElementsMatch(t, r.seenAccounts, []*AccountCurrency{accountCurrency})
+		assert.ElementsMatch(t, r.inactiveQueue, []*InactiveEntry{
+			{
+				accountCurrency: accountCurrency,
+				lastCheck:       block,
+			},
+		})
+	})
+
+	t.Run("another new account in active reconciliation", func(t *testing.T) {
+		err := r.inactiveAccountQueue(
+			context.Background(),
+			false,
+			accountCurrency2,
+			block2,
+		)
+		assert.Nil(t, err)
+		assert.Equal(t, handler.LastAccountCurrency, accountCurrency2)
+		assert.ElementsMatch(
+			t,
+			r.seenAccounts,
+			[]*AccountCurrency{accountCurrency, accountCurrency2},
+		)
+		assert.ElementsMatch(t, r.inactiveQueue, []*InactiveEntry{
+			{
+				accountCurrency: accountCurrency,
+				lastCheck:       block,
+			},
+			{
+				accountCurrency: accountCurrency2,
+				lastCheck:       block2,
+			},
+		})
+	})
+
+	t.Run("previous account in active reconciliation", func(t *testing.T) {
+		r.inactiveQueue = []*InactiveEntry{}
+		handler.LastAccountCurrency = nil
+
+		err := r.inactiveAccountQueue(
+			context.Background(),
+			false,
+			accountCurrency,
+			block,
+		)
+		assert.Nil(t, err)
+		assert.Nil(t, handler.LastAccountCurrency)
+		assert.ElementsMatch(
+			t,
+			r.seenAccounts,
+			[]*AccountCurrency{accountCurrency, accountCurrency2},
+		)
+		assert.ElementsMatch(t, r.inactiveQueue, []*InactiveEntry{})
+	})
+
+	t.Run("previous account in inactive reconciliation", func(t *testing.T) {
+		err := r.inactiveAccountQueue(
+			context.Background(),
+			true,
+			accountCurrency,
+			block,
+		)
+		assert.Nil(t, err)
+		assert.Nil(t, handler.LastAccountCurrency)
+		assert.ElementsMatch(
+			t,
+			r.seenAccounts,
+			[]*AccountCurrency{accountCurrency, accountCurrency2},
+		)
+		assert.ElementsMatch(t, r.inactiveQueue, []*InactiveEntry{
+			{
+				accountCurrency: accountCurrency,
+				lastCheck:       block,
+			},
+		})
+	})
+
+	t.Run("another previous account in inactive reconciliation", func(t *testing.T) {
+		err := r.inactiveAccountQueue(
+			context.Background(),
+			true,
+			accountCurrency2,
+			block2,
+		)
+		assert.Nil(t, err)
+		assert.Nil(t, handler.LastAccountCurrency)
+		assert.ElementsMatch(
+			t,
+			r.seenAccounts,
+			[]*AccountCurrency{accountCurrency, accountCurrency2},
+		)
+		assert.ElementsMatch(t, r.inactiveQueue, []*InactiveEntry{
+			{
+				accountCurrency: accountCurrency,
+				lastCheck:       block,
+			},
+			{
+				accountCurrency: accountCurrency2,
+				lastCheck:       block2,
+			},
+		})
+	})
+}
+
+func templateReconciler() *Reconciler {
+	return New(nil, nil, nil, nil)
+}
+
+type MockReconcilerHandler struct {
+	LastAccountCurrency *AccountCurrency
+}
+
+func (h *MockReconcilerHandler) ReconciliationFailed(
+	ctx context.Context,
+	reconciliationType string,
+	account *types.AccountIdentifier,
+	currency *types.Currency,
+	computedBalance string,
+	nodeBalance string,
+	block *types.BlockIdentifier,
+) error {
+	return nil
+}
+
+func (h *MockReconcilerHandler) ReconciliationSucceeded(
+	ctx context.Context,
+	reconciliationType string,
+	account *types.AccountIdentifier,
+	currency *types.Currency,
+	balance string,
+	block *types.BlockIdentifier,
+) error {
+	return nil
+}
+
+func (h *MockReconcilerHandler) NewAccountSeen(
+	ctx context.Context,
+	account *types.AccountIdentifier,
+	currency *types.Currency,
+) error {
+	h.LastAccountCurrency = &AccountCurrency{
+		Account:  account,
+		Currency: currency,
+	}
+
+	return nil
 }
 
 type MockReconcilerHelper struct {
