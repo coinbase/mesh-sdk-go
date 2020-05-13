@@ -18,7 +18,6 @@ import (
 	"fmt"
 
 	"github.com/coinbase/rosetta-sdk-go/parser"
-	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
 // Option is used to overwrite default values in
@@ -53,8 +52,12 @@ func WithSeenAccounts(seen []*AccountCurrency) Option {
 				Entry: acct,
 			})
 			r.seenAccounts = append(r.seenAccounts, acct)
-			fmt.Printf("Adding to inactive queue: %s\n", types.PrettyPrintStruct(acct))
 		}
+
+		fmt.Printf(
+			"Initialized reconciler with %d previously seen accounts\n",
+			len(r.seenAccounts),
+		)
 	}
 }
 
