@@ -69,6 +69,18 @@ const (
 	// inactive reconciliations.
 	// TODO: make configurable
 	inactiveReconciliationRequiredDepth = 500
+
+	// defaultLookupBalanceByBlock is the default setting
+	// for how to perform balance queries. It is preferable
+	// to perform queries by sepcific blocks but this is not
+	// always supported by the node.
+	defaultLookupBalanceByBlock = true
+
+	// defaultReconcilerConcurrency is the number of goroutines
+	// to start for reconciliation. Half of the goroutines are assigned
+	// to inactive reconciliation and half are assigned to active
+	// reconciliation.
+	defaultReconcilerConcurrency = 8
 )
 
 var (
@@ -135,68 +147,82 @@ type Handler interface {
 		balance string,
 		block *types.BlockIdentifier,
 	) error
+
+	NewAccountSeen(
+		ctx context.Context,
+		account *types.AccountIdentifier,
+		currency *types.Currency,
+	) error
+}
+
+// InactiveEntry is used to track the last
+// time that an *AccountCurrency was reconciled.
+type InactiveEntry struct {
+	Entry     *AccountCurrency
+	LastCheck *types.BlockIdentifier
+}
+
+// AccountCurrency is a simple struct combining
+// a *types.Account and *types.Currency. This can
+// be useful for looking up balances.
+type AccountCurrency struct {
+	Account  *types.AccountIdentifier `json:"account_identifier,omitempty"`
+	Currency *types.Currency          `json:"currency,omitempty"`
 }
 
 // Reconciler contains all logic to reconcile balances of
 // types.AccountIdentifiers returned in types.Operations
 // by a Rosetta Server.
 type Reconciler struct {
-	network              *types.NetworkIdentifier
-	helper               Helper
-	handler              Handler
-	fetcher              *fetcher.Fetcher
-	accountConcurrency   uint64
-	lookupBalanceByBlock bool
-	interestingAccounts  []*AccountCurrency
-	changeQueue          chan *parser.BalanceChange
+	network               *types.NetworkIdentifier
+	helper                Helper
+	handler               Handler
+	fetcher               *fetcher.Fetcher
+	reconcilerConcurrency int
+	lookupBalanceByBlock  bool
+	interestingAccounts   []*AccountCurrency
+	changeQueue           chan *parser.BalanceChange
 
 	// highWaterMark is used to skip requests when
 	// we are very far behind the live head.
 	highWaterMark int64
 
-	// seenAccts are stored for inactive account
+	// seenAccounts are stored for inactive account
 	// reconciliation.
-	seenAccts     []*AccountCurrency
-	inactiveQueue []*parser.BalanceChange
+	seenAccounts  []*AccountCurrency
+	inactiveQueue []*InactiveEntry
 
 	// inactiveQueueMutex needed because we can't peek at the tip
 	// of a channel to determine when it is ready to look at.
 	inactiveQueueMutex sync.Mutex
 }
 
-// NewReconciler creates a new Reconciler.
-func NewReconciler(
+// New creates a new Reconciler.
+func New(
 	network *types.NetworkIdentifier,
 	helper Helper,
 	handler Handler,
 	fetcher *fetcher.Fetcher,
-	accountConcurrency uint64,
-	lookupBalanceByBlock bool,
-	interestingAccounts []*AccountCurrency,
-	// TODO: load seenAccts and inactiveQueue from prior run (if exists)
+	options ...Option,
 ) *Reconciler {
 	r := &Reconciler{
-		network:              network,
-		helper:               helper,
-		handler:              handler,
-		fetcher:              fetcher,
-		accountConcurrency:   accountConcurrency,
-		lookupBalanceByBlock: lookupBalanceByBlock,
-		interestingAccounts:  interestingAccounts,
-		highWaterMark:        -1,
-		seenAccts:            make([]*AccountCurrency, 0),
-		inactiveQueue:        make([]*parser.BalanceChange, 0),
-	}
+		network:               network,
+		helper:                helper,
+		handler:               handler,
+		fetcher:               fetcher,
+		reconcilerConcurrency: defaultReconcilerConcurrency,
+		highWaterMark:         -1,
+		seenAccounts:          []*AccountCurrency{},
+		inactiveQueue:         []*InactiveEntry{},
 
-	if lookupBalanceByBlock {
 		// When lookupBalanceByBlock is enabled, we check
 		// balance changes synchronously.
-		r.changeQueue = make(chan *parser.BalanceChange)
-	} else {
-		// When lookupBalanceByBlock is disabled, we must check
-		// balance changes asynchronously. Using a buffered
-		// channel allows us to add balance changes without blocking.
-		r.changeQueue = make(chan *parser.BalanceChange, backlogThreshold)
+		lookupBalanceByBlock: defaultLookupBalanceByBlock,
+		changeQueue:          make(chan *parser.BalanceChange),
+	}
+
+	for _, opt := range options {
+		opt(r)
 	}
 
 	return r
@@ -405,7 +431,7 @@ func (r *Reconciler) accountReconciliation(
 				// Don't wait to check if we are very far behind
 				log.Printf(
 					"Skipping reconciliation for %s: %d blocks behind\n",
-					simpleAccountCurrency(accountCurrency),
+					types.PrettyPrintStruct(accountCurrency),
 					diff,
 				)
 
@@ -453,7 +479,11 @@ func (r *Reconciler) accountReconciliation(
 			return nil
 		}
 
-		r.inactiveAccountQueue(inactive, accountCurrency, liveBlock)
+		err = r.inactiveAccountQueue(ctx, inactive, accountCurrency, liveBlock)
+		if err != nil {
+			return err
+		}
+
 		return r.handler.ReconciliationSucceeded(
 			ctx,
 			reconciliationType,
@@ -468,41 +498,37 @@ func (r *Reconciler) accountReconciliation(
 }
 
 func (r *Reconciler) inactiveAccountQueue(
+	ctx context.Context,
 	inactive bool,
 	accountCurrency *AccountCurrency,
 	liveBlock *types.BlockIdentifier,
-) {
+) error {
 	// Only enqueue the first time we see an account on an active reconciliation.
 	shouldEnqueueInactive := false
-	if !inactive && !ContainsAccountCurrency(r.seenAccts, accountCurrency) {
-		r.seenAccts = append(r.seenAccts, accountCurrency)
+	if !inactive && !ContainsAccountCurrency(r.seenAccounts, accountCurrency) {
+		r.seenAccounts = append(r.seenAccounts, accountCurrency)
 		shouldEnqueueInactive = true
+
+		err := r.handler.NewAccountSeen(
+			ctx,
+			accountCurrency.Account,
+			accountCurrency.Currency,
+		)
+		if err != nil {
+			return err
+		}
 	}
 
 	if inactive || shouldEnqueueInactive {
 		r.inactiveQueueMutex.Lock()
-		r.inactiveQueue = append(r.inactiveQueue, &parser.BalanceChange{
-			Account:  accountCurrency.Account,
-			Currency: accountCurrency.Currency,
-			Block:    liveBlock,
+		r.inactiveQueue = append(r.inactiveQueue, &InactiveEntry{
+			Entry:     accountCurrency,
+			LastCheck: liveBlock,
 		})
 		r.inactiveQueueMutex.Unlock()
 	}
-}
 
-// simpleAccountCurrency returns a string that is a simple
-// representation of an AccountCurrency struct.
-func simpleAccountCurrency(
-	accountCurrency *AccountCurrency,
-) string {
-	acctString := accountCurrency.Account.Address
-	if accountCurrency.Account.SubAccount != nil {
-		acctString += accountCurrency.Account.SubAccount.Address
-	}
-
-	acctString += accountCurrency.Currency.Symbol
-
-	return acctString
+	return nil
 }
 
 // reconcileActiveAccounts selects an account
@@ -569,15 +595,16 @@ func (r *Reconciler) reconcileInactiveAccounts(
 
 		r.inactiveQueueMutex.Lock()
 		if len(r.inactiveQueue) > 0 &&
-			r.inactiveQueue[0].Block.Index+inactiveReconciliationRequiredDepth < head.Index {
+			(r.inactiveQueue[0].LastCheck == nil || // block is set to nil when loaded from previous run
+				r.inactiveQueue[0].LastCheck.Index+inactiveReconciliationRequiredDepth < head.Index) {
 			randAcct := r.inactiveQueue[0]
 			r.inactiveQueue = r.inactiveQueue[1:]
 			r.inactiveQueueMutex.Unlock()
 
 			block, amount, err := r.bestBalance(
 				ctx,
-				randAcct.Account,
-				randAcct.Currency,
+				randAcct.Entry.Account,
+				randAcct.Entry.Currency,
 				types.ConstructPartialBlockIdentifier(head),
 			)
 			if err != nil {
@@ -586,8 +613,8 @@ func (r *Reconciler) reconcileInactiveAccounts(
 
 			err = r.accountReconciliation(
 				ctx,
-				randAcct.Account,
-				randAcct.Currency,
+				randAcct.Entry.Account,
+				randAcct.Entry.Currency,
 				amount,
 				block,
 				true,
@@ -608,7 +635,7 @@ func (r *Reconciler) reconcileInactiveAccounts(
 // If any goroutine errors, the function will return an error.
 func (r *Reconciler) Reconcile(ctx context.Context) error {
 	g, ctx := errgroup.WithContext(ctx)
-	for j := uint64(0); j < r.accountConcurrency/2; j++ {
+	for j := 0; j < r.reconcilerConcurrency/2; j++ {
 		g.Go(func() error {
 			return r.reconcileActiveAccounts(ctx)
 		})
@@ -640,14 +667,6 @@ func ExtractAmount(
 	}
 
 	return nil, fmt.Errorf("could not extract amount for %+v", currency)
-}
-
-// AccountCurrency is a simple struct combining
-// a *types.Account and *types.Currency. This can
-// be useful for looking up balances.
-type AccountCurrency struct {
-	Account  *types.AccountIdentifier `json:"account_identifier,omitempty"`
-	Currency *types.Currency          `json:"currency,omitempty"`
 }
 
 // ContainsAccountCurrency returns a boolean indicating if a
