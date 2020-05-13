@@ -21,9 +21,108 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/coinbase/rosetta-sdk-go/parser"
 	"github.com/coinbase/rosetta-sdk-go/types"
+
 	"github.com/stretchr/testify/assert"
 )
+
+func templateReconciler() *Reconciler {
+	return New(nil, nil, nil, nil)
+}
+
+func TestNewReconciler(t *testing.T) {
+	var (
+		accountCurrency = &AccountCurrency{
+			Account: &types.AccountIdentifier{
+				Address: "acct 1",
+			},
+			Currency: &types.Currency{
+				Symbol:   "BTC",
+				Decimals: 8,
+			},
+		}
+	)
+	var tests = map[string]struct {
+		options []Option
+
+		expected *Reconciler
+	}{
+		"no options": {
+			expected: templateReconciler(),
+		},
+		"with reconciler concurrency": {
+			options: []Option{
+				WithReconcilerConcurrency(100),
+			},
+			expected: func() *Reconciler {
+				r := templateReconciler()
+				r.reconcilerConcurrency = 100
+
+				return r
+			}(),
+		},
+		"with interesting accounts": {
+			options: []Option{
+				WithInterestingAccounts([]*AccountCurrency{
+					accountCurrency,
+				}),
+			},
+			expected: func() *Reconciler {
+				r := templateReconciler()
+				r.interestingAccounts = []*AccountCurrency{
+					accountCurrency,
+				}
+
+				return r
+			}(),
+		},
+		"with seen accounts": {
+			options: []Option{
+				WithSeenAccounts([]*AccountCurrency{
+					accountCurrency,
+				}),
+			},
+			expected: func() *Reconciler {
+				r := templateReconciler()
+				r.inactiveQueue = []*InactiveEntry{
+					{
+						accountCurrency: accountCurrency,
+					},
+				}
+				r.seenAccounts = []*AccountCurrency{
+					accountCurrency,
+				}
+
+				return r
+			}(),
+		},
+		"with lookupBalanceByBlock": {
+			options: []Option{
+				WithLookupBalanceByBlock(false),
+			},
+			expected: func() *Reconciler {
+				r := templateReconciler()
+				r.lookupBalanceByBlock = false
+				r.changeQueue = make(chan *parser.BalanceChange, backlogThreshold)
+
+				return r
+			}(),
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			result := New(nil, nil, nil, nil, test.options...)
+			assert.ElementsMatch(t, test.expected.inactiveQueue, result.inactiveQueue)
+			assert.ElementsMatch(t, test.expected.seenAccounts, result.seenAccounts)
+			assert.ElementsMatch(t, test.expected.interestingAccounts, result.interestingAccounts)
+			assert.Equal(t, test.expected.reconcilerConcurrency, result.reconcilerConcurrency)
+			assert.Equal(t, test.expected.lookupBalanceByBlock, result.lookupBalanceByBlock)
+			assert.Equal(t, cap(test.expected.changeQueue), cap(result.changeQueue))
+		})
+	}
+}
 
 func TestContainsAccountCurrency(t *testing.T) {
 	currency1 := &types.Currency{
@@ -239,14 +338,11 @@ func TestCompareBalance(t *testing.T) {
 		mh = &MockReconcilerHelper{}
 	)
 
-	reconciler := NewReconciler(
+	reconciler := New(
 		nil,
 		mh,
 		nil,
 		nil,
-		1,
-		false,
-		[]*AccountCurrency{},
 	)
 
 	t.Run("No head block yet", func(t *testing.T) {
