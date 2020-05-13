@@ -50,7 +50,7 @@ func WithSeenAccounts(seen []*AccountCurrency) Option {
 			// When block is not set, it is assumed that the account should
 			// be checked as soon as possible.
 			r.inactiveQueue = append(r.inactiveQueue, &InactiveEntry{
-				accountCurrency: acct,
+				Entry: acct,
 			})
 			r.seenAccounts = append(r.seenAccounts, acct)
 			fmt.Printf("Adding to inactive queue: %s\n", types.PrettyPrintStruct(acct))
