@@ -83,7 +83,7 @@ func TestNewReconciler(t *testing.T) {
 				r := templateReconciler()
 				r.inactiveQueue = []*InactiveEntry{
 					{
-						accountCurrency: accountCurrency,
+						Entry: accountCurrency,
 					},
 				}
 				r.seenAccounts = []*AccountCurrency{
@@ -530,8 +530,8 @@ func TestInactiveAccountQueue(t *testing.T) {
 		assert.ElementsMatch(t, r.seenAccounts, []*AccountCurrency{accountCurrency})
 		assert.ElementsMatch(t, r.inactiveQueue, []*InactiveEntry{
 			{
-				accountCurrency: accountCurrency,
-				lastCheck:       block,
+				Entry:     accountCurrency,
+				LastCheck: block,
 			},
 		})
 	})
@@ -552,12 +552,12 @@ func TestInactiveAccountQueue(t *testing.T) {
 		)
 		assert.ElementsMatch(t, r.inactiveQueue, []*InactiveEntry{
 			{
-				accountCurrency: accountCurrency,
-				lastCheck:       block,
+				Entry:     accountCurrency,
+				LastCheck: block,
 			},
 			{
-				accountCurrency: accountCurrency2,
-				lastCheck:       block2,
+				Entry:     accountCurrency2,
+				LastCheck: block2,
 			},
 		})
 	})
@@ -598,8 +598,8 @@ func TestInactiveAccountQueue(t *testing.T) {
 		)
 		assert.ElementsMatch(t, r.inactiveQueue, []*InactiveEntry{
 			{
-				accountCurrency: accountCurrency,
-				lastCheck:       block,
+				Entry:     accountCurrency,
+				LastCheck: block,
 			},
 		})
 	})
@@ -620,12 +620,12 @@ func TestInactiveAccountQueue(t *testing.T) {
 		)
 		assert.ElementsMatch(t, r.inactiveQueue, []*InactiveEntry{
 			{
-				accountCurrency: accountCurrency,
-				lastCheck:       block,
+				Entry:     accountCurrency,
+				LastCheck: block,
 			},
 			{
-				accountCurrency: accountCurrency2,
-				lastCheck:       block2,
+				Entry:     accountCurrency2,
+				LastCheck: block2,
 			},
 		})
 	})

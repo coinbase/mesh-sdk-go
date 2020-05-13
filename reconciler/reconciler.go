@@ -158,8 +158,8 @@ type Handler interface {
 // InactiveEntry is used to track the last
 // time that an *AccountCurrency was reconciled.
 type InactiveEntry struct {
-	accountCurrency *AccountCurrency
-	lastCheck       *types.BlockIdentifier
+	Entry     *AccountCurrency
+	LastCheck *types.BlockIdentifier
 }
 
 // AccountCurrency is a simple struct combining
@@ -522,8 +522,8 @@ func (r *Reconciler) inactiveAccountQueue(
 	if inactive || shouldEnqueueInactive {
 		r.inactiveQueueMutex.Lock()
 		r.inactiveQueue = append(r.inactiveQueue, &InactiveEntry{
-			accountCurrency: accountCurrency,
-			lastCheck:       liveBlock,
+			Entry:     accountCurrency,
+			LastCheck: liveBlock,
 		})
 		r.inactiveQueueMutex.Unlock()
 	}
@@ -595,16 +595,16 @@ func (r *Reconciler) reconcileInactiveAccounts(
 
 		r.inactiveQueueMutex.Lock()
 		if len(r.inactiveQueue) > 0 &&
-			(r.inactiveQueue[0].lastCheck == nil || // block is set to nil when loaded from previous run
-				r.inactiveQueue[0].lastCheck.Index+inactiveReconciliationRequiredDepth < head.Index) {
+			(r.inactiveQueue[0].LastCheck == nil || // block is set to nil when loaded from previous run
+				r.inactiveQueue[0].LastCheck.Index+inactiveReconciliationRequiredDepth < head.Index) {
 			randAcct := r.inactiveQueue[0]
 			r.inactiveQueue = r.inactiveQueue[1:]
 			r.inactiveQueueMutex.Unlock()
 
 			block, amount, err := r.bestBalance(
 				ctx,
-				randAcct.accountCurrency.Account,
-				randAcct.accountCurrency.Currency,
+				randAcct.Entry.Account,
+				randAcct.Entry.Currency,
 				types.ConstructPartialBlockIdentifier(head),
 			)
 			if err != nil {
@@ -613,8 +613,8 @@ func (r *Reconciler) reconcileInactiveAccounts(
 
 			err = r.accountReconciliation(
 				ctx,
-				randAcct.accountCurrency.Account,
-				randAcct.accountCurrency.Currency,
+				randAcct.Entry.Account,
+				randAcct.Entry.Currency,
 				amount,
 				block,
 				true,
