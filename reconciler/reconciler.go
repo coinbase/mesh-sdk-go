@@ -585,11 +585,8 @@ func (r *Reconciler) reconcileInactiveAccounts(
 		// When first start syncing, this loop may run before the genesis block is synced.
 		// If this is the case, we should sleep and try again later instead of exiting.
 		if err != nil {
+			log.Println("waiting to start intactive reconciliation until a block is synced...")
 			time.Sleep(inactiveReconciliationSleep)
-			log.Printf(
-				"%s: waiting to start inactive reconciliation until current block set\n",
-				err.Error(),
-			)
 			continue
 		}
 
