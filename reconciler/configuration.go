@@ -33,7 +33,7 @@ func WithInactiveConcurrency(concurrency int) Option {
 	}
 }
 
-// WithActiveConcurrency overrides the default inactive
+// WithActiveConcurrency overrides the default active
 // concurrency.
 func WithActiveConcurrency(concurrency int) Option {
 	return func(r *Reconciler) {

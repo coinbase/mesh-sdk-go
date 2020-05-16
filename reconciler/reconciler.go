@@ -489,7 +489,7 @@ func (r *Reconciler) accountReconciliation(
 			return nil
 		}
 
-		err = r.inactiveAccountQueue(ctx, inactive, accountCurrency, liveBlock)
+		err = r.inactiveAccountQueue(inactive, accountCurrency, liveBlock)
 		if err != nil {
 			return err
 		}
@@ -508,7 +508,6 @@ func (r *Reconciler) accountReconciliation(
 }
 
 func (r *Reconciler) inactiveAccountQueue(
-	ctx context.Context,
 	inactive bool,
 	accountCurrency *AccountCurrency,
 	liveBlock *types.BlockIdentifier,
@@ -637,7 +636,6 @@ func (r *Reconciler) Reconcile(ctx context.Context) error {
 		g.Go(func() error {
 			return r.reconcileActiveAccounts(ctx)
 		})
-
 	}
 
 	for j := 0; j < r.inactiveConcurrency; j++ {
