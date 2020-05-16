@@ -523,7 +523,6 @@ func TestInactiveAccountQueue(t *testing.T) {
 
 	t.Run("new account in active reconciliation", func(t *testing.T) {
 		err := r.inactiveAccountQueue(
-			context.Background(),
 			false,
 			accountCurrency,
 			block,
@@ -540,7 +539,6 @@ func TestInactiveAccountQueue(t *testing.T) {
 
 	t.Run("another new account in active reconciliation", func(t *testing.T) {
 		err := r.inactiveAccountQueue(
-			context.Background(),
 			false,
 			accountCurrency2,
 			block2,
@@ -567,7 +565,6 @@ func TestInactiveAccountQueue(t *testing.T) {
 		r.inactiveQueue = []*InactiveEntry{}
 
 		err := r.inactiveAccountQueue(
-			context.Background(),
 			false,
 			accountCurrency,
 			block,
@@ -583,7 +580,6 @@ func TestInactiveAccountQueue(t *testing.T) {
 
 	t.Run("previous account in inactive reconciliation", func(t *testing.T) {
 		err := r.inactiveAccountQueue(
-			context.Background(),
 			true,
 			accountCurrency,
 			block,
@@ -604,7 +600,6 @@ func TestInactiveAccountQueue(t *testing.T) {
 
 	t.Run("another previous account in inactive reconciliation", func(t *testing.T) {
 		err := r.inactiveAccountQueue(
-			context.Background(),
 			true,
 			accountCurrency2,
 			block2,
