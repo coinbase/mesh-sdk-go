@@ -416,7 +416,11 @@ func (r *Reconciler) accountReconciliation(
 		Account:  account,
 		Currency: currency,
 	}
-	for ctx.Err() == nil {
+	for {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+
 		// If don't have previous balance because stateless, check diff on block
 		// instead of comparing entire computed balance
 		difference, cachedBalance, headIndex, err := r.CompareBalance(
@@ -580,7 +584,11 @@ func (r *Reconciler) reconcileActiveAccounts(
 func (r *Reconciler) reconcileInactiveAccounts(
 	ctx context.Context,
 ) error {
-	for ctx.Err() == nil {
+	for {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+
 		head, err := r.helper.CurrentBlock(ctx)
 		// When first start syncing, this loop may run before the genesis block is synced.
 		// If this is the case, we should sleep and try again later instead of exiting.
@@ -624,8 +632,6 @@ func (r *Reconciler) reconcileInactiveAccounts(
 			time.Sleep(inactiveReconciliationSleep)
 		}
 	}
-
-	return nil
 }
 
 // Reconcile starts the active and inactive Reconciler goroutines.
