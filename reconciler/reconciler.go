@@ -147,12 +147,6 @@ type Handler interface {
 		balance string,
 		block *types.BlockIdentifier,
 	) error
-
-	NewAccountSeen(
-		ctx context.Context,
-		account *types.AccountIdentifier,
-		currency *types.Currency,
-	) error
 }
 
 // InactiveEntry is used to track the last
@@ -174,21 +168,36 @@ type AccountCurrency struct {
 // types.AccountIdentifiers returned in types.Operations
 // by a Rosetta Server.
 type Reconciler struct {
-	network               *types.NetworkIdentifier
-	helper                Helper
-	handler               Handler
-	fetcher               *fetcher.Fetcher
-	reconcilerConcurrency int
-	lookupBalanceByBlock  bool
-	interestingAccounts   []*AccountCurrency
-	changeQueue           chan *parser.BalanceChange
+	network              *types.NetworkIdentifier
+	helper               Helper
+	handler              Handler
+	fetcher              *fetcher.Fetcher
+	lookupBalanceByBlock bool
+	interestingAccounts  []*AccountCurrency
+	changeQueue          chan *parser.BalanceChange
+
+	// Reconciler concurrency is separated between
+	// active and inactive concurrency to allow for
+	// fine-grained tuning of reconciler behavior.
+	// When there are many transactions in a block
+	// on a resource-constrained machine (laptop),
+	// it is useful to allocate more resources to
+	// active reconciliation as it is synchronous
+	// (when lookupBalanceByBlock is enabled).
+	activeConcurrency   int
+	inactiveConcurrency int
 
 	// highWaterMark is used to skip requests when
 	// we are very far behind the live head.
 	highWaterMark int64
 
 	// seenAccounts are stored for inactive account
-	// reconciliation.
+	// reconciliation. seenAccounts must be stored
+	// separately from inactiveQueue to prevent duplicate
+	// accounts from being added to the inactive reconciliation
+	// queue. If this is not done, it is possible a goroutine
+	// could be processing an account (not in the queue) when
+	// we do a lookup to determine if we should add to the queue.
 	seenAccounts  []*AccountCurrency
 	inactiveQueue []*InactiveEntry
 
@@ -206,14 +215,15 @@ func New(
 	options ...Option,
 ) *Reconciler {
 	r := &Reconciler{
-		network:               network,
-		helper:                helper,
-		handler:               handler,
-		fetcher:               fetcher,
-		reconcilerConcurrency: defaultReconcilerConcurrency,
-		highWaterMark:         -1,
-		seenAccounts:          []*AccountCurrency{},
-		inactiveQueue:         []*InactiveEntry{},
+		network:             network,
+		helper:              helper,
+		handler:             handler,
+		fetcher:             fetcher,
+		activeConcurrency:   defaultReconcilerConcurrency,
+		inactiveConcurrency: defaultReconcilerConcurrency,
+		highWaterMark:       -1,
+		seenAccounts:        []*AccountCurrency{},
+		inactiveQueue:       []*InactiveEntry{},
 
 		// When lookupBalanceByBlock is enabled, we check
 		// balance changes synchronously.
@@ -479,7 +489,7 @@ func (r *Reconciler) accountReconciliation(
 			return nil
 		}
 
-		err = r.inactiveAccountQueue(ctx, inactive, accountCurrency, liveBlock)
+		err = r.inactiveAccountQueue(inactive, accountCurrency, liveBlock)
 		if err != nil {
 			return err
 		}
@@ -498,7 +508,6 @@ func (r *Reconciler) accountReconciliation(
 }
 
 func (r *Reconciler) inactiveAccountQueue(
-	ctx context.Context,
 	inactive bool,
 	accountCurrency *AccountCurrency,
 	liveBlock *types.BlockIdentifier,
@@ -508,15 +517,6 @@ func (r *Reconciler) inactiveAccountQueue(
 	if !inactive && !ContainsAccountCurrency(r.seenAccounts, accountCurrency) {
 		r.seenAccounts = append(r.seenAccounts, accountCurrency)
 		shouldEnqueueInactive = true
-
-		err := r.handler.NewAccountSeen(
-			ctx,
-			accountCurrency.Account,
-			accountCurrency.Currency,
-		)
-		if err != nil {
-			return err
-		}
 	}
 
 	if inactive || shouldEnqueueInactive {
@@ -632,11 +632,13 @@ func (r *Reconciler) reconcileInactiveAccounts(
 // If any goroutine errors, the function will return an error.
 func (r *Reconciler) Reconcile(ctx context.Context) error {
 	g, ctx := errgroup.WithContext(ctx)
-	for j := 0; j < r.reconcilerConcurrency/2; j++ {
+	for j := 0; j < r.activeConcurrency; j++ {
 		g.Go(func() error {
 			return r.reconcileActiveAccounts(ctx)
 		})
+	}
 
+	for j := 0; j < r.inactiveConcurrency; j++ {
 		g.Go(func() error {
 			return r.reconcileInactiveAccounts(ctx)
 		})
