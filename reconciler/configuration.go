@@ -25,11 +25,19 @@ import (
 // falls back to the default value.
 type Option func(r *Reconciler)
 
-// WithReconcilerConcurrency overrides the default reconciler
+// WithInactiveConcurrency overrides the default inactive
 // concurrency.
-func WithReconcilerConcurrency(concurrency int) Option {
+func WithInactiveConcurrency(concurrency int) Option {
 	return func(r *Reconciler) {
-		r.reconcilerConcurrency = concurrency
+		r.inactiveConcurrency = concurrency
+	}
+}
+
+// WithActiveConcurrency overrides the default active
+// concurrency.
+func WithActiveConcurrency(concurrency int) Option {
+	return func(r *Reconciler) {
+		r.activeConcurrency = concurrency
 	}
 }
 

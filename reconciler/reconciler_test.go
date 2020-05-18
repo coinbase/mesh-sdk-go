@@ -49,11 +49,13 @@ func TestNewReconciler(t *testing.T) {
 		},
 		"with reconciler concurrency": {
 			options: []Option{
-				WithReconcilerConcurrency(100),
+				WithInactiveConcurrency(100),
+				WithActiveConcurrency(200),
 			},
 			expected: func() *Reconciler {
 				r := templateReconciler()
-				r.reconcilerConcurrency = 100
+				r.inactiveConcurrency = 100
+				r.activeConcurrency = 200
 
 				return r
 			}(),
@@ -113,7 +115,8 @@ func TestNewReconciler(t *testing.T) {
 			assert.ElementsMatch(t, test.expected.inactiveQueue, result.inactiveQueue)
 			assert.ElementsMatch(t, test.expected.seenAccounts, result.seenAccounts)
 			assert.ElementsMatch(t, test.expected.interestingAccounts, result.interestingAccounts)
-			assert.Equal(t, test.expected.reconcilerConcurrency, result.reconcilerConcurrency)
+			assert.Equal(t, test.expected.inactiveConcurrency, result.inactiveConcurrency)
+			assert.Equal(t, test.expected.activeConcurrency, result.activeConcurrency)
 			assert.Equal(t, test.expected.lookupBalanceByBlock, result.lookupBalanceByBlock)
 			assert.Equal(t, cap(test.expected.changeQueue), cap(result.changeQueue))
 		})
@@ -520,13 +523,11 @@ func TestInactiveAccountQueue(t *testing.T) {
 
 	t.Run("new account in active reconciliation", func(t *testing.T) {
 		err := r.inactiveAccountQueue(
-			context.Background(),
 			false,
 			accountCurrency,
 			block,
 		)
 		assert.Nil(t, err)
-		assert.Equal(t, handler.LastAccountCurrency, accountCurrency)
 		assert.ElementsMatch(t, r.seenAccounts, []*AccountCurrency{accountCurrency})
 		assert.ElementsMatch(t, r.inactiveQueue, []*InactiveEntry{
 			{
@@ -538,13 +539,11 @@ func TestInactiveAccountQueue(t *testing.T) {
 
 	t.Run("another new account in active reconciliation", func(t *testing.T) {
 		err := r.inactiveAccountQueue(
-			context.Background(),
 			false,
 			accountCurrency2,
 			block2,
 		)
 		assert.Nil(t, err)
-		assert.Equal(t, handler.LastAccountCurrency, accountCurrency2)
 		assert.ElementsMatch(
 			t,
 			r.seenAccounts,
@@ -564,16 +563,13 @@ func TestInactiveAccountQueue(t *testing.T) {
 
 	t.Run("previous account in active reconciliation", func(t *testing.T) {
 		r.inactiveQueue = []*InactiveEntry{}
-		handler.LastAccountCurrency = nil
 
 		err := r.inactiveAccountQueue(
-			context.Background(),
 			false,
 			accountCurrency,
 			block,
 		)
 		assert.Nil(t, err)
-		assert.Nil(t, handler.LastAccountCurrency)
 		assert.ElementsMatch(
 			t,
 			r.seenAccounts,
@@ -584,13 +580,11 @@ func TestInactiveAccountQueue(t *testing.T) {
 
 	t.Run("previous account in inactive reconciliation", func(t *testing.T) {
 		err := r.inactiveAccountQueue(
-			context.Background(),
 			true,
 			accountCurrency,
 			block,
 		)
 		assert.Nil(t, err)
-		assert.Nil(t, handler.LastAccountCurrency)
 		assert.ElementsMatch(
 			t,
 			r.seenAccounts,
@@ -606,13 +600,11 @@ func TestInactiveAccountQueue(t *testing.T) {
 
 	t.Run("another previous account in inactive reconciliation", func(t *testing.T) {
 		err := r.inactiveAccountQueue(
-			context.Background(),
 			true,
 			accountCurrency2,
 			block2,
 		)
 		assert.Nil(t, err)
-		assert.Nil(t, handler.LastAccountCurrency)
 		assert.ElementsMatch(
 			t,
 			r.seenAccounts,
@@ -635,9 +627,7 @@ func templateReconciler() *Reconciler {
 	return New(nil, nil, nil, nil)
 }
 
-type MockReconcilerHandler struct {
-	LastAccountCurrency *AccountCurrency
-}
+type MockReconcilerHandler struct{}
 
 func (h *MockReconcilerHandler) ReconciliationFailed(
 	ctx context.Context,
@@ -659,19 +649,6 @@ func (h *MockReconcilerHandler) ReconciliationSucceeded(
 	balance string,
 	block *types.BlockIdentifier,
 ) error {
-	return nil
-}
-
-func (h *MockReconcilerHandler) NewAccountSeen(
-	ctx context.Context,
-	account *types.AccountIdentifier,
-	currency *types.Currency,
-) error {
-	h.LastAccountCurrency = &AccountCurrency{
-		Account:  account,
-		Currency: currency,
-	}
-
 	return nil
 }
 
