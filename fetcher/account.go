@@ -71,7 +71,7 @@ func (f *Fetcher) AccountBalanceRetry(
 		f.maxRetries,
 	)
 
-	for ctx.Err() == nil {
+	for {
 		responseBlock, balances, metadata, err := f.AccountBalance(
 			ctx,
 			network,
@@ -80,6 +80,10 @@ func (f *Fetcher) AccountBalanceRetry(
 		)
 		if err == nil {
 			return responseBlock, balances, metadata, nil
+		}
+
+		if ctx.Err() != nil {
+			return nil, nil, nil, ctx.Err()
 		}
 
 		if !tryAgain(fmt.Sprintf("account %s", account.Address), backoffRetries, err) {
