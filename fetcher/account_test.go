@@ -3,6 +3,7 @@ package fetcher
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -48,50 +49,76 @@ func TestAccountBalanceRetry(t *testing.T) {
 	var tests = map[string]struct {
 		network *types.NetworkIdentifier
 		account *types.AccountIdentifier
-		block   *types.PartialBlockIdentifier
 
 		errorsBeforeSuccess int
 		expectedBlock       *types.BlockIdentifier
 		expectedAmounts     []*types.Amount
-		expectedMetadata    map[string]interface{}
 		expectedError       error
 
 		fetcherMaxRetries uint64
 		shouldCancel      bool
 	}{
-		"single failure": {
+		"no failures": {
+			network:           basicNetwork,
+			account:           basicAccount,
+			expectedBlock:     basicBlock,
+			expectedAmounts:   basicAmounts,
+			fetcherMaxRetries: 5,
+		},
+		"retry failures": {
 			network:             basicNetwork,
 			account:             basicAccount,
-			block:               nil,
-			errorsBeforeSuccess: 1,
+			errorsBeforeSuccess: 2,
 			expectedBlock:       basicBlock,
 			expectedAmounts:     basicAmounts,
-			expectedError:       nil,
 			fetcherMaxRetries:   5,
-			shouldCancel:        false,
+		},
+		"exhausted retries": {
+			network:             basicNetwork,
+			account:             basicAccount,
+			errorsBeforeSuccess: 2,
+			expectedError:       ErrExhaustedRetries,
+			fetcherMaxRetries:   1,
+		},
+		"cancel context": {
+			network:             basicNetwork,
+			account:             basicAccount,
+			errorsBeforeSuccess: 6,
+			expectedError:       context.Canceled,
+			fetcherMaxRetries:   5,
+			shouldCancel:        true,
 		},
 	}
+
 	for name, test := range tests {
-		runs := 0
 		t.Run(name, func(t *testing.T) {
-			assert := assert.New(t)
+			var (
+				tries       = 0
+				assert      = assert.New(t)
+				ctx, cancel = context.WithCancel(context.Background())
+				endpoint    = "/account/balance"
+			)
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				assert.Equal("POST", r.Method)
-				assert.Equal("/account/balance", r.URL.RequestURI())
+				assert.Equal(endpoint, r.URL.RequestURI())
 
 				expected := &types.AccountBalanceRequest{
 					NetworkIdentifier: test.network,
 					AccountIdentifier: test.account,
-					BlockIdentifier:   test.block,
 				}
 				var accountRequest *types.AccountBalanceRequest
 				assert.NoError(json.NewDecoder(r.Body).Decode(&accountRequest))
 				assert.Equal(expected, accountRequest)
-				if runs < test.errorsBeforeSuccess {
+
+				if test.shouldCancel {
+					cancel()
+				}
+
+				if tries < test.errorsBeforeSuccess {
 					w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 					w.WriteHeader(http.StatusInternalServerError)
 					fmt.Fprintln(w, "{}")
-					runs++
+					tries++
 					return
 				}
 
@@ -101,24 +128,23 @@ func TestAccountBalanceRetry(t *testing.T) {
 					&types.AccountBalanceResponse{
 						BlockIdentifier: test.expectedBlock,
 						Balances:        test.expectedAmounts,
-						Metadata:        test.expectedMetadata,
 					},
 				))
 			}))
 
 			defer ts.Close()
 
-			f := New(ts.URL, WithRetryElapsedTime(time.Second), WithMaxRetries(test.fetcherMaxRetries))
+			f := New(ts.URL, WithRetryElapsedTime(5*time.Second), WithMaxRetries(test.fetcherMaxRetries))
 			block, amounts, metadata, err := f.AccountBalanceRetry(
-				context.Background(),
+				ctx,
 				test.network,
 				test.account,
-				test.block,
+				nil,
 			)
 			assert.Equal(test.expectedBlock, block)
 			assert.Equal(test.expectedAmounts, amounts)
-			assert.Equal(test.expectedMetadata, metadata)
-			assert.Equal(test.expectedError, err)
+			assert.Nil(metadata)
+			assert.True(errors.Is(err, test.expectedError))
 		})
 	}
 }
