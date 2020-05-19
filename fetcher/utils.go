@@ -16,6 +16,7 @@ package fetcher
 
 import (
 	"log"
+	"strings"
 	"time"
 
 	"github.com/cenkalti/backoff"
@@ -35,6 +36,7 @@ func backoffRetries(
 // tryAgain handles a backoff and prints error messages depending
 // on the fetchMsg.
 func tryAgain(fetchMsg string, thisBackoff backoff.BackOff, err error) bool {
+	fetchMsg = strings.Replace(fetchMsg, "\n", "", -1)
 	log.Printf("%s fetch error: %s\n", fetchMsg, err.Error())
 
 	nextBackoff := thisBackoff.NextBackOff()
