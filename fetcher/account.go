@@ -85,7 +85,11 @@ func (f *Fetcher) AccountBalanceRetry(
 			return nil, nil, nil, ctx.Err()
 		}
 
-		if !tryAgain(fmt.Sprintf("account %s", types.PrettyPrintStruct(account)), backoffRetries, err) {
+		if !tryAgain(
+			fmt.Sprintf("account %s", types.PrettyPrintStruct(account)),
+			backoffRetries,
+			err,
+		) {
 			break
 		}
 	}
