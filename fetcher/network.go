@@ -16,7 +16,7 @@ package fetcher
 
 import (
 	"context"
-	"errors"
+	"fmt"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
 
@@ -60,7 +60,7 @@ func (f *Fetcher) NetworkStatusRetry(
 		f.maxRetries,
 	)
 
-	for ctx.Err() == nil {
+	for {
 		networkStatus, err := f.NetworkStatus(
 			ctx,
 			network,
@@ -70,12 +70,24 @@ func (f *Fetcher) NetworkStatusRetry(
 			return networkStatus, nil
 		}
 
-		if !tryAgain("NetworkStatus", backoffRetries, err) {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+
+		if !tryAgain(
+			fmt.Sprintf("network status %s", types.PrettyPrintStruct(network)),
+			backoffRetries,
+			err,
+		) {
 			break
 		}
 	}
 
-	return nil, errors.New("exhausted retries for NetworkStatus")
+	return nil, fmt.Errorf(
+		"%w: unable to fetch network status %s",
+		ErrExhaustedRetries,
+		types.PrettyPrintStruct(network),
+	)
 }
 
 // NetworkList returns the validated response
@@ -112,7 +124,7 @@ func (f *Fetcher) NetworkListRetry(
 		f.maxRetries,
 	)
 
-	for ctx.Err() == nil {
+	for {
 		networkList, err := f.NetworkList(
 			ctx,
 			metadata,
@@ -121,12 +133,19 @@ func (f *Fetcher) NetworkListRetry(
 			return networkList, nil
 		}
 
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+
 		if !tryAgain("NetworkList", backoffRetries, err) {
 			break
 		}
 	}
 
-	return nil, errors.New("exhausted retries for NetworkList")
+	return nil, fmt.Errorf(
+		"%w: unable to fetch network list",
+		ErrExhaustedRetries,
+	)
 }
 
 // NetworkOptions returns the validated response
@@ -166,7 +185,7 @@ func (f *Fetcher) NetworkOptionsRetry(
 		f.maxRetries,
 	)
 
-	for ctx.Err() == nil {
+	for {
 		networkOptions, err := f.NetworkOptions(
 			ctx,
 			network,
@@ -176,10 +195,22 @@ func (f *Fetcher) NetworkOptionsRetry(
 			return networkOptions, nil
 		}
 
-		if !tryAgain("NetworkOptions", backoffRetries, err) {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+
+		if !tryAgain(
+			fmt.Sprintf("network options %s", types.PrettyPrintStruct(network)),
+			backoffRetries,
+			err,
+		) {
 			break
 		}
 	}
 
-	return nil, errors.New("exhausted retries for NetworkOptions")
+	return nil, fmt.Errorf(
+		"%w: unable to fetch network options %s",
+		ErrExhaustedRetries,
+		types.PrettyPrintStruct(network),
+	)
 }
