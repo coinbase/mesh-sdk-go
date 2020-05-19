@@ -16,7 +16,6 @@ package fetcher
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
@@ -227,7 +226,11 @@ func (f *Fetcher) BlockRetry(
 		}
 	}
 
-	return nil, errors.New("exhausted retries for block")
+	return nil, fmt.Errorf(
+		"%w: unable to fetch block %s",
+		ErrExhaustedRetries,
+		types.PrettyPrintStruct(blockIdentifier),
+	)
 }
 
 // addIndicies appends a range of indicies (from
