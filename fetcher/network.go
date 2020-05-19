@@ -16,7 +16,7 @@ package fetcher
 
 import (
 	"context"
-	"errors"
+	"fmt"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
 
@@ -74,12 +74,16 @@ func (f *Fetcher) NetworkStatusRetry(
 			return nil, ctx.Err()
 		}
 
-		if !tryAgain("NetworkStatus", backoffRetries, err) {
+		if !tryAgain(fmt.Sprintf("network status %s", types.PrettyPrintStruct(network)), backoffRetries, err) {
 			break
 		}
 	}
 
-	return nil, errors.New("exhausted retries for NetworkStatus")
+	return nil, fmt.Errorf(
+		"%w: unable to fetch network status %s",
+		ErrExhaustedRetries,
+		types.PrettyPrintStruct(network),
+	)
 }
 
 // NetworkList returns the validated response
@@ -134,7 +138,10 @@ func (f *Fetcher) NetworkListRetry(
 		}
 	}
 
-	return nil, errors.New("exhausted retries for NetworkList")
+	return nil, fmt.Errorf(
+		"%w: unable to fetch network list",
+		ErrExhaustedRetries,
+	)
 }
 
 // NetworkOptions returns the validated response
@@ -188,10 +195,14 @@ func (f *Fetcher) NetworkOptionsRetry(
 			return nil, ctx.Err()
 		}
 
-		if !tryAgain("NetworkOptions", backoffRetries, err) {
+		if !tryAgain(fmt.Sprintf("network options %s", types.PrettyPrintStruct(network)), backoffRetries, err) {
 			break
 		}
 	}
 
-	return nil, errors.New("exhausted retries for NetworkOptions")
+	return nil, fmt.Errorf(
+		"%w: unable to fetch network options %s",
+		ErrExhaustedRetries,
+		types.PrettyPrintStruct(network),
+	)
 }
