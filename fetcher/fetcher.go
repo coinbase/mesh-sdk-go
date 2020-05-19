@@ -54,6 +54,12 @@ const (
 	DefaultUserAgent = "rosetta-sdk-go"
 )
 
+var (
+	// ErrExhaustedRetries is returned when a fetch with retries
+	// fails because it was attempted too many times.
+	ErrExhaustedRetries = errors.New("retries exhausted")
+)
+
 // Fetcher contains all logic to communicate with a Rosetta Server.
 type Fetcher struct {
 	// Asserter is a public variable because

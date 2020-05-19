@@ -16,7 +16,6 @@ package fetcher
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
@@ -71,7 +70,7 @@ func (f *Fetcher) AccountBalanceRetry(
 		f.maxRetries,
 	)
 
-	for ctx.Err() == nil {
+	for {
 		responseBlock, balances, metadata, err := f.AccountBalance(
 			ctx,
 			network,
@@ -82,10 +81,22 @@ func (f *Fetcher) AccountBalanceRetry(
 			return responseBlock, balances, metadata, nil
 		}
 
-		if !tryAgain(fmt.Sprintf("account %s", account.Address), backoffRetries, err) {
+		if ctx.Err() != nil {
+			return nil, nil, nil, ctx.Err()
+		}
+
+		if !tryAgain(
+			fmt.Sprintf("account %s", types.PrettyPrintStruct(account)),
+			backoffRetries,
+			err,
+		) {
 			break
 		}
 	}
 
-	return nil, nil, nil, errors.New("exhausted retries for account")
+	return nil, nil, nil, fmt.Errorf(
+		"%w: unable to fetch account %s",
+		ErrExhaustedRetries,
+		types.PrettyPrintStruct(account),
+	)
 }
