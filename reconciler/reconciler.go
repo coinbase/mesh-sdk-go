@@ -29,6 +29,16 @@ import (
 )
 
 const (
+	// ActiveReconciliation is included in the reconciliation
+	// error message if reconciliation failed during active
+	// reconciliation.
+	ActiveReconciliation = "ACTIVE"
+
+	// InactiveReconciliation is included in the reconciliation
+	// error message if reconciliation failed during inactive
+	// reconciliation.
+	InactiveReconciliation = "INACTIVE"
+
 	// backlogThreshold is the limit of account lookups
 	// that can be enqueued to reconcile before new
 	// requests are dropped.
@@ -46,16 +56,6 @@ const (
 	// to check a balance difference if the syncer is within
 	// waitToCheckDiff from the block a balance was queried at.
 	waitToCheckDiffSleep = 5 * time.Second
-
-	// activeReconciliation is included in the reconciliation
-	// error message if reconciliation failed during active
-	// reconciliation.
-	activeReconciliation = "ACTIVE"
-
-	// inactiveReconciliation is included in the reconciliation
-	// error message if reconciliation failed during inactive
-	// reconciliation.
-	inactiveReconciliation = "INACTIVE"
 
 	// zeroString is a string of value 0.
 	zeroString = "0"
@@ -471,9 +471,9 @@ func (r *Reconciler) accountReconciliation(
 			return err
 		}
 
-		reconciliationType := activeReconciliation
+		reconciliationType := ActiveReconciliation
 		if inactive {
-			reconciliationType = inactiveReconciliation
+			reconciliationType = InactiveReconciliation
 		}
 
 		if difference != zeroString {
