@@ -14,12 +14,12 @@ const (
 	PositiveAmountSign
 )
 
-func (s AmountSign) match(value string) bool {
+func (s AmountSign) match(amount *types.Amount) bool {
 	if s == AnyAmountSign {
 		return true
 	}
 
-	numeric, err := types.BigInt(value)
+	numeric, err := types.AmountValue(amount)
 	if err != nil {
 		return false
 	}
@@ -55,7 +55,7 @@ type AmountRequirement struct {
 type OperationRequirement struct {
 	Account  *AccountRequirement
 	Amount   *AmountRequirement
-	Metadata *MetadataRequirement
+	Metadata []*MetadataRequirement
 }
 
 type GroupRequirement struct {
@@ -64,7 +64,11 @@ type GroupRequirement struct {
 	OperationRequirements []*OperationRequirement
 }
 
-func matchMetadataKeys(reqs []*MetadataRequirement, metadata map[string]interface{}) bool {
+func metadataKeyMatch(reqs []*MetadataRequirement, metadata map[string]interface{}) bool {
+	if len(reqs) == 0 && metadata == nil {
+		return true
+	}
+
 	for _, req := range reqs {
 		val, ok := metadata[req.key]
 		if !ok {
@@ -80,15 +84,51 @@ func matchMetadataKeys(reqs []*MetadataRequirement, metadata map[string]interfac
 }
 
 func accountMatch(req *AccountRequirement, account *types.AccountIdentifier) bool {
-	return false
+	if account == nil {
+		if req.Account {
+			return false
+		}
+
+		return true
+	}
+
+	if account.SubAccount == nil {
+		if len(req.SubAccountAddress) > 0 {
+			return false
+		}
+
+		return true
+	}
+
+	if account.SubAccount.Address != req.SubAccountAddress {
+		return false
+	}
+
+	if !metadataKeyMatch(req.SubAccountMetadataKeys, account.SubAccount.Metadata) {
+		return false
+	}
+
+	return true
 }
 
 func amountMatch(req *AmountRequirement, amount *types.Amount) bool {
-	return false
-}
+	if amount == nil {
+		if req.Amount {
+			return false
+		}
 
-func metadataMatch(req *MetadataRequirement, metadata map[string]interface{}) bool {
-	return false
+		return true
+	}
+
+	if !req.Sign.match(amount) {
+		return false
+	}
+
+	if amount.Currency == nil || types.Hash(amount.Currency) != types.Hash(req.Currency) {
+		return false
+	}
+
+	return true
 }
 
 func operationMatch(groupIndex int, operation *types.Operation, requirements []*OperationRequirement, matches []int) {
@@ -106,7 +146,7 @@ func operationMatch(groupIndex int, operation *types.Operation, requirements []*
 			continue
 		}
 
-		if !metadataMatch(req.Metadata, operation.Metadata) {
+		if !metadataKeyMatch(req.Metadata, operation.Metadata) {
 			continue
 		}
 
@@ -117,11 +157,49 @@ func operationMatch(groupIndex int, operation *types.Operation, requirements []*
 }
 
 func equalAmounts(ops []*types.Operation) bool {
-	return false
+	if len(ops) <= 1 {
+		return true
+	}
+
+	val, err := types.AmountValue(ops[0].Amount)
+	if err != nil {
+		return false
+	}
+
+	for _, op := range ops {
+		otherVal, err := types.AmountValue(op.Amount)
+		if err != nil {
+			return false
+		}
+
+		if val.Cmp(otherVal) != 0 {
+			return false
+		}
+	}
+
+	return true
 }
 
 func oppositeAmounts(a *types.Operation, b *types.Operation) bool {
-	return false
+	aVal, err := types.AmountValue(a.Amount)
+	if err != nil {
+		return false
+	}
+
+	bVal, err := types.AmountValue(b.Amount)
+	if err != nil {
+		return false
+	}
+
+	if aVal.Sign() == bVal.Sign() {
+		return false
+	}
+
+	if aVal.CmpAbs(bVal) != 0 {
+		return false
+	}
+
+	return true
 }
 
 func assertGroupRequirements(matches []int, groupRequirement *GroupRequirement, operationGroup *OperationGroup) bool {
