@@ -82,20 +82,30 @@ func Hash(i interface{}) string {
 	return hashBytes(c)
 }
 
+// BigInt returns a *big.Int representation of a value.
+func BigInt(value string) (*big.Int, error) {
+	parsedVal, ok := new(big.Int).SetString(value, 10)
+	if !ok {
+		return nil, fmt.Errorf("%s is not an integer", value)
+	}
+
+	return parsedVal, nil
+}
+
 // AddValues adds string amounts using
 // big.Int.
 func AddValues(
 	a string,
 	b string,
 ) (string, error) {
-	aVal, ok := new(big.Int).SetString(a, 10)
-	if !ok {
-		return "", fmt.Errorf("%s is not an integer", a)
+	aVal, err := BigInt(a)
+	if err != nil {
+		return "", err
 	}
 
-	bVal, ok := new(big.Int).SetString(b, 10)
-	if !ok {
-		return "", fmt.Errorf("%s is not an integer", b)
+	bVal, err := BigInt(b)
+	if err != nil {
+		return "", err
 	}
 
 	newVal := new(big.Int).Add(aVal, bVal)
@@ -108,14 +118,14 @@ func SubtractValues(
 	a string,
 	b string,
 ) (string, error) {
-	aVal, ok := new(big.Int).SetString(a, 10)
-	if !ok {
-		return "", fmt.Errorf("%s is not an integer", a)
+	aVal, err := BigInt(a)
+	if err != nil {
+		return "", err
 	}
 
-	bVal, ok := new(big.Int).SetString(b, 10)
-	if !ok {
-		return "", fmt.Errorf("%s is not an integer", b)
+	bVal, err := BigInt(b)
+	if err != nil {
+		return "", err
 	}
 
 	newVal := new(big.Int).Sub(aVal, bVal)
@@ -126,9 +136,9 @@ func SubtractValues(
 func NegateValue(
 	val string,
 ) (string, error) {
-	existing, ok := new(big.Int).SetString(val, 10)
-	if !ok {
-		return "", fmt.Errorf("%s is not an integer", val)
+	existing, err := BigInt(val)
+	if err != nil {
+		return "", err
 	}
 
 	return new(big.Int).Neg(existing).String(), nil
