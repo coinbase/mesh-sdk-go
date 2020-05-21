@@ -17,6 +17,7 @@ package types
 import (
 	"crypto/sha256"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"math/big"
@@ -90,6 +91,14 @@ func BigInt(value string) (*big.Int, error) {
 	}
 
 	return parsedVal, nil
+}
+
+func AmountValue(amount *Amount) (*big.Int, error) {
+	if amount == nil {
+		return nil, errors.New("amount value cannot be nil")
+	}
+
+	return BigInt(amount.Value)
 }
 
 // AddValues adds string amounts using
