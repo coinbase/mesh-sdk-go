@@ -1,6 +1,8 @@
 package parser
 
 import (
+	"errors"
+	"fmt"
 	"reflect"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
@@ -35,19 +37,33 @@ func (s AmountSign) match(amount *types.Amount) bool {
 	return false
 }
 
+func (s AmountSign) String() string {
+	switch s {
+	case AnyAmountSign:
+		return "any"
+	case NegativeAmountSign:
+		return "negative"
+	case PositiveAmountSign:
+		return "positive"
+	default:
+		return "invalid"
+	}
+}
+
 type MetadataRequirement struct {
-	key       string
-	valueType reflect.Kind // ex: reflect.String
+	Key       string
+	ValueKind reflect.Kind // ex: reflect.String
 }
 
 type AccountRequirement struct {
-	Account                bool
+	Exists                 bool
+	SubAccountExists       bool
 	SubAccountAddress      string
 	SubAccountMetadataKeys []*MetadataRequirement
 }
 
 type AmountRequirement struct {
-	Amount   bool
+	Exists   bool
 	Sign     AmountSign
 	Currency *types.Currency
 }
@@ -64,71 +80,77 @@ type GroupRequirement struct {
 	OperationRequirements []*OperationRequirement
 }
 
-func metadataKeyMatch(reqs []*MetadataRequirement, metadata map[string]interface{}) bool {
+func metadataKeyMatch(reqs []*MetadataRequirement, metadata map[string]interface{}) error {
 	if len(reqs) == 0 && metadata == nil {
-		return true
+		return nil
 	}
 
 	for _, req := range reqs {
-		val, ok := metadata[req.key]
+		val, ok := metadata[req.Key]
 		if !ok {
-			return false
+			return fmt.Errorf("%s is not present in metadata", req.Key)
 		}
 
-		if reflect.TypeOf(val).Kind() != req.valueType {
-			return false
+		if reflect.TypeOf(val).Kind() != req.ValueKind {
+			return fmt.Errorf("%s value is not %s", req.Key, req.ValueKind)
 		}
 	}
 
-	return true
+	return nil
 }
 
-func accountMatch(req *AccountRequirement, account *types.AccountIdentifier) bool {
+func accountMatch(req *AccountRequirement, account *types.AccountIdentifier) error {
 	if account == nil {
-		if req.Account {
-			return false
+		if req.Exists {
+			return errors.New("account is missing")
 		}
 
-		return true
+		return nil
 	}
 
 	if account.SubAccount == nil {
-		if len(req.SubAccountAddress) > 0 {
-			return false
+		if req.SubAccountExists {
+			return errors.New("SubAccountIdentifier.Address is missing")
 		}
 
-		return true
+		return nil
 	}
 
-	if account.SubAccount.Address != req.SubAccountAddress {
-		return false
+	// Optionally can require a certain subaccount address
+	if len(req.SubAccountAddress) > 0 && account.SubAccount.Address != req.SubAccountAddress {
+		return fmt.Errorf("SubAccountIdentifier.Address is %s not %s", account.SubAccount.Address, req.SubAccountAddress)
 	}
 
-	if !metadataKeyMatch(req.SubAccountMetadataKeys, account.SubAccount.Metadata) {
-		return false
+	if err := metadataKeyMatch(req.SubAccountMetadataKeys, account.SubAccount.Metadata); err != nil {
+		return fmt.Errorf("%w: account metadata keys mismatch", err)
 	}
 
-	return true
+	return nil
 }
 
-func amountMatch(req *AmountRequirement, amount *types.Amount) bool {
+func amountMatch(req *AmountRequirement, amount *types.Amount) error {
 	if amount == nil {
-		if req.Amount {
-			return false
+		if req.Exists {
+			return errors.New("amount is missing")
 		}
 
-		return true
+		return nil
 	}
 
 	if !req.Sign.match(amount) {
-		return false
+		return fmt.Errorf("amount sign was not %s", req.Sign.String())
+	}
+
+	// no currency restriction
+	if req.Currency == nil {
+		return nil
 	}
 
 	if amount.Currency == nil || types.Hash(amount.Currency) != types.Hash(req.Currency) {
-		return false
+		return fmt.Errorf("currency %+v is not %+v", amount.Currency, req.Currency)
 	}
 
-	return true
+	return nil
 }
 
 func operationMatch(groupIndex int, operation *types.Operation, requirements []*OperationRequirement, matches []int) {
@@ -138,15 +160,15 @@ func operationMatch(groupIndex int, operation *types.Operation, requirements []*
 			continue
 		}
 
-		if !accountMatch(req.Account, operation.Account) {
+		if err := accountMatch(req.Account, operation.Account); err != nil {
 			continue
 		}
 
-		if !amountMatch(req.Amount, operation.Amount) {
+		if err := amountMatch(req.Amount, operation.Amount); err != nil {
 			continue
 		}
 
-		if !metadataKeyMatch(req.Metadata, operation.Metadata) {
+		if err := metadataKeyMatch(req.Metadata, operation.Metadata); err != nil {
 			continue
 		}
 
@@ -156,84 +178,84 @@ func operationMatch(groupIndex int, operation *types.Operation, requirements []*
 	}
 }
 
-func equalAmounts(ops []*types.Operation) bool {
+func equalAmounts(ops []*types.Operation) error {
 	if len(ops) <= 1 {
-		return true
+		return fmt.Errorf("cannot check equality of %d operations", len(ops))
 	}
 
 	val, err := types.AmountValue(ops[0].Amount)
 	if err != nil {
-		return false
+		return err
 	}
 
 	for _, op := range ops {
 		otherVal, err := types.AmountValue(op.Amount)
 		if err != nil {
-			return false
+			return err
 		}
 
 		if val.Cmp(otherVal) != 0 {
-			return false
+			return fmt.Errorf("%s is not equal to %s", val.String(), otherVal.String())
 		}
 	}
 
-	return true
+	return nil
 }
 
-func oppositeAmounts(a *types.Operation, b *types.Operation) bool {
+func oppositeAmounts(a *types.Operation, b *types.Operation) error {
 	aVal, err := types.AmountValue(a.Amount)
 	if err != nil {
-		return false
+		return err
 	}
 
 	bVal, err := types.AmountValue(b.Amount)
 	if err != nil {
-		return false
+		return err
 	}
 
 	if aVal.Sign() == bVal.Sign() {
-		return false
+		return fmt.Errorf("%s and %s have the same sign", aVal.String(), bVal.String())
 	}
 
 	if aVal.CmpAbs(bVal) != 0 {
-		return false
+		return fmt.Errorf("|%s| and |%s| are not equal", aVal.String(), bVal.String())
 	}
 
-	return true
+	return nil
 }
 
-func assertGroupRequirements(matches []int, groupRequirement *GroupRequirement, operationGroup *OperationGroup) bool {
+func assertGroupRequirements(matches []int, groupRequirement *GroupRequirement, operations []*types.Operation) error {
 	for _, amountMatch := range groupRequirement.EqualAmounts {
 		ops := make([]*types.Operation, len(amountMatch))
 		for j, reqIndex := range amountMatch {
-			ops[j] = operationGroup.Operations[matches[reqIndex]]
+			ops[j] = operations[matches[reqIndex]]
 		}
 
-		if !equalAmounts(ops) {
-			return false
+		if err := equalAmounts(ops); err != nil {
+			return fmt.Errorf("%w: operations not equal", err)
 		}
 	}
 
 	for _, amountMatch := range groupRequirement.OppositeAmounts {
 		if len(amountMatch) != 2 { // cannot have opposites without exactly 2
-			return false
+			return fmt.Errorf("cannot check opposites of %d operations", len(amountMatch))
 		}
 
-		if !oppositeAmounts(
-			operationGroup.Operations[amountMatch[0]],
-			operationGroup.Operations[amountMatch[1]],
-		) {
-			return false
+		if err := oppositeAmounts(
+			operations[matches[amountMatch[0]]],
+			operations[matches[amountMatch[1]]],
+		); err != nil {
+			return fmt.Errorf("%w: amounts not opposites", err)
 		}
 	}
 
-	return true
+	return nil
 }
 
 func ApplyRequirement(
-	operationGroup *OperationGroup,
+	operations []*types.Operation,
 	groupRequirement *GroupRequirement,
-) (bool, []int) {
+) ([]int, error) {
 	operationRequirements := groupRequirement.OperationRequirements
 	matches := make([]int, len(operationRequirements))
 
@@ -243,7 +265,7 @@ func ApplyRequirement(
 	}
 
 	// Match op to an *OperationRequirement
-	for i, op := range operationGroup.Operations {
+	for i, op := range operations {
 		operationMatch(i, op, operationRequirements, matches)
 	}
 
@@ -251,14 +273,14 @@ func ApplyRequirement(
 	// than requirements)
 	for i := 0; i < len(matches); i++ {
 		if matches[i] == -1 {
-			return false, nil
+			return nil, fmt.Errorf("could not find match for requirement %d", i)
 		}
 	}
 
 	// Check if group requirements met
-	if !assertGroupRequirements(matches, groupRequirement, operationGroup) {
-		return false, nil
+	if err := assertGroupRequirements(matches, groupRequirement, operations); err != nil {
+		return nil, fmt.Errorf("%w: group requirements not met", err)
 	}
 
-	return true, matches
+	return matches, nil
 }
