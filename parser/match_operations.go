@@ -224,13 +224,12 @@ func amountMatch(req *AmountDescription, amount *types.Amount) error {
 // operationMatch returns an error if a *types.Operation does not match a
 // *OperationDescription.
 func operationMatch(
-	groupIndex int,
 	operation *types.Operation,
 	descriptions []*OperationDescription,
-	matches []int,
+	matches []*types.Operation,
 ) {
 	for i, req := range descriptions {
-		if matches[i] != -1 { // already matched
+		if matches[i] != nil { // already matched
 			continue
 		}
 
@@ -246,7 +245,7 @@ func operationMatch(
 			continue
 		}
 
-		matches[i] = groupIndex
+		matches[i] = operation
 		return
 	}
 }
@@ -304,14 +303,13 @@ func oppositeAmounts(a *types.Operation, b *types.Operation) error {
 // comparisonMatch ensures collections of *types.Operations
 // have either equal or opposite amounts.
 func comparisonMatch(
-	matches []int,
 	descriptions *Descriptions,
-	operations []*types.Operation,
+	matches []*types.Operation,
 ) error {
 	for _, amountMatch := range descriptions.EqualAmounts {
 		ops := make([]*types.Operation, len(amountMatch))
 		for j, reqIndex := range amountMatch {
-			ops[j] = operations[matches[reqIndex]]
+			ops[j] = matches[reqIndex]
 		}
 
 		if err := equalAmounts(ops); err != nil {
@@ -325,8 +323,8 @@ func comparisonMatch(
 		}
 
 		if err := oppositeAmounts(
-			operations[matches[amountMatch[0]]],
-			operations[matches[amountMatch[1]]],
+			matches[amountMatch[0]],
+			matches[amountMatch[1]],
 		); err != nil {
 			return fmt.Errorf("%w: amounts not opposites", err)
 		}
@@ -337,12 +335,12 @@ func comparisonMatch(
 
 // MatchOperations attempts to match a slice of operations with a slice of
 // OperationDescriptions (high-level descriptions of what operations are
-// desired). If matching succeeds, a slice of indicies are returned mapping
-// OperationDescriptions to operations.
+// desired). If matching succeeds, a slice of matching operations in the
+// mapped to the order of the descriptions is returned.
 func MatchOperations(
 	descriptions *Descriptions,
 	operations []*types.Operation,
-) ([]int, error) {
+) ([]*types.Operation, error) {
 	if len(operations) == 0 {
 		return nil, errors.New("unable to match anything to 0 operations")
 	}
@@ -361,28 +359,23 @@ func MatchOperations(
 	}
 
 	operationDescriptions := descriptions.OperationDescriptions
-	matches := make([]int, len(operationDescriptions))
-
-	// Set all matches to -1 so we know if any are unmatched
-	for i := 0; i < len(matches); i++ {
-		matches[i] = -1
-	}
+	matches := make([]*types.Operation, len(operationDescriptions))
 
 	// Match a *types.Operation to each *OperationDescription
-	for i, op := range operations {
-		operationMatch(i, op, operationDescriptions, matches)
+	for _, op := range operations {
+		operationMatch(op, operationDescriptions, matches)
 	}
 
 	// Error if any *OperationDescription is not matched
 	for i := 0; i < len(matches); i++ {
-		if matches[i] == -1 {
-			return nil, fmt.Errorf("could not find match for Description %d", i)
+		if matches[i] == nil {
+			return nil, fmt.Errorf("could not find match for description %d", i)
 		}
 	}
 
 	// Once matches are found, assert high-level descriptions between
 	// *types.Operations
-	if err := comparisonMatch(matches, descriptions, operations); err != nil {
+	if err := comparisonMatch(descriptions, matches); err != nil {
 		return nil, fmt.Errorf("%w: group descriptions not met", err)
 	}
 
