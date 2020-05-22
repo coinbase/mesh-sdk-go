@@ -17,6 +17,7 @@ package types
 import (
 	"encoding/json"
 	"errors"
+	"math/big"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -531,6 +532,44 @@ func TestUnmarshalMap(t *testing.T) {
 			err := UnmarshalMap(test.input, &test.outputStruct)
 			assert.Equal(t, test.err, err)
 			assert.Equal(t, test.result, test.outputStruct)
+		})
+	}
+}
+
+func TestAmountValue(t *testing.T) {
+	var tests = map[string]struct {
+		amount *Amount
+		result *big.Int
+		err    error
+	}{
+		"positive integer": {
+			amount: &Amount{Value: "100"},
+			result: big.NewInt(100),
+		},
+		"negative integer": {
+			amount: &Amount{Value: "-100"},
+			result: big.NewInt(-100),
+		},
+		"nil": {
+			err: errors.New("amount value cannot be nil"),
+		},
+		"float": {
+			amount: &Amount{Value: "100.1"},
+			err:    errors.New("100.1 is not an integer"),
+		},
+		"not number": {
+			amount: &Amount{Value: "hello"},
+			err:    errors.New("hello is not an integer"),
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert := assert.New(t)
+
+			result, err := AmountValue(test.amount)
+			assert.Equal(test.result, result)
+			assert.Equal(test.err, err)
 		})
 	}
 }
