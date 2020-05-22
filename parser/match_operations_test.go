@@ -8,10 +8,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestGroupRequirements(t *testing.T) {
+func TestMatchOperations(t *testing.T) {
 	var tests = map[string]struct {
-		operations []*types.Operation
-		groupReq   *GroupRequirement
+		operations   []*types.Operation
+		descriptions *Descriptions
 
 		matches []int
 		err     bool
@@ -36,23 +36,23 @@ func TestGroupRequirements(t *testing.T) {
 					},
 				},
 			},
-			groupReq: &GroupRequirement{
+			descriptions: &Descriptions{
 				OppositeAmounts: [][]int{[]int{0, 1}},
-				OperationRequirements: []*OperationRequirement{
+				OperationDescriptions: []*OperationDescription{
 					{
-						Account: &AccountRequirement{
+						Account: &AccountDescription{
 							Exists: true,
 						},
-						Amount: &AmountRequirement{
+						Amount: &AmountDescription{
 							Exists: true,
 							Sign:   NegativeAmountSign,
 						},
 					},
 					{
-						Account: &AccountRequirement{
+						Account: &AccountDescription{
 							Exists: true,
 						},
-						Amount: &AmountRequirement{
+						Amount: &AmountDescription{
 							Exists: true,
 							Sign:   PositiveAmountSign,
 						},
@@ -61,6 +61,53 @@ func TestGroupRequirements(t *testing.T) {
 			},
 			matches: []int{2, 0},
 			err:     false,
+		},
+		"simple transfer (reject extra op)": {
+			operations: []*types.Operation{
+				{
+					Account: &types.AccountIdentifier{
+						Address: "addr2",
+					},
+					Amount: &types.Amount{
+						Value: "100",
+					},
+				},
+				{}, // extra op ignored
+				{
+					Account: &types.AccountIdentifier{
+						Address: "addr1",
+					},
+					Amount: &types.Amount{
+						Value: "-100",
+					},
+				},
+			},
+			descriptions: &Descriptions{
+				RejectExtraOperations: true,
+				OppositeAmounts:       [][]int{[]int{0, 1}},
+				OperationDescriptions: []*OperationDescription{
+					{
+						Account: &AccountDescription{
+							Exists: true,
+						},
+						Amount: &AmountDescription{
+							Exists: true,
+							Sign:   NegativeAmountSign,
+						},
+					},
+					{
+						Account: &AccountDescription{
+							Exists: true,
+						},
+						Amount: &AmountDescription{
+							Exists: true,
+							Sign:   PositiveAmountSign,
+						},
+					},
+				},
+			},
+			matches: nil,
+			err:     true,
 		},
 		"simple transfer (with unequal amounts)": {
 			operations: []*types.Operation{
@@ -82,23 +129,23 @@ func TestGroupRequirements(t *testing.T) {
 					},
 				},
 			},
-			groupReq: &GroupRequirement{
+			descriptions: &Descriptions{
 				EqualAmounts: [][]int{[]int{0, 1}},
-				OperationRequirements: []*OperationRequirement{
+				OperationDescriptions: []*OperationDescription{
 					{
-						Account: &AccountRequirement{
+						Account: &AccountDescription{
 							Exists: true,
 						},
-						Amount: &AmountRequirement{
+						Amount: &AmountDescription{
 							Exists: true,
 							Sign:   NegativeAmountSign,
 						},
 					},
 					{
-						Account: &AccountRequirement{
+						Account: &AccountDescription{
 							Exists: true,
 						},
-						Amount: &AmountRequirement{
+						Amount: &AmountDescription{
 							Exists: true,
 							Sign:   PositiveAmountSign,
 						},
@@ -128,22 +175,22 @@ func TestGroupRequirements(t *testing.T) {
 					},
 				},
 			},
-			groupReq: &GroupRequirement{
+			descriptions: &Descriptions{
 				EqualAmounts: [][]int{[]int{0, 1}},
-				OperationRequirements: []*OperationRequirement{
+				OperationDescriptions: []*OperationDescription{
 					{
-						Account: &AccountRequirement{
+						Account: &AccountDescription{
 							Exists: true,
 						},
-						Amount: &AmountRequirement{
+						Amount: &AmountDescription{
 							Exists: true,
 						},
 					},
 					{
-						Account: &AccountRequirement{
+						Account: &AccountDescription{
 							Exists: true,
 						},
-						Amount: &AmountRequirement{
+						Amount: &AmountDescription{
 							Exists: true,
 						},
 					},
@@ -180,14 +227,14 @@ func TestGroupRequirements(t *testing.T) {
 					},
 				},
 			},
-			groupReq: &GroupRequirement{
+			descriptions: &Descriptions{
 				OppositeAmounts: [][]int{[]int{0, 1}},
-				OperationRequirements: []*OperationRequirement{
+				OperationDescriptions: []*OperationDescription{
 					{
-						Account: &AccountRequirement{
+						Account: &AccountDescription{
 							Exists: true,
 						},
-						Amount: &AmountRequirement{
+						Amount: &AmountDescription{
 							Exists: true,
 							Sign:   NegativeAmountSign,
 							Currency: &types.Currency{
@@ -197,10 +244,10 @@ func TestGroupRequirements(t *testing.T) {
 						},
 					},
 					{
-						Account: &AccountRequirement{
+						Account: &AccountDescription{
 							Exists: true,
 						},
-						Amount: &AmountRequirement{
+						Amount: &AmountDescription{
 							Exists: true,
 							Sign:   PositiveAmountSign,
 							Currency: &types.Currency{
@@ -242,14 +289,14 @@ func TestGroupRequirements(t *testing.T) {
 					},
 				},
 			},
-			groupReq: &GroupRequirement{
+			descriptions: &Descriptions{
 				OppositeAmounts: [][]int{[]int{0, 1}},
-				OperationRequirements: []*OperationRequirement{
+				OperationDescriptions: []*OperationDescription{
 					{
-						Account: &AccountRequirement{
+						Account: &AccountDescription{
 							Exists: true,
 						},
-						Amount: &AmountRequirement{
+						Amount: &AmountDescription{
 							Exists: true,
 							Sign:   NegativeAmountSign,
 							Currency: &types.Currency{
@@ -259,10 +306,10 @@ func TestGroupRequirements(t *testing.T) {
 						},
 					},
 					{
-						Account: &AccountRequirement{
+						Account: &AccountDescription{
 							Exists: true,
 						},
-						Amount: &AmountRequirement{
+						Amount: &AmountDescription{
 							Exists: true,
 							Sign:   PositiveAmountSign,
 							Currency: &types.Currency{
@@ -302,31 +349,31 @@ func TestGroupRequirements(t *testing.T) {
 					},
 				},
 			},
-			groupReq: &GroupRequirement{
+			descriptions: &Descriptions{
 				OppositeAmounts: [][]int{[]int{0, 1}},
-				OperationRequirements: []*OperationRequirement{
+				OperationDescriptions: []*OperationDescription{
 					{
-						Account: &AccountRequirement{
+						Account: &AccountDescription{
 							Exists:            true,
 							SubAccountExists:  true,
 							SubAccountAddress: "sub",
-							SubAccountMetadataKeys: []*MetadataRequirement{
+							SubAccountMetadataKeys: []*MetadataDescription{
 								{
 									Key:       "validator",
 									ValueKind: reflect.String,
 								},
 							},
 						},
-						Amount: &AmountRequirement{
+						Amount: &AmountDescription{
 							Exists: true,
 							Sign:   NegativeAmountSign,
 						},
 					},
 					{
-						Account: &AccountRequirement{
+						Account: &AccountDescription{
 							Exists: true,
 						},
-						Amount: &AmountRequirement{
+						Amount: &AmountDescription{
 							Exists: true,
 							Sign:   PositiveAmountSign,
 						},
@@ -356,31 +403,31 @@ func TestGroupRequirements(t *testing.T) {
 					},
 				},
 			},
-			groupReq: &GroupRequirement{
+			descriptions: &Descriptions{
 				OppositeAmounts: [][]int{[]int{0, 1}},
-				OperationRequirements: []*OperationRequirement{
+				OperationDescriptions: []*OperationDescription{
 					{
-						Account: &AccountRequirement{
+						Account: &AccountDescription{
 							Exists:            true,
 							SubAccountExists:  true,
 							SubAccountAddress: "sub",
-							SubAccountMetadataKeys: []*MetadataRequirement{
+							SubAccountMetadataKeys: []*MetadataDescription{
 								{
 									Key:       "validator",
 									ValueKind: reflect.String,
 								},
 							},
 						},
-						Amount: &AmountRequirement{
+						Amount: &AmountDescription{
 							Exists: true,
 							Sign:   NegativeAmountSign,
 						},
 					},
 					{
-						Account: &AccountRequirement{
+						Account: &AccountDescription{
 							Exists: true,
 						},
-						Amount: &AmountRequirement{
+						Amount: &AmountDescription{
 							Exists: true,
 							Sign:   PositiveAmountSign,
 						},
@@ -410,17 +457,17 @@ func TestGroupRequirements(t *testing.T) {
 					Amount: &types.Amount{}, // allowed because no amount requirement provided
 				},
 			},
-			groupReq: &GroupRequirement{
-				OperationRequirements: []*OperationRequirement{
+			descriptions: &Descriptions{
+				OperationDescriptions: []*OperationDescription{
 					{
-						Account: &AccountRequirement{
+						Account: &AccountDescription{
 							Exists:            true,
 							SubAccountExists:  true,
 							SubAccountAddress: "sub 2",
 						},
 					},
 					{
-						Account: &AccountRequirement{
+						Account: &AccountDescription{
 							Exists:            true,
 							SubAccountExists:  true,
 							SubAccountAddress: "sub 1",
@@ -451,20 +498,20 @@ func TestGroupRequirements(t *testing.T) {
 					Amount: &types.Amount{},
 				},
 			},
-			groupReq: &GroupRequirement{
-				OperationRequirements: []*OperationRequirement{
+			descriptions: &Descriptions{
+				OperationDescriptions: []*OperationDescription{
 					{
-						Account: &AccountRequirement{
+						Account: &AccountDescription{
 							Exists:            true,
 							SubAccountExists:  true,
 							SubAccountAddress: "sub 2",
 						},
-						Amount: &AmountRequirement{
+						Amount: &AmountDescription{
 							Exists: false,
 						},
 					},
 					{
-						Account: &AccountRequirement{
+						Account: &AccountDescription{
 							Exists:            true,
 							SubAccountExists:  true,
 							SubAccountAddress: "sub 1",
@@ -497,20 +544,20 @@ func TestGroupRequirements(t *testing.T) {
 					},
 				},
 			},
-			groupReq: &GroupRequirement{
-				OperationRequirements: []*OperationRequirement{
+			descriptions: &Descriptions{
+				OperationDescriptions: []*OperationDescription{
 					{
-						Account: &AccountRequirement{
+						Account: &AccountDescription{
 							Exists:            true,
 							SubAccountExists:  true,
 							SubAccountAddress: "sub 2",
 						},
 					},
 					{
-						Account: &AccountRequirement{
+						Account: &AccountDescription{
 							Exists:           true,
 							SubAccountExists: true,
-							SubAccountMetadataKeys: []*MetadataRequirement{
+							SubAccountMetadataKeys: []*MetadataDescription{
 								{
 									Key:       "validator",
 									ValueKind: reflect.Int,
@@ -542,17 +589,17 @@ func TestGroupRequirements(t *testing.T) {
 					},
 				},
 			},
-			groupReq: &GroupRequirement{
-				OperationRequirements: []*OperationRequirement{
+			descriptions: &Descriptions{
+				OperationDescriptions: []*OperationDescription{
 					{
-						Account: &AccountRequirement{
+						Account: &AccountDescription{
 							Exists:            true,
 							SubAccountExists:  true,
 							SubAccountAddress: "sub 2",
 						},
 					},
 					{
-						Account: &AccountRequirement{
+						Account: &AccountDescription{
 							Exists:            true,
 							SubAccountExists:  true,
 							SubAccountAddress: "sub 1",
@@ -563,7 +610,7 @@ func TestGroupRequirements(t *testing.T) {
 			matches: nil,
 			err:     true,
 		},
-		"nil requirements": {
+		"nil descriptions": {
 			operations: []*types.Operation{
 				{
 					Account: &types.AccountIdentifier{
@@ -582,11 +629,11 @@ func TestGroupRequirements(t *testing.T) {
 					},
 				},
 			},
-			groupReq: &GroupRequirement{},
-			matches:  nil,
-			err:      true,
+			descriptions: &Descriptions{},
+			matches:      nil,
+			err:          true,
 		},
-		"2 empty requirements": {
+		"2 empty descriptions": {
 			operations: []*types.Operation{
 				{
 					Account: &types.AccountIdentifier{
@@ -605,8 +652,8 @@ func TestGroupRequirements(t *testing.T) {
 					},
 				},
 			},
-			groupReq: &GroupRequirement{
-				OperationRequirements: []*OperationRequirement{
+			descriptions: &Descriptions{
+				OperationDescriptions: []*OperationDescription{
 					{},
 					{},
 				},
@@ -616,8 +663,8 @@ func TestGroupRequirements(t *testing.T) {
 		},
 		"empty operations": {
 			operations: []*types.Operation{},
-			groupReq: &GroupRequirement{
-				OperationRequirements: []*OperationRequirement{
+			descriptions: &Descriptions{
+				OperationDescriptions: []*OperationDescription{
 					{},
 					{},
 				},
@@ -629,7 +676,7 @@ func TestGroupRequirements(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			matches, err := ApplyRequirement(test.operations, test.groupReq)
+			matches, err := MatchOperations(test.descriptions, test.operations)
 			if test.err {
 				assert.Error(t, err)
 			} else {
