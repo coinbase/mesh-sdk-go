@@ -27,7 +27,7 @@ func TestMatchOperations(t *testing.T) {
 		operations   []*types.Operation
 		descriptions *Descriptions
 
-		matches []int
+		matches []*types.Operation
 		err     bool
 	}{
 		"simple transfer (with extra op)": {
@@ -73,8 +73,25 @@ func TestMatchOperations(t *testing.T) {
 					},
 				},
 			},
-			matches: []int{2, 0},
-			err:     false,
+			matches: []*types.Operation{
+				{
+					Account: &types.AccountIdentifier{
+						Address: "addr1",
+					},
+					Amount: &types.Amount{
+						Value: "-100",
+					},
+				},
+				{
+					Account: &types.AccountIdentifier{
+						Address: "addr2",
+					},
+					Amount: &types.Amount{
+						Value: "100",
+					},
+				},
+			},
+			err: false,
 		},
 		"simple transfer (reject extra op)": {
 			operations: []*types.Operation{
@@ -210,8 +227,25 @@ func TestMatchOperations(t *testing.T) {
 					},
 				},
 			},
-			matches: []int{0, 2},
-			err:     false,
+			matches: []*types.Operation{
+				{
+					Account: &types.AccountIdentifier{
+						Address: "addr2",
+					},
+					Amount: &types.Amount{
+						Value: "100",
+					},
+				},
+				{
+					Account: &types.AccountIdentifier{
+						Address: "addr1",
+					},
+					Amount: &types.Amount{
+						Value: "100",
+					},
+				},
+			},
+			err: false,
 		},
 		"simple transfer (with currency)": {
 			operations: []*types.Operation{
@@ -272,8 +306,33 @@ func TestMatchOperations(t *testing.T) {
 					},
 				},
 			},
-			matches: []int{2, 0},
-			err:     false,
+			matches: []*types.Operation{
+				{
+					Account: &types.AccountIdentifier{
+						Address: "addr1",
+					},
+					Amount: &types.Amount{
+						Value: "-100",
+						Currency: &types.Currency{
+							Symbol:   "ETH",
+							Decimals: 18,
+						},
+					},
+				},
+				{
+					Account: &types.AccountIdentifier{
+						Address: "addr2",
+					},
+					Amount: &types.Amount{
+						Value: "100",
+						Currency: &types.Currency{
+							Symbol:   "BTC",
+							Decimals: 8,
+						},
+					},
+				},
+			},
+			err: false,
 		},
 		"simple transfer (with missing currency)": {
 			operations: []*types.Operation{
@@ -394,8 +453,31 @@ func TestMatchOperations(t *testing.T) {
 					},
 				},
 			},
-			matches: []int{2, 0},
-			err:     false,
+			matches: []*types.Operation{
+				{
+					Account: &types.AccountIdentifier{
+						Address: "addr1",
+						SubAccount: &types.SubAccountIdentifier{
+							Address: "sub",
+							Metadata: map[string]interface{}{
+								"validator": "10",
+							},
+						},
+					},
+					Amount: &types.Amount{
+						Value: "-100",
+					},
+				},
+				{
+					Account: &types.AccountIdentifier{
+						Address: "addr2",
+					},
+					Amount: &types.Amount{
+						Value: "100",
+					},
+				},
+			},
+			err: false,
 		},
 		"simple transfer (with missing sender address metadata)": {
 			operations: []*types.Operation{
@@ -489,8 +571,26 @@ func TestMatchOperations(t *testing.T) {
 					},
 				},
 			},
-			matches: []int{1, 0},
-			err:     false,
+			matches: []*types.Operation{
+				{
+					Account: &types.AccountIdentifier{
+						Address: "addr2",
+						SubAccount: &types.SubAccountIdentifier{
+							Address: "sub 2",
+						},
+					},
+					Amount: &types.Amount{},
+				},
+				{
+					Account: &types.AccountIdentifier{
+						Address: "addr1",
+						SubAccount: &types.SubAccountIdentifier{
+							Address: "sub 1",
+						},
+					},
+				},
+			},
+			err: false,
 		},
 		"nil amount ops (force false amount)": {
 			operations: []*types.Operation{
@@ -581,8 +681,28 @@ func TestMatchOperations(t *testing.T) {
 					},
 				},
 			},
-			matches: []int{1, 0},
-			err:     false,
+			matches: []*types.Operation{
+				{
+					Account: &types.AccountIdentifier{
+						Address: "addr2",
+						SubAccount: &types.SubAccountIdentifier{
+							Address: "sub 2",
+						},
+					},
+				},
+				{
+					Account: &types.AccountIdentifier{
+						Address: "addr1",
+						SubAccount: &types.SubAccountIdentifier{
+							Address: "sub 1",
+							Metadata: map[string]interface{}{
+								"validator": -1000,
+							},
+						},
+					},
+				},
+			},
+			err: false,
 		},
 		"nil amount ops (sub account address mismatch)": {
 			operations: []*types.Operation{
@@ -672,8 +792,25 @@ func TestMatchOperations(t *testing.T) {
 					{},
 				},
 			},
-			matches: []int{0, 1},
-			err:     false,
+			matches: []*types.Operation{
+				{
+					Account: &types.AccountIdentifier{
+						Address: "addr1",
+						SubAccount: &types.SubAccountIdentifier{
+							Address: "sub 3",
+						},
+					},
+				},
+				{
+					Account: &types.AccountIdentifier{
+						Address: "addr2",
+						SubAccount: &types.SubAccountIdentifier{
+							Address: "sub 2",
+						},
+					},
+				},
+			},
+			err: false,
 		},
 		"empty operations": {
 			operations: []*types.Operation{},
