@@ -93,6 +93,8 @@ func BigInt(value string) (*big.Int, error) {
 	return parsedVal, nil
 }
 
+// AmountValue returns a *big.Int representation of an
+// Amount.Value or an error.
 func AmountValue(amount *Amount) (*big.Int, error) {
 	if amount == nil {
 		return nil, errors.New("amount value cannot be nil")

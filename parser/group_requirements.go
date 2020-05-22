@@ -81,7 +81,7 @@ type GroupRequirement struct {
 }
 
 func metadataKeyMatch(reqs []*MetadataRequirement, metadata map[string]interface{}) error {
-	if len(reqs) == 0 && metadata == nil {
+	if len(reqs) == 0 {
 		return nil
 	}
 
@@ -100,6 +100,10 @@ func metadataKeyMatch(reqs []*MetadataRequirement, metadata map[string]interface
 }
 
 func accountMatch(req *AccountRequirement, account *types.AccountIdentifier) error {
+	if req == nil { //anything is ok
+		return nil
+	}
+
 	if account == nil {
 		if req.Exists {
 			return errors.New("account is missing")
@@ -116,6 +120,10 @@ func accountMatch(req *AccountRequirement, account *types.AccountIdentifier) err
 		return nil
 	}
 
+	if !req.SubAccountExists {
+		return errors.New("SubAccount is populated")
+	}
+
 	// Optionally can require a certain subaccount address
 	if len(req.SubAccountAddress) > 0 && account.SubAccount.Address != req.SubAccountAddress {
 		return fmt.Errorf("SubAccountIdentifier.Address is %s not %s", account.SubAccount.Address, req.SubAccountAddress)
@@ -129,12 +137,20 @@ func accountMatch(req *AccountRequirement, account *types.AccountIdentifier) err
 }
 
 func amountMatch(req *AmountRequirement, amount *types.Amount) error {
+	if req == nil { // anything is ok
+		return nil
+	}
+
 	if amount == nil {
 		if req.Exists {
 			return errors.New("amount is missing")
 		}
 
 		return nil
+	}
+
+	if !req.Exists {
+		return errors.New("amount is populated")
 	}
 
 	if !req.Sign.match(amount) {
@@ -256,6 +272,14 @@ func ApplyRequirement(
 	operations []*types.Operation,
 	groupRequirement *GroupRequirement,
 ) ([]int, error) {
+	if len(operations) == 0 {
+		return nil, errors.New("unable to apply requirements to 0 operations")
+	}
+
+	if len(groupRequirement.OperationRequirements) == 0 {
+		return nil, errors.New("unable to apply 0 requirements")
+	}
+
 	operationRequirements := groupRequirement.OperationRequirements
 	matches := make([]int, len(operationRequirements))
 
