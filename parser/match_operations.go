@@ -8,15 +8,28 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
+// AmountSign is used to represent possible signedness
+// of an amount.
 type AmountSign int
 
 const (
+	// AnyAmountSign is a positive or negative amount.
 	AnyAmountSign = iota
+
+	// NegativeAmountSign is a negative amount.
 	NegativeAmountSign
+
+	// PositiveAmountSign is a positive amount.
 	PositiveAmountSign
+
+	// oppositesLength is the only allowed number of
+	// operations to compare as opposites.
+	oppositesLength = 2
 )
 
-func (s AmountSign) match(amount *types.Amount) bool {
+// Match returns a boolean indicating if a *types.Amount
+// has an AmountSign.
+func (s AmountSign) Match(amount *types.Amount) bool {
 	if s == AnyAmountSign {
 		return true
 	}
@@ -37,6 +50,7 @@ func (s AmountSign) match(amount *types.Amount) bool {
 	return false
 }
 
+// String returns a description of an AmountSign.
 func (s AmountSign) String() string {
 	switch s {
 	case AnyAmountSign:
@@ -50,37 +64,53 @@ func (s AmountSign) String() string {
 	}
 }
 
-type MetadataRequirement struct {
+// MetadataDescription is used to check if a map[string]interface{}
+// has certain keys and values of a certain kind.
+type MetadataDescription struct {
 	Key       string
 	ValueKind reflect.Kind // ex: reflect.String
 }
 
-type AccountRequirement struct {
+// AccountDescription is used to describe a *types.AccountIdentifier.
+type AccountDescription struct {
 	Exists                 bool
 	SubAccountExists       bool
 	SubAccountAddress      string
-	SubAccountMetadataKeys []*MetadataRequirement
+	SubAccountMetadataKeys []*MetadataDescription
 }
 
-type AmountRequirement struct {
+// AmountDescription is used to describe a *types.Amount.
+type AmountDescription struct {
 	Exists   bool
 	Sign     AmountSign
 	Currency *types.Currency
 }
 
-type OperationRequirement struct {
-	Account  *AccountRequirement
-	Amount   *AmountRequirement
-	Metadata []*MetadataRequirement
+// OperationDescription is used to describe a *types.Operation.
+type OperationDescription struct {
+	Account  *AccountDescription
+	Amount   *AmountDescription
+	Metadata []*MetadataDescription
 }
 
-type GroupRequirement struct {
-	EqualAmounts          [][]int
-	OppositeAmounts       [][]int
-	OperationRequirements []*OperationRequirement
+// Descriptions contains a slice of OperationDescriptions and
+// high-level requirements enforced across multiple *types.Operations.
+type Descriptions struct {
+	// EqualAmounts are specified using the operation indicies of
+	// OperationDescriptions to handle out of order matches.
+	EqualAmounts [][]int
+
+	// OppositeAmounts are specified using the operation indicies of
+	// OperationDescriptions to handle out of order matches.
+	OppositeAmounts [][]int
+
+	RejectExtraOperations bool
+	OperationDescriptions []*OperationDescription
 }
 
-func metadataKeyMatch(reqs []*MetadataRequirement, metadata map[string]interface{}) error {
+// metadataMatch returns an error if a map[string]interface does not meet
+// a slice of *MetadataDescription.
+func metadataMatch(reqs []*MetadataDescription, metadata map[string]interface{}) error {
 	if len(reqs) == 0 {
 		return nil
 	}
@@ -99,7 +129,9 @@ func metadataKeyMatch(reqs []*MetadataRequirement, metadata map[string]interface
 	return nil
 }
 
-func accountMatch(req *AccountRequirement, account *types.AccountIdentifier) error {
+// accountMatch returns an error if a *types.AccountIdentifier does not meet
+// an *AccountDescription.
+func accountMatch(req *AccountDescription, account *types.AccountIdentifier) error {
 	if req == nil { //anything is ok
 		return nil
 	}
@@ -129,14 +161,16 @@ func accountMatch(req *AccountRequirement, account *types.AccountIdentifier) err
 		return fmt.Errorf("SubAccountIdentifier.Address is %s not %s", account.SubAccount.Address, req.SubAccountAddress)
 	}
 
-	if err := metadataKeyMatch(req.SubAccountMetadataKeys, account.SubAccount.Metadata); err != nil {
+	if err := metadataMatch(req.SubAccountMetadataKeys, account.SubAccount.Metadata); err != nil {
 		return fmt.Errorf("%w: account metadata keys mismatch", err)
 	}
 
 	return nil
 }
 
-func amountMatch(req *AmountRequirement, amount *types.Amount) error {
+// amountMatch returns an error if a *types.Amount does not meet an
+// *AmountDescription.
+func amountMatch(req *AmountDescription, amount *types.Amount) error {
 	if req == nil { // anything is ok
 		return nil
 	}
@@ -153,11 +187,11 @@ func amountMatch(req *AmountRequirement, amount *types.Amount) error {
 		return errors.New("amount is populated")
 	}
 
-	if !req.Sign.match(amount) {
+	if !req.Sign.Match(amount) {
 		return fmt.Errorf("amount sign was not %s", req.Sign.String())
 	}
 
-	// no currency restriction
+	// If no currency is provided, anything is ok.
 	if req.Currency == nil {
 		return nil
 	}
@@ -169,9 +203,10 @@ func amountMatch(req *AmountRequirement, amount *types.Amount) error {
 	return nil
 }
 
-func operationMatch(groupIndex int, operation *types.Operation, requirements []*OperationRequirement, matches []int) {
-	// Skip any requirements that already have matches
-	for i, req := range requirements {
+// operationMatch returns an error if a *types.Operation does not match a
+// *OperationDescription.
+func operationMatch(groupIndex int, operation *types.Operation, descriptions []*OperationDescription, matches []int) {
+	for i, req := range descriptions {
 		if matches[i] != -1 { // already matched
 			continue
 		}
@@ -184,16 +219,17 @@ func operationMatch(groupIndex int, operation *types.Operation, requirements []*
 			continue
 		}
 
-		if err := metadataKeyMatch(req.Metadata, operation.Metadata); err != nil {
+		if err := metadataMatch(req.Metadata, operation.Metadata); err != nil {
 			continue
 		}
 
-		// Assign match
 		matches[i] = groupIndex
 		return
 	}
 }
 
+// equalAmounts returns an error if a slice of operations do not have
+// equal amounts.
 func equalAmounts(ops []*types.Operation) error {
 	if len(ops) <= 1 {
 		return fmt.Errorf("cannot check equality of %d operations", len(ops))
@@ -218,6 +254,8 @@ func equalAmounts(ops []*types.Operation) error {
 	return nil
 }
 
+// oppositeAmounts returns an error if two operations do not have opposite
+// amounts.
 func oppositeAmounts(a *types.Operation, b *types.Operation) error {
 	aVal, err := types.AmountValue(a.Amount)
 	if err != nil {
@@ -240,8 +278,14 @@ func oppositeAmounts(a *types.Operation, b *types.Operation) error {
 	return nil
 }
 
-func assertGroupRequirements(matches []int, groupRequirement *GroupRequirement, operations []*types.Operation) error {
-	for _, amountMatch := range groupRequirement.EqualAmounts {
+// comparisonMatch ensures collections of *types.Operations
+// have either equal or opposite amounts.
+func comparisonMatch(
+	matches []int,
+	descriptions *Descriptions,
+	operations []*types.Operation,
+) error {
+	for _, amountMatch := range descriptions.EqualAmounts {
 		ops := make([]*types.Operation, len(amountMatch))
 		for j, reqIndex := range amountMatch {
 			ops[j] = operations[matches[reqIndex]]
@@ -252,8 +296,8 @@ func assertGroupRequirements(matches []int, groupRequirement *GroupRequirement, 
 		}
 	}
 
-	for _, amountMatch := range groupRequirement.OppositeAmounts {
-		if len(amountMatch) != 2 { // cannot have opposites without exactly 2
+	for _, amountMatch := range descriptions.OppositeAmounts {
+		if len(amountMatch) != oppositesLength { // cannot have opposites without exactly 2
 			return fmt.Errorf("cannot check opposites of %d operations", len(amountMatch))
 		}
 
@@ -268,42 +312,50 @@ func assertGroupRequirements(matches []int, groupRequirement *GroupRequirement, 
 	return nil
 }
 
-func ApplyRequirement(
+// MatchOperations attempts to match a slice of operations with a slice of
+// OperationDescriptions (high-level descriptions of what operations are
+// desired). If matching succeeds, a slice of indicies are returned mapping
+// OperationDescriptions to operations.
+func MatchOperations(
+	descriptions *Descriptions,
 	operations []*types.Operation,
-	groupRequirement *GroupRequirement,
 ) ([]int, error) {
 	if len(operations) == 0 {
-		return nil, errors.New("unable to apply requirements to 0 operations")
+		return nil, errors.New("unable to match anything to 0 operations")
 	}
 
-	if len(groupRequirement.OperationRequirements) == 0 {
-		return nil, errors.New("unable to apply 0 requirements")
+	if len(descriptions.OperationDescriptions) == 0 {
+		return nil, errors.New("unable to match 0 descriptions")
 	}
 
-	operationRequirements := groupRequirement.OperationRequirements
-	matches := make([]int, len(operationRequirements))
+	if descriptions.RejectExtraOperations && len(descriptions.OperationDescriptions) != len(operations) {
+		return nil, fmt.Errorf("expected %d operations, got %d", len(descriptions.OperationDescriptions), len(operations))
+	}
+
+	operationDescriptions := descriptions.OperationDescriptions
+	matches := make([]int, len(operationDescriptions))
 
 	// Set all matches to -1 so we know if any are unmatched
 	for i := 0; i < len(matches); i++ {
 		matches[i] = -1
 	}
 
-	// Match op to an *OperationRequirement
+	// Match a *types.Operation to each *OperationDescription
 	for i, op := range operations {
-		operationMatch(i, op, operationRequirements, matches)
+		operationMatch(i, op, operationDescriptions, matches)
 	}
 
-	// Error if any operationRequirement is not matched (do not error if more ops
-	// than requirements)
+	// Error if any *OperationDescription is not matched
 	for i := 0; i < len(matches); i++ {
 		if matches[i] == -1 {
-			return nil, fmt.Errorf("could not find match for requirement %d", i)
+			return nil, fmt.Errorf("could not find match for Description %d", i)
 		}
 	}
 
-	// Check if group requirements met
-	if err := assertGroupRequirements(matches, groupRequirement, operations); err != nil {
-		return nil, fmt.Errorf("%w: group requirements not met", err)
+	// Once matches are found, assert high-level descriptions between
+	// *types.Operations
+	if err := comparisonMatch(matches, descriptions, operations); err != nil {
+		return nil, fmt.Errorf("%w: group descriptions not met", err)
 	}
 
 	return matches, nil
