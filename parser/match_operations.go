@@ -1,3 +1,17 @@
+// Copyright 2020 Coinbase, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package parser
 
 import (
@@ -158,7 +172,11 @@ func accountMatch(req *AccountDescription, account *types.AccountIdentifier) err
 
 	// Optionally can require a certain subaccount address
 	if len(req.SubAccountAddress) > 0 && account.SubAccount.Address != req.SubAccountAddress {
-		return fmt.Errorf("SubAccountIdentifier.Address is %s not %s", account.SubAccount.Address, req.SubAccountAddress)
+		return fmt.Errorf(
+			"SubAccountIdentifier.Address is %s not %s",
+			account.SubAccount.Address,
+			req.SubAccountAddress,
+		)
 	}
 
 	if err := metadataMatch(req.SubAccountMetadataKeys, account.SubAccount.Metadata); err != nil {
@@ -205,7 +223,12 @@ func amountMatch(req *AmountDescription, amount *types.Amount) error {
 
 // operationMatch returns an error if a *types.Operation does not match a
 // *OperationDescription.
-func operationMatch(groupIndex int, operation *types.Operation, descriptions []*OperationDescription, matches []int) {
+func operationMatch(
+	groupIndex int,
+	operation *types.Operation,
+	descriptions []*OperationDescription,
+	matches []int,
+) {
 	for i, req := range descriptions {
 		if matches[i] != -1 { // already matched
 			continue
@@ -328,8 +351,13 @@ func MatchOperations(
 		return nil, errors.New("unable to match 0 descriptions")
 	}
 
-	if descriptions.RejectExtraOperations && len(descriptions.OperationDescriptions) != len(operations) {
-		return nil, fmt.Errorf("expected %d operations, got %d", len(descriptions.OperationDescriptions), len(operations))
+	if descriptions.RejectExtraOperations &&
+		len(descriptions.OperationDescriptions) != len(operations) {
+		return nil, fmt.Errorf(
+			"expected %d operations, got %d",
+			len(descriptions.OperationDescriptions),
+			len(operations),
+		)
 	}
 
 	operationDescriptions := descriptions.OperationDescriptions
