@@ -104,6 +104,77 @@ func TestMatchOperations(t *testing.T) {
 			},
 			err: false,
 		},
+		"simple transfer (check type)": {
+			operations: []*types.Operation{
+				{
+					Account: &types.AccountIdentifier{
+						Address: "addr2",
+					},
+					Amount: &types.Amount{
+						Value: "100",
+					},
+					Type: "output",
+				},
+				{}, // extra op ignored
+				{
+					Account: &types.AccountIdentifier{
+						Address: "addr1",
+					},
+					Amount: &types.Amount{
+						Value: "-100",
+					},
+					Type: "input",
+				},
+			},
+			descriptions: &Descriptions{
+				OppositeAmounts: [][]int{{0, 1}},
+				OperationDescriptions: []*OperationDescription{
+					{
+						Account: &AccountDescription{
+							Exists: true,
+						},
+						Type: "input",
+					},
+					{
+						Account: &AccountDescription{
+							Exists: true,
+						},
+						Type: "output",
+					},
+				},
+			},
+			matches: []*Match{
+				{
+					Operations: []*types.Operation{
+						{
+							Account: &types.AccountIdentifier{
+								Address: "addr1",
+							},
+							Amount: &types.Amount{
+								Value: "-100",
+							},
+							Type: "input",
+						},
+					},
+					Amounts: []*big.Int{big.NewInt(-100)},
+				},
+				{
+					Operations: []*types.Operation{
+						{
+							Account: &types.AccountIdentifier{
+								Address: "addr2",
+							},
+							Amount: &types.Amount{
+								Value: "100",
+							},
+							Type: "output",
+						},
+					},
+					Amounts: []*big.Int{big.NewInt(100)},
+				},
+			},
+			err: false,
+		},
 		"simple transfer (reject extra op)": {
 			operations: []*types.Operation{
 				{
@@ -893,6 +964,191 @@ func TestMatchOperations(t *testing.T) {
 				OperationDescriptions: []*OperationDescription{
 					{},
 					{},
+				},
+			},
+			matches: nil,
+			err:     true,
+		},
+		"simple repeated op": {
+			operations: []*types.Operation{
+				{
+					Account: &types.AccountIdentifier{
+						Address: "addr2",
+					},
+					Amount: &types.Amount{
+						Value: "200",
+					},
+				},
+				{}, // extra op ignored
+				{
+					Account: &types.AccountIdentifier{
+						Address: "addr1",
+					},
+					Amount: &types.Amount{
+						Value: "100",
+					},
+				},
+			},
+			descriptions: &Descriptions{
+				OperationDescriptions: []*OperationDescription{
+					{
+						Account: &AccountDescription{
+							Exists: true,
+						},
+						Amount: &AmountDescription{
+							Exists: true,
+							Sign:   PositiveAmountSign,
+						},
+						AllowRepeats: true,
+					},
+				},
+			},
+			matches: []*Match{
+				{
+					Operations: []*types.Operation{
+						{
+							Account: &types.AccountIdentifier{
+								Address: "addr2",
+							},
+							Amount: &types.Amount{
+								Value: "200",
+							},
+						},
+						{
+							Account: &types.AccountIdentifier{
+								Address: "addr1",
+							},
+							Amount: &types.Amount{
+								Value: "100",
+							},
+						},
+					},
+					Amounts: []*big.Int{
+						big.NewInt(200),
+						big.NewInt(100),
+					},
+				},
+			},
+			err: false,
+		},
+		"simple repeated op (no extra ops allowed)": {
+			operations: []*types.Operation{
+				{
+					Account: &types.AccountIdentifier{
+						Address: "addr2",
+					},
+					Amount: &types.Amount{
+						Value: "200",
+					},
+				},
+				{}, // extra op ignored
+				{
+					Account: &types.AccountIdentifier{
+						Address: "addr1",
+					},
+					Amount: &types.Amount{
+						Value: "100",
+					},
+				},
+			},
+			descriptions: &Descriptions{
+				OperationDescriptions: []*OperationDescription{
+					{
+						Account: &AccountDescription{
+							Exists: true,
+						},
+						Amount: &AmountDescription{
+							Exists: true,
+							Sign:   PositiveAmountSign,
+						},
+						AllowRepeats: true,
+					},
+				},
+				ErrUnmatched: true,
+			},
+			matches: nil,
+			err:     true,
+		},
+		"simple repeated op (with invalid comparison indexes)": {
+			operations: []*types.Operation{
+				{
+					Account: &types.AccountIdentifier{
+						Address: "addr2",
+					},
+					Amount: &types.Amount{
+						Value: "200",
+					},
+				},
+				{}, // extra op ignored
+				{
+					Account: &types.AccountIdentifier{
+						Address: "addr1",
+					},
+					Amount: &types.Amount{
+						Value: "100",
+					},
+				},
+			},
+			descriptions: &Descriptions{
+				OppositeAmounts: [][]int{{0, 1}},
+				OperationDescriptions: []*OperationDescription{
+					{
+						Account: &AccountDescription{
+							Exists: true,
+						},
+						Amount: &AmountDescription{
+							Exists: true,
+							Sign:   PositiveAmountSign,
+						},
+						AllowRepeats: true,
+					},
+				},
+			},
+			matches: nil,
+			err:     true,
+		},
+		"simple repeated op (with overlapping, repeated descriptions)": {
+			operations: []*types.Operation{
+				{
+					Account: &types.AccountIdentifier{
+						Address: "addr2",
+					},
+					Amount: &types.Amount{
+						Value: "200",
+					},
+				},
+				{}, // extra op ignored
+				{
+					Account: &types.AccountIdentifier{
+						Address: "addr1",
+					},
+					Amount: &types.Amount{
+						Value: "100",
+					},
+				},
+			},
+			descriptions: &Descriptions{
+				OperationDescriptions: []*OperationDescription{
+					{
+						Account: &AccountDescription{
+							Exists: true,
+						},
+						Amount: &AmountDescription{
+							Exists: true,
+							Sign:   PositiveAmountSign,
+						},
+						AllowRepeats: true,
+					},
+					{ // will never be possible to meet this description
+						Account: &AccountDescription{
+							Exists: true,
+						},
+						Amount: &AmountDescription{
+							Exists: true,
+							Sign:   PositiveAmountSign,
+						},
+						AllowRepeats: true,
+					},
 				},
 			},
 			matches: nil,
