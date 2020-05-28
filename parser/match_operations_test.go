@@ -1154,6 +1154,163 @@ func TestMatchOperations(t *testing.T) {
 			matches: nil,
 			err:     true,
 		},
+		"complex repeated op": {
+			operations: []*types.Operation{
+				{
+					Account: &types.AccountIdentifier{
+						Address: "addr2",
+					},
+					Amount: &types.Amount{
+						Value: "200",
+					},
+					Type: "output",
+				},
+				{
+					Account: &types.AccountIdentifier{
+						Address: "addr3",
+					},
+					Amount: &types.Amount{
+						Value: "200",
+					},
+					Type: "output",
+				},
+				{
+					Account: &types.AccountIdentifier{
+						Address: "addr1",
+					},
+					Amount: &types.Amount{
+						Value: "-200",
+					},
+					Type: "input",
+				},
+				{
+					Account: &types.AccountIdentifier{
+						Address: "addr4",
+					},
+					Amount: &types.Amount{
+						Value: "-200",
+					},
+					Type: "input",
+				},
+				{
+					Account: &types.AccountIdentifier{
+						Address: "addr5",
+					},
+					Amount: &types.Amount{
+						Value: "-1000",
+					},
+					Type: "runoff",
+				},
+			},
+			descriptions: &Descriptions{
+				OppositeAmounts: [][]int{{0, 1}},
+				OperationDescriptions: []*OperationDescription{
+					{
+						Account: &AccountDescription{
+							Exists: true,
+						},
+						Amount: &AmountDescription{
+							Exists: true,
+							Sign:   PositiveAmountSign,
+						},
+						AllowRepeats: true,
+						Type:         "output",
+					},
+					{
+						Account: &AccountDescription{
+							Exists: true,
+						},
+						Amount: &AmountDescription{
+							Exists: true,
+							Sign:   NegativeAmountSign,
+						},
+						AllowRepeats: true,
+						Type:         "input",
+					},
+					{
+						Account: &AccountDescription{
+							Exists: true,
+						},
+						Amount: &AmountDescription{
+							Exists: true,
+							Sign:   NegativeAmountSign,
+						},
+						AllowRepeats: true,
+					},
+				},
+			},
+			matches: []*Match{
+				{
+					Operations: []*types.Operation{
+						{
+							Account: &types.AccountIdentifier{
+								Address: "addr2",
+							},
+							Amount: &types.Amount{
+								Value: "200",
+							},
+							Type: "output",
+						},
+						{
+							Account: &types.AccountIdentifier{
+								Address: "addr3",
+							},
+							Amount: &types.Amount{
+								Value: "200",
+							},
+							Type: "output",
+						},
+					},
+					Amounts: []*big.Int{
+						big.NewInt(200),
+						big.NewInt(200),
+					},
+				},
+				{
+					Operations: []*types.Operation{
+						{
+							Account: &types.AccountIdentifier{
+								Address: "addr1",
+							},
+							Amount: &types.Amount{
+								Value: "-200",
+							},
+							Type: "input",
+						},
+						{
+							Account: &types.AccountIdentifier{
+								Address: "addr4",
+							},
+							Amount: &types.Amount{
+								Value: "-200",
+							},
+							Type: "input",
+						},
+					},
+					Amounts: []*big.Int{
+						big.NewInt(-200),
+						big.NewInt(-200),
+					},
+				},
+				{
+					Operations: []*types.Operation{
+						{
+							Account: &types.AccountIdentifier{
+								Address: "addr5",
+							},
+							Amount: &types.Amount{
+								Value: "-1000",
+							},
+							Type: "runoff",
+						},
+					},
+					Amounts: []*big.Int{
+						big.NewInt(-1000),
+					},
+				},
+			},
+			err: false,
+		},
 	}
 
 	for name, test := range tests {
