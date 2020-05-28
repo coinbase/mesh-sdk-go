@@ -131,11 +131,6 @@ type Descriptions struct {
 	// will error if all groups of operations aren't opposites.
 	OppositeAmounts [][]int
 
-	// NetZeroAmounts are specified using the operation indicies of
-	// OperationDescriptions to handle out of order matches. MatchOperations
-	// will error if all groups of operations don't net to zero.
-	NetZeroAmounts [][]int
-
 	// ErrUnmatched indicates that an error should be returned
 	// if all operations cannot be matched to a description.
 	ErrUnmatched bool
@@ -376,7 +371,6 @@ func comparisonMatch(
 				}
 			}
 		}
-
 	}
 
 	return nil
@@ -391,6 +385,10 @@ type Match struct {
 }
 
 func (m *Match) First() (*types.Operation, *big.Int) {
+	if m == nil {
+		return nil, nil
+	}
+
 	if len(m.Operations) > 0 {
 		return m.Operations[0], m.Amounts[0]
 	}
