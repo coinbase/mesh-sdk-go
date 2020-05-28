@@ -345,6 +345,12 @@ func comparisonMatch(
 	for _, amountMatch := range descriptions.EqualAmounts {
 		ops := []*types.Operation{}
 		for _, reqIndex := range amountMatch {
+			if reqIndex >= len(matches) {
+				return fmt.Errorf(
+					"equal amounts comparison index %d out of range",
+					reqIndex,
+				)
+			}
 			ops = append(ops, matches[reqIndex].Operations...)
 		}
 
@@ -359,6 +365,18 @@ func comparisonMatch(
 		}
 
 		// compare all possible pairs
+		if amountMatch[0] >= len(matches) {
+			return fmt.Errorf(
+				"opposite amounts comparison index %d out of range",
+				amountMatch[0],
+			)
+		}
+		if amountMatch[1] >= len(matches) {
+			return fmt.Errorf(
+				"opposite amounts comparison index %d out of range",
+				amountMatch[1],
+			)
+		}
 		for _, op := range matches[amountMatch[0]].Operations {
 			for _, otherOp := range matches[amountMatch[1]].Operations {
 				if err := oppositeAmounts(
