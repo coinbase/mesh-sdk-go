@@ -114,6 +114,10 @@ type OperationDescription struct {
 	// AllowRepeats indicates that multiple operations can be matched
 	// to a particular description.
 	AllowRepeats bool
+
+	// Optional indicates that not finding any operations that meet
+	// the description should not trigger an error.
+	Optional bool
 }
 
 // Descriptions contains a slice of OperationDescriptions and
@@ -339,6 +343,23 @@ func oppositeAmounts(a *types.Operation, b *types.Operation) error {
 	return nil
 }
 
+func matchIndexValid(matches []*Match, index int) error {
+	if index >= len(matches) {
+		return fmt.Errorf(
+			"match index %d out of range",
+			index,
+		)
+	}
+	if matches[index] == nil {
+		return fmt.Errorf(
+			"match index %d is nil",
+			index,
+		)
+	}
+
+	return nil
+}
+
 // comparisonMatch ensures collections of *types.Operations
 // have either equal or opposite amounts.
 func comparisonMatch(
@@ -348,12 +369,10 @@ func comparisonMatch(
 	for _, amountMatch := range descriptions.EqualAmounts {
 		ops := []*types.Operation{}
 		for _, reqIndex := range amountMatch {
-			if reqIndex >= len(matches) {
-				return fmt.Errorf(
-					"equal amounts comparison index %d out of range",
-					reqIndex,
-				)
+			if err := matchIndexValid(matches, reqIndex); err != nil {
+				return fmt.Errorf("%w: equal amounts comparison error", err)
 			}
+
 			ops = append(ops, matches[reqIndex].Operations...)
 		}
 
@@ -368,17 +387,11 @@ func comparisonMatch(
 		}
 
 		// compare all possible pairs
-		if amountMatch[0] >= len(matches) {
-			return fmt.Errorf(
-				"opposite amounts comparison index %d out of range",
-				amountMatch[0],
-			)
+		if err := matchIndexValid(matches, amountMatch[0]); err != nil {
+			return fmt.Errorf("%w: opposite amounts comparison error", err)
 		}
-		if amountMatch[1] >= len(matches) {
-			return fmt.Errorf(
-				"opposite amounts comparison index %d out of range",
-				amountMatch[1],
-			)
+		if err := matchIndexValid(matches, amountMatch[1]); err != nil {
+			return fmt.Errorf("%w: opposite amounts comparison error", err)
 		}
 		for _, op := range matches[amountMatch[0]].Operations {
 			for _, otherOp := range matches[amountMatch[1]].Operations {
@@ -452,7 +465,7 @@ func MatchOperations(
 
 	// Error if any *OperationDescription is not matched
 	for i := 0; i < len(matches); i++ {
-		if matches[i] == nil {
+		if matches[i] == nil && !descriptions.OperationDescriptions[i].Optional {
 			return nil, fmt.Errorf("could not find match for description %d", i)
 		}
 	}
