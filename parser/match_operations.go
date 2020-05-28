@@ -114,6 +114,10 @@ type OperationDescription struct {
 	// AllowRepeats indicates that multiple operations can be matched
 	// to a particular description.
 	AllowRepeats bool
+
+	// Optional indicates that not finding any operations that meet
+	// the description should not trigger an error.
+	Optional bool
 }
 
 // Descriptions contains a slice of OperationDescriptions and
@@ -354,6 +358,12 @@ func comparisonMatch(
 					reqIndex,
 				)
 			}
+			if matches[reqIndex] == nil {
+				return fmt.Errorf(
+					"equal amounts comarison index %d is nil",
+					reqIndex,
+				)
+			}
 			ops = append(ops, matches[reqIndex].Operations...)
 		}
 
@@ -374,9 +384,21 @@ func comparisonMatch(
 				amountMatch[0],
 			)
 		}
+		if matches[amountMatch[0]] == nil {
+			return fmt.Errorf(
+				"equal amounts comarison index %d is nil",
+				amountMatch[0],
+			)
+		}
 		if amountMatch[1] >= len(matches) {
 			return fmt.Errorf(
 				"opposite amounts comparison index %d out of range",
+				amountMatch[1],
+			)
+		}
+		if matches[amountMatch[1]] == nil {
+			return fmt.Errorf(
+				"equal amounts comarison index %d is nil",
 				amountMatch[1],
 			)
 		}
@@ -452,7 +474,7 @@ func MatchOperations(
 
 	// Error if any *OperationDescription is not matched
 	for i := 0; i < len(matches); i++ {
-		if matches[i] == nil {
+		if matches[i] == nil && !descriptions.OperationDescriptions[i].Optional {
 			return nil, fmt.Errorf("could not find match for description %d", i)
 		}
 	}
