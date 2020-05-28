@@ -343,6 +343,23 @@ func oppositeAmounts(a *types.Operation, b *types.Operation) error {
 	return nil
 }
 
+func matchIndexValid(matches []*Match, index int) error {
+	if index >= len(matches) {
+		return fmt.Errorf(
+			"match index %d out of range",
+			index,
+		)
+	}
+	if matches[index] == nil {
+		return fmt.Errorf(
+			"match index %d is nil",
+			index,
+		)
+	}
+
+	return nil
+}
+
 // comparisonMatch ensures collections of *types.Operations
 // have either equal or opposite amounts.
 func comparisonMatch(
@@ -352,18 +369,10 @@ func comparisonMatch(
 	for _, amountMatch := range descriptions.EqualAmounts {
 		ops := []*types.Operation{}
 		for _, reqIndex := range amountMatch {
-			if reqIndex >= len(matches) {
-				return fmt.Errorf(
-					"equal amounts comparison index %d out of range",
-					reqIndex,
-				)
+			if err := matchIndexValid(matches, reqIndex); err != nil {
+				return fmt.Errorf("%w: equal amounts comparison error", err)
 			}
-			if matches[reqIndex] == nil {
-				return fmt.Errorf(
-					"equal amounts comarison index %d is nil",
-					reqIndex,
-				)
-			}
+
 			ops = append(ops, matches[reqIndex].Operations...)
 		}
 
@@ -378,29 +387,11 @@ func comparisonMatch(
 		}
 
 		// compare all possible pairs
-		if amountMatch[0] >= len(matches) {
-			return fmt.Errorf(
-				"opposite amounts comparison index %d out of range",
-				amountMatch[0],
-			)
+		if err := matchIndexValid(matches, amountMatch[0]); err != nil {
+			return fmt.Errorf("%w: opposite amounts comparison error", err)
 		}
-		if matches[amountMatch[0]] == nil {
-			return fmt.Errorf(
-				"equal amounts comarison index %d is nil",
-				amountMatch[0],
-			)
-		}
-		if amountMatch[1] >= len(matches) {
-			return fmt.Errorf(
-				"opposite amounts comparison index %d out of range",
-				amountMatch[1],
-			)
-		}
-		if matches[amountMatch[1]] == nil {
-			return fmt.Errorf(
-				"equal amounts comarison index %d is nil",
-				amountMatch[1],
-			)
+		if err := matchIndexValid(matches, amountMatch[1]); err != nil {
+			return fmt.Errorf("%w: opposite amounts comparison error", err)
 		}
 		for _, op := range matches[amountMatch[0]].Operations {
 			for _, otherOp := range matches[amountMatch[1]].Operations {
