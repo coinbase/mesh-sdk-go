@@ -345,9 +345,7 @@ func comparisonMatch(
 	for _, amountMatch := range descriptions.EqualAmounts {
 		ops := []*types.Operation{}
 		for _, reqIndex := range amountMatch {
-			for _, op := range matches[reqIndex].Operations {
-				ops = append(ops, op)
-			}
+			ops = append(ops, matches[reqIndex].Operations...)
 		}
 
 		if err := equalAmounts(ops); err != nil {
@@ -376,6 +374,8 @@ func comparisonMatch(
 	return nil
 }
 
+// Match contains all *types.Operation matching a given OperationDescription and
+// their parsed *big.Int amounts (if populated).
 type Match struct {
 	Operations []*types.Operation
 
@@ -384,6 +384,9 @@ type Match struct {
 	Amounts []*big.Int
 }
 
+// First is a convenience method that returns the first matched operation
+// and amount (if they exist). This is used when parsing matches when
+// AllowRepeats is set to false.
 func (m *Match) First() (*types.Operation, *big.Int) {
 	if m == nil {
 		return nil, nil
