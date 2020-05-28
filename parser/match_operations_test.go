@@ -15,6 +15,7 @@
 package parser
 
 import (
+	"math/big"
 	"reflect"
 	"testing"
 
@@ -27,7 +28,7 @@ func TestMatchOperations(t *testing.T) {
 		operations   []*types.Operation
 		descriptions *Descriptions
 
-		matches []*types.Operation
+		matches []*Match
 		err     bool
 	}{
 		"simple transfer (with extra op)": {
@@ -73,15 +74,38 @@ func TestMatchOperations(t *testing.T) {
 					},
 				},
 			},
-			matches: []*types.Operation{
+			matches: []*Match{
 				{
-					Account: &types.AccountIdentifier{
-						Address: "addr1",
+					Operations: []*types.Operation{
+						{
+							Account: &types.AccountIdentifier{
+								Address: "addr1",
+							},
+							Amount: &types.Amount{
+								Value: "-100",
+							},
+						},
 					},
-					Amount: &types.Amount{
-						Value: "-100",
-					},
+					Amounts: []*big.Int{big.NewInt(-100)},
 				},
+				{
+					Operations: []*types.Operation{
+						{
+							Account: &types.AccountIdentifier{
+								Address: "addr2",
+							},
+							Amount: &types.Amount{
+								Value: "100",
+							},
+						},
+					},
+					Amounts: []*big.Int{big.NewInt(100)},
+				},
+			},
+			err: false,
+		},
+		"simple transfer (check type)": {
+			operations: []*types.Operation{
 				{
 					Account: &types.AccountIdentifier{
 						Address: "addr2",
@@ -89,6 +113,64 @@ func TestMatchOperations(t *testing.T) {
 					Amount: &types.Amount{
 						Value: "100",
 					},
+					Type: "output",
+				},
+				{}, // extra op ignored
+				{
+					Account: &types.AccountIdentifier{
+						Address: "addr1",
+					},
+					Amount: &types.Amount{
+						Value: "-100",
+					},
+					Type: "input",
+				},
+			},
+			descriptions: &Descriptions{
+				OppositeAmounts: [][]int{{0, 1}},
+				OperationDescriptions: []*OperationDescription{
+					{
+						Account: &AccountDescription{
+							Exists: true,
+						},
+						Type: "input",
+					},
+					{
+						Account: &AccountDescription{
+							Exists: true,
+						},
+						Type: "output",
+					},
+				},
+			},
+			matches: []*Match{
+				{
+					Operations: []*types.Operation{
+						{
+							Account: &types.AccountIdentifier{
+								Address: "addr1",
+							},
+							Amount: &types.Amount{
+								Value: "-100",
+							},
+							Type: "input",
+						},
+					},
+					Amounts: []*big.Int{big.NewInt(-100)},
+				},
+				{
+					Operations: []*types.Operation{
+						{
+							Account: &types.AccountIdentifier{
+								Address: "addr2",
+							},
+							Amount: &types.Amount{
+								Value: "100",
+							},
+							Type: "output",
+						},
+					},
+					Amounts: []*big.Int{big.NewInt(100)},
 				},
 			},
 			err: false,
@@ -114,8 +196,8 @@ func TestMatchOperations(t *testing.T) {
 				},
 			},
 			descriptions: &Descriptions{
-				RejectExtraOperations: true,
-				OppositeAmounts:       [][]int{{0, 1}},
+				ErrUnmatched:    true,
+				OppositeAmounts: [][]int{{0, 1}},
 				OperationDescriptions: []*OperationDescription{
 					{
 						Account: &AccountDescription{
@@ -227,22 +309,32 @@ func TestMatchOperations(t *testing.T) {
 					},
 				},
 			},
-			matches: []*types.Operation{
+			matches: []*Match{
 				{
-					Account: &types.AccountIdentifier{
-						Address: "addr2",
+					Operations: []*types.Operation{
+						{
+							Account: &types.AccountIdentifier{
+								Address: "addr2",
+							},
+							Amount: &types.Amount{
+								Value: "100",
+							},
+						},
 					},
-					Amount: &types.Amount{
-						Value: "100",
-					},
+					Amounts: []*big.Int{big.NewInt(100)},
 				},
 				{
-					Account: &types.AccountIdentifier{
-						Address: "addr1",
+					Operations: []*types.Operation{
+						{
+							Account: &types.AccountIdentifier{
+								Address: "addr1",
+							},
+							Amount: &types.Amount{
+								Value: "100",
+							},
+						},
 					},
-					Amount: &types.Amount{
-						Value: "100",
-					},
+					Amounts: []*big.Int{big.NewInt(100)},
 				},
 			},
 			err: false,
@@ -306,30 +398,40 @@ func TestMatchOperations(t *testing.T) {
 					},
 				},
 			},
-			matches: []*types.Operation{
+			matches: []*Match{
 				{
-					Account: &types.AccountIdentifier{
-						Address: "addr1",
-					},
-					Amount: &types.Amount{
-						Value: "-100",
-						Currency: &types.Currency{
-							Symbol:   "ETH",
-							Decimals: 18,
+					Operations: []*types.Operation{
+						{
+							Account: &types.AccountIdentifier{
+								Address: "addr1",
+							},
+							Amount: &types.Amount{
+								Value: "-100",
+								Currency: &types.Currency{
+									Symbol:   "ETH",
+									Decimals: 18,
+								},
+							},
 						},
 					},
+					Amounts: []*big.Int{big.NewInt(-100)},
 				},
 				{
-					Account: &types.AccountIdentifier{
-						Address: "addr2",
-					},
-					Amount: &types.Amount{
-						Value: "100",
-						Currency: &types.Currency{
-							Symbol:   "BTC",
-							Decimals: 8,
+					Operations: []*types.Operation{
+						{
+							Account: &types.AccountIdentifier{
+								Address: "addr2",
+							},
+							Amount: &types.Amount{
+								Value: "100",
+								Currency: &types.Currency{
+									Symbol:   "BTC",
+									Decimals: 8,
+								},
+							},
 						},
 					},
+					Amounts: []*big.Int{big.NewInt(100)},
 				},
 			},
 			err: false,
@@ -453,28 +555,38 @@ func TestMatchOperations(t *testing.T) {
 					},
 				},
 			},
-			matches: []*types.Operation{
+			matches: []*Match{
 				{
-					Account: &types.AccountIdentifier{
-						Address: "addr1",
-						SubAccount: &types.SubAccountIdentifier{
-							Address: "sub",
-							Metadata: map[string]interface{}{
-								"validator": "10",
+					Operations: []*types.Operation{
+						{
+							Account: &types.AccountIdentifier{
+								Address: "addr1",
+								SubAccount: &types.SubAccountIdentifier{
+									Address: "sub",
+									Metadata: map[string]interface{}{
+										"validator": "10",
+									},
+								},
+							},
+							Amount: &types.Amount{
+								Value: "-100",
 							},
 						},
 					},
-					Amount: &types.Amount{
-						Value: "-100",
-					},
+					Amounts: []*big.Int{big.NewInt(-100)},
 				},
 				{
-					Account: &types.AccountIdentifier{
-						Address: "addr2",
+					Operations: []*types.Operation{
+						{
+							Account: &types.AccountIdentifier{
+								Address: "addr2",
+							},
+							Amount: &types.Amount{
+								Value: "100",
+							},
+						},
 					},
-					Amount: &types.Amount{
-						Value: "100",
-					},
+					Amounts: []*big.Int{big.NewInt(100)},
 				},
 			},
 			err: false,
@@ -550,7 +662,9 @@ func TestMatchOperations(t *testing.T) {
 							Address: "sub 2",
 						},
 					},
-					Amount: &types.Amount{}, // allowed because no amount requirement provided
+					Amount: &types.Amount{
+						Value: "100",
+					}, // allowed because no amount requirement provided
 				},
 			},
 			descriptions: &Descriptions{
@@ -571,23 +685,35 @@ func TestMatchOperations(t *testing.T) {
 					},
 				},
 			},
-			matches: []*types.Operation{
+			matches: []*Match{
 				{
-					Account: &types.AccountIdentifier{
-						Address: "addr2",
-						SubAccount: &types.SubAccountIdentifier{
-							Address: "sub 2",
+					Operations: []*types.Operation{
+						{
+							Account: &types.AccountIdentifier{
+								Address: "addr2",
+								SubAccount: &types.SubAccountIdentifier{
+									Address: "sub 2",
+								},
+							},
+							Amount: &types.Amount{
+								Value: "100",
+							},
 						},
 					},
-					Amount: &types.Amount{},
+					Amounts: []*big.Int{big.NewInt(100)},
 				},
 				{
-					Account: &types.AccountIdentifier{
-						Address: "addr1",
-						SubAccount: &types.SubAccountIdentifier{
-							Address: "sub 1",
+					Operations: []*types.Operation{
+						{
+							Account: &types.AccountIdentifier{
+								Address: "addr1",
+								SubAccount: &types.SubAccountIdentifier{
+									Address: "sub 1",
+								},
+							},
 						},
 					},
+					Amounts: []*big.Int{nil},
 				},
 			},
 			err: false,
@@ -681,25 +807,35 @@ func TestMatchOperations(t *testing.T) {
 					},
 				},
 			},
-			matches: []*types.Operation{
+			matches: []*Match{
 				{
-					Account: &types.AccountIdentifier{
-						Address: "addr2",
-						SubAccount: &types.SubAccountIdentifier{
-							Address: "sub 2",
-						},
-					},
-				},
-				{
-					Account: &types.AccountIdentifier{
-						Address: "addr1",
-						SubAccount: &types.SubAccountIdentifier{
-							Address: "sub 1",
-							Metadata: map[string]interface{}{
-								"validator": -1000,
+					Operations: []*types.Operation{
+						{
+							Account: &types.AccountIdentifier{
+								Address: "addr2",
+								SubAccount: &types.SubAccountIdentifier{
+									Address: "sub 2",
+								},
 							},
 						},
 					},
+					Amounts: []*big.Int{nil},
+				},
+				{
+					Operations: []*types.Operation{
+						{
+							Account: &types.AccountIdentifier{
+								Address: "addr1",
+								SubAccount: &types.SubAccountIdentifier{
+									Address: "sub 1",
+									Metadata: map[string]interface{}{
+										"validator": -1000,
+									},
+								},
+							},
+						},
+					},
+					Amounts: []*big.Int{nil},
 				},
 			},
 			err: false,
@@ -792,22 +928,32 @@ func TestMatchOperations(t *testing.T) {
 					{},
 				},
 			},
-			matches: []*types.Operation{
+			matches: []*Match{
 				{
-					Account: &types.AccountIdentifier{
-						Address: "addr1",
-						SubAccount: &types.SubAccountIdentifier{
-							Address: "sub 3",
+					Operations: []*types.Operation{
+						{
+							Account: &types.AccountIdentifier{
+								Address: "addr1",
+								SubAccount: &types.SubAccountIdentifier{
+									Address: "sub 3",
+								},
+							},
 						},
 					},
+					Amounts: []*big.Int{nil},
 				},
 				{
-					Account: &types.AccountIdentifier{
-						Address: "addr2",
-						SubAccount: &types.SubAccountIdentifier{
-							Address: "sub 2",
+					Operations: []*types.Operation{
+						{
+							Account: &types.AccountIdentifier{
+								Address: "addr2",
+								SubAccount: &types.SubAccountIdentifier{
+									Address: "sub 2",
+								},
+							},
 						},
 					},
+					Amounts: []*big.Int{nil},
 				},
 			},
 			err: false,
@@ -823,6 +969,348 @@ func TestMatchOperations(t *testing.T) {
 			matches: nil,
 			err:     true,
 		},
+		"simple repeated op": {
+			operations: []*types.Operation{
+				{
+					Account: &types.AccountIdentifier{
+						Address: "addr2",
+					},
+					Amount: &types.Amount{
+						Value: "200",
+					},
+				},
+				{}, // extra op ignored
+				{
+					Account: &types.AccountIdentifier{
+						Address: "addr1",
+					},
+					Amount: &types.Amount{
+						Value: "100",
+					},
+				},
+			},
+			descriptions: &Descriptions{
+				OperationDescriptions: []*OperationDescription{
+					{
+						Account: &AccountDescription{
+							Exists: true,
+						},
+						Amount: &AmountDescription{
+							Exists: true,
+							Sign:   PositiveAmountSign,
+						},
+						AllowRepeats: true,
+					},
+				},
+			},
+			matches: []*Match{
+				{
+					Operations: []*types.Operation{
+						{
+							Account: &types.AccountIdentifier{
+								Address: "addr2",
+							},
+							Amount: &types.Amount{
+								Value: "200",
+							},
+						},
+						{
+							Account: &types.AccountIdentifier{
+								Address: "addr1",
+							},
+							Amount: &types.Amount{
+								Value: "100",
+							},
+						},
+					},
+					Amounts: []*big.Int{
+						big.NewInt(200),
+						big.NewInt(100),
+					},
+				},
+			},
+			err: false,
+		},
+		"simple repeated op (no extra ops allowed)": {
+			operations: []*types.Operation{
+				{
+					Account: &types.AccountIdentifier{
+						Address: "addr2",
+					},
+					Amount: &types.Amount{
+						Value: "200",
+					},
+				},
+				{}, // extra op ignored
+				{
+					Account: &types.AccountIdentifier{
+						Address: "addr1",
+					},
+					Amount: &types.Amount{
+						Value: "100",
+					},
+				},
+			},
+			descriptions: &Descriptions{
+				OperationDescriptions: []*OperationDescription{
+					{
+						Account: &AccountDescription{
+							Exists: true,
+						},
+						Amount: &AmountDescription{
+							Exists: true,
+							Sign:   PositiveAmountSign,
+						},
+						AllowRepeats: true,
+					},
+				},
+				ErrUnmatched: true,
+			},
+			matches: nil,
+			err:     true,
+		},
+		"simple repeated op (with invalid comparison indexes)": {
+			operations: []*types.Operation{
+				{
+					Account: &types.AccountIdentifier{
+						Address: "addr2",
+					},
+					Amount: &types.Amount{
+						Value: "200",
+					},
+				},
+				{}, // extra op ignored
+				{
+					Account: &types.AccountIdentifier{
+						Address: "addr1",
+					},
+					Amount: &types.Amount{
+						Value: "100",
+					},
+				},
+			},
+			descriptions: &Descriptions{
+				OppositeAmounts: [][]int{{0, 1}},
+				OperationDescriptions: []*OperationDescription{
+					{
+						Account: &AccountDescription{
+							Exists: true,
+						},
+						Amount: &AmountDescription{
+							Exists: true,
+							Sign:   PositiveAmountSign,
+						},
+						AllowRepeats: true,
+					},
+				},
+			},
+			matches: nil,
+			err:     true,
+		},
+		"simple repeated op (with overlapping, repeated descriptions)": {
+			operations: []*types.Operation{
+				{
+					Account: &types.AccountIdentifier{
+						Address: "addr2",
+					},
+					Amount: &types.Amount{
+						Value: "200",
+					},
+				},
+				{}, // extra op ignored
+				{
+					Account: &types.AccountIdentifier{
+						Address: "addr1",
+					},
+					Amount: &types.Amount{
+						Value: "100",
+					},
+				},
+			},
+			descriptions: &Descriptions{
+				OperationDescriptions: []*OperationDescription{
+					{
+						Account: &AccountDescription{
+							Exists: true,
+						},
+						Amount: &AmountDescription{
+							Exists: true,
+							Sign:   PositiveAmountSign,
+						},
+						AllowRepeats: true,
+					},
+					{ // will never be possible to meet this description
+						Account: &AccountDescription{
+							Exists: true,
+						},
+						Amount: &AmountDescription{
+							Exists: true,
+							Sign:   PositiveAmountSign,
+						},
+						AllowRepeats: true,
+					},
+				},
+			},
+			matches: nil,
+			err:     true,
+		},
+		"complex repeated op": {
+			operations: []*types.Operation{
+				{
+					Account: &types.AccountIdentifier{
+						Address: "addr2",
+					},
+					Amount: &types.Amount{
+						Value: "200",
+					},
+					Type: "output",
+				},
+				{
+					Account: &types.AccountIdentifier{
+						Address: "addr3",
+					},
+					Amount: &types.Amount{
+						Value: "200",
+					},
+					Type: "output",
+				},
+				{
+					Account: &types.AccountIdentifier{
+						Address: "addr1",
+					},
+					Amount: &types.Amount{
+						Value: "-200",
+					},
+					Type: "input",
+				},
+				{
+					Account: &types.AccountIdentifier{
+						Address: "addr4",
+					},
+					Amount: &types.Amount{
+						Value: "-200",
+					},
+					Type: "input",
+				},
+				{
+					Account: &types.AccountIdentifier{
+						Address: "addr5",
+					},
+					Amount: &types.Amount{
+						Value: "-1000",
+					},
+					Type: "runoff",
+				},
+			},
+			descriptions: &Descriptions{
+				OppositeAmounts: [][]int{{0, 1}},
+				OperationDescriptions: []*OperationDescription{
+					{
+						Account: &AccountDescription{
+							Exists: true,
+						},
+						Amount: &AmountDescription{
+							Exists: true,
+							Sign:   PositiveAmountSign,
+						},
+						AllowRepeats: true,
+						Type:         "output",
+					},
+					{
+						Account: &AccountDescription{
+							Exists: true,
+						},
+						Amount: &AmountDescription{
+							Exists: true,
+							Sign:   NegativeAmountSign,
+						},
+						AllowRepeats: true,
+						Type:         "input",
+					},
+					{
+						Account: &AccountDescription{
+							Exists: true,
+						},
+						Amount: &AmountDescription{
+							Exists: true,
+							Sign:   NegativeAmountSign,
+						},
+						AllowRepeats: true,
+					},
+				},
+			},
+			matches: []*Match{
+				{
+					Operations: []*types.Operation{
+						{
+							Account: &types.AccountIdentifier{
+								Address: "addr2",
+							},
+							Amount: &types.Amount{
+								Value: "200",
+							},
+							Type: "output",
+						},
+						{
+							Account: &types.AccountIdentifier{
+								Address: "addr3",
+							},
+							Amount: &types.Amount{
+								Value: "200",
+							},
+							Type: "output",
+						},
+					},
+					Amounts: []*big.Int{
+						big.NewInt(200),
+						big.NewInt(200),
+					},
+				},
+				{
+					Operations: []*types.Operation{
+						{
+							Account: &types.AccountIdentifier{
+								Address: "addr1",
+							},
+							Amount: &types.Amount{
+								Value: "-200",
+							},
+							Type: "input",
+						},
+						{
+							Account: &types.AccountIdentifier{
+								Address: "addr4",
+							},
+							Amount: &types.Amount{
+								Value: "-200",
+							},
+							Type: "input",
+						},
+					},
+					Amounts: []*big.Int{
+						big.NewInt(-200),
+						big.NewInt(-200),
+					},
+				},
+				{
+					Operations: []*types.Operation{
+						{
+							Account: &types.AccountIdentifier{
+								Address: "addr5",
+							},
+							Amount: &types.Amount{
+								Value: "-1000",
+							},
+							Type: "runoff",
+						},
+					},
+					Amounts: []*big.Int{
+						big.NewInt(-1000),
+					},
+				},
+			},
+			err: false,
+		},
 	}
 
 	for name, test := range tests {
@@ -835,6 +1323,91 @@ func TestMatchOperations(t *testing.T) {
 			}
 
 			assert.Equal(t, test.matches, matches)
+		})
+	}
+}
+
+func TestMatch(t *testing.T) {
+	var tests = map[string]struct {
+		m *Match
+
+		op     *types.Operation
+		amount *big.Int
+	}{
+		"nil match": {},
+		"empty match": {
+			m: &Match{},
+		},
+		"single op match": {
+			m: &Match{
+				Operations: []*types.Operation{
+					{
+						OperationIdentifier: &types.OperationIdentifier{
+							Index: 1,
+						},
+					},
+				},
+				Amounts: []*big.Int{
+					big.NewInt(100),
+				},
+			},
+			op: &types.Operation{
+				OperationIdentifier: &types.OperationIdentifier{
+					Index: 1,
+				},
+			},
+			amount: big.NewInt(100),
+		},
+		"multi-op match": {
+			m: &Match{
+				Operations: []*types.Operation{
+					{
+						OperationIdentifier: &types.OperationIdentifier{
+							Index: 1,
+						},
+					},
+					{
+						OperationIdentifier: &types.OperationIdentifier{
+							Index: 2,
+						},
+					},
+				},
+				Amounts: []*big.Int{
+					big.NewInt(100),
+					big.NewInt(200),
+				},
+			},
+			op: &types.Operation{
+				OperationIdentifier: &types.OperationIdentifier{
+					Index: 1,
+				},
+			},
+			amount: big.NewInt(100),
+		},
+		"single op match with nil amount": {
+			m: &Match{
+				Operations: []*types.Operation{
+					{
+						OperationIdentifier: &types.OperationIdentifier{
+							Index: 1,
+						},
+					},
+				},
+				Amounts: []*big.Int{nil},
+			},
+			op: &types.Operation{
+				OperationIdentifier: &types.OperationIdentifier{
+					Index: 1,
+				},
+			},
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			op, amount := test.m.First()
+			assert.Equal(t, test.op, op)
+			assert.Equal(t, test.amount, amount)
 		})
 	}
 }
