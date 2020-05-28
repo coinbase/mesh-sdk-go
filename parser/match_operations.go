@@ -17,6 +17,7 @@ package parser
 import (
 	"errors"
 	"fmt"
+	"math/big"
 	"reflect"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
@@ -105,21 +106,34 @@ type OperationDescription struct {
 	Account  *AccountDescription
 	Amount   *AmountDescription
 	Metadata []*MetadataDescription
+
+	// Type is the operation.Type that must match. If this is left empty,
+	// any type is considered a match.
+	Type string
+
+	// AllowRepeats indicates that multiple operations can be matched
+	// to a particular description.
+	AllowRepeats bool
 }
 
 // Descriptions contains a slice of OperationDescriptions and
 // high-level requirements enforced across multiple *types.Operations.
 type Descriptions struct {
+	OperationDescriptions []*OperationDescription
+
 	// EqualAmounts are specified using the operation indicies of
-	// OperationDescriptions to handle out of order matches.
+	// OperationDescriptions to handle out of order matches. MatchOperations
+	// will error if all groups of operations aren't equal.
 	EqualAmounts [][]int
 
 	// OppositeAmounts are specified using the operation indicies of
-	// OperationDescriptions to handle out of order matches.
+	// OperationDescriptions to handle out of order matches. MatchOperations
+	// will error if all groups of operations aren't opposites.
 	OppositeAmounts [][]int
 
-	RejectExtraOperations bool
-	OperationDescriptions []*OperationDescription
+	// ErrUnmatched indicates that an error should be returned
+	// if all operations cannot be matched to a description.
+	ErrUnmatched bool
 }
 
 // metadataMatch returns an error if a map[string]interface does not meet
@@ -226,28 +240,53 @@ func amountMatch(req *AmountDescription, amount *types.Amount) error {
 func operationMatch(
 	operation *types.Operation,
 	descriptions []*OperationDescription,
-	matches []*types.Operation,
-) {
-	for i, req := range descriptions {
-		if matches[i] != nil { // already matched
+	matches []*Match,
+) bool {
+	for i, des := range descriptions {
+		if matches[i] != nil && !des.AllowRepeats { // already matched
 			continue
 		}
 
-		if err := accountMatch(req.Account, operation.Account); err != nil {
+		if len(des.Type) > 0 && des.Type != operation.Type {
 			continue
 		}
 
-		if err := amountMatch(req.Amount, operation.Amount); err != nil {
+		if err := accountMatch(des.Account, operation.Account); err != nil {
 			continue
 		}
 
-		if err := metadataMatch(req.Metadata, operation.Metadata); err != nil {
+		if err := amountMatch(des.Amount, operation.Amount); err != nil {
 			continue
 		}
 
-		matches[i] = operation
-		return
+		if err := metadataMatch(des.Metadata, operation.Metadata); err != nil {
+			continue
+		}
+
+		if matches[i] == nil {
+			matches[i] = &Match{
+				Operations: []*types.Operation{},
+				Amounts:    []*big.Int{},
+			}
+		}
+
+		if operation.Amount != nil {
+			val, err := types.AmountValue(operation.Amount)
+			if err != nil {
+				continue
+			}
+			matches[i].Amounts = append(matches[i].Amounts, val)
+		} else {
+			matches[i].Amounts = append(matches[i].Amounts, nil)
+		}
+
+		// Wait to add operation to matches in case that we "continue" when
+		// parsing operation.Amount.
+		matches[i].Operations = append(matches[i].Operations, operation)
+		return true
 	}
+
+	return false
 }
 
 // equalAmounts returns an error if a slice of operations do not have
@@ -304,12 +343,18 @@ func oppositeAmounts(a *types.Operation, b *types.Operation) error {
 // have either equal or opposite amounts.
 func comparisonMatch(
 	descriptions *Descriptions,
-	matches []*types.Operation,
+	matches []*Match,
 ) error {
 	for _, amountMatch := range descriptions.EqualAmounts {
-		ops := make([]*types.Operation, len(amountMatch))
-		for j, reqIndex := range amountMatch {
-			ops[j] = matches[reqIndex]
+		ops := []*types.Operation{}
+		for _, reqIndex := range amountMatch {
+			if reqIndex >= len(matches) {
+				return fmt.Errorf(
+					"equal amounts comparison index %d out of range",
+					reqIndex,
+				)
+			}
+			ops = append(ops, matches[reqIndex].Operations...)
 		}
 
 		if err := equalAmounts(ops); err != nil {
@@ -322,15 +367,57 @@ func comparisonMatch(
 			return fmt.Errorf("cannot check opposites of %d operations", len(amountMatch))
 		}
 
-		if err := oppositeAmounts(
-			matches[amountMatch[0]],
-			matches[amountMatch[1]],
-		); err != nil {
-			return fmt.Errorf("%w: amounts not opposites", err)
+		// compare all possible pairs
+		if amountMatch[0] >= len(matches) {
+			return fmt.Errorf(
+				"opposite amounts comparison index %d out of range",
+				amountMatch[0],
+			)
+		}
+		if amountMatch[1] >= len(matches) {
+			return fmt.Errorf(
+				"opposite amounts comparison index %d out of range",
+				amountMatch[1],
+			)
+		}
+		for _, op := range matches[amountMatch[0]].Operations {
+			for _, otherOp := range matches[amountMatch[1]].Operations {
+				if err := oppositeAmounts(
+					op,
+					otherOp,
+				); err != nil {
+					return fmt.Errorf("%w: amounts not opposites", err)
+				}
+			}
 		}
 	}
 
 	return nil
+}
+
+// Match contains all *types.Operation matching a given OperationDescription and
+// their parsed *big.Int amounts (if populated).
+type Match struct {
+	Operations []*types.Operation
+
+	// Amounts has the same length as Operations. If an operation has
+	// a populate Amount, its corresponding *big.Int will be non-nil.
+	Amounts []*big.Int
+}
+
+// First is a convenience method that returns the first matched operation
+// and amount (if they exist). This is used when parsing matches when
+// AllowRepeats is set to false.
+func (m *Match) First() (*types.Operation, *big.Int) {
+	if m == nil {
+		return nil, nil
+	}
+
+	if len(m.Operations) > 0 {
+		return m.Operations[0], m.Amounts[0]
+	}
+
+	return nil, nil
 }
 
 // MatchOperations attempts to match a slice of operations with a slice of
@@ -340,30 +427,27 @@ func comparisonMatch(
 func MatchOperations(
 	descriptions *Descriptions,
 	operations []*types.Operation,
-) ([]*types.Operation, error) {
+) ([]*Match, error) {
 	if len(operations) == 0 {
 		return nil, errors.New("unable to match anything to 0 operations")
 	}
 
 	if len(descriptions.OperationDescriptions) == 0 {
-		return nil, errors.New("unable to match 0 descriptions")
-	}
-
-	if descriptions.RejectExtraOperations &&
-		len(descriptions.OperationDescriptions) != len(operations) {
-		return nil, fmt.Errorf(
-			"expected %d operations, got %d",
-			len(descriptions.OperationDescriptions),
-			len(operations),
-		)
+		return nil, errors.New("no descriptions to match")
 	}
 
 	operationDescriptions := descriptions.OperationDescriptions
-	matches := make([]*types.Operation, len(operationDescriptions))
+	matches := make([]*Match, len(operationDescriptions))
 
 	// Match a *types.Operation to each *OperationDescription
-	for _, op := range operations {
-		operationMatch(op, operationDescriptions, matches)
+	for i, op := range operations {
+		matchFound := operationMatch(op, operationDescriptions, matches)
+		if !matchFound && descriptions.ErrUnmatched {
+			return nil, fmt.Errorf(
+				"unable to find match for operation at index %d",
+				i,
+			)
+		}
 	}
 
 	// Error if any *OperationDescription is not matched
