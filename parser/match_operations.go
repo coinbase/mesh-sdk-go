@@ -270,7 +270,6 @@ func operationMatch(
 			}
 		}
 
-		matches[i].Operations = append(matches[i].Operations, operation)
 		if operation.Amount != nil {
 			val, err := types.AmountValue(operation.Amount)
 			if err != nil {
@@ -280,6 +279,10 @@ func operationMatch(
 		} else {
 			matches[i].Amounts = append(matches[i].Amounts, nil)
 		}
+
+		// Wait to add operation to matches in case that we "continue" when
+		// parsing operation.Amount.
+		matches[i].Operations = append(matches[i].Operations, operation)
 		return true
 	}
 
