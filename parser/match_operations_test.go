@@ -104,6 +104,49 @@ func TestMatchOperations(t *testing.T) {
 			},
 			err: false,
 		},
+		"simple transfer (with missing account error)": {
+			operations: []*types.Operation{
+				{
+					Account: &types.AccountIdentifier{
+						Address: "addr2",
+					},
+					Amount: &types.Amount{
+						Value: "100",
+					},
+				},
+				{
+					Amount: &types.Amount{
+						Value: "-100",
+					},
+				},
+			},
+			descriptions: &Descriptions{
+				OppositeAmounts: [][]int{{0, 1}},
+				EqualAddresses:  [][]int{{0, 1}},
+				OperationDescriptions: []*OperationDescription{
+					{
+						Account: &AccountDescription{
+							Exists: false,
+						},
+						Amount: &AmountDescription{
+							Exists: true,
+							Sign:   NegativeAmountSign,
+						},
+					},
+					{
+						Account: &AccountDescription{
+							Exists: true,
+						},
+						Amount: &AmountDescription{
+							Exists: true,
+							Sign:   PositiveAmountSign,
+						},
+					},
+				},
+			},
+			matches: nil,
+			err:     true,
+		},
 		"simple transfer (check type)": {
 			operations: []*types.Operation{
 				{
