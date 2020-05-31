@@ -498,7 +498,7 @@ func TestMatchOperations(t *testing.T) {
 			matches: nil,
 			err:     true,
 		},
-		"simple transfer (with sender metadata)": {
+		"simple transfer (with sender metadata) and non-equal addresses": {
 			operations: []*types.Operation{
 				{
 					Account: &types.AccountIdentifier{
@@ -526,6 +526,68 @@ func TestMatchOperations(t *testing.T) {
 			},
 			descriptions: &Descriptions{
 				OppositeAmounts: [][]int{{0, 1}},
+				EqualAddresses:  [][]int{{0, 1}},
+				OperationDescriptions: []*OperationDescription{
+					{
+						Account: &AccountDescription{
+							Exists:            true,
+							SubAccountExists:  true,
+							SubAccountAddress: "sub",
+							SubAccountMetadataKeys: []*MetadataDescription{
+								{
+									Key:       "validator",
+									ValueKind: reflect.String,
+								},
+							},
+						},
+						Amount: &AmountDescription{
+							Exists: true,
+							Sign:   NegativeAmountSign,
+						},
+					},
+					{
+						Account: &AccountDescription{
+							Exists: true,
+						},
+						Amount: &AmountDescription{
+							Exists: true,
+							Sign:   PositiveAmountSign,
+						},
+					},
+				},
+			},
+			matches: nil,
+			err:     true,
+		},
+		"simple transfer (with sender metadata)": {
+			operations: []*types.Operation{
+				{
+					Account: &types.AccountIdentifier{
+						Address: "addr1",
+					},
+					Amount: &types.Amount{
+						Value: "100",
+					},
+				},
+				{}, // extra op ignored
+				{
+					Account: &types.AccountIdentifier{
+						Address: "addr1",
+						SubAccount: &types.SubAccountIdentifier{
+							Address: "sub",
+							Metadata: map[string]interface{}{
+								"validator": "10",
+							},
+						},
+					},
+					Amount: &types.Amount{
+						Value: "-100",
+					},
+				},
+			},
+			descriptions: &Descriptions{
+				OppositeAmounts: [][]int{{0, 1}},
+				EqualAddresses:  [][]int{{0, 1}},
 				OperationDescriptions: []*OperationDescription{
 					{
 						Account: &AccountDescription{
@@ -579,7 +641,7 @@ func TestMatchOperations(t *testing.T) {
 					Operations: []*types.Operation{
 						{
 							Account: &types.AccountIdentifier{
-								Address: "addr2",
+								Address: "addr1",
 							},
 							Amount: &types.Amount{
 								Value: "100",

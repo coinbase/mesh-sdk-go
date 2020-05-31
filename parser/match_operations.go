@@ -135,6 +135,11 @@ type Descriptions struct {
 	// will error if all groups of operations aren't opposites.
 	OppositeAmounts [][]int
 
+	// EqualAddresses are specified using the operation indicies of
+	// OperationDescriptions to handle out of order matches. MatchOperations
+	// will error if all groups of operations addresses aren't equal.
+	EqualAddresses [][]int
+
 	// ErrUnmatched indicates that an error should be returned
 	// if all operations cannot be matched to a description.
 	ErrUnmatched bool
@@ -343,6 +348,33 @@ func oppositeAmounts(a *types.Operation, b *types.Operation) error {
 	return nil
 }
 
+// equalAddresses returns an error if a slice of operations do not have
+// equal addresses.
+func equalAddresses(ops []*types.Operation) error {
+	if len(ops) <= 1 {
+		return fmt.Errorf("cannot check equality of %d operations", len(ops))
+	}
+
+	base := ""
+
+	for _, op := range ops {
+		if op.Account == nil {
+			return fmt.Errorf("account is nil")
+		}
+
+		if len(base) == 0 {
+			base = op.Account.Address
+			continue
+		}
+
+		if base != op.Account.Address {
+			return fmt.Errorf("%s is not equal to %s", base, op.Account.Address)
+		}
+	}
+
+	return nil
+}
+
 func matchIndexValid(matches []*Match, index int) error {
 	if index >= len(matches) {
 		return fmt.Errorf(
@@ -378,6 +410,21 @@ func comparisonMatch(
 
 		if err := equalAmounts(ops); err != nil {
 			return fmt.Errorf("%w: operations not equal", err)
+		}
+	}
+
+	for _, addressMatch := range descriptions.EqualAddresses {
+		ops := []*types.Operation{}
+		for _, reqIndex := range addressMatch {
+			if err := matchIndexValid(matches, reqIndex); err != nil {
+				return fmt.Errorf("%w: equal addresses comparison error", err)
+			}
+
+			ops = append(ops, matches[reqIndex].Operations...)
+		}
+
+		if err := equalAddresses(ops); err != nil {
+			return fmt.Errorf("%w: addresses not equal", err)
 		}
 	}
 
