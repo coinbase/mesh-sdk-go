@@ -392,40 +392,37 @@ func matchIndexValid(matches []*Match, index int) error {
 	return nil
 }
 
+func checkOps(requests [][]int, matches []*Match, valid func([]*types.Operation) error) error {
+	for _, batch := range requests {
+		ops := []*types.Operation{}
+		for _, reqIndex := range batch {
+			if err := matchIndexValid(matches, reqIndex); err != nil {
+				return fmt.Errorf("%w: index %d not valid", err, reqIndex)
+			}
+
+			ops = append(ops, matches[reqIndex].Operations...)
+		}
+
+		if err := valid(ops); err != nil {
+			return fmt.Errorf("%w operations not valid", err)
+		}
+	}
+
+	return nil
+}
+
 // comparisonMatch ensures collections of *types.Operations
 // have either equal or opposite amounts.
 func comparisonMatch(
 	descriptions *Descriptions,
 	matches []*Match,
 ) error {
-	for _, amountMatch := range descriptions.EqualAmounts {
-		ops := []*types.Operation{}
-		for _, reqIndex := range amountMatch {
-			if err := matchIndexValid(matches, reqIndex); err != nil {
-				return fmt.Errorf("%w: equal amounts comparison error", err)
-			}
-
-			ops = append(ops, matches[reqIndex].Operations...)
-		}
-
-		if err := equalAmounts(ops); err != nil {
-			return fmt.Errorf("%w: operations not equal", err)
-		}
+	if err := checkOps(descriptions.EqualAmounts, matches, equalAmounts); err != nil {
+		return fmt.Errorf("%w: operation amounts not equal", err)
 	}
 
-	for _, addressMatch := range descriptions.EqualAddresses {
-		ops := []*types.Operation{}
-		for _, reqIndex := range addressMatch {
-			if err := matchIndexValid(matches, reqIndex); err != nil {
-				return fmt.Errorf("%w: equal addresses comparison error", err)
-			}
-
-			ops = append(ops, matches[reqIndex].Operations...)
-		}
-
-		if err := equalAddresses(ops); err != nil {
-			return fmt.Errorf("%w: addresses not equal", err)
-		}
+	if err := checkOps(descriptions.EqualAddresses, matches, equalAddresses); err != nil {
+		return fmt.Errorf("%w: operation addresses not equal", err)
 	}
 
 	for _, amountMatch := range descriptions.OppositeAmounts {
