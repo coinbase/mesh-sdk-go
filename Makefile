@@ -45,8 +45,7 @@ test:
 	${TEST_SCRIPT}
 
 test-cover:	
-	${TEST_SCRIPT} -coverprofile=c.out -covermode=count
-	${GOVERALLS_CMD} -coverprofile=c.out -repotoken ${COVERALLS_TOKEN}
+	if [ "${COVERALLS_TOKEN}" ]; then ${TEST_SCRIPT} -coverprofile=c.out -covermode=count; ${GOVERALLS_CMD} -coverprofile=c.out -repotoken ${COVERALLS_TOKEN}; fi
 
 add-license:
 	${ADDLICENCE_SCRIPT} .
