@@ -8,6 +8,6 @@ require (
 	github.com/gorilla/mux v1.7.4
 	github.com/mitchellh/mapstructure v1.3.1
 	github.com/segmentio/golines v0.0.0-20200306054842-869934f8da7b // indirect
-	github.com/stretchr/testify v1.5.1
+	github.com/stretchr/testify v1.6.0
 	golang.org/x/sync v0.0.0-20200317015054-43a5402ce75a
 )
