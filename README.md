@@ -1,27 +1,38 @@
-# rosetta-sdk-go
+<p align="center">
+  <a href="https://www.rosetta-api.org">
+    <img height="400" alt="Rosetta" src="https://www.rosetta-api.org/img/rosetta_header.png">
+  </a>
+</p>
+<h3 align="center">
+   Rosetta SDK
+</h3>
+<p align="center">
+Go SDK to create and interact with Rosetta API implementations
+</p>
+<p align="center">
+  <a href="https://circleci.com/gh/coinbase/rosetta-sdk-go/tree/master"><img src="https://circleci.com/gh/coinbase/rosetta-sdk-go/tree/master.svg?style=shield" /></a>
+  <a href="https://coveralls.io/github/coinbase/rosetta-sdk-go"><img src="https://coveralls.io/repos/github/coinbase/rosetta-sdk-go/badge.svg" /></a>
+  <a href="https://goreportcard.com/report/github.com/coinbase/rosetta-sdk-go"><img src="https://goreportcard.com/badge/github.com/coinbase/rosetta-sdk-go" /></a>
+  <a href="https://github.com/coinbase/rosetta-sdk-go/blob/master/LICENSE.txt"><img src="https://img.shields.io/github/license/coinbase/rosetta-sdk-go.svg" /></a>
+  <a href="https://pkg.go.dev/github.com/coinbase/rosetta-sdk-go?tab=overview"><img src="https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=shield" /></a>
+</p>
 
-[![Coinbase](https://circleci.com/gh/coinbase/rosetta-sdk-go/tree/master.svg?style=shield)](https://circleci.com/gh/coinbase/rosetta-sdk-go/tree/master)
-[![Coverage Status](https://coveralls.io/repos/github/coinbase/rosetta-sdk-go/badge.svg)](https://coveralls.io/github/coinbase/rosetta-sdk-go)
-[![Go Report Card](https://goreportcard.com/badge/github.com/coinbase/rosetta-sdk-go)](https://goreportcard.com/report/github.com/coinbase/rosetta-sdk-go)
-[![License](https://img.shields.io/github/license/coinbase/rosetta-sdk-go.svg)](https://github.com/coinbase/rosetta-sdk-go/blob/master/LICENSE.txt)
-[![GoDoc](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=shield)](https://pkg.go.dev/github.com/coinbase/rosetta-sdk-go?tab=overview)
+## Overview
+The `rosetta-sdk-go` provides a collection of packages used for interaction
+with the Rosetta API specification. Much of the code in this repository is
+generated from the [rosetta-specifications](https://github.com/coinbase/rosetta-specifications).
 
-## What is Rosetta?
-Rosetta is a new project to standardize the process
-of deploying and interacting with blockchains. With an explicit
-specification to adhere to, all parties involved in blockchain
-development can spend less time figuring out how to integrate
-with each other and more time working on the novel advances that
-will push the blockchain ecosystem forward. In practice, this means
-that any blockchain project that implements the requirements outlined
-in this specification will enable exchanges, block explorers,
-and wallets to integrate with much less communication overhead
-and network-specific work.
+## Documentation
+Before diving into the SDK, we recommend taking a look at the Rosetta API Docs:
+
+* [Overview](https://www.rosetta-api.org/docs/welcome.html)
+* [Node API](https://www.rosetta-api.org/docs/node_api_introduction.html)
+* [Wallet API (coming soon!)](https://www.rosetta-api.org/docs/wallet_api_introduction.html)
 
 ## Packages
 * [Types](types): Auto-generated Rosetta types
 * [Client](client): Low-level communication with any Rosetta server
-* [Server](server): Simplified Rosetta server development
+* [Server](server): Simplified Rosetta Node API server development
 * [Asserter](asserter): Validation of Rosetta types
 * [Fetcher](fetcher): Simplified and validated communication with
 any Rosetta server
