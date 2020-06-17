@@ -4,10 +4,10 @@
   </a>
 </p>
 <h3 align="center">
-   Rosetta SDK Go
+   Rosetta SDK
 </h3>
 <p align="center">
-Go SDK to interact with the Rosetta API
+Go SDK to create and interact with Rosetta API implementations
 </p>
 <p align="center">
   <a href="https://circleci.com/gh/coinbase/rosetta-sdk-go/tree/master"><img src="https://circleci.com/gh/coinbase/rosetta-sdk-go/tree/master.svg?style=shield" /></a>
@@ -32,7 +32,7 @@ Before diving into the SDK, we recommend taking a look at the Rosetta API Docs:
 ## Packages
 * [Types](types): Auto-generated Rosetta types
 * [Client](client): Low-level communication with any Rosetta server
-* [Server](server): Simplified Rosetta server development
+* [Server](server): Simplified Rosetta Node API server development
 * [Asserter](asserter): Validation of Rosetta types
 * [Fetcher](fetcher): Simplified and validated communication with
 any Rosetta server
