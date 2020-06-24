@@ -68,7 +68,17 @@ func verifyEd25519(pubKey, decodedMessage, decodedSignature []byte) bool {
 }
 
 func verifySecp256k1(pubKey, decodedMessage, decodedSignature []byte) (bool, error) {
-	return secp256k1.VerifySignature(pubKey, decodedMessage, decodedSignature), nil
+	var normalizedSig []byte
+	switch len(decodedSignature) {
+	case 65:
+		normalizedSig = decodedSignature[:64]
+	case 64:
+		normalizedSig = decodedSignature
+	default:
+		return false, fmt.Errorf("signature length %d is invalid", len(decodedSignature))
+	}
+
+	return secp256k1.VerifySignature(pubKey, decodedMessage, normalizedSig), nil
 }
 
 func Verify(signature *Signature) (bool, error) {
