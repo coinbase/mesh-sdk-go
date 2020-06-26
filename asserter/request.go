@@ -189,24 +189,6 @@ func (a *Asserter) ConstructionSubmitRequest(request *types.ConstructionSubmitRe
 	return nil
 }
 
-// MempoolRequest ensures that a types.MempoolRequest
-// is well-formatted.
-func (a *Asserter) MempoolRequest(request *types.MempoolRequest) error {
-	if a == nil {
-		return ErrAsserterNotInitialized
-	}
-
-	if request == nil {
-		return errors.New("MempoolRequest is nil")
-	}
-
-	if err := NetworkIdentifier(request.NetworkIdentifier); err != nil {
-		return err
-	}
-
-	return a.SupportedNetwork(request.NetworkIdentifier)
-}
-
 // MempoolTransactionRequest ensures that a types.MempoolTransactionRequest
 // is well-formatted.
 func (a *Asserter) MempoolTransactionRequest(request *types.MempoolTransactionRequest) error {
@@ -263,4 +245,66 @@ func (a *Asserter) NetworkRequest(request *types.NetworkRequest) error {
 	}
 
 	return nil
+}
+
+// ConstructionDeriveRequest ensures that a types.ConstructionDeriveRequest
+// is well-formatted.
+func (a *Asserter) ConstructionDeriveRequest(request *types.ConstructionDeriveRequest) error {
+	if a == nil {
+		return ErrAsserterNotInitialized
+	}
+
+	return errors.New("not implemented")
+}
+
+// ConstructionPreprocessRequest ensures that a types.ConstructionPreprocessRequest
+// is well-formatted.
+func (a *Asserter) ConstructionPreprocessRequest(
+	request *types.ConstructionPreprocessRequest,
+) error {
+	if a == nil {
+		return ErrAsserterNotInitialized
+	}
+
+	return errors.New("not implemented")
+}
+
+// ConstructionPayloadsRequest ensures that a types.ConstructionPayloadsRequest
+// is well-formatted.
+func (a *Asserter) ConstructionPayloadsRequest(request *types.ConstructionPayloadsRequest) error {
+	if a == nil {
+		return ErrAsserterNotInitialized
+	}
+
+	return errors.New("not implemented")
+}
+
+// ConstructionCombineRequest ensures that a types.ConstructionCombineRequest
+// is well-formatted.
+func (a *Asserter) ConstructionCombineRequest(request *types.ConstructionCombineRequest) error {
+	if a == nil {
+		return ErrAsserterNotInitialized
+	}
+
+	return errors.New("not implemented")
+}
+
+// ConstructionHashRequest ensures that a types.ConstructionHashRequest
+// is well-formatted.
+func (a *Asserter) ConstructionHashRequest(request *types.ConstructionHashRequest) error {
+	if a == nil {
+		return ErrAsserterNotInitialized
+	}
+
+	return errors.New("not implemented")
+}
+
+// ConstructionParseRequest ensures that a types.ConstructionParseRequest
+// is well-formatted.
+func (a *Asserter) ConstructionParseRequest(request *types.ConstructionParseRequest) error {
+	if a == nil {
+		return ErrAsserterNotInitialized
+	}
+
+	return errors.New("not implemented")
 }

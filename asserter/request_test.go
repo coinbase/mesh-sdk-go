@@ -376,45 +376,6 @@ func TestConstructionSubmitRequest(t *testing.T) {
 	}
 }
 
-func TestMempoolRequest(t *testing.T) {
-	var tests = map[string]struct {
-		request *types.MempoolRequest
-		err     error
-	}{
-		"valid request": {
-			request: &types.MempoolRequest{
-				NetworkIdentifier: validNetworkIdentifier,
-			},
-			err: nil,
-		},
-		"invalid request wrong network": {
-			request: &types.MempoolRequest{
-				NetworkIdentifier: wrongNetworkIdentifier,
-			},
-			err: fmt.Errorf("%+v is not supported", wrongNetworkIdentifier),
-		},
-		"nil request": {
-			request: nil,
-			err:     errors.New("MempoolRequest is nil"),
-		},
-		"empty tx": {
-			request: &types.MempoolRequest{},
-			err:     errors.New("NetworkIdentifier is nil"),
-		},
-	}
-
-	for name, test := range tests {
-		t.Run(name, func(t *testing.T) {
-			a, err := NewServer([]*types.NetworkIdentifier{validNetworkIdentifier})
-			assert.NoError(t, err)
-			assert.NotNil(t, a)
-
-			err = a.MempoolRequest(test.request)
-			assert.Equal(t, test.err, err)
-		})
-	}
-}
-
 func TestMempoolTransactionRequest(t *testing.T) {
 	var tests = map[string]struct {
 		request *types.MempoolTransactionRequest
