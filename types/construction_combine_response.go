@@ -16,12 +16,8 @@
 
 package types
 
-// Transaction Transactions contain an array of Operations that are attributable to the same
-// TransactionIdentifier.
-type Transaction struct {
-	TransactionIdentifier *TransactionIdentifier `json:"transaction_identifier"`
-	Operations            []*Operation           `json:"operations"`
-	// Transactions that are related to other transactions (like a cross-shard transaction) should
-	// include the tranaction_identifier of these transactions in the metadata.
-	Metadata map[string]interface{} `json:"metadata,omitempty"`
+// ConstructionCombineResponse ConstructionCombineResponse is returned by `/construction/combine`.
+// The network payload will be sent directly to the `construction/submit` endpoint.
+type ConstructionCombineResponse struct {
+	SignedTransaction string `json:"signed_transaction"`
 }

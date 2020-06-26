@@ -16,12 +16,12 @@
 
 package types
 
-// Transaction Transactions contain an array of Operations that are attributable to the same
-// TransactionIdentifier.
-type Transaction struct {
-	TransactionIdentifier *TransactionIdentifier `json:"transaction_identifier"`
-	Operations            []*Operation           `json:"operations"`
-	// Transactions that are related to other transactions (like a cross-shard transaction) should
-	// include the tranaction_identifier of these transactions in the metadata.
+// ConstructionParseResponse ConstructionParseResponse contains an array of operations that occur in
+// a transaction blob. This should match the array of operations provided to
+// `/construction/preprocess` and `/construction/payloads`.
+type ConstructionParseResponse struct {
+	Operations []*Operation `json:"operations"`
+	// All signers of a particular transaction. If the transaction is unsigned, it should be empty.
+	Signers  []string               `json:"signers"`
 	Metadata map[string]interface{} `json:"metadata,omitempty"`
 }
