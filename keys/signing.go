@@ -4,7 +4,7 @@ import (
 	"crypto/ed25519"
 	"encoding/hex"
 	"fmt"
-
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/crypto/secp256k1"
 )
 
@@ -81,10 +81,10 @@ func verifyECDSA(pubKey, decodedMessage, decodedSignature []byte) (bool, error) 
 	var normalizedSig []byte
 	switch len(decodedSignature) {
 	// ECDSA-PubkeyRecovery Signature
-	case 65:
+	case crypto.SignatureLength:
 		normalizedSig = decodedSignature[:64]
 	// Regular ECDSA Signature
-	case 64:
+	case crypto.RecoveryIDOffset:
 		normalizedSig = decodedSignature
 	default:
 		return false, fmt.Errorf("signature length %d is invalid", len(decodedSignature))

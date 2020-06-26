@@ -27,7 +27,7 @@ type KeyPair struct {
 // SigningPayload is signed by the client with the keypair associated
 // with an address using the specified SignatureType.
 type SigningPayload struct {
-	Address       string // in network-specific format (often times it is not possible to determine the public key from the address a priori)
+	Address       string // in network-specific format
 	PayloadHex    string
 	SignatureType SignatureType
 }
@@ -48,31 +48,31 @@ type Signature struct {
 
 const (
 	// Curves
-	SECP256K1_CURVE    = "secp256k1"    // public key is SEC compressed 33-bytes
-	EDWARDS25519_CURVE = "edwards25519" // public key is y (255-bits) || x-sign-bit (32-bytes)
+	Secp256k1Curve    = "secp256k1"    // public key is SEC compressed 33-bytes
+	Edwards25519Curve = "edwards25519" // public key is y (255-bits) || x-sign-bit (32-bytes)
 
 	// Signatures
-	ECDSA_SIGNATURE                 = "ecdsa"                 // r (32-bytes) || s (32-bytes)
-	ECDSA_PUBKEY_RECOVERY_SIGNATURE = "ecdsa_pubkey_recovery" // r (32-bytes) || s (32-bytes) || v (1-byte)
-	ED25519_SIGNATURE               = "ed25519"               // R (32-byte) || s (32-bytes)
+	EcdsaSignature               = "ecdsa"                 // r (32-bytes) || s (32-bytes)
+	EcdsaPubkeyRecoverySignature = "ecdsa_pubkey_recovery" // r (32-bytes) || s (32-bytes) || v (1-byte)
+	Ed25519Signature             = "ed25519"               // R (32-byte) || s (32-bytes)
 )
 
 func (c CurveType) IsEdwards25519() bool {
-	return c == EDWARDS25519_CURVE
+	return c == Edwards25519Curve
 }
 
 func (c CurveType) IsSecp256k1() bool {
-	return c == SECP256K1_CURVE
+	return c == Secp256k1Curve
 }
 
 func (s SignatureType) IsEcdsa() bool {
-	return s == ECDSA_SIGNATURE
+	return s == EcdsaSignature
 }
 
 func (s SignatureType) IsEcdsaPubkeyRecovery() bool {
-	return s == ECDSA_PUBKEY_RECOVERY_SIGNATURE
+	return s == EcdsaPubkeyRecoverySignature
 }
 
 func (s SignatureType) IsEd25519() bool {
-	return s == ED25519_SIGNATURE
+	return s == Ed25519Signature
 }

@@ -13,11 +13,11 @@ func hashAndHexEncode(message string) string {
 }
 
 func TestSignEd25519(t *testing.T) {
-	curve := CurveType(EDWARDS25519_CURVE)
+	curve := CurveType(Edwards25519Curve)
 	keypair, err := GenerateKeypair(curve)
 	assert.NoError(t, err)
 
-	signatureType := SignatureType(ED25519_SIGNATURE)
+	signatureType := SignatureType(Ed25519Signature)
 	payload := &SigningPayload{
 		Address:       "test",
 		PayloadHex:    "68656C6C6F0D0A",
@@ -33,11 +33,11 @@ func TestSignEd25519(t *testing.T) {
 }
 
 func TestSignSecp256k1EcdsaRecovery(t *testing.T) {
-	curve := CurveType(SECP256K1_CURVE)
+	curve := CurveType(Secp256k1Curve)
 	keypair, err := GenerateKeypair(curve)
 	assert.NoError(t, err)
 
-	signatureType := SignatureType(ECDSA_PUBKEY_RECOVERY_SIGNATURE)
+	signatureType := SignatureType(EcdsaPubkeyRecoverySignature)
 
 	payload := &SigningPayload{
 		Address:       "test",
@@ -54,11 +54,11 @@ func TestSignSecp256k1EcdsaRecovery(t *testing.T) {
 }
 
 func TestSignSecp256k1Ecdsa(t *testing.T) {
-	curve := CurveType(SECP256K1_CURVE)
+	curve := CurveType(Secp256k1Curve)
 	keypair, err := GenerateKeypair(curve)
 	assert.NoError(t, err)
 
-	signatureType := SignatureType(ECDSA_SIGNATURE)
+	signatureType := SignatureType(EcdsaSignature)
 
 	payload := &SigningPayload{
 		Address:       "test",
@@ -75,9 +75,9 @@ func TestSignSecp256k1Ecdsa(t *testing.T) {
 }
 
 func TestSignInvalidPayloadEcdsa(t *testing.T) {
-	curve := CurveType(SECP256K1_CURVE)
-	keypair, err := GenerateKeypair(curve)
-	signatureType := SignatureType(ECDSA_SIGNATURE)
+	curve := CurveType(Secp256k1Curve)
+	keypair, _ := GenerateKeypair(curve)
+	signatureType := SignatureType(EcdsaSignature)
 
 	invalidPayload := make([]byte, 33)
 
@@ -87,7 +87,7 @@ func TestSignInvalidPayloadEcdsa(t *testing.T) {
 		SignatureType: signatureType,
 	}
 
-	_, err = SignPayload(payload, keypair)
+	_, err := SignPayload(payload, keypair)
 	errorMsg := err.Error()
 	assert.Contains(t, errorMsg, "unable to sign. invalid message length, need 32 bytes")
 }

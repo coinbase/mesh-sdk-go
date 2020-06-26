@@ -71,17 +71,17 @@ func (k KeyPair) IsValid() (bool, error) {
 	}
 
 	// Secp256k1 Pubkeys are 33-bytes
-	if pkCurve.IsSecp256k1() && len(pk) != 33 {
+	if pkCurve.IsSecp256k1() && len(pk) != btcec.PubKeyBytesLenCompressed {
 		return false, fmt.Errorf("invalid pubkey length %v", len(pk))
 	}
 
 	// Ed25519 pubkeys are 32-bytes
-	if pkCurve.IsEdwards25519() && len(pk) != 32 {
+	if pkCurve.IsEdwards25519() && len(pk) != ed25519.PublicKeySize {
 		return false, fmt.Errorf("invalid pubkey length %v", len(pk))
 	}
 
 	// All privkeys are 32-bytes
-	if len(sk) != 32 {
+	if len(sk) != btcec.PrivKeyBytesLen {
 		return false, fmt.Errorf("invalid privkey length %v", len(sk))
 	}
 
