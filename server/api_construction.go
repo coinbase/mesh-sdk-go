@@ -47,10 +47,46 @@ func NewConstructionAPIController(
 func (c *ConstructionAPIController) Routes() Routes {
 	return Routes{
 		{
+			"ConstructionCombine",
+			strings.ToUpper("Post"),
+			"/construction/combine",
+			c.ConstructionCombine,
+		},
+		{
+			"ConstructionDerive",
+			strings.ToUpper("Post"),
+			"/construction/derive",
+			c.ConstructionDerive,
+		},
+		{
+			"ConstructionHash",
+			strings.ToUpper("Post"),
+			"/construction/hash",
+			c.ConstructionHash,
+		},
+		{
 			"ConstructionMetadata",
 			strings.ToUpper("Post"),
 			"/construction/metadata",
 			c.ConstructionMetadata,
+		},
+		{
+			"ConstructionParse",
+			strings.ToUpper("Post"),
+			"/construction/parse",
+			c.ConstructionParse,
+		},
+		{
+			"ConstructionPayloads",
+			strings.ToUpper("Post"),
+			"/construction/payloads",
+			c.ConstructionPayloads,
+		},
+		{
+			"ConstructionPreprocess",
+			strings.ToUpper("Post"),
+			"/construction/preprocess",
+			c.ConstructionPreprocess,
 		},
 		{
 			"ConstructionSubmit",
@@ -61,7 +97,97 @@ func (c *ConstructionAPIController) Routes() Routes {
 	}
 }
 
-// ConstructionMetadata - Get Transaction Construction Metadata
+// ConstructionCombine - Create Network Transaction from Signatures
+func (c *ConstructionAPIController) ConstructionCombine(w http.ResponseWriter, r *http.Request) {
+	constructionCombineRequest := &types.ConstructionCombineRequest{}
+	if err := json.NewDecoder(r.Body).Decode(&constructionCombineRequest); err != nil {
+		EncodeJSONResponse(&types.Error{
+			Message: err.Error(),
+		}, http.StatusInternalServerError, w)
+
+		return
+	}
+
+	// Assert that ConstructionCombineRequest is correct
+	if err := c.asserter.ConstructionCombineRequest(constructionCombineRequest); err != nil {
+		EncodeJSONResponse(&types.Error{
+			Message: err.Error(),
+		}, http.StatusInternalServerError, w)
+
+		return
+	}
+
+	result, serviceErr := c.service.ConstructionCombine(r.Context(), constructionCombineRequest)
+	if serviceErr != nil {
+		EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
+
+		return
+	}
+
+	EncodeJSONResponse(result, http.StatusOK, w)
+}
+
+// ConstructionDerive - Derive an Address from a PublicKey
+func (c *ConstructionAPIController) ConstructionDerive(w http.ResponseWriter, r *http.Request) {
+	constructionDeriveRequest := &types.ConstructionDeriveRequest{}
+	if err := json.NewDecoder(r.Body).Decode(&constructionDeriveRequest); err != nil {
+		EncodeJSONResponse(&types.Error{
+			Message: err.Error(),
+		}, http.StatusInternalServerError, w)
+
+		return
+	}
+
+	// Assert that ConstructionDeriveRequest is correct
+	if err := c.asserter.ConstructionDeriveRequest(constructionDeriveRequest); err != nil {
+		EncodeJSONResponse(&types.Error{
+			Message: err.Error(),
+		}, http.StatusInternalServerError, w)
+
+		return
+	}
+
+	result, serviceErr := c.service.ConstructionDerive(r.Context(), constructionDeriveRequest)
+	if serviceErr != nil {
+		EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
+
+		return
+	}
+
+	EncodeJSONResponse(result, http.StatusOK, w)
+}
+
+// ConstructionHash - Get the Hash of a Signed Transaction
+func (c *ConstructionAPIController) ConstructionHash(w http.ResponseWriter, r *http.Request) {
+	constructionHashRequest := &types.ConstructionHashRequest{}
+	if err := json.NewDecoder(r.Body).Decode(&constructionHashRequest); err != nil {
+		EncodeJSONResponse(&types.Error{
+			Message: err.Error(),
+		}, http.StatusInternalServerError, w)
+
+		return
+	}
+
+	// Assert that ConstructionHashRequest is correct
+	if err := c.asserter.ConstructionHashRequest(constructionHashRequest); err != nil {
+		EncodeJSONResponse(&types.Error{
+			Message: err.Error(),
+		}, http.StatusInternalServerError, w)
+
+		return
+	}
+
+	result, serviceErr := c.service.ConstructionHash(r.Context(), constructionHashRequest)
+	if serviceErr != nil {
+		EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
+
+		return
+	}
+
+	EncodeJSONResponse(result, http.StatusOK, w)
+}
+
+// ConstructionMetadata - Get Metadata for Transaction Construction
 func (c *ConstructionAPIController) ConstructionMetadata(w http.ResponseWriter, r *http.Request) {
 	constructionMetadataRequest := &types.ConstructionMetadataRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&constructionMetadataRequest); err != nil {
@@ -82,6 +208,99 @@ func (c *ConstructionAPIController) ConstructionMetadata(w http.ResponseWriter, 
 	}
 
 	result, serviceErr := c.service.ConstructionMetadata(r.Context(), constructionMetadataRequest)
+	if serviceErr != nil {
+		EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
+
+		return
+	}
+
+	EncodeJSONResponse(result, http.StatusOK, w)
+}
+
+// ConstructionParse - Parse a Transaction
+func (c *ConstructionAPIController) ConstructionParse(w http.ResponseWriter, r *http.Request) {
+	constructionParseRequest := &types.ConstructionParseRequest{}
+	if err := json.NewDecoder(r.Body).Decode(&constructionParseRequest); err != nil {
+		EncodeJSONResponse(&types.Error{
+			Message: err.Error(),
+		}, http.StatusInternalServerError, w)
+
+		return
+	}
+
+	// Assert that ConstructionParseRequest is correct
+	if err := c.asserter.ConstructionParseRequest(constructionParseRequest); err != nil {
+		EncodeJSONResponse(&types.Error{
+			Message: err.Error(),
+		}, http.StatusInternalServerError, w)
+
+		return
+	}
+
+	result, serviceErr := c.service.ConstructionParse(r.Context(), constructionParseRequest)
+	if serviceErr != nil {
+		EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
+
+		return
+	}
+
+	EncodeJSONResponse(result, http.StatusOK, w)
+}
+
+// ConstructionPayloads - Generate an Unsigned Transaction and Signing Payloads
+func (c *ConstructionAPIController) ConstructionPayloads(w http.ResponseWriter, r *http.Request) {
+	constructionPayloadsRequest := &types.ConstructionPayloadsRequest{}
+	if err := json.NewDecoder(r.Body).Decode(&constructionPayloadsRequest); err != nil {
+		EncodeJSONResponse(&types.Error{
+			Message: err.Error(),
+		}, http.StatusInternalServerError, w)
+
+		return
+	}
+
+	// Assert that ConstructionPayloadsRequest is correct
+	if err := c.asserter.ConstructionPayloadsRequest(constructionPayloadsRequest); err != nil {
+		EncodeJSONResponse(&types.Error{
+			Message: err.Error(),
+		}, http.StatusInternalServerError, w)
+
+		return
+	}
+
+	result, serviceErr := c.service.ConstructionPayloads(r.Context(), constructionPayloadsRequest)
+	if serviceErr != nil {
+		EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
+
+		return
+	}
+
+	EncodeJSONResponse(result, http.StatusOK, w)
+}
+
+// ConstructionPreprocess - Create a Request to Fetch Metadata
+func (c *ConstructionAPIController) ConstructionPreprocess(w http.ResponseWriter, r *http.Request) {
+	constructionPreprocessRequest := &types.ConstructionPreprocessRequest{}
+	if err := json.NewDecoder(r.Body).Decode(&constructionPreprocessRequest); err != nil {
+		EncodeJSONResponse(&types.Error{
+			Message: err.Error(),
+		}, http.StatusInternalServerError, w)
+
+		return
+	}
+
+	// Assert that ConstructionPreprocessRequest is correct
+	if err := c.asserter.ConstructionPreprocessRequest(constructionPreprocessRequest); err != nil {
+		EncodeJSONResponse(&types.Error{
+			Message: err.Error(),
+		}, http.StatusInternalServerError, w)
+
+		return
+	}
+
+	result, serviceErr := c.service.ConstructionPreprocess(
+		r.Context(),
+		constructionPreprocessRequest,
+	)
 	if serviceErr != nil {
 		EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
 

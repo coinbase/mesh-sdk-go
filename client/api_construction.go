@@ -33,16 +33,222 @@ var (
 // ConstructionAPIService ConstructionAPI service
 type ConstructionAPIService service
 
+// ConstructionCombine Combine creates a network-specific transaction from an unsigned transaction
+// and an array of provided signatures. The signed transaction returned from this method will be
+// sent to the /construction/submit endpoint by the caller.
+func (a *ConstructionAPIService) ConstructionCombine(
+	ctx _context.Context,
+	constructionCombineRequest *types.ConstructionCombineRequest,
+) (*types.ConstructionCombineResponse, *types.Error, error) {
+	var (
+		localVarPostBody interface{}
+	)
+
+	// create path and map variables
+	localVarPath := a.client.cfg.BasePath + "/construction/combine"
+	localVarHeaderParams := make(map[string]string)
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{"application/json"}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	// body params
+	localVarPostBody = constructionCombineRequest
+
+	r, err := a.client.prepareRequest(ctx, localVarPath, localVarPostBody, localVarHeaderParams)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(ctx, r)
+	if err != nil || localVarHTTPResponse == nil {
+		return nil, nil, err
+	}
+
+	localVarBody, err := _ioutil.ReadAll(localVarHTTPResponse.Body)
+	defer localVarHTTPResponse.Body.Close()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if localVarHTTPResponse.StatusCode != _nethttp.StatusOK {
+		var v types.Error
+		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+		if err != nil {
+			return nil, nil, err
+		}
+
+		return nil, &v, fmt.Errorf("%+v", v)
+	}
+
+	var v types.ConstructionCombineResponse
+	err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return &v, nil, nil
+}
+
+// ConstructionDerive Derive returns the network-specific address associated with a public key.
+// Blockchains that require an on-chain action to create an account should not implement this
+// method.
+func (a *ConstructionAPIService) ConstructionDerive(
+	ctx _context.Context,
+	constructionDeriveRequest *types.ConstructionDeriveRequest,
+) (*types.ConstructionDeriveResponse, *types.Error, error) {
+	var (
+		localVarPostBody interface{}
+	)
+
+	// create path and map variables
+	localVarPath := a.client.cfg.BasePath + "/construction/derive"
+	localVarHeaderParams := make(map[string]string)
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{"application/json"}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	// body params
+	localVarPostBody = constructionDeriveRequest
+
+	r, err := a.client.prepareRequest(ctx, localVarPath, localVarPostBody, localVarHeaderParams)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(ctx, r)
+	if err != nil || localVarHTTPResponse == nil {
+		return nil, nil, err
+	}
+
+	localVarBody, err := _ioutil.ReadAll(localVarHTTPResponse.Body)
+	defer localVarHTTPResponse.Body.Close()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if localVarHTTPResponse.StatusCode != _nethttp.StatusOK {
+		var v types.Error
+		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+		if err != nil {
+			return nil, nil, err
+		}
+
+		return nil, &v, fmt.Errorf("%+v", v)
+	}
+
+	var v types.ConstructionDeriveResponse
+	err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return &v, nil, nil
+}
+
+// ConstructionHash TransactionHash returns the network-specific transaction hash for a signed
+// transaction.
+func (a *ConstructionAPIService) ConstructionHash(
+	ctx _context.Context,
+	constructionHashRequest *types.ConstructionHashRequest,
+) (*types.ConstructionHashResponse, *types.Error, error) {
+	var (
+		localVarPostBody interface{}
+	)
+
+	// create path and map variables
+	localVarPath := a.client.cfg.BasePath + "/construction/hash"
+	localVarHeaderParams := make(map[string]string)
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{"application/json"}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	// body params
+	localVarPostBody = constructionHashRequest
+
+	r, err := a.client.prepareRequest(ctx, localVarPath, localVarPostBody, localVarHeaderParams)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(ctx, r)
+	if err != nil || localVarHTTPResponse == nil {
+		return nil, nil, err
+	}
+
+	localVarBody, err := _ioutil.ReadAll(localVarHTTPResponse.Body)
+	defer localVarHTTPResponse.Body.Close()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if localVarHTTPResponse.StatusCode != _nethttp.StatusOK {
+		var v types.Error
+		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+		if err != nil {
+			return nil, nil, err
+		}
+
+		return nil, &v, fmt.Errorf("%+v", v)
+	}
+
+	var v types.ConstructionHashResponse
+	err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return &v, nil, nil
+}
+
 // ConstructionMetadata Get any information required to construct a transaction for a specific
 // network. Metadata returned here could be a recent hash to use, an account sequence number, or
-// even arbitrary chain state. It is up to the client to correctly populate the options object with
-// any network-specific details to ensure the correct metadata is retrieved.  It is important to
-// clarify that this endpoint should not pre-construct any transactions for the client (this should
-// happen in the SDK). This endpoint is left purposely unstructured because of the wide scope of
-// metadata that could be required.  In a future version of the spec, we plan to pass an array of
-// Rosetta Operations to specify which metadata should be received and to create a transaction in an
-// accompanying SDK. This will help to insulate the client from chain-specific details that are
-// currently required here.
+// even arbitrary chain state. The request used when calling this endpoint is often created by
+// calling /construction/preprocess in an offline environment. It is important to clarify that this
+// endpoint should not pre-construct any transactions for the client (this should happen in
+// /construction/payloads). This endpoint is left purposely unstructured because of the wide scope
+// of metadata that could be required.
 func (a *ConstructionAPIService) ConstructionMetadata(
 	ctx _context.Context,
 	constructionMetadataRequest *types.ConstructionMetadataRequest,
@@ -110,9 +316,225 @@ func (a *ConstructionAPIService) ConstructionMetadata(
 	return &v, nil, nil
 }
 
+// ConstructionParse Parse is called on both unsigned and signed transactions to understand the
+// intent of the formulated transaction. This is run as a sanity check before signing (after
+// /construction/payloads) and before broadcast (after /construction/combine).
+func (a *ConstructionAPIService) ConstructionParse(
+	ctx _context.Context,
+	constructionParseRequest *types.ConstructionParseRequest,
+) (*types.ConstructionParseResponse, *types.Error, error) {
+	var (
+		localVarPostBody interface{}
+	)
+
+	// create path and map variables
+	localVarPath := a.client.cfg.BasePath + "/construction/parse"
+	localVarHeaderParams := make(map[string]string)
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{"application/json"}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	// body params
+	localVarPostBody = constructionParseRequest
+
+	r, err := a.client.prepareRequest(ctx, localVarPath, localVarPostBody, localVarHeaderParams)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(ctx, r)
+	if err != nil || localVarHTTPResponse == nil {
+		return nil, nil, err
+	}
+
+	localVarBody, err := _ioutil.ReadAll(localVarHTTPResponse.Body)
+	defer localVarHTTPResponse.Body.Close()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if localVarHTTPResponse.StatusCode != _nethttp.StatusOK {
+		var v types.Error
+		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+		if err != nil {
+			return nil, nil, err
+		}
+
+		return nil, &v, fmt.Errorf("%+v", v)
+	}
+
+	var v types.ConstructionParseResponse
+	err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return &v, nil, nil
+}
+
+// ConstructionPayloads Payloads is called with an array of operations and the response from
+// /construction/metadata. It returns an unsigned transaction blob and a collection of payloads that
+// must be signed by particular addresses using a certain SignatureType. The array of operations
+// provided in transaction construction often times can not specify all \effects\ of a transaction
+// (consider invoked transactions in Ethereum). However, they can deterministically specify the
+// \intent\ of the transaction, which is sufficient for construction. For this reason, parsing the
+// corresponding transaction in the Data API (when it lands on chain) will contain a superset of
+// whatever operations were provided during construction.
+func (a *ConstructionAPIService) ConstructionPayloads(
+	ctx _context.Context,
+	constructionPayloadsRequest *types.ConstructionPayloadsRequest,
+) (*types.ConstructionPayloadsResponse, *types.Error, error) {
+	var (
+		localVarPostBody interface{}
+	)
+
+	// create path and map variables
+	localVarPath := a.client.cfg.BasePath + "/construction/payloads"
+	localVarHeaderParams := make(map[string]string)
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{"application/json"}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	// body params
+	localVarPostBody = constructionPayloadsRequest
+
+	r, err := a.client.prepareRequest(ctx, localVarPath, localVarPostBody, localVarHeaderParams)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(ctx, r)
+	if err != nil || localVarHTTPResponse == nil {
+		return nil, nil, err
+	}
+
+	localVarBody, err := _ioutil.ReadAll(localVarHTTPResponse.Body)
+	defer localVarHTTPResponse.Body.Close()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if localVarHTTPResponse.StatusCode != _nethttp.StatusOK {
+		var v types.Error
+		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+		if err != nil {
+			return nil, nil, err
+		}
+
+		return nil, &v, fmt.Errorf("%+v", v)
+	}
+
+	var v types.ConstructionPayloadsResponse
+	err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return &v, nil, nil
+}
+
+// ConstructionPreprocess Preprocess is called prior to /construction/payloads to construct a
+// request for any metadata that is needed for transaction construction given (i.e. account nonce).
+// The request returned from this method will be used by the caller (in a different execution
+// environment) to call the /construction/metadata endpoint.
+func (a *ConstructionAPIService) ConstructionPreprocess(
+	ctx _context.Context,
+	constructionPreprocessRequest *types.ConstructionPreprocessRequest,
+) (*types.ConstructionPreprocessResponse, *types.Error, error) {
+	var (
+		localVarPostBody interface{}
+	)
+
+	// create path and map variables
+	localVarPath := a.client.cfg.BasePath + "/construction/preprocess"
+	localVarHeaderParams := make(map[string]string)
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{"application/json"}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	// body params
+	localVarPostBody = constructionPreprocessRequest
+
+	r, err := a.client.prepareRequest(ctx, localVarPath, localVarPostBody, localVarHeaderParams)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(ctx, r)
+	if err != nil || localVarHTTPResponse == nil {
+		return nil, nil, err
+	}
+
+	localVarBody, err := _ioutil.ReadAll(localVarHTTPResponse.Body)
+	defer localVarHTTPResponse.Body.Close()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if localVarHTTPResponse.StatusCode != _nethttp.StatusOK {
+		var v types.Error
+		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+		if err != nil {
+			return nil, nil, err
+		}
+
+		return nil, &v, fmt.Errorf("%+v", v)
+	}
+
+	var v types.ConstructionPreprocessResponse
+	err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return &v, nil, nil
+}
+
 // ConstructionSubmit Submit a pre-signed transaction to the node. This call should not block on the
 // transaction being included in a block. Rather, it should return immediately with an indication of
-// whether or not the transaction was included in the mempool.  The transaction submission response
+// whether or not the transaction was included in the mempool. The transaction submission response
 // should only return a 200 status if the submitted transaction could be included in the mempool.
 // Otherwise, it should return an error.
 func (a *ConstructionAPIService) ConstructionSubmit(
