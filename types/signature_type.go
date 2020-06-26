@@ -16,12 +16,14 @@
 
 package types
 
-// Transaction Transactions contain an array of Operations that are attributable to the same
-// TransactionIdentifier.
-type Transaction struct {
-	TransactionIdentifier *TransactionIdentifier `json:"transaction_identifier"`
-	Operations            []*Operation           `json:"operations"`
-	// Transactions that are related to other transactions (like a cross-shard transaction) should
-	// include the tranaction_identifier of these transactions in the metadata.
-	Metadata map[string]interface{} `json:"metadata,omitempty"`
-}
+// SignatureType SignatureType is the type of a cryptographic signature. * ecdsa: `r (32-bytes) || s
+// (32-bytes)` - `64 bytes` * ecdsa_recovery: `r (32-bytes) || s (32-bytes) || v (1-byte)` - `65
+// bytes` * ed25519: `R (32-byte) || s (32-bytes)` - `64 bytes`
+type SignatureType string
+
+// List of SignatureType
+const (
+	Ecdsa         SignatureType = "ecdsa"
+	EcdsaRecovery SignatureType = "ecdsa_recovery"
+	Ed25519       SignatureType = "ed25519"
+)
