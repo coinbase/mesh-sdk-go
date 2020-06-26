@@ -4,10 +4,8 @@ import (
 	"crypto/ed25519"
 	"encoding/hex"
 	"fmt"
-	"log"
 
 	"github.com/btcsuite/btcd/btcec"
-	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
 func GenerateKeypair(curve CurveType) (*KeyPair, error) {
@@ -59,8 +57,6 @@ func GenerateKeypair(curve CurveType) (*KeyPair, error) {
 		return nil, fmt.Errorf("%s is not supported", curve)
 	}
 
-	log.Printf("Generated keypair %s\n", types.PrettyPrintStruct(keyPair))
-
 	return keyPair, nil
 }
 
@@ -74,10 +70,17 @@ func (k KeyPair) IsValid() (bool, error) {
 		return false, fmt.Errorf("private key curve %s and public key curve %s do not match", skCurve, pkCurve)
 	}
 
-	if len(pk) != 32 {
+	// Secp256k1 Pubkeys are 33-bytes
+	if pkCurve.IsSecp256k1() && len(pk) != 33 {
 		return false, fmt.Errorf("invalid pubkey length %v", len(pk))
 	}
 
+	// Ed25519 pubkeys are 32-bytes
+	if pkCurve.IsEdwards25519() && len(pk) != 32 {
+		return false, fmt.Errorf("invalid pubkey length %v", len(pk))
+	}
+
+	// All privkeys are 32-bytes
 	if len(sk) != 32 {
 		return false, fmt.Errorf("invalid privkey length %v", len(sk))
 	}
