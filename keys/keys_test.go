@@ -23,7 +23,7 @@ func TestGenerateKeypairEd25519(t *testing.T) {
 	assert.Equal(t, keypair.PrivateKey.Curve, curve)
 }
 
-func TestKeypaidValidity(t *testing.T) {
+func TestKeypairValidity(t *testing.T) {
 	// Non matching curves
 	pubKey := &PublicKey{
 		Curve: CurveType(SECP256K1_CURVE),
@@ -39,10 +39,19 @@ func TestKeypaidValidity(t *testing.T) {
 	assert.Equal(t, false, valid)
 	assert.Contains(t, err.Error(), "do not match")
 
-	// Pubkey length too short
+	// Ed25519 pubkey invalid length
 	keyPair, err = GenerateKeypair(CurveType(EDWARDS25519_CURVE))
 	keyPair.PublicKey = &PublicKey{
 		Curve: CurveType(EDWARDS25519_CURVE),
+	}
+	valid, err = keyPair.IsValid()
+	assert.Equal(t, false, valid)
+	assert.Contains(t, err.Error(), "invalid pubkey length")
+
+	// Secp256k1 pubkey invalid length
+	keyPair, err = GenerateKeypair(CurveType(SECP256K1_CURVE))
+	keyPair.PublicKey = &PublicKey{
+		Curve: CurveType(SECP256K1_CURVE),
 	}
 	valid, err = keyPair.IsValid()
 	assert.Equal(t, false, valid)
@@ -52,6 +61,16 @@ func TestKeypaidValidity(t *testing.T) {
 	keyPair, err = GenerateKeypair(CurveType(EDWARDS25519_CURVE))
 	keyPair.PrivateKey = &PrivateKey{
 		Curve: CurveType(EDWARDS25519_CURVE),
+	}
+
+	valid, err = keyPair.IsValid()
+	assert.Equal(t, false, valid)
+	assert.Contains(t, err.Error(), "invalid privkey length")
+
+	// Privkey length too short
+	keyPair, err = GenerateKeypair(CurveType(SECP256K1_CURVE))
+	keyPair.PrivateKey = &PrivateKey{
+		Curve: CurveType(SECP256K1_CURVE),
 	}
 
 	valid, err = keyPair.IsValid()
