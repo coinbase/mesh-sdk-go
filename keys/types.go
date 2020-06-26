@@ -6,16 +6,19 @@ type CurveType string
 // SignatureType is the type of a cryptographic signature.
 type SignatureType string
 
+// PublicKey contains the hex-encoded pubkey bytes as well as the CurveType
 type PublicKey struct {
-	HexEncodedBytes string
-	Curve           CurveType
+	PubKeyHex string
+	Curve     CurveType
 }
 
+// PrivateKey contains the hex-encoded privkey bytes as well as the CurveType
 type PrivateKey struct {
-	HexEncodedBytes string // in hex
-	Curve           CurveType
+	PrivKeyHex string
+	Curve      CurveType
 }
 
+// KeyPair contains a PrivateKey and its' associated PublicKey
 type KeyPair struct {
 	PublicKey  *PublicKey
 	PrivateKey *PrivateKey
@@ -24,13 +27,13 @@ type KeyPair struct {
 // SigningPayload is signed by the client with the keypair associated
 // with an address using the specified SignatureType.
 type SigningPayload struct {
-	Address         string // in network-specific format (often times it is not possible to determine the public key from the address a priori)
-	HexEncodedBytes string
-	SignatureType   SignatureType // signature for payload must be SignatureType
+	Address       string // in network-specific format (often times it is not possible to determine the public key from the address a priori)
+	PayloadHex    string
+	SignatureType SignatureType
 }
 
 // Signature contains the payload that was signed, the public keys of the
-// keypairs used to produce the signature, the signature (encoded in hex),
+// keypairs used to produce the signature, the hex-encoded signature,
 // and the SignatureType.
 type Signature struct {
 	Payload *SigningPayload

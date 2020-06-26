@@ -22,12 +22,12 @@ func GenerateKeypair(curve CurveType) (*KeyPair, error) {
 		rawPubKey := rawPrivKey.PubKey()
 
 		pubKey := &PublicKey{
-			HexEncodedBytes: hex.EncodeToString(rawPubKey.SerializeCompressed()),
-			Curve:           curve,
+			PubKeyHex: hex.EncodeToString(rawPubKey.SerializeCompressed()),
+			Curve:     curve,
 		}
 		privKey := &PrivateKey{
-			HexEncodedBytes: hex.EncodeToString(rawPrivKey.Serialize()),
-			Curve:           curve,
+			PrivKeyHex: hex.EncodeToString(rawPrivKey.Serialize()),
+			Curve:      curve,
 		}
 
 		keyPair = &KeyPair{
@@ -42,12 +42,12 @@ func GenerateKeypair(curve CurveType) (*KeyPair, error) {
 		}
 
 		pubKey := &PublicKey{
-			HexEncodedBytes: hex.EncodeToString(rawPubKey),
-			Curve:           curve,
+			PubKeyHex: hex.EncodeToString(rawPubKey),
+			Curve:     curve,
 		}
 		privKey := &PrivateKey{
-			HexEncodedBytes: hex.EncodeToString(rawPrivKey),
-			Curve:           curve,
+			PrivKeyHex: hex.EncodeToString(rawPrivKey.Seed()),
+			Curve:      curve,
 		}
 
 		keyPair = &KeyPair{
@@ -62,4 +62,25 @@ func GenerateKeypair(curve CurveType) (*KeyPair, error) {
 	log.Printf("Generated keypair %s\n", types.PrettyPrintStruct(keyPair))
 
 	return keyPair, nil
+}
+
+func (k KeyPair) IsValid() (bool, error) {
+	pk, _ := hex.DecodeString(k.PublicKey.PubKeyHex)
+	sk, _ := hex.DecodeString(k.PrivateKey.PrivKeyHex)
+	pkCurve := k.PublicKey.Curve
+	skCurve := k.PrivateKey.Curve
+
+	if pkCurve != skCurve {
+		return false, fmt.Errorf("private key curve %s and public key curve %s do not match", skCurve, pkCurve)
+	}
+
+	if len(pk) != 32 {
+		return false, fmt.Errorf("invalid pubkey length %v", len(pk))
+	}
+
+	if len(sk) != 32 {
+		return false, fmt.Errorf("invalid privkey length %v", len(sk))
+	}
+
+	return true, nil
 }
