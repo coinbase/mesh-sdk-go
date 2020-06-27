@@ -74,3 +74,46 @@ func TestConstructionSubmit(t *testing.T) {
 		})
 	}
 }
+
+func TestPublicKey(t *testing.T) {
+	var tests = map[string]struct {
+		publicKey *types.PublicKey
+		err       error
+	}{
+		"valid public key": {
+			publicKey: &types.PublicKey{
+				HexBytes:  "48656c6c6f20476f7068657221",
+				CurveType: types.Secp256k1,
+			},
+		},
+		"nil public key": {
+			err: errors.New("PublicKey cannot be nil"),
+		},
+		"invalid hex": {
+			publicKey: &types.PublicKey{
+				HexBytes:  "hello",
+				CurveType: types.Secp256k1,
+			},
+			err: errors.New("hello is not a valid hex string"),
+		},
+		"invalid curve": {
+			publicKey: &types.PublicKey{
+				HexBytes:  "48656c6c6f20476f7068657221",
+				CurveType: "test",
+			},
+			err: errors.New("test is not a supported CurveType"),
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			err := PublicKey(test.publicKey)
+			if test.err != nil {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), test.err.Error())
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
