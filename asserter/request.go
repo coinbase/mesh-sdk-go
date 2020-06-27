@@ -98,6 +98,10 @@ func (a *Asserter) AccountBalanceRequest(request *types.AccountBalanceRequest) e
 		return nil
 	}
 
+	if request.BlockIdentifier != nil && !a.historicalBalanceLookup {
+		return errors.New("historical balance lookup is not supported")
+	}
+
 	return PartialBlockIdentifier(request.BlockIdentifier)
 }
 

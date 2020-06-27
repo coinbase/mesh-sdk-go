@@ -206,8 +206,9 @@ func TestSupportedNetworks(t *testing.T) {
 
 func TestAccountBalanceRequest(t *testing.T) {
 	var tests = map[string]struct {
-		request *types.AccountBalanceRequest
-		err     error
+		request         *types.AccountBalanceRequest
+		allowHistorical bool
+		err             error
 	}{
 		"valid request": {
 			request: &types.AccountBalanceRequest{
@@ -245,7 +246,8 @@ func TestAccountBalanceRequest(t *testing.T) {
 				AccountIdentifier: validAccountIdentifier,
 				BlockIdentifier:   validPartialBlockIdentifier,
 			},
-			err: nil,
+			allowHistorical: true,
+			err:             nil,
 		},
 		"invalid historical request": {
 			request: &types.AccountBalanceRequest{
@@ -253,13 +255,31 @@ func TestAccountBalanceRequest(t *testing.T) {
 				AccountIdentifier: validAccountIdentifier,
 				BlockIdentifier:   &types.PartialBlockIdentifier{},
 			},
-			err: errors.New("neither PartialBlockIdentifier.Hash nor PartialBlockIdentifier.Index is set"),
+			allowHistorical: true,
+			err:             errors.New("neither PartialBlockIdentifier.Hash nor PartialBlockIdentifier.Index is set"),
+		},
+		"valid historical request when not enabled": {
+			request: &types.AccountBalanceRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+				AccountIdentifier: validAccountIdentifier,
+				BlockIdentifier:   validPartialBlockIdentifier,
+			},
+			allowHistorical: false,
+			err:             errors.New("historical balance lookup is not supported"),
 		},
 	}
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			err := a.AccountBalanceRequest(test.request)
+			asserter, err := NewServer(
+				[]string{"PAYMENT"},
+				test.allowHistorical,
+				[]*types.NetworkIdentifier{validNetworkIdentifier},
+			)
+			assert.NotNil(t, asserter)
+			assert.NoError(t, err)
+
+			err = asserter.AccountBalanceRequest(test.request)
 			assert.Equal(t, test.err, err)
 		})
 	}
