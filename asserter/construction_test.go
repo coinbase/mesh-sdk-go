@@ -173,3 +173,100 @@ func TestSigningPayload(t *testing.T) {
 		})
 	}
 }
+
+func TestSignatures(t *testing.T) {
+	var tests = map[string]struct {
+		signatures []*types.Signature
+		err        error
+	}{
+		"valid signatures": {
+			signatures: []*types.Signature{
+				{
+					SigningPayload: &types.SigningPayload{
+						Address:  validAccount.Address,
+						HexBytes: "48656c6c6f20476f7068657221",
+					},
+					PublicKey:     validPublicKey,
+					SignatureType: types.Ed25519,
+					HexBytes:      "656c6c6f20476f7068657221",
+				},
+				{
+					SigningPayload: &types.SigningPayload{
+						Address:  validAccount.Address,
+						HexBytes: "48656c6c6f20476f7068657221",
+					},
+					PublicKey:     validPublicKey,
+					SignatureType: types.EcdsaRecovery,
+					HexBytes:      "656c6c6f20476f7068657221",
+				},
+			},
+		},
+		"signature type match": {
+			signatures: []*types.Signature{
+				{
+					SigningPayload: &types.SigningPayload{
+						Address:       validAccount.Address,
+						HexBytes:      "48656c6c6f20476f7068657221",
+						SignatureType: types.Ed25519,
+					},
+					PublicKey:     validPublicKey,
+					SignatureType: types.Ed25519,
+					HexBytes:      "656c6c6f20476f7068657221",
+				},
+			},
+		},
+		"nil signatures": {
+			err: errors.New("signatures cannot be empty"),
+		},
+		"empty signature": {
+			signatures: []*types.Signature{
+				{
+					SigningPayload: &types.SigningPayload{
+						Address:  validAccount.Address,
+						HexBytes: "48656c6c6f20476f7068657221",
+					},
+					PublicKey:     validPublicKey,
+					SignatureType: types.EcdsaRecovery,
+					HexBytes:      "656c6c6f20476f7068657221",
+				},
+				{
+					SigningPayload: &types.SigningPayload{
+						Address:       validAccount.Address,
+						HexBytes:      "48656c6c6f20476f7068657221",
+						SignatureType: types.Ed25519,
+					},
+					PublicKey:     validPublicKey,
+					SignatureType: types.Ed25519,
+				},
+			},
+			err: errors.New("signature 1 has invalid hex"),
+		},
+		"signature type mismatch": {
+			signatures: []*types.Signature{
+				{
+					SigningPayload: &types.SigningPayload{
+						Address:       validAccount.Address,
+						HexBytes:      "48656c6c6f20476f7068657221",
+						SignatureType: types.EcdsaRecovery,
+					},
+					PublicKey:     validPublicKey,
+					SignatureType: types.Ed25519,
+					HexBytes:      "656c6c6f20476f7068657221",
+				},
+			},
+			err: errors.New("requested signature type does not match"),
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			err := Signatures(test.signatures)
+			if test.err != nil {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), test.err.Error())
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
