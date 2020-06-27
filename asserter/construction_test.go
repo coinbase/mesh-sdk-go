@@ -117,3 +117,59 @@ func TestPublicKey(t *testing.T) {
 		})
 	}
 }
+
+func TestSigningPayload(t *testing.T) {
+	var tests = map[string]struct {
+		signingPayload *types.SigningPayload
+		err            error
+	}{
+		"valid signing payload": {
+			signingPayload: &types.SigningPayload{
+				Address:  "hello",
+				HexBytes: "48656c6c6f20476f7068657221",
+			},
+		},
+		"valid signing payload with signature type": {
+			signingPayload: &types.SigningPayload{
+				Address:       "hello",
+				HexBytes:      "48656c6c6f20476f7068657221",
+				SignatureType: types.Ed25519,
+			},
+		},
+		"nil signing payload": {
+			err: errors.New("signing payload cannot be nil"),
+		},
+		"empty address": {
+			signingPayload: &types.SigningPayload{
+				HexBytes: "48656c6c6f20476f7068657221",
+			},
+			err: errors.New("signing payload address cannot be empty"),
+		},
+		"empty hex": {
+			signingPayload: &types.SigningPayload{
+				Address: "hello",
+			},
+			err: errors.New("hex string cannot be empty"),
+		},
+		"invalid signature": {
+			signingPayload: &types.SigningPayload{
+				Address:       "hello",
+				HexBytes:      "48656c6c6f20476f7068657221",
+				SignatureType: "blah",
+			},
+			err: errors.New("blah is not a supported SignatureType"),
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			err := SigningPayload(test.signingPayload)
+			if test.err != nil {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), test.err.Error())
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
