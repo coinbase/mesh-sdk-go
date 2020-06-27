@@ -446,7 +446,7 @@ func TestOperation(t *testing.T) {
 			},
 			&types.NetworkOptionsResponse{
 				Version: &types.Version{
-					RosettaVersion: "1.3.1",
+					RosettaVersion: "1.4.0",
 					NodeVersion:    "1.0",
 				},
 				Allow: &types.Allow{
@@ -818,7 +818,7 @@ func TestBlock(t *testing.T) {
 				},
 				&types.NetworkOptionsResponse{
 					Version: &types.Version{
-						RosettaVersion: "1.3.1",
+						RosettaVersion: "1.4.0",
 						NodeVersion:    "1.0",
 					},
 					Allow: &types.Allow{
