@@ -59,7 +59,7 @@ func main() {
 	// The asserter automatically rejects incorrectly formatted
 	// requests.
 	asserter, err := asserter.NewServer(
-		[]string{"PAYMENT"},
+		[]string{"Transfer", "Reward"},
 		false,
 		[]*types.NetworkIdentifier{network},
 	)
