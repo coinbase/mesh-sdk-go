@@ -941,3 +941,46 @@ func TestConstructionHashRequest(t *testing.T) {
 		})
 	}
 }
+
+func TestConstructionParseRequest(t *testing.T) {
+	var tests = map[string]struct {
+		request *types.ConstructionParseRequest
+		err     error
+	}{
+		"valid request": {
+			request: &types.ConstructionParseRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+				Transaction:       "blah",
+			},
+			err: nil,
+		},
+		"invalid request wrong network": {
+			request: &types.ConstructionParseRequest{
+				NetworkIdentifier: wrongNetworkIdentifier,
+			},
+			err: fmt.Errorf("%+v is not supported", wrongNetworkIdentifier),
+		},
+		"nil request": {
+			request: nil,
+			err:     errors.New("ConstructionParseRequest is nil"),
+		},
+		"empty signed transaction": {
+			request: &types.ConstructionParseRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+			},
+			err: errors.New("Transaction cannot be empty"),
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			err := a.ConstructionParseRequest(test.request)
+			if test.err != nil {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), test.err.Error())
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
