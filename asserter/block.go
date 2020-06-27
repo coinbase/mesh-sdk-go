@@ -186,14 +186,12 @@ func (a *Asserter) Operation(
 		return err
 	}
 
-	if construction {
-		if len(operation.Status) != 0 {
-			return errors.New("operation.Status must be empty for construction")
-		}
-	} else {
-		if err := a.OperationStatus(operation.Status); err != nil {
-			return err
-		}
+	if construction && len(operation.Status) != 0 {
+		return errors.New("operation.Status must be empty for construction")
+	}
+
+	if err := a.OperationStatus(operation.Status); err != nil && !construction {
+		return err
 	}
 
 	if operation.Amount == nil {
