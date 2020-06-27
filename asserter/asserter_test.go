@@ -243,7 +243,11 @@ func TestNew(t *testing.T) {
 				configuration.AllowedOperationStatuses,
 			)
 			assert.ElementsMatch(t, test.networkOptions.Allow.Errors, configuration.AllowedErrors)
-			assert.Equal(t, test.networkOptions.Allow.HistoricalBalanceLookup, configuration.HistoricalBalanceLookup)
+			assert.Equal(
+				t,
+				test.networkOptions.Allow.HistoricalBalanceLookup,
+				configuration.HistoricalBalanceLookup,
+			)
 		})
 
 		t.Run(fmt.Sprintf("%s with file", name), func(t *testing.T) {
@@ -296,7 +300,11 @@ func TestNew(t *testing.T) {
 				configuration.AllowedOperationStatuses,
 			)
 			assert.ElementsMatch(t, test.networkOptions.Allow.Errors, configuration.AllowedErrors)
-			assert.Equal(t, test.networkOptions.Allow.HistoricalBalanceLookup, configuration.HistoricalBalanceLookup)
+			assert.Equal(
+				t,
+				test.networkOptions.Allow.HistoricalBalanceLookup,
+				configuration.HistoricalBalanceLookup,
+			)
 		})
 	}
 
