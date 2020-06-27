@@ -39,11 +39,7 @@ var (
 		Address: "acct1",
 	}
 
-	genesisBlockIndex      = int64(0)
-	genesisBlockIdentifier = &types.BlockIdentifier{
-		Index: genesisBlockIndex,
-		Hash:  "block 0",
-	}
+	genesisBlockIndex           = int64(0)
 	validBlockIndex             = int64(1000)
 	validPartialBlockIdentifier = &types.PartialBlockIdentifier{
 		Index: &validBlockIndex,

@@ -124,7 +124,7 @@ func main() {
 	//
 	// This will be used later to assert that a fetched block is
 	// valid.
-	asserter, err := asserter.NewClientWithResponses(
+	asserter, err := asserter.NewWithResponses(
 		primaryNetwork,
 		networkStatus,
 		networkOptions,

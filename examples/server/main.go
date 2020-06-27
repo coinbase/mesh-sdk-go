@@ -58,7 +58,11 @@ func main() {
 
 	// The asserter automatically rejects incorrectly formatted
 	// requests.
-	asserter, err := asserter.NewServer([]*types.NetworkIdentifier{network})
+	asserter, err := asserter.NewServer(
+		[]string{"PAYMENT"},
+		false,
+		[]*types.NetworkIdentifier{network},
+	)
 	if err != nil {
 		log.Fatal(err)
 	}
