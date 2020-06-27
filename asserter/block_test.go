@@ -811,10 +811,12 @@ func TestBlock(t *testing.T) {
 			assert.NotNil(t, asserter)
 			assert.NoError(t, err)
 
+			err = asserter.Block(test.block)
 			if test.err != nil {
-				err = asserter.Block(test.block)
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), test.err.Error())
+			} else {
+				assert.NoError(t, err)
 			}
 		})
 	}

@@ -53,6 +53,11 @@ var (
 	validTransactionIdentifier = &types.TransactionIdentifier{
 		Hash: "tx1",
 	}
+
+	validPublicKey = &types.PublicKey{
+		HexBytes:  "48656c6c6f20476f7068657221",
+		CurveType: types.Secp256k1,
+	}
 )
 
 func TestSupportedNetworks(t *testing.T) {
@@ -488,6 +493,63 @@ func TestNetworkRequest(t *testing.T) {
 
 			err = a.NetworkRequest(test.request)
 			assert.Equal(t, test.err, err)
+		})
+	}
+}
+
+func TestConstructionDeriveRequest(t *testing.T) {
+	var tests = map[string]struct {
+		request *types.ConstructionDeriveRequest
+		err     error
+	}{
+		"valid request": {
+			request: &types.ConstructionDeriveRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+				PublicKey:         validPublicKey,
+			},
+			err: nil,
+		},
+		"invalid request wrong network": {
+			request: &types.ConstructionDeriveRequest{
+				NetworkIdentifier: wrongNetworkIdentifier,
+			},
+			err: fmt.Errorf("%+v is not supported", wrongNetworkIdentifier),
+		},
+		"nil request": {
+			request: nil,
+			err:     errors.New("ConstructionDeriveRequest is nil"),
+		},
+		"nil public key": {
+			request: &types.ConstructionDeriveRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+			},
+			err: errors.New("PublicKey cannot be nil"),
+		},
+		"invalid hex public key": {
+			request: &types.ConstructionDeriveRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+				PublicKey: &types.PublicKey{
+					HexBytes:  "hello",
+					CurveType: types.Secp256k1,
+				},
+			},
+			err: errors.New("not a valid hex string public key"),
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			a, err := NewServer([]*types.NetworkIdentifier{validNetworkIdentifier})
+			assert.NoError(t, err)
+			assert.NotNil(t, a)
+
+			err = a.ConstructionDeriveRequest(test.request)
+			if test.err != nil {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), test.err.Error())
+			} else {
+				assert.NoError(t, err)
+			}
 		})
 	}
 }
