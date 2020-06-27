@@ -704,3 +704,68 @@ func TestConstructionPreprocessRequest(t *testing.T) {
 		})
 	}
 }
+
+func TestConstructionPayloadsRequest(t *testing.T) {
+	var tests = map[string]struct {
+		request *types.ConstructionPayloadsRequest
+		err     error
+	}{
+		"valid request": {
+			request: &types.ConstructionPayloadsRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+				Operations:        validOps,
+				Metadata:          map[string]interface{}{"test": "hello"},
+			},
+			err: nil,
+		},
+		"invalid request wrong network": {
+			request: &types.ConstructionPayloadsRequest{
+				NetworkIdentifier: wrongNetworkIdentifier,
+			},
+			err: fmt.Errorf("%+v is not supported", wrongNetworkIdentifier),
+		},
+		"nil request": {
+			request: nil,
+			err:     errors.New("ConstructionPayloadsRequest is nil"),
+		},
+		"nil operations": {
+			request: &types.ConstructionPayloadsRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+			},
+			err: errors.New("operations cannot be empty"),
+		},
+		"empty operations": {
+			request: &types.ConstructionPayloadsRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+				Operations:        []*types.Operation{},
+			},
+			err: errors.New("operations cannot be empty"),
+		},
+		"unsupported operation type": {
+			request: &types.ConstructionPayloadsRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+				Operations:        unsupportedTypeOps,
+			},
+			err: errors.New("Operation.Type STAKE is invalid"),
+		},
+		"invalid operations": {
+			request: &types.ConstructionPayloadsRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+				Operations:        invalidOps,
+			},
+			err: errors.New("must be empty for construction"),
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			err := a.ConstructionPayloadsRequest(test.request)
+			if test.err != nil {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), test.err.Error())
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
