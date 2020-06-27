@@ -153,6 +153,13 @@ func Signatures(
 			return fmt.Errorf("%w: signature %d has invalid signature type", err, i)
 		}
 
+		// Return an error if the requested signature type does not match the
+		// signture type in the returned signature.
+		if len(signature.SigningPayload.SignatureType) > 0 &&
+			signature.SigningPayload.SignatureType != signature.SignatureType {
+			return fmt.Errorf("requested signature type does not match returned signature type")
+		}
+
 		if err := checkHex(signature.HexBytes); err != nil {
 			return fmt.Errorf("%w: signature %d has invalid hex", err, i)
 		}

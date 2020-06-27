@@ -145,6 +145,56 @@ var (
 		},
 	}
 
+	validSignatures = []*types.Signature{
+		{
+			SigningPayload: &types.SigningPayload{
+				Address:  validAccount.Address,
+				HexBytes: "48656c6c6f20476f7068657221",
+			},
+			PublicKey:     validPublicKey,
+			SignatureType: types.Ed25519,
+			HexBytes:      "656c6c6f20476f7068657221",
+		},
+	}
+
+	signatureTypeMismatch = []*types.Signature{
+		{
+			SigningPayload: &types.SigningPayload{
+				Address:       validAccount.Address,
+				HexBytes:      "48656c6c6f20476f7068657221",
+				SignatureType: types.EcdsaRecovery,
+			},
+			PublicKey:     validPublicKey,
+			SignatureType: types.Ed25519,
+			HexBytes:      "656c6c6f20476f7068657221",
+		},
+	}
+
+	signatureTypeMatch = []*types.Signature{
+		{
+			SigningPayload: &types.SigningPayload{
+				Address:       validAccount.Address,
+				HexBytes:      "48656c6c6f20476f7068657221",
+				SignatureType: types.Ed25519,
+			},
+			PublicKey:     validPublicKey,
+			SignatureType: types.Ed25519,
+			HexBytes:      "656c6c6f20476f7068657221",
+		},
+	}
+
+	emptySignature = []*types.Signature{
+		{
+			SigningPayload: &types.SigningPayload{
+				Address:       validAccount.Address,
+				HexBytes:      "48656c6c6f20476f7068657221",
+				SignatureType: types.Ed25519,
+			},
+			PublicKey:     validPublicKey,
+			SignatureType: types.Ed25519,
+		},
+	}
+
 	a, aErr = NewServer(
 		[]string{"PAYMENT"},
 		true,
@@ -756,6 +806,89 @@ func TestConstructionPayloadsRequest(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			err := a.ConstructionPayloadsRequest(test.request)
+			if test.err != nil {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), test.err.Error())
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestConstructionCombineRequest(t *testing.T) {
+	var tests = map[string]struct {
+		request *types.ConstructionCombineRequest
+		err     error
+	}{
+		"valid request": {
+			request: &types.ConstructionCombineRequest{
+				NetworkIdentifier:   validNetworkIdentifier,
+				UnsignedTransaction: "blah",
+				Signatures:          validSignatures,
+			},
+			err: nil,
+		},
+		"invalid request wrong network": {
+			request: &types.ConstructionCombineRequest{
+				NetworkIdentifier: wrongNetworkIdentifier,
+			},
+			err: fmt.Errorf("%+v is not supported", wrongNetworkIdentifier),
+		},
+		"nil request": {
+			request: nil,
+			err:     errors.New("ConstructionCombineRequest is nil"),
+		},
+		"empty unsigned transaction": {
+			request: &types.ConstructionCombineRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+				Signatures:        validSignatures,
+			},
+			err: errors.New("UnsignedTransaction cannot be empty"),
+		},
+		"nil signatures": {
+			request: &types.ConstructionCombineRequest{
+				NetworkIdentifier:   validNetworkIdentifier,
+				UnsignedTransaction: "blah",
+			},
+			err: errors.New("signatures cannot be empty"),
+		},
+		"empty signatures": {
+			request: &types.ConstructionCombineRequest{
+				NetworkIdentifier:   validNetworkIdentifier,
+				UnsignedTransaction: "blah",
+				Signatures:          []*types.Signature{},
+			},
+			err: errors.New("signatures cannot be empty"),
+		},
+		"singature type mismatch": {
+			request: &types.ConstructionCombineRequest{
+				NetworkIdentifier:   validNetworkIdentifier,
+				UnsignedTransaction: "blah",
+				Signatures:          signatureTypeMismatch,
+			},
+			err: errors.New("requested signature type does not match returned signature type"),
+		},
+		"empty signature": {
+			request: &types.ConstructionCombineRequest{
+				NetworkIdentifier:   validNetworkIdentifier,
+				UnsignedTransaction: "blah",
+				Signatures:          emptySignature,
+			},
+			err: errors.New("hex string cannot be empty"),
+		},
+		"singature type match": {
+			request: &types.ConstructionCombineRequest{
+				NetworkIdentifier:   validNetworkIdentifier,
+				UnsignedTransaction: "blah",
+				Signatures:          signatureTypeMatch,
+			},
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			err := a.ConstructionCombineRequest(test.request)
 			if test.err != nil {
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), test.err.Error())
