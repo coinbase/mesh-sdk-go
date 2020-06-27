@@ -256,25 +256,17 @@ func TransactionIdentifier(
 	return nil
 }
 
-// Transaction returns an error if the types.TransactionIdentifier
-// is invalid, if any types.Operation within the types.Transaction
-// is invalid, or if any operation index is reused within a transaction.
-func (a *Asserter) Transaction(
-	transaction *types.Transaction,
+// Operations returns an error if any *types.Operation
+// in a []*types.Operation is invalid.
+func (a *Asserter) Operations(
+	operations []*types.Operation,
+	emptyOk bool,
 ) error {
-	if a == nil {
-		return ErrAsserterNotInitialized
+	if len(operations) == 0 && !emptyOk {
+		return errors.New("operations cannot be empty")
 	}
 
-	if transaction == nil {
-		return errors.New("Transaction is nil")
-	}
-
-	if err := TransactionIdentifier(transaction.TransactionIdentifier); err != nil {
-		return err
-	}
-
-	for i, op := range transaction.Operations {
+	for i, op := range operations {
 		// Ensure operations are sorted
 		if err := a.Operation(op, int64(i)); err != nil {
 			return err
@@ -302,6 +294,35 @@ func (a *Asserter) Transaction(
 			}
 			relatedIndexes = append(relatedIndexes, relatedOp.Index)
 		}
+	}
+
+	return nil
+}
+
+// Transaction returns an error if the types.TransactionIdentifier
+// is invalid, if any types.Operation within the types.Transaction
+// is invalid, or if any operation index is reused within a transaction.
+func (a *Asserter) Transaction(
+	transaction *types.Transaction,
+) error {
+	if a == nil {
+		return ErrAsserterNotInitialized
+	}
+
+	if transaction == nil {
+		return errors.New("Transaction is nil")
+	}
+
+	if err := TransactionIdentifier(transaction.TransactionIdentifier); err != nil {
+		return err
+	}
+
+	if err := a.Operations(transaction.Operations, true); err != nil {
+		return fmt.Errorf(
+			"%w invalid operation in transaction %s",
+			err,
+			transaction.TransactionIdentifier.Hash,
+		)
 	}
 
 	return nil
