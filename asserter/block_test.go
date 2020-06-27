@@ -423,7 +423,7 @@ func TestOperation(t *testing.T) {
 	}
 
 	for name, test := range tests {
-		asserter, err := NewWithResponses(
+		asserter, err := NewClientWithResponses(
 			&types.NetworkIdentifier{
 				Blockchain: "hello",
 				Network:    "world",
@@ -795,7 +795,7 @@ func TestBlock(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			asserter, err := NewWithResponses(
+			asserter, err := NewClientWithResponses(
 				&types.NetworkIdentifier{
 					Blockchain: "hello",
 					Network:    "world",

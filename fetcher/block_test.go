@@ -125,7 +125,7 @@ func TestBlockRetry(t *testing.T) {
 			}))
 
 			defer ts.Close()
-			a, err := asserter.NewWithOptions(
+			a, err := asserter.NewClientWithOptions(
 				basicNetwork,
 				&types.BlockIdentifier{
 					Index: 0,
@@ -134,7 +134,6 @@ func TestBlockRetry(t *testing.T) {
 				basicNetworkOptions.Allow.OperationTypes,
 				basicNetworkOptions.Allow.OperationStatuses,
 				nil,
-				false,
 			)
 			assert.NoError(err)
 
