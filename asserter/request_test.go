@@ -861,7 +861,7 @@ func TestConstructionCombineRequest(t *testing.T) {
 			},
 			err: errors.New("signatures cannot be empty"),
 		},
-		"singature type mismatch": {
+		"signature type mismatch": {
 			request: &types.ConstructionCombineRequest{
 				NetworkIdentifier:   validNetworkIdentifier,
 				UnsignedTransaction: "blah",
@@ -877,7 +877,7 @@ func TestConstructionCombineRequest(t *testing.T) {
 			},
 			err: errors.New("hex string cannot be empty"),
 		},
-		"singature type match": {
+		"signature type match": {
 			request: &types.ConstructionCombineRequest{
 				NetworkIdentifier:   validNetworkIdentifier,
 				UnsignedTransaction: "blah",
