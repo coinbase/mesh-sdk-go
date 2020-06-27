@@ -157,7 +157,7 @@ func (f *Fetcher) InitializeAsserter(
 		return nil, nil, err
 	}
 
-	f.Asserter, err = asserter.NewClientWithResponses(
+	f.Asserter, err = asserter.NewWithResponses(
 		primaryNetwork,
 		networkStatus,
 		networkOptions,

@@ -274,7 +274,7 @@ func (a *Asserter) ConstructionPreprocessRequest(
 		return err
 	}
 
-	if err := a.Operations(request.Operations, false); err != nil {
+	if err := a.Operations(request.Operations, true); err != nil {
 		return err
 	}
 
@@ -296,7 +296,7 @@ func (a *Asserter) ConstructionPayloadsRequest(request *types.ConstructionPayloa
 		return err
 	}
 
-	if err := a.Operations(request.Operations, false); err != nil {
+	if err := a.Operations(request.Operations, true); err != nil {
 		return err
 	}
 

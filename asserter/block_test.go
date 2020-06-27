@@ -284,10 +284,11 @@ func TestOperation(t *testing.T) {
 	)
 
 	var tests = map[string]struct {
-		operation  *types.Operation
-		index      int64
-		successful bool
-		err        error
+		operation    *types.Operation
+		index        int64
+		successful   bool
+		construction bool
+		err          error
 	}{
 		"valid operation": {
 			operation: &types.Operation{
@@ -390,10 +391,39 @@ func TestOperation(t *testing.T) {
 			index: int64(1),
 			err:   errors.New("Operation.Status DEFERRED is invalid"),
 		},
+		"valid construction operation": {
+			operation: &types.Operation{
+				OperationIdentifier: &types.OperationIdentifier{
+					Index: int64(1),
+				},
+				Type:    "PAYMENT",
+				Account: validAccount,
+				Amount:  validAmount,
+			},
+			index:        int64(1),
+			successful:   false,
+			construction: true,
+			err:          nil,
+		},
+		"invalid construction operation": {
+			operation: &types.Operation{
+				OperationIdentifier: &types.OperationIdentifier{
+					Index: int64(1),
+				},
+				Type:    "PAYMENT",
+				Status:  "SUCCESS",
+				Account: validAccount,
+				Amount:  validAmount,
+			},
+			index:        int64(1),
+			successful:   false,
+			construction: true,
+			err:          errors.New("operation.Status must be empty for construction"),
+		},
 	}
 
 	for name, test := range tests {
-		asserter, err := NewClientWithResponses(
+		asserter, err := NewWithResponses(
 			&types.NetworkIdentifier{
 				Blockchain: "hello",
 				Network:    "world",
@@ -440,9 +470,9 @@ func TestOperation(t *testing.T) {
 		assert.NoError(t, err)
 
 		t.Run(name, func(t *testing.T) {
-			err := asserter.Operation(test.operation, test.index)
+			err := asserter.Operation(test.operation, test.index, test.construction)
 			assert.Equal(t, test.err, err)
-			if err == nil {
+			if err == nil && !test.construction {
 				successful, err := asserter.OperationSuccessful(test.operation)
 				assert.NoError(t, err)
 				assert.Equal(t, test.successful, successful)
@@ -500,6 +530,27 @@ func TestBlock(t *testing.T) {
 			},
 		},
 	}
+	relatedToSelfTransaction := &types.Transaction{
+		TransactionIdentifier: &types.TransactionIdentifier{
+			Hash: "blah",
+		},
+		Operations: []*types.Operation{
+			{
+				OperationIdentifier: &types.OperationIdentifier{
+					Index: int64(0),
+				},
+				RelatedOperations: []*types.OperationIdentifier{
+					{
+						Index: int64(0),
+					},
+				},
+				Type:    "PAYMENT",
+				Status:  "SUCCESS",
+				Account: validAccount,
+				Amount:  validAmount,
+			},
+		},
+	}
 	outOfOrderTransaction := &types.Transaction{
 		TransactionIdentifier: &types.TransactionIdentifier{
 			Hash: "blah",
@@ -522,27 +573,6 @@ func TestBlock(t *testing.T) {
 			{
 				OperationIdentifier: &types.OperationIdentifier{
 					Index: int64(0),
-				},
-				Type:    "PAYMENT",
-				Status:  "SUCCESS",
-				Account: validAccount,
-				Amount:  validAmount,
-			},
-		},
-	}
-	relatedToSelfTransaction := &types.Transaction{
-		TransactionIdentifier: &types.TransactionIdentifier{
-			Hash: "blah",
-		},
-		Operations: []*types.Operation{
-			{
-				OperationIdentifier: &types.OperationIdentifier{
-					Index: int64(0),
-				},
-				RelatedOperations: []*types.OperationIdentifier{
-					{
-						Index: int64(0),
-					},
 				},
 				Type:    "PAYMENT",
 				Status:  "SUCCESS",
@@ -765,7 +795,7 @@ func TestBlock(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			asserter, err := NewClientWithResponses(
+			asserter, err := NewWithResponses(
 				&types.NetworkIdentifier{
 					Blockchain: "hello",
 					Network:    "world",

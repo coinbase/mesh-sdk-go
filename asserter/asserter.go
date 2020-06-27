@@ -34,11 +34,12 @@ var (
 // validation on Rosetta Server responses.
 type Asserter struct {
 	// These variables are used for response assertion.
-	network            *types.NetworkIdentifier
-	operationTypes     []string
-	operationStatusMap map[string]bool
-	errorTypeMap       map[int32]*types.Error
-	genesisBlock       *types.BlockIdentifier
+	network                 *types.NetworkIdentifier
+	operationTypes          []string
+	operationStatusMap      map[string]bool
+	errorTypeMap            map[int32]*types.Error
+	genesisBlock            *types.BlockIdentifier
+	historicalBalanceLookup bool
 
 	// These variables are used for request assertion.
 	supportedNetworks []*types.NetworkIdentifier
@@ -47,21 +48,29 @@ type Asserter struct {
 // NewServer constructs a new Asserter for use in the
 // server package.
 func NewServer(
+	operationTypes []string,
+	historicalBalanceLookup bool,
 	supportedNetworks []*types.NetworkIdentifier,
 ) (*Asserter, error) {
+	if err := OperationTypes(operationTypes); err != nil {
+		return nil, err
+	}
+
 	if err := SupportedNetworks(supportedNetworks); err != nil {
 		return nil, err
 	}
 
 	return &Asserter{
-		supportedNetworks: supportedNetworks,
+		operationTypes:          operationTypes,
+		historicalBalanceLookup: historicalBalanceLookup,
+		supportedNetworks:       supportedNetworks,
 	}, nil
 }
 
-// NewClientWithResponses constructs a new Asserter
+// NewWithResponses constructs a new Asserter
 // from a NetworkStatusResponse and
 // NetworkOptionsResponse.
-func NewClientWithResponses(
+func NewWithResponses(
 	network *types.NetworkIdentifier,
 	networkStatus *types.NetworkStatusResponse,
 	networkOptions *types.NetworkOptionsResponse,
@@ -78,12 +87,13 @@ func NewClientWithResponses(
 		return nil, err
 	}
 
-	return NewClientWithOptions(
+	return NewWithOptions(
 		network,
 		networkStatus.GenesisBlockIdentifier,
 		networkOptions.Allow.OperationTypes,
 		networkOptions.Allow.OperationStatuses,
 		networkOptions.Allow.Errors,
+		networkOptions.Allow.HistoricalBalanceLookup,
 	)
 }
 
@@ -96,14 +106,15 @@ type Configuration struct {
 	AllowedOperationTypes    []string                 `json:"allowed_operation_types"`
 	AllowedOperationStatuses []*types.OperationStatus `json:"allowed_operation_statuses"`
 	AllowedErrors            []*types.Error           `json:"allowed_errors"`
+	HistoricalBalanceLookup  bool                     `json:"historical_balance_lookup"`
 }
 
-// NewClientWithFile constructs a new Asserter using a specification
+// NewWithFile constructs a new Asserter using a specification
 // file instead of responses. This can be useful for running reliable
 // systems that error when updates to the server (more error types,
 // more operations, etc.) significantly change how to parse the chain.
 // The filePath provided is parsed relative to the current directory.
-func NewClientWithFile(
+func NewWithFile(
 	filePath string,
 ) (*Asserter, error) {
 	content, err := ioutil.ReadFile(path.Clean(filePath))
@@ -116,24 +127,26 @@ func NewClientWithFile(
 		return nil, err
 	}
 
-	return NewClientWithOptions(
+	return NewWithOptions(
 		config.NetworkIdentifier,
 		config.GenesisBlockIdentifier,
 		config.AllowedOperationTypes,
 		config.AllowedOperationStatuses,
 		config.AllowedErrors,
+		config.HistoricalBalanceLookup,
 	)
 }
 
-// NewClientWithOptions constructs a new Asserter using the provided
+// NewWithOptions constructs a new Asserter using the provided
 // arguments instead of using a NetworkStatusResponse and a
 // NetworkOptionsResponse.
-func NewClientWithOptions(
+func NewWithOptions(
 	network *types.NetworkIdentifier,
 	genesisBlockIdentifier *types.BlockIdentifier,
 	operationTypes []string,
 	operationStatuses []*types.OperationStatus,
 	errors []*types.Error,
+	historicalBalanceLookup bool,
 ) (*Asserter, error) {
 	if err := NetworkIdentifier(network); err != nil {
 		return nil, err
@@ -152,9 +165,10 @@ func NewClientWithOptions(
 	}
 
 	asserter := &Asserter{
-		network:        network,
-		operationTypes: operationTypes,
-		genesisBlock:   genesisBlockIdentifier,
+		network:                 network,
+		operationTypes:          operationTypes,
+		genesisBlock:            genesisBlockIdentifier,
+		historicalBalanceLookup: historicalBalanceLookup,
 	}
 
 	asserter.operationStatusMap = map[string]bool{}
@@ -170,9 +184,9 @@ func NewClientWithOptions(
 	return asserter, nil
 }
 
-// ClientConfiguration returns all variables currently set in an Asserter.
+// Configuration returns all variables currently set in an Asserter.
 // This function will error if it is called on an uninitialized asserter.
-func (a *Asserter) ClientConfiguration() (*Configuration, error) {
+func (a *Asserter) Configuration() (*Configuration, error) {
 	if a == nil {
 		return nil, ErrAsserterNotInitialized
 	}
@@ -196,6 +210,7 @@ func (a *Asserter) ClientConfiguration() (*Configuration, error) {
 		AllowedOperationTypes:    a.operationTypes,
 		AllowedOperationStatuses: operationStatuses,
 		AllowedErrors:            errors,
+		HistoricalBalanceLookup:  a.historicalBalanceLookup,
 	}, nil
 }
 
