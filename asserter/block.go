@@ -168,6 +168,7 @@ func (a *Asserter) OperationType(t string) error {
 func (a *Asserter) Operation(
 	operation *types.Operation,
 	index int64,
+	construction bool,
 ) error {
 	if a == nil {
 		return ErrAsserterNotInitialized
@@ -185,8 +186,14 @@ func (a *Asserter) Operation(
 		return err
 	}
 
-	if err := a.OperationStatus(operation.Status); err != nil {
-		return err
+	if construction {
+		if len(operation.Status) != 0 {
+			return errors.New("operation.Status must be empty for construction")
+		}
+	} else {
+		if err := a.OperationStatus(operation.Status); err != nil {
+			return err
+		}
 	}
 
 	if operation.Amount == nil {
@@ -260,15 +267,15 @@ func TransactionIdentifier(
 // in a []*types.Operation is invalid.
 func (a *Asserter) Operations(
 	operations []*types.Operation,
-	emptyOk bool,
+	construction bool,
 ) error {
-	if len(operations) == 0 && !emptyOk {
-		return errors.New("operations cannot be empty")
+	if len(operations) == 0 && construction {
+		return errors.New("operations cannot be empty for construction")
 	}
 
 	for i, op := range operations {
 		// Ensure operations are sorted
-		if err := a.Operation(op, int64(i)); err != nil {
+		if err := a.Operation(op, int64(i), construction); err != nil {
 			return err
 		}
 
@@ -317,7 +324,7 @@ func (a *Asserter) Transaction(
 		return err
 	}
 
-	if err := a.Operations(transaction.Operations, true); err != nil {
+	if err := a.Operations(transaction.Operations, false); err != nil {
 		return fmt.Errorf(
 			"%w invalid operation in transaction %s",
 			err,

@@ -310,7 +310,7 @@ func simpleTransactionFactory(
 func simpleAsserterConfiguration(
 	allowedStatus []*types.OperationStatus,
 ) (*asserter.Asserter, error) {
-	return asserter.NewClientWithOptions(
+	return asserter.NewWithOptions(
 		&types.NetworkIdentifier{
 			Blockchain: "bitcoin",
 			Network:    "mainnet",
@@ -322,5 +322,6 @@ func simpleAsserterConfiguration(
 		[]string{"Transfer"},
 		allowedStatus,
 		[]*types.Error{},
+		false,
 	)
 }

@@ -39,7 +39,11 @@ var (
 		Address: "acct1",
 	}
 
-	genesisBlockIndex           = int64(0)
+	genesisBlockIndex      = int64(0)
+	genesisBlockIdentifier = &types.BlockIdentifier{
+		Index: genesisBlockIndex,
+		Hash:  "block 0",
+	}
 	validBlockIndex             = int64(1000)
 	validPartialBlockIdentifier = &types.PartialBlockIdentifier{
 		Index: &validBlockIndex,
@@ -58,7 +62,106 @@ var (
 		HexBytes:  "48656c6c6f20476f7068657221",
 		CurveType: types.Secp256k1,
 	}
+
+	validAmount = &types.Amount{
+		Value: "1000",
+		Currency: &types.Currency{
+			Symbol:   "BTC",
+			Decimals: 8,
+		},
+	}
+
+	validAccount = &types.AccountIdentifier{
+		Address: "test",
+	}
+
+	validOps = []*types.Operation{
+		{
+			OperationIdentifier: &types.OperationIdentifier{
+				Index: int64(0),
+			},
+			Type:    "PAYMENT",
+			Account: validAccount,
+			Amount:  validAmount,
+		},
+		{
+			OperationIdentifier: &types.OperationIdentifier{
+				Index: int64(1),
+			},
+			RelatedOperations: []*types.OperationIdentifier{
+				{
+					Index: int64(0),
+				},
+			},
+			Type:    "PAYMENT",
+			Account: validAccount,
+			Amount:  validAmount,
+		},
+	}
+
+	unsupportedTypeOps = []*types.Operation{
+		{
+			OperationIdentifier: &types.OperationIdentifier{
+				Index: int64(0),
+			},
+			Type:    "STAKE",
+			Account: validAccount,
+			Amount:  validAmount,
+		},
+		{
+			OperationIdentifier: &types.OperationIdentifier{
+				Index: int64(1),
+			},
+			RelatedOperations: []*types.OperationIdentifier{
+				{
+					Index: int64(0),
+				},
+			},
+			Type:    "PAYMENT",
+			Account: validAccount,
+			Amount:  validAmount,
+		},
+	}
+
+	invalidOps = []*types.Operation{
+		{
+			OperationIdentifier: &types.OperationIdentifier{
+				Index: int64(0),
+			},
+			Type:    "PAYMENT",
+			Status:  "SUCCESS",
+			Account: validAccount,
+			Amount:  validAmount,
+		},
+		{
+			OperationIdentifier: &types.OperationIdentifier{
+				Index: int64(1),
+			},
+			RelatedOperations: []*types.OperationIdentifier{
+				{
+					Index: int64(0),
+				},
+			},
+			Type:    "PAYMENT",
+			Status:  "SUCCESS",
+			Account: validAccount,
+			Amount:  validAmount,
+		},
+	}
+
+	a, aErr = NewServer(
+		[]string{"PAYMENT"},
+		true,
+		[]*types.NetworkIdentifier{validNetworkIdentifier},
+	)
 )
+
+func TestNewWithOptions(t *testing.T) {
+	t.Run("ensure asserter initialized", func(t *testing.T) {
+		assert.NotNil(t, a)
+		assert.NoError(t, aErr)
+	})
+}
 
 func TestSupportedNetworks(t *testing.T) {
 	var tests = map[string]struct {
@@ -156,11 +259,7 @@ func TestAccountBalanceRequest(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			a, err := NewServer([]*types.NetworkIdentifier{validNetworkIdentifier})
-			assert.NoError(t, err)
-			assert.NotNil(t, a)
-
-			err = a.AccountBalanceRequest(test.request)
+			err := a.AccountBalanceRequest(test.request)
 			assert.Equal(t, test.err, err)
 		})
 	}
@@ -221,11 +320,7 @@ func TestBlockRequest(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			a, err := NewServer([]*types.NetworkIdentifier{validNetworkIdentifier})
-			assert.NoError(t, err)
-			assert.NotNil(t, a)
-
-			err = a.BlockRequest(test.request)
+			err := a.BlockRequest(test.request)
 			assert.Equal(t, test.err, err)
 		})
 	}
@@ -281,11 +376,7 @@ func TestBlockTransactionRequest(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			a, err := NewServer([]*types.NetworkIdentifier{validNetworkIdentifier})
-			assert.NoError(t, err)
-			assert.NotNil(t, a)
-
-			err = a.BlockTransactionRequest(test.request)
+			err := a.BlockTransactionRequest(test.request)
 			assert.Equal(t, test.err, err)
 		})
 	}
@@ -330,11 +421,7 @@ func TestConstructionMetadataRequest(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			a, err := NewServer([]*types.NetworkIdentifier{validNetworkIdentifier})
-			assert.NoError(t, err)
-			assert.NotNil(t, a)
-
-			err = a.ConstructionMetadataRequest(test.request)
+			err := a.ConstructionMetadataRequest(test.request)
 			assert.Equal(t, test.err, err)
 		})
 	}
@@ -371,11 +458,7 @@ func TestConstructionSubmitRequest(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			a, err := NewServer([]*types.NetworkIdentifier{validNetworkIdentifier})
-			assert.NoError(t, err)
-			assert.NotNil(t, a)
-
-			err = a.ConstructionSubmitRequest(test.request)
+			err := a.ConstructionSubmitRequest(test.request)
 			assert.Equal(t, test.err, err)
 		})
 	}
@@ -421,11 +504,7 @@ func TestMempoolTransactionRequest(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			a, err := NewServer([]*types.NetworkIdentifier{validNetworkIdentifier})
-			assert.NoError(t, err)
-			assert.NotNil(t, a)
-
-			err = a.MempoolTransactionRequest(test.request)
+			err := a.MempoolTransactionRequest(test.request)
 			assert.Equal(t, test.err, err)
 		})
 	}
@@ -448,11 +527,7 @@ func TestMetadataRequest(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			a, err := NewServer([]*types.NetworkIdentifier{validNetworkIdentifier})
-			assert.NoError(t, err)
-			assert.NotNil(t, a)
-
-			err = a.MetadataRequest(test.request)
+			err := a.MetadataRequest(test.request)
 			assert.Equal(t, test.err, err)
 		})
 	}
@@ -487,11 +562,7 @@ func TestNetworkRequest(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			a, err := NewServer([]*types.NetworkIdentifier{validNetworkIdentifier})
-			assert.NoError(t, err)
-			assert.NotNil(t, a)
-
-			err = a.NetworkRequest(test.request)
+			err := a.NetworkRequest(test.request)
 			assert.Equal(t, test.err, err)
 		})
 	}
@@ -539,11 +610,71 @@ func TestConstructionDeriveRequest(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			a, err := NewServer([]*types.NetworkIdentifier{validNetworkIdentifier})
-			assert.NoError(t, err)
-			assert.NotNil(t, a)
+			err := a.ConstructionDeriveRequest(test.request)
+			if test.err != nil {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), test.err.Error())
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
 
-			err = a.ConstructionDeriveRequest(test.request)
+func TestConstructionPreprocessRequest(t *testing.T) {
+	var tests = map[string]struct {
+		request *types.ConstructionPreprocessRequest
+		err     error
+	}{
+		"valid request": {
+			request: &types.ConstructionPreprocessRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+				Operations:        validOps,
+			},
+			err: nil,
+		},
+		"invalid request wrong network": {
+			request: &types.ConstructionPreprocessRequest{
+				NetworkIdentifier: wrongNetworkIdentifier,
+			},
+			err: fmt.Errorf("%+v is not supported", wrongNetworkIdentifier),
+		},
+		"nil request": {
+			request: nil,
+			err:     errors.New("ConstructionPreprocessRequest is nil"),
+		},
+		"nil operations": {
+			request: &types.ConstructionPreprocessRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+			},
+			err: errors.New("operations cannot be empty"),
+		},
+		"empty operations": {
+			request: &types.ConstructionPreprocessRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+				Operations:        []*types.Operation{},
+			},
+			err: errors.New("operations cannot be empty"),
+		},
+		"unsupported operation type": {
+			request: &types.ConstructionPreprocessRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+				Operations:        unsupportedTypeOps,
+			},
+			err: errors.New("Operation.Type STAKE is invalid"),
+		},
+		"invalid operations": {
+			request: &types.ConstructionPreprocessRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+				Operations:        invalidOps,
+			},
+			err: errors.New("must be empty for construction"),
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			err := a.ConstructionPreprocessRequest(test.request)
 			if test.err != nil {
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), test.err.Error())
