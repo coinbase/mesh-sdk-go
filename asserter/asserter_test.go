@@ -211,7 +211,7 @@ func TestNew(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(fmt.Sprintf("%s with responses", name), func(t *testing.T) {
-			asserter, err := NewWithResponses(
+			asserter, err := NewClientWithResponses(
 				test.network,
 				test.networkStatus,
 				test.networkOptions,
@@ -224,7 +224,7 @@ func TestNew(t *testing.T) {
 			}
 
 			assert.NotNil(t, asserter)
-			configuration, err := asserter.Configuration()
+			configuration, err := asserter.ClientConfiguration()
 			assert.NoError(t, err)
 			assert.Equal(t, test.network, configuration.NetworkIdentifier)
 			assert.Equal(
@@ -243,11 +243,6 @@ func TestNew(t *testing.T) {
 				configuration.AllowedOperationStatuses,
 			)
 			assert.ElementsMatch(t, test.networkOptions.Allow.Errors, configuration.AllowedErrors)
-			assert.Equal(
-				t,
-				test.networkOptions.Allow.HistoricalBalanceLookup,
-				configuration.HistoricalBalanceLookup,
-			)
 		})
 
 		t.Run(fmt.Sprintf("%s with file", name), func(t *testing.T) {
@@ -257,7 +252,6 @@ func TestNew(t *testing.T) {
 				AllowedOperationTypes:    test.networkOptions.Allow.OperationTypes,
 				AllowedOperationStatuses: test.networkOptions.Allow.OperationStatuses,
 				AllowedErrors:            test.networkOptions.Allow.Errors,
-				HistoricalBalanceLookup:  test.networkOptions.Allow.HistoricalBalanceLookup,
 			}
 			tmpfile, err := ioutil.TempFile("", "test.json")
 			assert.NoError(t, err)
@@ -270,7 +264,7 @@ func TestNew(t *testing.T) {
 			assert.NoError(t, err)
 			assert.NoError(t, tmpfile.Close())
 
-			asserter, err := NewWithFile(
+			asserter, err := NewClientWithFile(
 				tmpfile.Name(),
 			)
 
@@ -281,7 +275,7 @@ func TestNew(t *testing.T) {
 			}
 
 			assert.NotNil(t, asserter)
-			configuration, err := asserter.Configuration()
+			configuration, err := asserter.ClientConfiguration()
 			assert.NoError(t, err)
 			assert.Equal(t, test.network, configuration.NetworkIdentifier)
 			assert.Equal(
@@ -300,16 +294,11 @@ func TestNew(t *testing.T) {
 				configuration.AllowedOperationStatuses,
 			)
 			assert.ElementsMatch(t, test.networkOptions.Allow.Errors, configuration.AllowedErrors)
-			assert.Equal(
-				t,
-				test.networkOptions.Allow.HistoricalBalanceLookup,
-				configuration.HistoricalBalanceLookup,
-			)
 		})
 	}
 
 	t.Run("non-existent file", func(t *testing.T) {
-		asserter, err := NewWithFile(
+		asserter, err := NewClientWithFile(
 			"blah",
 		)
 		assert.Error(t, err)
@@ -325,7 +314,7 @@ func TestNew(t *testing.T) {
 		assert.NoError(t, err)
 		assert.NoError(t, tmpfile.Close())
 
-		asserter, err := NewWithFile(
+		asserter, err := NewClientWithFile(
 			tmpfile.Name(),
 		)
 
