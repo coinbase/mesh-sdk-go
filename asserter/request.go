@@ -59,6 +59,22 @@ func (a *Asserter) SupportedNetwork(
 	return nil
 }
 
+// ValidSupportedNetwork returns an error if a types.NetworkIdentifier
+// is not valid or not supported.
+func (a *Asserter) ValidSupportedNetwork(
+	requestNetwork *types.NetworkIdentifier,
+) error {
+	if err := NetworkIdentifier(requestNetwork); err != nil {
+		return err
+	}
+
+	if err := a.SupportedNetwork(requestNetwork); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // AccountBalanceRequest ensures that a types.AccountBalanceRequest
 // is well-formatted.
 func (a *Asserter) AccountBalanceRequest(request *types.AccountBalanceRequest) error {
@@ -70,11 +86,7 @@ func (a *Asserter) AccountBalanceRequest(request *types.AccountBalanceRequest) e
 		return errors.New("AccountBalanceRequest is nil")
 	}
 
-	if err := NetworkIdentifier(request.NetworkIdentifier); err != nil {
-		return err
-	}
-
-	if err := a.SupportedNetwork(request.NetworkIdentifier); err != nil {
+	if err := a.ValidSupportedNetwork(request.NetworkIdentifier); err != nil {
 		return err
 	}
 
@@ -84,6 +96,10 @@ func (a *Asserter) AccountBalanceRequest(request *types.AccountBalanceRequest) e
 
 	if request.BlockIdentifier == nil {
 		return nil
+	}
+
+	if request.BlockIdentifier != nil && !a.historicalBalanceLookup {
+		return errors.New("historical balance lookup is not supported")
 	}
 
 	return PartialBlockIdentifier(request.BlockIdentifier)
@@ -100,11 +116,7 @@ func (a *Asserter) BlockRequest(request *types.BlockRequest) error {
 		return errors.New("BlockRequest is nil")
 	}
 
-	if err := NetworkIdentifier(request.NetworkIdentifier); err != nil {
-		return err
-	}
-
-	if err := a.SupportedNetwork(request.NetworkIdentifier); err != nil {
+	if err := a.ValidSupportedNetwork(request.NetworkIdentifier); err != nil {
 		return err
 	}
 
@@ -122,11 +134,7 @@ func (a *Asserter) BlockTransactionRequest(request *types.BlockTransactionReques
 		return errors.New("BlockTransactionRequest is nil")
 	}
 
-	if err := NetworkIdentifier(request.NetworkIdentifier); err != nil {
-		return err
-	}
-
-	if err := a.SupportedNetwork(request.NetworkIdentifier); err != nil {
+	if err := a.ValidSupportedNetwork(request.NetworkIdentifier); err != nil {
 		return err
 	}
 
@@ -148,11 +156,7 @@ func (a *Asserter) ConstructionMetadataRequest(request *types.ConstructionMetada
 		return errors.New("ConstructionMetadataRequest is nil")
 	}
 
-	if err := NetworkIdentifier(request.NetworkIdentifier); err != nil {
-		return err
-	}
-
-	if err := a.SupportedNetwork(request.NetworkIdentifier); err != nil {
+	if err := a.ValidSupportedNetwork(request.NetworkIdentifier); err != nil {
 		return err
 	}
 
@@ -174,11 +178,7 @@ func (a *Asserter) ConstructionSubmitRequest(request *types.ConstructionSubmitRe
 		return errors.New("ConstructionSubmitRequest is nil")
 	}
 
-	if err := NetworkIdentifier(request.NetworkIdentifier); err != nil {
-		return err
-	}
-
-	if err := a.SupportedNetwork(request.NetworkIdentifier); err != nil {
+	if err := a.ValidSupportedNetwork(request.NetworkIdentifier); err != nil {
 		return err
 	}
 
@@ -187,24 +187,6 @@ func (a *Asserter) ConstructionSubmitRequest(request *types.ConstructionSubmitRe
 	}
 
 	return nil
-}
-
-// MempoolRequest ensures that a types.MempoolRequest
-// is well-formatted.
-func (a *Asserter) MempoolRequest(request *types.MempoolRequest) error {
-	if a == nil {
-		return ErrAsserterNotInitialized
-	}
-
-	if request == nil {
-		return errors.New("MempoolRequest is nil")
-	}
-
-	if err := NetworkIdentifier(request.NetworkIdentifier); err != nil {
-		return err
-	}
-
-	return a.SupportedNetwork(request.NetworkIdentifier)
 }
 
 // MempoolTransactionRequest ensures that a types.MempoolTransactionRequest
@@ -218,11 +200,7 @@ func (a *Asserter) MempoolTransactionRequest(request *types.MempoolTransactionRe
 		return errors.New("MempoolTransactionRequest is nil")
 	}
 
-	if err := NetworkIdentifier(request.NetworkIdentifier); err != nil {
-		return err
-	}
-
-	if err := a.SupportedNetwork(request.NetworkIdentifier); err != nil {
+	if err := a.ValidSupportedNetwork(request.NetworkIdentifier); err != nil {
 		return err
 	}
 
@@ -254,12 +232,146 @@ func (a *Asserter) NetworkRequest(request *types.NetworkRequest) error {
 		return errors.New("NetworkRequest is nil")
 	}
 
-	if err := NetworkIdentifier(request.NetworkIdentifier); err != nil {
+	if err := a.ValidSupportedNetwork(request.NetworkIdentifier); err != nil {
 		return err
 	}
 
-	if err := a.SupportedNetwork(request.NetworkIdentifier); err != nil {
+	return nil
+}
+
+// ConstructionDeriveRequest ensures that a types.ConstructionDeriveRequest
+// is well-formatted.
+func (a *Asserter) ConstructionDeriveRequest(request *types.ConstructionDeriveRequest) error {
+	if a == nil {
+		return ErrAsserterNotInitialized
+	}
+
+	if request == nil {
+		return errors.New("ConstructionDeriveRequest is nil")
+	}
+
+	if err := a.ValidSupportedNetwork(request.NetworkIdentifier); err != nil {
 		return err
+	}
+
+	if err := PublicKey(request.PublicKey); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// ConstructionPreprocessRequest ensures that a types.ConstructionPreprocessRequest
+// is well-formatted.
+func (a *Asserter) ConstructionPreprocessRequest(
+	request *types.ConstructionPreprocessRequest,
+) error {
+	if a == nil {
+		return ErrAsserterNotInitialized
+	}
+
+	if request == nil {
+		return errors.New("ConstructionPreprocessRequest is nil")
+	}
+
+	if err := a.ValidSupportedNetwork(request.NetworkIdentifier); err != nil {
+		return err
+	}
+
+	if err := a.Operations(request.Operations, true); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// ConstructionPayloadsRequest ensures that a types.ConstructionPayloadsRequest
+// is well-formatted.
+func (a *Asserter) ConstructionPayloadsRequest(request *types.ConstructionPayloadsRequest) error {
+	if a == nil {
+		return ErrAsserterNotInitialized
+	}
+
+	if request == nil {
+		return errors.New("ConstructionPayloadsRequest is nil")
+	}
+
+	if err := a.ValidSupportedNetwork(request.NetworkIdentifier); err != nil {
+		return err
+	}
+
+	if err := a.Operations(request.Operations, true); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// ConstructionCombineRequest ensures that a types.ConstructionCombineRequest
+// is well-formatted.
+func (a *Asserter) ConstructionCombineRequest(request *types.ConstructionCombineRequest) error {
+	if a == nil {
+		return ErrAsserterNotInitialized
+	}
+
+	if request == nil {
+		return errors.New("ConstructionCombineRequest is nil")
+	}
+
+	if err := a.ValidSupportedNetwork(request.NetworkIdentifier); err != nil {
+		return err
+	}
+
+	if len(request.UnsignedTransaction) == 0 {
+		return errors.New("UnsignedTransaction cannot be empty")
+	}
+
+	if err := Signatures(request.Signatures); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// ConstructionHashRequest ensures that a types.ConstructionHashRequest
+// is well-formatted.
+func (a *Asserter) ConstructionHashRequest(request *types.ConstructionHashRequest) error {
+	if a == nil {
+		return ErrAsserterNotInitialized
+	}
+
+	if request == nil {
+		return errors.New("ConstructionHashRequest is nil")
+	}
+
+	if err := a.ValidSupportedNetwork(request.NetworkIdentifier); err != nil {
+		return err
+	}
+
+	if len(request.SignedTransaction) == 0 {
+		return errors.New("SignedTransaction cannot be empty")
+	}
+
+	return nil
+}
+
+// ConstructionParseRequest ensures that a types.ConstructionParseRequest
+// is well-formatted.
+func (a *Asserter) ConstructionParseRequest(request *types.ConstructionParseRequest) error {
+	if a == nil {
+		return ErrAsserterNotInitialized
+	}
+
+	if request == nil {
+		return errors.New("ConstructionParseRequest is nil")
+	}
+
+	if err := a.ValidSupportedNetwork(request.NetworkIdentifier); err != nil {
+		return err
+	}
+
+	if len(request.Transaction) == 0 {
+		return errors.New("Transaction cannot be empty")
 	}
 
 	return nil

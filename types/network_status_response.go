@@ -17,12 +17,15 @@
 package types
 
 // NetworkStatusResponse NetworkStatusResponse contains basic information about the node's view of a
-// blockchain network.
+// blockchain network. If a Rosetta implementation prunes historical state, it should populate the
+// optional `oldest_block_identifier` field with the oldest block available to query. If this is not
+// populated, it is assumed that the `genesis_block_identifier` is the oldest queryable block.
 type NetworkStatusResponse struct {
 	CurrentBlockIdentifier *BlockIdentifier `json:"current_block_identifier"`
 	// The timestamp of the block in milliseconds since the Unix Epoch. The timestamp is stored in
 	// milliseconds because some blockchains produce blocks more often than once a second.
 	CurrentBlockTimestamp  int64            `json:"current_block_timestamp"`
 	GenesisBlockIdentifier *BlockIdentifier `json:"genesis_block_identifier"`
+	OldestBlockIdentifier  *BlockIdentifier `json:"oldest_block_identifier,omitempty"`
 	Peers                  []*Peer          `json:"peers"`
 }

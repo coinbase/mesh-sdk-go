@@ -16,12 +16,13 @@
 
 package types
 
-// Transaction Transactions contain an array of Operations that are attributable to the same
-// TransactionIdentifier.
-type Transaction struct {
-	TransactionIdentifier *TransactionIdentifier `json:"transaction_identifier"`
-	Operations            []*Operation           `json:"operations"`
-	// Transactions that are related to other transactions (like a cross-shard transaction) should
-	// include the tranaction_identifier of these transactions in the metadata.
-	Metadata map[string]interface{} `json:"metadata,omitempty"`
+// ConstructionParseRequest ConstructionParseRequest is the input to the `/construction/parse`
+// endpoint. It allows the caller to parse either an unsigned or signed transaction.
+type ConstructionParseRequest struct {
+	NetworkIdentifier *NetworkIdentifier `json:"network_identifier"`
+	// Signed is a boolean indicating whether the transaction is signed.
+	Signed bool `json:"signed"`
+	// This must be either the unsigned transaction blob returned by `/construction/payloads` or the
+	// signed transaction blob returned by `/construction/combine`.
+	Transaction string `json:"transaction"`
 }

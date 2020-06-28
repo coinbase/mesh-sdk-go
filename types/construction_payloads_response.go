@@ -16,8 +16,11 @@
 
 package types
 
-// MempoolRequest A MempoolRequest is utilized to retrieve all transaction identifiers in the
-// mempool for a particular network_identifier.
-type MempoolRequest struct {
-	NetworkIdentifier *NetworkIdentifier `json:"network_identifier"`
+// ConstructionPayloadsResponse ConstructionTransactionResponse is returned by
+// `/construction/payloads`. It contains an unsigned transaction blob (that is usually needed to
+// construct the a network transaction from a collection of signatures) and an array of payloads
+// that must be signed by the caller.
+type ConstructionPayloadsResponse struct {
+	UnsignedTransaction string            `json:"unsigned_transaction"`
+	Payloads            []*SigningPayload `json:"payloads"`
 }

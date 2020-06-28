@@ -47,7 +47,7 @@ var (
 
 	basicNetworkOptions = &types.NetworkOptionsResponse{
 		Version: &types.Version{
-			RosettaVersion: "1.3.1",
+			RosettaVersion: "1.4.0",
 			NodeVersion:    "0.0.1",
 		},
 		Allow: &types.Allow{

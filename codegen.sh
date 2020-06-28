@@ -53,7 +53,7 @@ done
 rm -rf tmp;
 
 # Download spec file from releases
-ROSETTA_SPEC_VERSION=v1.3.1
+ROSETTA_SPEC_VERSION=v1.4.0
 curl -L https://github.com/coinbase/rosetta-specifications/releases/download/${ROSETTA_SPEC_VERSION}/api.json -o api.json;
 
 # Generate client + types code
@@ -113,6 +113,17 @@ sed "${SED_IFLAG[@]}" 's/Api/API/g' client/* server/*;
 sed "${SED_IFLAG[@]}" 's/Json/JSON/g' client/* server/*;
 sed "${SED_IFLAG[@]}" 's/Id /ID /g' client/* server/*;
 sed "${SED_IFLAG[@]}" 's/Url/URL/g' client/* server/*;
+
+# Fix enum pointers
+sed "${SED_IFLAG[@]}" 's/*CurveType/CurveType/g' client/* server/*;
+sed "${SED_IFLAG[@]}" 's/*SignatureType/SignatureType/g' client/* server/*;
+
+# Fix CurveTypes and SignatureTypes
+sed "${SED_IFLAG[@]}" 's/SECP256K1/Secp256k1/g' client/* server/*;
+sed "${SED_IFLAG[@]}" 's/EDWARDS25519/Edwards25519/g' client/* server/*;
+sed "${SED_IFLAG[@]}" 's/ECDSA_RECOVERY/EcdsaRecovery/g' client/* server/*;
+sed "${SED_IFLAG[@]}" 's/ECDSA/Ecdsa/g' client/* server/*;
+sed "${SED_IFLAG[@]}" 's/ED25519/Ed25519/g' client/* server/*;
 
 # Remove special characters
 sed "${SED_IFLAG[@]}" 's/&#x60;//g' client/* server/*;

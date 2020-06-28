@@ -41,20 +41,29 @@ type Asserter struct {
 	genesisBlock       *types.BlockIdentifier
 
 	// These variables are used for request assertion.
-	supportedNetworks []*types.NetworkIdentifier
+	historicalBalanceLookup bool
+	supportedNetworks       []*types.NetworkIdentifier
 }
 
 // NewServer constructs a new Asserter for use in the
 // server package.
 func NewServer(
+	supportedOperationTypes []string,
+	historicalBalanceLookup bool,
 	supportedNetworks []*types.NetworkIdentifier,
 ) (*Asserter, error) {
+	if err := OperationTypes(supportedOperationTypes); err != nil {
+		return nil, err
+	}
+
 	if err := SupportedNetworks(supportedNetworks); err != nil {
 		return nil, err
 	}
 
 	return &Asserter{
-		supportedNetworks: supportedNetworks,
+		operationTypes:          supportedOperationTypes,
+		historicalBalanceLookup: historicalBalanceLookup,
+		supportedNetworks:       supportedNetworks,
 	}, nil
 }
 

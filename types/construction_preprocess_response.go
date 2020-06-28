@@ -16,12 +16,10 @@
 
 package types
 
-// Transaction Transactions contain an array of Operations that are attributable to the same
-// TransactionIdentifier.
-type Transaction struct {
-	TransactionIdentifier *TransactionIdentifier `json:"transaction_identifier"`
-	Operations            []*Operation           `json:"operations"`
-	// Transactions that are related to other transactions (like a cross-shard transaction) should
-	// include the tranaction_identifier of these transactions in the metadata.
-	Metadata map[string]interface{} `json:"metadata,omitempty"`
+// ConstructionPreprocessResponse ConstructionPreprocessResponse contains the request that will be
+// sent directly to `/construction/metadata`. If it is not necessary to make a request to
+// `/construction/metadata`, options should be null.
+type ConstructionPreprocessResponse struct {
+	// The options that will be sent directly to `/construction/metadata` by the caller.
+	Options map[string]interface{} `json:"options,omitempty"`
 }

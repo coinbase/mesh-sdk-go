@@ -30,4 +30,7 @@ type Allow struct {
 	// All Errors that this implementation could return. Any error that is returned during parsing
 	// that is not listed here will cause client validation to error.
 	Errors []*Error `json:"errors"`
+	// Any Rosetta implementation that supports querying the balance of an account at any height in
+	// the past should set this to true.
+	HistoricalBalanceLookup bool `json:"historical_balance_lookup"`
 }
