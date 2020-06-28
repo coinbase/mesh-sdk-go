@@ -16,12 +16,11 @@
 
 package types
 
-// Transaction Transactions contain an array of Operations that are attributable to the same
-// TransactionIdentifier.
-type Transaction struct {
-	TransactionIdentifier *TransactionIdentifier `json:"transaction_identifier"`
-	Operations            []*Operation           `json:"operations"`
-	// Transactions that are related to other transactions (like a cross-shard transaction) should
-	// include the tranaction_identifier of these transactions in the metadata.
-	Metadata map[string]interface{} `json:"metadata,omitempty"`
+// ConstructionCombineRequest ConstructionCombineRequest is the input to the `/construction/combine`
+// endpoint. It contains the unsigned transaction blob returned by `/construction/payloads` and all
+// required signatures to create a network transaction.
+type ConstructionCombineRequest struct {
+	NetworkIdentifier   *NetworkIdentifier `json:"network_identifier"`
+	UnsignedTransaction string             `json:"unsigned_transaction"`
+	Signatures          []*Signature       `json:"signatures"`
 }

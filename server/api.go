@@ -49,7 +49,13 @@ type BlockAPIRouter interface {
 // pass the data to a ConstructionAPIServicer to perform the required actions, then write the
 // service results to the http response.
 type ConstructionAPIRouter interface {
+	ConstructionCombine(http.ResponseWriter, *http.Request)
+	ConstructionDerive(http.ResponseWriter, *http.Request)
+	ConstructionHash(http.ResponseWriter, *http.Request)
 	ConstructionMetadata(http.ResponseWriter, *http.Request)
+	ConstructionParse(http.ResponseWriter, *http.Request)
+	ConstructionPayloads(http.ResponseWriter, *http.Request)
+	ConstructionPreprocess(http.ResponseWriter, *http.Request)
 	ConstructionSubmit(http.ResponseWriter, *http.Request)
 }
 
@@ -102,10 +108,34 @@ type BlockAPIServicer interface {
 // while the service implementation can ignored with the .openapi-generator-ignore file
 // and updated with the logic required for the API.
 type ConstructionAPIServicer interface {
+	ConstructionCombine(
+		context.Context,
+		*types.ConstructionCombineRequest,
+	) (*types.ConstructionCombineResponse, *types.Error)
+	ConstructionDerive(
+		context.Context,
+		*types.ConstructionDeriveRequest,
+	) (*types.ConstructionDeriveResponse, *types.Error)
+	ConstructionHash(
+		context.Context,
+		*types.ConstructionHashRequest,
+	) (*types.ConstructionHashResponse, *types.Error)
 	ConstructionMetadata(
 		context.Context,
 		*types.ConstructionMetadataRequest,
 	) (*types.ConstructionMetadataResponse, *types.Error)
+	ConstructionParse(
+		context.Context,
+		*types.ConstructionParseRequest,
+	) (*types.ConstructionParseResponse, *types.Error)
+	ConstructionPayloads(
+		context.Context,
+		*types.ConstructionPayloadsRequest,
+	) (*types.ConstructionPayloadsResponse, *types.Error)
+	ConstructionPreprocess(
+		context.Context,
+		*types.ConstructionPreprocessRequest,
+	) (*types.ConstructionPreprocessResponse, *types.Error)
 	ConstructionSubmit(
 		context.Context,
 		*types.ConstructionSubmitRequest,
@@ -117,7 +147,7 @@ type ConstructionAPIServicer interface {
 // while the service implementation can ignored with the .openapi-generator-ignore file
 // and updated with the logic required for the API.
 type MempoolAPIServicer interface {
-	Mempool(context.Context, *types.MempoolRequest) (*types.MempoolResponse, *types.Error)
+	Mempool(context.Context, *types.NetworkRequest) (*types.MempoolResponse, *types.Error)
 	MempoolTransaction(
 		context.Context,
 		*types.MempoolTransactionRequest,

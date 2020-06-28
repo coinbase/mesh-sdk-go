@@ -16,12 +16,10 @@
 
 package types
 
-// Transaction Transactions contain an array of Operations that are attributable to the same
-// TransactionIdentifier.
-type Transaction struct {
-	TransactionIdentifier *TransactionIdentifier `json:"transaction_identifier"`
-	Operations            []*Operation           `json:"operations"`
-	// Transactions that are related to other transactions (like a cross-shard transaction) should
-	// include the tranaction_identifier of these transactions in the metadata.
-	Metadata map[string]interface{} `json:"metadata,omitempty"`
+// PublicKey PublicKey contains a public key byte array for a particular CurveType encoded in hex.
+// Note that there is no PrivateKey struct as this is NEVER the concern of an implementation.
+type PublicKey struct {
+	// Hex-encoded public key bytes in the format specified by the CurveType.
+	HexBytes  string    `json:"hex_bytes"`
+	CurveType CurveType `json:"curve_type"`
 }

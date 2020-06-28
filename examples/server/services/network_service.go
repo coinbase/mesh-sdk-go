@@ -75,7 +75,7 @@ func (s *NetworkAPIService) NetworkOptions(
 ) (*types.NetworkOptionsResponse, *types.Error) {
 	return &types.NetworkOptionsResponse{
 		Version: &types.Version{
-			RosettaVersion: "1.3.0",
+			RosettaVersion: "1.4.0",
 			NodeVersion:    "0.0.1",
 		},
 		Allow: &types.Allow{

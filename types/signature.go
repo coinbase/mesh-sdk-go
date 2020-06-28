@@ -16,12 +16,13 @@
 
 package types
 
-// Transaction Transactions contain an array of Operations that are attributable to the same
-// TransactionIdentifier.
-type Transaction struct {
-	TransactionIdentifier *TransactionIdentifier `json:"transaction_identifier"`
-	Operations            []*Operation           `json:"operations"`
-	// Transactions that are related to other transactions (like a cross-shard transaction) should
-	// include the tranaction_identifier of these transactions in the metadata.
-	Metadata map[string]interface{} `json:"metadata,omitempty"`
+// Signature Signature contains the payload that was signed, the public keys of the keypairs used to
+// produce the signature, the signature (encoded in hex), and the SignatureType. PublicKey is often
+// times not known during construction of the signing payloads but may be needed to combine
+// signatures properly.
+type Signature struct {
+	SigningPayload *SigningPayload `json:"signing_payload"`
+	PublicKey      *PublicKey      `json:"public_key"`
+	SignatureType  SignatureType   `json:"signature_type"`
+	HexBytes       string          `json:"hex_bytes"`
 }
