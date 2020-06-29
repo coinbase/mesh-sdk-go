@@ -26,4 +26,8 @@ type Error struct {
 	Message string `json:"message"`
 	// An error is retriable if the same request may succeed if submitted again.
 	Retriable bool `json:"retriable"`
+	// Often times it is useful to return context specific to the request that caused the error
+	// (i.e. a sample of the stack trace or impacted account) in addition to the standard error
+	// message.
+	Details map[string]interface{} `json:"details,omitempty"`
 }

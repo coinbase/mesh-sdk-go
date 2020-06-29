@@ -85,7 +85,7 @@ func TestVersion(t *testing.T) {
 	var (
 		middlewareVersion        = "1.2"
 		invalidMiddlewareVersion = ""
-		validRosettaVersion      = "1.2.4"
+		validRosettaVersion      = "1.4.0"
 	)
 
 	var tests = map[string]struct {
@@ -109,7 +109,7 @@ func TestVersion(t *testing.T) {
 		},
 		"old RosettaVersion": {
 			version: &types.Version{
-				RosettaVersion: "1.2.2",
+				RosettaVersion: "1.2.0",
 				NodeVersion:    "1.0",
 			},
 			err: nil,

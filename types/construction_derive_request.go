@@ -16,12 +16,12 @@
 
 package types
 
-// Transaction Transactions contain an array of Operations that are attributable to the same
-// TransactionIdentifier.
-type Transaction struct {
-	TransactionIdentifier *TransactionIdentifier `json:"transaction_identifier"`
-	Operations            []*Operation           `json:"operations"`
-	// Transactions that are related to other transactions (like a cross-shard transaction) should
-	// include the tranaction_identifier of these transactions in the metadata.
-	Metadata map[string]interface{} `json:"metadata,omitempty"`
+// ConstructionDeriveRequest ConstructionDeriveRequest is passed to the `/construction/derive`
+// endpoint. Network is provided in the request because some blockchains have different address
+// formats for different networks. Metadata is provided in the request because some blockchains
+// allow for multiple address types (i.e. different address for validators vs normal accounts).
+type ConstructionDeriveRequest struct {
+	NetworkIdentifier *NetworkIdentifier     `json:"network_identifier"`
+	PublicKey         *PublicKey             `json:"public_key"`
+	Metadata          map[string]interface{} `json:"metadata,omitempty"`
 }
