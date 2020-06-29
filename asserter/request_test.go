@@ -53,7 +53,161 @@ var (
 	validTransactionIdentifier = &types.TransactionIdentifier{
 		Hash: "tx1",
 	}
+
+	validPublicKey = &types.PublicKey{
+		HexBytes:  "48656c6c6f20476f7068657221",
+		CurveType: types.Secp256k1,
+	}
+
+	validAmount = &types.Amount{
+		Value: "1000",
+		Currency: &types.Currency{
+			Symbol:   "BTC",
+			Decimals: 8,
+		},
+	}
+
+	validAccount = &types.AccountIdentifier{
+		Address: "test",
+	}
+
+	validOps = []*types.Operation{
+		{
+			OperationIdentifier: &types.OperationIdentifier{
+				Index: int64(0),
+			},
+			Type:    "PAYMENT",
+			Account: validAccount,
+			Amount:  validAmount,
+		},
+		{
+			OperationIdentifier: &types.OperationIdentifier{
+				Index: int64(1),
+			},
+			RelatedOperations: []*types.OperationIdentifier{
+				{
+					Index: int64(0),
+				},
+			},
+			Type:    "PAYMENT",
+			Account: validAccount,
+			Amount:  validAmount,
+		},
+	}
+
+	unsupportedTypeOps = []*types.Operation{
+		{
+			OperationIdentifier: &types.OperationIdentifier{
+				Index: int64(0),
+			},
+			Type:    "STAKE",
+			Account: validAccount,
+			Amount:  validAmount,
+		},
+		{
+			OperationIdentifier: &types.OperationIdentifier{
+				Index: int64(1),
+			},
+			RelatedOperations: []*types.OperationIdentifier{
+				{
+					Index: int64(0),
+				},
+			},
+			Type:    "PAYMENT",
+			Account: validAccount,
+			Amount:  validAmount,
+		},
+	}
+
+	invalidOps = []*types.Operation{
+		{
+			OperationIdentifier: &types.OperationIdentifier{
+				Index: int64(0),
+			},
+			Type:    "PAYMENT",
+			Status:  "SUCCESS",
+			Account: validAccount,
+			Amount:  validAmount,
+		},
+		{
+			OperationIdentifier: &types.OperationIdentifier{
+				Index: int64(1),
+			},
+			RelatedOperations: []*types.OperationIdentifier{
+				{
+					Index: int64(0),
+				},
+			},
+			Type:    "PAYMENT",
+			Status:  "SUCCESS",
+			Account: validAccount,
+			Amount:  validAmount,
+		},
+	}
+
+	validSignatures = []*types.Signature{
+		{
+			SigningPayload: &types.SigningPayload{
+				Address:  validAccount.Address,
+				HexBytes: "48656c6c6f20476f7068657221",
+			},
+			PublicKey:     validPublicKey,
+			SignatureType: types.Ed25519,
+			HexBytes:      "656c6c6f20476f7068657221",
+		},
+	}
+
+	signatureTypeMismatch = []*types.Signature{
+		{
+			SigningPayload: &types.SigningPayload{
+				Address:       validAccount.Address,
+				HexBytes:      "48656c6c6f20476f7068657221",
+				SignatureType: types.EcdsaRecovery,
+			},
+			PublicKey:     validPublicKey,
+			SignatureType: types.Ed25519,
+			HexBytes:      "656c6c6f20476f7068657221",
+		},
+	}
+
+	signatureTypeMatch = []*types.Signature{
+		{
+			SigningPayload: &types.SigningPayload{
+				Address:       validAccount.Address,
+				HexBytes:      "48656c6c6f20476f7068657221",
+				SignatureType: types.Ed25519,
+			},
+			PublicKey:     validPublicKey,
+			SignatureType: types.Ed25519,
+			HexBytes:      "656c6c6f20476f7068657221",
+		},
+	}
+
+	emptySignature = []*types.Signature{
+		{
+			SigningPayload: &types.SigningPayload{
+				Address:       validAccount.Address,
+				HexBytes:      "48656c6c6f20476f7068657221",
+				SignatureType: types.Ed25519,
+			},
+			PublicKey:     validPublicKey,
+			SignatureType: types.Ed25519,
+		},
+	}
+
+	a, aErr = NewServer(
+		[]string{"PAYMENT"},
+		true,
+		[]*types.NetworkIdentifier{validNetworkIdentifier},
+	)
 )
+
+func TestNewWithOptions(t *testing.T) {
+	t.Run("ensure asserter initialized", func(t *testing.T) {
+		assert.NotNil(t, a)
+		assert.NoError(t, aErr)
+	})
+}
 
 func TestSupportedNetworks(t *testing.T) {
 	var tests = map[string]struct {
@@ -98,8 +252,9 @@ func TestSupportedNetworks(t *testing.T) {
 
 func TestAccountBalanceRequest(t *testing.T) {
 	var tests = map[string]struct {
-		request *types.AccountBalanceRequest
-		err     error
+		request         *types.AccountBalanceRequest
+		allowHistorical bool
+		err             error
 	}{
 		"valid request": {
 			request: &types.AccountBalanceRequest{
@@ -137,7 +292,8 @@ func TestAccountBalanceRequest(t *testing.T) {
 				AccountIdentifier: validAccountIdentifier,
 				BlockIdentifier:   validPartialBlockIdentifier,
 			},
-			err: nil,
+			allowHistorical: true,
+			err:             nil,
 		},
 		"invalid historical request": {
 			request: &types.AccountBalanceRequest{
@@ -145,17 +301,31 @@ func TestAccountBalanceRequest(t *testing.T) {
 				AccountIdentifier: validAccountIdentifier,
 				BlockIdentifier:   &types.PartialBlockIdentifier{},
 			},
-			err: errors.New("neither PartialBlockIdentifier.Hash nor PartialBlockIdentifier.Index is set"),
+			allowHistorical: true,
+			err:             errors.New("neither PartialBlockIdentifier.Hash nor PartialBlockIdentifier.Index is set"),
+		},
+		"valid historical request when not enabled": {
+			request: &types.AccountBalanceRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+				AccountIdentifier: validAccountIdentifier,
+				BlockIdentifier:   validPartialBlockIdentifier,
+			},
+			allowHistorical: false,
+			err:             errors.New("historical balance lookup is not supported"),
 		},
 	}
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			a, err := NewServer([]*types.NetworkIdentifier{validNetworkIdentifier})
+			asserter, err := NewServer(
+				[]string{"PAYMENT"},
+				test.allowHistorical,
+				[]*types.NetworkIdentifier{validNetworkIdentifier},
+			)
+			assert.NotNil(t, asserter)
 			assert.NoError(t, err)
-			assert.NotNil(t, a)
 
-			err = a.AccountBalanceRequest(test.request)
+			err = asserter.AccountBalanceRequest(test.request)
 			assert.Equal(t, test.err, err)
 		})
 	}
@@ -216,11 +386,7 @@ func TestBlockRequest(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			a, err := NewServer([]*types.NetworkIdentifier{validNetworkIdentifier})
-			assert.NoError(t, err)
-			assert.NotNil(t, a)
-
-			err = a.BlockRequest(test.request)
+			err := a.BlockRequest(test.request)
 			assert.Equal(t, test.err, err)
 		})
 	}
@@ -276,11 +442,7 @@ func TestBlockTransactionRequest(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			a, err := NewServer([]*types.NetworkIdentifier{validNetworkIdentifier})
-			assert.NoError(t, err)
-			assert.NotNil(t, a)
-
-			err = a.BlockTransactionRequest(test.request)
+			err := a.BlockTransactionRequest(test.request)
 			assert.Equal(t, test.err, err)
 		})
 	}
@@ -325,11 +487,7 @@ func TestConstructionMetadataRequest(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			a, err := NewServer([]*types.NetworkIdentifier{validNetworkIdentifier})
-			assert.NoError(t, err)
-			assert.NotNil(t, a)
-
-			err = a.ConstructionMetadataRequest(test.request)
+			err := a.ConstructionMetadataRequest(test.request)
 			assert.Equal(t, test.err, err)
 		})
 	}
@@ -366,50 +524,7 @@ func TestConstructionSubmitRequest(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			a, err := NewServer([]*types.NetworkIdentifier{validNetworkIdentifier})
-			assert.NoError(t, err)
-			assert.NotNil(t, a)
-
-			err = a.ConstructionSubmitRequest(test.request)
-			assert.Equal(t, test.err, err)
-		})
-	}
-}
-
-func TestMempoolRequest(t *testing.T) {
-	var tests = map[string]struct {
-		request *types.MempoolRequest
-		err     error
-	}{
-		"valid request": {
-			request: &types.MempoolRequest{
-				NetworkIdentifier: validNetworkIdentifier,
-			},
-			err: nil,
-		},
-		"invalid request wrong network": {
-			request: &types.MempoolRequest{
-				NetworkIdentifier: wrongNetworkIdentifier,
-			},
-			err: fmt.Errorf("%+v is not supported", wrongNetworkIdentifier),
-		},
-		"nil request": {
-			request: nil,
-			err:     errors.New("MempoolRequest is nil"),
-		},
-		"empty tx": {
-			request: &types.MempoolRequest{},
-			err:     errors.New("NetworkIdentifier is nil"),
-		},
-	}
-
-	for name, test := range tests {
-		t.Run(name, func(t *testing.T) {
-			a, err := NewServer([]*types.NetworkIdentifier{validNetworkIdentifier})
-			assert.NoError(t, err)
-			assert.NotNil(t, a)
-
-			err = a.MempoolRequest(test.request)
+			err := a.ConstructionSubmitRequest(test.request)
 			assert.Equal(t, test.err, err)
 		})
 	}
@@ -455,11 +570,7 @@ func TestMempoolTransactionRequest(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			a, err := NewServer([]*types.NetworkIdentifier{validNetworkIdentifier})
-			assert.NoError(t, err)
-			assert.NotNil(t, a)
-
-			err = a.MempoolTransactionRequest(test.request)
+			err := a.MempoolTransactionRequest(test.request)
 			assert.Equal(t, test.err, err)
 		})
 	}
@@ -482,11 +593,7 @@ func TestMetadataRequest(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			a, err := NewServer([]*types.NetworkIdentifier{validNetworkIdentifier})
-			assert.NoError(t, err)
-			assert.NotNil(t, a)
-
-			err = a.MetadataRequest(test.request)
+			err := a.MetadataRequest(test.request)
 			assert.Equal(t, test.err, err)
 		})
 	}
@@ -521,12 +628,359 @@ func TestNetworkRequest(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			a, err := NewServer([]*types.NetworkIdentifier{validNetworkIdentifier})
-			assert.NoError(t, err)
-			assert.NotNil(t, a)
-
-			err = a.NetworkRequest(test.request)
+			err := a.NetworkRequest(test.request)
 			assert.Equal(t, test.err, err)
+		})
+	}
+}
+
+func TestConstructionDeriveRequest(t *testing.T) {
+	var tests = map[string]struct {
+		request *types.ConstructionDeriveRequest
+		err     error
+	}{
+		"valid request": {
+			request: &types.ConstructionDeriveRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+				PublicKey:         validPublicKey,
+			},
+			err: nil,
+		},
+		"invalid request wrong network": {
+			request: &types.ConstructionDeriveRequest{
+				NetworkIdentifier: wrongNetworkIdentifier,
+			},
+			err: fmt.Errorf("%+v is not supported", wrongNetworkIdentifier),
+		},
+		"nil request": {
+			request: nil,
+			err:     errors.New("ConstructionDeriveRequest is nil"),
+		},
+		"nil public key": {
+			request: &types.ConstructionDeriveRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+			},
+			err: errors.New("PublicKey cannot be nil"),
+		},
+		"invalid hex public key": {
+			request: &types.ConstructionDeriveRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+				PublicKey: &types.PublicKey{
+					HexBytes:  "hello",
+					CurveType: types.Secp256k1,
+				},
+			},
+			err: errors.New("not a valid hex string public key"),
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			err := a.ConstructionDeriveRequest(test.request)
+			if test.err != nil {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), test.err.Error())
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestConstructionPreprocessRequest(t *testing.T) {
+	var tests = map[string]struct {
+		request *types.ConstructionPreprocessRequest
+		err     error
+	}{
+		"valid request": {
+			request: &types.ConstructionPreprocessRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+				Operations:        validOps,
+			},
+			err: nil,
+		},
+		"invalid request wrong network": {
+			request: &types.ConstructionPreprocessRequest{
+				NetworkIdentifier: wrongNetworkIdentifier,
+			},
+			err: fmt.Errorf("%+v is not supported", wrongNetworkIdentifier),
+		},
+		"nil request": {
+			request: nil,
+			err:     errors.New("ConstructionPreprocessRequest is nil"),
+		},
+		"nil operations": {
+			request: &types.ConstructionPreprocessRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+			},
+			err: errors.New("operations cannot be empty"),
+		},
+		"empty operations": {
+			request: &types.ConstructionPreprocessRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+				Operations:        []*types.Operation{},
+			},
+			err: errors.New("operations cannot be empty"),
+		},
+		"unsupported operation type": {
+			request: &types.ConstructionPreprocessRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+				Operations:        unsupportedTypeOps,
+			},
+			err: errors.New("Operation.Type STAKE is invalid"),
+		},
+		"invalid operations": {
+			request: &types.ConstructionPreprocessRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+				Operations:        invalidOps,
+			},
+			err: errors.New("must be empty for construction"),
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			err := a.ConstructionPreprocessRequest(test.request)
+			if test.err != nil {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), test.err.Error())
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestConstructionPayloadsRequest(t *testing.T) {
+	var tests = map[string]struct {
+		request *types.ConstructionPayloadsRequest
+		err     error
+	}{
+		"valid request": {
+			request: &types.ConstructionPayloadsRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+				Operations:        validOps,
+				Metadata:          map[string]interface{}{"test": "hello"},
+			},
+			err: nil,
+		},
+		"invalid request wrong network": {
+			request: &types.ConstructionPayloadsRequest{
+				NetworkIdentifier: wrongNetworkIdentifier,
+			},
+			err: fmt.Errorf("%+v is not supported", wrongNetworkIdentifier),
+		},
+		"nil request": {
+			request: nil,
+			err:     errors.New("ConstructionPayloadsRequest is nil"),
+		},
+		"nil operations": {
+			request: &types.ConstructionPayloadsRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+			},
+			err: errors.New("operations cannot be empty"),
+		},
+		"empty operations": {
+			request: &types.ConstructionPayloadsRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+				Operations:        []*types.Operation{},
+			},
+			err: errors.New("operations cannot be empty"),
+		},
+		"unsupported operation type": {
+			request: &types.ConstructionPayloadsRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+				Operations:        unsupportedTypeOps,
+			},
+			err: errors.New("Operation.Type STAKE is invalid"),
+		},
+		"invalid operations": {
+			request: &types.ConstructionPayloadsRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+				Operations:        invalidOps,
+			},
+			err: errors.New("must be empty for construction"),
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			err := a.ConstructionPayloadsRequest(test.request)
+			if test.err != nil {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), test.err.Error())
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestConstructionCombineRequest(t *testing.T) {
+	var tests = map[string]struct {
+		request *types.ConstructionCombineRequest
+		err     error
+	}{
+		"valid request": {
+			request: &types.ConstructionCombineRequest{
+				NetworkIdentifier:   validNetworkIdentifier,
+				UnsignedTransaction: "blah",
+				Signatures:          validSignatures,
+			},
+			err: nil,
+		},
+		"invalid request wrong network": {
+			request: &types.ConstructionCombineRequest{
+				NetworkIdentifier: wrongNetworkIdentifier,
+			},
+			err: fmt.Errorf("%+v is not supported", wrongNetworkIdentifier),
+		},
+		"nil request": {
+			request: nil,
+			err:     errors.New("ConstructionCombineRequest is nil"),
+		},
+		"empty unsigned transaction": {
+			request: &types.ConstructionCombineRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+				Signatures:        validSignatures,
+			},
+			err: errors.New("UnsignedTransaction cannot be empty"),
+		},
+		"nil signatures": {
+			request: &types.ConstructionCombineRequest{
+				NetworkIdentifier:   validNetworkIdentifier,
+				UnsignedTransaction: "blah",
+			},
+			err: errors.New("signatures cannot be empty"),
+		},
+		"empty signatures": {
+			request: &types.ConstructionCombineRequest{
+				NetworkIdentifier:   validNetworkIdentifier,
+				UnsignedTransaction: "blah",
+				Signatures:          []*types.Signature{},
+			},
+			err: errors.New("signatures cannot be empty"),
+		},
+		"signature type mismatch": {
+			request: &types.ConstructionCombineRequest{
+				NetworkIdentifier:   validNetworkIdentifier,
+				UnsignedTransaction: "blah",
+				Signatures:          signatureTypeMismatch,
+			},
+			err: errors.New("requested signature type does not match returned signature type"),
+		},
+		"empty signature": {
+			request: &types.ConstructionCombineRequest{
+				NetworkIdentifier:   validNetworkIdentifier,
+				UnsignedTransaction: "blah",
+				Signatures:          emptySignature,
+			},
+			err: errors.New("hex string cannot be empty"),
+		},
+		"signature type match": {
+			request: &types.ConstructionCombineRequest{
+				NetworkIdentifier:   validNetworkIdentifier,
+				UnsignedTransaction: "blah",
+				Signatures:          signatureTypeMatch,
+			},
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			err := a.ConstructionCombineRequest(test.request)
+			if test.err != nil {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), test.err.Error())
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestConstructionHashRequest(t *testing.T) {
+	var tests = map[string]struct {
+		request *types.ConstructionHashRequest
+		err     error
+	}{
+		"valid request": {
+			request: &types.ConstructionHashRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+				SignedTransaction: "blah",
+			},
+			err: nil,
+		},
+		"invalid request wrong network": {
+			request: &types.ConstructionHashRequest{
+				NetworkIdentifier: wrongNetworkIdentifier,
+			},
+			err: fmt.Errorf("%+v is not supported", wrongNetworkIdentifier),
+		},
+		"nil request": {
+			request: nil,
+			err:     errors.New("ConstructionHashRequest is nil"),
+		},
+		"empty signed transaction": {
+			request: &types.ConstructionHashRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+			},
+			err: errors.New("SignedTransaction cannot be empty"),
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			err := a.ConstructionHashRequest(test.request)
+			if test.err != nil {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), test.err.Error())
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestConstructionParseRequest(t *testing.T) {
+	var tests = map[string]struct {
+		request *types.ConstructionParseRequest
+		err     error
+	}{
+		"valid request": {
+			request: &types.ConstructionParseRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+				Transaction:       "blah",
+			},
+			err: nil,
+		},
+		"invalid request wrong network": {
+			request: &types.ConstructionParseRequest{
+				NetworkIdentifier: wrongNetworkIdentifier,
+			},
+			err: fmt.Errorf("%+v is not supported", wrongNetworkIdentifier),
+		},
+		"nil request": {
+			request: nil,
+			err:     errors.New("ConstructionParseRequest is nil"),
+		},
+		"empty signed transaction": {
+			request: &types.ConstructionParseRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+			},
+			err: errors.New("Transaction cannot be empty"),
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			err := a.ConstructionParseRequest(test.request)
+			if test.err != nil {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), test.err.Error())
+			} else {
+				assert.NoError(t, err)
+			}
 		})
 	}
 }

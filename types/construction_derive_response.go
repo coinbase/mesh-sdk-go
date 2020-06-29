@@ -16,12 +16,10 @@
 
 package types
 
-// Transaction Transactions contain an array of Operations that are attributable to the same
-// TransactionIdentifier.
-type Transaction struct {
-	TransactionIdentifier *TransactionIdentifier `json:"transaction_identifier"`
-	Operations            []*Operation           `json:"operations"`
-	// Transactions that are related to other transactions (like a cross-shard transaction) should
-	// include the tranaction_identifier of these transactions in the metadata.
+// ConstructionDeriveResponse ConstructionDeriveResponse is returned by the `/construction/derive`
+// endpoint.
+type ConstructionDeriveResponse struct {
+	// Address in network-specific format.
+	Address  string                 `json:"address"`
 	Metadata map[string]interface{} `json:"metadata,omitempty"`
 }

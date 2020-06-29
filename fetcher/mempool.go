@@ -30,7 +30,7 @@ func (f *Fetcher) Mempool(
 ) ([]*types.TransactionIdentifier, error) {
 	response, _, err := f.rosettaClient.MempoolAPI.Mempool(
 		ctx,
-		&types.MempoolRequest{
+		&types.NetworkRequest{
 			NetworkIdentifier: network,
 		},
 	)

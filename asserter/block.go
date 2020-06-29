@@ -168,6 +168,7 @@ func (a *Asserter) OperationType(t string) error {
 func (a *Asserter) Operation(
 	operation *types.Operation,
 	index int64,
+	construction bool,
 ) error {
 	if a == nil {
 		return ErrAsserterNotInitialized
@@ -185,7 +186,11 @@ func (a *Asserter) Operation(
 		return err
 	}
 
-	if err := a.OperationStatus(operation.Status); err != nil {
+	if construction && len(operation.Status) != 0 {
+		return errors.New("operation.Status must be empty for construction")
+	}
+
+	if err := a.OperationStatus(operation.Status); err != nil && !construction {
 		return err
 	}
 
@@ -256,27 +261,19 @@ func TransactionIdentifier(
 	return nil
 }
 
-// Transaction returns an error if the types.TransactionIdentifier
-// is invalid, if any types.Operation within the types.Transaction
-// is invalid, or if any operation index is reused within a transaction.
-func (a *Asserter) Transaction(
-	transaction *types.Transaction,
+// Operations returns an error if any *types.Operation
+// in a []*types.Operation is invalid.
+func (a *Asserter) Operations(
+	operations []*types.Operation,
+	construction bool,
 ) error {
-	if a == nil {
-		return ErrAsserterNotInitialized
+	if len(operations) == 0 && construction {
+		return errors.New("operations cannot be empty for construction")
 	}
 
-	if transaction == nil {
-		return errors.New("Transaction is nil")
-	}
-
-	if err := TransactionIdentifier(transaction.TransactionIdentifier); err != nil {
-		return err
-	}
-
-	for i, op := range transaction.Operations {
+	for i, op := range operations {
 		// Ensure operations are sorted
-		if err := a.Operation(op, int64(i)); err != nil {
+		if err := a.Operation(op, int64(i), construction); err != nil {
 			return err
 		}
 
@@ -302,6 +299,35 @@ func (a *Asserter) Transaction(
 			}
 			relatedIndexes = append(relatedIndexes, relatedOp.Index)
 		}
+	}
+
+	return nil
+}
+
+// Transaction returns an error if the types.TransactionIdentifier
+// is invalid, if any types.Operation within the types.Transaction
+// is invalid, or if any operation index is reused within a transaction.
+func (a *Asserter) Transaction(
+	transaction *types.Transaction,
+) error {
+	if a == nil {
+		return ErrAsserterNotInitialized
+	}
+
+	if transaction == nil {
+		return errors.New("Transaction is nil")
+	}
+
+	if err := TransactionIdentifier(transaction.TransactionIdentifier); err != nil {
+		return err
+	}
+
+	if err := a.Operations(transaction.Operations, false); err != nil {
+		return fmt.Errorf(
+			"%w invalid operation in transaction %s",
+			err,
+			transaction.TransactionIdentifier.Hash,
+		)
 	}
 
 	return nil

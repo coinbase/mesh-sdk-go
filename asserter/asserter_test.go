@@ -66,7 +66,7 @@ func TestNew(t *testing.T) {
 
 		validNetworkOptions = &types.NetworkOptionsResponse{
 			Version: &types.Version{
-				RosettaVersion: "1.2.3",
+				RosettaVersion: "1.4.0",
 				NodeVersion:    "1.0",
 			},
 			Allow: &types.Allow{
@@ -86,12 +86,13 @@ func TestNew(t *testing.T) {
 						Retriable: true,
 					},
 				},
+				HistoricalBalanceLookup: true,
 			},
 		}
 
 		invalidNetworkOptions = &types.NetworkOptionsResponse{
 			Version: &types.Version{
-				RosettaVersion: "1.2.3",
+				RosettaVersion: "1.4.0",
 				NodeVersion:    "1.0",
 			},
 			Allow: &types.Allow{
@@ -110,7 +111,7 @@ func TestNew(t *testing.T) {
 
 		duplicateStatuses = &types.NetworkOptionsResponse{
 			Version: &types.Version{
-				RosettaVersion: "1.2.3",
+				RosettaVersion: "1.4.0",
 				NodeVersion:    "1.0",
 			},
 			Allow: &types.Allow{
@@ -139,7 +140,7 @@ func TestNew(t *testing.T) {
 
 		duplicateTypes = &types.NetworkOptionsResponse{
 			Version: &types.Version{
-				RosettaVersion: "1.2.3",
+				RosettaVersion: "1.4.0",
 				NodeVersion:    "1.0",
 			},
 			Allow: &types.Allow{
