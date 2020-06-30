@@ -22,6 +22,38 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
+// ConstructionCombine creates a network-specific transaction from an unsigned
+// transaction and an array of provided signatures.
+//
+// The signed transaction returned from this method will be sent to the
+// `/construction/submit` endpoint by the caller.
+func (f *Fetcher) ConstructionCombine(
+	ctx context.Context,
+	network *types.NetworkIdentifier,
+	unsignedTransaction string,
+	signatures []*types.Signature,
+) (string, error) {
+	response, _, err := f.rosettaClient.ConstructionAPI.ConstructionCombine(ctx,
+		&types.ConstructionCombineRequest{
+			NetworkIdentifier:   network,
+			UnsignedTransaction: unsignedTransaction,
+			Signatures:          signatures,
+		},
+	)
+	if err != nil {
+		return "", err
+	}
+
+	if err := asserter.ConstructionCombine(response); err != nil {
+		return "", err
+	}
+
+	return response.SignedTransaction, nil
+}
+
+func (f *Fetcher) ConstructionDerive() {}
+func (f *Fetcher) ConstructionHash()   {}
+
 // ConstructionMetadata returns the validated response
 // from the ConstructionMetadata method.
 func (f *Fetcher) ConstructionMetadata(
@@ -45,6 +77,10 @@ func (f *Fetcher) ConstructionMetadata(
 
 	return metadata.Metadata, nil
 }
+
+func (f *Fetcher) ConstructionParse()      {}
+func (f *Fetcher) ConstructionPayloads()   {}
+func (f *Fetcher) ConstructionPreprocess() {}
 
 // ConstructionSubmit returns the validated response
 // from the ConstructionSubmit method.
