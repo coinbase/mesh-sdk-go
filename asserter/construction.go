@@ -26,6 +26,10 @@ import (
 func ConstructionMetadata(
 	response *types.ConstructionMetadataResponse,
 ) error {
+	if response == nil {
+		return errors.New("construction metadata response cannot be nil")
+	}
+
 	if response.Metadata == nil {
 		return errors.New("Metadata is nil")
 	}
@@ -40,8 +44,29 @@ func ConstructionMetadata(
 func ConstructionSubmit(
 	response *types.ConstructionSubmitResponse,
 ) error {
+	if response == nil {
+		return errors.New("construction submit response cannot be nil")
+	}
+
 	if err := TransactionIdentifier(response.TransactionIdentifier); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+// ConstructionCombine returns an error if
+// a *types.ConstructionCombineResponse does
+// not have a populated SignedTransaction.
+func ConstructionCombine(
+	response *types.ConstructionCombineResponse,
+) error {
+	if response == nil {
+		return errors.New("construction combine response cannot be nil")
+	}
+
+	if len(response.SignedTransaction) == 0 {
+		return errors.New("signed transaction cannot be empty")
 	}
 
 	return nil
