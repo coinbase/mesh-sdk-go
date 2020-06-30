@@ -51,6 +51,11 @@ func (f *Fetcher) ConstructionCombine(
 	return response.SignedTransaction, nil
 }
 
+// ConstructionDerive returns the network-specific address associated with a
+// public key.
+//
+// Blockchains that require an on-chain action to create an
+// account should not implement this method.
 func (f *Fetcher) ConstructionDerive(
 	ctx context.Context,
 	network *types.NetworkIdentifier,
@@ -75,7 +80,29 @@ func (f *Fetcher) ConstructionDerive(
 	return response.Address, response.Metadata, nil
 }
 
-func (f *Fetcher) ConstructionHash() {}
+// ConstructionHash returns the network-specific transaction hash for
+// a signed transaction.
+func (f *Fetcher) ConstructionHash(
+	ctx context.Context,
+	network *types.NetworkIdentifier,
+	signedTransaction string,
+) (string, error) {
+	response, _, err := f.rosettaClient.ConstructionAPI.ConstructionHash(ctx,
+		&types.ConstructionHashRequest{
+			NetworkIdentifier: network,
+			SignedTransaction: signedTransaction,
+		},
+	)
+	if err != nil {
+		return "", err
+	}
+
+	if err := asserter.ConstructionHash(response); err != nil {
+		return "", err
+	}
+
+	return response.TransactionHash, nil
+}
 
 // ConstructionMetadata returns the validated response
 // from the ConstructionMetadata method.

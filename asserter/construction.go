@@ -89,6 +89,23 @@ func ConstructionDerive(
 	return nil
 }
 
+// ConstructionHash returns an error if
+// a *types.ConstructionHashResponse does
+// not have a populated transaction hash.
+func ConstructionHash(
+	response *types.ConstructionHashResponse,
+) error {
+	if response == nil {
+		return errors.New("construction hash response cannot be nil")
+	}
+
+	if len(response.TransactionHash) == 0 {
+		return errors.New("transaction hash cannot be empty")
+	}
+
+	return nil
+}
+
 // PublicKey returns an error if
 // the *types.PublicKey is nil, is not
 // valid hex, or has an undefined CurveType.
