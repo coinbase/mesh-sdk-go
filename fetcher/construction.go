@@ -51,8 +51,31 @@ func (f *Fetcher) ConstructionCombine(
 	return response.SignedTransaction, nil
 }
 
-func (f *Fetcher) ConstructionDerive() {}
-func (f *Fetcher) ConstructionHash()   {}
+func (f *Fetcher) ConstructionDerive(
+	ctx context.Context,
+	network *types.NetworkIdentifier,
+	publicKey *types.PublicKey,
+	metadata map[string]interface{},
+) (string, map[string]interface{}, error) {
+	response, _, err := f.rosettaClient.ConstructionAPI.ConstructionDerive(ctx,
+		&types.ConstructionDeriveRequest{
+			NetworkIdentifier: network,
+			PublicKey:         publicKey,
+			Metadata:          metadata,
+		},
+	)
+	if err != nil {
+		return "", nil, err
+	}
+
+	if err := asserter.ConstructionDerive(response); err != nil {
+		return "", nil, err
+	}
+
+	return response.Address, response.Metadata, nil
+}
+
+func (f *Fetcher) ConstructionHash() {}
 
 // ConstructionMetadata returns the validated response
 // from the ConstructionMetadata method.
