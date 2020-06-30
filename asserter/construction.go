@@ -72,6 +72,23 @@ func ConstructionCombine(
 	return nil
 }
 
+// ConstructionDerive returns an error if
+// a *types.ConstructionDeriveResponse does
+// not have a populated Address.
+func ConstructionDerive(
+	response *types.ConstructionDeriveResponse,
+) error {
+	if response == nil {
+		return errors.New("construction derive response cannot be nil")
+	}
+
+	if len(response.Address) == 0 {
+		return errors.New("address cannot be empty")
+	}
+
+	return nil
+}
+
 // PublicKey returns an error if
 // the *types.PublicKey is nil, is not
 // valid hex, or has an undefined CurveType.
