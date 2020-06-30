@@ -106,6 +106,58 @@ func ConstructionHash(
 	return nil
 }
 
+// ConstructionParse returns an error if
+// a *types.ConstructionParseResponse does
+// not have a valid set of operations or
+// if the signers is empty.
+func (a *Asserter) ConstructionParse(
+	response *types.ConstructionParseResponse,
+) error {
+	if a == nil {
+		return ErrAsserterNotInitialized
+	}
+
+	if response == nil {
+		return errors.New("construction parse response cannot be nil")
+	}
+
+	if err := a.Operations(response.Operations, true); err != nil {
+		return fmt.Errorf("%w unable to parse operations", err)
+	}
+
+	if len(response.Signers) == 0 {
+		return errors.New("signers cannot be empty")
+	}
+
+	for _, signer := range response.Signers {
+		if len(signer) == 0 {
+			return errors.New("signer cannot be empty string")
+		}
+	}
+
+	return nil
+}
+
+// ConstructionPayloads returns an error if
+// a *types.ConstructionPayloadsResponse does
+// not have an UnsignedTransaction or has no
+// valid *SigningPaylod.
+func ConstructionPayloads(
+	response *types.ConstructionPayloadsResponse,
+) error {
+	if response == nil {
+		return errors.New("construction payloads response cannot be nil")
+	}
+
+	if len(response.UnsignedTransaction) == 0 {
+		return errors.New("unsigned transaction cannot be empty")
+	}
+
+	// TODO: check Signing Payloads
+
+	return nil
+}
+
 // PublicKey returns an error if
 // the *types.PublicKey is nil, is not
 // valid hex, or has an undefined CurveType.

@@ -128,9 +128,99 @@ func (f *Fetcher) ConstructionMetadata(
 	return metadata.Metadata, nil
 }
 
-func (f *Fetcher) ConstructionParse()      {}
-func (f *Fetcher) ConstructionPayloads()   {}
-func (f *Fetcher) ConstructionPreprocess() {}
+// ConstructionParse is called on both unsigned and signed transactions to
+// understand the intent of the formulated transaction.
+//
+// This is run as a sanity check before signing (after `/construction/payloads`)
+// and before broadcast (after `/construction/combine`).
+func (f *Fetcher) ConstructionParse(
+	ctx context.Context,
+	network *types.NetworkIdentifier,
+	signed bool,
+	transaction string,
+) ([]*types.Operation, []string, map[string]interface{}, error) {
+	response, _, err := f.rosettaClient.ConstructionAPI.ConstructionParse(ctx,
+		&types.ConstructionParseRequest{
+			NetworkIdentifier: network,
+			Signed:            signed,
+			Transaction:       transaction,
+		},
+	)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	if err := f.Asserter.ConstructionParse(response); err != nil {
+		return nil, nil, nil, err
+	}
+
+	return response.Operations, response.Signers, response.Metadata, nil
+}
+
+// ConstructionPayloads is called with an array of operations
+// and the response from `/construction/metadata`. It returns an
+// unsigned transaction blob and a collection of payloads that must
+// be signed by particular addresses using a certain SignatureType.
+//
+// The array of operations provided in transaction construction often times
+// can not specify all "effects" of a transaction (consider invoked transactions
+// in Ethereum). However, they can deterministically specify the "intent"
+// of the transaction, which is sufficient for construction. For this reason,
+// parsing the corresponding transaction in the Data API (when it lands on chain)
+// will contain a superset of whatever operations were provided during construction.
+func (f *Fetcher) ConstructionPayloads(
+	ctx context.Context,
+	network *types.NetworkIdentifier,
+	operations []*types.Operation,
+	metadata map[string]interface{},
+) (string, []*types.SigningPayload, error) {
+	response, _, err := f.rosettaClient.ConstructionAPI.ConstructionPayloads(ctx,
+		&types.ConstructionPayloadsRequest{
+			NetworkIdentifier: network,
+			Operations:        operations,
+			Metadata:          metadata,
+		},
+	)
+	if err != nil {
+		return "", nil, err
+	}
+
+	if err := asserter.ConstructionPayloads(response); err != nil {
+		return "", nil, err
+	}
+
+	return response.UnsignedTransaction, response.Payloads, nil
+}
+
+// ConstructionPreprocess is called prior to `/construction/payloads` to construct a
+// request for any metadata that is needed for transaction construction
+// given (i.e. account nonce).
+//
+// The request returned from this method will be used by the caller (in a
+// different execution environment) to call the `/construction/metadata`
+// endpoint.
+func (f *Fetcher) ConstructionPreprocess(
+	ctx context.Context,
+	network *types.NetworkIdentifier,
+	operations []*types.Operation,
+	metadata map[string]interface{},
+) (map[string]interface{}, error) {
+	response, _, err := f.rosettaClient.ConstructionAPI.ConstructionPreprocess(ctx,
+		&types.ConstructionPreprocessRequest{
+			NetworkIdentifier: network,
+			Operations:        operations,
+			Metadata:          metadata,
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	// We do not assert the response here because the only object
+	// in the response is optional and unstructured.
+
+	return response.Options, nil
+}
 
 // ConstructionSubmit returns the validated response
 // from the ConstructionSubmit method.
