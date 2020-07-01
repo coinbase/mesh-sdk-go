@@ -24,6 +24,7 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
+// GenerateKeypair returns a Keypair of a specified CurveType
 func GenerateKeypair(curve types.CurveType) (*KeyPair, error) {
 	var keyPair *KeyPair
 
@@ -77,6 +78,7 @@ func GenerateKeypair(curve types.CurveType) (*KeyPair, error) {
 	return keyPair, nil
 }
 
+// IsValid checks the validity of a keypair
 func (k KeyPair) IsValid() (bool, error) {
 	sk, _ := hex.DecodeString(k.PrivateKey.HexBytes)
 	pkCurve := k.PublicKey.CurveType

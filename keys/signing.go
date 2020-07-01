@@ -24,6 +24,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto/secp256k1"
 )
 
+// signECDSA is a helper function to sign payloads with the ECDSA SignatureType
 func signECDSA(privKeyBytes, payload []byte, signatureType types.SignatureType) ([]byte, error) {
 	var sig []byte
 	var err error
@@ -44,6 +45,7 @@ func signECDSA(privKeyBytes, payload []byte, signatureType types.SignatureType) 
 	return sig, nil
 }
 
+// signEd25519 is a helper function to sign payloads with the Ed25519 SignatureType
 func signEd25519(privKeyBytes, payload []byte) []byte {
 	privKey := ed25519.NewKeyFromSeed(privKeyBytes)
 	sig := ed25519.Sign(privKey, payload)
@@ -51,6 +53,7 @@ func signEd25519(privKeyBytes, payload []byte) []byte {
 	return sig
 }
 
+// SignPayload signs arbitrary payloads using a KeyPair
 func SignPayload(payload *types.SigningPayload, keypair *KeyPair) (*types.Signature, error) {
 	privKeyBytes, err := hex.DecodeString(keypair.PrivateKey.HexBytes)
 	if err != nil {
@@ -90,19 +93,24 @@ func SignPayload(payload *types.SigningPayload, keypair *KeyPair) (*types.Signat
 	}
 }
 
+// verifyEd25519 is a helper function to verify Ed25519 signatures
 func verifyEd25519(pubKey, decodedMessage, decodedSignature []byte) bool {
 	return ed25519.Verify(pubKey, decodedMessage, decodedSignature)
 }
 
+// verifyECDSA is a helper function to verify ECDSA signatures
 func verifyECDSA(pubKey, decodedMessage, decodedSignature []byte) bool {
 	return secp256k1.VerifySignature(pubKey, decodedMessage, decodedSignature)
 }
 
+// verifyECDSARecovery is a helper function to verify ECDSA-Recovery signatures
 func verifyECDSARecovery(pubKey, decodedMessage, decodedSignature []byte) bool {
 	normalizedSig := decodedSignature[:64]
 	return secp256k1.VerifySignature(pubKey, decodedMessage, normalizedSig)
 }
 
+// Verify verifies a Signature, by checking the validity of a Signature,
+// the SigningPayload, and the PublicKey of the Signature.
 func Verify(signature *types.Signature) (bool, error) {
 	curve := signature.PublicKey.CurveType
 	pubKey, err := hex.DecodeString(signature.PublicKey.HexBytes)
