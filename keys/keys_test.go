@@ -15,66 +15,42 @@
 package keys
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/coinbase/rosetta-sdk-go/types"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestGenerateKeypairSecp256k1(t *testing.T) {
-	curve := CurveType(Secp256k1Curve)
+	curve := types.Secp256k1
 	keypair, err := GenerateKeypair(curve)
 
 	assert.NoError(t, err)
-	assert.Equal(t, keypair.PublicKey.Curve, curve)
-	assert.Equal(t, keypair.PrivateKey.Curve, curve)
+	assert.Equal(t, keypair.PublicKey.CurveType, curve)
+	assert.Equal(t, keypair.PrivateKey.CurveType, curve)
 }
 
 func TestGenerateKeypairEd25519(t *testing.T) {
-	curve := CurveType(Edwards25519Curve)
+	curve := types.Edwards25519
 	keypair, err := GenerateKeypair(curve)
 
 	assert.NoError(t, err)
-	assert.Equal(t, keypair.PublicKey.Curve, curve)
-	assert.Equal(t, keypair.PrivateKey.Curve, curve)
+	assert.Equal(t, keypair.PublicKey.CurveType, curve)
+	assert.Equal(t, keypair.PrivateKey.CurveType, curve)
 }
 
 func TestKeypairValidity(t *testing.T) {
 	// Non matching curves
-	pubKey := &PublicKey{
-		Curve: CurveType(Secp256k1Curve),
-	}
-	privKey := &PrivateKey{
-		Curve: CurveType(Edwards25519Curve),
-	}
-	keyPair := &KeyPair{
-		PublicKey:  pubKey,
-		PrivateKey: privKey,
-	}
+	keyPair, _ := GenerateKeypair(types.Edwards25519)
+	keyPair.PublicKey.CurveType = types.Secp256k1
 	valid, err := keyPair.IsValid()
 	assert.Equal(t, false, valid)
 	assert.Contains(t, err.Error(), "do not match")
 
-	// Ed25519 pubkey invalid length
-	keyPair, _ = GenerateKeypair(CurveType(Edwards25519Curve))
-	keyPair.PublicKey = &PublicKey{
-		Curve: CurveType(Edwards25519Curve),
-	}
-	valid, err = keyPair.IsValid()
-	assert.Equal(t, false, valid)
-	assert.Contains(t, err.Error(), "invalid pubkey length")
-
-	// Secp256k1 pubkey invalid length
-	keyPair, _ = GenerateKeypair(CurveType(Secp256k1Curve))
-	keyPair.PublicKey = &PublicKey{
-		Curve: CurveType(Secp256k1Curve),
-	}
-	valid, err = keyPair.IsValid()
-	assert.Equal(t, false, valid)
-	assert.Contains(t, err.Error(), "invalid pubkey length")
-
 	// Privkey length too short
-	keyPair, _ = GenerateKeypair(CurveType(Edwards25519Curve))
+	keyPair, _ = GenerateKeypair(types.Edwards25519)
 	keyPair.PrivateKey = &PrivateKey{
-		Curve: CurveType(Edwards25519Curve),
+		CurveType: types.Edwards25519,
 	}
 
 	valid, err = keyPair.IsValid()
@@ -82,9 +58,9 @@ func TestKeypairValidity(t *testing.T) {
 	assert.Contains(t, err.Error(), "invalid privkey length")
 
 	// Privkey length too short
-	keyPair, _ = GenerateKeypair(CurveType(Secp256k1Curve))
+	keyPair, _ = GenerateKeypair(types.Secp256k1)
 	keyPair.PrivateKey = &PrivateKey{
-		Curve: CurveType(Secp256k1Curve),
+		CurveType: types.Secp256k1,
 	}
 
 	valid, err = keyPair.IsValid()

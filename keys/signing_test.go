@@ -16,9 +16,11 @@ package keys
 
 import (
 	"encoding/hex"
+	"testing"
+
+	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func hashAndHexEncode(message string) string {
@@ -27,14 +29,14 @@ func hashAndHexEncode(message string) string {
 }
 
 func TestSignEd25519(t *testing.T) {
-	curve := CurveType(Edwards25519Curve)
+	curve := types.Edwards25519
 	keypair, err := GenerateKeypair(curve)
 	assert.NoError(t, err)
 
-	signatureType := SignatureType(Ed25519Signature)
-	payload := &SigningPayload{
+	signatureType := types.Ed25519
+	payload := &types.SigningPayload{
 		Address:       "test",
-		PayloadHex:    "68656C6C6F0D0A",
+		HexBytes:      "68656C6C6F0D0A",
 		SignatureType: signatureType,
 	}
 
@@ -47,15 +49,15 @@ func TestSignEd25519(t *testing.T) {
 }
 
 func TestSignSecp256k1EcdsaRecovery(t *testing.T) {
-	curve := CurveType(Secp256k1Curve)
+	curve := types.Secp256k1
 	keypair, err := GenerateKeypair(curve)
 	assert.NoError(t, err)
 
-	signatureType := SignatureType(EcdsaPubkeyRecoverySignature)
+	signatureType := types.EcdsaRecovery
 
-	payload := &SigningPayload{
+	payload := &types.SigningPayload{
 		Address:       "test",
-		PayloadHex:    hashAndHexEncode("hello"),
+		HexBytes:      hashAndHexEncode("hello"),
 		SignatureType: signatureType,
 	}
 
@@ -68,15 +70,15 @@ func TestSignSecp256k1EcdsaRecovery(t *testing.T) {
 }
 
 func TestSignSecp256k1Ecdsa(t *testing.T) {
-	curve := CurveType(Secp256k1Curve)
+	curve := types.Secp256k1
 	keypair, err := GenerateKeypair(curve)
 	assert.NoError(t, err)
 
-	signatureType := SignatureType(EcdsaSignature)
+	signatureType := types.Ecdsa
 
-	payload := &SigningPayload{
+	payload := &types.SigningPayload{
 		Address:       "test",
-		PayloadHex:    hashAndHexEncode("hello"),
+		HexBytes:      hashAndHexEncode("hello"),
 		SignatureType: signatureType,
 	}
 
@@ -89,15 +91,15 @@ func TestSignSecp256k1Ecdsa(t *testing.T) {
 }
 
 func TestSignInvalidPayloadEcdsa(t *testing.T) {
-	curve := CurveType(Secp256k1Curve)
+	curve := types.Secp256k1
 	keypair, _ := GenerateKeypair(curve)
-	signatureType := SignatureType(EcdsaSignature)
+	signatureType := types.Ecdsa
 
 	invalidPayload := make([]byte, 33)
 
-	payload := &SigningPayload{
+	payload := &types.SigningPayload{
 		Address:       "test",
-		PayloadHex:    hex.EncodeToString(invalidPayload),
+		HexBytes:      hex.EncodeToString(invalidPayload),
 		SignatureType: signatureType,
 	}
 
