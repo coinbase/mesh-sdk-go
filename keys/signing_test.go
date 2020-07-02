@@ -42,7 +42,7 @@ func TestSignEd25519(t *testing.T) {
 
 	signature, err := SignPayload(payload, keypair)
 	assert.NoError(t, err)
-	signatureBytes, err := hex.DecodeString(signature.HexBytes)
+	signatureBytes, _ := hex.DecodeString(signature.HexBytes)
 	assert.Equal(t, len(signatureBytes), 64)
 
 	verify, err := Verify(signature)
@@ -65,7 +65,7 @@ func TestSignSecp256k1EcdsaRecovery(t *testing.T) {
 
 	signature, err := SignPayload(payload, keypair)
 	assert.NoError(t, err)
-	signatureBytes, err := hex.DecodeString(signature.HexBytes)
+	signatureBytes, _ := hex.DecodeString(signature.HexBytes)
 	assert.Equal(t, len(signatureBytes), 65)
 
 	verify, err := Verify(signature)
@@ -88,7 +88,7 @@ func TestSignSecp256k1Ecdsa(t *testing.T) {
 
 	signature, err := SignPayload(payload, keypair)
 	assert.NoError(t, err)
-	signatureBytes, err := hex.DecodeString(signature.HexBytes)
+	signatureBytes, _ := hex.DecodeString(signature.HexBytes)
 	assert.Equal(t, len(signatureBytes), 64)
 
 	verify, err := Verify(signature)
