@@ -28,87 +28,63 @@ func hashAndHexEncode(message string) string {
 	return hex.EncodeToString(messageHashBytes)
 }
 
-func TestSignEd25519(t *testing.T) {
-	curve := types.Edwards25519
-	keypair, err := GenerateKeypair(curve)
-	assert.NoError(t, err)
+var signerSecp256k1 Signer
 
-	signatureType := types.Ed25519
-	payload := &types.SigningPayload{
-		Address:       "test",
-		HexBytes:      "68656C6C6F0D0A",
-		SignatureType: signatureType,
-	}
-
-	signature, err := SignPayload(payload, keypair)
-	assert.NoError(t, err)
-	signatureBytes, _ := hex.DecodeString(signature.HexBytes)
-	assert.Equal(t, len(signatureBytes), 64)
-
-	verify, err := Verify(signature)
-	assert.NoError(t, err)
-	assert.True(t, verify)
+func init() {
+	keypair, _ := GenerateKeypair(types.Secp256k1)
+	signerSecp256k1 = Signer(SignerSecp256k1{*keypair})
 }
 
 func TestSignSecp256k1EcdsaRecovery(t *testing.T) {
-	curve := types.Secp256k1
-	keypair, err := GenerateKeypair(curve)
-	assert.NoError(t, err)
-
 	signatureType := types.EcdsaRecovery
 
-	payload := &types.SigningPayload{
+	payload := types.SigningPayload{
 		Address:       "test",
 		HexBytes:      hashAndHexEncode("hello"),
 		SignatureType: signatureType,
 	}
 
-	signature, err := SignPayload(payload, keypair)
+	signature, err := signerSecp256k1.Sign(payload)
 	assert.NoError(t, err)
 	signatureBytes, _ := hex.DecodeString(signature.HexBytes)
 	assert.Equal(t, len(signatureBytes), 65)
 
-	verify, err := Verify(signature)
+	verify, err := signerSecp256k1.Verify(signature)
 	assert.NoError(t, err)
 	assert.True(t, verify)
 }
 
 func TestSignSecp256k1Ecdsa(t *testing.T) {
-	curve := types.Secp256k1
-	keypair, err := GenerateKeypair(curve)
-	assert.NoError(t, err)
-
 	signatureType := types.Ecdsa
 
-	payload := &types.SigningPayload{
+	payload := types.SigningPayload{
 		Address:       "test",
 		HexBytes:      hashAndHexEncode("hello"),
 		SignatureType: signatureType,
 	}
 
-	signature, err := SignPayload(payload, keypair)
+	signature, err := signerSecp256k1.Sign(payload)
 	assert.NoError(t, err)
 	signatureBytes, _ := hex.DecodeString(signature.HexBytes)
 	assert.Equal(t, len(signatureBytes), 64)
 
-	verify, err := Verify(signature)
+	verify, err := signerSecp256k1.Verify(signature)
 	assert.NoError(t, err)
 	assert.True(t, verify)
 }
 
 func TestSignInvalidPayload(t *testing.T) {
-	keypair, _ := GenerateKeypair(types.Secp256k1)
 	signatureType := types.Ecdsa
 
 	invalidPayload := make([]byte, 33)
 
-	payload := &types.SigningPayload{
+	payload := types.SigningPayload{
 		Address:       "test",
 		HexBytes:      hex.EncodeToString(invalidPayload),
 		SignatureType: signatureType,
 	}
 
-	_, err := SignPayload(payload, keypair)
+	_, err := signerSecp256k1.Sign(payload)
 	errorMsg := err.Error()
 	assert.Contains(t, errorMsg, "unable to sign. invalid message length, need 32 bytes")
 }
