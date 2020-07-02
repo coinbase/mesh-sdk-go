@@ -41,7 +41,7 @@ func GenerateKeypair(curve types.CurveType) (*KeyPair, error) {
 			CurveType: curve,
 		}
 		privKey := &PrivateKey{
-			HexBytes:  hex.EncodeToString(rawPrivKey.Serialize()),
+			Bytes:     rawPrivKey.Serialize(),
 			CurveType: curve,
 		}
 
@@ -62,7 +62,7 @@ func GenerateKeypair(curve types.CurveType) (*KeyPair, error) {
 		}
 
 		privKey := &PrivateKey{
-			HexBytes:  hex.EncodeToString(rawPrivKey.Seed()),
+			Bytes:     rawPrivKey.Seed(),
 			CurveType: curve,
 		}
 
@@ -79,32 +79,32 @@ func GenerateKeypair(curve types.CurveType) (*KeyPair, error) {
 }
 
 // IsValid checks the validity of a keypair
-func (k KeyPair) IsValid() (bool, error) {
-	sk, _ := hex.DecodeString(k.PrivateKey.HexBytes)
+func (k KeyPair) IsValid() error {
+	sk := k.PrivateKey.Bytes
 	pkCurve := k.PublicKey.CurveType
 	skCurve := k.PrivateKey.CurveType
 
 	// Checks if valid Public Key
 	err := asserter.PublicKey(k.PublicKey)
 	if err != nil {
-		return false, err
+		return err
 	}
 
 	// Checks if valid CurveType
-	err = asserter.CurveType(k.PublicKey.CurveType)
+	err = asserter.CurveType(pkCurve)
 	if err != nil {
-		return false, err
+		return err
 	}
 
 	// Checks if pk and sk have the same CurveType
 	if pkCurve != skCurve {
-		return false, fmt.Errorf("private key curve %s and public key curve %s do not match", skCurve, pkCurve)
+		return fmt.Errorf("private key curve %s and public key curve %s do not match", skCurve, pkCurve)
 	}
 
 	// All privkeys are 32-bytes
 	if len(sk) != btcec.PrivKeyBytesLen {
-		return false, fmt.Errorf("invalid privkey length %v", len(sk))
+		return fmt.Errorf("invalid privkey length %v", len(sk))
 	}
 
-	return true, nil
+	return nil
 }

@@ -55,11 +55,11 @@ func signEd25519(privKeyBytes, payload []byte) []byte {
 
 // SignPayload signs arbitrary payloads using a KeyPair
 func SignPayload(payload *types.SigningPayload, keypair *KeyPair) (*types.Signature, error) {
-	privKeyBytes, err := hex.DecodeString(keypair.PrivateKey.HexBytes)
+	err := keypair.IsValid()
 	if err != nil {
-		return nil, fmt.Errorf("sign: unable to decode private key. %w", err)
+		return nil, err
 	}
-
+	privKeyBytes := keypair.PrivateKey.Bytes
 	decodedMessage, err := hex.DecodeString(payload.HexBytes)
 	if err != nil {
 		return nil, fmt.Errorf("sign: unable to decode message. %w", err)
