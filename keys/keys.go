@@ -103,7 +103,7 @@ func (k KeyPair) IsValid() error {
 
 	// All privkeys are 32-bytes
 	if len(sk) != btcec.PrivKeyBytesLen {
-		return fmt.Errorf("invalid privkey length %v", len(sk))
+		return fmt.Errorf("invalid privkey length %v. Expected 32 bytes", len(sk))
 	}
 
 	return nil
