@@ -39,24 +39,10 @@ func TestGenerateKeypairEd25519(t *testing.T) {
 	assert.Equal(t, keypair.PrivateKey.CurveType, curve)
 }
 
-type privKeyTest struct {
-	keypair *KeyPair
-	errMsg  string
-}
-
 func mockKeyPair(privKey []byte, curveType types.CurveType) *KeyPair {
 	keypair, _ := GenerateKeypair(curveType)
 	keypair.PrivateKey.Bytes = privKey
 	return keypair
-}
-
-var privKeyTests = []privKeyTest{
-	{mockKeyPair(make([]byte, 33), types.Secp256k1), "invalid privkey length"},
-	{mockKeyPair(make([]byte, 31), types.Secp256k1), "invalid privkey length"},
-	{mockKeyPair(make([]byte, 0), types.Secp256k1), "invalid privkey length"},
-	{mockKeyPair(make([]byte, 33), types.Edwards25519), "invalid privkey length"},
-	{mockKeyPair(make([]byte, 31), types.Edwards25519), "invalid privkey length"},
-	{mockKeyPair(make([]byte, 0), types.Edwards25519), "invalid privkey length"},
 }
 
 func TestKeypairValidity(t *testing.T) {
@@ -65,6 +51,20 @@ func TestKeypairValidity(t *testing.T) {
 	keyPair.PublicKey.CurveType = types.Secp256k1
 	err := keyPair.IsValid()
 	assert.Contains(t, err.Error(), "do not match")
+
+	type privKeyTest struct {
+		keypair *KeyPair
+		errMsg  string
+	}
+
+	var privKeyTests = []privKeyTest{
+		{mockKeyPair(make([]byte, 33), types.Secp256k1), "invalid privkey length"},
+		{mockKeyPair(make([]byte, 31), types.Secp256k1), "invalid privkey length"},
+		{mockKeyPair(make([]byte, 0), types.Secp256k1), "invalid privkey length"},
+		{mockKeyPair(make([]byte, 33), types.Edwards25519), "invalid privkey length"},
+		{mockKeyPair(make([]byte, 31), types.Edwards25519), "invalid privkey length"},
+		{mockKeyPair(make([]byte, 0), types.Edwards25519), "invalid privkey length"},
+	}
 
 	for _, test := range privKeyTests {
 		err = test.keypair.IsValid()
