@@ -18,7 +18,7 @@ import "github.com/coinbase/rosetta-sdk-go/types"
 
 // Signer is an interface for different curve signers
 type Signer interface {
-	PublicKey() types.PublicKey
-	Sign(payload types.SigningPayload) (*types.Signature, error)
-	Verify(signature *types.Signature) (bool, error)
+	PublicKey() *types.PublicKey
+	Sign(payload *types.SigningPayload) (*types.Signature, error)
+	Verify(signature *types.Signature) error
 }

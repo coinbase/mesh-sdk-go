@@ -29,17 +29,21 @@ type SignerSecp256k1 struct {
 }
 
 // PublicKey returns the PublicKey of the signer
-func (s SignerSecp256k1) PublicKey() types.PublicKey {
-	return *s.KeyPair.PublicKey
+func (s SignerSecp256k1) PublicKey() *types.PublicKey {
+	return s.KeyPair.PublicKey
 }
 
 // Signs arbitrary payloads using a KeyPair
-func (s SignerSecp256k1) Sign(payload types.SigningPayload) (*types.Signature, error) {
+func (s SignerSecp256k1) Sign(payload *types.SigningPayload) (*types.Signature, error) {
 	err := s.KeyPair.IsValid()
 	if err != nil {
 		return nil, err
 	}
-	privKeyBytes := s.KeyPair.PrivateKey.Bytes
+	privKeyBytes, err := hex.DecodeString(s.KeyPair.PrivateKey.HexBytes)
+	if err != nil {
+		return nil, fmt.Errorf("sign: unable to decode private key. %w", err)
+	}
+
 	decodedMessage, err := hex.DecodeString(payload.HexBytes)
 	if err != nil {
 		return nil, fmt.Errorf("sign: unable to decode message. %w", err)
@@ -63,7 +67,7 @@ func (s SignerSecp256k1) Sign(payload types.SigningPayload) (*types.Signature, e
 	}
 
 	return &types.Signature{
-		SigningPayload: &payload,
+		SigningPayload: payload,
 		PublicKey:      s.KeyPair.PublicKey,
 		SignatureType:  payload.SignatureType,
 		HexBytes:       hex.EncodeToString(sig),
@@ -72,34 +76,38 @@ func (s SignerSecp256k1) Sign(payload types.SigningPayload) (*types.Signature, e
 
 // Verify verifies a Signature, by checking the validity of a Signature,
 // the SigningPayload, and the PublicKey of the Signature.
-func (s SignerSecp256k1) Verify(signature *types.Signature) (bool, error) {
+func (s SignerSecp256k1) Verify(signature *types.Signature) error {
 	pubKey, err := hex.DecodeString(signature.PublicKey.HexBytes)
 	if err != nil {
-		return false, fmt.Errorf("verify: unable to decode pubkey. %w", err)
+		return fmt.Errorf("verify: unable to decode pubkey. %w", err)
 	}
 	decodedMessage, err := hex.DecodeString(signature.SigningPayload.HexBytes)
 	if err != nil {
-		return false, fmt.Errorf("verify: unable to decode message. %w", err)
+		return fmt.Errorf("verify: unable to decode message. %w", err)
 	}
 	decodedSignature, err := hex.DecodeString(signature.HexBytes)
 	if err != nil {
-		return false, fmt.Errorf("verify: unable to decode signature. %w", err)
+		return fmt.Errorf("verify: unable to decode signature. %w", err)
 	}
 
 	err = asserter.Signatures([]*types.Signature{signature})
 	if err != nil {
-		return false, err
+		return err
 	}
 
+	var verify bool
 	switch signature.SignatureType {
 	case types.Ecdsa:
-		verify := secp256k1.VerifySignature(pubKey, decodedMessage, decodedSignature)
-		return verify, nil
+		verify = secp256k1.VerifySignature(pubKey, decodedMessage, decodedSignature)
 	case types.EcdsaRecovery:
 		normalizedSig := decodedSignature[:64]
-		verify := secp256k1.VerifySignature(pubKey, decodedMessage, normalizedSig)
-		return verify, nil
+		verify = secp256k1.VerifySignature(pubKey, decodedMessage, normalizedSig)
 	default:
-		return false, fmt.Errorf("%s is not supported", signature.SignatureType)
+		return fmt.Errorf("%s is not supported", signature.SignatureType)
 	}
+
+	if !verify {
+		return fmt.Errorf("verify: verify returned false")
+	}
+	return nil
 }
