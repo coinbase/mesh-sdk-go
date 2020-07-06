@@ -15,6 +15,7 @@
 package keys
 
 import (
+	"encoding/hex"
 	"testing"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
@@ -41,7 +42,7 @@ func TestGenerateKeypairEd25519(t *testing.T) {
 
 func mockKeyPair(privKey []byte, curveType types.CurveType) *KeyPair {
 	keypair, _ := GenerateKeypair(curveType)
-	keypair.PrivateKey.Bytes = privKey
+	keypair.PrivateKey.HexBytes = hex.EncodeToString(privKey)
 	return keypair
 }
 

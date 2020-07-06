@@ -41,7 +41,7 @@ func GenerateKeypair(curve types.CurveType) (*KeyPair, error) {
 			CurveType: curve,
 		}
 		privKey := &PrivateKey{
-			Bytes:     rawPrivKey.Serialize(),
+			HexBytes:  hex.EncodeToString(rawPrivKey.Serialize()),
 			CurveType: curve,
 		}
 
@@ -62,7 +62,7 @@ func GenerateKeypair(curve types.CurveType) (*KeyPair, error) {
 		}
 
 		privKey := &PrivateKey{
-			Bytes:     rawPrivKey.Seed(),
+			HexBytes:  hex.EncodeToString(rawPrivKey.Seed()),
 			CurveType: curve,
 		}
 
@@ -80,12 +80,16 @@ func GenerateKeypair(curve types.CurveType) (*KeyPair, error) {
 
 // IsValid checks the validity of a keypair
 func (k KeyPair) IsValid() error {
-	sk := k.PrivateKey.Bytes
+	sk, err := hex.DecodeString(k.PrivateKey.HexBytes)
+	if err != nil {
+		return err
+	}
+
 	pkCurve := k.PublicKey.CurveType
 	skCurve := k.PrivateKey.CurveType
 
 	// Checks if valid Public Key
-	err := asserter.PublicKey(k.PublicKey)
+	err = asserter.PublicKey(k.PublicKey)
 	if err != nil {
 		return err
 	}

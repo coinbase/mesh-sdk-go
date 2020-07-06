@@ -18,7 +18,7 @@ import "github.com/coinbase/rosetta-sdk-go/types"
 
 // PrivateKey contains the hex-encoded privkey bytes as well as the CurveType
 type PrivateKey struct {
-	Bytes     []byte
+	HexBytes  string
 	CurveType types.CurveType
 }
 
