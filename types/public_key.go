@@ -16,9 +16,55 @@
 
 package types
 
+import (
+	"encoding/hex"
+	"encoding/json"
+)
+
 // PublicKey PublicKey contains a public key byte array for a particular CurveType encoded in hex.
 // Note that there is no PrivateKey struct as this is NEVER the concern of an implementation.
 type PublicKey struct {
 	Bytes     []byte    `json:"hex_bytes"`
 	CurveType CurveType `json:"curve_type"`
+}
+
+// MarshalJSON overrides the default JSON marshaler
+// and encodes bytes as hex instead of base64.
+func (s *PublicKey) MarshalJSON() ([]byte, error) {
+	type Alias PublicKey
+	j, err := json.Marshal(struct {
+		Bytes string `json:"hex_bytes"`
+		*Alias
+	}{
+		Bytes: hex.EncodeToString(s.Bytes),
+		Alias: (*Alias)(s),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return j, nil
+}
+
+// UnmarshalJSON overrides the default JSON unmarshaler
+// and decodes bytes from hex instead of base64.
+func (s *PublicKey) UnmarshalJSON(b []byte) error {
+	type Alias PublicKey
+	r := struct {
+		Bytes string `json:"hex_bytes"`
+		*Alias
+	}{
+		Alias: (*Alias)(s),
+	}
+	err := json.Unmarshal(b, &r)
+	if err != nil {
+		return err
+	}
+
+	bytes, err := hex.DecodeString(r.Bytes)
+	if err != nil {
+		return err
+	}
+
+	s.Bytes = bytes
+	return nil
 }

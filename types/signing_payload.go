@@ -16,6 +16,11 @@
 
 package types
 
+import (
+	"encoding/hex"
+	"encoding/json"
+)
+
 // SigningPayload SigningPayload is signed by the client with the keypair associated with an address
 // using the specified SignatureType. SignatureType can be optionally populated if there is a
 // restriction on the signature scheme that can be used to sign the payload.
@@ -24,4 +29,45 @@ type SigningPayload struct {
 	Address       string        `json:"address"`
 	Bytes         []byte        `json:"hex_bytes"`
 	SignatureType SignatureType `json:"signature_type,omitempty"`
+}
+
+// MarshalJSON overrides the default JSON marshaler
+// and encodes bytes as hex instead of base64.
+func (s *SigningPayload) MarshalJSON() ([]byte, error) {
+	type Alias SigningPayload
+	j, err := json.Marshal(struct {
+		Bytes string `json:"hex_bytes"`
+		*Alias
+	}{
+		Bytes: hex.EncodeToString(s.Bytes),
+		Alias: (*Alias)(s),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return j, nil
+}
+
+// UnmarshalJSON overrides the default JSON unmarshaler
+// and decodes bytes from hex instead of base64.
+func (s *SigningPayload) UnmarshalJSON(b []byte) error {
+	type Alias SigningPayload
+	r := struct {
+		Bytes string `json:"hex_bytes"`
+		*Alias
+	}{
+		Alias: (*Alias)(s),
+	}
+	err := json.Unmarshal(b, &r)
+	if err != nil {
+		return err
+	}
+
+	bytes, err := hex.DecodeString(r.Bytes)
+	if err != nil {
+		return err
+	}
+
+	s.Bytes = bytes
+	return nil
 }
