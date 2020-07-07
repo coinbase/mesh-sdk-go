@@ -29,7 +29,7 @@ case "${OS}" in
         ;;
 esac
 
-# Remove existing clienterated code
+# Remove existing client generated code
 mkdir -p tmp;
 DIRS=( types client server )
 IGNORED_FILES=( README.md utils.go utils_test.go )
@@ -151,6 +151,22 @@ done
 
 # Change model files to correct package
 sed "${SED_IFLAG[@]}" 's/package client/package types/g' types/*;
+
+# Inject Custom Marshaling Logic
+for file in $(grep -Ril "hex_bytes" types)
+do
+  echo "${file}"
+  RAW_NAME=$(echo "${file}" | cut -c7- | rev | cut -c4- | rev);
+  STRUCT_NAME=$(echo "${RAW_NAME}" | perl -pe 's/(?:\b|_)(\p{Ll})/\u$1/g');
+  echo "${STRUCT_NAME}"
+  MARSHAL_CONTENTS=$(sed "s/STRUCT_NAME/${STRUCT_NAME}/g" < templates/marshal.txt);
+  echo "${MARSHAL_CONTENTS}" >> "${file}";
+  sed "${SED_IFLAG[@]}" 's/package types/package types\
+    import \(\
+    \"encoding\/hex\"\
+    \"encoding\/json\"\
+    \)/g' "${file}";
+done
 
 # Format client generated code
 FORMAT_GEN="gofmt -w /local/types; gofmt -w /local/client; gofmt -w /local/server"
