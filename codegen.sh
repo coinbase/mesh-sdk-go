@@ -156,10 +156,8 @@ sed "${SED_IFLAG[@]}" 's/package client/package types/g' types/*;
 # shellcheck disable=SC2013
 for file in $(grep -Ril "hex_bytes" types)
 do
-  echo "${file}"
   RAW_NAME=$(echo "${file}" | cut -c7- | rev | cut -c4- | rev);
   STRUCT_NAME=$(echo "${RAW_NAME}" | perl -pe 's/(?:\b|_)(\p{Ll})/\u$1/g');
-  echo "${STRUCT_NAME}"
   MARSHAL_CONTENTS=$(sed "s/STRUCT_NAME/${STRUCT_NAME}/g" < templates/marshal.txt);
   echo "${MARSHAL_CONTENTS}" >> "${file}";
   # shellcheck disable=SC1004
