@@ -22,6 +22,6 @@ package types
 type SigningPayload struct {
 	// The network-specific address of the account that should sign the payload.
 	Address       string        `json:"address"`
-	HexBytes      string        `json:"hex_bytes"`
+	Bytes         []byte        `json:"hex_bytes"`
 	SignatureType SignatureType `json:"signature_type,omitempty"`
 }

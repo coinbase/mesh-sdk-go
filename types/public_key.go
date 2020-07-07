@@ -19,7 +19,6 @@ package types
 // PublicKey PublicKey contains a public key byte array for a particular CurveType encoded in hex.
 // Note that there is no PrivateKey struct as this is NEVER the concern of an implementation.
 type PublicKey struct {
-	// Hex-encoded public key bytes in the format specified by the CurveType.
-	HexBytes  string    `json:"hex_bytes"`
+	Bytes     []byte    `json:"hex_bytes"`
 	CurveType CurveType `json:"curve_type"`
 }

@@ -24,5 +24,5 @@ type Signature struct {
 	SigningPayload *SigningPayload `json:"signing_payload"`
 	PublicKey      *PublicKey      `json:"public_key"`
 	SignatureType  SignatureType   `json:"signature_type"`
-	HexBytes       string          `json:"hex_bytes"`
+	Bytes          []byte          `json:"hex_bytes"`
 }
