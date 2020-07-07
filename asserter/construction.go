@@ -15,7 +15,6 @@
 package asserter
 
 import (
-	"encoding/hex"
 	"errors"
 	"fmt"
 
@@ -58,8 +57,8 @@ func PublicKey(
 		return errors.New("PublicKey cannot be nil")
 	}
 
-	if err := checkHex(publicKey.HexBytes); err != nil {
-		return fmt.Errorf("%w public key does not have valid hex", err)
+	if len(publicKey.Bytes) == 0 {
+		return errors.New("public key bytes cannot be empty")
 	}
 
 	if err := CurveType(publicKey.CurveType); err != nil {
@@ -82,24 +81,6 @@ func CurveType(
 	}
 }
 
-// checkHex returns an error if a
-// string is not valid hex or if
-// it is empty.
-func checkHex(
-	hexString string,
-) error {
-	if len(hexString) == 0 {
-		return errors.New("hex string cannot be empty")
-	}
-
-	_, err := hex.DecodeString(hexString)
-	if err != nil {
-		return fmt.Errorf("%w: %s is not a valid hex string", err, hexString)
-	}
-
-	return nil
-}
-
 // SigningPayload returns an error
 // if a *types.SigningPayload is nil,
 // has an empty address, has invlaid hex,
@@ -115,8 +96,8 @@ func SigningPayload(
 		return errors.New("signing payload address cannot be empty")
 	}
 
-	if err := checkHex(signingPayload.HexBytes); err != nil {
-		return fmt.Errorf("%w signature payload is not a valid hex string", err)
+	if len(signingPayload.Bytes) == 0 {
+		return errors.New("signing payload bytes cannot be empty")
 	}
 
 	// SignatureType can be optionally populated
@@ -160,8 +141,8 @@ func Signatures(
 			return fmt.Errorf("requested signature type does not match returned signature type")
 		}
 
-		if err := checkHex(signature.HexBytes); err != nil {
-			return fmt.Errorf("%w: signature %d has invalid hex", err, i)
+		if len(signature.Bytes) == 0 {
+			return fmt.Errorf("signature %d bytes cannot be empty", i)
 		}
 	}
 

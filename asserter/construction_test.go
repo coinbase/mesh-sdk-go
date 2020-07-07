@@ -82,23 +82,22 @@ func TestPublicKey(t *testing.T) {
 	}{
 		"valid public key": {
 			publicKey: &types.PublicKey{
-				HexBytes:  "48656c6c6f20476f7068657221",
+				Bytes:     []byte("blah"),
 				CurveType: types.Secp256k1,
 			},
 		},
 		"nil public key": {
 			err: errors.New("PublicKey cannot be nil"),
 		},
-		"invalid hex": {
+		"invalid bytes": {
 			publicKey: &types.PublicKey{
-				HexBytes:  "hello",
 				CurveType: types.Secp256k1,
 			},
-			err: errors.New("hello is not a valid hex string"),
+			err: errors.New("public key bytes cannot be empty"),
 		},
 		"invalid curve": {
 			publicKey: &types.PublicKey{
-				HexBytes:  "48656c6c6f20476f7068657221",
+				Bytes:     []byte("hello"),
 				CurveType: "test",
 			},
 			err: errors.New("test is not a supported CurveType"),
@@ -125,14 +124,14 @@ func TestSigningPayload(t *testing.T) {
 	}{
 		"valid signing payload": {
 			signingPayload: &types.SigningPayload{
-				Address:  "hello",
-				HexBytes: "48656c6c6f20476f7068657221",
+				Address: "hello",
+				Bytes:   []byte("blah"),
 			},
 		},
 		"valid signing payload with signature type": {
 			signingPayload: &types.SigningPayload{
 				Address:       "hello",
-				HexBytes:      "48656c6c6f20476f7068657221",
+				Bytes:         []byte("blah"),
 				SignatureType: types.Ed25519,
 			},
 		},
@@ -141,20 +140,20 @@ func TestSigningPayload(t *testing.T) {
 		},
 		"empty address": {
 			signingPayload: &types.SigningPayload{
-				HexBytes: "48656c6c6f20476f7068657221",
+				Bytes: []byte("blah"),
 			},
 			err: errors.New("signing payload address cannot be empty"),
 		},
-		"empty hex": {
+		"empty bytes": {
 			signingPayload: &types.SigningPayload{
 				Address: "hello",
 			},
-			err: errors.New("hex string cannot be empty"),
+			err: errors.New("signing payload bytes cannot be empty"),
 		},
 		"invalid signature": {
 			signingPayload: &types.SigningPayload{
 				Address:       "hello",
-				HexBytes:      "48656c6c6f20476f7068657221",
+				Bytes:         []byte("blah"),
 				SignatureType: "blah",
 			},
 			err: errors.New("blah is not a supported SignatureType"),
@@ -183,21 +182,21 @@ func TestSignatures(t *testing.T) {
 			signatures: []*types.Signature{
 				{
 					SigningPayload: &types.SigningPayload{
-						Address:  validAccount.Address,
-						HexBytes: "48656c6c6f20476f7068657221",
+						Address: validAccount.Address,
+						Bytes:   []byte("blah"),
 					},
 					PublicKey:     validPublicKey,
 					SignatureType: types.Ed25519,
-					HexBytes:      "656c6c6f20476f7068657221",
+					Bytes:         []byte("hello"),
 				},
 				{
 					SigningPayload: &types.SigningPayload{
-						Address:  validAccount.Address,
-						HexBytes: "48656c6c6f20476f7068657221",
+						Address: validAccount.Address,
+						Bytes:   []byte("blah"),
 					},
 					PublicKey:     validPublicKey,
 					SignatureType: types.EcdsaRecovery,
-					HexBytes:      "656c6c6f20476f7068657221",
+					Bytes:         []byte("hello"),
 				},
 			},
 		},
@@ -206,12 +205,12 @@ func TestSignatures(t *testing.T) {
 				{
 					SigningPayload: &types.SigningPayload{
 						Address:       validAccount.Address,
-						HexBytes:      "48656c6c6f20476f7068657221",
+						Bytes:         []byte("blah"),
 						SignatureType: types.Ed25519,
 					},
 					PublicKey:     validPublicKey,
 					SignatureType: types.Ed25519,
-					HexBytes:      "656c6c6f20476f7068657221",
+					Bytes:         []byte("hello"),
 				},
 			},
 		},
@@ -222,36 +221,36 @@ func TestSignatures(t *testing.T) {
 			signatures: []*types.Signature{
 				{
 					SigningPayload: &types.SigningPayload{
-						Address:  validAccount.Address,
-						HexBytes: "48656c6c6f20476f7068657221",
+						Address: validAccount.Address,
+						Bytes:   []byte("blah"),
 					},
 					PublicKey:     validPublicKey,
 					SignatureType: types.EcdsaRecovery,
-					HexBytes:      "656c6c6f20476f7068657221",
+					Bytes:         []byte("hello"),
 				},
 				{
 					SigningPayload: &types.SigningPayload{
 						Address:       validAccount.Address,
-						HexBytes:      "48656c6c6f20476f7068657221",
+						Bytes:         []byte("blah"),
 						SignatureType: types.Ed25519,
 					},
 					PublicKey:     validPublicKey,
 					SignatureType: types.Ed25519,
 				},
 			},
-			err: errors.New("signature 1 has invalid hex"),
+			err: errors.New("signature 1 bytes cannot be empty"),
 		},
 		"signature type mismatch": {
 			signatures: []*types.Signature{
 				{
 					SigningPayload: &types.SigningPayload{
 						Address:       validAccount.Address,
-						HexBytes:      "48656c6c6f20476f7068657221",
+						Bytes:         []byte("blah"),
 						SignatureType: types.EcdsaRecovery,
 					},
 					PublicKey:     validPublicKey,
 					SignatureType: types.Ed25519,
-					HexBytes:      "656c6c6f20476f7068657221",
+					Bytes:         []byte("hello"),
 				},
 			},
 			err: errors.New("requested signature type does not match"),
