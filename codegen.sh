@@ -32,7 +32,7 @@ esac
 # Remove existing client generated code
 mkdir -p tmp;
 DIRS=( types client server )
-IGNORED_FILES=( README.md utils.go utils_test.go )
+IGNORED_FILES=( README.md utils.go utils_test.go marshal_test.go )
 
 for dir in "${DIRS[@]}"
 do
