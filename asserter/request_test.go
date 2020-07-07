@@ -55,7 +55,7 @@ var (
 	}
 
 	validPublicKey = &types.PublicKey{
-		HexBytes:  "48656c6c6f20476f7068657221",
+		Bytes:     []byte("hello"),
 		CurveType: types.Secp256k1,
 	}
 
@@ -148,12 +148,12 @@ var (
 	validSignatures = []*types.Signature{
 		{
 			SigningPayload: &types.SigningPayload{
-				Address:  validAccount.Address,
-				HexBytes: "48656c6c6f20476f7068657221",
+				Address: validAccount.Address,
+				Bytes:   []byte("blah"),
 			},
 			PublicKey:     validPublicKey,
 			SignatureType: types.Ed25519,
-			HexBytes:      "656c6c6f20476f7068657221",
+			Bytes:         []byte("hello"),
 		},
 	}
 
@@ -161,12 +161,12 @@ var (
 		{
 			SigningPayload: &types.SigningPayload{
 				Address:       validAccount.Address,
-				HexBytes:      "48656c6c6f20476f7068657221",
+				Bytes:         []byte("blah"),
 				SignatureType: types.EcdsaRecovery,
 			},
 			PublicKey:     validPublicKey,
 			SignatureType: types.Ed25519,
-			HexBytes:      "656c6c6f20476f7068657221",
+			Bytes:         []byte("hello"),
 		},
 	}
 
@@ -174,12 +174,12 @@ var (
 		{
 			SigningPayload: &types.SigningPayload{
 				Address:       validAccount.Address,
-				HexBytes:      "48656c6c6f20476f7068657221",
+				Bytes:         []byte("blah"),
 				SignatureType: types.Ed25519,
 			},
 			PublicKey:     validPublicKey,
 			SignatureType: types.Ed25519,
-			HexBytes:      "656c6c6f20476f7068657221",
+			Bytes:         []byte("hello"),
 		},
 	}
 
@@ -187,7 +187,7 @@ var (
 		{
 			SigningPayload: &types.SigningPayload{
 				Address:       validAccount.Address,
-				HexBytes:      "48656c6c6f20476f7068657221",
+				Bytes:         []byte("blah"),
 				SignatureType: types.Ed25519,
 			},
 			PublicKey:     validPublicKey,
@@ -662,15 +662,14 @@ func TestConstructionDeriveRequest(t *testing.T) {
 			},
 			err: errors.New("PublicKey cannot be nil"),
 		},
-		"invalid hex public key": {
+		"empty public key bytes": {
 			request: &types.ConstructionDeriveRequest{
 				NetworkIdentifier: validNetworkIdentifier,
 				PublicKey: &types.PublicKey{
-					HexBytes:  "hello",
 					CurveType: types.Secp256k1,
 				},
 			},
-			err: errors.New("not a valid hex string public key"),
+			err: errors.New("public key bytes cannot be empty"),
 		},
 	}
 
@@ -875,7 +874,7 @@ func TestConstructionCombineRequest(t *testing.T) {
 				UnsignedTransaction: "blah",
 				Signatures:          emptySignature,
 			},
-			err: errors.New("hex string cannot be empty"),
+			err: errors.New("signature 0 bytes cannot be empty"),
 		},
 		"signature type match": {
 			request: &types.ConstructionCombineRequest{

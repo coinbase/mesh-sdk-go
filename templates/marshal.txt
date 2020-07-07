@@ -1,0 +1,41 @@
+
+// MarshalJSON overrides the default JSON marshaler
+// and encodes bytes as hex instead of base64.
+func (s *STRUCT_NAME) MarshalJSON() ([]byte, error) {
+	type Alias STRUCT_NAME
+	j, err := json.Marshal(struct {
+		Bytes string `json:"hex_bytes"`
+		*Alias
+	}{
+		Bytes: hex.EncodeToString(s.Bytes),
+		Alias: (*Alias)(s),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return j, nil
+}
+
+// UnmarshalJSON overrides the default JSON unmarshaler
+// and decodes bytes from hex instead of base64.
+func (s *STRUCT_NAME) UnmarshalJSON(b []byte) error {
+	type Alias STRUCT_NAME
+  r := struct {
+		Bytes string `json:"hex_bytes"`
+		*Alias
+	}{
+		Alias: (*Alias)(s),
+	}
+	err := json.Unmarshal(b, &r)
+	if err != nil {
+		return err
+	}
+
+	bytes, err := hex.DecodeString(r.Bytes)
+	if err != nil {
+		return err
+	}
+
+	s.Bytes = bytes
+	return nil
+}
