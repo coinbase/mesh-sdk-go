@@ -125,6 +125,10 @@ sed "${SED_IFLAG[@]}" 's/ECDSA_RECOVERY/EcdsaRecovery/g' client/* server/*;
 sed "${SED_IFLAG[@]}" 's/ECDSA/Ecdsa/g' client/* server/*;
 sed "${SED_IFLAG[@]}" 's/ED25519/Ed25519/g' client/* server/*;
 
+# Convert HexBytes to Bytes
+sed "${SED_IFLAG[@]}" '/Hex-encoded public key bytes in the format specified by the CurveType/d' client/* server/*;
+sed "${SED_IFLAG[@]}" -E 's/HexBytes[[:space:]]+string/Bytes []byte/g' client/* server/*;
+
 # Remove special characters
 sed "${SED_IFLAG[@]}" 's/&#x60;//g' client/* server/*;
 sed "${SED_IFLAG[@]}" 's/\&quot;//g' client/* server/*;
