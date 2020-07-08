@@ -15,6 +15,7 @@
 package keys
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
@@ -29,6 +30,12 @@ func TestGenerateKeypairSecp256k1(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, keypair.PublicKey.CurveType, curve)
 	assert.Equal(t, keypair.PrivateKey.CurveType, curve)
+
+	privKeyJSON, _ := json.Marshal(keypair.PrivateKey)
+	var privKey PrivateKey
+	err = json.Unmarshal(privKeyJSON, &privKey)
+	assert.NoError(t, err)
+	assert.Equal(t, privKey.Bytes, keypair.PrivateKey.Bytes)
 }
 
 func TestGenerateKeypairEd25519(t *testing.T) {
@@ -38,6 +45,12 @@ func TestGenerateKeypairEd25519(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, keypair.PublicKey.CurveType, curve)
 	assert.Equal(t, keypair.PrivateKey.CurveType, curve)
+
+	privKeyJSON, _ := json.Marshal(keypair.PrivateKey)
+	var privKey PrivateKey
+	err = json.Unmarshal(privKeyJSON, &privKey)
+	assert.NoError(t, err)
+	assert.Equal(t, privKey.Bytes, keypair.PrivateKey.Bytes)
 }
 
 func mockKeyPair(privKey []byte, curveType types.CurveType) *KeyPair {

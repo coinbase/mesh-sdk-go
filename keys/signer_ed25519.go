@@ -16,6 +16,7 @@ package keys
 
 import (
 	"crypto/ed25519"
+	"errors"
 	"fmt"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
@@ -28,23 +29,23 @@ type SignerEd25519 struct {
 }
 
 // PublicKey returns the PublicKey of the signer
-func (s SignerEd25519) PublicKey() *types.PublicKey {
+func (s *SignerEd25519) PublicKey() *types.PublicKey {
 	return s.KeyPair.PublicKey
 }
 
 // Signs arbitrary payloads using a KeyPair
-func (s SignerEd25519) Sign(payload *types.SigningPayload, sigType types.SignatureType) (*types.Signature, error) {
+func (s *SignerEd25519) Sign(payload *types.SigningPayload, sigType types.SignatureType) (*types.Signature, error) {
 	err := s.KeyPair.IsValid()
 	if err != nil {
 		return nil, err
 	}
 
 	if !(payload.SignatureType == types.Ed25519 || payload.SignatureType == "") {
-		return nil, fmt.Errorf("sign: payload signature type is not ed25519")
+		return nil, fmt.Errorf("sign: payload signature type is not %v", types.Ed25519)
 	}
 
 	if sigType != types.Ed25519 {
-		return nil, fmt.Errorf("sign: signature type is not ed25519")
+		return nil, fmt.Errorf("sign: signature type is not %v", types.Ed25519)
 	}
 
 	privKeyBytes := s.KeyPair.PrivateKey.Bytes
@@ -61,9 +62,9 @@ func (s SignerEd25519) Sign(payload *types.SigningPayload, sigType types.Signatu
 
 // Verify verifies a Signature, by checking the validity of a Signature,
 // the SigningPayload, and the PublicKey of the Signature.
-func (s SignerEd25519) Verify(signature *types.Signature) error {
+func (s *SignerEd25519) Verify(signature *types.Signature) error {
 	if signature.SignatureType != types.Ed25519 {
-		return fmt.Errorf("verify: payload signature type is not ed25519")
+		return fmt.Errorf("verify: payload signature type is not %v", types.Ed25519)
 	}
 
 	pubKey := signature.PublicKey.Bytes
@@ -76,7 +77,7 @@ func (s SignerEd25519) Verify(signature *types.Signature) error {
 
 	verify := ed25519.Verify(pubKey, message, sig)
 	if !verify {
-		return fmt.Errorf("verify: verify returned false")
+		return errors.New("verify: verify returned false")
 	}
 
 	return nil

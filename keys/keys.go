@@ -24,6 +24,9 @@ import (
 	"github.com/btcsuite/btcd/btcec"
 )
 
+// Currently all suppported privkeys are 32-bytes
+const PrivKeyBytesLen = 32
+
 // GenerateKeypair returns a Keypair of a specified CurveType
 func GenerateKeypair(curve types.CurveType) (*KeyPair, error) {
 	var keyPair *KeyPair
@@ -101,8 +104,8 @@ func (k *KeyPair) IsValid() error {
 		return fmt.Errorf("private key curve %s and public key curve %s do not match", skCurve, pkCurve)
 	}
 
-	// All privkeys are 32-bytes
-	if len(sk) != btcec.PrivKeyBytesLen {
+	// Will change if we support more CurveTypes with different privkey sizes
+	if len(sk) != PrivKeyBytesLen {
 		return fmt.Errorf("invalid privkey length %v. Expected 32 bytes", len(sk))
 	}
 

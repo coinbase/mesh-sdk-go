@@ -15,6 +15,7 @@
 package keys
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
@@ -29,17 +30,24 @@ type SignerSecp256k1 struct {
 }
 
 // PublicKey returns the PublicKey of the signer
-func (s SignerSecp256k1) PublicKey() *types.PublicKey {
+func (s *SignerSecp256k1) PublicKey() *types.PublicKey {
 	return s.KeyPair.PublicKey
 }
 
 // Signs arbitrary payloads using a KeyPair
-func (s SignerSecp256k1) Sign(payload *types.SigningPayload, sigType types.SignatureType) (*types.Signature, error) {
+func (s *SignerSecp256k1) Sign(payload *types.SigningPayload, sigType types.SignatureType) (*types.Signature, error) {
 	err := s.KeyPair.IsValid()
 	if err != nil {
 		return nil, err
 	}
 	privKeyBytes := s.KeyPair.PrivateKey.Bytes
+
+	if payload.SignatureType != sigType {
+		return nil, fmt.Errorf(
+			"sign: payload sigtype %v and signing sigtype %v are not equal",
+			payload.SignatureType,
+			sigType)
+	}
 
 	var sig []byte
 	switch sigType {
@@ -68,7 +76,7 @@ func (s SignerSecp256k1) Sign(payload *types.SigningPayload, sigType types.Signa
 
 // Verify verifies a Signature, by checking the validity of a Signature,
 // the SigningPayload, and the PublicKey of the Signature.
-func (s SignerSecp256k1) Verify(signature *types.Signature) error {
+func (s *SignerSecp256k1) Verify(signature *types.Signature) error {
 	pubKey := signature.PublicKey.Bytes
 	message := signature.SigningPayload.Bytes
 	sig := signature.Bytes
@@ -90,7 +98,7 @@ func (s SignerSecp256k1) Verify(signature *types.Signature) error {
 	}
 
 	if !verify {
-		return fmt.Errorf("verify: verify returned false")
+		return errors.New("verify: verify returned false")
 	}
 	return nil
 }
