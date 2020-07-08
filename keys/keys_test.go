@@ -15,6 +15,7 @@
 package keys
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"testing"
 
@@ -23,6 +24,28 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestJSONEncoding(t *testing.T) {
+	secpKeypair, _ := GenerateKeypair(types.Secp256k1)
+	ed25519Keypair, _ := GenerateKeypair(types.Secp256k1)
+
+	var keyPairs = []*KeyPair{secpKeypair, ed25519Keypair}
+	for _, keypair := range keyPairs {
+		privKeyJSON, err := json.Marshal(keypair.PrivateKey)
+		assert.NoError(t, err)
+
+		// Simple Hex Check
+		simpleType := struct {
+			HexBytes string `json:"hex_bytes"`
+		}{}
+		err = json.Unmarshal(privKeyJSON, &simpleType)
+		assert.NoError(t, err)
+
+		b, err := hex.DecodeString(simpleType.HexBytes)
+		assert.NoError(t, err)
+		assert.Equal(t, keypair.PrivateKey.Bytes, b)
+	}
+}
+
 func TestGenerateKeypairSecp256k1(t *testing.T) {
 	curve := types.Secp256k1
 	keypair, err := GenerateKeypair(curve)
@@ -30,27 +53,15 @@ func TestGenerateKeypairSecp256k1(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, keypair.PublicKey.CurveType, curve)
 	assert.Equal(t, keypair.PrivateKey.CurveType, curve)
-
-	privKeyJSON, _ := json.Marshal(keypair.PrivateKey)
-	var privKey PrivateKey
-	err = json.Unmarshal(privKeyJSON, &privKey)
-	assert.NoError(t, err)
-	assert.Equal(t, privKey.Bytes, keypair.PrivateKey.Bytes)
 }
 
-func TestGenerateKeypairEd25519(t *testing.T) {
+func TestGenerateKeypairEdwards25519(t *testing.T) {
 	curve := types.Edwards25519
 	keypair, err := GenerateKeypair(curve)
 
 	assert.NoError(t, err)
 	assert.Equal(t, keypair.PublicKey.CurveType, curve)
 	assert.Equal(t, keypair.PrivateKey.CurveType, curve)
-
-	privKeyJSON, _ := json.Marshal(keypair.PrivateKey)
-	var privKey PrivateKey
-	err = json.Unmarshal(privKeyJSON, &privKey)
-	assert.NoError(t, err)
-	assert.Equal(t, privKey.Bytes, keypair.PrivateKey.Bytes)
 }
 
 func mockKeyPair(privKey []byte, curveType types.CurveType) *KeyPair {
