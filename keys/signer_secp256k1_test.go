@@ -32,7 +32,7 @@ var signerSecp256k1 Signer
 
 func init() {
 	keypair, _ := GenerateKeypair(types.Secp256k1)
-	signerSecp256k1 = Signer(SignerSecp256k1{keypair})
+	signerSecp256k1 = Signer(&SignerSecp256k1{keypair})
 }
 
 func TestSignSecp256k1(t *testing.T) {
@@ -84,13 +84,18 @@ func TestVerifySecp256k1(t *testing.T) {
 		errMsg    string
 	}
 
-	payload := &types.SigningPayload{
+	payloadEcdsa := &types.SigningPayload{
 		Address:       "test",
 		Bytes:         hash("hello"),
 		SignatureType: types.Ecdsa,
 	}
-	testSignatureEcdsa, _ := signerSecp256k1.Sign(payload, types.Ecdsa)
-	testSignatureEcdsaRecovery, _ := signerSecp256k1.Sign(payload, types.EcdsaRecovery)
+	payloadEcdsaRecovery := &types.SigningPayload{
+		Address:       "test",
+		Bytes:         hash("hello"),
+		SignatureType: types.EcdsaRecovery,
+	}
+	testSignatureEcdsa, _ := signerSecp256k1.Sign(payloadEcdsa, types.Ecdsa)
+	testSignatureEcdsaRecovery, _ := signerSecp256k1.Sign(payloadEcdsaRecovery, types.EcdsaRecovery)
 
 	var signatureTests = []signatureTest{
 		{mockSecpSignature(

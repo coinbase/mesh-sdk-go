@@ -14,16 +14,60 @@
 
 package keys
 
-import "github.com/coinbase/rosetta-sdk-go/types"
+import (
+	"encoding/hex"
+	"encoding/json"
 
-// PrivateKey contains the hex-encoded privkey bytes as well as the CurveType
-type PrivateKey struct {
-	Bytes     []byte
-	CurveType types.CurveType
-}
+	"github.com/coinbase/rosetta-sdk-go/types"
+)
 
 // KeyPair contains a PrivateKey and its' associated PublicKey
 type KeyPair struct {
 	PublicKey  *types.PublicKey
 	PrivateKey *PrivateKey
+}
+
+// PrivateKey contains the privkey bytes as well as the CurveType
+type PrivateKey struct {
+	Bytes     []byte          `json:"hex_bytes"`
+	CurveType types.CurveType `json:"curve_type"`
+}
+
+// MarshalJSON overrides the default JSON marshaler
+// and encodes bytes as hex instead of base64.
+func (pk *PrivateKey) MarshalJSON() ([]byte, error) {
+	type Alias PrivateKey
+	j, err := json.Marshal(struct {
+		Bytes string `json:"hex_bytes"`
+		*Alias
+	}{
+		Bytes: hex.EncodeToString(pk.Bytes),
+		Alias: (*Alias)(pk),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return j, nil
+}
+
+// UnmarshalJSON overrides the default JSON unmarshaler
+// and decodes bytes from hex instead of base64.
+func (pk *PrivateKey) UnmarshalJSON(b []byte) error {
+	type Alias PrivateKey
+	r := struct {
+		Bytes string `json:"hex_bytes"`
+		*Alias
+	}{
+		Alias: (*Alias)(pk),
+	}
+	err := json.Unmarshal(b, &r)
+	if err != nil {
+		return err
+	}
+	bytes, err := hex.DecodeString(r.Bytes)
+	if err != nil {
+		return err
+	}
+	pk.Bytes = bytes
+	return nil
 }
