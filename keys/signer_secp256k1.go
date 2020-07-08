@@ -29,6 +29,9 @@ type SignerSecp256k1 struct {
 	KeyPair *KeyPair
 }
 
+// EcdsaSignatureLen is 64 bytes
+const EcdsaSignatureLen = 64
+
 var _ Signer = (*SignerSecp256k1)(nil)
 
 // PublicKey returns the PublicKey of the signer
@@ -63,7 +66,7 @@ func (s *SignerSecp256k1) Sign(
 		if err != nil {
 			return nil, fmt.Errorf("sign: unable to sign. %w", err)
 		}
-		sig = sig[:64]
+		sig = sig[:EcdsaSignatureLen]
 	default:
 		return nil, fmt.Errorf("sign: unsupported signature type. %w", err)
 	}
@@ -93,7 +96,7 @@ func (s *SignerSecp256k1) Verify(signature *types.Signature) error {
 	case types.Ecdsa:
 		verify = secp256k1.VerifySignature(pubKey, message, sig)
 	case types.EcdsaRecovery:
-		normalizedSig := sig[:64]
+		normalizedSig := sig[:EcdsaSignatureLen]
 		verify = secp256k1.VerifySignature(pubKey, message, normalizedSig)
 	default:
 		return fmt.Errorf("%s is not supported", signature.SignatureType)
