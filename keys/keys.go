@@ -78,7 +78,7 @@ func GenerateKeypair(curve types.CurveType) (*KeyPair, error) {
 }
 
 // IsValid checks the validity of a keypair
-func (k KeyPair) IsValid() error {
+func (k *KeyPair) IsValid() error {
 	sk := k.PrivateKey.Bytes
 	pkCurve := k.PublicKey.CurveType
 	skCurve := k.PrivateKey.CurveType

@@ -24,7 +24,7 @@ import (
 
 // SignerSecp256k1 is initialized from a keypair
 type SignerSecp256k1 struct {
-	KeyPair KeyPair
+	KeyPair *KeyPair
 }
 
 // PublicKey returns the PublicKey of the signer
@@ -33,7 +33,7 @@ func (s SignerSecp256k1) PublicKey() *types.PublicKey {
 }
 
 // Signs arbitrary payloads using a KeyPair
-func (s SignerSecp256k1) Sign(payload *types.SigningPayload) (*types.Signature, error) {
+func (s SignerSecp256k1) Sign(payload *types.SigningPayload, sigType types.SignatureType) (*types.Signature, error) {
 	err := s.KeyPair.IsValid()
 	if err != nil {
 		return nil, err
@@ -41,7 +41,7 @@ func (s SignerSecp256k1) Sign(payload *types.SigningPayload) (*types.Signature, 
 	privKeyBytes := s.KeyPair.PrivateKey.Bytes
 
 	var sig []byte
-	switch payload.SignatureType {
+	switch sigType {
 	case types.EcdsaRecovery:
 		sig, err = secp256k1.Sign(payload.Bytes, privKeyBytes)
 		if err != nil {
@@ -54,7 +54,7 @@ func (s SignerSecp256k1) Sign(payload *types.SigningPayload) (*types.Signature, 
 		}
 		sig = sig[:64]
 	default:
-		return nil, fmt.Errorf("sign: unsupported signature type in payload. %w", err)
+		return nil, fmt.Errorf("sign: unsupported signature type. %w", err)
 	}
 
 	return &types.Signature{

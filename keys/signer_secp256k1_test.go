@@ -31,25 +31,26 @@ var signerSecp256k1 Signer
 
 func init() {
 	keypair, _ := GenerateKeypair(types.Secp256k1)
-	signerSecp256k1 = Signer(SignerSecp256k1{*keypair})
+	signerSecp256k1 = Signer(SignerSecp256k1{keypair})
 }
 
 func TestSignSecp256k1(t *testing.T) {
 	type payloadTest struct {
 		payload *types.SigningPayload
+		sigType types.SignatureType
 		sigLen  int
 		err     bool
 		errMsg  string
 	}
 
 	var payloadTests = []payloadTest{
-		{mockPayload(hash("hello"), types.Ed25519), 64, true, "unsupported signature type in payload."},
-		{mockPayload(hash("hello123"), types.Ecdsa), 64, false, ""},
-		{mockPayload(hash("hello1234"), types.EcdsaRecovery), 65, false, ""},
+		{mockPayload(hash("hello123"), types.Ecdsa), types.Ecdsa, 64, false, ""},
+		{mockPayload(hash("hello1234"), types.EcdsaRecovery), types.EcdsaRecovery, 65, false, ""},
+		{mockPayload(hash("hello123"), types.Ed25519), types.Ed25519, 64, true, "unsupported signature type"},
 	}
 
 	for _, test := range payloadTests {
-		signature, err := signerSecp256k1.Sign(test.payload)
+		signature, err := signerSecp256k1.Sign(test.payload, test.sigType)
 
 		if !test.err {
 			assert.NoError(t, err)
@@ -87,7 +88,8 @@ func TestVerifySecp256k1(t *testing.T) {
 		Bytes:         hash("hello"),
 		SignatureType: types.Ecdsa,
 	}
-	testSignatureEcdsa, _ := signerSecp256k1.Sign(payload)
+	testSignatureEcdsa, _ := signerSecp256k1.Sign(payload, types.Ecdsa)
+	testSignatureEcdsaRecovery, _ := signerSecp256k1.Sign(payload, types.EcdsaRecovery)
 
 	var signatureTests = []signatureTest{
 		{mockSecpSignature(
@@ -116,7 +118,7 @@ func TestVerifySecp256k1(t *testing.T) {
 		types.EcdsaRecovery,
 		signerSecp256k1.PublicKey(),
 		hash("hello"),
-		testSignatureEcdsa.Bytes)
+		testSignatureEcdsaRecovery.Bytes)
 	assert.Equal(t, nil, signerSecp256k1.Verify(goodEcdsaSignature))
 	assert.Equal(t, nil, signerSecp256k1.Verify(goodEcdsaRecoverySignature))
 }
