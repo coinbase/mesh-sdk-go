@@ -16,6 +16,11 @@
 
 package types
 
+import (
+	"encoding/hex"
+	"encoding/json"
+)
+
 // Signature Signature contains the payload that was signed, the public keys of the keypairs used to
 // produce the signature, the signature (encoded in hex), and the SignatureType. PublicKey is often
 // times not known during construction of the signing payloads but may be needed to combine
@@ -24,5 +29,46 @@ type Signature struct {
 	SigningPayload *SigningPayload `json:"signing_payload"`
 	PublicKey      *PublicKey      `json:"public_key"`
 	SignatureType  SignatureType   `json:"signature_type"`
-	HexBytes       string          `json:"hex_bytes"`
+	Bytes          []byte          `json:"hex_bytes"`
+}
+
+// MarshalJSON overrides the default JSON marshaler
+// and encodes bytes as hex instead of base64.
+func (s *Signature) MarshalJSON() ([]byte, error) {
+	type Alias Signature
+	j, err := json.Marshal(struct {
+		Bytes string `json:"hex_bytes"`
+		*Alias
+	}{
+		Bytes: hex.EncodeToString(s.Bytes),
+		Alias: (*Alias)(s),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return j, nil
+}
+
+// UnmarshalJSON overrides the default JSON unmarshaler
+// and decodes bytes from hex instead of base64.
+func (s *Signature) UnmarshalJSON(b []byte) error {
+	type Alias Signature
+	r := struct {
+		Bytes string `json:"hex_bytes"`
+		*Alias
+	}{
+		Alias: (*Alias)(s),
+	}
+	err := json.Unmarshal(b, &r)
+	if err != nil {
+		return err
+	}
+
+	bytes, err := hex.DecodeString(r.Bytes)
+	if err != nil {
+		return err
+	}
+
+	s.Bytes = bytes
+	return nil
 }

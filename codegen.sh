@@ -29,10 +29,10 @@ case "${OS}" in
         ;;
 esac
 
-# Remove existing clienterated code
+# Remove existing client generated code
 mkdir -p tmp;
 DIRS=( types client server )
-IGNORED_FILES=( README.md utils.go utils_test.go )
+IGNORED_FILES=( README.md utils.go utils_test.go marshal_test.go )
 
 for dir in "${DIRS[@]}"
 do
@@ -125,6 +125,10 @@ sed "${SED_IFLAG[@]}" 's/ECDSA_RECOVERY/EcdsaRecovery/g' client/* server/*;
 sed "${SED_IFLAG[@]}" 's/ECDSA/Ecdsa/g' client/* server/*;
 sed "${SED_IFLAG[@]}" 's/ED25519/Ed25519/g' client/* server/*;
 
+# Convert HexBytes to Bytes
+sed "${SED_IFLAG[@]}" '/Hex-encoded public key bytes in the format specified by the CurveType/d' client/* server/*;
+sed "${SED_IFLAG[@]}" -E 's/HexBytes[[:space:]]+string/Bytes []byte/g' client/* server/*;
+
 # Remove special characters
 sed "${SED_IFLAG[@]}" 's/&#x60;//g' client/* server/*;
 sed "${SED_IFLAG[@]}" 's/\&quot;//g' client/* server/*;
@@ -147,6 +151,27 @@ done
 
 # Change model files to correct package
 sed "${SED_IFLAG[@]}" 's/package client/package types/g' types/*;
+
+# Inject Custom Marshaling Logic
+# shellcheck disable=SC2013
+for file in $(grep -Ril "hex_bytes" types)
+do
+  if [[ "${file}" == *"_test.go"* ]];then
+    echo "Skipping injection for ${file}";
+    continue;
+  fi
+
+  RAW_NAME=$(echo "${file}" | cut -c7- | rev | cut -c4- | rev);
+  STRUCT_NAME=$(echo "${RAW_NAME}" | perl -pe 's/(?:\b|_)(\p{Ll})/\u$1/g');
+  MARSHAL_CONTENTS=$(sed "s/STRUCT_NAME/${STRUCT_NAME}/g" < templates/marshal.txt);
+  echo "${MARSHAL_CONTENTS}" >> "${file}";
+  # shellcheck disable=SC1004
+  sed "${SED_IFLAG[@]}" 's/package types/package types\
+    import \(\
+    \"encoding\/hex\"\
+    \"encoding\/json\"\
+    \)/g' "${file}";
+done
 
 # Format client generated code
 FORMAT_GEN="gofmt -w /local/types; gofmt -w /local/client; gofmt -w /local/server"
