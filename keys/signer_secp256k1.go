@@ -99,7 +99,7 @@ func (s *SignerSecp256k1) Verify(signature *types.Signature) error {
 		normalizedSig := sig[:EcdsaSignatureLen]
 		verify = secp256k1.VerifySignature(pubKey, message, normalizedSig)
 	default:
-		return fmt.Errorf("%s is not supported", signature.SignatureType)
+		return fmt.Errorf("%s is not supported ", signature.SignatureType)
 	}
 
 	if !verify {
