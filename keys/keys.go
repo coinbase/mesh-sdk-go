@@ -18,9 +18,10 @@ import (
 	"crypto/ed25519"
 	"fmt"
 
-	"github.com/btcsuite/btcd/btcec"
 	"github.com/coinbase/rosetta-sdk-go/asserter"
 	"github.com/coinbase/rosetta-sdk-go/types"
+
+	"github.com/btcsuite/btcd/btcec"
 )
 
 // GenerateKeypair returns a Keypair of a specified CurveType
