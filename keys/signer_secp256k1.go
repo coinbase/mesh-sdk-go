@@ -15,7 +15,6 @@
 package keys
 
 import (
-	"encoding/hex"
 	"fmt"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
@@ -39,25 +38,17 @@ func (s SignerSecp256k1) Sign(payload *types.SigningPayload) (*types.Signature, 
 	if err != nil {
 		return nil, err
 	}
-	privKeyBytes, err := hex.DecodeString(s.KeyPair.PrivateKey.HexBytes)
-	if err != nil {
-		return nil, fmt.Errorf("sign: unable to decode private key. %w", err)
-	}
-
-	decodedMessage, err := hex.DecodeString(payload.HexBytes)
-	if err != nil {
-		return nil, fmt.Errorf("sign: unable to decode message. %w", err)
-	}
+	privKeyBytes := s.KeyPair.PrivateKey.Bytes
 
 	var sig []byte
 	switch payload.SignatureType {
 	case types.EcdsaRecovery:
-		sig, err = secp256k1.Sign(decodedMessage, privKeyBytes)
+		sig, err = secp256k1.Sign(payload.Bytes, privKeyBytes)
 		if err != nil {
 			return nil, fmt.Errorf("sign: unable to sign. %w", err)
 		}
 	case types.Ecdsa:
-		sig, err = secp256k1.Sign(decodedMessage, privKeyBytes)
+		sig, err = secp256k1.Sign(payload.Bytes, privKeyBytes)
 		if err != nil {
 			return nil, fmt.Errorf("sign: unable to sign. %w", err)
 		}
@@ -70,27 +61,18 @@ func (s SignerSecp256k1) Sign(payload *types.SigningPayload) (*types.Signature, 
 		SigningPayload: payload,
 		PublicKey:      s.KeyPair.PublicKey,
 		SignatureType:  payload.SignatureType,
-		HexBytes:       hex.EncodeToString(sig),
+		Bytes:          sig,
 	}, nil
 }
 
 // Verify verifies a Signature, by checking the validity of a Signature,
 // the SigningPayload, and the PublicKey of the Signature.
 func (s SignerSecp256k1) Verify(signature *types.Signature) error {
-	pubKey, err := hex.DecodeString(signature.PublicKey.HexBytes)
-	if err != nil {
-		return fmt.Errorf("verify: unable to decode pubkey. %w", err)
-	}
-	decodedMessage, err := hex.DecodeString(signature.SigningPayload.HexBytes)
-	if err != nil {
-		return fmt.Errorf("verify: unable to decode message. %w", err)
-	}
-	decodedSignature, err := hex.DecodeString(signature.HexBytes)
-	if err != nil {
-		return fmt.Errorf("verify: unable to decode signature. %w", err)
-	}
+	pubKey := signature.PublicKey.Bytes
+	message := signature.SigningPayload.Bytes
+	sig := signature.Bytes
 
-	err = asserter.Signatures([]*types.Signature{signature})
+	err := asserter.Signatures([]*types.Signature{signature})
 	if err != nil {
 		return err
 	}
@@ -98,10 +80,10 @@ func (s SignerSecp256k1) Verify(signature *types.Signature) error {
 	var verify bool
 	switch signature.SignatureType {
 	case types.Ecdsa:
-		verify = secp256k1.VerifySignature(pubKey, decodedMessage, decodedSignature)
+		verify = secp256k1.VerifySignature(pubKey, message, sig)
 	case types.EcdsaRecovery:
-		normalizedSig := decodedSignature[:64]
-		verify = secp256k1.VerifySignature(pubKey, decodedMessage, normalizedSig)
+		normalizedSig := sig[:64]
+		verify = secp256k1.VerifySignature(pubKey, message, normalizedSig)
 	default:
 		return fmt.Errorf("%s is not supported", signature.SignatureType)
 	}

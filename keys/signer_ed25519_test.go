@@ -15,7 +15,6 @@
 package keys
 
 import (
-	"encoding/hex"
 	"testing"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
@@ -29,10 +28,10 @@ func init() {
 	signerEd25519 = Signer(SignerEd25519{*keypair})
 }
 
-func mockPayload(msg string, signatureType types.SignatureType) *types.SigningPayload {
+func mockPayload(msg []byte, signatureType types.SignatureType) *types.SigningPayload {
 	payload := &types.SigningPayload{
 		Address:       "test",
-		HexBytes:      msg,
+		Bytes:         msg,
 		SignatureType: signatureType,
 	}
 
@@ -47,11 +46,10 @@ func TestSignEd25519(t *testing.T) {
 	}
 
 	var payloadTests = []payloadTest{
-		{mockPayload("68656C6C6F313233", types.Ed25519), false, ""},
-		{mockPayload("68656C6C6F313233", ""), false, ""},
-		{mockPayload("68656C6C6F313233", types.Ecdsa), true, "payload signature type is not ed25519"},
-		{mockPayload("68656C6C6F313233", types.EcdsaRecovery), true, "payload signature type is not ed25519"},
-		{mockPayload("asd", types.Ed25519), true, "unable to decode message"},
+		{mockPayload(make([]byte, 32), types.Ed25519), false, ""},
+		{mockPayload(make([]byte, 32), ""), false, ""},
+		{mockPayload(make([]byte, 33), types.Ecdsa), true, "payload signature type is not ed25519"},
+		{mockPayload(make([]byte, 34), types.EcdsaRecovery), true, "payload signature type is not ed25519"},
 	}
 
 	for _, test := range payloadTests {
@@ -59,18 +57,17 @@ func TestSignEd25519(t *testing.T) {
 
 		if !test.err {
 			assert.NoError(t, err)
-			signatureBytes, _ := hex.DecodeString(signature.HexBytes)
-			assert.Len(t, signatureBytes, 64)
+			assert.Len(t, signature.Bytes, 64)
 		} else {
 			assert.Contains(t, err.Error(), test.errMsg)
 		}
 	}
 }
 
-func mockSignature(sigType types.SignatureType, pubkey *types.PublicKey, msg, sig string) *types.Signature {
+func mockSignature(sigType types.SignatureType, pubkey *types.PublicKey, msg, sig []byte) *types.Signature {
 	payload := &types.SigningPayload{
 		Address:       "test",
-		HexBytes:      msg,
+		Bytes:         msg,
 		SignatureType: types.Ed25519,
 	}
 
@@ -78,7 +75,7 @@ func mockSignature(sigType types.SignatureType, pubkey *types.PublicKey, msg, si
 		SigningPayload: payload,
 		PublicKey:      pubkey,
 		SignatureType:  sigType,
-		HexBytes:       sig,
+		Bytes:          sig,
 	}
 	return mockSig
 }
@@ -89,14 +86,9 @@ func TestVerifyEd25519(t *testing.T) {
 		errMsg    string
 	}
 
-	badPubkey := &types.PublicKey{
-		HexBytes:  "asd",
-		CurveType: types.Edwards25519,
-	}
-
 	payload := &types.SigningPayload{
 		Address:       "test",
-		HexBytes:      "68656C6C6F313233",
+		Bytes:         make([]byte, 32),
 		SignatureType: types.Ed25519,
 	}
 	testSignature, _ := signerEd25519.Sign(payload)
@@ -105,28 +97,18 @@ func TestVerifyEd25519(t *testing.T) {
 		{mockSignature(
 			types.Ecdsa,
 			signerEd25519.PublicKey(),
-			"68656C6C6F313233",
-			""), "payload signature type is not ed25519"},
+			make([]byte, 32),
+			make([]byte, 32)), "payload signature type is not ed25519"},
 		{mockSignature(
 			types.EcdsaRecovery,
 			signerEd25519.PublicKey(),
-			"68656C6C6F313233",
-			""), "payload signature type is not ed25519"},
-		{mockSignature(
-			types.Ed25519,
-			badPubkey,
-			"68656C6C6F313233",
-			""), "unable to decode pubkey"},
+			make([]byte, 32),
+			make([]byte, 32)), "payload signature type is not ed25519"},
 		{mockSignature(
 			types.Ed25519,
 			signerEd25519.PublicKey(),
-			"asd",
-			""), "unable to decode message"},
-		{mockSignature(
-			types.Ed25519,
-			signerEd25519.PublicKey(),
-			"617364",
-			testSignature.HexBytes), "verify returned false"},
+			make([]byte, 40),
+			testSignature.Bytes), "verify returned false"},
 	}
 
 	for _, test := range signatureTests {
@@ -134,6 +116,6 @@ func TestVerifyEd25519(t *testing.T) {
 		assert.Contains(t, err.Error(), test.errMsg)
 	}
 
-	goodSignature := mockSignature(types.Ed25519, signerEd25519.PublicKey(), "68656C6C6F313233", testSignature.HexBytes)
+	goodSignature := mockSignature(types.Ed25519, signerEd25519.PublicKey(), make([]byte, 32), testSignature.Bytes)
 	assert.Equal(t, nil, signerEd25519.Verify(goodSignature))
 }

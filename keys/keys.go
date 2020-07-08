@@ -16,7 +16,6 @@ package keys
 
 import (
 	"crypto/ed25519"
-	"encoding/hex"
 	"fmt"
 
 	"github.com/btcsuite/btcd/btcec"
@@ -37,11 +36,11 @@ func GenerateKeypair(curve types.CurveType) (*KeyPair, error) {
 		rawPubKey := rawPrivKey.PubKey()
 
 		pubKey := &types.PublicKey{
-			HexBytes:  hex.EncodeToString(rawPubKey.SerializeCompressed()),
+			Bytes:     rawPubKey.SerializeCompressed(),
 			CurveType: curve,
 		}
 		privKey := &PrivateKey{
-			HexBytes:  hex.EncodeToString(rawPrivKey.Serialize()),
+			Bytes:     rawPrivKey.Serialize(),
 			CurveType: curve,
 		}
 
@@ -57,12 +56,12 @@ func GenerateKeypair(curve types.CurveType) (*KeyPair, error) {
 		}
 
 		pubKey := &types.PublicKey{
-			HexBytes:  hex.EncodeToString(rawPubKey),
+			Bytes:     rawPubKey,
 			CurveType: curve,
 		}
 
 		privKey := &PrivateKey{
-			HexBytes:  hex.EncodeToString(rawPrivKey.Seed()),
+			Bytes:     rawPrivKey.Seed(),
 			CurveType: curve,
 		}
 
@@ -80,16 +79,12 @@ func GenerateKeypair(curve types.CurveType) (*KeyPair, error) {
 
 // IsValid checks the validity of a keypair
 func (k KeyPair) IsValid() error {
-	sk, err := hex.DecodeString(k.PrivateKey.HexBytes)
-	if err != nil {
-		return err
-	}
-
+	sk := k.PrivateKey.Bytes
 	pkCurve := k.PublicKey.CurveType
 	skCurve := k.PrivateKey.CurveType
 
 	// Checks if valid Public Key
-	err = asserter.PublicKey(k.PublicKey)
+	err := asserter.PublicKey(k.PublicKey)
 	if err != nil {
 		return err
 	}

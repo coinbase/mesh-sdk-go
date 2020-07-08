@@ -16,7 +16,6 @@ package keys
 
 import (
 	"crypto/ed25519"
-	"encoding/hex"
 	"fmt"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
@@ -44,20 +43,15 @@ func (s SignerEd25519) Sign(payload *types.SigningPayload) (*types.Signature, er
 		return nil, fmt.Errorf("sign: payload signature type is not ed25519")
 	}
 
-	privKeyHexBytes, _ := hex.DecodeString(s.KeyPair.PrivateKey.HexBytes)
-	decodedMessage, err := hex.DecodeString(payload.HexBytes)
-	if err != nil {
-		return nil, fmt.Errorf("sign: unable to decode message. %w", err)
-	}
-
-	privKey := ed25519.NewKeyFromSeed(privKeyHexBytes)
-	sig := ed25519.Sign(privKey, decodedMessage)
+	privKeyBytes := s.KeyPair.PrivateKey.Bytes
+	privKey := ed25519.NewKeyFromSeed(privKeyBytes)
+	sig := ed25519.Sign(privKey, payload.Bytes)
 
 	return &types.Signature{
 		SigningPayload: payload,
 		PublicKey:      s.KeyPair.PublicKey,
 		SignatureType:  payload.SignatureType,
-		HexBytes:       hex.EncodeToString(sig),
+		Bytes:          sig,
 	}, nil
 }
 
@@ -68,25 +62,15 @@ func (s SignerEd25519) Verify(signature *types.Signature) error {
 		return fmt.Errorf("verify: payload signature type is not ed25519")
 	}
 
-	pubKey, err := hex.DecodeString(signature.PublicKey.HexBytes)
-	if err != nil {
-		return fmt.Errorf("verify: unable to decode pubkey. %w", err)
-	}
-	decodedMessage, err := hex.DecodeString(signature.SigningPayload.HexBytes)
-	if err != nil {
-		return fmt.Errorf("verify: unable to decode message. %w", err)
-	}
-	decodedSignature, err := hex.DecodeString(signature.HexBytes)
-	if err != nil {
-		return fmt.Errorf("verify: unable to decode signature. %w", err)
-	}
-
-	err = asserter.Signatures([]*types.Signature{signature})
+	pubKey := signature.PublicKey.Bytes
+	message := signature.SigningPayload.Bytes
+	sig := signature.Bytes
+	err := asserter.Signatures([]*types.Signature{signature})
 	if err != nil {
 		return err
 	}
 
-	verify := ed25519.Verify(pubKey, decodedMessage, decodedSignature)
+	verify := ed25519.Verify(pubKey, message, sig)
 	if !verify {
 		return fmt.Errorf("verify: verify returned false")
 	}
