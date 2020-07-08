@@ -34,7 +34,10 @@ func (s *SignerEd25519) PublicKey() *types.PublicKey {
 }
 
 // Signs arbitrary payloads using a KeyPair
-func (s *SignerEd25519) Sign(payload *types.SigningPayload, sigType types.SignatureType) (*types.Signature, error) {
+func (s *SignerEd25519) Sign(
+	payload *types.SigningPayload,
+	sigType types.SignatureType,
+) (*types.Signature, error) {
 	err := s.KeyPair.IsValid()
 	if err != nil {
 		return nil, err
