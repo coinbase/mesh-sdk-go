@@ -39,6 +39,7 @@ any Rosetta server
 * [Parser](parser): Tool for parsing Rosetta blocks
 * [Syncer](syncer): Sync Rosetta blocks with customizable handling
 * [Reconciler](reconciler): Compare derived balances with node balances
+* [Keys](keys): Cryptographic operations for Rosetta-supported curves
 
 ## Examples
 The packages listed above are demoed extensively in
