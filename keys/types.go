@@ -23,8 +23,8 @@ import (
 
 // KeyPair contains a PrivateKey and its' associated PublicKey
 type KeyPair struct {
-	PublicKey  *types.PublicKey
-	PrivateKey *PrivateKey
+	PublicKey  *types.PublicKey `json:"public_key"`
+	PrivateKey *PrivateKey      `json:"private_key"`
 }
 
 // PrivateKey contains the privkey bytes as well as the CurveType

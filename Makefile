@@ -12,7 +12,7 @@ GOLINES_CMD=go run github.com/segmentio/golines
 GOVERALLS_CMD=go run github.com/mattn/goveralls
 
 GO_PACKAGES=./asserter/... ./fetcher/... ./types/... ./client/... ./server/... \
-						./parser/... ./syncer/... ./reconciler/...
+						./parser/... ./syncer/... ./reconciler/... ./keys/...
 GO_FOLDERS=$(shell echo ${GO_PACKAGES} | sed -e "s/\.\///g" | sed -e "s/\/\.\.\.//g")
 TEST_SCRIPT=go test -v ${GO_PACKAGES}
 LINT_SETTINGS=golint,misspell,gocyclo,gocritic,whitespace,goconst,gocognit,bodyclose,unconvert,lll,unparam

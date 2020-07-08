@@ -24,7 +24,7 @@ import (
 	"github.com/btcsuite/btcd/btcec"
 )
 
-// Currently all suppported privkeys are 32-bytes
+// PrivKeyBytesLen are 32-bytes for all supported curvetypes
 const PrivKeyBytesLen = 32
 
 // GenerateKeypair returns a Keypair of a specified CurveType

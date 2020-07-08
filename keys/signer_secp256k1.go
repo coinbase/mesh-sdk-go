@@ -42,11 +42,8 @@ func (s *SignerSecp256k1) Sign(payload *types.SigningPayload, sigType types.Sign
 	}
 	privKeyBytes := s.KeyPair.PrivateKey.Bytes
 
-	if payload.SignatureType != sigType {
-		return nil, fmt.Errorf(
-			"sign: payload sigtype %v and signing sigtype %v are not equal",
-			payload.SignatureType,
-			sigType)
+	if !(payload.SignatureType == sigType || payload.SignatureType == "") {
+		return nil, fmt.Errorf("sign: invalid payload signaturetype %v", payload.SignatureType)
 	}
 
 	var sig []byte
