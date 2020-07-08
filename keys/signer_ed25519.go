@@ -28,6 +28,8 @@ type SignerEd25519 struct {
 	KeyPair *KeyPair
 }
 
+var _ Signer = (*SignerEd25519)(nil)
+
 // PublicKey returns the PublicKey of the signer
 func (s *SignerEd25519) PublicKey() *types.PublicKey {
 	return s.KeyPair.PublicKey
