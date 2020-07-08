@@ -15,7 +15,6 @@
 package keys
 
 import (
-	"encoding/hex"
 	"testing"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
@@ -23,9 +22,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func hashAndHexEncode(message string) string {
+func hash(message string) []byte {
 	messageHashBytes := common.BytesToHash([]byte(message)).Bytes()
-	return hex.EncodeToString(messageHashBytes)
+	return messageHashBytes
 }
 
 var signerSecp256k1 Signer
@@ -44,10 +43,9 @@ func TestSignSecp256k1(t *testing.T) {
 	}
 
 	var payloadTests = []payloadTest{
-		{mockPayload(hashAndHexEncode("hello"), types.Ed25519), 64, true, "unsupported signature type in payload."},
-		{mockPayload(hashAndHexEncode("hello123"), types.Ecdsa), 64, false, ""},
-		{mockPayload(hashAndHexEncode("hello1234"), types.EcdsaRecovery), 65, false, ""},
-		{mockPayload("asd", types.Ecdsa), 64, true, "unable to decode message"},
+		{mockPayload(hash("hello"), types.Ed25519), 64, true, "unsupported signature type in payload."},
+		{mockPayload(hash("hello123"), types.Ecdsa), 64, false, ""},
+		{mockPayload(hash("hello1234"), types.EcdsaRecovery), 65, false, ""},
 	}
 
 	for _, test := range payloadTests {
@@ -55,18 +53,17 @@ func TestSignSecp256k1(t *testing.T) {
 
 		if !test.err {
 			assert.NoError(t, err)
-			signatureBytes, _ := hex.DecodeString(signature.HexBytes)
-			assert.Equal(t, len(signatureBytes), test.sigLen)
+			assert.Equal(t, len(signature.Bytes), test.sigLen)
 		} else {
 			assert.Contains(t, err.Error(), test.errMsg)
 		}
 	}
 }
 
-func mockSecpSignature(sigType types.SignatureType, pubkey *types.PublicKey, msg, sig string) *types.Signature {
+func mockSecpSignature(sigType types.SignatureType, pubkey *types.PublicKey, msg, sig []byte) *types.Signature {
 	payload := &types.SigningPayload{
 		Address:       "test",
-		HexBytes:      msg,
+		Bytes:         msg,
 		SignatureType: sigType,
 	}
 
@@ -74,7 +71,7 @@ func mockSecpSignature(sigType types.SignatureType, pubkey *types.PublicKey, msg
 		SigningPayload: payload,
 		PublicKey:      pubkey,
 		SignatureType:  sigType,
-		HexBytes:       sig,
+		Bytes:          sig,
 	}
 	return mockSig
 }
@@ -85,14 +82,9 @@ func TestVerifySecp256k1(t *testing.T) {
 		errMsg    string
 	}
 
-	badPubkey := &types.PublicKey{
-		HexBytes:  "asd",
-		CurveType: types.Secp256k1,
-	}
-
 	payload := &types.SigningPayload{
 		Address:       "test",
-		HexBytes:      hashAndHexEncode("hello"),
+		Bytes:         hash("hello"),
 		SignatureType: types.Ecdsa,
 	}
 	testSignatureEcdsa, _ := signerSecp256k1.Sign(payload)
@@ -101,28 +93,13 @@ func TestVerifySecp256k1(t *testing.T) {
 		{mockSecpSignature(
 			types.Ed25519,
 			signerSecp256k1.PublicKey(),
-			hashAndHexEncode("hello"),
-			"68656C6C6F313233"), "ed25519 is not supported"},
+			hash("hello"),
+			make([]byte, 33)), "ed25519 is not supported"},
 		{mockSecpSignature(
 			types.Ecdsa,
 			signerSecp256k1.PublicKey(),
-			"hello",
-			"68656C6C6F313233"), "unable to decode message"},
-		{mockSecpSignature(
-			types.Ecdsa,
-			signerSecp256k1.PublicKey(),
-			hashAndHexEncode("hello"),
-			"asd"), "unable to decode signature"},
-		{mockSecpSignature(
-			types.Ecdsa,
-			badPubkey,
-			hashAndHexEncode("hello"),
-			"asd"), "unable to decode pubkey"},
-		{mockSecpSignature(
-			types.Ecdsa,
-			signerSecp256k1.PublicKey(),
-			hashAndHexEncode("hello"),
-			"68656C6C6F313233"), "verify returned false"},
+			hash("hello"),
+			make([]byte, 33)), "verify returned false"},
 	}
 
 	for _, test := range signatureTests {
@@ -133,13 +110,13 @@ func TestVerifySecp256k1(t *testing.T) {
 	goodEcdsaSignature := mockSecpSignature(
 		types.Ecdsa,
 		signerSecp256k1.PublicKey(),
-		hashAndHexEncode("hello"),
-		testSignatureEcdsa.HexBytes)
+		hash("hello"),
+		testSignatureEcdsa.Bytes)
 	goodEcdsaRecoverySignature := mockSecpSignature(
 		types.EcdsaRecovery,
 		signerSecp256k1.PublicKey(),
-		hashAndHexEncode("hello"),
-		testSignatureEcdsa.HexBytes)
+		hash("hello"),
+		testSignatureEcdsa.Bytes)
 	assert.Equal(t, nil, signerSecp256k1.Verify(goodEcdsaSignature))
 	assert.Equal(t, nil, signerSecp256k1.Verify(goodEcdsaRecoverySignature))
 }
