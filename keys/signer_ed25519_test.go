@@ -26,7 +26,7 @@ var signerEd25519 Signer
 
 func init() {
 	keypair, _ := GenerateKeypair(types.Edwards25519)
-	signerEd25519 = Signer(&SignerEd25519{keypair})
+	signerEd25519 = &SignerEd25519{keypair}
 }
 
 func mockPayload(msg []byte, signatureType types.SignatureType) *types.SigningPayload {
