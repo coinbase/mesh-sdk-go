@@ -25,7 +25,7 @@ var signerEd25519 Signer
 
 func init() {
 	keypair, _ := GenerateKeypair(types.Edwards25519)
-	signerEd25519 = Signer(SignerEd25519{*keypair})
+	signerEd25519 = Signer(SignerEd25519{keypair})
 }
 
 func mockPayload(msg []byte, signatureType types.SignatureType) *types.SigningPayload {
@@ -53,7 +53,7 @@ func TestSignEd25519(t *testing.T) {
 	}
 
 	for _, test := range payloadTests {
-		signature, err := signerEd25519.Sign(test.payload)
+		signature, err := signerEd25519.Sign(test.payload, types.Ed25519)
 
 		if !test.err {
 			assert.NoError(t, err)
@@ -91,7 +91,7 @@ func TestVerifyEd25519(t *testing.T) {
 		Bytes:         make([]byte, 32),
 		SignatureType: types.Ed25519,
 	}
-	testSignature, _ := signerEd25519.Sign(payload)
+	testSignature, _ := signerEd25519.Sign(payload, types.Ed25519)
 
 	var signatureTests = []signatureTest{
 		{mockSignature(
