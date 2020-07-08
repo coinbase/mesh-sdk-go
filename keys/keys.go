@@ -101,7 +101,11 @@ func (k *KeyPair) IsValid() error {
 
 	// Checks if pk and sk have the same CurveType
 	if pkCurve != skCurve {
-		return fmt.Errorf("private key curve %s and public key curve %s do not match", skCurve, pkCurve)
+		return fmt.Errorf(
+			"private key curve %s and public key curve %s do not match",
+			skCurve,
+			pkCurve,
+		)
 	}
 
 	// Will change if we support more CurveTypes with different privkey sizes

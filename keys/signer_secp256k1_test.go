@@ -62,7 +62,11 @@ func TestSignSecp256k1(t *testing.T) {
 	}
 }
 
-func mockSecpSignature(sigType types.SignatureType, pubkey *types.PublicKey, msg, sig []byte) *types.Signature {
+func mockSecpSignature(
+	sigType types.SignatureType,
+	pubkey *types.PublicKey,
+	msg, sig []byte,
+) *types.Signature {
 	payload := &types.SigningPayload{
 		Address:       "test",
 		Bytes:         msg,

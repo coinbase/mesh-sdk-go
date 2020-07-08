@@ -65,7 +65,11 @@ func TestSignEd25519(t *testing.T) {
 	}
 }
 
-func mockSignature(sigType types.SignatureType, pubkey *types.PublicKey, msg, sig []byte) *types.Signature {
+func mockSignature(
+	sigType types.SignatureType,
+	pubkey *types.PublicKey,
+	msg, sig []byte,
+) *types.Signature {
 	payload := &types.SigningPayload{
 		Address:       "test",
 		Bytes:         msg,
@@ -117,6 +121,11 @@ func TestVerifyEd25519(t *testing.T) {
 		assert.Contains(t, err.Error(), test.errMsg)
 	}
 
-	goodSignature := mockSignature(types.Ed25519, signerEd25519.PublicKey(), make([]byte, 32), testSignature.Bytes)
+	goodSignature := mockSignature(
+		types.Ed25519,
+		signerEd25519.PublicKey(),
+		make([]byte, 32),
+		testSignature.Bytes,
+	)
 	assert.Equal(t, nil, signerEd25519.Verify(goodSignature))
 }
