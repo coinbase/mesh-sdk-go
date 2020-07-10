@@ -144,6 +144,34 @@ func TestConstructionDerive(t *testing.T) {
 	}
 }
 
+func TestConstructionHash(t *testing.T) {
+	var tests = map[string]struct {
+		response *types.ConstructionHashResponse
+		err      error
+	}{
+		"valid response": {
+			response: &types.ConstructionHashResponse{
+				TransactionHash: "tx hash",
+			},
+			err: nil,
+		},
+		"nil response": {
+			err: errors.New("construction hash response cannot be nil"),
+		},
+		"empty tx hash": {
+			response: &types.ConstructionHashResponse{},
+			err:      errors.New("transaction hash cannot be empty"),
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			err := ConstructionHash(test.response)
+			assert.Equal(t, test.err, err)
+		})
+	}
+}
+
 func TestPublicKey(t *testing.T) {
 	var tests = map[string]struct {
 		publicKey *types.PublicKey
