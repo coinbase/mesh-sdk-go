@@ -15,6 +15,8 @@
 package fetcher
 
 import (
+	"crypto/tls"
+	"net/http"
 	"time"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
@@ -69,5 +71,22 @@ func WithRetryElapsedTime(retryElapsedTime time.Duration) Option {
 func WithAsserter(asserter *asserter.Asserter) Option {
 	return func(f *Fetcher) {
 		f.Asserter = asserter
+	}
+}
+
+// WithInsecureTLS overrides the default TLS
+// security settings to allow insecure certificates
+// on an HTTPS connection.
+//
+// This should ONLY be used when debugging a Rosetta API
+// implementation. Using this option can lead to a man-in-the-middle
+// attack!!
+func WithInsecureTLS() Option {
+	return func(f *Fetcher) {
+		// See this conversation around why `.Clone()` is used here: https://github.com/golang/go/issues/26013
+		customTransport := http.DefaultTransport.(*http.Transport).Clone()
+		customTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+
+		f.rosettaClient.GetConfig().HTTPClient.Transport = customTransport
 	}
 }
