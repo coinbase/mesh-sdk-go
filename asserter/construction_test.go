@@ -23,7 +23,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestConstructionMetadata(t *testing.T) {
+func TestConstructionMetadataResponse(t *testing.T) {
 	var tests = map[string]struct {
 		response *types.ConstructionMetadataResponse
 		err      error
@@ -34,6 +34,9 @@ func TestConstructionMetadata(t *testing.T) {
 			},
 			err: nil,
 		},
+		"nil response": {
+			err: errors.New("construction metadata response cannot be nil"),
+		},
 		"invalid metadata": {
 			response: &types.ConstructionMetadataResponse{},
 			err:      errors.New("Metadata is nil"),
@@ -42,13 +45,13 @@ func TestConstructionMetadata(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			err := ConstructionMetadata(test.response)
+			err := ConstructionMetadataResponse(test.response)
 			assert.Equal(t, test.err, err)
 		})
 	}
 }
 
-func TestConstructionSubmit(t *testing.T) {
+func TestConstructionSubmitResponse(t *testing.T) {
 	var tests = map[string]struct {
 		response *types.ConstructionSubmitResponse
 		err      error
@@ -61,6 +64,9 @@ func TestConstructionSubmit(t *testing.T) {
 			},
 			err: nil,
 		},
+		"nil response": {
+			err: errors.New("construction submit response cannot be nil"),
+		},
 		"invalid transaction identifier": {
 			response: &types.ConstructionSubmitResponse{},
 			err:      errors.New("TransactionIdentifier is nil"),
@@ -69,8 +75,348 @@ func TestConstructionSubmit(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			err := ConstructionSubmit(test.response)
+			err := ConstructionSubmitResponse(test.response)
 			assert.Equal(t, test.err, err)
+		})
+	}
+}
+
+func TestConstructionCombineResponse(t *testing.T) {
+	var tests = map[string]struct {
+		response *types.ConstructionCombineResponse
+		err      error
+	}{
+		"valid response": {
+			response: &types.ConstructionCombineResponse{
+				SignedTransaction: "signed tx",
+			},
+			err: nil,
+		},
+		"nil response": {
+			err: errors.New("construction combine response cannot be nil"),
+		},
+		"empty signed transaction": {
+			response: &types.ConstructionCombineResponse{},
+			err:      errors.New("signed transaction cannot be empty"),
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			err := ConstructionCombineResponse(test.response)
+			assert.Equal(t, test.err, err)
+		})
+	}
+}
+
+func TestConstructionDeriveResponse(t *testing.T) {
+	var tests = map[string]struct {
+		response *types.ConstructionDeriveResponse
+		err      error
+	}{
+		"valid response": {
+			response: &types.ConstructionDeriveResponse{
+				Address: "addr",
+				Metadata: map[string]interface{}{
+					"name": "hello",
+				},
+			},
+			err: nil,
+		},
+		"nil response": {
+			err: errors.New("construction derive response cannot be nil"),
+		},
+		"empty address": {
+			response: &types.ConstructionDeriveResponse{
+				Metadata: map[string]interface{}{
+					"name": "hello",
+				},
+			},
+			err: errors.New("address cannot be empty"),
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			err := ConstructionDeriveResponse(test.response)
+			assert.Equal(t, test.err, err)
+		})
+	}
+}
+
+func TestConstructionHashResponse(t *testing.T) {
+	var tests = map[string]struct {
+		response *types.ConstructionHashResponse
+		err      error
+	}{
+		"valid response": {
+			response: &types.ConstructionHashResponse{
+				TransactionHash: "tx hash",
+			},
+			err: nil,
+		},
+		"nil response": {
+			err: errors.New("construction hash response cannot be nil"),
+		},
+		"empty tx hash": {
+			response: &types.ConstructionHashResponse{},
+			err:      errors.New("transaction hash cannot be empty"),
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			err := ConstructionHashResponse(test.response)
+			assert.Equal(t, test.err, err)
+		})
+	}
+}
+
+func TestConstructionParseResponse(t *testing.T) {
+	var tests = map[string]struct {
+		response *types.ConstructionParseResponse
+		err      error
+	}{
+		"valid response": {
+			response: &types.ConstructionParseResponse{
+				Operations: []*types.Operation{
+					{
+						OperationIdentifier: &types.OperationIdentifier{
+							Index: int64(0),
+						},
+						Type:    "PAYMENT",
+						Account: validAccount,
+						Amount:  validAmount,
+					},
+					{
+						OperationIdentifier: &types.OperationIdentifier{
+							Index: int64(1),
+						},
+						RelatedOperations: []*types.OperationIdentifier{
+							{Index: int64(0)},
+						},
+						Type:    "PAYMENT",
+						Account: validAccount,
+						Amount:  validAmount,
+					},
+				},
+				Signers: []string{"account 1"},
+				Metadata: map[string]interface{}{
+					"extra": "stuff",
+				},
+			},
+			err: nil,
+		},
+		"nil response": {
+			err: errors.New("construction parse response cannot be nil"),
+		},
+		"no operations": {
+			response: &types.ConstructionParseResponse{
+				Signers: []string{"account 1"},
+				Metadata: map[string]interface{}{
+					"extra": "stuff",
+				},
+			},
+			err: errors.New("operations cannot be empty"),
+		},
+		"invalid operation ordering": {
+			response: &types.ConstructionParseResponse{
+				Operations: []*types.Operation{
+					{
+						OperationIdentifier: &types.OperationIdentifier{
+							Index: int64(1),
+						},
+						Type:    "PAYMENT",
+						Account: validAccount,
+						Amount:  validAmount,
+					},
+				},
+				Signers: []string{"account 1"},
+				Metadata: map[string]interface{}{
+					"extra": "stuff",
+				},
+			},
+			err: errors.New("Operation.OperationIdentifier.Index 1 is out of order, expected 0 unable to parse operations"),
+		},
+		"no signers": {
+			response: &types.ConstructionParseResponse{
+				Operations: []*types.Operation{
+					{
+						OperationIdentifier: &types.OperationIdentifier{
+							Index: int64(0),
+						},
+						Type:    "PAYMENT",
+						Account: validAccount,
+						Amount:  validAmount,
+					},
+					{
+						OperationIdentifier: &types.OperationIdentifier{
+							Index: int64(1),
+						},
+						RelatedOperations: []*types.OperationIdentifier{
+							{Index: int64(0)},
+						},
+						Type:    "PAYMENT",
+						Account: validAccount,
+						Amount:  validAmount,
+					},
+				},
+				Metadata: map[string]interface{}{
+					"extra": "stuff",
+				},
+			},
+			err: errors.New("signers cannot be empty"),
+		},
+		"empty string signer": {
+			response: &types.ConstructionParseResponse{
+				Operations: []*types.Operation{
+					{
+						OperationIdentifier: &types.OperationIdentifier{
+							Index: int64(0),
+						},
+						Type:    "PAYMENT",
+						Account: validAccount,
+						Amount:  validAmount,
+					},
+					{
+						OperationIdentifier: &types.OperationIdentifier{
+							Index: int64(1),
+						},
+						RelatedOperations: []*types.OperationIdentifier{
+							{Index: int64(0)},
+						},
+						Type:    "PAYMENT",
+						Account: validAccount,
+						Amount:  validAmount,
+					},
+				},
+				Signers: []string{""},
+				Metadata: map[string]interface{}{
+					"extra": "stuff",
+				},
+			},
+			err: errors.New("signer 0 cannot be empty"),
+		},
+	}
+
+	for name, test := range tests {
+		asserter, err := NewClientWithResponses(
+			&types.NetworkIdentifier{
+				Blockchain: "hello",
+				Network:    "world",
+			},
+			&types.NetworkStatusResponse{
+				GenesisBlockIdentifier: &types.BlockIdentifier{
+					Index: 0,
+					Hash:  "block 0",
+				},
+				CurrentBlockIdentifier: &types.BlockIdentifier{
+					Index: 100,
+					Hash:  "block 100",
+				},
+				CurrentBlockTimestamp: MinUnixEpoch + 1,
+				Peers: []*types.Peer{
+					{
+						PeerID: "peer 1",
+					},
+				},
+			},
+			&types.NetworkOptionsResponse{
+				Version: &types.Version{
+					RosettaVersion: "1.4.0",
+					NodeVersion:    "1.0",
+				},
+				Allow: &types.Allow{
+					OperationStatuses: []*types.OperationStatus{
+						{
+							Status:     "SUCCESS",
+							Successful: true,
+						},
+						{
+							Status:     "FAILURE",
+							Successful: false,
+						},
+					},
+					OperationTypes: []string{
+						"PAYMENT",
+					},
+				},
+			},
+		)
+		assert.NotNil(t, asserter)
+		assert.NoError(t, err)
+
+		t.Run(name, func(t *testing.T) {
+			err := asserter.ConstructionParseResponse(test.response)
+			if test.err != nil {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), test.err.Error())
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestConstructionPayloadsResponse(t *testing.T) {
+	var tests = map[string]struct {
+		response *types.ConstructionPayloadsResponse
+		err      error
+	}{
+		"valid response": {
+			response: &types.ConstructionPayloadsResponse{
+				UnsignedTransaction: "tx blob",
+				Payloads: []*types.SigningPayload{
+					{
+						Address: "hello",
+						Bytes:   []byte("48656c6c6f20476f7068657221"),
+					},
+				},
+			},
+			err: nil,
+		},
+		"nil response": {
+			err: errors.New("construction payloads response cannot be nil"),
+		},
+		"empty unsigned transaction": {
+			response: &types.ConstructionPayloadsResponse{
+				Payloads: []*types.SigningPayload{
+					{
+						Address: "hello",
+						Bytes:   []byte("48656c6c6f20476f7068657221"),
+					},
+				},
+			},
+			err: errors.New("unsigned transaction cannot be empty"),
+		},
+		"empty signing payloads": {
+			response: &types.ConstructionPayloadsResponse{
+				UnsignedTransaction: "tx blob",
+			},
+			err: errors.New("signing payloads cannot be empty"),
+		},
+		"invalid signing payload": {
+			response: &types.ConstructionPayloadsResponse{
+				UnsignedTransaction: "tx blob",
+				Payloads: []*types.SigningPayload{
+					{
+						Bytes: []byte("48656c6c6f20476f7068657221"),
+					},
+				},
+			},
+			err: errors.New("signing payload address cannot be empty"),
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			err := ConstructionPayloadsResponse(test.response)
+			if test.err != nil {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), test.err.Error())
+			} else {
+				assert.NoError(t, err)
+			}
 		})
 	}
 }

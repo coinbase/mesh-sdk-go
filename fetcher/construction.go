@@ -22,6 +22,88 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
+// ConstructionCombine creates a network-specific transaction from an unsigned
+// transaction and an array of provided signatures.
+//
+// The signed transaction returned from this method will be sent to the
+// `/construction/submit` endpoint by the caller.
+func (f *Fetcher) ConstructionCombine(
+	ctx context.Context,
+	network *types.NetworkIdentifier,
+	unsignedTransaction string,
+	signatures []*types.Signature,
+) (string, error) {
+	response, _, err := f.rosettaClient.ConstructionAPI.ConstructionCombine(ctx,
+		&types.ConstructionCombineRequest{
+			NetworkIdentifier:   network,
+			UnsignedTransaction: unsignedTransaction,
+			Signatures:          signatures,
+		},
+	)
+	if err != nil {
+		return "", err
+	}
+
+	if err := asserter.ConstructionCombineResponse(response); err != nil {
+		return "", err
+	}
+
+	return response.SignedTransaction, nil
+}
+
+// ConstructionDerive returns the network-specific address associated with a
+// public key.
+//
+// Blockchains that require an on-chain action to create an
+// account should not implement this method.
+func (f *Fetcher) ConstructionDerive(
+	ctx context.Context,
+	network *types.NetworkIdentifier,
+	publicKey *types.PublicKey,
+	metadata map[string]interface{},
+) (string, map[string]interface{}, error) {
+	response, _, err := f.rosettaClient.ConstructionAPI.ConstructionDerive(ctx,
+		&types.ConstructionDeriveRequest{
+			NetworkIdentifier: network,
+			PublicKey:         publicKey,
+			Metadata:          metadata,
+		},
+	)
+	if err != nil {
+		return "", nil, err
+	}
+
+	if err := asserter.ConstructionDeriveResponse(response); err != nil {
+		return "", nil, err
+	}
+
+	return response.Address, response.Metadata, nil
+}
+
+// ConstructionHash returns the network-specific transaction hash for
+// a signed transaction.
+func (f *Fetcher) ConstructionHash(
+	ctx context.Context,
+	network *types.NetworkIdentifier,
+	signedTransaction string,
+) (string, error) {
+	response, _, err := f.rosettaClient.ConstructionAPI.ConstructionHash(ctx,
+		&types.ConstructionHashRequest{
+			NetworkIdentifier: network,
+			SignedTransaction: signedTransaction,
+		},
+	)
+	if err != nil {
+		return "", err
+	}
+
+	if err := asserter.ConstructionHashResponse(response); err != nil {
+		return "", err
+	}
+
+	return response.TransactionHash, nil
+}
+
 // ConstructionMetadata returns the validated response
 // from the ConstructionMetadata method.
 func (f *Fetcher) ConstructionMetadata(
@@ -39,11 +121,105 @@ func (f *Fetcher) ConstructionMetadata(
 		return nil, err
 	}
 
-	if err := asserter.ConstructionMetadata(metadata); err != nil {
+	if err := asserter.ConstructionMetadataResponse(metadata); err != nil {
 		return nil, err
 	}
 
 	return metadata.Metadata, nil
+}
+
+// ConstructionParse is called on both unsigned and signed transactions to
+// understand the intent of the formulated transaction.
+//
+// This is run as a sanity check before signing (after `/construction/payloads`)
+// and before broadcast (after `/construction/combine`).
+func (f *Fetcher) ConstructionParse(
+	ctx context.Context,
+	network *types.NetworkIdentifier,
+	signed bool,
+	transaction string,
+) ([]*types.Operation, []string, map[string]interface{}, error) {
+	response, _, err := f.rosettaClient.ConstructionAPI.ConstructionParse(ctx,
+		&types.ConstructionParseRequest{
+			NetworkIdentifier: network,
+			Signed:            signed,
+			Transaction:       transaction,
+		},
+	)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	if err := f.Asserter.ConstructionParseResponse(response); err != nil {
+		return nil, nil, nil, err
+	}
+
+	return response.Operations, response.Signers, response.Metadata, nil
+}
+
+// ConstructionPayloads is called with an array of operations
+// and the response from `/construction/metadata`. It returns an
+// unsigned transaction blob and a collection of payloads that must
+// be signed by particular addresses using a certain SignatureType.
+//
+// The array of operations provided in transaction construction often times
+// can not specify all "effects" of a transaction (consider invoked transactions
+// in Ethereum). However, they can deterministically specify the "intent"
+// of the transaction, which is sufficient for construction. For this reason,
+// parsing the corresponding transaction in the Data API (when it lands on chain)
+// will contain a superset of whatever operations were provided during construction.
+func (f *Fetcher) ConstructionPayloads(
+	ctx context.Context,
+	network *types.NetworkIdentifier,
+	operations []*types.Operation,
+	metadata map[string]interface{},
+) (string, []*types.SigningPayload, error) {
+	response, _, err := f.rosettaClient.ConstructionAPI.ConstructionPayloads(ctx,
+		&types.ConstructionPayloadsRequest{
+			NetworkIdentifier: network,
+			Operations:        operations,
+			Metadata:          metadata,
+		},
+	)
+	if err != nil {
+		return "", nil, err
+	}
+
+	if err := asserter.ConstructionPayloadsResponse(response); err != nil {
+		return "", nil, err
+	}
+
+	return response.UnsignedTransaction, response.Payloads, nil
+}
+
+// ConstructionPreprocess is called prior to `/construction/payloads` to construct a
+// request for any metadata that is needed for transaction construction
+// given (i.e. account nonce).
+//
+// The request returned from this method will be used by the caller (in a
+// different execution environment) to call the `/construction/metadata`
+// endpoint.
+func (f *Fetcher) ConstructionPreprocess(
+	ctx context.Context,
+	network *types.NetworkIdentifier,
+	operations []*types.Operation,
+	metadata map[string]interface{},
+) (map[string]interface{}, error) {
+	response, _, err := f.rosettaClient.ConstructionAPI.ConstructionPreprocess(ctx,
+		&types.ConstructionPreprocessRequest{
+			NetworkIdentifier: network,
+			Operations:        operations,
+			Metadata:          metadata,
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	// We do not assert the response here because the only object
+	// in the response is optional and unstructured.
+
+	return response.Options, nil
 }
 
 // ConstructionSubmit returns the validated response
@@ -64,7 +240,7 @@ func (f *Fetcher) ConstructionSubmit(
 		return nil, nil, err
 	}
 
-	if err := asserter.ConstructionSubmit(submitResponse); err != nil {
+	if err := asserter.ConstructionSubmitResponse(submitResponse); err != nil {
 		return nil, nil, err
 	}
 
