@@ -100,6 +100,38 @@ func TestConstructionCombine(t *testing.T) {
 	}
 }
 
+func TestConstructionDerive(t *testing.T) {
+	var tests = map[string]struct {
+		response *types.ConstructionDeriveResponse
+		err      error
+	}{
+		"valid response": {
+			response: &types.ConstructionDeriveResponse{
+				Address: "addr",
+				Metadata: map[string]interface{}{
+					"name": "hello",
+				},
+			},
+			err: nil,
+		},
+		"empty address": {
+			response: &types.ConstructionDeriveResponse{
+				Metadata: map[string]interface{}{
+					"name": "hello",
+				},
+			},
+			err: errors.New("address cannot be empty"),
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			err := ConstructionDerive(test.response)
+			assert.Equal(t, test.err, err)
+		})
+	}
+}
+
 func TestPublicKey(t *testing.T) {
 	var tests = map[string]struct {
 		publicKey *types.PublicKey
