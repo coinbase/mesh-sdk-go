@@ -83,7 +83,8 @@ func WithAsserter(asserter *asserter.Asserter) Option {
 // attack!!
 func WithInsecureTLS() Option {
 	return func(f *Fetcher) {
-		// See this conversation around why `.Clone()` is used here: https://github.com/golang/go/issues/26013
+		// See this conversation around why `.Clone()` is used here:
+		// https://github.com/golang/go/issues/26013
 		customTransport := http.DefaultTransport.(*http.Transport).Clone()
 		customTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 
