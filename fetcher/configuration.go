@@ -86,7 +86,7 @@ func WithInsecureTLS() Option {
 		// See this conversation around why `.Clone()` is used here:
 		// https://github.com/golang/go/issues/26013
 		customTransport := http.DefaultTransport.(*http.Transport).Clone()
-		customTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+		customTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true} // #nosec G402
 
 		f.rosettaClient.GetConfig().HTTPClient.Transport = customTransport
 	}
