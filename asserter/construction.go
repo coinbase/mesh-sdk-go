@@ -153,7 +153,11 @@ func ConstructionPayloads(
 		return errors.New("unsigned transaction cannot be empty")
 	}
 
-	// TODO: check Signing Payloads
+	for i, payload := range response.Payloads {
+		if err := SigningPayload(payload); err != nil {
+			return fmt.Errorf("%w: signing payload %d is invalid", err, i)
+		}
+	}
 
 	return nil
 }
