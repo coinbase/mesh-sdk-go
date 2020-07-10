@@ -34,6 +34,9 @@ func TestConstructionMetadata(t *testing.T) {
 			},
 			err: nil,
 		},
+		"nil response": {
+			err: errors.New("construction metadata response cannot be nil"),
+		},
 		"invalid metadata": {
 			response: &types.ConstructionMetadataResponse{},
 			err:      errors.New("Metadata is nil"),
@@ -61,6 +64,9 @@ func TestConstructionSubmit(t *testing.T) {
 			},
 			err: nil,
 		},
+		"nil response": {
+			err: errors.New("construction submit response cannot be nil"),
+		},
 		"invalid transaction identifier": {
 			response: &types.ConstructionSubmitResponse{},
 			err:      errors.New("TransactionIdentifier is nil"),
@@ -85,6 +91,9 @@ func TestConstructionCombine(t *testing.T) {
 				SignedTransaction: "signed tx",
 			},
 			err: nil,
+		},
+		"nil response": {
+			err: errors.New("construction combine response cannot be nil"),
 		},
 		"empty signed transaction": {
 			response: &types.ConstructionCombineResponse{},
@@ -113,6 +122,9 @@ func TestConstructionDerive(t *testing.T) {
 				},
 			},
 			err: nil,
+		},
+		"nil response": {
+			err: errors.New("construction derive response cannot be nil"),
 		},
 		"empty address": {
 			response: &types.ConstructionDeriveResponse{
