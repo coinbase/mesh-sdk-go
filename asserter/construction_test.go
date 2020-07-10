@@ -172,6 +172,192 @@ func TestConstructionHash(t *testing.T) {
 	}
 }
 
+func TestConstructionParse(t *testing.T) {
+	var tests = map[string]struct {
+		response *types.ConstructionParseResponse
+		err      error
+	}{
+		"valid response": {
+			response: &types.ConstructionParseResponse{
+				Operations: []*types.Operation{
+					{
+						OperationIdentifier: &types.OperationIdentifier{
+							Index: int64(0),
+						},
+						Type:    "PAYMENT",
+						Account: validAccount,
+						Amount:  validAmount,
+					},
+					{
+						OperationIdentifier: &types.OperationIdentifier{
+							Index: int64(1),
+						},
+						RelatedOperations: []*types.OperationIdentifier{
+							{Index: int64(0)},
+						},
+						Type:    "PAYMENT",
+						Account: validAccount,
+						Amount:  validAmount,
+					},
+				},
+				Signers: []string{"account 1"},
+				Metadata: map[string]interface{}{
+					"extra": "stuff",
+				},
+			},
+			err: nil,
+		},
+		"nil response": {
+			err: errors.New("construction parse response cannot be nil"),
+		},
+		"no operations": {
+			response: &types.ConstructionParseResponse{
+				Signers: []string{"account 1"},
+				Metadata: map[string]interface{}{
+					"extra": "stuff",
+				},
+			},
+			err: errors.New("operations cannot be empty"),
+		},
+		"invalid operation ordering": {
+			response: &types.ConstructionParseResponse{
+				Operations: []*types.Operation{
+					{
+						OperationIdentifier: &types.OperationIdentifier{
+							Index: int64(1),
+						},
+						Type:    "PAYMENT",
+						Account: validAccount,
+						Amount:  validAmount,
+					},
+				},
+				Signers: []string{"account 1"},
+				Metadata: map[string]interface{}{
+					"extra": "stuff",
+				},
+			},
+			err: errors.New("Operation.OperationIdentifier.Index 1 is out of order, expected 0 unable to parse operations"),
+		},
+		"no signers": {
+			response: &types.ConstructionParseResponse{
+				Operations: []*types.Operation{
+					{
+						OperationIdentifier: &types.OperationIdentifier{
+							Index: int64(0),
+						},
+						Type:    "PAYMENT",
+						Account: validAccount,
+						Amount:  validAmount,
+					},
+					{
+						OperationIdentifier: &types.OperationIdentifier{
+							Index: int64(1),
+						},
+						RelatedOperations: []*types.OperationIdentifier{
+							{Index: int64(0)},
+						},
+						Type:    "PAYMENT",
+						Account: validAccount,
+						Amount:  validAmount,
+					},
+				},
+				Metadata: map[string]interface{}{
+					"extra": "stuff",
+				},
+			},
+			err: errors.New("signers cannot be empty"),
+		},
+		"empty string signer": {
+			response: &types.ConstructionParseResponse{
+				Operations: []*types.Operation{
+					{
+						OperationIdentifier: &types.OperationIdentifier{
+							Index: int64(0),
+						},
+						Type:    "PAYMENT",
+						Account: validAccount,
+						Amount:  validAmount,
+					},
+					{
+						OperationIdentifier: &types.OperationIdentifier{
+							Index: int64(1),
+						},
+						RelatedOperations: []*types.OperationIdentifier{
+							{Index: int64(0)},
+						},
+						Type:    "PAYMENT",
+						Account: validAccount,
+						Amount:  validAmount,
+					},
+				},
+				Signers: []string{""},
+				Metadata: map[string]interface{}{
+					"extra": "stuff",
+				},
+			},
+			err: errors.New("signer 0 cannot be empty"),
+		},
+	}
+
+	for name, test := range tests {
+		asserter, err := NewClientWithResponses(
+			&types.NetworkIdentifier{
+				Blockchain: "hello",
+				Network:    "world",
+			},
+			&types.NetworkStatusResponse{
+				GenesisBlockIdentifier: &types.BlockIdentifier{
+					Index: 0,
+					Hash:  "block 0",
+				},
+				CurrentBlockIdentifier: &types.BlockIdentifier{
+					Index: 100,
+					Hash:  "block 100",
+				},
+				CurrentBlockTimestamp: MinUnixEpoch + 1,
+				Peers: []*types.Peer{
+					{
+						PeerID: "peer 1",
+					},
+				},
+			},
+			&types.NetworkOptionsResponse{
+				Version: &types.Version{
+					RosettaVersion: "1.4.0",
+					NodeVersion:    "1.0",
+				},
+				Allow: &types.Allow{
+					OperationStatuses: []*types.OperationStatus{
+						{
+							Status:     "SUCCESS",
+							Successful: true,
+						},
+						{
+							Status:     "FAILURE",
+							Successful: false,
+						},
+					},
+					OperationTypes: []string{
+						"PAYMENT",
+					},
+				},
+			},
+		)
+		assert.NotNil(t, asserter)
+		assert.NoError(t, err)
+
+		t.Run(name, func(t *testing.T) {
+			err := asserter.ConstructionParse(test.response)
+			if test.err != nil {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), test.err.Error())
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
 func TestPublicKey(t *testing.T) {
 	var tests = map[string]struct {
 		publicKey *types.PublicKey

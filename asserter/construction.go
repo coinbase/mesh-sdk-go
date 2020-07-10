@@ -121,6 +121,10 @@ func (a *Asserter) ConstructionParse(
 		return errors.New("construction parse response cannot be nil")
 	}
 
+	if len(response.Operations) == 0 {
+		return errors.New("operations cannot be empty")
+	}
+
 	if err := a.Operations(response.Operations, true); err != nil {
 		return fmt.Errorf("%w unable to parse operations", err)
 	}
@@ -129,9 +133,9 @@ func (a *Asserter) ConstructionParse(
 		return errors.New("signers cannot be empty")
 	}
 
-	for _, signer := range response.Signers {
+	for i, signer := range response.Signers {
 		if len(signer) == 0 {
-			return errors.New("signer cannot be empty string")
+			return fmt.Errorf("signer %d cannot be empty string", i)
 		}
 	}
 
