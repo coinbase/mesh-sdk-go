@@ -21,11 +21,15 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
-// ConstructionMetadata returns an error if
+// ConstructionMetadataResponse returns an error if
 // the metadata is not a JSON object.
-func ConstructionMetadata(
+func ConstructionMetadataResponse(
 	response *types.ConstructionMetadataResponse,
 ) error {
+	if response == nil {
+		return errors.New("construction metadata response cannot be nil")
+	}
+
 	if response.Metadata == nil {
 		return errors.New("Metadata is nil")
 	}
@@ -33,15 +37,134 @@ func ConstructionMetadata(
 	return nil
 }
 
-// ConstructionSubmit returns an error if
+// ConstructionSubmitResponse returns an error if
 // the types.TransactionIdentifier in the response is not
 // valid or if the Submission.Status is not contained
 // within the provided validStatuses slice.
-func ConstructionSubmit(
+func ConstructionSubmitResponse(
 	response *types.ConstructionSubmitResponse,
 ) error {
+	if response == nil {
+		return errors.New("construction submit response cannot be nil")
+	}
+
 	if err := TransactionIdentifier(response.TransactionIdentifier); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+// ConstructionCombineResponse returns an error if
+// a *types.ConstructionCombineResponse does
+// not have a populated SignedTransaction.
+func ConstructionCombineResponse(
+	response *types.ConstructionCombineResponse,
+) error {
+	if response == nil {
+		return errors.New("construction combine response cannot be nil")
+	}
+
+	if len(response.SignedTransaction) == 0 {
+		return errors.New("signed transaction cannot be empty")
+	}
+
+	return nil
+}
+
+// ConstructionDeriveResponse returns an error if
+// a *types.ConstructionDeriveResponse does
+// not have a populated Address.
+func ConstructionDeriveResponse(
+	response *types.ConstructionDeriveResponse,
+) error {
+	if response == nil {
+		return errors.New("construction derive response cannot be nil")
+	}
+
+	if len(response.Address) == 0 {
+		return errors.New("address cannot be empty")
+	}
+
+	return nil
+}
+
+// ConstructionHashResponse returns an error if
+// a *types.ConstructionHashResponse does
+// not have a populated transaction hash.
+func ConstructionHashResponse(
+	response *types.ConstructionHashResponse,
+) error {
+	if response == nil {
+		return errors.New("construction hash response cannot be nil")
+	}
+
+	if len(response.TransactionHash) == 0 {
+		return errors.New("transaction hash cannot be empty")
+	}
+
+	return nil
+}
+
+// ConstructionParseResponse returns an error if
+// a *types.ConstructionParseResponse does
+// not have a valid set of operations or
+// if the signers is empty.
+func (a *Asserter) ConstructionParseResponse(
+	response *types.ConstructionParseResponse,
+) error {
+	if a == nil {
+		return ErrAsserterNotInitialized
+	}
+
+	if response == nil {
+		return errors.New("construction parse response cannot be nil")
+	}
+
+	if len(response.Operations) == 0 {
+		return errors.New("operations cannot be empty")
+	}
+
+	if err := a.Operations(response.Operations, true); err != nil {
+		return fmt.Errorf("%w unable to parse operations", err)
+	}
+
+	if len(response.Signers) == 0 {
+		return errors.New("signers cannot be empty")
+	}
+
+	for i, signer := range response.Signers {
+		if len(signer) == 0 {
+			return fmt.Errorf("signer %d cannot be empty string", i)
+		}
+	}
+
+	return nil
+}
+
+// ConstructionPayloadsResponse returns an error if
+// a *types.ConstructionPayloadsResponse does
+// not have an UnsignedTransaction or has no
+// valid *SigningPaylod.
+func ConstructionPayloadsResponse(
+	response *types.ConstructionPayloadsResponse,
+) error {
+	if response == nil {
+		return errors.New("construction payloads response cannot be nil")
+	}
+
+	if len(response.UnsignedTransaction) == 0 {
+		return errors.New("unsigned transaction cannot be empty")
+	}
+
+	if len(response.Payloads) == 0 {
+		return errors.New("signing payloads cannot be empty")
+	}
+
+	for i, payload := range response.Payloads {
+		if err := SigningPayload(payload); err != nil {
+			return fmt.Errorf("%w: signing payload %d is invalid", err, i)
+		}
 	}
 
 	return nil
