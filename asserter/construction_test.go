@@ -358,6 +358,69 @@ func TestConstructionParse(t *testing.T) {
 	}
 }
 
+func TestConstructionPayloads(t *testing.T) {
+	var tests = map[string]struct {
+		response *types.ConstructionPayloadsResponse
+		err      error
+	}{
+		"valid response": {
+			response: &types.ConstructionPayloadsResponse{
+				UnsignedTransaction: "tx blob",
+				Payloads: []*types.SigningPayload{
+					{
+						Address:  "hello",
+						HexBytes: "48656c6c6f20476f7068657221",
+					},
+				},
+			},
+			err: nil,
+		},
+		"nil response": {
+			err: errors.New("construction payloads response cannot be nil"),
+		},
+		"empty unsigned transaction": {
+			response: &types.ConstructionPayloadsResponse{
+				Payloads: []*types.SigningPayload{
+					{
+						Address:  "hello",
+						HexBytes: "48656c6c6f20476f7068657221",
+					},
+				},
+			},
+			err: errors.New("unsigned transaction cannot be empty"),
+		},
+		"empty signing payloads": {
+			response: &types.ConstructionPayloadsResponse{
+				UnsignedTransaction: "tx blob",
+			},
+			err: errors.New("signing payloads cannot be empty"),
+		},
+		"invalid signing payload": {
+			response: &types.ConstructionPayloadsResponse{
+				UnsignedTransaction: "tx blob",
+				Payloads: []*types.SigningPayload{
+					{
+						HexBytes: "48656c6c6f20476f7068657221",
+					},
+				},
+			},
+			err: errors.New("signing payload address cannot be empty"),
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			err := ConstructionPayloads(test.response)
+			if test.err != nil {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), test.err.Error())
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
 func TestPublicKey(t *testing.T) {
 	var tests = map[string]struct {
 		publicKey *types.PublicKey
