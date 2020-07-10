@@ -75,6 +75,31 @@ func TestConstructionSubmit(t *testing.T) {
 	}
 }
 
+func TestConstructionCombine(t *testing.T) {
+	var tests = map[string]struct {
+		response *types.ConstructionCombineResponse
+		err      error
+	}{
+		"valid response": {
+			response: &types.ConstructionCombineResponse{
+				SignedTransaction: "signed tx",
+			},
+			err: nil,
+		},
+		"empty signed transaction": {
+			response: &types.ConstructionCombineResponse{},
+			err:      errors.New("signed transaction cannot be empty"),
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			err := ConstructionCombine(test.response)
+			assert.Equal(t, test.err, err)
+		})
+	}
+}
+
 func TestPublicKey(t *testing.T) {
 	var tests = map[string]struct {
 		publicKey *types.PublicKey
