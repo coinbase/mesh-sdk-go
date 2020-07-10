@@ -21,9 +21,9 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
-// ConstructionMetadata returns an error if
+// ConstructionMetadataResponse returns an error if
 // the metadata is not a JSON object.
-func ConstructionMetadata(
+func ConstructionMetadataResponse(
 	response *types.ConstructionMetadataResponse,
 ) error {
 	if response == nil {
@@ -37,11 +37,11 @@ func ConstructionMetadata(
 	return nil
 }
 
-// ConstructionSubmit returns an error if
+// ConstructionSubmitResponse returns an error if
 // the types.TransactionIdentifier in the response is not
 // valid or if the Submission.Status is not contained
 // within the provided validStatuses slice.
-func ConstructionSubmit(
+func ConstructionSubmitResponse(
 	response *types.ConstructionSubmitResponse,
 ) error {
 	if response == nil {
@@ -55,10 +55,10 @@ func ConstructionSubmit(
 	return nil
 }
 
-// ConstructionCombine returns an error if
+// ConstructionCombineResponse returns an error if
 // a *types.ConstructionCombineResponse does
 // not have a populated SignedTransaction.
-func ConstructionCombine(
+func ConstructionCombineResponse(
 	response *types.ConstructionCombineResponse,
 ) error {
 	if response == nil {
@@ -72,10 +72,10 @@ func ConstructionCombine(
 	return nil
 }
 
-// ConstructionDerive returns an error if
+// ConstructionDeriveResponse returns an error if
 // a *types.ConstructionDeriveResponse does
 // not have a populated Address.
-func ConstructionDerive(
+func ConstructionDeriveResponse(
 	response *types.ConstructionDeriveResponse,
 ) error {
 	if response == nil {
@@ -89,10 +89,10 @@ func ConstructionDerive(
 	return nil
 }
 
-// ConstructionHash returns an error if
+// ConstructionHashResponse returns an error if
 // a *types.ConstructionHashResponse does
 // not have a populated transaction hash.
-func ConstructionHash(
+func ConstructionHashResponse(
 	response *types.ConstructionHashResponse,
 ) error {
 	if response == nil {
@@ -106,11 +106,11 @@ func ConstructionHash(
 	return nil
 }
 
-// ConstructionParse returns an error if
+// ConstructionParseResponse returns an error if
 // a *types.ConstructionParseResponse does
 // not have a valid set of operations or
 // if the signers is empty.
-func (a *Asserter) ConstructionParse(
+func (a *Asserter) ConstructionParseResponse(
 	response *types.ConstructionParseResponse,
 ) error {
 	if a == nil {
@@ -142,11 +142,11 @@ func (a *Asserter) ConstructionParse(
 	return nil
 }
 
-// ConstructionPayloads returns an error if
+// ConstructionPayloadsResponse returns an error if
 // a *types.ConstructionPayloadsResponse does
 // not have an UnsignedTransaction or has no
 // valid *SigningPaylod.
-func ConstructionPayloads(
+func ConstructionPayloadsResponse(
 	response *types.ConstructionPayloadsResponse,
 ) error {
 	if response == nil {

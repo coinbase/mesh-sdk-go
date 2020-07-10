@@ -23,7 +23,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestConstructionMetadata(t *testing.T) {
+func TestConstructionMetadataResponse(t *testing.T) {
 	var tests = map[string]struct {
 		response *types.ConstructionMetadataResponse
 		err      error
@@ -45,13 +45,13 @@ func TestConstructionMetadata(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			err := ConstructionMetadata(test.response)
+			err := ConstructionMetadataResponse(test.response)
 			assert.Equal(t, test.err, err)
 		})
 	}
 }
 
-func TestConstructionSubmit(t *testing.T) {
+func TestConstructionSubmitResponse(t *testing.T) {
 	var tests = map[string]struct {
 		response *types.ConstructionSubmitResponse
 		err      error
@@ -75,13 +75,13 @@ func TestConstructionSubmit(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			err := ConstructionSubmit(test.response)
+			err := ConstructionSubmitResponse(test.response)
 			assert.Equal(t, test.err, err)
 		})
 	}
 }
 
-func TestConstructionCombine(t *testing.T) {
+func TestConstructionCombineResponse(t *testing.T) {
 	var tests = map[string]struct {
 		response *types.ConstructionCombineResponse
 		err      error
@@ -103,13 +103,13 @@ func TestConstructionCombine(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			err := ConstructionCombine(test.response)
+			err := ConstructionCombineResponse(test.response)
 			assert.Equal(t, test.err, err)
 		})
 	}
 }
 
-func TestConstructionDerive(t *testing.T) {
+func TestConstructionDeriveResponse(t *testing.T) {
 	var tests = map[string]struct {
 		response *types.ConstructionDeriveResponse
 		err      error
@@ -138,13 +138,13 @@ func TestConstructionDerive(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			err := ConstructionDerive(test.response)
+			err := ConstructionDeriveResponse(test.response)
 			assert.Equal(t, test.err, err)
 		})
 	}
 }
 
-func TestConstructionHash(t *testing.T) {
+func TestConstructionHashResponse(t *testing.T) {
 	var tests = map[string]struct {
 		response *types.ConstructionHashResponse
 		err      error
@@ -166,13 +166,13 @@ func TestConstructionHash(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			err := ConstructionHash(test.response)
+			err := ConstructionHashResponse(test.response)
 			assert.Equal(t, test.err, err)
 		})
 	}
 }
 
-func TestConstructionParse(t *testing.T) {
+func TestConstructionParseResponse(t *testing.T) {
 	var tests = map[string]struct {
 		response *types.ConstructionParseResponse
 		err      error
@@ -347,7 +347,7 @@ func TestConstructionParse(t *testing.T) {
 		assert.NoError(t, err)
 
 		t.Run(name, func(t *testing.T) {
-			err := asserter.ConstructionParse(test.response)
+			err := asserter.ConstructionParseResponse(test.response)
 			if test.err != nil {
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), test.err.Error())
@@ -358,7 +358,7 @@ func TestConstructionParse(t *testing.T) {
 	}
 }
 
-func TestConstructionPayloads(t *testing.T) {
+func TestConstructionPayloadsResponse(t *testing.T) {
 	var tests = map[string]struct {
 		response *types.ConstructionPayloadsResponse
 		err      error
@@ -410,7 +410,7 @@ func TestConstructionPayloads(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			err := ConstructionPayloads(test.response)
+			err := ConstructionPayloadsResponse(test.response)
 			if test.err != nil {
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), test.err.Error())
