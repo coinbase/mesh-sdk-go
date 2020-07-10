@@ -368,8 +368,8 @@ func TestConstructionPayloadsResponse(t *testing.T) {
 				UnsignedTransaction: "tx blob",
 				Payloads: []*types.SigningPayload{
 					{
-						Address:  "hello",
-						HexBytes: "48656c6c6f20476f7068657221",
+						Address: "hello",
+						Bytes:   []byte("48656c6c6f20476f7068657221"),
 					},
 				},
 			},
@@ -382,8 +382,8 @@ func TestConstructionPayloadsResponse(t *testing.T) {
 			response: &types.ConstructionPayloadsResponse{
 				Payloads: []*types.SigningPayload{
 					{
-						Address:  "hello",
-						HexBytes: "48656c6c6f20476f7068657221",
+						Address: "hello",
+						Bytes:   []byte("48656c6c6f20476f7068657221"),
 					},
 				},
 			},
@@ -400,7 +400,7 @@ func TestConstructionPayloadsResponse(t *testing.T) {
 				UnsignedTransaction: "tx blob",
 				Payloads: []*types.SigningPayload{
 					{
-						HexBytes: "48656c6c6f20476f7068657221",
+						Bytes: []byte("48656c6c6f20476f7068657221"),
 					},
 				},
 			},
