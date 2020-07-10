@@ -44,7 +44,7 @@ func (f *Fetcher) ConstructionCombine(
 		return "", err
 	}
 
-	if err := asserter.ConstructionCombine(response); err != nil {
+	if err := asserter.ConstructionCombineResponse(response); err != nil {
 		return "", err
 	}
 
@@ -73,7 +73,7 @@ func (f *Fetcher) ConstructionDerive(
 		return "", nil, err
 	}
 
-	if err := asserter.ConstructionDerive(response); err != nil {
+	if err := asserter.ConstructionDeriveResponse(response); err != nil {
 		return "", nil, err
 	}
 
@@ -97,7 +97,7 @@ func (f *Fetcher) ConstructionHash(
 		return "", err
 	}
 
-	if err := asserter.ConstructionHash(response); err != nil {
+	if err := asserter.ConstructionHashResponse(response); err != nil {
 		return "", err
 	}
 
@@ -121,7 +121,7 @@ func (f *Fetcher) ConstructionMetadata(
 		return nil, err
 	}
 
-	if err := asserter.ConstructionMetadata(metadata); err != nil {
+	if err := asserter.ConstructionMetadataResponse(metadata); err != nil {
 		return nil, err
 	}
 
@@ -150,7 +150,7 @@ func (f *Fetcher) ConstructionParse(
 		return nil, nil, nil, err
 	}
 
-	if err := f.Asserter.ConstructionParse(response); err != nil {
+	if err := f.Asserter.ConstructionParseResponse(response); err != nil {
 		return nil, nil, nil, err
 	}
 
@@ -185,7 +185,7 @@ func (f *Fetcher) ConstructionPayloads(
 		return "", nil, err
 	}
 
-	if err := asserter.ConstructionPayloads(response); err != nil {
+	if err := asserter.ConstructionPayloadsResponse(response); err != nil {
 		return "", nil, err
 	}
 
@@ -240,7 +240,7 @@ func (f *Fetcher) ConstructionSubmit(
 		return nil, nil, err
 	}
 
-	if err := asserter.ConstructionSubmit(submitResponse); err != nil {
+	if err := asserter.ConstructionSubmitResponse(submitResponse); err != nil {
 		return nil, nil, err
 	}
 
