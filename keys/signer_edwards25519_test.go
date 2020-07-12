@@ -39,7 +39,7 @@ func mockPayload(msg []byte, signatureType types.SignatureType) *types.SigningPa
 	return payload
 }
 
-func TestSignEd25519(t *testing.T) {
+func TestSignEdwards25519(t *testing.T) {
 	type payloadTest struct {
 		payload *types.SigningPayload
 		err     bool
@@ -85,7 +85,7 @@ func mockSignature(
 	return mockSig
 }
 
-func TestVerifyEd25519(t *testing.T) {
+func TestVerifyEdwards25519(t *testing.T) {
 	type signatureTest struct {
 		signature *types.Signature
 		errMsg    string
