@@ -115,3 +115,16 @@ func (k *KeyPair) IsValid() error {
 
 	return nil
 }
+
+// Signer returns the constructs a Signer
+// for the KeyPair.
+func (k *KeyPair) Signer() (Signer, error) {
+	switch k.PublicKey.CurveType {
+	case types.Secp256k1:
+		return &SignerSecp256k1{k}, nil
+	case types.Edwards25519:
+		return &SignerEd25519{k}, nil
+	default:
+		return nil, fmt.Errorf("curve %s not supported", k.PublicKey.CurveType)
+	}
+}
