@@ -25,24 +25,27 @@ import (
 )
 
 func TestJSONEncoding(t *testing.T) {
-	secpKeypair, _ := GenerateKeypair(types.Secp256k1)
-	ed25519Keypair, _ := GenerateKeypair(types.Secp256k1)
+	secp256k1Keypair, err := GenerateKeypair(types.Secp256k1)
+	assert.NoError(t, err)
 
-	var keyPairs = []*KeyPair{secpKeypair, ed25519Keypair}
+	edwards25519Keypair, err := GenerateKeypair(types.Edwards25519)
+	assert.NoError(t, err)
+
+	var keyPairs = []*KeyPair{secp256k1Keypair, edwards25519Keypair}
 	for _, keypair := range keyPairs {
-		privKeyJSON, err := json.Marshal(keypair.PrivateKey)
+		kpb, err := json.Marshal(keypair)
 		assert.NoError(t, err)
 
 		// Simple Hex Check
 		simpleType := struct {
-			HexBytes string `json:"hex_bytes"`
+			HexBytes string `json:"private_key"`
 		}{}
-		err = json.Unmarshal(privKeyJSON, &simpleType)
+		err = json.Unmarshal(kpb, &simpleType)
 		assert.NoError(t, err)
 
 		b, err := hex.DecodeString(simpleType.HexBytes)
 		assert.NoError(t, err)
-		assert.Equal(t, keypair.PrivateKey.Bytes, b)
+		assert.Equal(t, keypair.PrivateKey, b)
 	}
 }
 
@@ -52,7 +55,7 @@ func TestGenerateKeypairSecp256k1(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Equal(t, keypair.PublicKey.CurveType, curve)
-	assert.Equal(t, keypair.PrivateKey.CurveType, curve)
+	assert.Len(t, keypair.PrivateKey, PrivKeyBytesLen)
 }
 
 func TestGenerateKeypairEdwards25519(t *testing.T) {
@@ -61,21 +64,23 @@ func TestGenerateKeypairEdwards25519(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Equal(t, keypair.PublicKey.CurveType, curve)
-	assert.Equal(t, keypair.PrivateKey.CurveType, curve)
+	assert.Len(t, keypair.PrivateKey, PrivKeyBytesLen)
 }
 
 func mockKeyPair(privKey []byte, curveType types.CurveType) *KeyPair {
 	keypair, _ := GenerateKeypair(curveType)
-	keypair.PrivateKey.Bytes = privKey
+	keypair.PrivateKey = privKey
 	return keypair
 }
 
 func TestKeypairValidity(t *testing.T) {
-	// Non matching curves
-	keyPair, _ := GenerateKeypair(types.Edwards25519)
-	keyPair.PublicKey.CurveType = types.Secp256k1
-	err := keyPair.IsValid()
-	assert.Contains(t, err.Error(), "do not match")
+	// invalid CurveType
+	keyPair, err := GenerateKeypair(types.Edwards25519)
+	assert.NoError(t, err)
+
+	keyPair.PublicKey.CurveType = "blah"
+	err = keyPair.IsValid()
+	assert.Contains(t, err.Error(), "blah is not a supported CurveType")
 
 	type privKeyTest struct {
 		keypair *KeyPair

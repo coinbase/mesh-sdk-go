@@ -39,7 +39,7 @@ func (s *SignerSecp256k1) PublicKey() *types.PublicKey {
 	return s.KeyPair.PublicKey
 }
 
-// Signs arbitrary payloads using a KeyPair
+// Sign arbitrary payloads using a KeyPair
 func (s *SignerSecp256k1) Sign(
 	payload *types.SigningPayload,
 	sigType types.SignatureType,
@@ -48,7 +48,7 @@ func (s *SignerSecp256k1) Sign(
 	if err != nil {
 		return nil, err
 	}
-	privKeyBytes := s.KeyPair.PrivateKey.Bytes
+	privKeyBytes := s.KeyPair.PrivateKey
 
 	if !(payload.SignatureType == sigType || payload.SignatureType == "") {
 		return nil, fmt.Errorf("sign: invalid payload signaturetype %v", payload.SignatureType)
