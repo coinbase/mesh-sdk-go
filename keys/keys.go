@@ -43,14 +43,10 @@ func GenerateKeypair(curve types.CurveType) (*KeyPair, error) {
 			Bytes:     rawPubKey.SerializeCompressed(),
 			CurveType: curve,
 		}
-		privKey := &PrivateKey{
-			Bytes:     rawPrivKey.Serialize(),
-			CurveType: curve,
-		}
 
 		keyPair = &KeyPair{
 			PublicKey:  pubKey,
-			PrivateKey: privKey,
+			PrivateKey: rawPrivKey.Serialize(),
 		}
 
 	case types.Edwards25519:
@@ -64,14 +60,9 @@ func GenerateKeypair(curve types.CurveType) (*KeyPair, error) {
 			CurveType: curve,
 		}
 
-		privKey := &PrivateKey{
-			Bytes:     rawPrivKey.Seed(),
-			CurveType: curve,
-		}
-
 		keyPair = &KeyPair{
 			PublicKey:  pubKey,
-			PrivateKey: privKey,
+			PrivateKey: rawPrivKey.Seed(),
 		}
 
 	default:
@@ -83,34 +74,18 @@ func GenerateKeypair(curve types.CurveType) (*KeyPair, error) {
 
 // IsValid checks the validity of a keypair
 func (k *KeyPair) IsValid() error {
-	sk := k.PrivateKey.Bytes
-	pkCurve := k.PublicKey.CurveType
-	skCurve := k.PrivateKey.CurveType
-
-	// Checks if valid Public Key
+	// Checks if valid PublicKey and CurveType
 	err := asserter.PublicKey(k.PublicKey)
 	if err != nil {
 		return err
 	}
 
-	// Checks if valid CurveType
-	err = asserter.CurveType(pkCurve)
-	if err != nil {
-		return err
-	}
-
-	// Checks if pk and sk have the same CurveType
-	if pkCurve != skCurve {
-		return fmt.Errorf(
-			"private key curve %s and public key curve %s do not match",
-			skCurve,
-			pkCurve,
-		)
-	}
-
 	// Will change if we support more CurveTypes with different privkey sizes
-	if len(sk) != PrivKeyBytesLen {
-		return fmt.Errorf("invalid privkey length %v. Expected 32 bytes", len(sk))
+	if len(k.PrivateKey) != PrivKeyBytesLen {
+		return fmt.Errorf(
+			"invalid privkey length %v. Expected 32 bytes",
+			len(k.PrivateKey),
+		)
 	}
 
 	return nil
@@ -123,7 +98,7 @@ func (k *KeyPair) Signer() (Signer, error) {
 	case types.Secp256k1:
 		return &SignerSecp256k1{k}, nil
 	case types.Edwards25519:
-		return &SignerEd25519{k}, nil
+		return &SignerEdwards25519{k}, nil
 	default:
 		return nil, fmt.Errorf("curve %s not supported", k.PublicKey.CurveType)
 	}

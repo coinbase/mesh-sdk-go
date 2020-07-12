@@ -22,11 +22,11 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var signerEd25519 Signer
+var signerEdwards25519 Signer
 
 func init() {
 	keypair, _ := GenerateKeypair(types.Edwards25519)
-	signerEd25519 = &SignerEd25519{keypair}
+	signerEdwards25519, _ = keypair.Signer()
 }
 
 func mockPayload(msg []byte, signatureType types.SignatureType) *types.SigningPayload {
@@ -54,7 +54,7 @@ func TestSignEd25519(t *testing.T) {
 	}
 
 	for _, test := range payloadTests {
-		signature, err := signerEd25519.Sign(test.payload, types.Ed25519)
+		signature, err := signerEdwards25519.Sign(test.payload, types.Ed25519)
 
 		if !test.err {
 			assert.NoError(t, err)
@@ -96,36 +96,37 @@ func TestVerifyEd25519(t *testing.T) {
 		Bytes:         make([]byte, 32),
 		SignatureType: types.Ed25519,
 	}
-	testSignature, _ := signerEd25519.Sign(payload, types.Ed25519)
+	testSignature, err := signerEdwards25519.Sign(payload, types.Ed25519)
+	assert.NoError(t, err)
 
 	var signatureTests = []signatureTest{
 		{mockSignature(
 			types.Ecdsa,
-			signerEd25519.PublicKey(),
+			signerEdwards25519.PublicKey(),
 			make([]byte, 32),
 			make([]byte, 32)), "payload signature type is not ed25519"},
 		{mockSignature(
 			types.EcdsaRecovery,
-			signerEd25519.PublicKey(),
+			signerEdwards25519.PublicKey(),
 			make([]byte, 32),
 			make([]byte, 32)), "payload signature type is not ed25519"},
 		{mockSignature(
 			types.Ed25519,
-			signerEd25519.PublicKey(),
+			signerEdwards25519.PublicKey(),
 			make([]byte, 40),
 			testSignature.Bytes), "verify returned false"},
 	}
 
 	for _, test := range signatureTests {
-		err := signerEd25519.Verify(test.signature)
+		err := signerEdwards25519.Verify(test.signature)
 		assert.Contains(t, err.Error(), test.errMsg)
 	}
 
 	goodSignature := mockSignature(
 		types.Ed25519,
-		signerEd25519.PublicKey(),
+		signerEdwards25519.PublicKey(),
 		make([]byte, 32),
 		testSignature.Bytes,
 	)
-	assert.Equal(t, nil, signerEd25519.Verify(goodSignature))
+	assert.Equal(t, nil, signerEdwards25519.Verify(goodSignature))
 }
