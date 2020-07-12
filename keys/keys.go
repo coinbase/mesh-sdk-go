@@ -29,8 +29,6 @@ const PrivKeyBytesLen = 32
 
 // GenerateKeypair returns a Keypair of a specified CurveType
 func GenerateKeypair(curve types.CurveType) (*KeyPair, error) {
-	var keyPair *KeyPair
-
 	switch curve {
 	case types.Secp256k1:
 		rawPrivKey, err := btcec.NewPrivateKey(btcec.S256())
@@ -44,11 +42,12 @@ func GenerateKeypair(curve types.CurveType) (*KeyPair, error) {
 			CurveType: curve,
 		}
 
-		keyPair = &KeyPair{
+		keyPair := &KeyPair{
 			PublicKey:  pubKey,
 			PrivateKey: rawPrivKey.Serialize(),
 		}
 
+		return keyPair, nil
 	case types.Edwards25519:
 		rawPubKey, rawPrivKey, err := ed25519.GenerateKey(nil)
 		if err != nil {
@@ -60,16 +59,15 @@ func GenerateKeypair(curve types.CurveType) (*KeyPair, error) {
 			CurveType: curve,
 		}
 
-		keyPair = &KeyPair{
+		keyPair := &KeyPair{
 			PublicKey:  pubKey,
 			PrivateKey: rawPrivKey.Seed(),
 		}
 
+		return keyPair, nil
 	default:
 		return nil, fmt.Errorf("%s is not supported", curve)
 	}
-
-	return keyPair, nil
 }
 
 // IsValid checks the validity of a keypair
