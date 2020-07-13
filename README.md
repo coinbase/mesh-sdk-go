@@ -32,7 +32,7 @@ Before diving into the SDK, we recommend taking a look at the Rosetta API Docs:
 ## Packages
 * [Types](types): Auto-generated Rosetta types
 * [Client](client): Low-level communication with any Rosetta server
-* [Server](server): Simplified Rosetta Node API server development
+* [Server](server): Simplified Rosetta API server development
 * [Asserter](asserter): Validation of Rosetta types
 * [Fetcher](fetcher): Simplified and validated communication with
 any Rosetta server
