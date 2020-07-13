@@ -2,7 +2,7 @@
 
 [![GoDoc](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=shield)](https://pkg.go.dev/github.com/coinbase/rosetta-sdk-go/syncer?tab=doc)
 
-The Syncer package provides support for syncing blocks from any Rosetta Node API
+The Syncer package provides support for syncing blocks from any Rosetta Data API
 implementation. If you want to see an example of how to use this package, take
 a look at [rosetta-cli](https://github.com/coinbase/rosetta-cli).
 
