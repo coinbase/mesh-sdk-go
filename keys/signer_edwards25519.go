@@ -23,20 +23,20 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
-// SignerEd25519 is initialized from a keypair
-type SignerEd25519 struct {
+// SignerEdwards25519 is initialized from a keypair
+type SignerEdwards25519 struct {
 	KeyPair *KeyPair
 }
 
-var _ Signer = (*SignerEd25519)(nil)
+var _ Signer = (*SignerEdwards25519)(nil)
 
 // PublicKey returns the PublicKey of the signer
-func (s *SignerEd25519) PublicKey() *types.PublicKey {
+func (s *SignerEdwards25519) PublicKey() *types.PublicKey {
 	return s.KeyPair.PublicKey
 }
 
-// Signs arbitrary payloads using a KeyPair
-func (s *SignerEd25519) Sign(
+// Sign arbitrary payloads using a KeyPair
+func (s *SignerEdwards25519) Sign(
 	payload *types.SigningPayload,
 	sigType types.SignatureType,
 ) (*types.Signature, error) {
@@ -53,7 +53,7 @@ func (s *SignerEd25519) Sign(
 		return nil, fmt.Errorf("sign: signature type is not %v", types.Ed25519)
 	}
 
-	privKeyBytes := s.KeyPair.PrivateKey.Bytes
+	privKeyBytes := s.KeyPair.PrivateKey
 	privKey := ed25519.NewKeyFromSeed(privKeyBytes)
 	sig := ed25519.Sign(privKey, payload.Bytes)
 
@@ -67,7 +67,7 @@ func (s *SignerEd25519) Sign(
 
 // Verify verifies a Signature, by checking the validity of a Signature,
 // the SigningPayload, and the PublicKey of the Signature.
-func (s *SignerEd25519) Verify(signature *types.Signature) error {
+func (s *SignerEdwards25519) Verify(signature *types.Signature) error {
 	if signature.SignatureType != types.Ed25519 {
 		return fmt.Errorf("verify: payload signature type is not %v", types.Ed25519)
 	}

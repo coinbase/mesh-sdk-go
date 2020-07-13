@@ -32,5 +32,5 @@ error.
 The reconciler randomly checks the balances of accounts that aren't
 involved in any transactions. The balances of accounts could change
 on the blockchain node without being included in an operation
-returned by the Rosetta Node API. Recall that all balance-changing
-operations must be returned by the Rosetta Node API.
+returned by the Rosetta Data API. Recall that all balance-changing
+operations must be returned by the Rosetta Data API.

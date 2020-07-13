@@ -29,8 +29,6 @@ const PrivKeyBytesLen = 32
 
 // GenerateKeypair returns a Keypair of a specified CurveType
 func GenerateKeypair(curve types.CurveType) (*KeyPair, error) {
-	var keyPair *KeyPair
-
 	switch curve {
 	case types.Secp256k1:
 		rawPrivKey, err := btcec.NewPrivateKey(btcec.S256())
@@ -43,16 +41,13 @@ func GenerateKeypair(curve types.CurveType) (*KeyPair, error) {
 			Bytes:     rawPubKey.SerializeCompressed(),
 			CurveType: curve,
 		}
-		privKey := &PrivateKey{
-			Bytes:     rawPrivKey.Serialize(),
-			CurveType: curve,
-		}
 
-		keyPair = &KeyPair{
+		keyPair := &KeyPair{
 			PublicKey:  pubKey,
-			PrivateKey: privKey,
+			PrivateKey: rawPrivKey.Serialize(),
 		}
 
+		return keyPair, nil
 	case types.Edwards25519:
 		rawPubKey, rawPrivKey, err := ed25519.GenerateKey(nil)
 		if err != nil {
@@ -64,54 +59,45 @@ func GenerateKeypair(curve types.CurveType) (*KeyPair, error) {
 			CurveType: curve,
 		}
 
-		privKey := &PrivateKey{
-			Bytes:     rawPrivKey.Seed(),
-			CurveType: curve,
-		}
-
-		keyPair = &KeyPair{
+		keyPair := &KeyPair{
 			PublicKey:  pubKey,
-			PrivateKey: privKey,
+			PrivateKey: rawPrivKey.Seed(),
 		}
 
+		return keyPair, nil
 	default:
 		return nil, fmt.Errorf("%s is not supported", curve)
 	}
-
-	return keyPair, nil
 }
 
 // IsValid checks the validity of a keypair
 func (k *KeyPair) IsValid() error {
-	sk := k.PrivateKey.Bytes
-	pkCurve := k.PublicKey.CurveType
-	skCurve := k.PrivateKey.CurveType
-
-	// Checks if valid Public Key
+	// Checks if valid PublicKey and CurveType
 	err := asserter.PublicKey(k.PublicKey)
 	if err != nil {
 		return err
 	}
 
-	// Checks if valid CurveType
-	err = asserter.CurveType(pkCurve)
-	if err != nil {
-		return err
-	}
-
-	// Checks if pk and sk have the same CurveType
-	if pkCurve != skCurve {
+	// Will change if we support more CurveTypes with different privkey sizes
+	if len(k.PrivateKey) != PrivKeyBytesLen {
 		return fmt.Errorf(
-			"private key curve %s and public key curve %s do not match",
-			skCurve,
-			pkCurve,
+			"invalid privkey length %v. Expected 32 bytes",
+			len(k.PrivateKey),
 		)
 	}
 
-	// Will change if we support more CurveTypes with different privkey sizes
-	if len(sk) != PrivKeyBytesLen {
-		return fmt.Errorf("invalid privkey length %v. Expected 32 bytes", len(sk))
-	}
-
 	return nil
+}
+
+// Signer returns the constructs a Signer
+// for the KeyPair.
+func (k *KeyPair) Signer() (Signer, error) {
+	switch k.PublicKey.CurveType {
+	case types.Secp256k1:
+		return &SignerSecp256k1{k}, nil
+	case types.Edwards25519:
+		return &SignerEdwards25519{k}, nil
+	default:
+		return nil, fmt.Errorf("curve %s not supported", k.PublicKey.CurveType)
+	}
 }

@@ -32,7 +32,7 @@ var signerSecp256k1 Signer
 
 func init() {
 	keypair, _ := GenerateKeypair(types.Secp256k1)
-	signerSecp256k1 = &SignerSecp256k1{keypair}
+	signerSecp256k1, _ = keypair.Signer()
 }
 
 func TestSignSecp256k1(t *testing.T) {
