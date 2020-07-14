@@ -43,7 +43,7 @@ const (
 	// that can be enqueued to reconcile before new
 	// requests are dropped.
 	// TODO: Make configurable
-	backlogThreshold = 1000
+	backlogThreshold = 50000
 
 	// waitToCheckDiff is the syncing difference (live-head)
 	// to retry instead of exiting. In other words, if the
