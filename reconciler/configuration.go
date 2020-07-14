@@ -85,3 +85,11 @@ func WithLookupBalanceByBlock(lookup bool) Option {
 		r.lookupBalanceByBlock = lookup
 	}
 }
+
+// WithInactiveFrequency is how many blocks the reconciler
+// should wait between inactive reconciliations on each account.
+func WithInactiveFrequency(blocks int64) Option {
+	return func(r *Reconciler) {
+		r.inactiveFrequency = blocks
+	}
+}
