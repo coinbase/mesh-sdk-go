@@ -198,7 +198,7 @@ type Reconciler struct {
 	// queue. If this is not done, it is possible a goroutine
 	// could be processing an account (not in the queue) when
 	// we do a lookup to determine if we should add to the queue.
-	seenAccounts  []*AccountCurrency
+	seenAccounts  map[string]struct{}
 	inactiveQueue []*InactiveEntry
 
 	// inactiveQueueMutex needed because we can't peek at the tip
@@ -223,7 +223,7 @@ func New(
 		activeConcurrency:   defaultReconcilerConcurrency,
 		inactiveConcurrency: defaultReconcilerConcurrency,
 		highWaterMark:       -1,
-		seenAccounts:        []*AccountCurrency{},
+		seenAccounts:        map[string]struct{}{},
 		inactiveQueue:       []*InactiveEntry{},
 
 		// When lookupBalanceByBlock is enabled, we check
@@ -517,21 +517,23 @@ func (r *Reconciler) inactiveAccountQueue(
 	accountCurrency *AccountCurrency,
 	liveBlock *types.BlockIdentifier,
 ) error {
+	r.inactiveQueueMutex.Lock()
+
 	// Only enqueue the first time we see an account on an active reconciliation.
 	shouldEnqueueInactive := false
 	if !inactive && !ContainsAccountCurrency(r.seenAccounts, accountCurrency) {
-		r.seenAccounts = append(r.seenAccounts, accountCurrency)
+		r.seenAccounts[types.Hash(accountCurrency)] = struct{}{}
 		shouldEnqueueInactive = true
 	}
 
 	if inactive || shouldEnqueueInactive {
-		r.inactiveQueueMutex.Lock()
 		r.inactiveQueue = append(r.inactiveQueue, &InactiveEntry{
 			Entry:     accountCurrency,
 			LastCheck: liveBlock,
 		})
-		r.inactiveQueueMutex.Unlock()
 	}
+
+	r.inactiveQueueMutex.Unlock()
 
 	return nil
 }
@@ -682,18 +684,13 @@ func ExtractAmount(
 }
 
 // ContainsAccountCurrency returns a boolean indicating if a
-// AccountCurrency slice already contains an Account and Currency combination.
+// AccountCurrency set already contains an Account and Currency combination.
 func ContainsAccountCurrency(
-	arr []*AccountCurrency,
+	m map[string]struct{},
 	change *AccountCurrency,
 ) bool {
-	for _, a := range arr {
-		if types.Hash(a) == types.Hash(change) {
-			return true
-		}
-	}
-
-	return false
+	_, exists := m[types.Hash(change)]
+	return exists
 }
 
 // GetCurrencyBalance fetches the balance of a *types.AccountIdentifier
