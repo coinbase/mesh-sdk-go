@@ -175,6 +175,7 @@ type Reconciler struct {
 	interestingAccounts  []*AccountCurrency
 	changeQueue          chan *parser.BalanceChange
 	inactiveFrequency    int64
+	debugLogging         bool
 
 	// Reconciler concurrency is separated between
 	// active and inactive concurrency to allow for
@@ -295,7 +296,9 @@ func (r *Reconciler) QueueChanges(
 			select {
 			case r.changeQueue <- change:
 			default:
-				log.Println("skipping active enqueue because backlog")
+				if r.debugLogging {
+					log.Println("skipping active enqueue because backlog")
+				}
 			}
 		} else {
 			// Block until all checked for a block or context is Done
@@ -456,11 +459,13 @@ func (r *Reconciler) accountReconciliation(
 				}
 
 				// Don't wait to check if we are very far behind
-				log.Printf(
-					"Skipping reconciliation for %s: %d blocks behind\n",
-					types.PrettyPrintStruct(accountCurrency),
-					diff,
-				)
+				if r.debugLogging {
+					log.Printf(
+						"Skipping reconciliation for %s: %d blocks behind\n",
+						types.PrettyPrintStruct(accountCurrency),
+						diff,
+					)
+				}
 
 				// Set a highWaterMark to not accept any new
 				// reconciliation requests unless they happened
@@ -604,6 +609,9 @@ func (r *Reconciler) reconcileInactiveAccounts(
 		// When first start syncing, this loop may run before the genesis block is synced.
 		// If this is the case, we should sleep and try again later instead of exiting.
 		if err != nil {
+			if r.debugLogging {
+				log.Println("waiting to start intactive reconciliation until a block is synced...")
+			}
 			time.Sleep(inactiveReconciliationSleep)
 			continue
 		}
@@ -648,11 +656,13 @@ func (r *Reconciler) reconcileInactiveAccounts(
 			}
 		} else {
 			r.inactiveQueueMutex.Unlock()
-			log.Printf(
-				"no accounts ready for inactive reconciliation (%d accounts in queue, will reconcile next account at index %d)\n",
-				len(r.inactiveQueue),
-				nextValidIndex,
-			)
+			if r.debugLogging {
+				log.Printf(
+					"no accounts ready for inactive reconciliation (%d accounts in queue, will reconcile next account at index %d)\n",
+					len(r.inactiveQueue),
+					nextValidIndex,
+				)
+			}
 			time.Sleep(inactiveReconciliationSleep)
 		}
 	}

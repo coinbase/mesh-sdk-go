@@ -94,3 +94,11 @@ func WithInactiveFrequency(blocks int64) Option {
 		r.inactiveFrequency = blocks
 	}
 }
+
+// WithDebugLogging determines if verbose logs should
+// be printed.
+func WithDebugLogging(debug bool) Option {
+	return func(r *Reconciler) {
+		r.debugLogging = debug
+	}
+}
