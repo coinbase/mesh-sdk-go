@@ -64,11 +64,10 @@ const (
 	// to sleep when there are no seen accounts to reconcile.
 	inactiveReconciliationSleep = 5 * time.Second
 
-	// inactiveReconciliationRequiredDepth is the minimum
+	// defaultInactiveFrequency is the minimum
 	// number of blocks the reconciler should wait between
-	// inactive reconciliations.
-	// TODO: make configurable
-	inactiveReconciliationRequiredDepth = 500
+	// inactive reconciliations for each account.
+	defaultInactiveFrequency = 200
 
 	// defaultLookupBalanceByBlock is the default setting
 	// for how to perform balance queries. It is preferable
@@ -175,6 +174,7 @@ type Reconciler struct {
 	lookupBalanceByBlock bool
 	interestingAccounts  []*AccountCurrency
 	changeQueue          chan *parser.BalanceChange
+	inactiveFrequency    int64
 
 	// Reconciler concurrency is separated between
 	// active and inactive concurrency to allow for
@@ -219,6 +219,7 @@ func New(
 		helper:              helper,
 		handler:             handler,
 		fetcher:             fetcher,
+		inactiveFrequency:   defaultInactiveFrequency,
 		activeConcurrency:   defaultReconcilerConcurrency,
 		inactiveConcurrency: defaultReconcilerConcurrency,
 		highWaterMark:       -1,
@@ -601,7 +602,7 @@ func (r *Reconciler) reconcileInactiveAccounts(
 		r.inactiveQueueMutex.Lock()
 		if len(r.inactiveQueue) > 0 &&
 			(r.inactiveQueue[0].LastCheck == nil || // block is set to nil when loaded from previous run
-				r.inactiveQueue[0].LastCheck.Index+inactiveReconciliationRequiredDepth < head.Index) {
+				r.inactiveQueue[0].LastCheck.Index+r.inactiveFrequency < head.Index) {
 			randAcct := r.inactiveQueue[0]
 			r.inactiveQueue = r.inactiveQueue[1:]
 			r.inactiveQueueMutex.Unlock()
