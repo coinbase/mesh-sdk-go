@@ -593,6 +593,35 @@ func (r *Reconciler) reconcileActiveAccounts(
 	}
 }
 
+// shouldAttemptInactiveReconciliation returns a boolean indicating whether
+// inactive reconciliation should be attempted based on syncing status.
+func (r *Reconciler) shouldAttemptInactiveReconciliation(
+	ctx context.Context,
+) (bool, *types.BlockIdentifier) {
+	head, err := r.helper.CurrentBlock(ctx)
+	// When first start syncing, this loop may run before the genesis block is synced.
+	// If this is the case, we should sleep and try again later instead of exiting.
+	if err != nil {
+		if r.debugLogging {
+			log.Println("waiting to start intactive reconciliation until a block is synced...")
+		}
+
+		return false, nil
+	}
+
+	if head.Index < r.highWaterMark {
+		if r.debugLogging {
+			log.Println(
+				"waiting to continue intactive reconciliation until reaching high water mark...",
+			)
+		}
+
+		return false, nil
+	}
+
+	return true, head
+}
+
 // reconcileInactiveAccounts selects a random account
 // from all previously seen accounts and reconciles
 // the balance. This is useful for detecting balance
@@ -605,21 +634,8 @@ func (r *Reconciler) reconcileInactiveAccounts(
 			return ctx.Err()
 		}
 
-		head, err := r.helper.CurrentBlock(ctx)
-		// When first start syncing, this loop may run before the genesis block is synced.
-		// If this is the case, we should sleep and try again later instead of exiting.
-		if err != nil {
-			if r.debugLogging {
-				log.Println("waiting to start intactive reconciliation until a block is synced...")
-			}
-			time.Sleep(inactiveReconciliationSleep)
-			continue
-		}
-
-		if head.Index < r.highWaterMark {
-			if r.debugLogging {
-				log.Println("waiting to continue intactive reconciliation until reaching high water mark...")
-			}
+		shouldAttempt, head := r.shouldAttemptInactiveReconciliation(ctx)
+		if !shouldAttempt {
 			time.Sleep(inactiveReconciliationSleep)
 			continue
 		}
