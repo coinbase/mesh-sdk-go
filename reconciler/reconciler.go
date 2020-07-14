@@ -616,6 +616,14 @@ func (r *Reconciler) reconcileInactiveAccounts(
 			continue
 		}
 
+		if head.Index < r.highWaterMark {
+			if r.debugLogging {
+				log.Println("waiting to continue intactive reconciliation until reaching high water mark...")
+			}
+			time.Sleep(inactiveReconciliationSleep)
+			continue
+		}
+
 		r.inactiveQueueMutex.Lock()
 		nextValidIndex := r.inactiveQueue[0].LastCheck.Index + r.inactiveFrequency
 		if len(r.inactiveQueue) > 0 &&
