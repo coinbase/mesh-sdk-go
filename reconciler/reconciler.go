@@ -270,23 +270,35 @@ func (r *Reconciler) QueueChanges(
 		})
 	}
 
-	if !r.lookupBalanceByBlock {
-		// All changes will have the same block. Return
-		// if we are too far behind to start reconciling.
-		if block.Index < r.highWaterMark {
-			return nil
+	for _, change := range balanceChanges {
+		// Add all seen accounts to inactive reconciler queue.
+		//
+		// Note: accounts are only added if they have not been seen before.
+		err := r.inactiveAccountQueue(false, &AccountCurrency{
+			Account:  change.Account,
+			Currency: change.Currency,
+		}, block)
+		if err != nil {
+			return err
 		}
 
-		for _, change := range balanceChanges {
+		if !r.lookupBalanceByBlock {
+			// All changes will have the same block. Continue
+			// if we are too far behind to start reconciling.
+			//
+			// Note: we don't return here so that we can ensure
+			// all seen accounts are added to the inactiveAccountQueue.
+			if block.Index < r.highWaterMark {
+				continue
+			}
+
 			select {
 			case r.changeQueue <- change:
 			default:
 				log.Println("skipping active enqueue because backlog")
 			}
-		}
-	} else {
-		// Block until all checked for a block or context is Done
-		for _, change := range balanceChanges {
+		} else {
+			// Block until all checked for a block or context is Done
 			select {
 			case r.changeQueue <- change:
 			case <-ctx.Done():
@@ -487,16 +499,11 @@ func (r *Reconciler) accountReconciliation(
 				liveAmount,
 				liveBlock,
 			)
-			if err != nil {
+			if err != nil { // error only returned if we should exit on failure
 				return err
 			}
 
 			return nil
-		}
-
-		err = r.inactiveAccountQueue(inactive, accountCurrency, liveBlock)
-		if err != nil {
-			return err
 		}
 
 		return r.handler.ReconciliationSucceeded(
@@ -509,6 +516,7 @@ func (r *Reconciler) accountReconciliation(
 		)
 	}
 
+	// We return here if we gave up trying to reconcile an account.
 	return nil
 }
 
@@ -596,7 +604,6 @@ func (r *Reconciler) reconcileInactiveAccounts(
 		// When first start syncing, this loop may run before the genesis block is synced.
 		// If this is the case, we should sleep and try again later instead of exiting.
 		if err != nil {
-			log.Println("waiting to start intactive reconciliation until a block is synced...")
 			time.Sleep(inactiveReconciliationSleep)
 			continue
 		}
@@ -628,6 +635,14 @@ func (r *Reconciler) reconcileInactiveAccounts(
 				block,
 				true,
 			)
+			if err != nil {
+				return err
+			}
+
+			// Always re-enqueue accounts after they have been inactively
+			// reconciled. If we don't re-enqueue, we will never check
+			// these accounts again.
+			err = r.inactiveAccountQueue(true, nextAcct.Entry, block)
 			if err != nil {
 				return err
 			}
