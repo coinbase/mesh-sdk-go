@@ -62,7 +62,7 @@ const (
 
 	// inactiveReconciliationSleep is used as the time.Duration
 	// to sleep when there are no seen accounts to reconcile.
-	inactiveReconciliationSleep = 5 * time.Second
+	inactiveReconciliationSleep = 1 * time.Second
 
 	// defaultInactiveFrequency is the minimum
 	// number of blocks the reconciler should wait between
@@ -600,17 +600,18 @@ func (r *Reconciler) reconcileInactiveAccounts(
 		}
 
 		r.inactiveQueueMutex.Lock()
+		nextValidIndex := r.inactiveQueue[0].LastCheck.Index + r.inactiveFrequency
 		if len(r.inactiveQueue) > 0 &&
 			(r.inactiveQueue[0].LastCheck == nil || // block is set to nil when loaded from previous run
-				r.inactiveQueue[0].LastCheck.Index+r.inactiveFrequency < head.Index) {
-			randAcct := r.inactiveQueue[0]
+				nextValidIndex <= head.Index) {
+			nextAcct := r.inactiveQueue[0]
 			r.inactiveQueue = r.inactiveQueue[1:]
 			r.inactiveQueueMutex.Unlock()
 
 			block, amount, err := r.bestBalance(
 				ctx,
-				randAcct.Entry.Account,
-				randAcct.Entry.Currency,
+				nextAcct.Entry.Account,
+				nextAcct.Entry.Currency,
 				types.ConstructPartialBlockIdentifier(head),
 			)
 			if err != nil {
@@ -619,8 +620,8 @@ func (r *Reconciler) reconcileInactiveAccounts(
 
 			err = r.accountReconciliation(
 				ctx,
-				randAcct.Entry.Account,
-				randAcct.Entry.Currency,
+				nextAcct.Entry.Account,
+				nextAcct.Entry.Currency,
 				amount,
 				block,
 				true,
@@ -630,6 +631,11 @@ func (r *Reconciler) reconcileInactiveAccounts(
 			}
 		} else {
 			r.inactiveQueueMutex.Unlock()
+			log.Printf(
+				"no accounts ready for inactive reconciliation (%d accounts in queue, will reconcile next account at index %d)\n",
+				len(r.inactiveQueue),
+				nextValidIndex,
+			)
 			time.Sleep(inactiveReconciliationSleep)
 		}
 	}
