@@ -88,8 +88,8 @@ func TestNewReconciler(t *testing.T) {
 						Entry: accountCurrency,
 					},
 				}
-				r.seenAccounts = []*AccountCurrency{
-					accountCurrency,
+				r.seenAccounts = map[string]struct{}{
+					types.Hash(accountCurrency): struct{}{},
 				}
 
 				return r
@@ -113,7 +113,7 @@ func TestNewReconciler(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			result := New(nil, nil, nil, nil, test.options...)
 			assert.ElementsMatch(t, test.expected.inactiveQueue, result.inactiveQueue)
-			assert.ElementsMatch(t, test.expected.seenAccounts, result.seenAccounts)
+			assert.Equal(t, test.expected.seenAccounts, result.seenAccounts)
 			assert.ElementsMatch(t, test.expected.interestingAccounts, result.interestingAccounts)
 			assert.Equal(t, test.expected.inactiveConcurrency, result.inactiveConcurrency)
 			assert.Equal(t, test.expected.activeConcurrency, result.activeConcurrency)
@@ -132,7 +132,7 @@ func TestContainsAccountCurrency(t *testing.T) {
 		Symbol:   "Blah2",
 		Decimals: 2,
 	}
-	accts := []*AccountCurrency{
+	acctSlice := []*AccountCurrency{
 		{
 			Account: &types.AccountIdentifier{
 				Address: "test",
@@ -160,6 +160,11 @@ func TestContainsAccountCurrency(t *testing.T) {
 			},
 			Currency: currency1,
 		},
+	}
+
+	accts := map[string]struct{}{}
+	for _, acct := range acctSlice {
+		accts[types.Hash(acct)] = struct{}{}
 	}
 
 	t.Run("Non-existent account", func(t *testing.T) {
@@ -489,6 +494,13 @@ func TestCompareBalance(t *testing.T) {
 	})
 }
 
+func assertContainsAllAccounts(t *testing.T, m map[string]struct{}, a []*AccountCurrency) {
+	for _, account := range a {
+		_, exists := m[types.Hash(account)]
+		assert.True(t, exists)
+	}
+}
+
 func TestInactiveAccountQueue(t *testing.T) {
 	var (
 		handler = &MockReconcilerHandler{}
@@ -528,7 +540,7 @@ func TestInactiveAccountQueue(t *testing.T) {
 			block,
 		)
 		assert.Nil(t, err)
-		assert.ElementsMatch(t, r.seenAccounts, []*AccountCurrency{accountCurrency})
+		assertContainsAllAccounts(t, r.seenAccounts, []*AccountCurrency{accountCurrency})
 		assert.ElementsMatch(t, r.inactiveQueue, []*InactiveEntry{
 			{
 				Entry:     accountCurrency,
@@ -544,7 +556,7 @@ func TestInactiveAccountQueue(t *testing.T) {
 			block2,
 		)
 		assert.Nil(t, err)
-		assert.ElementsMatch(
+		assertContainsAllAccounts(
 			t,
 			r.seenAccounts,
 			[]*AccountCurrency{accountCurrency, accountCurrency2},
@@ -570,7 +582,7 @@ func TestInactiveAccountQueue(t *testing.T) {
 			block,
 		)
 		assert.Nil(t, err)
-		assert.ElementsMatch(
+		assertContainsAllAccounts(
 			t,
 			r.seenAccounts,
 			[]*AccountCurrency{accountCurrency, accountCurrency2},
@@ -585,7 +597,7 @@ func TestInactiveAccountQueue(t *testing.T) {
 			block,
 		)
 		assert.Nil(t, err)
-		assert.ElementsMatch(
+		assertContainsAllAccounts(
 			t,
 			r.seenAccounts,
 			[]*AccountCurrency{accountCurrency, accountCurrency2},
@@ -605,7 +617,7 @@ func TestInactiveAccountQueue(t *testing.T) {
 			block2,
 		)
 		assert.Nil(t, err)
-		assert.ElementsMatch(
+		assertContainsAllAccounts(
 			t,
 			r.seenAccounts,
 			[]*AccountCurrency{accountCurrency, accountCurrency2},

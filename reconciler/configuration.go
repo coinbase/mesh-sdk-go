@@ -18,6 +18,7 @@ import (
 	"fmt"
 
 	"github.com/coinbase/rosetta-sdk-go/parser"
+	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
 // Option is used to overwrite default values in
@@ -59,7 +60,7 @@ func WithSeenAccounts(seen []*AccountCurrency) Option {
 			r.inactiveQueue = append(r.inactiveQueue, &InactiveEntry{
 				Entry: acct,
 			})
-			r.seenAccounts = append(r.seenAccounts, acct)
+			r.seenAccounts[types.Hash(acct)] = struct{}{}
 		}
 
 		fmt.Printf(
