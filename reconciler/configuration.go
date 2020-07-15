@@ -18,6 +18,7 @@ import (
 	"fmt"
 
 	"github.com/coinbase/rosetta-sdk-go/parser"
+	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
 // Option is used to overwrite default values in
@@ -59,7 +60,7 @@ func WithSeenAccounts(seen []*AccountCurrency) Option {
 			r.inactiveQueue = append(r.inactiveQueue, &InactiveEntry{
 				Entry: acct,
 			})
-			r.seenAccounts = append(r.seenAccounts, acct)
+			r.seenAccounts[types.Hash(acct)] = struct{}{}
 		}
 
 		fmt.Printf(
@@ -83,5 +84,21 @@ func WithLookupBalanceByBlock(lookup bool) Option {
 		// We don't do anything if lookup == true because the default
 		// is already to create a non-buffered channel.
 		r.lookupBalanceByBlock = lookup
+	}
+}
+
+// WithInactiveFrequency is how many blocks the reconciler
+// should wait between inactive reconciliations on each account.
+func WithInactiveFrequency(blocks int64) Option {
+	return func(r *Reconciler) {
+		r.inactiveFrequency = blocks
+	}
+}
+
+// WithDebugLogging determines if verbose logs should
+// be printed.
+func WithDebugLogging(debug bool) Option {
+	return func(r *Reconciler) {
+		r.debugLogging = debug
 	}
 }
