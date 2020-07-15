@@ -729,7 +729,10 @@ func ExtractAmount(
 		return b, nil
 	}
 
-	return nil, fmt.Errorf("could not extract amount for %+v", currency)
+	return nil, fmt.Errorf(
+		"account balance response does could not contain currency %s",
+		types.PrettyPrintStruct(currency),
+	)
 }
 
 // ContainsAccountCurrency returns a boolean indicating if a
@@ -764,7 +767,12 @@ func GetCurrencyBalance(
 
 	liveAmount, err := ExtractAmount(liveBalances, currency)
 	if err != nil {
-		return nil, "", err
+		return nil, "", fmt.Errorf(
+			"%w: could not get %s currency balance for %s",
+			err,
+			types.PrettyPrintStruct(currency),
+			types.PrettyPrintStruct(account),
+		)
 	}
 
 	return liveBlock, liveAmount.Value, nil

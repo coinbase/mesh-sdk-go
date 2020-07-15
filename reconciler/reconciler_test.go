@@ -273,7 +273,14 @@ func TestExtractAmount(t *testing.T) {
 	t.Run("Non-existent currency", func(t *testing.T) {
 		result, err := ExtractAmount(balances, badCurr)
 		assert.Nil(t, result)
-		assert.EqualError(t, err, fmt.Errorf("could not extract amount for %+v", badCurr).Error())
+		assert.EqualError(
+			t,
+			err,
+			fmt.Errorf(
+				"account balance response does could not contain currency %s",
+				types.PrettyPrintStruct(badCurr),
+			).Error(),
+		)
 	})
 
 	t.Run("Simple account", func(t *testing.T) {
