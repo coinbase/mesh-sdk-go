@@ -150,7 +150,7 @@ func (f *Fetcher) ConstructionParse(
 		return nil, nil, nil, err
 	}
 
-	if err := f.Asserter.ConstructionParseResponse(signed, response); err != nil {
+	if err := f.Asserter.ConstructionParseResponse(response, signed); err != nil {
 		return nil, nil, nil, err
 	}
 
