@@ -299,55 +299,132 @@ func TestConstructionParseResponse(t *testing.T) {
 		},
 	}
 
-	for name, test := range tests {
-		asserter, err := NewClientWithResponses(
-			&types.NetworkIdentifier{
-				Blockchain: "hello",
-				Network:    "world",
+	asserter, err := NewClientWithResponses(
+		&types.NetworkIdentifier{
+			Blockchain: "hello",
+			Network:    "world",
+		},
+		&types.NetworkStatusResponse{
+			GenesisBlockIdentifier: &types.BlockIdentifier{
+				Index: 0,
+				Hash:  "block 0",
 			},
-			&types.NetworkStatusResponse{
-				GenesisBlockIdentifier: &types.BlockIdentifier{
-					Index: 0,
-					Hash:  "block 0",
+			CurrentBlockIdentifier: &types.BlockIdentifier{
+				Index: 100,
+				Hash:  "block 100",
+			},
+			CurrentBlockTimestamp: MinUnixEpoch + 1,
+			Peers: []*types.Peer{
+				{
+					PeerID: "peer 1",
 				},
-				CurrentBlockIdentifier: &types.BlockIdentifier{
-					Index: 100,
-					Hash:  "block 100",
-				},
-				CurrentBlockTimestamp: MinUnixEpoch + 1,
-				Peers: []*types.Peer{
+			},
+		},
+		&types.NetworkOptionsResponse{
+			Version: &types.Version{
+				RosettaVersion: "1.4.0",
+				NodeVersion:    "1.0",
+			},
+			Allow: &types.Allow{
+				OperationStatuses: []*types.OperationStatus{
 					{
-						PeerID: "peer 1",
+						Status:     "SUCCESS",
+						Successful: true,
 					},
+					{
+						Status:     "FAILURE",
+						Successful: false,
+					},
+				},
+				OperationTypes: []string{
+					"PAYMENT",
 				},
 			},
-			&types.NetworkOptionsResponse{
-				Version: &types.Version{
-					RosettaVersion: "1.4.0",
-					NodeVersion:    "1.0",
-				},
-				Allow: &types.Allow{
-					OperationStatuses: []*types.OperationStatus{
-						{
-							Status:     "SUCCESS",
-							Successful: true,
-						},
-						{
-							Status:     "FAILURE",
-							Successful: false,
-						},
-					},
-					OperationTypes: []string{
-						"PAYMENT",
-					},
-				},
-			},
-		)
-		assert.NotNil(t, asserter)
-		assert.NoError(t, err)
+		},
+	)
+	assert.NotNil(t, asserter)
+	assert.NoError(t, err)
 
+	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			err := asserter.ConstructionParseResponse(test.response)
+			err := asserter.ConstructionParseResponse(true, test.response)
+			if test.err != nil {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), test.err.Error())
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+
+	var unsignedTest = map[string]struct {
+		response *types.ConstructionParseResponse
+		err      error
+	}{
+		"invalid signer": {
+			response: &types.ConstructionParseResponse{
+				Operations: []*types.Operation{
+					{
+						OperationIdentifier: &types.OperationIdentifier{
+							Index: int64(0),
+						},
+						Type:    "PAYMENT",
+						Account: validAccount,
+						Amount:  validAmount,
+					},
+					{
+						OperationIdentifier: &types.OperationIdentifier{
+							Index: int64(1),
+						},
+						RelatedOperations: []*types.OperationIdentifier{
+							{Index: int64(0)},
+						},
+						Type:    "PAYMENT",
+						Account: validAccount,
+						Amount:  validAmount,
+					},
+				},
+				Metadata: map[string]interface{}{
+					"extra": "stuff",
+				},
+				Signers: []string{"account 1"},
+			},
+			err: errors.New("signers should be empty for unsigned txs"),
+		},
+		"valid response": {
+			response: &types.ConstructionParseResponse{
+				Operations: []*types.Operation{
+					{
+						OperationIdentifier: &types.OperationIdentifier{
+							Index: int64(0),
+						},
+						Type:    "PAYMENT",
+						Account: validAccount,
+						Amount:  validAmount,
+					},
+					{
+						OperationIdentifier: &types.OperationIdentifier{
+							Index: int64(1),
+						},
+						RelatedOperations: []*types.OperationIdentifier{
+							{Index: int64(0)},
+						},
+						Type:    "PAYMENT",
+						Account: validAccount,
+						Amount:  validAmount,
+					},
+				},
+				Metadata: map[string]interface{}{
+					"extra": "stuff",
+				},
+			},
+			err: nil,
+		},
+	}
+
+	for name, test := range unsignedTest {
+		t.Run(name, func(t *testing.T) {
+			err := asserter.ConstructionParseResponse(false, test.response)
 			if test.err != nil {
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), test.err.Error())
