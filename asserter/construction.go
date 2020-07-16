@@ -112,6 +112,7 @@ func ConstructionHashResponse(
 // if the signers is empty.
 func (a *Asserter) ConstructionParseResponse(
 	response *types.ConstructionParseResponse,
+	signed bool,
 ) error {
 	if a == nil {
 		return ErrAsserterNotInitialized
@@ -129,8 +130,12 @@ func (a *Asserter) ConstructionParseResponse(
 		return fmt.Errorf("%w unable to parse operations", err)
 	}
 
-	if len(response.Signers) == 0 {
+	if signed && len(response.Signers) == 0 {
 		return errors.New("signers cannot be empty")
+	}
+
+	if !signed && len(response.Signers) > 0 {
+		return errors.New("signers should be empty for unsigned txs")
 	}
 
 	for i, signer := range response.Signers {
