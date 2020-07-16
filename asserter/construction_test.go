@@ -347,7 +347,7 @@ func TestConstructionParseResponse(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			err := asserter.ConstructionParseResponse(true, test.response)
+			err := asserter.ConstructionParseResponse(test.response, true)
 			if test.err != nil {
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), test.err.Error())
@@ -424,7 +424,7 @@ func TestConstructionParseResponse(t *testing.T) {
 
 	for name, test := range unsignedTest {
 		t.Run(name, func(t *testing.T) {
-			err := asserter.ConstructionParseResponse(false, test.response)
+			err := asserter.ConstructionParseResponse(test.response, false)
 			if test.err != nil {
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), test.err.Error())

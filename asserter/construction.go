@@ -111,8 +111,8 @@ func ConstructionHashResponse(
 // not have a valid set of operations or
 // if the signers is empty.
 func (a *Asserter) ConstructionParseResponse(
-	signed bool,
 	response *types.ConstructionParseResponse,
+	signed bool,
 ) error {
 	if a == nil {
 		return ErrAsserterNotInitialized
