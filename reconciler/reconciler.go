@@ -641,10 +641,20 @@ func (r *Reconciler) reconcileInactiveAccounts(
 		}
 
 		r.inactiveQueueMutex.Lock()
+		if len(r.inactiveQueue) == 0 {
+			r.inactiveQueueMutex.Unlock()
+			if r.debugLogging {
+				log.Println(
+					"no accounts ready for inactive reconciliation (0 accounts in queue)",
+				)
+			}
+			time.Sleep(inactiveReconciliationSleep)
+			continue
+		}
+
 		nextValidIndex := r.inactiveQueue[0].LastCheck.Index + r.inactiveFrequency
-		if len(r.inactiveQueue) > 0 &&
-			(r.inactiveQueue[0].LastCheck == nil || // block is set to nil when loaded from previous run
-				nextValidIndex <= head.Index) {
+		if r.inactiveQueue[0].LastCheck == nil || // block is set to nil when loaded from previous run
+			nextValidIndex <= head.Index {
 			nextAcct := r.inactiveQueue[0]
 			r.inactiveQueue = r.inactiveQueue[1:]
 			r.inactiveQueueMutex.Unlock()
