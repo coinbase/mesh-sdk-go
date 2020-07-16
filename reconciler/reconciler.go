@@ -652,10 +652,13 @@ func (r *Reconciler) reconcileInactiveAccounts(
 			continue
 		}
 
-		nextValidIndex := r.inactiveQueue[0].LastCheck.Index + r.inactiveFrequency
-		if r.inactiveQueue[0].LastCheck == nil || // block is set to nil when loaded from previous run
-			nextValidIndex <= head.Index {
-			nextAcct := r.inactiveQueue[0]
+		nextAcct := r.inactiveQueue[0]
+		nextValidIndex := int64(-1)
+		if nextAcct.LastCheck != nil { // block is set to nil when loaded from previous run
+			nextValidIndex = nextAcct.LastCheck.Index + r.inactiveFrequency
+		}
+
+		if nextValidIndex <= head.Index {
 			r.inactiveQueue = r.inactiveQueue[1:]
 			r.inactiveQueueMutex.Unlock()
 
