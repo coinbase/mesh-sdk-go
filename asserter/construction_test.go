@@ -175,6 +175,7 @@ func TestConstructionHashResponse(t *testing.T) {
 func TestConstructionParseResponse(t *testing.T) {
 	var tests = map[string]struct {
 		response *types.ConstructionParseResponse
+		signed   bool
 		err      error
 	}{
 		"valid response": {
@@ -205,7 +206,8 @@ func TestConstructionParseResponse(t *testing.T) {
 					"extra": "stuff",
 				},
 			},
-			err: nil,
+			signed: true,
+			err:    nil,
 		},
 		"nil response": {
 			err: errors.New("construction parse response cannot be nil"),
@@ -265,7 +267,8 @@ func TestConstructionParseResponse(t *testing.T) {
 					"extra": "stuff",
 				},
 			},
-			err: errors.New("signers cannot be empty"),
+			signed: true,
+			err:    errors.New("signers cannot be empty"),
 		},
 		"empty string signer": {
 			response: &types.ConstructionParseResponse{
@@ -295,7 +298,69 @@ func TestConstructionParseResponse(t *testing.T) {
 					"extra": "stuff",
 				},
 			},
-			err: errors.New("signer 0 cannot be empty"),
+			signed: true,
+			err:    errors.New("signer 0 cannot be empty"),
+		},
+		"invalid signer unsigned": {
+			response: &types.ConstructionParseResponse{
+				Operations: []*types.Operation{
+					{
+						OperationIdentifier: &types.OperationIdentifier{
+							Index: int64(0),
+						},
+						Type:    "PAYMENT",
+						Account: validAccount,
+						Amount:  validAmount,
+					},
+					{
+						OperationIdentifier: &types.OperationIdentifier{
+							Index: int64(1),
+						},
+						RelatedOperations: []*types.OperationIdentifier{
+							{Index: int64(0)},
+						},
+						Type:    "PAYMENT",
+						Account: validAccount,
+						Amount:  validAmount,
+					},
+				},
+				Metadata: map[string]interface{}{
+					"extra": "stuff",
+				},
+				Signers: []string{"account 1"},
+			},
+			signed: false,
+			err:    errors.New("signers should be empty for unsigned txs"),
+		},
+		"valid response unsigned": {
+			response: &types.ConstructionParseResponse{
+				Operations: []*types.Operation{
+					{
+						OperationIdentifier: &types.OperationIdentifier{
+							Index: int64(0),
+						},
+						Type:    "PAYMENT",
+						Account: validAccount,
+						Amount:  validAmount,
+					},
+					{
+						OperationIdentifier: &types.OperationIdentifier{
+							Index: int64(1),
+						},
+						RelatedOperations: []*types.OperationIdentifier{
+							{Index: int64(0)},
+						},
+						Type:    "PAYMENT",
+						Account: validAccount,
+						Amount:  validAmount,
+					},
+				},
+				Metadata: map[string]interface{}{
+					"extra": "stuff",
+				},
+			},
+			signed: false,
+			err:    nil,
 		},
 	}
 
@@ -347,84 +412,7 @@ func TestConstructionParseResponse(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			err := asserter.ConstructionParseResponse(test.response, true)
-			if test.err != nil {
-				assert.Error(t, err)
-				assert.Contains(t, err.Error(), test.err.Error())
-			} else {
-				assert.NoError(t, err)
-			}
-		})
-	}
-
-	var unsignedTest = map[string]struct {
-		response *types.ConstructionParseResponse
-		err      error
-	}{
-		"invalid signer": {
-			response: &types.ConstructionParseResponse{
-				Operations: []*types.Operation{
-					{
-						OperationIdentifier: &types.OperationIdentifier{
-							Index: int64(0),
-						},
-						Type:    "PAYMENT",
-						Account: validAccount,
-						Amount:  validAmount,
-					},
-					{
-						OperationIdentifier: &types.OperationIdentifier{
-							Index: int64(1),
-						},
-						RelatedOperations: []*types.OperationIdentifier{
-							{Index: int64(0)},
-						},
-						Type:    "PAYMENT",
-						Account: validAccount,
-						Amount:  validAmount,
-					},
-				},
-				Metadata: map[string]interface{}{
-					"extra": "stuff",
-				},
-				Signers: []string{"account 1"},
-			},
-			err: errors.New("signers should be empty for unsigned txs"),
-		},
-		"valid response": {
-			response: &types.ConstructionParseResponse{
-				Operations: []*types.Operation{
-					{
-						OperationIdentifier: &types.OperationIdentifier{
-							Index: int64(0),
-						},
-						Type:    "PAYMENT",
-						Account: validAccount,
-						Amount:  validAmount,
-					},
-					{
-						OperationIdentifier: &types.OperationIdentifier{
-							Index: int64(1),
-						},
-						RelatedOperations: []*types.OperationIdentifier{
-							{Index: int64(0)},
-						},
-						Type:    "PAYMENT",
-						Account: validAccount,
-						Amount:  validAmount,
-					},
-				},
-				Metadata: map[string]interface{}{
-					"extra": "stuff",
-				},
-			},
-			err: nil,
-		},
-	}
-
-	for name, test := range unsignedTest {
-		t.Run(name, func(t *testing.T) {
-			err := asserter.ConstructionParseResponse(test.response, false)
+			err := asserter.ConstructionParseResponse(test.response, test.signed)
 			if test.err != nil {
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), test.err.Error())
