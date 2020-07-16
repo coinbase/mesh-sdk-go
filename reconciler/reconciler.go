@@ -641,7 +641,8 @@ func (r *Reconciler) reconcileInactiveAccounts(
 		}
 
 		r.inactiveQueueMutex.Lock()
-		if len(r.inactiveQueue) == 0 {
+		queueLen := len(r.inactiveQueue)
+		if queueLen == 0 {
 			r.inactiveQueueMutex.Unlock()
 			if r.debugLogging {
 				log.Println(
@@ -696,7 +697,7 @@ func (r *Reconciler) reconcileInactiveAccounts(
 			if r.debugLogging {
 				log.Printf(
 					"no accounts ready for inactive reconciliation (%d accounts in queue, will reconcile next account at index %d)\n",
-					len(r.inactiveQueue),
+					queueLen,
 					nextValidIndex,
 				)
 			}
