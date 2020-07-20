@@ -144,20 +144,22 @@ func (s *Syncer) nextSyncableRange(
 		return -1, false, errors.New("unable to get current head")
 	}
 
-	if endIndex == -1 {
-		networkStatus, err := s.fetcher.NetworkStatusRetry(
-			ctx,
-			s.network,
-			nil,
-		)
-		if err != nil {
-			return -1, false, fmt.Errorf("%w: unable to get network status", err)
-		}
+	// Always fetch network status to ensure endIndex is not
+	// past tip
+	networkStatus, err := s.fetcher.NetworkStatusRetry(
+		ctx,
+		s.network,
+		nil,
+	)
+	if err != nil {
+		return -1, false, fmt.Errorf("%w: unable to get network status", err)
+	}
 
+	if endIndex == -1 || endIndex > networkStatus.CurrentBlockIdentifier.Index {
 		endIndex = networkStatus.CurrentBlockIdentifier.Index
 	}
 
-	if s.nextIndex >= endIndex {
+	if s.nextIndex > endIndex {
 		return -1, true, nil
 	}
 
@@ -289,16 +291,20 @@ func (s *Syncer) Sync(
 		}
 
 		if halt {
-			if endIndex != -1 {
+			if s.nextIndex > endIndex && endIndex != -1 {
 				break
 			}
 
-			log.Printf("Syncer at tip %d...sleeping\n", s.nextIndex)
+			log.Printf("Syncer at tip (waiting for block %d)\n", s.nextIndex)
 			time.Sleep(defaultSyncSleep)
 			continue
 		}
 
-		log.Printf("Syncing %d-%d\n", s.nextIndex, rangeEnd)
+		if s.nextIndex != rangeEnd {
+			log.Printf("Syncing %d-%d\n", s.nextIndex, rangeEnd)
+		} else {
+			log.Printf("Syncing %d\n", s.nextIndex)
+		}
 
 		err = s.syncRange(ctx, rangeEnd)
 		if err != nil {
