@@ -295,12 +295,16 @@ func (s *Syncer) Sync(
 				break
 			}
 
-			log.Printf("Syncer at tip %d...sleeping\n", s.nextIndex)
+			log.Printf("Syncer at tip (waiting for block %d)\n", s.nextIndex)
 			time.Sleep(defaultSyncSleep)
 			continue
 		}
 
-		log.Printf("Syncing %d-%d\n", s.nextIndex, rangeEnd)
+		if s.nextIndex != rangeEnd {
+			log.Printf("Syncing %d-%d\n", s.nextIndex, rangeEnd)
+		} else {
+			log.Printf("Syncing %d\n", s.nextIndex)
+		}
 
 		err = s.syncRange(ctx, rangeEnd)
 		if err != nil {
