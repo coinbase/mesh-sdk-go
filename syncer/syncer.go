@@ -159,7 +159,7 @@ func (s *Syncer) nextSyncableRange(
 		endIndex = networkStatus.CurrentBlockIdentifier.Index
 	}
 
-	if s.nextIndex >= endIndex {
+	if s.nextIndex > endIndex {
 		return -1, true, nil
 	}
 
