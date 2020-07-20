@@ -438,37 +438,35 @@ func comparisonMatch(
 			return fmt.Errorf("%w: opposite amounts comparison error", err)
 		}
 
-		match1Ops := matches[amountMatch[0]].Operations
-		match2Ops := matches[amountMatch[1]].Operations
+		match0Ops := matches[amountMatch[0]].Operations
+		match1Ops := matches[amountMatch[1]].Operations
 
-		if len(match1Ops) != len(match2Ops) {
-			return errors.New("opposite amounts comparison error: unequal length between match amounts")
-		}
-		// continue if nothing to compare
-		if len(match1Ops) == 0 {
-			continue
+		if len(match0Ops) == 0 || len(match1Ops) == 0 {
+			return errors.New("opposite amounts comparison error: no matched operations")
 		}
 		// check if all operations within the same match slice have the same amount
-		for i := 1; i < len(match1Ops); i++ {
-			if err := equalAmounts([]*types.Operation{
-				match1Ops[i-1],
-				match1Ops[i],
-			}); err != nil {
+		if len(match0Ops) > 1 {
+			if err := equalAmounts(match0Ops); err != nil {
 				return fmt.Errorf(
-					"%w: opposite amounts comparison error: amounts not equal within the same match amounts array", err)
+					"%w: opposite amounts comparison error: amounts not equal within index %d match operations",
+					err,
+					amountMatch[0],
+				)
 			}
-			if err := equalAmounts([]*types.Operation{
-				match2Ops[i-1],
-				match2Ops[i],
-			}); err != nil {
+		}
+		if len(match1Ops) > 1 {
+			if err := equalAmounts(match1Ops); err != nil {
 				return fmt.Errorf(
-					"%w: opposite amounts comparison error: amounts not equal within the same match amounts array", err)
+					"%w: opposite amounts comparison error: amounts not equal within index %d match operations ",
+					err,
+					amountMatch[1],
+				)
 			}
 		}
 		// check for opposites amount
 		if err := oppositeAmounts(
+			match0Ops[0],
 			match1Ops[0],
-			match2Ops[0],
 		); err != nil {
 			return fmt.Errorf("%w: amounts not opposites", err)
 		}

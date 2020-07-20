@@ -89,7 +89,7 @@ func TestNewReconciler(t *testing.T) {
 					},
 				}
 				r.seenAccounts = map[string]struct{}{
-					types.Hash(accountCurrency): struct{}{},
+					types.Hash(accountCurrency): {},
 				}
 
 				return r
