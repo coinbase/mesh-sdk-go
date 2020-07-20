@@ -291,7 +291,7 @@ func (s *Syncer) Sync(
 		}
 
 		if halt {
-			if rangeEnd >= endIndex && endIndex != -1 {
+			if s.nextIndex > endIndex && endIndex != -1 {
 				break
 			}
 
