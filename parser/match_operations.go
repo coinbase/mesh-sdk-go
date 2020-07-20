@@ -437,41 +437,45 @@ func comparisonMatch(
 		if err := matchIndexValid(matches, amountMatch[1]); err != nil {
 			return fmt.Errorf("%w: opposite amounts comparison error", err)
 		}
-
-		match0Ops := matches[amountMatch[0]].Operations
-		match1Ops := matches[amountMatch[1]].Operations
-
-		if len(match0Ops) == 0 || len(match1Ops) == 0 {
-			return errors.New("opposite amounts comparison error: no matched operations")
+		if err := validateMatchOperationsForOppositeComparison(amountMatch[0], matches); err != nil {
+			return err
 		}
-		// check if all operations within the same match slice have the same amount
-		if len(match0Ops) > 1 {
-			if err := equalAmounts(match0Ops); err != nil {
-				return fmt.Errorf(
-					"%w: opposite amounts comparison error: amounts not equal within index %d match operations",
-					err,
-					amountMatch[0],
-				)
-			}
-		}
-		if len(match1Ops) > 1 {
-			if err := equalAmounts(match1Ops); err != nil {
-				return fmt.Errorf(
-					"%w: opposite amounts comparison error: amounts not equal within index %d match operations ",
-					err,
-					amountMatch[1],
-				)
-			}
+		if err := validateMatchOperationsForOppositeComparison(amountMatch[1], matches); err != nil {
+			return err
 		}
 		// check for opposites amount
 		if err := oppositeAmounts(
-			match0Ops[0],
-			match1Ops[0],
+			matches[amountMatch[0]].Operations[0],
+			matches[amountMatch[1]].Operations[0],
 		); err != nil {
 			return fmt.Errorf("%w: amounts not opposites", err)
 		}
 	}
 
+	return nil
+}
+
+// validateMatchOperationsForOppositeComparison checks if the matched operations have at least one element and
+// checks if all the operations have the same amount
+func validateMatchOperationsForOppositeComparison(matchIndex int, matches []*Match) error {
+	matchOps := matches[matchIndex].Operations
+
+	if len(matchOps) == 0 {
+		return fmt.Errorf(
+			"opposite amounts comparison error: no matched operations for match index %d",
+			matchIndex,
+		)
+	}
+	// check if all operations within the same match slice have the same amount
+	if len(matchOps) > 1 {
+		if err := equalAmounts(matchOps); err != nil {
+			return fmt.Errorf(
+				"%w: opposite amounts comparison error: amounts not equal within index %d match operations",
+				err,
+				matchIndex,
+			)
+		}
+	}
 	return nil
 }
 
