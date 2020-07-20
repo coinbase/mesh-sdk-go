@@ -144,16 +144,18 @@ func (s *Syncer) nextSyncableRange(
 		return -1, false, errors.New("unable to get current head")
 	}
 
-	if endIndex == -1 {
-		networkStatus, err := s.fetcher.NetworkStatusRetry(
-			ctx,
-			s.network,
-			nil,
-		)
-		if err != nil {
-			return -1, false, fmt.Errorf("%w: unable to get network status", err)
-		}
+	// Always fetch network status to ensure endIndex is not
+	// past tip
+	networkStatus, err := s.fetcher.NetworkStatusRetry(
+		ctx,
+		s.network,
+		nil,
+	)
+	if err != nil {
+		return -1, false, fmt.Errorf("%w: unable to get network status", err)
+	}
 
+	if endIndex == -1 || endIndex > networkStatus.CurrentBlockIdentifier.Index {
 		endIndex = networkStatus.CurrentBlockIdentifier.Index
 	}
 
