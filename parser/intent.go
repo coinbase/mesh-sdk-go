@@ -1,7 +1,6 @@
 package parser
 
 import (
-	"context"
 	"fmt"
 	"log"
 
@@ -45,7 +44,6 @@ func ExpectedOperation(intent *types.Operation, observed *types.Operation) error
 // it is possible to error if any extra observed opertions
 // are found.
 func ExpectedOperations(
-	ctx context.Context,
 	intent []*types.Operation,
 	observed []*types.Operation,
 	errExtra bool,
