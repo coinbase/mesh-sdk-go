@@ -437,13 +437,16 @@ func comparisonMatch(
 		if err := matchIndexValid(matches, amountMatch[1]); err != nil {
 			return fmt.Errorf("%w: opposite amounts comparison error", err)
 		}
-		if err := validateMatchOperationsForOppositeComparison(amountMatch[0], matches); err != nil {
+		if err := matchOperationsForOppositeComparisonValid(amountMatch[0], matches); err != nil {
 			return err
 		}
-		if err := validateMatchOperationsForOppositeComparison(amountMatch[1], matches); err != nil {
+		if err := matchOperationsForOppositeComparisonValid(amountMatch[1], matches); err != nil {
 			return err
 		}
-		// check for opposites amount
+
+		// only need to check opposites amount for the very first operation from each
+		// matched operations group since we made sure all amounts within the same
+		// matched operation group are the same
 		if err := oppositeAmounts(
 			matches[amountMatch[0]].Operations[0],
 			matches[amountMatch[1]].Operations[0],
@@ -455,9 +458,10 @@ func comparisonMatch(
 	return nil
 }
 
-// validateMatchOperationsForOppositeComparison checks if the matched operations have at least one element and
+// matchOperationsForOppositeComparisonValid checks if the matched operations have at least one
+// element and
 // checks if all the operations have the same amount
-func validateMatchOperationsForOppositeComparison(matchIndex int, matches []*Match) error {
+func matchOperationsForOppositeComparisonValid(matchIndex int, matches []*Match) error {
 	matchOps := matches[matchIndex].Operations
 
 	if len(matchOps) == 0 {
