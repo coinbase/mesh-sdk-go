@@ -301,8 +301,8 @@ func operationMatch(
 // equalAmounts returns an error if a slice of operations do not have
 // equal amounts.
 func equalAmounts(ops []*types.Operation) error {
-	if len(ops) <= 1 {
-		return fmt.Errorf("cannot check equality of %d operations", len(ops))
+	if len(ops) == 0 {
+		return errors.New("cannot check equality of 0 operations")
 	}
 
 	val, err := types.AmountValue(ops[0].Amount)
@@ -437,15 +437,32 @@ func comparisonMatch(
 		if err := matchIndexValid(matches, amountMatch[1]); err != nil {
 			return fmt.Errorf("%w: opposite amounts comparison error", err)
 		}
-		for _, op := range matches[amountMatch[0]].Operations {
-			for _, otherOp := range matches[amountMatch[1]].Operations {
-				if err := oppositeAmounts(
-					op,
-					otherOp,
-				); err != nil {
-					return fmt.Errorf("%w: amounts not opposites", err)
-				}
-			}
+
+		match0Ops := matches[amountMatch[0]].Operations
+		match1Ops := matches[amountMatch[1]].Operations
+		if err := equalAmounts(match0Ops); err != nil {
+			return fmt.Errorf(
+				"%w: opposite amounts comparison error for match index %d",
+				err,
+				amountMatch[0],
+			)
+		}
+		if err := equalAmounts(match1Ops); err != nil {
+			return fmt.Errorf(
+				"%w: opposite amounts comparison error for match index %d",
+				err,
+				amountMatch[1],
+			)
+		}
+
+		// only need to check opposites amount for the very first operation from each
+		// matched operations group since we made sure all amounts within the same
+		// matched operation group are the same
+		if err := oppositeAmounts(
+			match0Ops[0],
+			match1Ops[0],
+		); err != nil {
+			return fmt.Errorf("%w: amounts not opposites", err)
 		}
 	}
 
