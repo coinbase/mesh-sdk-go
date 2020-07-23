@@ -341,3 +341,89 @@ func TestExpectedOperations(t *testing.T) {
 		})
 	}
 }
+
+func TestExpectedSigners(t *testing.T) {
+	var tests = map[string]struct {
+		intent   []*types.SigningPayload
+		observed []string
+
+		err bool
+	}{
+		"simple match": {
+			intent: []*types.SigningPayload{
+				{
+					Address: "addr1",
+				},
+				{
+					Address: "addr2",
+				},
+				{
+					Address: "addr2",
+				},
+			},
+			observed: []string{
+				"addr1",
+				"addr2",
+			},
+		},
+		"duplicate observed signers": {
+			intent: []*types.SigningPayload{
+				{
+					Address: "addr1",
+				},
+				{
+					Address: "addr2",
+				},
+				{
+					Address: "addr2",
+				},
+			},
+			observed: []string{
+				"addr1",
+				"addr2",
+				"addr2",
+			},
+			err: true,
+		},
+		"missing observed signer": {
+			intent: []*types.SigningPayload{
+				{
+					Address: "addr1",
+				},
+				{
+					Address: "addr2",
+				},
+				{
+					Address: "addr2",
+				},
+			},
+			observed: []string{
+				"addr1",
+			},
+			err: true,
+		},
+		"extra observed signer": {
+			intent: []*types.SigningPayload{
+				{
+					Address: "addr1",
+				},
+			},
+			observed: []string{
+				"addr1",
+				"addr2",
+			},
+			err: true,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			err := ExpectedSigners(test.intent, test.observed)
+			if test.err {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/coinbase/rosetta-sdk-go/asserter"
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
@@ -48,10 +49,10 @@ func ExpectedOperations(
 	observed []*types.Operation,
 	errExtra bool,
 ) error {
-	matches := map[int]int{} // mapping from intent -> observed
-	unmatched := []int{}     // observed
+	matches := make(map[int]struct{})
+	unmatched := []*types.Operation{}
 
-	for o, obs := range observed {
+	for _, obs := range observed {
 		foundMatch := false
 		for i, in := range intent {
 			if _, exists := matches[i]; exists {
@@ -59,7 +60,7 @@ func ExpectedOperations(
 			}
 
 			if ExpectedOperation(in, obs) == nil {
-				matches[i] = o
+				matches[i] = struct{}{}
 				foundMatch = true
 				break
 			}
@@ -69,26 +70,24 @@ func ExpectedOperations(
 			if errExtra {
 				return fmt.Errorf(
 					"found extra operation %s",
-					types.PrettyPrintStruct(o),
+					types.PrettyPrintStruct(obs),
 				)
 			}
-			unmatched = append(unmatched, o)
+			unmatched = append(unmatched, obs)
 		}
 	}
 
-	if len(matches) != len(intent) {
-		for i := 0; i < len(intent); i++ {
-			if _, exists := matches[i]; !exists {
-				return fmt.Errorf(
-					"could not find operation with intent %s in observed",
-					types.PrettyPrintStruct(intent[i]),
-				)
-			}
+	for i := 0; i < len(intent); i++ {
+		if _, exists := matches[i]; !exists {
+			return fmt.Errorf(
+				"could not find operation with intent %s in observed",
+				types.PrettyPrintStruct(intent[i]),
+			)
 		}
 	}
 
-	for _, extra := range unmatched {
-		log.Printf("found extra operation %s\n", types.PrettyPrintStruct(observed[extra]))
+	if len(unmatched) > 0 {
+		log.Printf("found extra operations: %s\n", types.PrettyPrintStruct(unmatched))
 	}
 
 	return nil
@@ -98,47 +97,42 @@ func ExpectedOperations(
 // has different signers than what was observed (typically populated
 // using the signers returned from parsing a transaction).
 func ExpectedSigners(intent []*types.SigningPayload, observed []string) error {
-	matches := map[int]int{} // requested -> observed
-	unmatched := []int{}     // observed
-	for o, observed := range observed {
-		foundMatch := false
-		for r, req := range intent {
-			if _, exists := matches[r]; exists {
-				continue
-			}
+	// De-duplicate required signers (ex: multiple UTXOs from same address)
+	intendedSigners := make(map[string]struct{})
+	for _, payload := range intent {
+		intendedSigners[payload.Address] = struct{}{}
+	}
 
-			if req.Address == observed {
-				matches[r] = o
-				foundMatch = true
-				break
-			}
-		}
+	if err := asserter.StringArray("observed signers", observed); err != nil {
+		return fmt.Errorf("%w: found duplicate signer", err)
+	}
 
-		if !foundMatch {
-			unmatched = append(unmatched, o)
+	// Could exist here if len(intent) != len(observed) but
+	// more useful to print out a detailed error message.
+	seenSigners := make(map[string]struct{})
+	unmatched := []string{} // observed
+	for _, signer := range observed {
+		_, exists := intendedSigners[signer]
+		if !exists {
+			unmatched = append(unmatched, signer)
+		} else {
+			seenSigners[signer] = struct{}{}
 		}
 	}
 
-	if len(matches) != len(intent) {
-		for i := 0; i < len(intent); i++ {
-			if _, exists := matches[i]; !exists {
-				return fmt.Errorf(
-					"could not find signer with address %s in observed",
-					types.PrettyPrintStruct(intent[i]),
-				)
-			}
+	for k := range intendedSigners {
+		if _, exists := seenSigners[k]; !exists {
+			return fmt.Errorf(
+				"could not find match for intended signer %s",
+				k,
+			)
 		}
 	}
 
 	if len(unmatched) != 0 {
-		unexpected := []string{}
-		for _, m := range unmatched {
-			unexpected = append(unexpected, observed[m])
-		}
-
 		return fmt.Errorf(
 			"found unexpected signers: %s",
-			types.PrettyPrintStruct(unexpected),
+			types.PrettyPrintStruct(unmatched),
 		)
 	}
 
