@@ -295,7 +295,6 @@ func (s *Syncer) Sync(
 				break
 			}
 
-			log.Printf("Syncer at tip (waiting for block %d)\n", s.nextIndex)
 			time.Sleep(defaultSyncSleep)
 			continue
 		}
