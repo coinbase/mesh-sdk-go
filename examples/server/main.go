@@ -67,7 +67,11 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// Create the main router handler then apply the logger and Cors
+	// middlewares in sequence.
 	router := NewBlockchainRouter(network, asserter)
+	loggedRouter := server.LoggerMiddleware(router)
+	corsRouter := server.CorsMiddleware(loggedRouter)
 	log.Printf("Listening on port %d\n", serverPort)
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", serverPort), router))
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", serverPort), corsRouter))
 }
