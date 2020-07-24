@@ -20,12 +20,17 @@ type Route struct {
 type Routes []Route
 
 // Router defines the required methods for retrieving api routes
-type Router interface { 
+type Router interface {
 	Routes() Routes
 }
 
-// CorsMiddleware handle CORS and ensures OPTIONS requests are
+// CorsMiddleware handles CORS and ensures OPTIONS requests are
 // handled properly.
+//
+// This may be used to expose a Rosetta server instance to requests made by web
+// apps served over a different domain. Note that his currently allows _all_
+// third party domains so callers might want to adapt this middleware for their
+// own use-cases.
 func CorsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -44,20 +49,15 @@ func NewRouter(routers ...Router) http.Handler {
 	router := mux.NewRouter().StrictSlash(true)
 	for _, api := range routers {
 		for _, route := range api.Routes() {
-			var handler http.Handler
-			handler = route.HandlerFunc
-			handler = Logger(handler, route.Name)
-
 			router.
 				Methods(route.Method).
 				Path(route.Pattern).
 				Name(route.Name).
-				Handler(handler)
+				Handler(route.HandlerFunc)
 		}
 	}
 
-  // use custom middleware because could not get mux handler to work in Chrome
-  return CorsMiddleware(router)
+  return router
 }
 
 // EncodeJSONResponse uses the json encoder to write an interface to the http response with an optional status code
