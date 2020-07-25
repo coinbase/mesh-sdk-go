@@ -16,8 +16,9 @@
 
 package types
 
-// ConstructionHashResponse ConstructionHashResponse is the output of the `/construction/hash`
-// endpoint.
-type ConstructionHashResponse struct {
-	TransactionHash string `json:"transaction_hash"`
+// TransactionIdentifierResponse TransactionIdentifierResponse contains the transaction_identifier
+// of a transaction that was submitted to either `/construction/hash` or `/construction/submit`.
+type TransactionIdentifierResponse struct {
+	TransactionIdentifier *TransactionIdentifier `json:"transaction_identifier"`
+	Metadata              map[string]interface{} `json:"metadata,omitempty"`
 }

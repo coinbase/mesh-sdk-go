@@ -86,7 +86,7 @@ func (f *Fetcher) ConstructionHash(
 	ctx context.Context,
 	network *types.NetworkIdentifier,
 	signedTransaction string,
-) (string, error) {
+) (*types.TransactionIdentifier, error) {
 	response, _, err := f.rosettaClient.ConstructionAPI.ConstructionHash(ctx,
 		&types.ConstructionHashRequest{
 			NetworkIdentifier: network,
@@ -94,14 +94,14 @@ func (f *Fetcher) ConstructionHash(
 		},
 	)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	if err := asserter.ConstructionHashResponse(response); err != nil {
-		return "", err
+	if err := asserter.TransactionIdentifierResponse(response); err != nil {
+		return nil, err
 	}
 
-	return response.TransactionHash, nil
+	return response.TransactionIdentifier, nil
 }
 
 // ConstructionMetadata returns the validated response
@@ -240,7 +240,7 @@ func (f *Fetcher) ConstructionSubmit(
 		return nil, nil, err
 	}
 
-	if err := asserter.ConstructionSubmitResponse(submitResponse); err != nil {
+	if err := asserter.TransactionIdentifierResponse(submitResponse); err != nil {
 		return nil, nil, err
 	}
 

@@ -37,12 +37,11 @@ func ConstructionMetadataResponse(
 	return nil
 }
 
-// ConstructionSubmitResponse returns an error if
+// TransactionIdentifierResponse returns an error if
 // the types.TransactionIdentifier in the response is not
-// valid or if the Submission.Status is not contained
-// within the provided validStatuses slice.
-func ConstructionSubmitResponse(
-	response *types.ConstructionSubmitResponse,
+// valid.
+func TransactionIdentifierResponse(
+	response *types.TransactionIdentifierResponse,
 ) error {
 	if response == nil {
 		return errors.New("construction submit response cannot be nil")
@@ -84,23 +83,6 @@ func ConstructionDeriveResponse(
 
 	if len(response.Address) == 0 {
 		return errors.New("address cannot be empty")
-	}
-
-	return nil
-}
-
-// ConstructionHashResponse returns an error if
-// a *types.ConstructionHashResponse does
-// not have a populated transaction hash.
-func ConstructionHashResponse(
-	response *types.ConstructionHashResponse,
-) error {
-	if response == nil {
-		return errors.New("construction hash response cannot be nil")
-	}
-
-	if len(response.TransactionHash) == 0 {
-		return errors.New("transaction hash cannot be empty")
 	}
 
 	return nil
