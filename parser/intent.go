@@ -15,6 +15,7 @@
 package parser
 
 import (
+	"errors"
 	"fmt"
 	"log"
 
@@ -57,13 +58,16 @@ func ExpectedOperation(intent *types.Operation, observed *types.Operation) error
 // ExpectedOperations returns an error if a slice of intended
 // operations differ from observed operations. Optionally,
 // it is possible to error if any extra observed opertions
-// are found.
-func ExpectedOperations(
+// are found or if operations matched are not considered
+// successful.
+func (p *Parser) ExpectedOperations(
 	intent []*types.Operation,
 	observed []*types.Operation,
 	errExtra bool,
+	confirmSuccess bool,
 ) error {
 	matches := make(map[int]struct{})
+	failedMatches := []*types.Operation{}
 	unmatched := []*types.Operation{}
 
 	for _, obs := range observed {
@@ -73,11 +77,28 @@ func ExpectedOperations(
 				continue
 			}
 
-			if ExpectedOperation(in, obs) == nil {
-				matches[i] = struct{}{}
-				foundMatch = true
-				break
+			// Any error returned here only indicated that intent
+			// does not match observed. For ExpectedOperations,
+			// we don't care about the content of the error, we
+			// just care if it errors so we can evaluate the next
+			// operation for a match.
+			if err := ExpectedOperation(in, obs); err != nil {
+				continue
 			}
+
+			obsSuccess, err := p.Asserter.OperationSuccessful(obs)
+			if err != nil {
+				return fmt.Errorf("%w: unable to check operation success", err)
+			}
+
+			if confirmSuccess && !obsSuccess {
+				failedMatches = append(failedMatches, obs)
+				continue
+			}
+
+			matches[i] = struct{}{}
+			foundMatch = true
+			break
 		}
 
 		if !foundMatch {
@@ -91,13 +112,28 @@ func ExpectedOperations(
 		}
 	}
 
+	missingIntent := []int{}
 	for i := 0; i < len(intent); i++ {
 		if _, exists := matches[i]; !exists {
-			return fmt.Errorf(
-				"could not find operation with intent %s in observed",
-				types.PrettyPrintStruct(intent[i]),
+			missingIntent = append(missingIntent, i)
+		}
+	}
+
+	if len(missingIntent) > 0 {
+		errString := fmt.Sprintf(
+			"could intent match for %v",
+			missingIntent,
+		)
+
+		if len(failedMatches) > 0 {
+			errString += fmt.Sprintf(
+				"%s: found matching ops with unsuccessful status %s",
+				errString,
+				types.PrettyPrintStruct(failedMatches),
 			)
 		}
+
+		return errors.New(errString)
 	}
 
 	if len(unmatched) > 0 {
