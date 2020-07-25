@@ -175,9 +175,10 @@ func TestExpectedOperation(t *testing.T) {
 
 func TestExpectedOperations(t *testing.T) {
 	var tests = map[string]struct {
-		intent   []*types.Operation
-		observed []*types.Operation
-		errExtra bool
+		intent         []*types.Operation
+		observed       []*types.Operation
+		errExtra       bool
+		confirmSuccess bool
 
 		err bool
 	}{
@@ -241,6 +242,131 @@ func TestExpectedOperations(t *testing.T) {
 					},
 				},
 			},
+		},
+		"simple match (confirm success)": {
+			intent: []*types.Operation{
+				{
+					OperationIdentifier: &types.OperationIdentifier{
+						Index: 1,
+					},
+					Type: "transfer",
+					Account: &types.AccountIdentifier{
+						Address: "addr1",
+					},
+					Amount: &types.Amount{
+						Value: "100",
+					},
+				},
+				{
+					OperationIdentifier: &types.OperationIdentifier{
+						Index: 5,
+					},
+					Type: "fee",
+					Account: &types.AccountIdentifier{
+						Address: "addr2",
+					},
+					Amount: &types.Amount{
+						Value: "50",
+					},
+				},
+			},
+			observed: []*types.Operation{
+				{
+					OperationIdentifier: &types.OperationIdentifier{
+						Index: 2,
+					},
+					Status: "success",
+					Type:   "fee",
+					Account: &types.AccountIdentifier{
+						Address: "addr2",
+					},
+					Amount: &types.Amount{
+						Value: "50",
+					},
+				},
+				{
+					OperationIdentifier: &types.OperationIdentifier{
+						Index: 3,
+					},
+					RelatedOperations: []*types.OperationIdentifier{
+						{
+							Index: 2,
+						},
+					},
+					Status: "success",
+					Type:   "transfer",
+					Account: &types.AccountIdentifier{
+						Address: "addr1",
+					},
+					Amount: &types.Amount{
+						Value: "100",
+					},
+				},
+			},
+			confirmSuccess: true,
+		},
+		"simple match (confirm success) err": {
+			intent: []*types.Operation{
+				{
+					OperationIdentifier: &types.OperationIdentifier{
+						Index: 1,
+					},
+					Type: "transfer",
+					Account: &types.AccountIdentifier{
+						Address: "addr1",
+					},
+					Amount: &types.Amount{
+						Value: "100",
+					},
+				},
+				{
+					OperationIdentifier: &types.OperationIdentifier{
+						Index: 5,
+					},
+					Type: "fee",
+					Account: &types.AccountIdentifier{
+						Address: "addr2",
+					},
+					Amount: &types.Amount{
+						Value: "50",
+					},
+				},
+			},
+			observed: []*types.Operation{
+				{
+					OperationIdentifier: &types.OperationIdentifier{
+						Index: 2,
+					},
+					Status: "success",
+					Type:   "fee",
+					Account: &types.AccountIdentifier{
+						Address: "addr2",
+					},
+					Amount: &types.Amount{
+						Value: "50",
+					},
+				},
+				{
+					OperationIdentifier: &types.OperationIdentifier{
+						Index: 3,
+					},
+					RelatedOperations: []*types.OperationIdentifier{
+						{
+							Index: 2,
+						},
+					},
+					Status: "failure",
+					Type:   "transfer",
+					Account: &types.AccountIdentifier{
+						Address: "addr1",
+					},
+					Amount: &types.Amount{
+						Value: "100",
+					},
+				},
+			},
+			confirmSuccess: true,
+			err:            true,
 		},
 		"err extra": {
 			intent: []*types.Operation{
@@ -345,8 +471,28 @@ func TestExpectedOperations(t *testing.T) {
 	}
 
 	for name, test := range tests {
+		asserter, err := simpleAsserterConfiguration([]*types.OperationStatus{
+			{
+				Status:     "success",
+				Successful: true,
+			},
+			{
+				Status:     "failure",
+				Successful: false,
+			},
+		})
+		assert.NoError(t, err)
+		assert.NotNil(t, asserter)
+
+		parser := New(asserter, nil)
+
 		t.Run(name, func(t *testing.T) {
-			err := ExpectedOperations(test.intent, test.observed, test.errExtra)
+			err := parser.ExpectedOperations(
+				test.intent,
+				test.observed,
+				test.errExtra,
+				test.confirmSuccess,
+			)
 			if test.err {
 				assert.Error(t, err)
 			} else {
