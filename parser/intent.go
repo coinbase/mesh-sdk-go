@@ -58,7 +58,8 @@ func ExpectedOperation(intent *types.Operation, observed *types.Operation) error
 // ExpectedOperations returns an error if a slice of intended
 // operations differ from observed operations. Optionally,
 // it is possible to error if any extra observed opertions
-// are found.
+// are found or if operations matched are not considered
+// successful.
 func (p *Parser) ExpectedOperations(
 	intent []*types.Operation,
 	observed []*types.Operation,
