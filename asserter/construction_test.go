@@ -51,13 +51,13 @@ func TestConstructionMetadataResponse(t *testing.T) {
 	}
 }
 
-func TestConstructionSubmitResponse(t *testing.T) {
+func TestTransactionIdentifierResponse(t *testing.T) {
 	var tests = map[string]struct {
-		response *types.ConstructionSubmitResponse
+		response *types.TransactionIdentifierResponse
 		err      error
 	}{
 		"valid response": {
-			response: &types.ConstructionSubmitResponse{
+			response: &types.TransactionIdentifierResponse{
 				TransactionIdentifier: &types.TransactionIdentifier{
 					Hash: "tx1",
 				},
@@ -68,14 +68,14 @@ func TestConstructionSubmitResponse(t *testing.T) {
 			err: errors.New("construction submit response cannot be nil"),
 		},
 		"invalid transaction identifier": {
-			response: &types.ConstructionSubmitResponse{},
+			response: &types.TransactionIdentifierResponse{},
 			err:      errors.New("TransactionIdentifier is nil"),
 		},
 	}
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			err := ConstructionSubmitResponse(test.response)
+			err := TransactionIdentifierResponse(test.response)
 			assert.Equal(t, test.err, err)
 		})
 	}
@@ -139,34 +139,6 @@ func TestConstructionDeriveResponse(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			err := ConstructionDeriveResponse(test.response)
-			assert.Equal(t, test.err, err)
-		})
-	}
-}
-
-func TestConstructionHashResponse(t *testing.T) {
-	var tests = map[string]struct {
-		response *types.ConstructionHashResponse
-		err      error
-	}{
-		"valid response": {
-			response: &types.ConstructionHashResponse{
-				TransactionHash: "tx hash",
-			},
-			err: nil,
-		},
-		"nil response": {
-			err: errors.New("construction hash response cannot be nil"),
-		},
-		"empty tx hash": {
-			response: &types.ConstructionHashResponse{},
-			err:      errors.New("transaction hash cannot be empty"),
-		},
-	}
-
-	for name, test := range tests {
-		t.Run(name, func(t *testing.T) {
-			err := ConstructionHashResponse(test.response)
 			assert.Equal(t, test.err, err)
 		})
 	}

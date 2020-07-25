@@ -178,7 +178,7 @@ func (a *ConstructionAPIService) ConstructionDerive(
 func (a *ConstructionAPIService) ConstructionHash(
 	ctx _context.Context,
 	constructionHashRequest *types.ConstructionHashRequest,
-) (*types.ConstructionHashResponse, *types.Error, error) {
+) (*types.TransactionIdentifierResponse, *types.Error, error) {
 	var (
 		localVarPostBody interface{}
 	)
@@ -233,7 +233,7 @@ func (a *ConstructionAPIService) ConstructionHash(
 		return nil, &v, fmt.Errorf("%+v", v)
 	}
 
-	var v types.ConstructionHashResponse
+	var v types.TransactionIdentifierResponse
 	err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 	if err != nil {
 		return nil, nil, err
@@ -540,7 +540,7 @@ func (a *ConstructionAPIService) ConstructionPreprocess(
 func (a *ConstructionAPIService) ConstructionSubmit(
 	ctx _context.Context,
 	constructionSubmitRequest *types.ConstructionSubmitRequest,
-) (*types.ConstructionSubmitResponse, *types.Error, error) {
+) (*types.TransactionIdentifierResponse, *types.Error, error) {
 	var (
 		localVarPostBody interface{}
 	)
@@ -595,7 +595,7 @@ func (a *ConstructionAPIService) ConstructionSubmit(
 		return nil, &v, fmt.Errorf("%+v", v)
 	}
 
-	var v types.ConstructionSubmitResponse
+	var v types.TransactionIdentifierResponse
 	err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 	if err != nil {
 		return nil, nil, err
