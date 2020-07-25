@@ -120,6 +120,7 @@ sed "${SED_IFLAG[@]}" 's/Url/URL/g' client/* server/*;
 # Fix enum pointers
 sed "${SED_IFLAG[@]}" 's/*CurveType/CurveType/g' client/* server/*;
 sed "${SED_IFLAG[@]}" 's/*SignatureType/SignatureType/g' client/* server/*;
+sed "${SED_IFLAG[@]}" 's/*CoinAction/CoinAction/g' client/* server/*;
 
 # Fix CurveTypes and SignatureTypes
 sed "${SED_IFLAG[@]}" 's/SECP256K1/Secp256k1/g' client/* server/*;
