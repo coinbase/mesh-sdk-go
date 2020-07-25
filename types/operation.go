@@ -34,8 +34,9 @@ type Operation struct {
 	// because blockchains with smart contracts may have transactions that partially apply.
 	// Blockchains with atomic transactions (all operations succeed or all operations fail) will
 	// have the same status for each operation.
-	Status   string                 `json:"status"`
-	Account  *AccountIdentifier     `json:"account,omitempty"`
-	Amount   *Amount                `json:"amount,omitempty"`
-	Metadata map[string]interface{} `json:"metadata,omitempty"`
+	Status     string                 `json:"status"`
+	Account    *AccountIdentifier     `json:"account,omitempty"`
+	Amount     *Amount                `json:"amount,omitempty"`
+	CoinChange *CoinChange            `json:"coin_change,omitempty"`
+	Metadata   map[string]interface{} `json:"metadata,omitempty"`
 }
