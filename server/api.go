@@ -119,7 +119,7 @@ type ConstructionAPIServicer interface {
 	ConstructionHash(
 		context.Context,
 		*types.ConstructionHashRequest,
-	) (*types.ConstructionHashResponse, *types.Error)
+	) (*types.TransactionIdentifierResponse, *types.Error)
 	ConstructionMetadata(
 		context.Context,
 		*types.ConstructionMetadataRequest,
@@ -139,7 +139,7 @@ type ConstructionAPIServicer interface {
 	ConstructionSubmit(
 		context.Context,
 		*types.ConstructionSubmitRequest,
-	) (*types.ConstructionSubmitResponse, *types.Error)
+	) (*types.TransactionIdentifierResponse, *types.Error)
 }
 
 // MempoolAPIServicer defines the api actions for the MempoolAPI service

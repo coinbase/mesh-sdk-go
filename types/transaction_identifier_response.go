@@ -16,9 +16,9 @@
 
 package types
 
-// ConstructionSubmitResponse A TransactionSubmitResponse contains the transaction_identifier of a
-// submitted transaction that was accepted into the mempool.
-type ConstructionSubmitResponse struct {
+// TransactionIdentifierResponse TransactionIdentifierResponse contains the transaction_identifier
+// of a transaction that was submitted to either `/construction/hash` or `/construction/submit`.
+type TransactionIdentifierResponse struct {
 	TransactionIdentifier *TransactionIdentifier `json:"transaction_identifier"`
 	Metadata              map[string]interface{} `json:"metadata,omitempty"`
 }

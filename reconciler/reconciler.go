@@ -769,7 +769,7 @@ func GetCurrencyBalance(
 	currency *types.Currency,
 	block *types.PartialBlockIdentifier,
 ) (*types.BlockIdentifier, string, error) {
-	liveBlock, liveBalances, _, err := fetcher.AccountBalanceRetry(
+	liveBlock, liveBalances, _, _, err := fetcher.AccountBalanceRetry(
 		ctx,
 		network,
 		account,
