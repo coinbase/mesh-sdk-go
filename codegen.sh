@@ -53,7 +53,7 @@ done
 rm -rf tmp;
 
 # Download spec file from releases
-ROSETTA_SPEC_VERSION=v1.4.0
+ROSETTA_SPEC_VERSION=v1.4.1
 curl -L https://github.com/coinbase/rosetta-specifications/releases/download/${ROSETTA_SPEC_VERSION}/api.json -o api.json;
 
 # Generate client + types code
@@ -117,13 +117,16 @@ sed "${SED_IFLAG[@]}" 's/Url/URL/g' client/* server/*;
 # Fix enum pointers
 sed "${SED_IFLAG[@]}" 's/*CurveType/CurveType/g' client/* server/*;
 sed "${SED_IFLAG[@]}" 's/*SignatureType/SignatureType/g' client/* server/*;
+sed "${SED_IFLAG[@]}" 's/*CoinAction/CoinAction/g' client/* server/*;
 
-# Fix CurveTypes and SignatureTypes
+# Fix CurveTypes, SignatureTypes, and CoinActions
 sed "${SED_IFLAG[@]}" 's/SECP256K1/Secp256k1/g' client/* server/*;
 sed "${SED_IFLAG[@]}" 's/EDWARDS25519/Edwards25519/g' client/* server/*;
 sed "${SED_IFLAG[@]}" 's/ECDSA_RECOVERY/EcdsaRecovery/g' client/* server/*;
 sed "${SED_IFLAG[@]}" 's/ECDSA/Ecdsa/g' client/* server/*;
 sed "${SED_IFLAG[@]}" 's/ED25519/Ed25519/g' client/* server/*;
+sed "${SED_IFLAG[@]}" 's/CREATED/CoinCreated/g' client/* server/*;
+sed "${SED_IFLAG[@]}" 's/SPENT/CoinSpent/g' client/* server/*;
 
 # Convert HexBytes to Bytes
 sed "${SED_IFLAG[@]}" '/Hex-encoded public key bytes in the format specified by the CurveType/d' client/* server/*;

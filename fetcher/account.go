@@ -31,7 +31,7 @@ func (f *Fetcher) AccountBalance(
 	network *types.NetworkIdentifier,
 	account *types.AccountIdentifier,
 	block *types.PartialBlockIdentifier,
-) (*types.BlockIdentifier, []*types.Amount, map[string]interface{}, error) {
+) (*types.BlockIdentifier, []*types.Amount, []*types.Coin, map[string]interface{}, error) {
 	response, _, err := f.rosettaClient.AccountAPI.AccountBalance(ctx,
 		&types.AccountBalanceRequest{
 			NetworkIdentifier: network,
@@ -40,20 +40,17 @@ func (f *Fetcher) AccountBalance(
 		},
 	)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 
-	responseBlock := response.BlockIdentifier
-	balances := response.Balances
 	if err := asserter.AccountBalanceResponse(
 		block,
-		responseBlock,
-		balances,
+		response,
 	); err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 
-	return responseBlock, balances, response.Metadata, nil
+	return response.BlockIdentifier, response.Balances, response.Coins, response.Metadata, nil
 }
 
 // AccountBalanceRetry retrieves the validated AccountBalance
@@ -64,25 +61,25 @@ func (f *Fetcher) AccountBalanceRetry(
 	network *types.NetworkIdentifier,
 	account *types.AccountIdentifier,
 	block *types.PartialBlockIdentifier,
-) (*types.BlockIdentifier, []*types.Amount, map[string]interface{}, error) {
+) (*types.BlockIdentifier, []*types.Amount, []*types.Coin, map[string]interface{}, error) {
 	backoffRetries := backoffRetries(
 		f.retryElapsedTime,
 		f.maxRetries,
 	)
 
 	for {
-		responseBlock, balances, metadata, err := f.AccountBalance(
+		responseBlock, balances, coins, metadata, err := f.AccountBalance(
 			ctx,
 			network,
 			account,
 			block,
 		)
 		if err == nil {
-			return responseBlock, balances, metadata, nil
+			return responseBlock, balances, coins, metadata, nil
 		}
 
 		if ctx.Err() != nil {
-			return nil, nil, nil, ctx.Err()
+			return nil, nil, nil, nil, ctx.Err()
 		}
 
 		if !tryAgain(
@@ -94,7 +91,7 @@ func (f *Fetcher) AccountBalanceRetry(
 		}
 	}
 
-	return nil, nil, nil, fmt.Errorf(
+	return nil, nil, nil, nil, fmt.Errorf(
 		"%w: unable to fetch account %s",
 		ErrExhaustedRetries,
 		types.PrettyPrintStruct(account),

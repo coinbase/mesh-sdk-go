@@ -16,8 +16,13 @@
 
 package types
 
-// ConstructionHashResponse ConstructionHashResponse is the output of the `/construction/hash`
-// endpoint.
-type ConstructionHashResponse struct {
-	TransactionHash string `json:"transaction_hash"`
-}
+// CoinAction CoinActions are different state changes that a Coin can undergo. When a Coin is
+// created, it is coin_created. When a Coin is spent, it is coin_spent. It is assumed that a single
+// Coin cannot be created or spent more than once.
+type CoinAction string
+
+// List of CoinAction
+const (
+	CoinCreated CoinAction = "coin_created"
+	CoinSpent   CoinAction = "coin_spent"
+)

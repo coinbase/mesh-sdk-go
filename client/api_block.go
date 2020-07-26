@@ -36,7 +36,11 @@ type BlockAPIService service
 // Block Get a block by its Block Identifier. If transactions are returned in the same call to the
 // node as fetching the block, the response should include these transactions in the Block object.
 // If not, an array of Transaction Identifiers should be returned so /block/transaction fetches can
-// be done to get all transaction information.
+// be done to get all transaction information. When requesting a block by the hash component of the
+// BlockIdentifier, this request MUST be idempotent: repeated invocations for the same
+// hash-identified block must return the exact same block contents. No such restriction is imposed
+// when requesting a block by height, given that a chain reorg event might cause the specific block
+// at height n to be set to a different one.
 func (a *BlockAPIService) Block(
 	ctx _context.Context,
 	blockRequest *types.BlockRequest,
