@@ -471,7 +471,12 @@ func TestOperation(t *testing.T) {
 
 		t.Run(name, func(t *testing.T) {
 			err := asserter.Operation(test.operation, test.index, test.construction)
-			assert.Equal(t, test.err, err)
+			if test.err != nil {
+				assert.Contains(t, err.Error(), test.err.Error())
+			} else {
+				assert.NoError(t, err)
+			}
+
 			if err == nil && !test.construction {
 				successful, err := asserter.OperationSuccessful(test.operation)
 				assert.NoError(t, err)

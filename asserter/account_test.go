@@ -250,10 +250,16 @@ func TestAccoutBalance(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			err := AccountBalanceResponse(
 				test.requestBlock,
-				test.responseBlock,
-				test.balances,
+				&types.AccountBalanceResponse{
+					BlockIdentifier: test.responseBlock,
+					Balances:        test.balances,
+				},
 			)
-			assert.Equal(t, test.err, err)
+			if test.err != nil {
+				assert.Contains(t, err.Error(), test.err.Error())
+			} else {
+				assert.NoError(t, err)
+			}
 		})
 	}
 }
