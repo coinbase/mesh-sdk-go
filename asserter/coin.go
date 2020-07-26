@@ -83,7 +83,7 @@ func CoinAction(action types.CoinAction) error {
 	switch action {
 	case types.CoinCreated, types.CoinSpent:
 	default:
-		return fmt.Errorf("%s is not a valid CoinAction", action)
+		return fmt.Errorf("%s is not a valid coin action", action)
 	}
 
 	return nil

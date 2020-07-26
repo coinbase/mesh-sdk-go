@@ -61,11 +61,126 @@ func TestCoin(t *testing.T) {
 			},
 			err: errors.New("amount is invalid"),
 		},
+		"nil amount": {
+			coin: &types.Coin{
+				CoinIdentifier: &types.CoinIdentifier{
+					Identifier: "coin1",
+				},
+			},
+			err: errors.New("amount is invalid"),
+		},
 	}
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			err := Coin(test.coin)
+			if test.err != nil {
+				assert.Contains(t, err.Error(), test.err.Error())
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestCoins(t *testing.T) {
+	var tests = map[string]struct {
+		coins []*types.Coin
+		err   error
+	}{
+		"valid coins": {
+			coins: []*types.Coin{
+				{
+					CoinIdentifier: &types.CoinIdentifier{
+						Identifier: "coin1",
+					},
+					Amount: validAmount,
+				},
+				{
+					CoinIdentifier: &types.CoinIdentifier{
+						Identifier: "coin2",
+					},
+					Amount: validAmount,
+				},
+			},
+			err: nil,
+		},
+		"nil": {
+			coins: nil,
+			err:   nil,
+		},
+		"duplicate coins": {
+			coins: []*types.Coin{
+				{
+					CoinIdentifier: &types.CoinIdentifier{
+						Identifier: "coin1",
+					},
+					Amount: validAmount,
+				},
+				{
+					CoinIdentifier: &types.CoinIdentifier{
+						Identifier: "coin1",
+					},
+					Amount: validAmount,
+				},
+			},
+			err: errors.New("duplicate coin identifier"),
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			err := Coins(test.coins)
+			if test.err != nil {
+				assert.Contains(t, err.Error(), test.err.Error())
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestCoinChange(t *testing.T) {
+	var tests = map[string]struct {
+		change *types.CoinChange
+		err    error
+	}{
+		"valid change": {
+			change: &types.CoinChange{
+				CoinIdentifier: &types.CoinIdentifier{
+					Identifier: "coin1",
+				},
+				CoinAction: types.CoinCreated,
+			},
+			err: nil,
+		},
+		"nil": {
+			change: nil,
+			err:    errors.New("cannot be nil"),
+		},
+		"invalid identifier": {
+			change: &types.CoinChange{
+				CoinIdentifier: &types.CoinIdentifier{
+					Identifier: "",
+				},
+				CoinAction: types.CoinCreated,
+			},
+			err: errors.New("cannot be empty"),
+		},
+		"invalid coin action": {
+			change: &types.CoinChange{
+				CoinIdentifier: &types.CoinIdentifier{
+					Identifier: "coin1",
+				},
+				CoinAction: "hello",
+			},
+			err: errors.New("not a valid coin action"),
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			err := CoinChange(test.change)
 			if test.err != nil {
 				assert.Contains(t, err.Error(), test.err.Error())
 			} else {
