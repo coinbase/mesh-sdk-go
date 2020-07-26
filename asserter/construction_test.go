@@ -210,7 +210,7 @@ func TestConstructionParseResponse(t *testing.T) {
 					"extra": "stuff",
 				},
 			},
-			err: errors.New("Operation.OperationIdentifier.Index 1 is out of order, expected 0 unable to parse operations"),
+			err: errors.New("Operation.OperationIdentifier.Index 1 is out of order, expected 0"),
 		},
 		"no signers": {
 			response: &types.ConstructionParseResponse{

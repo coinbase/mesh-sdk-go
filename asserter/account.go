@@ -63,34 +63,39 @@ func assertBalanceAmounts(amounts []*types.Amount) error {
 // if the same currency is present in multiple amounts.
 func AccountBalanceResponse(
 	requestBlock *types.PartialBlockIdentifier,
-	responseBlock *types.BlockIdentifier,
-	balances []*types.Amount,
+	response *types.AccountBalanceResponse,
 ) error {
-	if err := BlockIdentifier(responseBlock); err != nil {
-		return err
+	if err := BlockIdentifier(response.BlockIdentifier); err != nil {
+		return fmt.Errorf("%w: block identifier is invalid", err)
 	}
 
-	if err := assertBalanceAmounts(balances); err != nil {
-		return err
+	if err := assertBalanceAmounts(response.Balances); err != nil {
+		return fmt.Errorf("%w: balance amounts are invalid", err)
+	}
+
+	if response.Coins != nil {
+		if err := Coins(response.Coins); err != nil {
+			return fmt.Errorf("%w: coins are invalid", err)
+		}
 	}
 
 	if requestBlock == nil {
 		return nil
 	}
 
-	if requestBlock.Hash != nil && *requestBlock.Hash != responseBlock.Hash {
+	if requestBlock.Hash != nil && *requestBlock.Hash != response.BlockIdentifier.Hash {
 		return fmt.Errorf(
 			"request block hash %s does not match response block hash %s",
 			*requestBlock.Hash,
-			responseBlock.Hash,
+			response.BlockIdentifier.Hash,
 		)
 	}
 
-	if requestBlock.Index != nil && *requestBlock.Index != responseBlock.Index {
+	if requestBlock.Index != nil && *requestBlock.Index != response.BlockIdentifier.Index {
 		return fmt.Errorf(
 			"request block index %d does not match response block index %d",
 			*requestBlock.Index,
-			responseBlock.Index,
+			response.BlockIdentifier.Index,
 		)
 	}
 

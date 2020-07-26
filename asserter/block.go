@@ -179,11 +179,11 @@ func (a *Asserter) Operation(
 	}
 
 	if err := OperationIdentifier(operation.OperationIdentifier, index); err != nil {
-		return err
+		return fmt.Errorf("%w: operation identifier is invalid in operation %d", err, index)
 	}
 
 	if err := a.OperationType(operation.Type); err != nil {
-		return err
+		return fmt.Errorf("%w: operation type is invalid in operation %d", err, index)
 	}
 
 	if construction && len(operation.Status) != 0 {
@@ -191,7 +191,7 @@ func (a *Asserter) Operation(
 	}
 
 	if err := a.OperationStatus(operation.Status); err != nil && !construction {
-		return err
+		return fmt.Errorf("%w: operation status is invalid in operation %d", err, index)
 	}
 
 	if operation.Amount == nil {
@@ -199,11 +199,19 @@ func (a *Asserter) Operation(
 	}
 
 	if err := AccountIdentifier(operation.Account); err != nil {
-		return err
+		return fmt.Errorf("%w: account identifier is invalid in operation %d", err, index)
 	}
 
 	if err := Amount(operation.Amount); err != nil {
-		return err
+		return fmt.Errorf("%w: amount is invalid in operation %d", err, index)
+	}
+
+	if operation.CoinChange == nil {
+		return nil
+	}
+
+	if err := CoinChange(operation.CoinChange); err != nil {
+		return fmt.Errorf("%w: coin change is invalid in operation %d", err, index)
 	}
 
 	return nil
