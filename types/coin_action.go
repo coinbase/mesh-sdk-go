@@ -23,6 +23,6 @@ type CoinAction string
 
 // List of CoinAction
 const (
-	CREATED CoinAction = "coin_created"
-	SPENT   CoinAction = "coin_spent"
+	CoinCreated CoinAction = "coin_created"
+	CoinSpent   CoinAction = "coin_spent"
 )
