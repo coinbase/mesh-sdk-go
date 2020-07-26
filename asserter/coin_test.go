@@ -1,0 +1,76 @@
+// Copyright 2020 Coinbase, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package asserter
+
+import (
+	"errors"
+	"testing"
+
+	"github.com/coinbase/rosetta-sdk-go/types"
+
+	"github.com/stretchr/testify/assert"
+)
+
+func TestCoin(t *testing.T) {
+	var tests = map[string]struct {
+		coin *types.Coin
+		err  error
+	}{
+		"valid coin": {
+			coin: &types.Coin{
+				CoinIdentifier: &types.CoinIdentifier{
+					Identifier: "coin1",
+				},
+				Amount: validAmount,
+			},
+			err: nil,
+		},
+		"nil": {
+			coin: nil,
+			err:  errors.New("cannot be nil"),
+		},
+		"invalid identifier": {
+			coin: &types.Coin{
+				CoinIdentifier: &types.CoinIdentifier{
+					Identifier: "",
+				},
+				Amount: validAmount,
+			},
+			err: errors.New("identifier is invalid"),
+		},
+		"invalid amount": {
+			coin: &types.Coin{
+				CoinIdentifier: &types.CoinIdentifier{
+					Identifier: "coin1",
+				},
+				Amount: &types.Amount{
+					Value: "100",
+				},
+			},
+			err: errors.New("amount is invalid"),
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			err := Coin(test.coin)
+			if test.err != nil {
+				assert.Contains(t, err.Error(), test.err.Error())
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
