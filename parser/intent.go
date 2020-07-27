@@ -17,7 +17,6 @@ package parser
 import (
 	"errors"
 	"fmt"
-	"log"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
 	"github.com/coinbase/rosetta-sdk-go/types"
@@ -68,7 +67,6 @@ func (p *Parser) ExpectedOperations(
 ) error {
 	matches := make(map[int]struct{})
 	failedMatches := []*types.Operation{}
-	unmatched := []*types.Operation{}
 
 	for _, obs := range observed {
 		foundMatch := false
@@ -86,14 +84,16 @@ func (p *Parser) ExpectedOperations(
 				continue
 			}
 
-			obsSuccess, err := p.Asserter.OperationSuccessful(obs)
-			if err != nil {
-				return fmt.Errorf("%w: unable to check operation success", err)
-			}
+			if confirmSuccess {
+				obsSuccess, err := p.Asserter.OperationSuccessful(obs)
+				if err != nil {
+					return fmt.Errorf("%w: unable to check operation success", err)
+				}
 
-			if confirmSuccess && !obsSuccess {
-				failedMatches = append(failedMatches, obs)
-				continue
+				if !obsSuccess {
+					failedMatches = append(failedMatches, obs)
+					continue
+				}
 			}
 
 			matches[i] = struct{}{}
@@ -101,14 +101,11 @@ func (p *Parser) ExpectedOperations(
 			break
 		}
 
-		if !foundMatch {
-			if errExtra {
-				return fmt.Errorf(
-					"found extra operation %s",
-					types.PrettyPrintStruct(obs),
-				)
-			}
-			unmatched = append(unmatched, obs)
+		if !foundMatch && errExtra {
+			return fmt.Errorf(
+				"found extra operation %s",
+				types.PrettyPrintStruct(obs),
+			)
 		}
 	}
 
@@ -134,10 +131,6 @@ func (p *Parser) ExpectedOperations(
 		}
 
 		return errors.New(errString)
-	}
-
-	if len(unmatched) > 0 {
-		log.Printf("found extra operations: %s\n", types.PrettyPrintStruct(unmatched))
 	}
 
 	return nil
