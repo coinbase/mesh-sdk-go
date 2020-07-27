@@ -243,6 +243,65 @@ func TestExpectedOperations(t *testing.T) {
 				},
 			},
 		},
+		"simple unbroadcast match": {
+			intent: []*types.Operation{
+				{
+					OperationIdentifier: &types.OperationIdentifier{
+						Index: 1,
+					},
+					Type: "transfer",
+					Account: &types.AccountIdentifier{
+						Address: "addr1",
+					},
+					Amount: &types.Amount{
+						Value: "100",
+					},
+				},
+				{
+					OperationIdentifier: &types.OperationIdentifier{
+						Index: 5,
+					},
+					Type: "fee",
+					Account: &types.AccountIdentifier{
+						Address: "addr2",
+					},
+					Amount: &types.Amount{
+						Value: "50",
+					},
+				},
+			},
+			observed: []*types.Operation{
+				{
+					OperationIdentifier: &types.OperationIdentifier{
+						Index: 2,
+					},
+					Type: "fee",
+					Account: &types.AccountIdentifier{
+						Address: "addr2",
+					},
+					Amount: &types.Amount{
+						Value: "50",
+					},
+				},
+				{
+					OperationIdentifier: &types.OperationIdentifier{
+						Index: 3,
+					},
+					RelatedOperations: []*types.OperationIdentifier{
+						{
+							Index: 2,
+						},
+					},
+					Type: "transfer",
+					Account: &types.AccountIdentifier{
+						Address: "addr1",
+					},
+					Amount: &types.Amount{
+						Value: "100",
+					},
+				},
+			},
+		},
 		"simple match (confirm success)": {
 			intent: []*types.Operation{
 				{
