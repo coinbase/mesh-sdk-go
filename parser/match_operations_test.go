@@ -382,6 +382,172 @@ func TestMatchOperations(t *testing.T) {
 			},
 			err: false,
 		},
+		"simple transfer (with coin action)": {
+			operations: []*types.Operation{
+				{
+					Account: &types.AccountIdentifier{
+						Address: "addr2",
+					},
+					Amount: &types.Amount{
+						Value: "100",
+						Currency: &types.Currency{
+							Symbol:   "BTC",
+							Decimals: 8,
+						},
+					},
+					CoinChange: &types.CoinChange{
+						CoinAction: types.CoinSpent,
+					},
+				},
+				{}, // extra op ignored
+				{
+					Account: &types.AccountIdentifier{
+						Address: "addr1",
+					},
+					Amount: &types.Amount{
+						Value: "-100",
+						Currency: &types.Currency{
+							Symbol:   "ETH",
+							Decimals: 18,
+						},
+					},
+				},
+			},
+			descriptions: &Descriptions{
+				OppositeAmounts: [][]int{{0, 1}},
+				OperationDescriptions: []*OperationDescription{
+					{
+						Account: &AccountDescription{
+							Exists: true,
+						},
+						Amount: &AmountDescription{
+							Exists: true,
+							Sign:   NegativeAmountSign,
+							Currency: &types.Currency{
+								Symbol:   "ETH",
+								Decimals: 18,
+							},
+						},
+					},
+					{
+						Account: &AccountDescription{
+							Exists: true,
+						},
+						Amount: &AmountDescription{
+							Exists: true,
+							Sign:   PositiveAmountSign,
+							Currency: &types.Currency{
+								Symbol:   "BTC",
+								Decimals: 8,
+							},
+						},
+						CoinAction: types.CoinSpent,
+					},
+				},
+			},
+			matches: []*Match{
+				{
+					Operations: []*types.Operation{
+						{
+							Account: &types.AccountIdentifier{
+								Address: "addr1",
+							},
+							Amount: &types.Amount{
+								Value: "-100",
+								Currency: &types.Currency{
+									Symbol:   "ETH",
+									Decimals: 18,
+								},
+							},
+						},
+					},
+					Amounts: []*big.Int{big.NewInt(-100)},
+				},
+				{
+					Operations: []*types.Operation{
+						{
+							Account: &types.AccountIdentifier{
+								Address: "addr2",
+							},
+							Amount: &types.Amount{
+								Value: "100",
+								Currency: &types.Currency{
+									Symbol:   "BTC",
+									Decimals: 8,
+								},
+							},
+							CoinChange: &types.CoinChange{
+								CoinAction: types.CoinSpent,
+							},
+						},
+					},
+					Amounts: []*big.Int{big.NewInt(100)},
+				},
+			},
+			err: false,
+		},
+		"simple transfer (missing coin action)": {
+			operations: []*types.Operation{
+				{
+					Account: &types.AccountIdentifier{
+						Address: "addr2",
+					},
+					Amount: &types.Amount{
+						Value: "100",
+						Currency: &types.Currency{
+							Symbol:   "BTC",
+							Decimals: 8,
+						},
+					},
+				},
+				{}, // extra op ignored
+				{
+					Account: &types.AccountIdentifier{
+						Address: "addr1",
+					},
+					Amount: &types.Amount{
+						Value: "-100",
+						Currency: &types.Currency{
+							Symbol:   "ETH",
+							Decimals: 18,
+						},
+					},
+				},
+			},
+			descriptions: &Descriptions{
+				OppositeAmounts: [][]int{{0, 1}},
+				OperationDescriptions: []*OperationDescription{
+					{
+						Account: &AccountDescription{
+							Exists: true,
+						},
+						Amount: &AmountDescription{
+							Exists: true,
+							Sign:   NegativeAmountSign,
+							Currency: &types.Currency{
+								Symbol:   "ETH",
+								Decimals: 18,
+							},
+						},
+					},
+					{
+						Account: &AccountDescription{
+							Exists: true,
+						},
+						Amount: &AmountDescription{
+							Exists: true,
+							Sign:   PositiveAmountSign,
+							Currency: &types.Currency{
+								Symbol:   "BTC",
+								Decimals: 8,
+							},
+						},
+						CoinAction: types.CoinSpent,
+					},
+				},
+			},
+			err: true,
+		},
 		"simple transfer (with currency)": {
 			operations: []*types.Operation{
 				{

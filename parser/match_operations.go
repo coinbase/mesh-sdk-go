@@ -118,6 +118,11 @@ type OperationDescription struct {
 	// Optional indicates that not finding any operations that meet
 	// the description should not trigger an error.
 	Optional bool
+
+	// CoinAction indicates that an operation should have a CoinChange
+	// and that it should have the CoinAction. If this is not populated,
+	// CoinChange is not checked.
+	CoinAction types.CoinAction
 }
 
 // Descriptions contains a slice of OperationDescriptions and
@@ -244,6 +249,26 @@ func amountMatch(req *AmountDescription, amount *types.Amount) error {
 	return nil
 }
 
+func coinActionMatch(requiredAction types.CoinAction, coinChange *types.CoinChange) error {
+	if len(requiredAction) == 0 {
+		return nil
+	}
+
+	if coinChange == nil {
+		return fmt.Errorf("coin change is nil but expected %s", requiredAction)
+	}
+
+	if coinChange.CoinAction != requiredAction {
+		return fmt.Errorf(
+			"coin change action is %s but expected %s",
+			coinChange.CoinAction,
+			requiredAction,
+		)
+	}
+
+	return nil
+}
+
 // operationMatch returns an error if a *types.Operation does not match a
 // *OperationDescription.
 func operationMatch(
@@ -269,6 +294,10 @@ func operationMatch(
 		}
 
 		if err := metadataMatch(des.Metadata, operation.Metadata); err != nil {
+			continue
+		}
+
+		if err := coinActionMatch(des.CoinAction, operation.CoinChange); err != nil {
 			continue
 		}
 
