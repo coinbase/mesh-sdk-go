@@ -17,7 +17,6 @@ package parser
 import (
 	"context"
 	"fmt"
-	"log"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
@@ -61,7 +60,6 @@ func (p *Parser) skipOperation(op *types.Operation) (bool, error) {
 	// In some cases, it may be desirable to exempt certain operations from
 	// balance changes.
 	if p.ExemptFunc != nil && p.ExemptFunc(op) {
-		log.Printf("Skipping exempt operation %s\n", types.PrettyPrintStruct(op))
 		return true, nil
 	}
 
