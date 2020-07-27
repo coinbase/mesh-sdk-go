@@ -86,14 +86,16 @@ func (p *Parser) ExpectedOperations(
 				continue
 			}
 
-			obsSuccess, err := p.Asserter.OperationSuccessful(obs)
-			if err != nil {
-				return fmt.Errorf("%w: unable to check operation success", err)
-			}
+			if confirmSuccess {
+				obsSuccess, err := p.Asserter.OperationSuccessful(obs)
+				if err != nil {
+					return fmt.Errorf("%w: unable to check operation success", err)
+				}
 
-			if confirmSuccess && !obsSuccess {
-				failedMatches = append(failedMatches, obs)
-				continue
+				if !obsSuccess {
+					failedMatches = append(failedMatches, obs)
+					continue
+				}
 			}
 
 			matches[i] = struct{}{}
