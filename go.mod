@@ -8,7 +8,7 @@ require (
 	github.com/ethereum/go-ethereum v1.9.18
 	github.com/google/addlicense v0.0.0-20200622132530-df58acafd6d5 // indirect
 	github.com/gorilla/mux v1.7.4
-	github.com/mitchellh/mapstructure v1.3.2
+	github.com/mitchellh/mapstructure v1.3.3
 	github.com/segmentio/golines v0.0.0-20200306054842-869934f8da7b // indirect
 	github.com/stretchr/testify v1.6.1
 	golang.org/x/sync v0.0.0-20200317015054-43a5402ce75a
