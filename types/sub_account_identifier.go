@@ -22,9 +22,9 @@ package types
 type SubAccountIdentifier struct {
 	// The SubAccount address may be a cryptographic value or some other identifier (ex: bonded)
 	// that uniquely specifies a SubAccount.
-	Address string `json:"address"`
+	Address string `json:"address"            yaml:"address"`
 	// If the SubAccount address is not sufficient to uniquely specify a SubAccount, any other
 	// identifying information can be stored here. It is important to note that two SubAccounts with
 	// identical addresses but differing metadata will not be considered equal by clients.
-	Metadata map[string]interface{} `json:"metadata,omitempty"`
+	Metadata map[string]interface{} `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 }

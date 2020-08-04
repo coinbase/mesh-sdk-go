@@ -26,10 +26,10 @@ import (
 // times not known during construction of the signing payloads but may be needed to combine
 // signatures properly.
 type Signature struct {
-	SigningPayload *SigningPayload `json:"signing_payload"`
-	PublicKey      *PublicKey      `json:"public_key"`
-	SignatureType  SignatureType   `json:"signature_type"`
-	Bytes          []byte          `json:"hex_bytes"`
+	SigningPayload *SigningPayload `json:"signing_payload" yaml:"signing_payload"`
+	PublicKey      *PublicKey      `json:"public_key"      yaml:"public_key"`
+	SignatureType  SignatureType   `json:"signature_type"  yaml:"signature_type"`
+	Bytes          []byte          `json:"hex_bytes"       yaml:"hex_bytes"`
 }
 
 // MarshalJSON overrides the default JSON marshaler

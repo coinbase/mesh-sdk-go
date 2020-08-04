@@ -26,12 +26,12 @@ package types
 // Without this field, it may appear that the implementation is stuck syncing and needs to be
 // terminated.
 type NetworkStatusResponse struct {
-	CurrentBlockIdentifier *BlockIdentifier `json:"current_block_identifier"`
+	CurrentBlockIdentifier *BlockIdentifier `json:"current_block_identifier"          yaml:"current_block_identifier"`
 	// The timestamp of the block in milliseconds since the Unix Epoch. The timestamp is stored in
 	// milliseconds because some blockchains produce blocks more often than once a second.
-	CurrentBlockTimestamp  int64            `json:"current_block_timestamp"`
-	GenesisBlockIdentifier *BlockIdentifier `json:"genesis_block_identifier"`
-	OldestBlockIdentifier  *BlockIdentifier `json:"oldest_block_identifier,omitempty"`
-	SyncStatus             *SyncStatus      `json:"sync_status,omitempty"`
-	Peers                  []*Peer          `json:"peers"`
+	CurrentBlockTimestamp  int64            `json:"current_block_timestamp"           yaml:"current_block_timestamp"`
+	GenesisBlockIdentifier *BlockIdentifier `json:"genesis_block_identifier"          yaml:"genesis_block_identifier"`
+	OldestBlockIdentifier  *BlockIdentifier `json:"oldest_block_identifier,omitempty" yaml:"oldest_block_identifier,omitempty"`
+	SyncStatus             *SyncStatus      `json:"sync_status,omitempty"             yaml:"sync_status,omitempty"`
+	Peers                  []*Peer          `json:"peers"                             yaml:"peers"`
 }

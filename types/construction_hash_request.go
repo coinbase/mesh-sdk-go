@@ -19,6 +19,6 @@ package types
 // ConstructionHashRequest ConstructionHashRequest is the input to the `/construction/hash`
 // endpoint.
 type ConstructionHashRequest struct {
-	NetworkIdentifier *NetworkIdentifier `json:"network_identifier"`
-	SignedTransaction string             `json:"signed_transaction"`
+	NetworkIdentifier *NetworkIdentifier `json:"network_identifier" yaml:"network_identifier"`
+	SignedTransaction string             `json:"signed_transaction" yaml:"signed_transaction"`
 }

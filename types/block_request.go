@@ -18,6 +18,6 @@ package types
 
 // BlockRequest A BlockRequest is utilized to make a block request on the /block endpoint.
 type BlockRequest struct {
-	NetworkIdentifier *NetworkIdentifier      `json:"network_identifier"`
-	BlockIdentifier   *PartialBlockIdentifier `json:"block_identifier"`
+	NetworkIdentifier *NetworkIdentifier      `json:"network_identifier" yaml:"network_identifier"`
+	BlockIdentifier   *PartialBlockIdentifier `json:"block_identifier"   yaml:"block_identifier"`
 }

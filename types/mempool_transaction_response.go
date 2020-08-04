@@ -20,6 +20,6 @@ package types
 // transaction. It may not be possible to know the full impact of a transaction in the mempool (ex:
 // fee paid).
 type MempoolTransactionResponse struct {
-	Transaction *Transaction           `json:"transaction"`
-	Metadata    map[string]interface{} `json:"metadata,omitempty"`
+	Transaction *Transaction           `json:"transaction"        yaml:"transaction"`
+	Metadata    map[string]interface{} `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 }

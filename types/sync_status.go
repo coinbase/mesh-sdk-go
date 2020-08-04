@@ -22,10 +22,10 @@ package types
 // not populated.
 type SyncStatus struct {
 	// CurrentIndex is the index of the last synced block in the current stage.
-	CurrentIndex int64 `json:"current_index"`
+	CurrentIndex int64 `json:"current_index"          yaml:"current_index"`
 	// TargetIndex is the index of the block that the implementation is attempting to sync to in the
 	// current stage.
-	TargetIndex *int64 `json:"target_index,omitempty"`
+	TargetIndex *int64 `json:"target_index,omitempty" yaml:"target_index,omitempty"`
 	// Stage is the phase of the sync process.
-	Stage *string `json:"stage,omitempty"`
+	Stage *string `json:"stage,omitempty"        yaml:"stage,omitempty"`
 }

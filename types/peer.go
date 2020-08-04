@@ -18,6 +18,6 @@ package types
 
 // Peer A Peer is a representation of a node's peer.
 type Peer struct {
-	PeerID   string                 `json:"peer_id"`
-	Metadata map[string]interface{} `json:"metadata,omitempty"`
+	PeerID   string                 `json:"peer_id"            yaml:"peer_id"`
+	Metadata map[string]interface{} `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 }

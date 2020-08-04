@@ -21,5 +21,5 @@ package types
 // `/construction/metadata`, options should be null.
 type ConstructionPreprocessResponse struct {
 	// The options that will be sent directly to `/construction/metadata` by the caller.
-	Options map[string]interface{} `json:"options,omitempty"`
+	Options map[string]interface{} `json:"options,omitempty" yaml:"options,omitempty"`
 }

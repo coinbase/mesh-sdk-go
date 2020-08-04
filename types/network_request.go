@@ -19,6 +19,6 @@ package types
 // NetworkRequest A NetworkRequest is utilized to retrieve some data specific exclusively to a
 // NetworkIdentifier.
 type NetworkRequest struct {
-	NetworkIdentifier *NetworkIdentifier     `json:"network_identifier"`
-	Metadata          map[string]interface{} `json:"metadata,omitempty"`
+	NetworkIdentifier *NetworkIdentifier     `json:"network_identifier" yaml:"network_identifier"`
+	Metadata          map[string]interface{} `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 }

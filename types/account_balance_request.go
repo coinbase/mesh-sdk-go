@@ -20,7 +20,7 @@ package types
 // /account/balance endpoint. If the block_identifier is populated, a historical balance query
 // should be performed.
 type AccountBalanceRequest struct {
-	NetworkIdentifier *NetworkIdentifier      `json:"network_identifier"`
-	AccountIdentifier *AccountIdentifier      `json:"account_identifier"`
-	BlockIdentifier   *PartialBlockIdentifier `json:"block_identifier,omitempty"`
+	NetworkIdentifier *NetworkIdentifier      `json:"network_identifier"         yaml:"network_identifier"`
+	AccountIdentifier *AccountIdentifier      `json:"account_identifier"         yaml:"account_identifier"`
+	BlockIdentifier   *PartialBlockIdentifier `json:"block_identifier,omitempty" yaml:"block_identifier,omitempty"`
 }

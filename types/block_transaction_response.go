@@ -19,5 +19,5 @@ package types
 // BlockTransactionResponse A BlockTransactionResponse contains information about a block
 // transaction.
 type BlockTransactionResponse struct {
-	Transaction *Transaction `json:"transaction"`
+	Transaction *Transaction `json:"transaction" yaml:"transaction"`
 }

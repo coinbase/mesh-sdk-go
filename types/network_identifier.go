@@ -19,9 +19,9 @@ package types
 // NetworkIdentifier The network_identifier specifies which network a particular object is
 // associated with.
 type NetworkIdentifier struct {
-	Blockchain string `json:"blockchain"`
+	Blockchain string `json:"blockchain"                       yaml:"blockchain"`
 	// If a blockchain has a specific chain-id or network identifier, it should go in this field. It
 	// is up to the client to determine which network-specific identifier is mainnet or testnet.
-	Network              string                `json:"network"`
-	SubNetworkIdentifier *SubNetworkIdentifier `json:"sub_network_identifier,omitempty"`
+	Network              string                `json:"network"                          yaml:"network"`
+	SubNetworkIdentifier *SubNetworkIdentifier `json:"sub_network_identifier,omitempty" yaml:"sub_network_identifier,omitempty"`
 }

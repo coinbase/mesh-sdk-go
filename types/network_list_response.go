@@ -19,5 +19,5 @@ package types
 // NetworkListResponse A NetworkListResponse contains all NetworkIdentifiers that the node can serve
 // information for.
 type NetworkListResponse struct {
-	NetworkIdentifiers []*NetworkIdentifier `json:"network_identifiers"`
+	NetworkIdentifiers []*NetworkIdentifier `json:"network_identifiers" yaml:"network_identifiers"`
 }

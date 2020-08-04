@@ -20,5 +20,5 @@ package types
 type CoinIdentifier struct {
 	// Identifier should be populated with a globally unique identifier of a Coin. In Bitcoin, this
 	// identifier would be transaction_hash:index.
-	Identifier string `json:"identifier"`
+	Identifier string `json:"identifier" yaml:"identifier"`
 }

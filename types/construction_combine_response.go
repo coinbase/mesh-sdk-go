@@ -19,5 +19,5 @@ package types
 // ConstructionCombineResponse ConstructionCombineResponse is returned by `/construction/combine`.
 // The network payload will be sent directly to the `construction/submit` endpoint.
 type ConstructionCombineResponse struct {
-	SignedTransaction string `json:"signed_transaction"`
+	SignedTransaction string `json:"signed_transaction" yaml:"signed_transaction"`
 }

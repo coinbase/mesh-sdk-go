@@ -19,9 +19,9 @@ package types
 // Transaction Transactions contain an array of Operations that are attributable to the same
 // TransactionIdentifier.
 type Transaction struct {
-	TransactionIdentifier *TransactionIdentifier `json:"transaction_identifier"`
-	Operations            []*Operation           `json:"operations"`
+	TransactionIdentifier *TransactionIdentifier `json:"transaction_identifier" yaml:"transaction_identifier"`
+	Operations            []*Operation           `json:"operations"             yaml:"operations"`
 	// Transactions that are related to other transactions (like a cross-shard transaction) should
 	// include the tranaction_identifier of these transactions in the metadata.
-	Metadata map[string]interface{} `json:"metadata,omitempty"`
+	Metadata map[string]interface{} `json:"metadata,omitempty"     yaml:"metadata,omitempty"`
 }

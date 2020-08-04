@@ -20,7 +20,7 @@ package types
 // `/construction/preprocess` endpoint so that a Rosetta implementation can determine which metadata
 // it needs to request for construction.
 type ConstructionPreprocessRequest struct {
-	NetworkIdentifier *NetworkIdentifier     `json:"network_identifier"`
-	Operations        []*Operation           `json:"operations"`
-	Metadata          map[string]interface{} `json:"metadata,omitempty"`
+	NetworkIdentifier *NetworkIdentifier     `json:"network_identifier" yaml:"network_identifier"`
+	Operations        []*Operation           `json:"operations"         yaml:"operations"`
+	Metadata          map[string]interface{} `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 }

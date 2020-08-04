@@ -19,5 +19,5 @@ package types
 // ConstructionMetadataResponse The ConstructionMetadataResponse returns network-specific metadata
 // used for transaction construction.
 type ConstructionMetadataResponse struct {
-	Metadata map[string]interface{} `json:"metadata"`
+	Metadata map[string]interface{} `json:"metadata" yaml:"metadata"`
 }

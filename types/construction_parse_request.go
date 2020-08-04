@@ -19,10 +19,10 @@ package types
 // ConstructionParseRequest ConstructionParseRequest is the input to the `/construction/parse`
 // endpoint. It allows the caller to parse either an unsigned or signed transaction.
 type ConstructionParseRequest struct {
-	NetworkIdentifier *NetworkIdentifier `json:"network_identifier"`
+	NetworkIdentifier *NetworkIdentifier `json:"network_identifier" yaml:"network_identifier"`
 	// Signed is a boolean indicating whether the transaction is signed.
-	Signed bool `json:"signed"`
+	Signed bool `json:"signed"             yaml:"signed"`
 	// This must be either the unsigned transaction blob returned by `/construction/payloads` or the
 	// signed transaction blob returned by `/construction/combine`.
-	Transaction string `json:"transaction"`
+	Transaction string `json:"transaction"        yaml:"transaction"`
 }

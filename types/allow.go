@@ -23,14 +23,14 @@ package types
 type Allow struct {
 	// All Operation.Status this implementation supports. Any status that is returned during parsing
 	// that is not listed here will cause client validation to error.
-	OperationStatuses []*OperationStatus `json:"operation_statuses"`
+	OperationStatuses []*OperationStatus `json:"operation_statuses"        yaml:"operation_statuses"`
 	// All Operation.Type this implementation supports. Any type that is returned during parsing
 	// that is not listed here will cause client validation to error.
-	OperationTypes []string `json:"operation_types"`
+	OperationTypes []string `json:"operation_types"           yaml:"operation_types"`
 	// All Errors that this implementation could return. Any error that is returned during parsing
 	// that is not listed here will cause client validation to error.
-	Errors []*Error `json:"errors"`
+	Errors []*Error `json:"errors"                    yaml:"errors"`
 	// Any Rosetta implementation that supports querying the balance of an account at any height in
 	// the past should set this to true.
-	HistoricalBalanceLookup bool `json:"historical_balance_lookup"`
+	HistoricalBalanceLookup bool `json:"historical_balance_lookup" yaml:"historical_balance_lookup"`
 }

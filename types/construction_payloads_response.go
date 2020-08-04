@@ -21,6 +21,6 @@ package types
 // construct the a network transaction from a collection of signatures) and an array of payloads
 // that must be signed by the caller.
 type ConstructionPayloadsResponse struct {
-	UnsignedTransaction string            `json:"unsigned_transaction"`
-	Payloads            []*SigningPayload `json:"payloads"`
+	UnsignedTransaction string            `json:"unsigned_transaction" yaml:"unsigned_transaction"`
+	Payloads            []*SigningPayload `json:"payloads"             yaml:"payloads"`
 }

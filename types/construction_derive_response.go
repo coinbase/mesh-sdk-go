@@ -20,6 +20,6 @@ package types
 // endpoint.
 type ConstructionDeriveResponse struct {
 	// Address in network-specific format.
-	Address  string                 `json:"address"`
-	Metadata map[string]interface{} `json:"metadata,omitempty"`
+	Address  string                 `json:"address"            yaml:"address"`
+	Metadata map[string]interface{} `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 }

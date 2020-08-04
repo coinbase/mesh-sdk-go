@@ -19,7 +19,7 @@ package types
 // BlockTransactionRequest A BlockTransactionRequest is used to fetch a Transaction included in a
 // block that is not returned in a BlockResponse.
 type BlockTransactionRequest struct {
-	NetworkIdentifier     *NetworkIdentifier     `json:"network_identifier"`
-	BlockIdentifier       *BlockIdentifier       `json:"block_identifier"`
-	TransactionIdentifier *TransactionIdentifier `json:"transaction_identifier"`
+	NetworkIdentifier     *NetworkIdentifier     `json:"network_identifier"     yaml:"network_identifier"`
+	BlockIdentifier       *BlockIdentifier       `json:"block_identifier"       yaml:"block_identifier"`
+	TransactionIdentifier *TransactionIdentifier `json:"transaction_identifier" yaml:"transaction_identifier"`
 }

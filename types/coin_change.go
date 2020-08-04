@@ -22,6 +22,6 @@ package types
 // transfers and UTXO-based transfers on the same blockchain (when a transfer is account-based,
 // don't populate this model).
 type CoinChange struct {
-	CoinIdentifier *CoinIdentifier `json:"coin_identifier"`
-	CoinAction     CoinAction      `json:"coin_action"`
+	CoinIdentifier *CoinIdentifier `json:"coin_identifier" yaml:"coin_identifier"`
+	CoinAction     CoinAction      `json:"coin_action"     yaml:"coin_action"`
 }

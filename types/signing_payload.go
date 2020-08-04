@@ -26,9 +26,9 @@ import (
 // restriction on the signature scheme that can be used to sign the payload.
 type SigningPayload struct {
 	// The network-specific address of the account that should sign the payload.
-	Address       string        `json:"address"`
-	Bytes         []byte        `json:"hex_bytes"`
-	SignatureType SignatureType `json:"signature_type,omitempty"`
+	Address       string        `json:"address"                  yaml:"address"`
+	Bytes         []byte        `json:"hex_bytes"                yaml:"hex_bytes"`
+	SignatureType SignatureType `json:"signature_type,omitempty" yaml:"signature_type,omitempty"`
 }
 
 // MarshalJSON overrides the default JSON marshaler

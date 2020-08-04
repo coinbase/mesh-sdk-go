@@ -24,8 +24,8 @@ import (
 // PublicKey PublicKey contains a public key byte array for a particular CurveType encoded in hex.
 // Note that there is no PrivateKey struct as this is NEVER the concern of an implementation.
 type PublicKey struct {
-	Bytes     []byte    `json:"hex_bytes"`
-	CurveType CurveType `json:"curve_type"`
+	Bytes     []byte    `json:"hex_bytes"  yaml:"hex_bytes"`
+	CurveType CurveType `json:"curve_type" yaml:"curve_type"`
 }
 
 // MarshalJSON overrides the default JSON marshaler

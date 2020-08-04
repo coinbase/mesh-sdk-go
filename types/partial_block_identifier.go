@@ -20,6 +20,6 @@ package types
 // the index or hash. If neither property is specified, it is assumed that the client is making a
 // request at the current block.
 type PartialBlockIdentifier struct {
-	Index *int64  `json:"index,omitempty"`
-	Hash  *string `json:"hash,omitempty"`
+	Index *int64  `json:"index,omitempty" yaml:"index,omitempty"`
+	Hash  *string `json:"hash,omitempty"  yaml:"hash,omitempty"`
 }

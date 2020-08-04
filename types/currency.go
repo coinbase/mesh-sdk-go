@@ -20,12 +20,12 @@ package types
 // convert an Amount.Value from atomic units (Satoshis) to standard units (Bitcoins).
 type Currency struct {
 	// Canonical symbol associated with a currency.
-	Symbol string `json:"symbol"`
+	Symbol string `json:"symbol"             yaml:"symbol"`
 	// Number of decimal places in the standard unit representation of the amount. For example, BTC
 	// has 8 decimals. Note that it is not possible to represent the value of some currency in
 	// atomic units that is not base 10.
-	Decimals int32 `json:"decimals"`
+	Decimals int32 `json:"decimals"           yaml:"decimals"`
 	// Any additional information related to the currency itself. For example, it would be useful to
 	// populate this object with the contract address of an ERC-20 token.
-	Metadata map[string]interface{} `json:"metadata,omitempty"`
+	Metadata map[string]interface{} `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 }

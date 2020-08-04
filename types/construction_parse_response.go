@@ -20,8 +20,8 @@ package types
 // a transaction blob. This should match the array of operations provided to
 // `/construction/preprocess` and `/construction/payloads`.
 type ConstructionParseResponse struct {
-	Operations []*Operation `json:"operations"`
+	Operations []*Operation `json:"operations"         yaml:"operations"`
 	// All signers of a particular transaction. If the transaction is unsigned, it should be empty.
-	Signers  []string               `json:"signers"`
-	Metadata map[string]interface{} `json:"metadata,omitempty"`
+	Signers  []string               `json:"signers"            yaml:"signers"`
+	Metadata map[string]interface{} `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 }

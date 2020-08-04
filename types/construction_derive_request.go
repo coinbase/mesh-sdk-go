@@ -21,7 +21,7 @@ package types
 // formats for different networks. Metadata is provided in the request because some blockchains
 // allow for multiple address types (i.e. different address for validators vs normal accounts).
 type ConstructionDeriveRequest struct {
-	NetworkIdentifier *NetworkIdentifier     `json:"network_identifier"`
-	PublicKey         *PublicKey             `json:"public_key"`
-	Metadata          map[string]interface{} `json:"metadata,omitempty"`
+	NetworkIdentifier *NetworkIdentifier     `json:"network_identifier" yaml:"network_identifier"`
+	PublicKey         *PublicKey             `json:"public_key"         yaml:"public_key"`
+	Metadata          map[string]interface{} `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 }

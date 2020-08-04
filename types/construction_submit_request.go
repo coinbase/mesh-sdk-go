@@ -18,6 +18,6 @@ package types
 
 // ConstructionSubmitRequest The transaction submission request includes a signed transaction.
 type ConstructionSubmitRequest struct {
-	NetworkIdentifier *NetworkIdentifier `json:"network_identifier"`
-	SignedTransaction string             `json:"signed_transaction"`
+	NetworkIdentifier *NetworkIdentifier `json:"network_identifier" yaml:"network_identifier"`
+	SignedTransaction string             `json:"signed_transaction" yaml:"signed_transaction"`
 }
