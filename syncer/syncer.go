@@ -247,7 +247,7 @@ func (s *Syncer) processBlock(
 	return nil
 }
 
-// addIndicies appends a range of indicies (from
+// addBlockIndicies appends a range of indicies (from
 // startIndex to endIndex, inclusive) to the
 // blockIndicies channel. When all indicies are added,
 // the channel is closed.
