@@ -310,7 +310,11 @@ func (s *Syncer) fetchChannelBlocks(
 
 // processBlocks is invoked whenever a new block is fetched. It attempts
 // to process as many blocks as possible.
-func (s *Syncer) processBlocks(ctx context.Context, cache map[int64]*types.Block, endIndex int64) error {
+func (s *Syncer) processBlocks(
+	ctx context.Context,
+	cache map[int64]*types.Block,
+	endIndex int64,
+) error {
 	// We need to determine if we are in a reorg
 	// so that we can force blocks to be fetched
 	// if they don't exist in the cache.
