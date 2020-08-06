@@ -409,6 +409,51 @@ func TestSync_NoReorg(t *testing.T) {
 	mockHandler.AssertExpectations(t)
 }
 
+func TestSync_SpecificStart(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+
+	mockHelper := &mocks.Helper{}
+	mockHandler := &mocks.Handler{}
+	syncer := New(networkIdentifier, mockHelper, mockHandler, cancel, WithConcurrency(16))
+
+	mockHelper.On("NetworkStatus", ctx, networkIdentifier).Return(&types.NetworkStatusResponse{
+		CurrentBlockIdentifier: &types.BlockIdentifier{
+			Hash:  "block 1300",
+			Index: 1300,
+		},
+		GenesisBlockIdentifier: &types.BlockIdentifier{
+			Hash:  "block 0",
+			Index: 0,
+		},
+	}, nil)
+
+	blocks := createBlocks(100, 1200, "")
+	for _, b := range blocks {
+		mockHelper.On(
+			"Block",
+			mock.AnythingOfType("*context.cancelCtx"),
+			networkIdentifier,
+			&types.PartialBlockIdentifier{Index: &b.BlockIdentifier.Index},
+		).Return(
+			b,
+			nil,
+		).Once()
+		mockHandler.On(
+			"BlockAdded",
+			mock.AnythingOfType("*context.cancelCtx"),
+			b,
+		).Return(
+			nil,
+		).Once()
+	}
+
+	err := syncer.Sync(ctx, 100, 1200)
+	assert.NoError(t, err)
+	mockHelper.AssertNumberOfCalls(t, "NetworkStatus", 3)
+	mockHelper.AssertExpectations(t)
+	mockHandler.AssertExpectations(t)
+}
+
 func TestSync_Cancel(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 

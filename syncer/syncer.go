@@ -363,6 +363,9 @@ func (s *Syncer) processBlocks(
 	return nil
 }
 
+// syncRange fetches and processes a range of blocks
+// (from syncer.nextIndex to endIndex, inclusive)
+// with syncer.concurrency.
 func (s *Syncer) syncRange(
 	ctx context.Context,
 	endIndex int64,
