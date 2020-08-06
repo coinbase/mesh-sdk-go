@@ -195,7 +195,7 @@ func TestProcessBlock(t *testing.T) {
 
 	mockHelper := &mocks.Helper{}
 	mockHandler := &mocks.Handler{}
-	syncer := New(networkIdentifier, mockHelper, mockHandler, nil, 1, nil)
+	syncer := New(networkIdentifier, mockHelper, mockHandler, nil, WithConcurrency(1))
 	syncer.genesisBlock = blockSequence[0].BlockIdentifier
 
 	t.Run("No block exists", func(t *testing.T) {
@@ -356,7 +356,7 @@ func TestSync_NoReorg(t *testing.T) {
 
 	mockHelper := &mocks.Helper{}
 	mockHandler := &mocks.Handler{}
-	syncer := New(networkIdentifier, mockHelper, mockHandler, cancel, 16, nil)
+	syncer := New(networkIdentifier, mockHelper, mockHandler, cancel, WithConcurrency(16))
 
 	// Force syncer to only get part of the way through the full range
 	mockHelper.On("NetworkStatus", ctx, networkIdentifier).Return(&types.NetworkStatusResponse{
@@ -383,8 +383,22 @@ func TestSync_NoReorg(t *testing.T) {
 
 	blocks := createBlocks(0, 1200, "")
 	for _, b := range blocks {
-		mockHelper.On("Block", mock.AnythingOfType("*context.cancelCtx"), networkIdentifier, &types.PartialBlockIdentifier{Index: &b.BlockIdentifier.Index}).Return(b, nil).Once()
-		mockHandler.On("BlockAdded", mock.AnythingOfType("*context.cancelCtx"), b).Return(nil).Once()
+		mockHelper.On(
+			"Block",
+			mock.AnythingOfType("*context.cancelCtx"),
+			networkIdentifier,
+			&types.PartialBlockIdentifier{Index: &b.BlockIdentifier.Index},
+		).Return(
+			b,
+			nil,
+		).Once()
+		mockHandler.On(
+			"BlockAdded",
+			mock.AnythingOfType("*context.cancelCtx"),
+			b,
+		).Return(
+			nil,
+		).Once()
 	}
 
 	err := syncer.Sync(ctx, -1, 1200)
@@ -398,7 +412,7 @@ func TestSync_Reorg(t *testing.T) {
 
 	mockHelper := &mocks.Helper{}
 	mockHandler := &mocks.Handler{}
-	syncer := New(networkIdentifier, mockHelper, mockHandler, cancel, 16, nil)
+	syncer := New(networkIdentifier, mockHelper, mockHandler, cancel, WithConcurrency(16))
 
 	mockHelper.On("NetworkStatus", ctx, networkIdentifier).Return(&types.NetworkStatusResponse{
 		CurrentBlockIdentifier: &types.BlockIdentifier{
@@ -413,13 +427,35 @@ func TestSync_Reorg(t *testing.T) {
 
 	blocks := createBlocks(0, 800, "")
 	for _, b := range blocks { // [0, 800]
-		mockHelper.On("Block", mock.AnythingOfType("*context.cancelCtx"), networkIdentifier, &types.PartialBlockIdentifier{Index: &b.BlockIdentifier.Index}).Return(b, nil).Once()
-		mockHandler.On("BlockAdded", mock.AnythingOfType("*context.cancelCtx"), b).Return(nil).Once()
+		mockHelper.On(
+			"Block",
+			mock.AnythingOfType("*context.cancelCtx"),
+			networkIdentifier,
+			&types.PartialBlockIdentifier{Index: &b.BlockIdentifier.Index},
+		).Return(
+			b,
+			nil,
+		).Once()
+		mockHandler.On(
+			"BlockAdded",
+			mock.AnythingOfType("*context.cancelCtx"),
+			b,
+		).Return(
+			nil,
+		).Once()
 	}
 
 	// Create reorg
 	newBlocks := createBlocks(790, 1200, "other")
-	mockHelper.On("Block", mock.AnythingOfType("*context.cancelCtx"), networkIdentifier, &types.PartialBlockIdentifier{Index: &newBlocks[11].BlockIdentifier.Index}).Return(newBlocks[11], nil).Once() // [801]
+	mockHelper.On(
+		"Block",
+		mock.AnythingOfType("*context.cancelCtx"),
+		networkIdentifier,
+		&types.PartialBlockIdentifier{Index: &newBlocks[11].BlockIdentifier.Index},
+	).Return(
+		newBlocks[11],
+		nil,
+	).Once() // [801]
 
 	// Set parent of reorg start to be last good block
 	newBlocks[0].ParentBlockIdentifier = blocks[789].BlockIdentifier
@@ -427,16 +463,50 @@ func TestSync_Reorg(t *testing.T) {
 	// Orphan last 10 blocks
 	for i := 790; i <= 800; i++ { // [790, 800]
 		thisBlock := newBlocks[i-790]
-		mockHelper.On("Block", mock.AnythingOfType("*context.cancelCtx"), networkIdentifier, &types.PartialBlockIdentifier{Index: &thisBlock.BlockIdentifier.Index}).Return(thisBlock, nil).Once()
-		mockHandler.On("BlockRemoved", mock.AnythingOfType("*context.cancelCtx"), blocks[i].BlockIdentifier).Return(nil).Once()
+		mockHelper.On(
+			"Block",
+			mock.AnythingOfType("*context.cancelCtx"),
+			networkIdentifier,
+			&types.PartialBlockIdentifier{Index: &thisBlock.BlockIdentifier.Index},
+		).Return(
+			thisBlock,
+			nil,
+		).Once()
+		mockHandler.On(
+			"BlockRemoved",
+			mock.AnythingOfType("*context.cancelCtx"),
+			blocks[i].BlockIdentifier,
+		).Return(
+			nil,
+		).Once()
 	}
 
-	mockHandler.On("BlockAdded", mock.AnythingOfType("*context.cancelCtx"), newBlocks[0]).Return(nil).Once() // only fetch this block once
+	mockHandler.On(
+		"BlockAdded",
+		mock.AnythingOfType("*context.cancelCtx"),
+		newBlocks[0],
+	).Return(
+		nil,
+	).Once() // only fetch this block once
 
 	// New blocks added
 	for _, b := range newBlocks[1:] { // [790, 1200]
-		mockHelper.On("Block", mock.AnythingOfType("*context.cancelCtx"), networkIdentifier, &types.PartialBlockIdentifier{Index: &b.BlockIdentifier.Index}).Return(b, nil).Once()
-		mockHandler.On("BlockAdded", mock.AnythingOfType("*context.cancelCtx"), b).Return(nil).Once()
+		mockHelper.On(
+			"Block",
+			mock.AnythingOfType("*context.cancelCtx"),
+			networkIdentifier,
+			&types.PartialBlockIdentifier{Index: &b.BlockIdentifier.Index},
+		).Return(
+			b,
+			nil,
+		).Once()
+		mockHandler.On(
+			"BlockAdded",
+			mock.AnythingOfType("*context.cancelCtx"),
+			b,
+		).Return(
+			nil,
+		).Once()
 	}
 
 	// Expected Calls to Block

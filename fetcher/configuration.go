@@ -35,13 +35,6 @@ func WithClient(client *client.APIClient) Option {
 	}
 }
 
-// WithBlockConcurrency overrides the default block concurrency.
-func WithBlockConcurrency(concurrency uint64) Option {
-	return func(f *Fetcher) {
-		f.blockConcurrency = concurrency
-	}
-}
-
 // WithTransactionConcurrency overrides the default transaction
 // concurrency.
 func WithTransactionConcurrency(concurrency uint64) Option {

@@ -33,12 +33,21 @@ const (
 	//
 	// TODO: make configurable
 	PastBlockSize = 20
+
+	// DefaultConcurrency is the default number of
+	// blocks the syncer will try to get concurrently.
+	DefaultConcurrency = 8
 )
 
 var (
 	// defaultSyncSleep is the amount of time to sleep
 	// when we are at tip but want to keep syncing.
-	defaultSyncSleep = 5 * time.Second
+	defaultSyncSleep = 2 * time.Second
+
+	// defaultFetchSleep is the amount of time to sleep
+	// when we are loading more blocks to fetch but we
+	// already have a backlog >= to concurrency.
+	defaultFetchSleep = 500 * time.Millisecond
 )
 
 // Handler is called at various times during the sync cycle
@@ -56,10 +65,17 @@ type Handler interface {
 	) error
 }
 
+// Helper is called at various times during the sync cycle
+// to get information about a blockchain network. It is
+// common to implement this helper using the Fetcher package.
 type Helper interface {
 	NetworkStatus(context.Context, *types.NetworkIdentifier) (*types.NetworkStatusResponse, error)
 
-	Block(context.Context, *types.NetworkIdentifier, *types.PartialBlockIdentifier) (*types.Block, error)
+	Block(
+		context.Context,
+		*types.NetworkIdentifier,
+		*types.PartialBlockIdentifier,
+	) (*types.Block, error)
 }
 
 // Syncer coordinates blockchain syncing without relying on
@@ -69,11 +85,11 @@ type Helper interface {
 // In the rosetta-cli, we handle reconciliation, state storage, and
 // logging in the handler.
 type Syncer struct {
-	network          *types.NetworkIdentifier
-	helper           Helper
-	handler          Handler
-	cancel           context.CancelFunc
-	blockConcurrency uint64
+	network     *types.NetworkIdentifier
+	helper      Helper
+	handler     Handler
+	cancel      context.CancelFunc
+	concurrency uint64
 
 	// Used to keep track of sync state
 	genesisBlock *types.BlockIdentifier
@@ -96,22 +112,23 @@ func New(
 	helper Helper,
 	handler Handler,
 	cancel context.CancelFunc,
-	blockConcurrency uint64,
-	pastBlocks []*types.BlockIdentifier,
+	options ...Option,
 ) *Syncer {
-	past := pastBlocks
-	if past == nil {
-		past = []*types.BlockIdentifier{}
+	s := &Syncer{
+		network:     network,
+		helper:      helper,
+		handler:     handler,
+		concurrency: DefaultConcurrency,
+		cancel:      cancel,
+		pastBlocks:  []*types.BlockIdentifier{},
 	}
 
-	return &Syncer{
-		network:          network,
-		helper:           helper,
-		handler:          handler,
-		blockConcurrency: blockConcurrency,
-		cancel:           cancel,
-		pastBlocks:       past,
+	// Override defaults with any provided options
+	for _, opt := range options {
+		opt(s)
 	}
+
+	return s
 }
 
 func (s *Syncer) setStart(
@@ -244,8 +261,8 @@ func (s *Syncer) addBlockIndicies(
 	i := startIndex
 	for i <= endIndex {
 		// Don't load if we already have a healthy backlog.
-		if uint64(len(blockIndicies)) > s.blockConcurrency {
-			time.Sleep(1 * time.Second)
+		if uint64(len(blockIndicies)) > s.concurrency {
+			time.Sleep(defaultFetchSleep)
 			continue
 		}
 
@@ -303,7 +320,7 @@ func (s *Syncer) syncRange(
 		return s.addBlockIndicies(ctx, blockIndicies, highWaterMark, endIndex)
 	})
 
-	for j := uint64(0); j < s.blockConcurrency; j++ {
+	for j := uint64(0); j < s.concurrency; j++ {
 		g.Go(func() error {
 			return s.fetchChannelBlocks(ctx, s.network, blockIndicies, results)
 		})
@@ -324,7 +341,8 @@ func (s *Syncer) syncRange(
 		for s.nextIndex <= endIndex {
 			block, exists := cache[s.nextIndex]
 			if !exists {
-				if highWaterMark == s.nextIndex && reorgBlock != s.nextIndex { // wait for more blocks
+				if highWaterMark == s.nextIndex &&
+					reorgBlock != s.nextIndex { // wait for more blocks
 					break
 				}
 
