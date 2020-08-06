@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
+	"golang.org/x/sync/errgroup"
 )
 
 const (
@@ -68,10 +69,11 @@ type Helper interface {
 // In the rosetta-cli, we handle reconciliation, state storage, and
 // logging in the handler.
 type Syncer struct {
-	network *types.NetworkIdentifier
-	helper  Helper
-	handler Handler
-	cancel  context.CancelFunc
+	network          *types.NetworkIdentifier
+	helper           Helper
+	handler          Handler
+	cancel           context.CancelFunc
+	blockConcurrency uint64
 
 	// Used to keep track of sync state
 	genesisBlock *types.BlockIdentifier
@@ -94,6 +96,7 @@ func New(
 	helper Helper,
 	handler Handler,
 	cancel context.CancelFunc,
+	blockConcurrency uint64,
 	pastBlocks []*types.BlockIdentifier,
 ) *Syncer {
 	past := pastBlocks
@@ -102,11 +105,12 @@ func New(
 	}
 
 	return &Syncer{
-		network:    network,
-		helper:     helper,
-		handler:    handler,
-		cancel:     cancel,
-		pastBlocks: past,
+		network:          network,
+		helper:           helper,
+		handler:          handler,
+		blockConcurrency: blockConcurrency,
+		cancel:           cancel,
+		pastBlocks:       past,
 	}
 }
 
@@ -226,38 +230,137 @@ func (s *Syncer) processBlock(
 	return nil
 }
 
+// addIndicies appends a range of indicies (from
+// startIndex to endIndex, inclusive) to the
+// blockIndicies channel. When all indicies are added,
+// the channel is closed.
+func (s *Syncer) addBlockIndicies(
+	ctx context.Context,
+	blockIndicies chan int64,
+	startIndex int64,
+	endIndex int64,
+) error {
+	defer close(blockIndicies)
+	i := startIndex
+	for i <= endIndex {
+		// Don't load if we already have a healthy backlog.
+		if uint64(len(blockIndicies)) > s.blockConcurrency {
+			time.Sleep(1 * time.Second)
+			continue
+		}
+
+		select {
+		case blockIndicies <- i:
+			i++
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+	return nil
+}
+
+// fetchChannelBlocks fetches blocks from a
+// channel with retries until there are no
+// more blocks in the channel or there is an
+// error.
+func (s *Syncer) fetchChannelBlocks(
+	ctx context.Context,
+	network *types.NetworkIdentifier,
+	blockIndicies chan int64,
+	results chan *types.Block,
+) error {
+	for b := range blockIndicies {
+		block, err := s.helper.Block(
+			ctx,
+			network,
+			&types.PartialBlockIdentifier{
+				Index: &b,
+			},
+		)
+		if err != nil {
+			return err
+		}
+
+		select {
+		case results <- block:
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+
+	return nil
+}
+
 func (s *Syncer) syncRange(
 	ctx context.Context,
 	endIndex int64,
 ) error {
-	blockMap, err := s.fetcher.BlockRange(ctx, s.network, s.nextIndex, endIndex)
-	if err != nil {
-		return err
+	highWaterMark := s.nextIndex
+	blockIndicies := make(chan int64)
+	results := make(chan *types.Block)
+	g, ctx := errgroup.WithContext(ctx)
+	g.Go(func() error {
+		return s.addBlockIndicies(ctx, blockIndicies, highWaterMark, endIndex)
+	})
+
+	for j := uint64(0); j < s.blockConcurrency; j++ {
+		g.Go(func() error {
+			return s.fetchChannelBlocks(ctx, s.network, blockIndicies, results)
+		})
 	}
 
-	for s.nextIndex <= endIndex {
-		block, ok := blockMap[s.nextIndex]
-		if !ok { // could happen in a reorg
-			block, err = s.helper.Block(
-				ctx,
-				s.network,
-				&types.PartialBlockIdentifier{
-					Index: &s.nextIndex,
-				},
-			)
-			if err != nil {
-				return err
-			}
-		} else {
-			// Anytime we re-fetch an index, we
-			// will need to make another call to the node
-			// as it is likely in a reorg.
-			delete(blockMap, s.nextIndex)
-		}
+	// Wait for all block fetching goroutines to exit
+	// before closing the results channel.
+	go func() {
+		_ = g.Wait()
+		close(results)
+	}()
 
-		if err = s.processBlock(ctx, block); err != nil {
-			return err
+	cache := make(map[int64]*types.Block)
+	for b := range results {
+		cache[b.BlockIdentifier.Index] = b
+
+		for s.nextIndex <= endIndex {
+			block, exists := cache[s.nextIndex]
+			if !exists {
+				if highWaterMark == s.nextIndex { // wait for more blocks
+					break
+				}
+
+				if s.nextIndex < highWaterMark { // reorg occuring
+					newBlock, err := s.helper.Block(
+						ctx,
+						s.network,
+						&types.PartialBlockIdentifier{
+							Index: &s.nextIndex,
+						},
+					)
+					if err != nil {
+						return fmt.Errorf("%w: unable to fetch block %d", err, s.nextIndex)
+					}
+
+					block = newBlock
+				}
+			} else {
+				// Anytime we re-fetch an index, we
+				// will need to make another call to the node
+				// as it is likely in a reorg.
+				delete(cache, s.nextIndex)
+			}
+
+			if err := s.processBlock(ctx, block); err != nil {
+				return fmt.Errorf("%w: unable to process block", err)
+			}
+
+			if s.nextIndex > highWaterMark {
+				highWaterMark = s.nextIndex
+			}
 		}
+	}
+
+	err := g.Wait()
+	if err != nil {
+		return fmt.Errorf("%w: unable to sync to %d", err, endIndex)
 	}
 
 	return nil
