@@ -358,16 +358,28 @@ func TestSync_NoOrphans(t *testing.T) {
 	mockHandler := &mocks.Handler{}
 	syncer := New(networkIdentifier, mockHelper, mockHandler, cancel, 16, nil)
 
+	// Force syncer to only get part of the way through the full range
 	mockHelper.On("NetworkStatus", ctx, networkIdentifier).Return(&types.NetworkStatusResponse{
 		CurrentBlockIdentifier: &types.BlockIdentifier{
-			Hash:  "block 10000",
-			Index: 10000,
+			Hash:  "block 200",
+			Index: 200,
 		},
 		GenesisBlockIdentifier: &types.BlockIdentifier{
 			Hash:  "block 0",
 			Index: 0,
 		},
-	}, nil)
+	}, nil).Twice()
+
+	mockHelper.On("NetworkStatus", ctx, networkIdentifier).Return(&types.NetworkStatusResponse{
+		CurrentBlockIdentifier: &types.BlockIdentifier{
+			Hash:  "block 1300",
+			Index: 1300,
+		},
+		GenesisBlockIdentifier: &types.BlockIdentifier{
+			Hash:  "block 0",
+			Index: 0,
+		},
+	}, nil).Twice()
 
 	blocks := createBlocks(0, 1200)
 	for _, b := range blocks {
@@ -378,6 +390,5 @@ func TestSync_NoOrphans(t *testing.T) {
 	err := syncer.Sync(ctx, -1, 1200)
 	assert.NoError(t, err)
 	mockHelper.AssertExpectations(t)
-	mockHelper.AssertNumberOfCalls(t, "NetworkStatus", 3)
 	mockHandler.AssertExpectations(t)
 }
