@@ -18,6 +18,7 @@ import (
 	"context"
 	"testing"
 
+	mocks "github.com/coinbase/rosetta-sdk-go/mocks/syncer"
 	"github.com/coinbase/rosetta-sdk-go/types"
 
 	"github.com/stretchr/testify/assert"
@@ -190,10 +191,13 @@ func lastBlockIdentifier(syncer *Syncer) *types.BlockIdentifier {
 func TestProcessBlock(t *testing.T) {
 	ctx := context.Background()
 
-	syncer := New(networkIdentifier, nil, &MockSyncHandler{}, nil, nil)
+	mockHelper := &mocks.Helper{}
+	mockHandler := &mocks.Handler{}
+	syncer := New(networkIdentifier, mockHelper, mockHandler, nil, 1, nil)
 	syncer.genesisBlock = blockSequence[0].BlockIdentifier
 
 	t.Run("No block exists", func(t *testing.T) {
+		mockHandler.On("BlockAdded", ctx, blockSequence[0]).Return(nil)
 		assert.Equal(
 			t,
 			[]*types.BlockIdentifier{},
@@ -230,6 +234,7 @@ func TestProcessBlock(t *testing.T) {
 	})
 
 	t.Run("Block exists, no reorg", func(t *testing.T) {
+		mockHandler.On("BlockAdded", ctx, blockSequence[1]).Return(nil)
 		err := syncer.processBlock(
 			ctx,
 			blockSequence[1],
@@ -248,6 +253,7 @@ func TestProcessBlock(t *testing.T) {
 	})
 
 	t.Run("Orphan block", func(t *testing.T) {
+		mockHandler.On("BlockRemoved", ctx, blockSequence[1].BlockIdentifier).Return(nil)
 		err := syncer.processBlock(
 			ctx,
 			blockSequence[2],
@@ -261,6 +267,7 @@ func TestProcessBlock(t *testing.T) {
 			syncer.pastBlocks,
 		)
 
+		mockHandler.On("BlockAdded", ctx, blockSequence[3]).Return(nil)
 		err = syncer.processBlock(
 			ctx,
 			blockSequence[3],
@@ -277,6 +284,7 @@ func TestProcessBlock(t *testing.T) {
 			syncer.pastBlocks,
 		)
 
+		mockHandler.On("BlockAdded", ctx, blockSequence[2]).Return(nil)
 		err = syncer.processBlock(
 			ctx,
 			blockSequence[2],
@@ -313,20 +321,7 @@ func TestProcessBlock(t *testing.T) {
 			syncer.pastBlocks,
 		)
 	})
-}
 
-type MockSyncHandler struct{}
-
-func (h *MockSyncHandler) BlockAdded(
-	ctx context.Context,
-	block *types.Block,
-) error {
-	return nil
-}
-
-func (h *MockSyncHandler) BlockRemoved(
-	ctx context.Context,
-	block *types.BlockIdentifier,
-) error {
-	return nil
+	mockHelper.AssertExpectations(t)
+	mockHandler.AssertExpectations(t)
 }
