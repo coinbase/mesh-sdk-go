@@ -78,18 +78,4 @@ func main() {
 
 	// Step 5: Print the block
 	log.Printf("Current Block: %s\n", types.PrettyPrintStruct(block))
-
-	// Step 6: Get a range of blocks
-	blockMap, err := newFetcher.BlockRange(
-		ctx,
-		primaryNetwork,
-		networkStatus.GenesisBlockIdentifier.Index,
-		networkStatus.GenesisBlockIdentifier.Index+10,
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Step 7: Print the block range
-	log.Printf("Block Range: %s\n", types.PrettyPrintStruct(blockMap))
 }

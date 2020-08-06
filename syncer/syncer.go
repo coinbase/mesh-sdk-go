@@ -320,14 +320,15 @@ func (s *Syncer) syncRange(
 	for b := range results {
 		cache[b.BlockIdentifier.Index] = b
 
+		reorgBlock := int64(-1)
 		for s.nextIndex <= endIndex {
 			block, exists := cache[s.nextIndex]
 			if !exists {
-				if highWaterMark == s.nextIndex { // wait for more blocks
+				if highWaterMark == s.nextIndex && reorgBlock != s.nextIndex { // wait for more blocks
 					break
 				}
 
-				if s.nextIndex < highWaterMark { // reorg occuring
+				if s.nextIndex < highWaterMark || reorgBlock == s.nextIndex { // reorg occuring
 					newBlock, err := s.helper.Block(
 						ctx,
 						s.network,
@@ -348,8 +349,12 @@ func (s *Syncer) syncRange(
 				delete(cache, s.nextIndex)
 			}
 
+			start := s.nextIndex
 			if err := s.processBlock(ctx, block); err != nil {
 				return fmt.Errorf("%w: unable to process block", err)
+			}
+			if s.nextIndex < start && reorgBlock == -1 {
+				reorgBlock = start
 			}
 
 			if s.nextIndex > highWaterMark {

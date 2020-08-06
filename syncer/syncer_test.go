@@ -328,30 +328,30 @@ func TestProcessBlock(t *testing.T) {
 	mockHandler.AssertExpectations(t)
 }
 
-func createBlocks(startIndex int64, endIndex int64) []*types.Block {
-	blocks := make([]*types.Block, endIndex-startIndex+1)
+func createBlocks(startIndex int64, endIndex int64, add string) []*types.Block {
+	blocks := []*types.Block{}
 	for i := startIndex; i <= endIndex; i++ {
 		parentIndex := i - 1
 		if parentIndex < 0 {
 			parentIndex = 0
 		}
 
-		blocks[i] = &types.Block{
+		blocks = append(blocks, &types.Block{
 			BlockIdentifier: &types.BlockIdentifier{
-				Hash:  fmt.Sprintf("block %d", i),
+				Hash:  fmt.Sprintf("block %s%d", add, i),
 				Index: i,
 			},
 			ParentBlockIdentifier: &types.BlockIdentifier{
-				Hash:  fmt.Sprintf("block %d", parentIndex),
+				Hash:  fmt.Sprintf("block %s%d", add, parentIndex),
 				Index: parentIndex,
 			},
-		}
+		})
 	}
 
 	return blocks
 }
 
-func TestSync_NoOrphans(t *testing.T) {
+func TestSync_NoReorg(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	mockHelper := &mocks.Helper{}
@@ -381,7 +381,7 @@ func TestSync_NoOrphans(t *testing.T) {
 		},
 	}, nil).Twice()
 
-	blocks := createBlocks(0, 1200)
+	blocks := createBlocks(0, 1200, "")
 	for _, b := range blocks {
 		mockHelper.On("Block", mock.AnythingOfType("*context.cancelCtx"), networkIdentifier, &types.PartialBlockIdentifier{Index: &b.BlockIdentifier.Index}).Return(b, nil).Once()
 		mockHandler.On("BlockAdded", mock.AnythingOfType("*context.cancelCtx"), b).Return(nil).Once()
@@ -389,6 +389,58 @@ func TestSync_NoOrphans(t *testing.T) {
 
 	err := syncer.Sync(ctx, -1, 1200)
 	assert.NoError(t, err)
+	mockHelper.AssertExpectations(t)
+	mockHandler.AssertExpectations(t)
+}
+
+func TestSync_Reorg(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+
+	mockHelper := &mocks.Helper{}
+	mockHandler := &mocks.Handler{}
+	syncer := New(networkIdentifier, mockHelper, mockHandler, cancel, 16, nil)
+
+	mockHelper.On("NetworkStatus", ctx, networkIdentifier).Return(&types.NetworkStatusResponse{
+		CurrentBlockIdentifier: &types.BlockIdentifier{
+			Hash:  "block 1300",
+			Index: 1300,
+		},
+		GenesisBlockIdentifier: &types.BlockIdentifier{
+			Hash:  "block 0",
+			Index: 0,
+		},
+	}, nil)
+
+	blocks := createBlocks(0, 800, "")
+	for _, b := range blocks {
+		mockHelper.On("Block", mock.AnythingOfType("*context.cancelCtx"), networkIdentifier, &types.PartialBlockIdentifier{Index: &b.BlockIdentifier.Index}).Return(b, nil).Once()
+		mockHandler.On("BlockAdded", mock.AnythingOfType("*context.cancelCtx"), b).Return(nil).Once()
+	}
+
+	// Create new longest chain
+	newBlocks := createBlocks(790, 1200, "other")
+
+	// Orphan last 10 blocks
+	for i := 790; i <= 800; i++ {
+		mockHandler.On("BlockRemoved", mock.AnythingOfType("*context.cancelCtx"), blocks[i].BlockIdentifier).Return(nil).Once()
+
+		thisBlock := newBlocks[i-790]
+		mockHelper.On("Block", mock.AnythingOfType("*context.cancelCtx"), networkIdentifier, &types.PartialBlockIdentifier{Index: &thisBlock.BlockIdentifier.Index}).Return(thisBlock, nil).Once()
+	}
+
+	// Allow block where reorg observed to be called twice more
+	mockHelper.On("Block", mock.AnythingOfType("*context.cancelCtx"), networkIdentifier, &types.PartialBlockIdentifier{Index: &newBlocks[11].BlockIdentifier.Index}).Return(newBlocks[11], nil).Twice()
+
+	// Set parent of reorg start to be last good block
+	newBlocks[0].ParentBlockIdentifier = blocks[789].BlockIdentifier
+	for _, b := range newBlocks {
+		mockHelper.On("Block", mock.AnythingOfType("*context.cancelCtx"), networkIdentifier, &types.PartialBlockIdentifier{Index: &b.BlockIdentifier.Index}).Return(b, nil).Once()
+		mockHandler.On("BlockAdded", mock.AnythingOfType("*context.cancelCtx"), b).Return(nil).Once()
+	}
+
+	err := syncer.Sync(ctx, -1, 1200)
+	assert.NoError(t, err)
+	mockHelper.AssertNumberOfCalls(t, "NetworkStatus", 3)
 	mockHelper.AssertExpectations(t)
 	mockHandler.AssertExpectations(t)
 }
