@@ -21,15 +21,10 @@ import (
 	"log"
 	"time"
 
-	"github.com/coinbase/rosetta-sdk-go/fetcher"
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
 const (
-	// maxSync is the maximum number of blocks
-	// to try and sync in a given SyncCycle.
-	maxSync = 999
-
 	// PastBlockSize is the maximum number of previously
 	// processed blocks we keep in the syncer to handle
 	// reorgs correctly. If there is a reorg greater than
@@ -60,6 +55,12 @@ type Handler interface {
 	) error
 }
 
+type Helper interface {
+	NetworkStatus(context.Context, *types.NetworkIdentifier) (*types.NetworkStatusResponse, error)
+
+	Block(context.Context, *types.NetworkIdentifier, *types.PartialBlockIdentifier) (*types.Block, error)
+}
+
 // Syncer coordinates blockchain syncing without relying on
 // a storage interface. Instead, it calls a provided Handler
 // whenever a block is added or removed. This provides the client
@@ -68,7 +69,7 @@ type Handler interface {
 // logging in the handler.
 type Syncer struct {
 	network *types.NetworkIdentifier
-	fetcher *fetcher.Fetcher
+	helper  Helper
 	handler Handler
 	cancel  context.CancelFunc
 
@@ -90,7 +91,7 @@ type Syncer struct {
 // be set to an empty slice.
 func New(
 	network *types.NetworkIdentifier,
-	fetcher *fetcher.Fetcher,
+	helper Helper,
 	handler Handler,
 	cancel context.CancelFunc,
 	pastBlocks []*types.BlockIdentifier,
@@ -102,7 +103,7 @@ func New(
 
 	return &Syncer{
 		network:    network,
-		fetcher:    fetcher,
+		helper:     helper,
 		handler:    handler,
 		cancel:     cancel,
 		pastBlocks: past,
@@ -113,10 +114,9 @@ func (s *Syncer) setStart(
 	ctx context.Context,
 	index int64,
 ) error {
-	networkStatus, err := s.fetcher.NetworkStatusRetry(
+	networkStatus, err := s.helper.NetworkStatus(
 		ctx,
 		s.network,
-		nil,
 	)
 	if err != nil {
 		return err
@@ -146,10 +146,9 @@ func (s *Syncer) nextSyncableRange(
 
 	// Always fetch network status to ensure endIndex is not
 	// past tip
-	networkStatus, err := s.fetcher.NetworkStatusRetry(
+	networkStatus, err := s.helper.NetworkStatus(
 		ctx,
 		s.network,
-		nil,
 	)
 	if err != nil {
 		return -1, false, fmt.Errorf("%w: unable to get network status", err)
@@ -161,10 +160,6 @@ func (s *Syncer) nextSyncableRange(
 
 	if s.nextIndex > endIndex {
 		return -1, true, nil
-	}
-
-	if endIndex-s.nextIndex > maxSync {
-		endIndex = s.nextIndex + maxSync
 	}
 
 	return endIndex, false, nil
@@ -243,7 +238,7 @@ func (s *Syncer) syncRange(
 	for s.nextIndex <= endIndex {
 		block, ok := blockMap[s.nextIndex]
 		if !ok { // could happen in a reorg
-			block, err = s.fetcher.BlockRetry(
+			block, err = s.helper.Block(
 				ctx,
 				s.network,
 				&types.PartialBlockIdentifier{
