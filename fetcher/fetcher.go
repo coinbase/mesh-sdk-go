@@ -34,10 +34,6 @@ const (
 	// attempt a retry on a failed request.
 	DefaultRetries = 10
 
-	// DefaultBlockConcurrency is the default number of
-	// blocks a Fetcher will try to get concurrently.
-	DefaultBlockConcurrency = 8
-
 	// DefaultHTTPTimeout is the default timeout for
 	// HTTP requests.
 	DefaultHTTPTimeout = 10 * time.Second
@@ -68,7 +64,6 @@ type Fetcher struct {
 	// be applied.
 	Asserter               *asserter.Asserter
 	rosettaClient          *client.APIClient
-	blockConcurrency       uint64
 	transactionConcurrency uint64
 	maxRetries             uint64
 	retryElapsedTime       time.Duration
@@ -90,7 +85,6 @@ func New(
 
 	f := &Fetcher{
 		rosettaClient:          client,
-		blockConcurrency:       DefaultBlockConcurrency,
 		transactionConcurrency: DefaultTransactionConcurrency,
 		maxRetries:             DefaultRetries,
 		retryElapsedTime:       DefaultElapsedTime,

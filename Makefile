@@ -1,5 +1,5 @@
 .PHONY: deps gen lint format check-format test test-coverage add-license \
-	check-license shorten-lines shellcheck salus release
+	check-license shorten-lines shellcheck salus release mocks
 
 # To run the the following packages as commands,
 # it is necessary to use `go run <pkg>`. Running `go get` does
@@ -14,7 +14,7 @@ GOVERALLS_CMD=go run github.com/mattn/goveralls
 GO_PACKAGES=./asserter/... ./fetcher/... ./types/... ./client/... ./server/... \
 						./parser/... ./syncer/... ./reconciler/... ./keys/...
 GO_FOLDERS=$(shell echo ${GO_PACKAGES} | sed -e "s/\.\///g" | sed -e "s/\/\.\.\.//g")
-TEST_SCRIPT=go test -v ${GO_PACKAGES}
+TEST_SCRIPT=go test ${GO_PACKAGES}
 LINT_SETTINGS=golint,misspell,gocyclo,gocritic,whitespace,goconst,gocognit,bodyclose,unconvert,lll,unparam
 
 deps:
@@ -63,3 +63,7 @@ salus:
 	docker run --rm -t -v ${PWD}:/home/repo coinbase/salus
 
 release: shellcheck check-gen check-license check-format test lint salus
+
+mocks:
+	rm -rf mocks;
+	mockery --dir syncer --all --case underscore --outpkg syncer --output mocks/syncer;

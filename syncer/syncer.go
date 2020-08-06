@@ -21,15 +21,11 @@ import (
 	"log"
 	"time"
 
-	"github.com/coinbase/rosetta-sdk-go/fetcher"
 	"github.com/coinbase/rosetta-sdk-go/types"
+	"golang.org/x/sync/errgroup"
 )
 
 const (
-	// maxSync is the maximum number of blocks
-	// to try and sync in a given SyncCycle.
-	maxSync = 999
-
 	// PastBlockSize is the maximum number of previously
 	// processed blocks we keep in the syncer to handle
 	// reorgs correctly. If there is a reorg greater than
@@ -37,12 +33,21 @@ const (
 	//
 	// TODO: make configurable
 	PastBlockSize = 20
+
+	// DefaultConcurrency is the default number of
+	// blocks the syncer will try to get concurrently.
+	DefaultConcurrency = 8
 )
 
 var (
 	// defaultSyncSleep is the amount of time to sleep
 	// when we are at tip but want to keep syncing.
-	defaultSyncSleep = 5 * time.Second
+	defaultSyncSleep = 2 * time.Second
+
+	// defaultFetchSleep is the amount of time to sleep
+	// when we are loading more blocks to fetch but we
+	// already have a backlog >= to concurrency.
+	defaultFetchSleep = 500 * time.Millisecond
 )
 
 // Handler is called at various times during the sync cycle
@@ -60,6 +65,19 @@ type Handler interface {
 	) error
 }
 
+// Helper is called at various times during the sync cycle
+// to get information about a blockchain network. It is
+// common to implement this helper using the Fetcher package.
+type Helper interface {
+	NetworkStatus(context.Context, *types.NetworkIdentifier) (*types.NetworkStatusResponse, error)
+
+	Block(
+		context.Context,
+		*types.NetworkIdentifier,
+		*types.PartialBlockIdentifier,
+	) (*types.Block, error)
+}
+
 // Syncer coordinates blockchain syncing without relying on
 // a storage interface. Instead, it calls a provided Handler
 // whenever a block is added or removed. This provides the client
@@ -67,10 +85,11 @@ type Handler interface {
 // In the rosetta-cli, we handle reconciliation, state storage, and
 // logging in the handler.
 type Syncer struct {
-	network *types.NetworkIdentifier
-	fetcher *fetcher.Fetcher
-	handler Handler
-	cancel  context.CancelFunc
+	network     *types.NetworkIdentifier
+	helper      Helper
+	handler     Handler
+	cancel      context.CancelFunc
+	concurrency uint64
 
 	// Used to keep track of sync state
 	genesisBlock *types.BlockIdentifier
@@ -90,33 +109,35 @@ type Syncer struct {
 // be set to an empty slice.
 func New(
 	network *types.NetworkIdentifier,
-	fetcher *fetcher.Fetcher,
+	helper Helper,
 	handler Handler,
 	cancel context.CancelFunc,
-	pastBlocks []*types.BlockIdentifier,
+	options ...Option,
 ) *Syncer {
-	past := pastBlocks
-	if past == nil {
-		past = []*types.BlockIdentifier{}
+	s := &Syncer{
+		network:     network,
+		helper:      helper,
+		handler:     handler,
+		concurrency: DefaultConcurrency,
+		cancel:      cancel,
+		pastBlocks:  []*types.BlockIdentifier{},
 	}
 
-	return &Syncer{
-		network:    network,
-		fetcher:    fetcher,
-		handler:    handler,
-		cancel:     cancel,
-		pastBlocks: past,
+	// Override defaults with any provided options
+	for _, opt := range options {
+		opt(s)
 	}
+
+	return s
 }
 
 func (s *Syncer) setStart(
 	ctx context.Context,
 	index int64,
 ) error {
-	networkStatus, err := s.fetcher.NetworkStatusRetry(
+	networkStatus, err := s.helper.NetworkStatus(
 		ctx,
 		s.network,
-		nil,
 	)
 	if err != nil {
 		return err
@@ -146,10 +167,9 @@ func (s *Syncer) nextSyncableRange(
 
 	// Always fetch network status to ensure endIndex is not
 	// past tip
-	networkStatus, err := s.fetcher.NetworkStatusRetry(
+	networkStatus, err := s.helper.NetworkStatus(
 		ctx,
 		s.network,
-		nil,
 	)
 	if err != nil {
 		return -1, false, fmt.Errorf("%w: unable to get network status", err)
@@ -161,10 +181,6 @@ func (s *Syncer) nextSyncableRange(
 
 	if s.nextIndex > endIndex {
 		return -1, true, nil
-	}
-
-	if endIndex-s.nextIndex > maxSync {
-		endIndex = s.nextIndex + maxSync
 	}
 
 	return endIndex, false, nil
@@ -231,19 +247,91 @@ func (s *Syncer) processBlock(
 	return nil
 }
 
-func (s *Syncer) syncRange(
+// addBlockIndicies appends a range of indicies (from
+// startIndex to endIndex, inclusive) to the
+// blockIndicies channel. When all indicies are added,
+// the channel is closed.
+func (s *Syncer) addBlockIndicies(
 	ctx context.Context,
+	blockIndicies chan int64,
+	startIndex int64,
 	endIndex int64,
 ) error {
-	blockMap, err := s.fetcher.BlockRange(ctx, s.network, s.nextIndex, endIndex)
-	if err != nil {
-		return err
+	defer close(blockIndicies)
+	i := startIndex
+	for i <= endIndex {
+		// Don't load if we already have a healthy backlog.
+		if uint64(len(blockIndicies)) > s.concurrency {
+			time.Sleep(defaultFetchSleep)
+			continue
+		}
+
+		select {
+		case blockIndicies <- i:
+			i++
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+	return nil
+}
+
+// fetchChannelBlocks fetches blocks from a
+// channel with retries until there are no
+// more blocks in the channel or there is an
+// error.
+func (s *Syncer) fetchChannelBlocks(
+	ctx context.Context,
+	network *types.NetworkIdentifier,
+	blockIndicies chan int64,
+	results chan *types.Block,
+) error {
+	for b := range blockIndicies {
+		block, err := s.helper.Block(
+			ctx,
+			network,
+			&types.PartialBlockIdentifier{
+				Index: &b,
+			},
+		)
+		if err != nil {
+			return err
+		}
+
+		select {
+		case results <- block:
+		case <-ctx.Done():
+			return ctx.Err()
+		}
 	}
 
+	return nil
+}
+
+// processBlocks is invoked whenever a new block is fetched. It attempts
+// to process as many blocks as possible.
+func (s *Syncer) processBlocks(
+	ctx context.Context,
+	cache map[int64]*types.Block,
+	endIndex int64,
+) error {
+	// We need to determine if we are in a reorg
+	// so that we can force blocks to be fetched
+	// if they don't exist in the cache.
+	reorgStart := int64(-1)
+
 	for s.nextIndex <= endIndex {
-		block, ok := blockMap[s.nextIndex]
-		if !ok { // could happen in a reorg
-			block, err = s.fetcher.BlockRetry(
+		block, exists := cache[s.nextIndex]
+		if !exists {
+			// Wait for more blocks if we aren't
+			// in a reorg.
+			if reorgStart < s.nextIndex {
+				break
+			}
+
+			// Fetch the nextIndex if we are
+			// in a re-org.
+			newBlock, err := s.helper.Block(
 				ctx,
 				s.network,
 				&types.PartialBlockIdentifier{
@@ -251,18 +339,69 @@ func (s *Syncer) syncRange(
 				},
 			)
 			if err != nil {
-				return err
+				return fmt.Errorf("%w: unable to fetch block %d", err, s.nextIndex)
 			}
+
+			block = newBlock
 		} else {
 			// Anytime we re-fetch an index, we
 			// will need to make another call to the node
 			// as it is likely in a reorg.
-			delete(blockMap, s.nextIndex)
+			delete(cache, s.nextIndex)
 		}
 
-		if err = s.processBlock(ctx, block); err != nil {
-			return err
+		lastProcessed := s.nextIndex
+		if err := s.processBlock(ctx, block); err != nil {
+			return fmt.Errorf("%w: unable to process block", err)
 		}
+
+		if s.nextIndex < lastProcessed && reorgStart == -1 {
+			reorgStart = lastProcessed
+		}
+	}
+
+	return nil
+}
+
+// syncRange fetches and processes a range of blocks
+// (from syncer.nextIndex to endIndex, inclusive)
+// with syncer.concurrency.
+func (s *Syncer) syncRange(
+	ctx context.Context,
+	endIndex int64,
+) error {
+	blockIndicies := make(chan int64)
+	results := make(chan *types.Block)
+	g, ctx := errgroup.WithContext(ctx)
+	g.Go(func() error {
+		return s.addBlockIndicies(ctx, blockIndicies, s.nextIndex, endIndex)
+	})
+
+	for j := uint64(0); j < s.concurrency; j++ {
+		g.Go(func() error {
+			return s.fetchChannelBlocks(ctx, s.network, blockIndicies, results)
+		})
+	}
+
+	// Wait for all block fetching goroutines to exit
+	// before closing the results channel.
+	go func() {
+		_ = g.Wait()
+		close(results)
+	}()
+
+	cache := make(map[int64]*types.Block)
+	for b := range results {
+		cache[b.BlockIdentifier.Index] = b
+
+		if err := s.processBlocks(ctx, cache, endIndex); err != nil {
+			return fmt.Errorf("%w: unable to process blocks", err)
+		}
+	}
+
+	err := g.Wait()
+	if err != nil {
+		return fmt.Errorf("%w: unable to sync to %d", err, endIndex)
 	}
 
 	return nil
