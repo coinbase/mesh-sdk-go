@@ -308,16 +308,66 @@ func (s *Syncer) fetchChannelBlocks(
 	return nil
 }
 
+// processBlocks is invoked whenever a new block is fetched. It attempts
+// to process as many blocks as possible.
+func (s *Syncer) processBlocks(ctx context.Context, cache map[int64]*types.Block, endIndex int64) error {
+	// We need to determine if we are in a reorg
+	// so that we can force blocks to be fetched
+	// if they don't exist in the cache.
+	reorgStart := int64(-1)
+
+	for s.nextIndex <= endIndex {
+		block, exists := cache[s.nextIndex]
+		if !exists {
+			// Wait for more blocks if we aren't
+			// in a reorg.
+			if reorgStart < s.nextIndex {
+				break
+			}
+
+			// Fetch the nextIndex if we are
+			// in a re-org.
+			newBlock, err := s.helper.Block(
+				ctx,
+				s.network,
+				&types.PartialBlockIdentifier{
+					Index: &s.nextIndex,
+				},
+			)
+			if err != nil {
+				return fmt.Errorf("%w: unable to fetch block %d", err, s.nextIndex)
+			}
+
+			block = newBlock
+		} else {
+			// Anytime we re-fetch an index, we
+			// will need to make another call to the node
+			// as it is likely in a reorg.
+			delete(cache, s.nextIndex)
+		}
+
+		lastProcessed := s.nextIndex
+		if err := s.processBlock(ctx, block); err != nil {
+			return fmt.Errorf("%w: unable to process block", err)
+		}
+
+		if s.nextIndex < lastProcessed && reorgStart == -1 {
+			reorgStart = lastProcessed
+		}
+	}
+
+	return nil
+}
+
 func (s *Syncer) syncRange(
 	ctx context.Context,
 	endIndex int64,
 ) error {
-	highWaterMark := s.nextIndex
 	blockIndicies := make(chan int64)
 	results := make(chan *types.Block)
 	g, ctx := errgroup.WithContext(ctx)
 	g.Go(func() error {
-		return s.addBlockIndicies(ctx, blockIndicies, highWaterMark, endIndex)
+		return s.addBlockIndicies(ctx, blockIndicies, s.nextIndex, endIndex)
 	})
 
 	for j := uint64(0); j < s.concurrency; j++ {
@@ -337,47 +387,8 @@ func (s *Syncer) syncRange(
 	for b := range results {
 		cache[b.BlockIdentifier.Index] = b
 
-		reorgBlock := int64(-1)
-		for s.nextIndex <= endIndex {
-			block, exists := cache[s.nextIndex]
-			if !exists {
-				if highWaterMark == s.nextIndex &&
-					reorgBlock != s.nextIndex { // wait for more blocks
-					break
-				}
-
-				if s.nextIndex < highWaterMark || reorgBlock == s.nextIndex { // reorg occuring
-					newBlock, err := s.helper.Block(
-						ctx,
-						s.network,
-						&types.PartialBlockIdentifier{
-							Index: &s.nextIndex,
-						},
-					)
-					if err != nil {
-						return fmt.Errorf("%w: unable to fetch block %d", err, s.nextIndex)
-					}
-
-					block = newBlock
-				}
-			} else {
-				// Anytime we re-fetch an index, we
-				// will need to make another call to the node
-				// as it is likely in a reorg.
-				delete(cache, s.nextIndex)
-			}
-
-			start := s.nextIndex
-			if err := s.processBlock(ctx, block); err != nil {
-				return fmt.Errorf("%w: unable to process block", err)
-			}
-			if s.nextIndex < start && reorgBlock == -1 {
-				reorgBlock = start
-			}
-
-			if s.nextIndex > highWaterMark {
-				highWaterMark = s.nextIndex
-			}
+		if err := s.processBlocks(ctx, cache, endIndex); err != nil {
+			return fmt.Errorf("%w: unable to process blocks", err)
 		}
 	}
 
