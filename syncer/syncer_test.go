@@ -353,6 +353,11 @@ func createBlocks(startIndex int64, endIndex int64, add string) []*types.Block {
 	return blocks
 }
 
+func assertNotCanceled(t *testing.T, args mock.Arguments) {
+	err := args.Get(0).(context.Context)
+	assert.NoError(t, err.Err())
+}
+
 func TestSync_NoReorg(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -394,8 +399,7 @@ func TestSync_NoReorg(t *testing.T) {
 			b,
 			nil,
 		).Run(func(args mock.Arguments) {
-			err := args.Get(0).(context.Context)
-			assert.NoError(t, err.Err())
+			assertNotCanceled(t, args)
 		}).Once()
 		mockHandler.On(
 			"BlockAdded",
@@ -404,8 +408,7 @@ func TestSync_NoReorg(t *testing.T) {
 		).Return(
 			nil,
 		).Run(func(args mock.Arguments) {
-			err := args.Get(0).(context.Context)
-			assert.NoError(t, err.Err())
+			assertNotCanceled(t, args)
 		}).Once()
 	}
 
@@ -444,8 +447,7 @@ func TestSync_SpecificStart(t *testing.T) {
 			b,
 			nil,
 		).Run(func(args mock.Arguments) {
-			err := args.Get(0).(context.Context)
-			assert.NoError(t, err.Err())
+			assertNotCanceled(t, args)
 		}).Once()
 		mockHandler.On(
 			"BlockAdded",
@@ -454,8 +456,7 @@ func TestSync_SpecificStart(t *testing.T) {
 		).Return(
 			nil,
 		).Run(func(args mock.Arguments) {
-			err := args.Get(0).(context.Context)
-			assert.NoError(t, err.Err())
+			assertNotCanceled(t, args)
 		}).Once()
 	}
 
@@ -557,16 +558,14 @@ func TestSync_Reorg(t *testing.T) {
 			b,
 			nil,
 		).Run(func(args mock.Arguments) {
-			err := args.Get(0).(context.Context)
-			assert.NoError(t, err.Err())
+			assertNotCanceled(t, args)
 		}).Once()
 		mockHandler.On(
 			"BlockAdded",
 			mock.AnythingOfType("*context.cancelCtx"),
 			b,
 		).Run(func(args mock.Arguments) {
-			err := args.Get(0).(context.Context)
-			assert.NoError(t, err.Err())
+			assertNotCanceled(t, args)
 		}).Return(
 			nil,
 		).Once()
@@ -602,8 +601,7 @@ func TestSync_Reorg(t *testing.T) {
 			thisBlock,
 			nil,
 		).Run(func(args mock.Arguments) {
-			err := args.Get(0).(context.Context)
-			assert.NoError(t, err.Err())
+			assertNotCanceled(t, args)
 		}).Once()
 		mockHandler.On(
 			"BlockRemoved",
@@ -612,8 +610,7 @@ func TestSync_Reorg(t *testing.T) {
 		).Return(
 			nil,
 		).Run(func(args mock.Arguments) {
-			err := args.Get(0).(context.Context)
-			assert.NoError(t, err.Err())
+			assertNotCanceled(t, args)
 		}).Once()
 	}
 
@@ -639,8 +636,7 @@ func TestSync_Reorg(t *testing.T) {
 			b,
 			nil,
 		).Run(func(args mock.Arguments) {
-			err := args.Get(0).(context.Context)
-			assert.NoError(t, err.Err())
+			assertNotCanceled(t, args)
 		}).Once()
 		mockHandler.On(
 			"BlockAdded",
@@ -649,8 +645,7 @@ func TestSync_Reorg(t *testing.T) {
 		).Return(
 			nil,
 		).Run(func(args mock.Arguments) {
-			err := args.Get(0).(context.Context)
-			assert.NoError(t, err.Err())
+			assertNotCanceled(t, args)
 		}).Once()
 	}
 
