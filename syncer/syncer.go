@@ -372,14 +372,23 @@ func (s *Syncer) syncRange(
 ) error {
 	blockIndicies := make(chan int64)
 	results := make(chan *types.Block)
-	g, ctx := errgroup.WithContext(ctx)
+
+	// We create a separate derivative context here instead of
+	// replacing the provided ctx because the context returned
+	// by errgroup.WithContext is canceled as soon as Wait returns.
+	// If this canceled context is passed to a handler or helper,
+	// it can have unintented consequences (some functions
+	// return immediately if the context is canceled).
+	//
+	// Source: https://godoc.org/golang.org/x/sync/errgroup
+	g, pipelineCtx := errgroup.WithContext(ctx)
 	g.Go(func() error {
-		return s.addBlockIndicies(ctx, blockIndicies, s.nextIndex, endIndex)
+		return s.addBlockIndicies(pipelineCtx, blockIndicies, s.nextIndex, endIndex)
 	})
 
 	for j := uint64(0); j < s.concurrency; j++ {
 		g.Go(func() error {
-			return s.fetchChannelBlocks(ctx, s.network, blockIndicies, results)
+			return s.fetchChannelBlocks(pipelineCtx, s.network, blockIndicies, results)
 		})
 	}
 
