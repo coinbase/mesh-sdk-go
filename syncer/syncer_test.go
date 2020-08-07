@@ -353,6 +353,11 @@ func createBlocks(startIndex int64, endIndex int64, add string) []*types.Block {
 	return blocks
 }
 
+func assertNotCanceled(t *testing.T, args mock.Arguments) {
+	err := args.Get(0).(context.Context)
+	assert.NoError(t, err.Err())
+}
+
 func TestSync_NoReorg(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -393,14 +398,18 @@ func TestSync_NoReorg(t *testing.T) {
 		).Return(
 			b,
 			nil,
-		).Once()
+		).Run(func(args mock.Arguments) {
+			assertNotCanceled(t, args)
+		}).Once()
 		mockHandler.On(
 			"BlockAdded",
 			mock.AnythingOfType("*context.cancelCtx"),
 			b,
 		).Return(
 			nil,
-		).Once()
+		).Run(func(args mock.Arguments) {
+			assertNotCanceled(t, args)
+		}).Once()
 	}
 
 	err := syncer.Sync(ctx, -1, 1200)
@@ -437,14 +446,18 @@ func TestSync_SpecificStart(t *testing.T) {
 		).Return(
 			b,
 			nil,
-		).Once()
+		).Run(func(args mock.Arguments) {
+			assertNotCanceled(t, args)
+		}).Once()
 		mockHandler.On(
 			"BlockAdded",
 			mock.AnythingOfType("*context.cancelCtx"),
 			b,
 		).Return(
 			nil,
-		).Once()
+		).Run(func(args mock.Arguments) {
+			assertNotCanceled(t, args)
+		}).Once()
 	}
 
 	err := syncer.Sync(ctx, 100, 1200)
@@ -529,7 +542,10 @@ func TestSync_Reorg(t *testing.T) {
 			Hash:  "block 0",
 			Index: 0,
 		},
-	}, nil)
+	}, nil).Run(func(args mock.Arguments) {
+		err := args.Get(0).(context.Context)
+		assert.NoError(t, err.Err())
+	})
 
 	blocks := createBlocks(0, 800, "")
 	for _, b := range blocks { // [0, 800]
@@ -541,12 +557,16 @@ func TestSync_Reorg(t *testing.T) {
 		).Return(
 			b,
 			nil,
-		).Once()
+		).Run(func(args mock.Arguments) {
+			assertNotCanceled(t, args)
+		}).Once()
 		mockHandler.On(
 			"BlockAdded",
 			mock.AnythingOfType("*context.cancelCtx"),
 			b,
-		).Return(
+		).Run(func(args mock.Arguments) {
+			assertNotCanceled(t, args)
+		}).Return(
 			nil,
 		).Once()
 	}
@@ -561,7 +581,10 @@ func TestSync_Reorg(t *testing.T) {
 	).Return(
 		newBlocks[11],
 		nil,
-	).Once() // [801]
+	).Run(func(args mock.Arguments) {
+		err := args.Get(0).(context.Context)
+		assert.NoError(t, err.Err())
+	}).Once() // [801]
 
 	// Set parent of reorg start to be last good block
 	newBlocks[0].ParentBlockIdentifier = blocks[789].BlockIdentifier
@@ -577,21 +600,28 @@ func TestSync_Reorg(t *testing.T) {
 		).Return(
 			thisBlock,
 			nil,
-		).Once()
+		).Run(func(args mock.Arguments) {
+			assertNotCanceled(t, args)
+		}).Once()
 		mockHandler.On(
 			"BlockRemoved",
 			mock.AnythingOfType("*context.cancelCtx"),
 			blocks[i].BlockIdentifier,
 		).Return(
 			nil,
-		).Once()
+		).Run(func(args mock.Arguments) {
+			assertNotCanceled(t, args)
+		}).Once()
 	}
 
 	mockHandler.On(
 		"BlockAdded",
 		mock.AnythingOfType("*context.cancelCtx"),
 		newBlocks[0],
-	).Return(
+	).Run(func(args mock.Arguments) {
+		err := args.Get(0).(context.Context)
+		assert.NoError(t, err.Err())
+	}).Return(
 		nil,
 	).Once() // only fetch this block once
 
@@ -605,14 +635,18 @@ func TestSync_Reorg(t *testing.T) {
 		).Return(
 			b,
 			nil,
-		).Once()
+		).Run(func(args mock.Arguments) {
+			assertNotCanceled(t, args)
+		}).Once()
 		mockHandler.On(
 			"BlockAdded",
 			mock.AnythingOfType("*context.cancelCtx"),
 			b,
 		).Return(
 			nil,
-		).Once()
+		).Run(func(args mock.Arguments) {
+			assertNotCanceled(t, args)
+		}).Once()
 	}
 
 	// Expected Calls to Block
