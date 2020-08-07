@@ -377,7 +377,7 @@ func (s *Syncer) syncRange(
 	// replacing the provided ctx because the context returned
 	// by errgroup.WithContext is canceled as soon as Wait returns.
 	// If this canceled context is passed to a handler or helper,
-	// it can have unintented consequences (some functions
+	// it can have unintended consequences (some functions
 	// return immediately if the context is canceled).
 	//
 	// Source: https://godoc.org/golang.org/x/sync/errgroup
