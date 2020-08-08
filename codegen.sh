@@ -53,8 +53,9 @@ done
 rm -rf tmp;
 
 # Download spec file from releases
-ROSETTA_SPEC_VERSION=v1.4.1
-curl -L https://github.com/coinbase/rosetta-specifications/releases/download/${ROSETTA_SPEC_VERSION}/api.json -o api.json;
+# ROSETTA_SPEC_VERSION=v1.4.1
+# curl -L https://github.com/coinbase/rosetta-specifications/releases/download/${ROSETTA_SPEC_VERSION}/api.json -o api.json;
+cp ../rosetta-specifications/api.json .
 
 # Generate client + types code
 GENERATOR_VERSION=v4.3.0
