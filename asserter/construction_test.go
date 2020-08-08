@@ -16,6 +16,7 @@ package asserter
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
@@ -34,6 +35,25 @@ func TestConstructionMetadataResponse(t *testing.T) {
 			},
 			err: nil,
 		},
+		"with suggested fee": {
+			response: &types.ConstructionMetadataResponse{
+				Metadata: map[string]interface{}{},
+				SuggestedFee: []*types.Amount{
+					validAmount,
+				},
+			},
+			err: nil,
+		},
+		"with duplicate suggested fee": {
+			response: &types.ConstructionMetadataResponse{
+				Metadata: map[string]interface{}{},
+				SuggestedFee: []*types.Amount{
+					validAmount,
+					validAmount,
+				},
+			},
+			err: fmt.Errorf("currency %+v used multiple times", validAmount.Currency),
+		},
 		"nil response": {
 			err: errors.New("construction metadata response cannot be nil"),
 		},
@@ -46,7 +66,11 @@ func TestConstructionMetadataResponse(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			err := ConstructionMetadataResponse(test.response)
-			assert.Equal(t, test.err, err)
+			if test.err != nil {
+				assert.Contains(t, err.Error(), test.err.Error())
+			} else {
+				assert.NoError(t, err)
+			}
 		})
 	}
 }
