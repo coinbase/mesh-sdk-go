@@ -53,6 +53,12 @@ func TestBlockRetry(t *testing.T) {
 		fetcherMaxRetries uint64
 		shouldCancel      bool
 	}{
+		"omitted block": {
+			network:           basicNetwork,
+			block:             basicBlock,
+			expectedBlock:     nil,
+			fetcherMaxRetries: 0,
+		},
 		"no failures": {
 			network:           basicNetwork,
 			block:             basicBlock,

@@ -244,11 +244,13 @@ func (a *ConstructionAPIService) ConstructionHash(
 
 // ConstructionMetadata Get any information required to construct a transaction for a specific
 // network. Metadata returned here could be a recent hash to use, an account sequence number, or
-// even arbitrary chain state. The request used when calling this endpoint is often created by
-// calling /construction/preprocess in an offline environment. It is important to clarify that this
-// endpoint should not pre-construct any transactions for the client (this should happen in
-// /construction/payloads). This endpoint is left purposely unstructured because of the wide scope
-// of metadata that could be required.
+// even arbitrary chain state. The request used when calling this endpoint is created by calling
+// /construction/preprocess in an offline environment. You should NEVER assume that the request sent
+// to this endpoint will be created by the caller or populated with any custom parameters. This must
+// occur in /construction/preprocess. It is important to clarify that this endpoint should not
+// pre-construct any transactions for the client (this should happen in /construction/payloads).
+// This endpoint is left purposely unstructured because of the wide scope of metadata that could be
+// required.
 func (a *ConstructionAPIService) ConstructionMetadata(
 	ctx _context.Context,
 	constructionMetadataRequest *types.ConstructionMetadataRequest,
@@ -463,8 +465,10 @@ func (a *ConstructionAPIService) ConstructionPayloads(
 
 // ConstructionPreprocess Preprocess is called prior to /construction/payloads to construct a
 // request for any metadata that is needed for transaction construction given (i.e. account nonce).
-// The request returned from this method will be used by the caller (in a different execution
-// environment) to call the /construction/metadata endpoint.
+// The options object returned from this endpoint will be sent to the /construction/metadata
+// endpoint UNMODIFIED by the caller (in an offline execution environment). If your Construction API
+// implementation has configuration options, they MUST be specified in the /construction/preprocess
+// request (in the metadata field).
 func (a *ConstructionAPIService) ConstructionPreprocess(
 	ctx _context.Context,
 	constructionPreprocessRequest *types.ConstructionPreprocessRequest,
