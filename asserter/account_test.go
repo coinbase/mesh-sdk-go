@@ -183,7 +183,7 @@ func TestAccoutBalance(t *testing.T) {
 				validAmount,
 				validAmount,
 			},
-			err: fmt.Errorf("currency %+v used in balance multiple times", validAmount.Currency),
+			err: fmt.Errorf("currency %+v used multiple times", validAmount.Currency),
 		},
 		"valid historical request index": {
 			requestBlock: &types.PartialBlockIdentifier{

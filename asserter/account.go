@@ -42,9 +42,9 @@ func ContainsCurrency(currencies []*types.Currency, currency *types.Currency) bo
 func assertUniqueAmounts(amounts []*types.Amount) error {
 	currencies := make([]*types.Currency, 0)
 	for _, amount := range amounts {
-		// Ensure a currency is used at most once in balance.Amounts
+		// Ensure a currency is used at most once
 		if ContainsCurrency(currencies, amount.Currency) {
-			return fmt.Errorf("currency %+v used in balance multiple times", amount.Currency)
+			return fmt.Errorf("currency %+v used multiple times", amount.Currency)
 		}
 		currencies = append(currencies, amount.Currency)
 
