@@ -34,6 +34,10 @@ func ConstructionMetadataResponse(
 		return errors.New("Metadata is nil")
 	}
 
+	if err := assertUniqueAmounts(response.SuggestedFee); err != nil {
+		return fmt.Errorf("%w: duplicate suggested fee currency found", err)
+	}
+
 	return nil
 }
 

@@ -219,6 +219,13 @@ func (s *Syncer) processBlock(
 	ctx context.Context,
 	block *types.Block,
 ) error {
+	// If the block is omitted, increase
+	// index and return.
+	if block == nil {
+		s.nextIndex++
+		return nil
+	}
+
 	shouldRemove, lastBlock, err := s.checkRemove(block)
 	if err != nil {
 		return err
@@ -284,7 +291,7 @@ func (s *Syncer) fetchChannelBlocks(
 	ctx context.Context,
 	network *types.NetworkIdentifier,
 	blockIndicies chan int64,
-	results chan *types.Block,
+	results chan *blockResult,
 ) error {
 	for b := range blockIndicies {
 		block, err := s.helper.Block(
@@ -299,7 +306,7 @@ func (s *Syncer) fetchChannelBlocks(
 		}
 
 		select {
-		case results <- block:
+		case results <- &blockResult{index: b, block: block}:
 		case <-ctx.Done():
 			return ctx.Err()
 		}
@@ -363,6 +370,16 @@ func (s *Syncer) processBlocks(
 	return nil
 }
 
+// blockResult is returned by calls
+// to fetch a particular index. We must
+// use a separate index field in case
+// the block is omitted and we can't
+// determine the index of the request.
+type blockResult struct {
+	index int64
+	block *types.Block
+}
+
 // syncRange fetches and processes a range of blocks
 // (from syncer.nextIndex to endIndex, inclusive)
 // with syncer.concurrency.
@@ -371,7 +388,7 @@ func (s *Syncer) syncRange(
 	endIndex int64,
 ) error {
 	blockIndicies := make(chan int64)
-	results := make(chan *types.Block)
+	results := make(chan *blockResult)
 
 	// We create a separate derivative context here instead of
 	// replacing the provided ctx because the context returned
@@ -401,7 +418,7 @@ func (s *Syncer) syncRange(
 
 	cache := make(map[int64]*types.Block)
 	for b := range results {
-		cache[b.BlockIdentifier.Index] = b
+		cache[b.index] = b.block
 
 		if err := s.processBlocks(ctx, cache, endIndex); err != nil {
 			return fmt.Errorf("%w: unable to process blocks", err)
