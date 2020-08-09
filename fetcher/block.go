@@ -177,6 +177,12 @@ func (f *Fetcher) Block(
 		return nil, err
 	}
 
+	// If a block is omitted, it will return a non-error
+	// response with block equal to nil.
+	if block == nil {
+		return nil, nil
+	}
+
 	if err := f.Asserter.Block(block); err != nil {
 		return nil, err
 	}

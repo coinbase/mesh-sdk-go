@@ -112,14 +112,16 @@ func (a *BlockAPIService) Block(
 // only be used when querying a node for a block does not return all transactions contained within
 // it. All transactions returned by this endpoint must be appended to any transactions returned by
 // the /block method by consumers of this data. Fetching a transaction by hash is considered an
-// Explorer Method (which is classified under the Future Work section). Calling this endpoint
-// requires reference to a BlockIdentifier because transaction parsing can change depending on which
-// block contains the transaction. For example, in Bitcoin it is necessary to know which block
-// contains a transaction to determine the destination of fee payments. Without specifying a block
-// identifier, the node would have to infer which block to use (which could change during a re-org).
-// Implementations that require fetching previous transactions to populate the response (ex:
-// Previous UTXOs in Bitcoin) may find it useful to run a cache within the Rosetta server in the
-// /data directory (on a path that does not conflict with the node).
+// Explorer Method (which is classified under the Future Work section). This method can be used to
+// let consumers to paginate results when the  block trasactions count is too big to be returned in
+// a single BlockResponse. Calling this endpoint requires reference to a BlockIdentifier because
+// transaction parsing can change depending on which block contains the transaction. For example, in
+// Bitcoin it is necessary to know which block contains a transaction to determine the destination
+// of fee payments. Without specifying a block identifier, the node would have to infer which block
+// to use (which could change during a re-org). Implementations that require fetching previous
+// transactions to populate the response (ex: Previous UTXOs in Bitcoin) may find it useful to run a
+// cache within the Rosetta server in the /data directory (on a path that does not conflict with the
+// node).
 func (a *BlockAPIService) BlockTransaction(
 	ctx _context.Context,
 	blockTransactionRequest *types.BlockTransactionRequest,

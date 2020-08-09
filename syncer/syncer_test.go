@@ -326,6 +326,25 @@ func TestProcessBlock(t *testing.T) {
 		)
 	})
 
+	t.Run("Process omitted block", func(t *testing.T) {
+		err := syncer.processBlock(
+			ctx,
+			nil,
+		)
+		assert.NoError(t, err)
+		assert.Equal(t, int64(4), syncer.nextIndex)
+		assert.Equal(t, blockSequence[2].BlockIdentifier, lastBlockIdentifier(syncer))
+		assert.Equal(
+			t,
+			[]*types.BlockIdentifier{
+				blockSequence[0].BlockIdentifier,
+				blockSequence[3].BlockIdentifier,
+				blockSequence[2].BlockIdentifier,
+			},
+			syncer.pastBlocks,
+		)
+	})
+
 	mockHelper.AssertExpectations(t)
 	mockHandler.AssertExpectations(t)
 }
@@ -389,18 +408,28 @@ func TestSync_NoReorg(t *testing.T) {
 	}, nil).Twice()
 
 	blocks := createBlocks(0, 1200, "")
-	for _, b := range blocks {
+
+	// Create a block gap
+	blocks[100] = nil
+	blocks[101].ParentBlockIdentifier = blocks[99].BlockIdentifier
+	for i, b := range blocks {
+		index := int64(i)
 		mockHelper.On(
 			"Block",
 			mock.AnythingOfType("*context.cancelCtx"),
 			networkIdentifier,
-			&types.PartialBlockIdentifier{Index: &b.BlockIdentifier.Index},
+			&types.PartialBlockIdentifier{Index: &index},
 		).Return(
 			b,
 			nil,
 		).Run(func(args mock.Arguments) {
 			assertNotCanceled(t, args)
 		}).Once()
+
+		if b == nil {
+			continue
+		}
+
 		mockHandler.On(
 			"BlockAdded",
 			mock.AnythingOfType("*context.cancelCtx"),
