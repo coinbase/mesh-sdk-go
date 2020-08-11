@@ -140,7 +140,7 @@ type Handler interface {
 		account *types.AccountIdentifier,
 		currency *types.Currency,
 		computedBalance string,
-		nodeBalance string,
+		liveBalance string,
 		block *types.BlockIdentifier,
 	) error
 
@@ -372,7 +372,7 @@ func (r *Reconciler) CompareBalance(
 	)
 	if err != nil {
 		return zeroString, "", head.Index, fmt.Errorf(
-			"%w: unable to get cached balance for %+v:%+v",
+			"%w: unable to get computed balance for %+v:%+v",
 			err,
 			account,
 			currency,
@@ -442,7 +442,7 @@ func (r *Reconciler) accountReconciliation(
 
 		// If don't have previous balance because stateless, check diff on block
 		// instead of comparing entire computed balance
-		difference, cachedBalance, headIndex, err := r.CompareBalance(
+		difference, computedBalance, headIndex, err := r.CompareBalance(
 			ctx,
 			account,
 			currency,
@@ -503,7 +503,7 @@ func (r *Reconciler) accountReconciliation(
 				reconciliationType,
 				accountCurrency.Account,
 				accountCurrency.Currency,
-				cachedBalance,
+				computedBalance,
 				liveAmount,
 				liveBlock,
 			)
