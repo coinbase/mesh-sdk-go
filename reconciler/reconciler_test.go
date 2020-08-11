@@ -626,7 +626,50 @@ func TestInactiveAccountQueue(t *testing.T) {
 	})
 }
 
-func TestReconcile_SuccessOnlyActive(t *testing.T) {
+func mockSuccessfulReconcilerCalls(
+	mockHelper *mocks.Helper,
+	mockHandler *mocks.Handler,
+	accountCurrency *AccountCurrency,
+	value string,
+	headBlock *types.BlockIdentifier,
+	liveBlock *types.BlockIdentifier,
+) {
+	mockHelper.On("CurrentBlock", mock.Anything).Return(headBlock, nil).Once()
+	mockHelper.On(
+		"LiveBalance",
+		mock.Anything,
+		accountCurrency.Account,
+		accountCurrency.Currency,
+		types.ConstructPartialBlockIdentifier(liveBlock),
+	).Return(
+		&types.Amount{Value: value, Currency: accountCurrency.Currency},
+		headBlock,
+		nil,
+	).Once()
+	mockHelper.On("BlockExists", mock.Anything, headBlock).Return(true, nil).Once()
+	mockHelper.On(
+		"ComputedBalance",
+		mock.Anything,
+		accountCurrency.Account,
+		accountCurrency.Currency,
+		headBlock,
+	).Return(
+		&types.Amount{Value: value, Currency: accountCurrency.Currency},
+		liveBlock,
+		nil,
+	).Once()
+	mockHandler.On(
+		"ReconciliationSucceeded",
+		mock.Anything,
+		"ACTIVE",
+		accountCurrency.Account,
+		accountCurrency.Currency,
+		value,
+		headBlock,
+	).Return(nil).Once()
+}
+
+func TestReconcile_SuccessOnlyActiveLookupByBlock(t *testing.T) {
 	var (
 		block = &types.BlockIdentifier{
 			Hash:  "block 1",
@@ -641,6 +684,15 @@ func TestReconcile_SuccessOnlyActive(t *testing.T) {
 				Decimals: 8,
 			},
 		}
+		accountCurrency2 = &AccountCurrency{
+			Account: &types.AccountIdentifier{
+				Address: "addr 2",
+			},
+			Currency: &types.Currency{
+				Symbol:   "ETH",
+				Decimals: 18,
+			},
+		}
 		block2 = &types.BlockIdentifier{
 			Hash:  "block 2",
 			Index: 2,
@@ -649,43 +701,33 @@ func TestReconcile_SuccessOnlyActive(t *testing.T) {
 
 	mockHelper := &mocks.Helper{}
 	mockHandler := &mocks.Handler{}
-	r := New(mockHelper, mockHandler, WithActiveConcurrency(1), WithInactiveConcurrency(0))
+	r := New(
+		mockHelper,
+		mockHandler,
+		WithActiveConcurrency(1),
+		WithInactiveConcurrency(0),
+		WithInterestingAccounts([]*AccountCurrency{accountCurrency2}),
+	)
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
 
-	mockHelper.On(
-		"LiveBalance",
-		mock.Anything,
-		accountCurrency.Account,
-		accountCurrency.Currency,
-		types.ConstructPartialBlockIdentifier(block),
-	).Return(
-		&types.Amount{Value: "100", Currency: accountCurrency.Currency},
-		block,
-		nil,
-	).Once()
-	mockHelper.On("CurrentBlock", mock.Anything).Return(block2, nil).Once()
-	mockHelper.On("BlockExists", mock.Anything, block).Return(true, nil).Once()
-	mockHelper.On(
-		"ComputedBalance",
-		mock.Anything,
-		accountCurrency.Account,
-		accountCurrency.Currency,
-		block2,
-	).Return(
-		&types.Amount{Value: "100", Currency: accountCurrency.Currency},
-		block,
-		nil,
-	).Once()
-	mockHandler.On(
-		"ReconciliationSucceeded",
-		mock.Anything,
-		"ACTIVE",
-		accountCurrency.Account,
-		accountCurrency.Currency,
+	mockSuccessfulReconcilerCalls(
+		mockHelper,
+		mockHandler,
+		accountCurrency,
 		"100",
+		block2,
 		block,
-	).Return(nil).Once()
+	)
+
+	mockSuccessfulReconcilerCalls(
+		mockHelper,
+		mockHandler,
+		accountCurrency2,
+		"250",
+		block2,
+		block,
+	)
 
 	go func() {
 		err := r.Reconcile(ctx)
@@ -694,10 +736,9 @@ func TestReconcile_SuccessOnlyActive(t *testing.T) {
 
 	err := r.QueueChanges(ctx, block, []*parser.BalanceChange{
 		{
-			Account:    accountCurrency.Account,
-			Currency:   accountCurrency.Currency,
-			Difference: "100",
-			Block:      block,
+			Account:  accountCurrency.Account,
+			Currency: accountCurrency.Currency,
+			Block:    block,
 		},
 	})
 	assert.NoError(t, err)
