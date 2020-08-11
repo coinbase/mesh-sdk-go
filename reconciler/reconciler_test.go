@@ -626,56 +626,7 @@ func TestInactiveAccountQueue(t *testing.T) {
 	})
 }
 
-func mockSuccessfulReconcilerCalls(
-	mockHelper *mocks.Helper,
-	mockHandler *mocks.Handler,
-	lookupBalanceByBlock bool,
-	accountCurrency *AccountCurrency,
-	value string,
-	headBlock *types.BlockIdentifier,
-	liveBlock *types.BlockIdentifier,
-) {
-	mockHelper.On("CurrentBlock", mock.Anything).Return(headBlock, nil).Once()
-	lookupBlock := liveBlock
-	if !lookupBalanceByBlock {
-		lookupBlock = nil
-	}
-
-	mockHelper.On(
-		"LiveBalance",
-		mock.Anything,
-		accountCurrency.Account,
-		accountCurrency.Currency,
-		lookupBlock,
-	).Return(
-		&types.Amount{Value: value, Currency: accountCurrency.Currency},
-		headBlock,
-		nil,
-	).Once()
-	mockHelper.On("BlockExists", mock.Anything, headBlock).Return(true, nil).Once()
-	mockHelper.On(
-		"ComputedBalance",
-		mock.Anything,
-		accountCurrency.Account,
-		accountCurrency.Currency,
-		headBlock,
-	).Return(
-		&types.Amount{Value: value, Currency: accountCurrency.Currency},
-		liveBlock,
-		nil,
-	).Once()
-	mockHandler.On(
-		"ReconciliationSucceeded",
-		mock.Anything,
-		"ACTIVE",
-		accountCurrency.Account,
-		accountCurrency.Currency,
-		value,
-		headBlock,
-	).Return(nil).Once()
-}
-
-func mockFailedReconcilerCalls(
+func mockReconcilerCalls(
 	mockHelper *mocks.Helper,
 	mockHandler *mocks.Handler,
 	lookupBalanceByBlock bool,
@@ -684,8 +635,12 @@ func mockFailedReconcilerCalls(
 	computedValue string,
 	headBlock *types.BlockIdentifier,
 	liveBlock *types.BlockIdentifier,
+	success bool,
+	reconciliationType string,
 ) {
-	mockHelper.On("CurrentBlock", mock.Anything).Return(headBlock, nil).Once()
+	if reconciliationType == ActiveReconciliation {
+		mockHelper.On("CurrentBlock", mock.Anything).Return(headBlock, nil).Once()
+	}
 	lookupBlock := liveBlock
 	if !lookupBalanceByBlock {
 		lookupBlock = nil
@@ -714,16 +669,28 @@ func mockFailedReconcilerCalls(
 		liveBlock,
 		nil,
 	).Once()
-	mockHandler.On(
-		"ReconciliationFailed",
-		mock.Anything,
-		"ACTIVE",
-		accountCurrency.Account,
-		accountCurrency.Currency,
-		computedValue,
-		liveValue,
-		headBlock,
-	).Return(errors.New("reconciliation failed")).Once()
+	if success {
+		mockHandler.On(
+			"ReconciliationSucceeded",
+			mock.Anything,
+			reconciliationType,
+			accountCurrency.Account,
+			accountCurrency.Currency,
+			liveValue,
+			headBlock,
+		).Return(nil).Once()
+	} else {
+		mockHandler.On(
+			"ReconciliationFailed",
+			mock.Anything,
+			reconciliationType,
+			accountCurrency.Account,
+			accountCurrency.Currency,
+			computedValue,
+			liveValue,
+			headBlock,
+		).Return(errors.New("reconciliation failed")).Once()
+	}
 }
 
 func TestReconcile_SuccessOnlyActive(t *testing.T) {
@@ -772,34 +739,43 @@ func TestReconcile_SuccessOnlyActive(t *testing.T) {
 			ctx := context.Background()
 			ctx, cancel := context.WithCancel(ctx)
 
-			mockSuccessfulReconcilerCalls(
+			mockReconcilerCalls(
 				mockHelper,
 				mockHandler,
 				lookup,
 				accountCurrency,
 				"100",
+				"100",
 				block2,
 				block,
+				true,
+				ActiveReconciliation,
 			)
 
-			mockSuccessfulReconcilerCalls(
+			mockReconcilerCalls(
 				mockHelper,
 				mockHandler,
 				lookup,
 				accountCurrency2,
 				"250",
+				"250",
 				block2,
 				block,
+				true,
+				ActiveReconciliation,
 			)
 
-			mockSuccessfulReconcilerCalls(
+			mockReconcilerCalls(
 				mockHelper,
 				mockHandler,
 				lookup,
 				accountCurrency2,
 				"120",
+				"120",
 				block2,
 				block2,
+				true,
+				ActiveReconciliation,
 			)
 
 			go func() {
@@ -892,23 +868,29 @@ func TestReconcile_HighWaterMark(t *testing.T) {
 	).Once()
 
 	// Second call to QueueChanges
-	mockSuccessfulReconcilerCalls(
+	mockReconcilerCalls(
 		mockHelper,
 		mockHandler,
 		false,
 		accountCurrency,
 		"150",
+		"150",
 		block200,
 		block200,
+		true,
+		ActiveReconciliation,
 	)
-	mockSuccessfulReconcilerCalls(
+	mockReconcilerCalls(
 		mockHelper,
 		mockHandler,
 		false,
 		accountCurrency2,
 		"120",
+		"120",
 		block200,
 		block200,
+		true,
+		ActiveReconciliation,
 	)
 
 	go func() {
@@ -1038,7 +1020,7 @@ func TestReconcile_FailureOnlyActive(t *testing.T) {
 			)
 			ctx := context.Background()
 
-			mockFailedReconcilerCalls(
+			mockReconcilerCalls(
 				mockHelper,
 				mockHandler,
 				lookup,
@@ -1047,6 +1029,8 @@ func TestReconcile_FailureOnlyActive(t *testing.T) {
 				"100",
 				block2,
 				block,
+				false,
+				ActiveReconciliation,
 			)
 
 			go func() {
@@ -1070,104 +1054,6 @@ func TestReconcile_FailureOnlyActive(t *testing.T) {
 			mockHandler.AssertExpectations(t)
 		})
 	}
-}
-
-func mockSuccessfulReconcilerCallsINACTIVE(
-	mockHelper *mocks.Helper,
-	mockHandler *mocks.Handler,
-	lookupBalanceByBlock bool,
-	accountCurrency *AccountCurrency,
-	value string,
-	headBlock *types.BlockIdentifier,
-	liveBlock *types.BlockIdentifier,
-) {
-	lookupBlock := liveBlock
-	if !lookupBalanceByBlock {
-		lookupBlock = nil
-	}
-
-	mockHelper.On(
-		"LiveBalance",
-		mock.Anything,
-		accountCurrency.Account,
-		accountCurrency.Currency,
-		lookupBlock,
-	).Return(
-		&types.Amount{Value: value, Currency: accountCurrency.Currency},
-		headBlock,
-		nil,
-	).Once()
-	mockHelper.On("BlockExists", mock.Anything, headBlock).Return(true, nil).Once()
-	mockHelper.On(
-		"ComputedBalance",
-		mock.Anything,
-		accountCurrency.Account,
-		accountCurrency.Currency,
-		headBlock,
-	).Return(
-		&types.Amount{Value: value, Currency: accountCurrency.Currency},
-		liveBlock,
-		nil,
-	).Once()
-	mockHandler.On(
-		"ReconciliationSucceeded",
-		mock.Anything,
-		"INACTIVE",
-		accountCurrency.Account,
-		accountCurrency.Currency,
-		value,
-		headBlock,
-	).Return(nil).Once()
-}
-
-func mockFailureReconcilerCallsINACTIVE(
-	mockHelper *mocks.Helper,
-	mockHandler *mocks.Handler,
-	lookupBalanceByBlock bool,
-	accountCurrency *AccountCurrency,
-	liveValue string,
-	computedValue string,
-	headBlock *types.BlockIdentifier,
-	liveBlock *types.BlockIdentifier,
-) {
-	lookupBlock := liveBlock
-	if !lookupBalanceByBlock {
-		lookupBlock = nil
-	}
-
-	mockHelper.On(
-		"LiveBalance",
-		mock.Anything,
-		accountCurrency.Account,
-		accountCurrency.Currency,
-		lookupBlock,
-	).Return(
-		&types.Amount{Value: liveValue, Currency: accountCurrency.Currency},
-		headBlock,
-		nil,
-	).Once()
-	mockHelper.On("BlockExists", mock.Anything, headBlock).Return(true, nil).Once()
-	mockHelper.On(
-		"ComputedBalance",
-		mock.Anything,
-		accountCurrency.Account,
-		accountCurrency.Currency,
-		headBlock,
-	).Return(
-		&types.Amount{Value: computedValue, Currency: accountCurrency.Currency},
-		liveBlock,
-		nil,
-	).Once()
-	mockHandler.On(
-		"ReconciliationFailed",
-		mock.Anything,
-		"INACTIVE",
-		accountCurrency.Account,
-		accountCurrency.Currency,
-		computedValue,
-		liveValue,
-		headBlock,
-	).Return(errors.New("reconciliation failed")).Once()
 }
 
 func TestReconcile_SuccessOnlyInactive(t *testing.T) {
@@ -1210,14 +1096,17 @@ func TestReconcile_SuccessOnlyInactive(t *testing.T) {
 			ctx, cancel := context.WithCancel(ctx)
 
 			mockHelper.On("CurrentBlock", mock.Anything).Return(block, nil)
-			mockSuccessfulReconcilerCallsINACTIVE(
+			mockReconcilerCalls(
 				mockHelper,
 				mockHandler,
 				lookup,
 				accountCurrency,
 				"100",
+				"100",
 				block,
 				block,
+				true,
+				InactiveReconciliation,
 			)
 
 			go func() {
@@ -1236,14 +1125,17 @@ func TestReconcile_SuccessOnlyInactive(t *testing.T) {
 			ctx, cancel = context.WithCancel(ctx)
 
 			mockHelper2.On("CurrentBlock", mock.Anything).Return(block2, nil)
-			mockSuccessfulReconcilerCallsINACTIVE(
+			mockReconcilerCalls(
 				mockHelper2,
 				mockHandler2,
 				lookup,
 				accountCurrency,
 				"200",
+				"200",
 				block2,
 				block2,
+				true,
+				InactiveReconciliation,
 			)
 
 			go func() {
@@ -1297,7 +1189,7 @@ func TestReconcile_FailureOnlyInactive(t *testing.T) {
 			ctx, cancel := context.WithCancel(ctx)
 
 			mockHelper.On("CurrentBlock", mock.Anything).Return(block, nil)
-			mockFailureReconcilerCallsINACTIVE(
+			mockReconcilerCalls(
 				mockHelper,
 				mockHandler,
 				lookup,
@@ -1306,6 +1198,8 @@ func TestReconcile_FailureOnlyInactive(t *testing.T) {
 				"105",
 				block,
 				block,
+				false,
+				InactiveReconciliation,
 			)
 
 			go func() {
