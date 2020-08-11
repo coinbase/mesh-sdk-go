@@ -405,18 +405,20 @@ func (r *Reconciler) bestLiveBalance(
 	currency *types.Currency,
 	block *types.BlockIdentifier,
 ) (*types.Amount, *types.BlockIdentifier, error) {
-	if !r.lookupBalanceByBlock {
-		// Use the current balance to reconcile balances when lookupBalanceByBlock
-		// is disabled. This could be the case when a rosetta server does not
-		// support historical balance lookups.
-		block = nil
+	// Use the current balance to reconcile balances when lookupBalanceByBlock
+	// is disabled. This could be the case when a rosetta server does not
+	// support historical balance lookups.
+	var lookupBlock *types.PartialBlockIdentifier
+
+	if r.lookupBalanceByBlock {
+		lookupBlock = types.ConstructPartialBlockIdentifier(block)
 	}
 
 	return r.helper.LiveBalance(
 		ctx,
 		account,
 		currency,
-		types.ConstructPartialBlockIdentifier(block),
+		lookupBlock,
 	)
 }
 
