@@ -16,6 +16,7 @@ package keys
 
 import (
 	"crypto/ed25519"
+	"encoding/hex"
 	"fmt"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
@@ -26,6 +27,49 @@ import (
 
 // PrivKeyBytesLen are 32-bytes for all supported curvetypes
 const PrivKeyBytesLen = 32
+
+// ImportPrivKey returns a Keypair from a hex-encoded privkey string
+func ImportPrivKey(privKeyHex string, curve types.CurveType) (*KeyPair, error) {
+	privKey, err := hex.DecodeString(privKeyHex)
+	if err != nil {
+		return nil, fmt.Errorf("%s could not decode privkey", privKeyHex)
+	}
+
+	switch curve {
+	case types.Secp256k1:
+		rawPrivKey, rawPubKey := btcec.PrivKeyFromBytes(btcec.S256(), privKey)
+
+		pubKey := &types.PublicKey{
+			Bytes:     rawPubKey.SerializeCompressed(),
+			CurveType: curve,
+		}
+
+		keyPair := &KeyPair{
+			PublicKey:  pubKey,
+			PrivateKey: rawPrivKey.Serialize(),
+		}
+
+		return keyPair, nil
+	case types.Edwards25519:
+		privKeyBytes := ed25519.NewKeyFromSeed(privKey)
+		pubKeyBytes := make([]byte, ed25519.PublicKeySize)
+		copy(pubKeyBytes, privKey[32:])
+
+		pubKey := &types.PublicKey{
+			Bytes:     pubKeyBytes,
+			CurveType: curve,
+		}
+
+		keyPair := &KeyPair{
+			PublicKey:  pubKey,
+			PrivateKey: privKeyBytes,
+		}
+
+		return keyPair, nil
+	default:
+		return nil, fmt.Errorf("%s is not supported", curve)
+	}
+}
 
 // GenerateKeypair returns a Keypair of a specified CurveType
 func GenerateKeypair(curve types.CurveType) (*KeyPair, error) {
