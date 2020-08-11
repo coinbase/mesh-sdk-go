@@ -29,13 +29,13 @@ type Handler struct {
 	mock.Mock
 }
 
-// ReconciliationFailed provides a mock function with given fields: ctx, reconciliationType, account, currency, computedBalance, nodeBalance, block
-func (_m *Handler) ReconciliationFailed(ctx context.Context, reconciliationType string, account *types.AccountIdentifier, currency *types.Currency, computedBalance string, nodeBalance string, block *types.BlockIdentifier) error {
-	ret := _m.Called(ctx, reconciliationType, account, currency, computedBalance, nodeBalance, block)
+// ReconciliationFailed provides a mock function with given fields: ctx, reconciliationType, account, currency, computedBalance, liveBalance, block
+func (_m *Handler) ReconciliationFailed(ctx context.Context, reconciliationType string, account *types.AccountIdentifier, currency *types.Currency, computedBalance string, liveBalance string, block *types.BlockIdentifier) error {
+	ret := _m.Called(ctx, reconciliationType, account, currency, computedBalance, liveBalance, block)
 
 	var r0 error
 	if rf, ok := ret.Get(0).(func(context.Context, string, *types.AccountIdentifier, *types.Currency, string, string, *types.BlockIdentifier) error); ok {
-		r0 = rf(ctx, reconciliationType, account, currency, computedBalance, nodeBalance, block)
+		r0 = rf(ctx, reconciliationType, account, currency, computedBalance, liveBalance, block)
 	} else {
 		r0 = ret.Error(0)
 	}
