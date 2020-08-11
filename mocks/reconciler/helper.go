@@ -50,8 +50,8 @@ func (_m *Helper) BlockExists(ctx context.Context, block *types.BlockIdentifier)
 	return r0, r1
 }
 
-// ComputedAccountBalance provides a mock function with given fields: ctx, account, currency, headBlock
-func (_m *Helper) ComputedAccountBalance(ctx context.Context, account *types.AccountIdentifier, currency *types.Currency, headBlock *types.BlockIdentifier) (*types.Amount, *types.BlockIdentifier, error) {
+// ComputedBalance provides a mock function with given fields: ctx, account, currency, headBlock
+func (_m *Helper) ComputedBalance(ctx context.Context, account *types.AccountIdentifier, currency *types.Currency, headBlock *types.BlockIdentifier) (*types.Amount, *types.BlockIdentifier, error) {
 	ret := _m.Called(ctx, account, currency, headBlock)
 
 	var r0 *types.Amount
@@ -105,8 +105,8 @@ func (_m *Helper) CurrentBlock(ctx context.Context) (*types.BlockIdentifier, err
 	return r0, r1
 }
 
-// LiveAccountBalance provides a mock function with given fields: ctx, account, currency, block
-func (_m *Helper) LiveAccountBalance(ctx context.Context, account *types.AccountIdentifier, currency *types.Currency, block *types.PartialBlockIdentifier) (*types.Amount, *types.BlockIdentifier, error) {
+// LiveBalance provides a mock function with given fields: ctx, account, currency, block
+func (_m *Helper) LiveBalance(ctx context.Context, account *types.AccountIdentifier, currency *types.Currency, block *types.PartialBlockIdentifier) (*types.Amount, *types.BlockIdentifier, error) {
 	ret := _m.Called(ctx, account, currency, block)
 
 	var r0 *types.Amount

@@ -351,7 +351,7 @@ func TestCompareBalance(t *testing.T) {
 	mh.On("CurrentBlock", ctx).Return(block2, nil).Once()
 	mh.On("BlockExists", ctx, block0).Return(true, nil).Once()
 	mh.On(
-		"ComputedAccountBalance",
+		"ComputedBalance",
 		ctx,
 		account1,
 		amount1.Currency,
@@ -378,7 +378,7 @@ func TestCompareBalance(t *testing.T) {
 	mh.On("CurrentBlock", ctx).Return(block2, nil).Once()
 	mh.On("BlockExists", ctx, block1).Return(true, nil).Once()
 	mh.On(
-		"ComputedAccountBalance",
+		"ComputedBalance",
 		ctx,
 		account1,
 		amount1.Currency,
@@ -405,7 +405,7 @@ func TestCompareBalance(t *testing.T) {
 	mh.On("CurrentBlock", ctx).Return(block2, nil).Once()
 	mh.On("BlockExists", ctx, block2).Return(true, nil).Once()
 	mh.On(
-		"ComputedAccountBalance",
+		"ComputedBalance",
 		ctx,
 		account1,
 		currency1,
@@ -432,7 +432,7 @@ func TestCompareBalance(t *testing.T) {
 	mh.On("CurrentBlock", ctx).Return(block2, nil).Once()
 	mh.On("BlockExists", ctx, block2).Return(true, nil).Once()
 	mh.On(
-		"ComputedAccountBalance",
+		"ComputedBalance",
 		ctx,
 		account1,
 		currency1,
@@ -459,7 +459,7 @@ func TestCompareBalance(t *testing.T) {
 	mh.On("CurrentBlock", ctx).Return(block2, nil).Once()
 	mh.On("BlockExists", ctx, block2).Return(true, nil).Once()
 	mh.On(
-		"ComputedAccountBalance",
+		"ComputedBalance",
 		ctx,
 		account2,
 		currency1,
@@ -654,7 +654,7 @@ func TestReconcile_SuccessOnlyActive(t *testing.T) {
 	ctx, cancel := context.WithCancel(ctx)
 
 	mockHelper.On(
-		"LiveAccountBalance",
+		"LiveBalance",
 		mock.Anything,
 		accountCurrency.Account,
 		accountCurrency.Currency,
@@ -667,7 +667,7 @@ func TestReconcile_SuccessOnlyActive(t *testing.T) {
 	mockHelper.On("CurrentBlock", mock.Anything).Return(block2, nil).Once()
 	mockHelper.On("BlockExists", mock.Anything, block).Return(true, nil).Once()
 	mockHelper.On(
-		"ComputedAccountBalance",
+		"ComputedBalance",
 		mock.Anything,
 		accountCurrency.Account,
 		accountCurrency.Currency,
@@ -736,7 +736,7 @@ func TestReconcile_FailureOnlyActive(t *testing.T) {
 	ctx := context.Background()
 
 	mockHelper.On(
-		"LiveAccountBalance",
+		"LiveBalance",
 		mock.Anything,
 		accountCurrency.Account,
 		accountCurrency.Currency,
@@ -749,7 +749,7 @@ func TestReconcile_FailureOnlyActive(t *testing.T) {
 	mockHelper.On("CurrentBlock", mock.Anything).Return(block2, nil).Once()
 	mockHelper.On("BlockExists", mock.Anything, block).Return(true, nil).Once()
 	mockHelper.On(
-		"ComputedAccountBalance",
+		"ComputedBalance",
 		mock.Anything,
 		accountCurrency.Account,
 		accountCurrency.Currency,
