@@ -941,6 +941,68 @@ func TestReconcile_HighWaterMark(t *testing.T) {
 	mockHandler.AssertExpectations(t)
 }
 
+func TestReconcile_Orphan(t *testing.T) {
+	var (
+		block = &types.BlockIdentifier{
+			Hash:  "block 1",
+			Index: 1,
+		}
+		accountCurrency = &AccountCurrency{
+			Account: &types.AccountIdentifier{
+				Address: "addr 1",
+			},
+			Currency: &types.Currency{
+				Symbol:   "BTC",
+				Decimals: 8,
+			},
+		}
+	)
+
+	mockHelper := &mocks.Helper{}
+	mockHandler := &mocks.Handler{}
+	r := New(
+		mockHelper,
+		mockHandler,
+		WithActiveConcurrency(1),
+		WithInactiveConcurrency(0),
+	)
+	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
+
+	mockHelper.On(
+		"LiveBalance",
+		mock.Anything,
+		accountCurrency.Account,
+		accountCurrency.Currency,
+		types.ConstructPartialBlockIdentifier(block),
+	).Return(
+		nil,
+		nil,
+		errors.New("cannot find block"),
+	).Once()
+	mockHelper.On("BlockExists", mock.Anything, block).Return(false, nil).Once()
+
+	go func() {
+		err := r.Reconcile(ctx)
+		assert.Contains(t, context.Canceled.Error(), err.Error())
+	}()
+
+	err := r.QueueChanges(ctx, block, []*parser.BalanceChange{
+		{
+			Account:  accountCurrency.Account,
+			Currency: accountCurrency.Currency,
+			Block:    block,
+		},
+	})
+	assert.NoError(t, err)
+
+	time.Sleep(1 * time.Second)
+	cancel()
+
+	mockHelper.AssertExpectations(t)
+	mockHandler.AssertExpectations(t)
+}
+
 func TestReconcile_FailureOnlyActive(t *testing.T) {
 	var (
 		block = &types.BlockIdentifier{
@@ -967,7 +1029,13 @@ func TestReconcile_FailureOnlyActive(t *testing.T) {
 		t.Run(fmt.Sprintf("lookup balance by block %t", lookup), func(t *testing.T) {
 			mockHelper := &mocks.Helper{}
 			mockHandler := &mocks.Handler{}
-			r := New(mockHelper, mockHandler, WithActiveConcurrency(1), WithInactiveConcurrency(0), WithLookupBalanceByBlock(lookup))
+			r := New(
+				mockHelper,
+				mockHandler,
+				WithActiveConcurrency(1),
+				WithInactiveConcurrency(0),
+				WithLookupBalanceByBlock(lookup),
+			)
 			ctx := context.Background()
 
 			mockFailedReconcilerCalls(

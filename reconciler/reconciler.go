@@ -414,12 +414,25 @@ func (r *Reconciler) bestLiveBalance(
 		lookupBlock = types.ConstructPartialBlockIdentifier(block)
 	}
 
-	return r.helper.LiveBalance(
+	amount, currentBlock, err := r.helper.LiveBalance(
 		ctx,
 		account,
 		currency,
 		lookupBlock,
 	)
+	if err == nil {
+		return amount, currentBlock, nil
+	}
+
+	// If there is a reorg, there is a chance that balance
+	// lookup can fail if we try to query an orphaned block.
+	// If this is the case, we continue reconciling.
+	exists, existsErr := r.helper.BlockExists(ctx, block)
+	if existsErr != nil || !exists {
+		return nil, nil, ErrBlockGone
+	}
+
+	return nil, nil, err
 }
 
 // accountReconciliation returns an error if the provided
@@ -579,8 +592,12 @@ func (r *Reconciler) reconcileActiveAccounts(
 				balanceChange.Currency,
 				balanceChange.Block,
 			)
+			if errors.Is(err, ErrBlockGone) {
+				continue
+			}
+
 			if err != nil {
-				return err
+				return fmt.Errorf("%w: unable to lookup live balance", err)
 			}
 
 			err = r.accountReconciliation(
@@ -674,20 +691,21 @@ func (r *Reconciler) reconcileInactiveAccounts(
 				nextAcct.Entry.Currency,
 				head,
 			)
-			if err != nil {
-				return err
-			}
-
-			err = r.accountReconciliation(
-				ctx,
-				nextAcct.Entry.Account,
-				nextAcct.Entry.Currency,
-				amount.Value,
-				block,
-				true,
-			)
-			if err != nil {
-				return err
+			switch {
+			case err == nil:
+				err = r.accountReconciliation(
+					ctx,
+					nextAcct.Entry.Account,
+					nextAcct.Entry.Currency,
+					amount.Value,
+					block,
+					true,
+				)
+				if err != nil {
+					return err
+				}
+			case !errors.Is(err, ErrBlockGone):
+				return fmt.Errorf("%w: unable to lookup live balance", err)
 			}
 
 			// Always re-enqueue accounts after they have been inactively
