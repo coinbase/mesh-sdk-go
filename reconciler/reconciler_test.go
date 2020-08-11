@@ -636,7 +636,7 @@ func mockSuccessfulReconcilerCalls(
 	liveBlock *types.BlockIdentifier,
 ) {
 	mockHelper.On("CurrentBlock", mock.Anything).Return(headBlock, nil).Once()
-	lookupBlock := types.ConstructPartialBlockIdentifier(liveBlock)
+	lookupBlock := liveBlock
 	if !lookupBalanceByBlock {
 		lookupBlock = nil
 	}
@@ -686,7 +686,7 @@ func mockFailedReconcilerCalls(
 	liveBlock *types.BlockIdentifier,
 ) {
 	mockHelper.On("CurrentBlock", mock.Anything).Return(headBlock, nil).Once()
-	lookupBlock := types.ConstructPartialBlockIdentifier(liveBlock)
+	lookupBlock := liveBlock
 	if !lookupBalanceByBlock {
 		lookupBlock = nil
 	}
@@ -884,7 +884,7 @@ func TestReconcile_HighWaterMark(t *testing.T) {
 		mock.Anything,
 		accountCurrency.Account,
 		accountCurrency.Currency,
-		(*types.PartialBlockIdentifier)(nil),
+		(*types.BlockIdentifier)(nil),
 	).Return(
 		&types.Amount{Value: "100", Currency: accountCurrency.Currency},
 		block200,
@@ -974,7 +974,7 @@ func TestReconcile_Orphan(t *testing.T) {
 		mock.Anything,
 		accountCurrency.Account,
 		accountCurrency.Currency,
-		types.ConstructPartialBlockIdentifier(block),
+		block,
 	).Return(
 		nil,
 		nil,
@@ -1081,7 +1081,7 @@ func mockSuccessfulReconcilerCallsINACTIVE(
 	headBlock *types.BlockIdentifier,
 	liveBlock *types.BlockIdentifier,
 ) {
-	lookupBlock := types.ConstructPartialBlockIdentifier(liveBlock)
+	lookupBlock := liveBlock
 	if !lookupBalanceByBlock {
 		lookupBlock = nil
 	}
@@ -1130,7 +1130,7 @@ func mockFailureReconcilerCallsINACTIVE(
 	headBlock *types.BlockIdentifier,
 	liveBlock *types.BlockIdentifier,
 ) {
-	lookupBlock := types.ConstructPartialBlockIdentifier(liveBlock)
+	lookupBlock := liveBlock
 	if !lookupBalanceByBlock {
 		lookupBlock = nil
 	}

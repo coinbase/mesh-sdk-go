@@ -126,7 +126,7 @@ type Helper interface {
 		ctx context.Context,
 		account *types.AccountIdentifier,
 		currency *types.Currency,
-		block *types.PartialBlockIdentifier,
+		block *types.BlockIdentifier,
 	) (*types.Amount, *types.BlockIdentifier, error)
 }
 
@@ -408,10 +408,10 @@ func (r *Reconciler) bestLiveBalance(
 	// Use the current balance to reconcile balances when lookupBalanceByBlock
 	// is disabled. This could be the case when a rosetta server does not
 	// support historical balance lookups.
-	var lookupBlock *types.PartialBlockIdentifier
+	var lookupBlock *types.BlockIdentifier
 
 	if r.lookupBalanceByBlock {
-		lookupBlock = types.ConstructPartialBlockIdentifier(block)
+		lookupBlock = block
 	}
 
 	amount, currentBlock, err := r.helper.LiveBalance(
