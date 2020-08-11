@@ -115,14 +115,14 @@ type Helper interface {
 		ctx context.Context,
 	) (*types.BlockIdentifier, error)
 
-	ComputedAccountBalance(
+	ComputedBalance(
 		ctx context.Context,
 		account *types.AccountIdentifier,
 		currency *types.Currency,
 		headBlock *types.BlockIdentifier,
 	) (*types.Amount, *types.BlockIdentifier, error)
 
-	LiveAccountBalance(
+	LiveBalance(
 		ctx context.Context,
 		account *types.AccountIdentifier,
 		currency *types.Currency,
@@ -360,7 +360,7 @@ func (r *Reconciler) CompareBalance(
 	}
 
 	// Check if live block < computed head
-	computedBalance, computedBlock, err := r.helper.ComputedAccountBalance(
+	computedBalance, computedBlock, err := r.helper.ComputedBalance(
 		ctx,
 		account,
 		currency,
@@ -392,10 +392,10 @@ func (r *Reconciler) CompareBalance(
 	return difference, computedBalance.Value, head.Index, nil
 }
 
-// bestBalance returns the balance for an account
+// bestLiveBalance returns the balance for an account
 // at either the current block (if lookupBalanceByBlock is
 // disabled) or at some historical block.
-func (r *Reconciler) bestBalance(
+func (r *Reconciler) bestLiveBalance(
 	ctx context.Context,
 	account *types.AccountIdentifier,
 	currency *types.Currency,
@@ -408,7 +408,7 @@ func (r *Reconciler) bestBalance(
 		block = nil
 	}
 
-	return r.helper.LiveAccountBalance(
+	return r.helper.LiveBalance(
 		ctx,
 		account,
 		currency,
@@ -567,7 +567,7 @@ func (r *Reconciler) reconcileActiveAccounts(
 				continue
 			}
 
-			amount, block, err := r.bestBalance(
+			amount, block, err := r.bestLiveBalance(
 				ctx,
 				balanceChange.Account,
 				balanceChange.Currency,
@@ -662,7 +662,7 @@ func (r *Reconciler) reconcileInactiveAccounts(
 			r.inactiveQueue = r.inactiveQueue[1:]
 			r.inactiveQueueMutex.Unlock()
 
-			amount, block, err := r.bestBalance(
+			amount, block, err := r.bestLiveBalance(
 				ctx,
 				nextAcct.Entry.Account,
 				nextAcct.Entry.Currency,
