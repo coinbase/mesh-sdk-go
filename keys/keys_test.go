@@ -115,9 +115,21 @@ func TestImportPrivKey(t *testing.T) {
 	}
 
 	importPrivKeyTests := []importKeyTest{
-		{"aeb121b4c545f0f850e1480492508c65a250e9965b0d90176fab4d7506398ebb", types.Edwards25519, ""},
-		{"01ea48249742650907004331e85536f868e2d3959434ba751d8aa230138a9707", types.Edwards25519, ""},
-		{"f1821e051843bce17c1f31023609e9412ae4525d27447fc93afa4a271ee60550", types.Edwards25519, ""},
+		{
+			"aeb121b4c545f0f850e1480492508c65a250e9965b0d90176fab4d7506398ebb",
+			types.Edwards25519,
+			"",
+		},
+		{
+			"01ea48249742650907004331e85536f868e2d3959434ba751d8aa230138a9707",
+			types.Edwards25519,
+			"",
+		},
+		{
+			"f1821e051843bce17c1f31023609e9412ae4525d27447fc93afa4a271ee60550",
+			types.Edwards25519,
+			"",
+		},
 		{"0b188af56b25d007fbc4bbf2176cd2a54d876ce4774bb5df38b7c83349405b7a", types.Secp256k1, ""},
 		{"0e842a16b2d39a4dff5c63688513cb2109e30c3c30bc4eb502cc54f4614493f6", types.Secp256k1, ""},
 		{"42efc44bdf7b2d4d45ddd6ddb727ed498c91e7070914c9ed0d80af680ff42b3e", types.Secp256k1, ""},
