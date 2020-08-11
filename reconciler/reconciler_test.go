@@ -1120,6 +1120,56 @@ func mockSuccessfulReconcilerCallsINACTIVE(
 	).Return(nil).Once()
 }
 
+func mockFailureReconcilerCallsINACTIVE(
+	mockHelper *mocks.Helper,
+	mockHandler *mocks.Handler,
+	lookupBalanceByBlock bool,
+	accountCurrency *AccountCurrency,
+	liveValue string,
+	computedValue string,
+	headBlock *types.BlockIdentifier,
+	liveBlock *types.BlockIdentifier,
+) {
+	lookupBlock := types.ConstructPartialBlockIdentifier(liveBlock)
+	if !lookupBalanceByBlock {
+		lookupBlock = nil
+	}
+
+	mockHelper.On(
+		"LiveBalance",
+		mock.Anything,
+		accountCurrency.Account,
+		accountCurrency.Currency,
+		lookupBlock,
+	).Return(
+		&types.Amount{Value: liveValue, Currency: accountCurrency.Currency},
+		headBlock,
+		nil,
+	).Once()
+	mockHelper.On("BlockExists", mock.Anything, headBlock).Return(true, nil).Once()
+	mockHelper.On(
+		"ComputedBalance",
+		mock.Anything,
+		accountCurrency.Account,
+		accountCurrency.Currency,
+		headBlock,
+	).Return(
+		&types.Amount{Value: computedValue, Currency: accountCurrency.Currency},
+		liveBlock,
+		nil,
+	).Once()
+	mockHandler.On(
+		"ReconciliationFailed",
+		mock.Anything,
+		"INACTIVE",
+		accountCurrency.Account,
+		accountCurrency.Currency,
+		computedValue,
+		liveValue,
+		headBlock,
+	).Return(errors.New("reconciliation failed")).Once()
+}
+
 func TestReconcile_SuccessOnlyInactive(t *testing.T) {
 	var (
 		block = &types.BlockIdentifier{
@@ -1207,6 +1257,67 @@ func TestReconcile_SuccessOnlyInactive(t *testing.T) {
 			mockHandler.AssertExpectations(t)
 			mockHelper2.AssertExpectations(t)
 			mockHandler2.AssertExpectations(t)
+		})
+	}
+}
+
+func TestReconcile_FailureOnlyInactive(t *testing.T) {
+	var (
+		block = &types.BlockIdentifier{
+			Hash:  "block 1",
+			Index: 1,
+		}
+		accountCurrency = &AccountCurrency{
+			Account: &types.AccountIdentifier{
+				Address: "addr 1",
+			},
+			Currency: &types.Currency{
+				Symbol:   "BTC",
+				Decimals: 8,
+			},
+		}
+	)
+
+	lookupBalanceByBlocks := []bool{true, false}
+	for _, lookup := range lookupBalanceByBlocks {
+		t.Run(fmt.Sprintf("lookup balance by block %t", lookup), func(t *testing.T) {
+			mockHelper := &mocks.Helper{}
+			mockHandler := &mocks.Handler{}
+			r := New(
+				mockHelper,
+				mockHandler,
+				WithActiveConcurrency(0),
+				WithInactiveConcurrency(1),
+				WithSeenAccounts([]*AccountCurrency{accountCurrency}),
+				WithLookupBalanceByBlock(lookup),
+				WithInactiveFrequency(1),
+				WithDebugLogging(true),
+			)
+			ctx := context.Background()
+			ctx, cancel := context.WithCancel(ctx)
+
+			mockHelper.On("CurrentBlock", mock.Anything).Return(block, nil)
+			mockFailureReconcilerCallsINACTIVE(
+				mockHelper,
+				mockHandler,
+				lookup,
+				accountCurrency,
+				"100",
+				"105",
+				block,
+				block,
+			)
+
+			go func() {
+				time.Sleep(2 * time.Second)
+				cancel()
+			}()
+
+			err := r.Reconcile(ctx)
+			assert.Contains(t, "reconciliation failed", err.Error())
+
+			mockHelper.AssertExpectations(t)
+			mockHandler.AssertExpectations(t)
 		})
 	}
 }
