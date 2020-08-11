@@ -173,7 +173,6 @@ type AccountCurrency struct {
 // types.AccountIdentifiers returned in types.Operations
 // by a Rosetta Server.
 type Reconciler struct {
-	network              *types.NetworkIdentifier
 	helper               Helper
 	handler              Handler
 	lookupBalanceByBlock bool
@@ -214,13 +213,11 @@ type Reconciler struct {
 
 // New creates a new Reconciler.
 func New(
-	network *types.NetworkIdentifier,
 	helper Helper,
 	handler Handler,
 	options ...Option,
 ) *Reconciler {
 	r := &Reconciler{
-		network:             network,
 		helper:              helper,
 		handler:             handler,
 		inactiveFrequency:   defaultInactiveFrequency,
