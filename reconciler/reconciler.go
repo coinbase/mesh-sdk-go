@@ -252,11 +252,15 @@ func (r *Reconciler) QueueChanges(
 		skipAccount := false
 		// Look through balance changes for account + currency
 		for _, change := range balanceChanges {
-			if types.Hash(account) == types.Hash(change) {
+			if types.Hash(account) == types.Hash(&AccountCurrency{
+				Account:  change.Account,
+				Currency: change.Currency,
+			}) {
 				skipAccount = true
 				break
 			}
 		}
+
 		// Account changed on this block
 		if skipAccount {
 			continue
