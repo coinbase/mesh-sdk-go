@@ -111,7 +111,7 @@ func TestNewReconciler(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			result := New(nil, nil, nil, nil, test.options...)
+			result := New(nil, nil, nil, test.options...)
 			assert.ElementsMatch(t, test.expected.inactiveQueue, result.inactiveQueue)
 			assert.Equal(t, test.expected.seenAccounts, result.seenAccounts)
 			assert.ElementsMatch(t, test.expected.interestingAccounts, result.interestingAccounts)
@@ -234,65 +234,6 @@ func TestContainsAccountCurrency(t *testing.T) {
 			},
 			Currency: currency1,
 		}))
-	})
-}
-
-func TestExtractAmount(t *testing.T) {
-	var (
-		currency1 = &types.Currency{
-			Symbol:   "curr1",
-			Decimals: 4,
-		}
-
-		currency2 = &types.Currency{
-			Symbol:   "curr2",
-			Decimals: 7,
-		}
-
-		amount1 = &types.Amount{
-			Value:    "100",
-			Currency: currency1,
-		}
-
-		amount2 = &types.Amount{
-			Value:    "200",
-			Currency: currency2,
-		}
-
-		balances = []*types.Amount{
-			amount1,
-			amount2,
-		}
-
-		badCurr = &types.Currency{
-			Symbol:   "no curr",
-			Decimals: 100,
-		}
-	)
-
-	t.Run("Non-existent currency", func(t *testing.T) {
-		result, err := ExtractAmount(balances, badCurr)
-		assert.Nil(t, result)
-		assert.EqualError(
-			t,
-			err,
-			fmt.Errorf(
-				"account balance response does could not contain currency %s",
-				types.PrettyPrintStruct(badCurr),
-			).Error(),
-		)
-	})
-
-	t.Run("Simple account", func(t *testing.T) {
-		result, err := ExtractAmount(balances, currency1)
-		assert.Equal(t, amount1, result)
-		assert.NoError(t, err)
-	})
-
-	t.Run("SubAccount", func(t *testing.T) {
-		result, err := ExtractAmount(balances, currency2)
-		assert.Equal(t, amount2, result)
-		assert.NoError(t, err)
 	})
 }
 
