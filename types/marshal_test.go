@@ -61,7 +61,9 @@ func TestCustomMarshalPublicKey(t *testing.T) {
 func TestCustomMarshalSignature(t *testing.T) {
 	s := &Signature{
 		SignatureType: Ecdsa,
-		Bytes:         []byte("hsdjkfhkasjfhkjasdhfkjasdnfkjabsdfkjhakjsfdhjksadhfjk23478923645yhsdfn"),
+		Bytes: []byte(
+			"hsdjkfhkasjfhkjasdhfkjasdnfkjabsdfkjhakjsfdhjksadhfjk23478923645yhsdfn",
+		),
 	}
 
 	j, err := json.Marshal(s)
