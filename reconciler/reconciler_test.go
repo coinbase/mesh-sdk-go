@@ -18,13 +18,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"reflect"
 	"testing"
+	"time"
 
+	mocks "github.com/coinbase/rosetta-sdk-go/mocks/reconciler"
 	"github.com/coinbase/rosetta-sdk-go/parser"
 	"github.com/coinbase/rosetta-sdk-go/types"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 func TestNewReconciler(t *testing.T) {
@@ -45,7 +47,7 @@ func TestNewReconciler(t *testing.T) {
 		expected *Reconciler
 	}{
 		"no options": {
-			expected: templateReconciler(),
+			expected: New(nil, nil),
 		},
 		"with reconciler concurrency": {
 			options: []Option{
@@ -53,7 +55,7 @@ func TestNewReconciler(t *testing.T) {
 				WithActiveConcurrency(200),
 			},
 			expected: func() *Reconciler {
-				r := templateReconciler()
+				r := New(nil, nil)
 				r.inactiveConcurrency = 100
 				r.activeConcurrency = 200
 
@@ -67,7 +69,7 @@ func TestNewReconciler(t *testing.T) {
 				}),
 			},
 			expected: func() *Reconciler {
-				r := templateReconciler()
+				r := New(nil, nil)
 				r.interestingAccounts = []*AccountCurrency{
 					accountCurrency,
 				}
@@ -82,7 +84,7 @@ func TestNewReconciler(t *testing.T) {
 				}),
 			},
 			expected: func() *Reconciler {
-				r := templateReconciler()
+				r := New(nil, nil)
 				r.inactiveQueue = []*InactiveEntry{
 					{
 						Entry: accountCurrency,
@@ -100,7 +102,7 @@ func TestNewReconciler(t *testing.T) {
 				WithLookupBalanceByBlock(false),
 			},
 			expected: func() *Reconciler {
-				r := templateReconciler()
+				r := New(nil, nil)
 				r.lookupBalanceByBlock = false
 				r.changeQueue = make(chan *parser.BalanceChange, backlogThreshold)
 
@@ -111,7 +113,7 @@ func TestNewReconciler(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			result := New(nil, nil, nil, nil, test.options...)
+			result := New(nil, nil, test.options...)
 			assert.ElementsMatch(t, test.expected.inactiveQueue, result.inactiveQueue)
 			assert.Equal(t, test.expected.seenAccounts, result.seenAccounts)
 			assert.ElementsMatch(t, test.expected.interestingAccounts, result.interestingAccounts)
@@ -237,65 +239,6 @@ func TestContainsAccountCurrency(t *testing.T) {
 	})
 }
 
-func TestExtractAmount(t *testing.T) {
-	var (
-		currency1 = &types.Currency{
-			Symbol:   "curr1",
-			Decimals: 4,
-		}
-
-		currency2 = &types.Currency{
-			Symbol:   "curr2",
-			Decimals: 7,
-		}
-
-		amount1 = &types.Amount{
-			Value:    "100",
-			Currency: currency1,
-		}
-
-		amount2 = &types.Amount{
-			Value:    "200",
-			Currency: currency2,
-		}
-
-		balances = []*types.Amount{
-			amount1,
-			amount2,
-		}
-
-		badCurr = &types.Currency{
-			Symbol:   "no curr",
-			Decimals: 100,
-		}
-	)
-
-	t.Run("Non-existent currency", func(t *testing.T) {
-		result, err := ExtractAmount(balances, badCurr)
-		assert.Nil(t, result)
-		assert.EqualError(
-			t,
-			err,
-			fmt.Errorf(
-				"account balance response does could not contain currency %s",
-				types.PrettyPrintStruct(badCurr),
-			).Error(),
-		)
-	})
-
-	t.Run("Simple account", func(t *testing.T) {
-		result, err := ExtractAmount(balances, currency1)
-		assert.Equal(t, amount1, result)
-		assert.NoError(t, err)
-	})
-
-	t.Run("SubAccount", func(t *testing.T) {
-		result, err := ExtractAmount(balances, currency2)
-		assert.Equal(t, amount2, result)
-		assert.NoError(t, err)
-	})
-}
-
 func TestCompareBalance(t *testing.T) {
 	var (
 		account1 = &types.AccountIdentifier{
@@ -346,16 +289,15 @@ func TestCompareBalance(t *testing.T) {
 
 		ctx = context.Background()
 
-		mh = &MockReconcilerHelper{}
+		mh = &mocks.Helper{}
 	)
 
 	reconciler := New(
-		nil,
 		mh,
-		nil,
 		nil,
 	)
 
+	mh.On("CurrentBlock", ctx).Return(nil, errors.New("no head block")).Once()
 	t.Run("No head block yet", func(t *testing.T) {
 		difference, cachedBalance, headIndex, err := reconciler.CompareBalance(
 			ctx,
@@ -370,9 +312,7 @@ func TestCompareBalance(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	// Update head block
-	mh.HeadBlock = block0
-
+	mh.On("CurrentBlock", ctx).Return(block0, nil).Once()
 	t.Run("Live block is ahead of head block", func(t *testing.T) {
 		difference, cachedBalance, headIndex, err := reconciler.CompareBalance(
 			ctx,
@@ -392,12 +332,8 @@ func TestCompareBalance(t *testing.T) {
 		).Error())
 	})
 
-	// Update head block
-	mh.HeadBlock = &types.BlockIdentifier{
-		Hash:  "hash2",
-		Index: 2,
-	}
-
+	mh.On("CurrentBlock", ctx).Return(block2, nil).Once()
+	mh.On("BlockExists", ctx, block1).Return(false, nil).Once()
 	t.Run("Live block is not in store", func(t *testing.T) {
 		difference, cachedBalance, headIndex, err := reconciler.CompareBalance(
 			ctx,
@@ -412,24 +348,19 @@ func TestCompareBalance(t *testing.T) {
 		assert.Contains(t, err.Error(), ErrBlockGone.Error())
 	})
 
-	// Add blocks to store behind head
-	mh.StoredBlocks = map[string]*types.Block{}
-	mh.StoredBlocks[block0.Hash] = &types.Block{
-		BlockIdentifier:       block0,
-		ParentBlockIdentifier: block0,
-	}
-	mh.StoredBlocks[block1.Hash] = &types.Block{
-		BlockIdentifier:       block1,
-		ParentBlockIdentifier: block0,
-	}
-	mh.StoredBlocks[block2.Hash] = &types.Block{
-		BlockIdentifier:       block2,
-		ParentBlockIdentifier: block1,
-	}
-	mh.BalanceAccount = account1
-	mh.BalanceAmount = amount1
-	mh.BalanceBlock = block1
-
+	mh.On("CurrentBlock", ctx).Return(block2, nil).Once()
+	mh.On("BlockExists", ctx, block0).Return(true, nil).Once()
+	mh.On(
+		"ComputedBalance",
+		ctx,
+		account1,
+		amount1.Currency,
+		block2,
+	).Return(
+		amount1,
+		block2,
+		nil,
+	).Once()
 	t.Run("Account updated after live block", func(t *testing.T) {
 		difference, cachedBalance, headIndex, err := reconciler.CompareBalance(
 			ctx,
@@ -444,6 +375,19 @@ func TestCompareBalance(t *testing.T) {
 		assert.Contains(t, err.Error(), ErrAccountUpdated.Error())
 	})
 
+	mh.On("CurrentBlock", ctx).Return(block2, nil).Once()
+	mh.On("BlockExists", ctx, block1).Return(true, nil).Once()
+	mh.On(
+		"ComputedBalance",
+		ctx,
+		account1,
+		amount1.Currency,
+		block2,
+	).Return(
+		amount1,
+		block1,
+		nil,
+	).Once()
 	t.Run("Account balance matches", func(t *testing.T) {
 		difference, cachedBalance, headIndex, err := reconciler.CompareBalance(
 			ctx,
@@ -458,6 +402,19 @@ func TestCompareBalance(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
+	mh.On("CurrentBlock", ctx).Return(block2, nil).Once()
+	mh.On("BlockExists", ctx, block2).Return(true, nil).Once()
+	mh.On(
+		"ComputedBalance",
+		ctx,
+		account1,
+		currency1,
+		block2,
+	).Return(
+		amount1,
+		block1,
+		nil,
+	).Once()
 	t.Run("Account balance matches later live block", func(t *testing.T) {
 		difference, cachedBalance, headIndex, err := reconciler.CompareBalance(
 			ctx,
@@ -472,6 +429,19 @@ func TestCompareBalance(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
+	mh.On("CurrentBlock", ctx).Return(block2, nil).Once()
+	mh.On("BlockExists", ctx, block2).Return(true, nil).Once()
+	mh.On(
+		"ComputedBalance",
+		ctx,
+		account1,
+		currency1,
+		block2,
+	).Return(
+		amount1,
+		block1,
+		nil,
+	).Once()
 	t.Run("Balances are not equal", func(t *testing.T) {
 		difference, cachedBalance, headIndex, err := reconciler.CompareBalance(
 			ctx,
@@ -486,6 +456,19 @@ func TestCompareBalance(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
+	mh.On("CurrentBlock", ctx).Return(block2, nil).Once()
+	mh.On("BlockExists", ctx, block2).Return(true, nil).Once()
+	mh.On(
+		"ComputedBalance",
+		ctx,
+		account2,
+		currency1,
+		block2,
+	).Return(
+		nil,
+		nil,
+		errors.New("account missing"),
+	).Once()
 	t.Run("Compare balance for non-existent account", func(t *testing.T) {
 		difference, cachedBalance, headIndex, err := reconciler.CompareBalance(
 			ctx,
@@ -499,6 +482,8 @@ func TestCompareBalance(t *testing.T) {
 		assert.Equal(t, int64(2), headIndex)
 		assert.Error(t, err)
 	})
+
+	mh.AssertExpectations(t)
 }
 
 func assertContainsAllAccounts(t *testing.T, m map[string]struct{}, a []*AccountCurrency) {
@@ -510,9 +495,8 @@ func assertContainsAllAccounts(t *testing.T, m map[string]struct{}, a []*Account
 
 func TestInactiveAccountQueue(t *testing.T) {
 	var (
-		handler = &MockReconcilerHandler{}
-		r       = New(nil, nil, handler, nil)
-		block   = &types.BlockIdentifier{
+		r     = New(nil, nil)
+		block = &types.BlockIdentifier{
 			Hash:  "block 1",
 			Index: 1,
 		}
@@ -642,75 +626,592 @@ func TestInactiveAccountQueue(t *testing.T) {
 	})
 }
 
-func templateReconciler() *Reconciler {
-	return New(nil, nil, nil, nil)
-}
-
-type MockReconcilerHandler struct{}
-
-func (h *MockReconcilerHandler) ReconciliationFailed(
-	ctx context.Context,
-	reconciliationType string,
-	account *types.AccountIdentifier,
-	currency *types.Currency,
-	computedBalance string,
-	nodeBalance string,
-	block *types.BlockIdentifier,
-) error {
-	return nil
-}
-
-func (h *MockReconcilerHandler) ReconciliationSucceeded(
-	ctx context.Context,
-	reconciliationType string,
-	account *types.AccountIdentifier,
-	currency *types.Currency,
-	balance string,
-	block *types.BlockIdentifier,
-) error {
-	return nil
-}
-
-type MockReconcilerHelper struct {
-	HeadBlock    *types.BlockIdentifier
-	StoredBlocks map[string]*types.Block
-
-	BalanceAccount *types.AccountIdentifier
-	BalanceAmount  *types.Amount
-	BalanceBlock   *types.BlockIdentifier
-}
-
-func (h *MockReconcilerHelper) BlockExists(
-	ctx context.Context,
-	block *types.BlockIdentifier,
-) (bool, error) {
-	_, ok := h.StoredBlocks[block.Hash]
-	if !ok {
-		return false, nil
-	}
-
-	return true, nil
-}
-
-func (h *MockReconcilerHelper) CurrentBlock(
-	ctx context.Context,
-) (*types.BlockIdentifier, error) {
-	if h.HeadBlock == nil {
-		return nil, errors.New("head block is nil")
-	}
-
-	return h.HeadBlock, nil
-}
-
-func (h *MockReconcilerHelper) AccountBalance(
-	ctx context.Context,
-	account *types.AccountIdentifier,
-	currency *types.Currency,
+func mockReconcilerCalls(
+	mockHelper *mocks.Helper,
+	mockHandler *mocks.Handler,
+	lookupBalanceByBlock bool,
+	accountCurrency *AccountCurrency,
+	liveValue string,
+	computedValue string,
 	headBlock *types.BlockIdentifier,
-) (*types.Amount, *types.BlockIdentifier, error) {
-	if h.BalanceAccount == nil || !reflect.DeepEqual(account, h.BalanceAccount) {
-		return nil, nil, errors.New("account does not exist")
+	liveBlock *types.BlockIdentifier,
+	success bool,
+	reconciliationType string,
+) {
+	if reconciliationType == ActiveReconciliation {
+		mockHelper.On("CurrentBlock", mock.Anything).Return(headBlock, nil).Once()
+	}
+	lookupBlock := liveBlock
+	if !lookupBalanceByBlock {
+		lookupBlock = nil
 	}
 
-	return h.BalanceAmount, h.BalanceBlock, nil
+	mockHelper.On(
+		"LiveBalance",
+		mock.Anything,
+		accountCurrency.Account,
+		accountCurrency.Currency,
+		lookupBlock,
+	).Return(
+		&types.Amount{Value: liveValue, Currency: accountCurrency.Currency},
+		headBlock,
+		nil,
+	).Once()
+	mockHelper.On("BlockExists", mock.Anything, headBlock).Return(true, nil).Once()
+	mockHelper.On(
+		"ComputedBalance",
+		mock.Anything,
+		accountCurrency.Account,
+		accountCurrency.Currency,
+		headBlock,
+	).Return(
+		&types.Amount{Value: computedValue, Currency: accountCurrency.Currency},
+		liveBlock,
+		nil,
+	).Once()
+	if success {
+		mockHandler.On(
+			"ReconciliationSucceeded",
+			mock.Anything,
+			reconciliationType,
+			accountCurrency.Account,
+			accountCurrency.Currency,
+			liveValue,
+			headBlock,
+		).Return(nil).Once()
+	} else {
+		mockHandler.On(
+			"ReconciliationFailed",
+			mock.Anything,
+			reconciliationType,
+			accountCurrency.Account,
+			accountCurrency.Currency,
+			computedValue,
+			liveValue,
+			headBlock,
+		).Return(errors.New("reconciliation failed")).Once()
+	}
+}
+
+func TestReconcile_SuccessOnlyActive(t *testing.T) {
+	var (
+		block = &types.BlockIdentifier{
+			Hash:  "block 1",
+			Index: 1,
+		}
+		accountCurrency = &AccountCurrency{
+			Account: &types.AccountIdentifier{
+				Address: "addr 1",
+			},
+			Currency: &types.Currency{
+				Symbol:   "BTC",
+				Decimals: 8,
+			},
+		}
+		accountCurrency2 = &AccountCurrency{
+			Account: &types.AccountIdentifier{
+				Address: "addr 2",
+			},
+			Currency: &types.Currency{
+				Symbol:   "ETH",
+				Decimals: 18,
+			},
+		}
+		block2 = &types.BlockIdentifier{
+			Hash:  "block 2",
+			Index: 2,
+		}
+	)
+
+	lookupBalanceByBlocks := []bool{true, false}
+	for _, lookup := range lookupBalanceByBlocks {
+		t.Run(fmt.Sprintf("lookup balance by block %t", lookup), func(t *testing.T) {
+			mockHelper := &mocks.Helper{}
+			mockHandler := &mocks.Handler{}
+			r := New(
+				mockHelper,
+				mockHandler,
+				WithActiveConcurrency(1),
+				WithInactiveConcurrency(0),
+				WithInterestingAccounts([]*AccountCurrency{accountCurrency2}),
+				WithLookupBalanceByBlock(lookup),
+			)
+			ctx := context.Background()
+			ctx, cancel := context.WithCancel(ctx)
+
+			mockReconcilerCalls(
+				mockHelper,
+				mockHandler,
+				lookup,
+				accountCurrency,
+				"100",
+				"100",
+				block2,
+				block,
+				true,
+				ActiveReconciliation,
+			)
+
+			mockReconcilerCalls(
+				mockHelper,
+				mockHandler,
+				lookup,
+				accountCurrency2,
+				"250",
+				"250",
+				block2,
+				block,
+				true,
+				ActiveReconciliation,
+			)
+
+			mockReconcilerCalls(
+				mockHelper,
+				mockHandler,
+				lookup,
+				accountCurrency2,
+				"120",
+				"120",
+				block2,
+				block2,
+				true,
+				ActiveReconciliation,
+			)
+
+			go func() {
+				err := r.Reconcile(ctx)
+				assert.Contains(t, context.Canceled.Error(), err.Error())
+			}()
+
+			err := r.QueueChanges(ctx, block, []*parser.BalanceChange{
+				{
+					Account:  accountCurrency.Account,
+					Currency: accountCurrency.Currency,
+					Block:    block,
+				},
+			})
+			assert.NoError(t, err)
+			err = r.QueueChanges(ctx, block2, []*parser.BalanceChange{
+				{
+					Account:  accountCurrency2.Account,
+					Currency: accountCurrency2.Currency,
+					Block:    block2,
+				},
+			})
+			assert.NoError(t, err)
+
+			time.Sleep(1 * time.Second)
+			cancel()
+
+			mockHelper.AssertExpectations(t)
+			mockHandler.AssertExpectations(t)
+		})
+	}
+}
+
+func TestReconcile_HighWaterMark(t *testing.T) {
+	var (
+		block = &types.BlockIdentifier{
+			Hash:  "block 1",
+			Index: 1,
+		}
+		accountCurrency = &AccountCurrency{
+			Account: &types.AccountIdentifier{
+				Address: "addr 1",
+			},
+			Currency: &types.Currency{
+				Symbol:   "BTC",
+				Decimals: 8,
+			},
+		}
+		accountCurrency2 = &AccountCurrency{
+			Account: &types.AccountIdentifier{
+				Address: "addr 2",
+			},
+			Currency: &types.Currency{
+				Symbol:   "ETH",
+				Decimals: 18,
+			},
+		}
+		block200 = &types.BlockIdentifier{
+			Hash:  "block 200",
+			Index: 200,
+		}
+	)
+
+	mockHelper := &mocks.Helper{}
+	mockHandler := &mocks.Handler{}
+	r := New(
+		mockHelper,
+		mockHandler,
+		WithActiveConcurrency(1),
+		WithInactiveConcurrency(0),
+		WithInterestingAccounts([]*AccountCurrency{accountCurrency2}),
+		WithLookupBalanceByBlock(false),
+		WithDebugLogging(true),
+	)
+	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
+
+	// First call to QueueChanges
+	mockHelper.On("CurrentBlock", mock.Anything).Return(block, nil).Once()
+	mockHelper.On(
+		"LiveBalance",
+		mock.Anything,
+		accountCurrency.Account,
+		accountCurrency.Currency,
+		(*types.BlockIdentifier)(nil),
+	).Return(
+		&types.Amount{Value: "100", Currency: accountCurrency.Currency},
+		block200,
+		nil,
+	).Once()
+
+	// Second call to QueueChanges
+	mockReconcilerCalls(
+		mockHelper,
+		mockHandler,
+		false,
+		accountCurrency,
+		"150",
+		"150",
+		block200,
+		block200,
+		true,
+		ActiveReconciliation,
+	)
+	mockReconcilerCalls(
+		mockHelper,
+		mockHandler,
+		false,
+		accountCurrency2,
+		"120",
+		"120",
+		block200,
+		block200,
+		true,
+		ActiveReconciliation,
+	)
+
+	go func() {
+		err := r.Reconcile(ctx)
+		assert.Contains(t, context.Canceled.Error(), err.Error())
+	}()
+
+	err := r.QueueChanges(ctx, block, []*parser.BalanceChange{
+		{
+			Account:  accountCurrency.Account,
+			Currency: accountCurrency.Currency,
+			Block:    block,
+		},
+	})
+
+	assert.NoError(t, err)
+	err = r.QueueChanges(ctx, block200, []*parser.BalanceChange{
+		{
+			Account:  accountCurrency.Account,
+			Currency: accountCurrency.Currency,
+			Block:    block200,
+		},
+	})
+	assert.NoError(t, err)
+
+	time.Sleep(1 * time.Second)
+	cancel()
+
+	mockHelper.AssertExpectations(t)
+	mockHandler.AssertExpectations(t)
+}
+
+func TestReconcile_Orphan(t *testing.T) {
+	var (
+		block = &types.BlockIdentifier{
+			Hash:  "block 1",
+			Index: 1,
+		}
+		accountCurrency = &AccountCurrency{
+			Account: &types.AccountIdentifier{
+				Address: "addr 1",
+			},
+			Currency: &types.Currency{
+				Symbol:   "BTC",
+				Decimals: 8,
+			},
+		}
+	)
+
+	mockHelper := &mocks.Helper{}
+	mockHandler := &mocks.Handler{}
+	r := New(
+		mockHelper,
+		mockHandler,
+		WithActiveConcurrency(1),
+		WithInactiveConcurrency(0),
+	)
+	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
+
+	mockHelper.On(
+		"LiveBalance",
+		mock.Anything,
+		accountCurrency.Account,
+		accountCurrency.Currency,
+		block,
+	).Return(
+		nil,
+		nil,
+		errors.New("cannot find block"),
+	).Once()
+	mockHelper.On("BlockExists", mock.Anything, block).Return(false, nil).Once()
+
+	go func() {
+		err := r.Reconcile(ctx)
+		assert.Contains(t, context.Canceled.Error(), err.Error())
+	}()
+
+	err := r.QueueChanges(ctx, block, []*parser.BalanceChange{
+		{
+			Account:  accountCurrency.Account,
+			Currency: accountCurrency.Currency,
+			Block:    block,
+		},
+	})
+	assert.NoError(t, err)
+
+	time.Sleep(1 * time.Second)
+	cancel()
+
+	mockHelper.AssertExpectations(t)
+	mockHandler.AssertExpectations(t)
+}
+
+func TestReconcile_FailureOnlyActive(t *testing.T) {
+	var (
+		block = &types.BlockIdentifier{
+			Hash:  "block 1",
+			Index: 1,
+		}
+		accountCurrency = &AccountCurrency{
+			Account: &types.AccountIdentifier{
+				Address: "addr 1",
+			},
+			Currency: &types.Currency{
+				Symbol:   "BTC",
+				Decimals: 8,
+			},
+		}
+		block2 = &types.BlockIdentifier{
+			Hash:  "block 2",
+			Index: 2,
+		}
+	)
+
+	lookupBalanceByBlocks := []bool{true, false}
+	for _, lookup := range lookupBalanceByBlocks {
+		t.Run(fmt.Sprintf("lookup balance by block %t", lookup), func(t *testing.T) {
+			mockHelper := &mocks.Helper{}
+			mockHandler := &mocks.Handler{}
+			r := New(
+				mockHelper,
+				mockHandler,
+				WithActiveConcurrency(1),
+				WithInactiveConcurrency(0),
+				WithLookupBalanceByBlock(lookup),
+			)
+			ctx := context.Background()
+
+			mockReconcilerCalls(
+				mockHelper,
+				mockHandler,
+				lookup,
+				accountCurrency,
+				"105",
+				"100",
+				block2,
+				block,
+				false,
+				ActiveReconciliation,
+			)
+
+			go func() {
+				err := r.Reconcile(ctx)
+				assert.Contains(t, "reconciliation failed", err.Error())
+			}()
+
+			err := r.QueueChanges(ctx, block, []*parser.BalanceChange{
+				{
+					Account:    accountCurrency.Account,
+					Currency:   accountCurrency.Currency,
+					Difference: "100",
+					Block:      block,
+				},
+			})
+			assert.NoError(t, err)
+
+			time.Sleep(1 * time.Second)
+
+			mockHelper.AssertExpectations(t)
+			mockHandler.AssertExpectations(t)
+		})
+	}
+}
+
+func TestReconcile_SuccessOnlyInactive(t *testing.T) {
+	var (
+		block = &types.BlockIdentifier{
+			Hash:  "block 1",
+			Index: 1,
+		}
+		block2 = &types.BlockIdentifier{
+			Hash:  "block 2",
+			Index: 2,
+		}
+		accountCurrency = &AccountCurrency{
+			Account: &types.AccountIdentifier{
+				Address: "addr 1",
+			},
+			Currency: &types.Currency{
+				Symbol:   "BTC",
+				Decimals: 8,
+			},
+		}
+	)
+
+	lookupBalanceByBlocks := []bool{true, false}
+	for _, lookup := range lookupBalanceByBlocks {
+		t.Run(fmt.Sprintf("lookup balance by block %t", lookup), func(t *testing.T) {
+			mockHelper := &mocks.Helper{}
+			mockHandler := &mocks.Handler{}
+			r := New(
+				mockHelper,
+				mockHandler,
+				WithActiveConcurrency(0),
+				WithInactiveConcurrency(1),
+				WithSeenAccounts([]*AccountCurrency{accountCurrency}),
+				WithLookupBalanceByBlock(lookup),
+				WithInactiveFrequency(1),
+				WithDebugLogging(true),
+			)
+			ctx := context.Background()
+			ctx, cancel := context.WithCancel(ctx)
+
+			mockHelper.On("CurrentBlock", mock.Anything).Return(block, nil)
+			mockReconcilerCalls(
+				mockHelper,
+				mockHandler,
+				lookup,
+				accountCurrency,
+				"100",
+				"100",
+				block,
+				block,
+				true,
+				InactiveReconciliation,
+			)
+
+			go func() {
+				time.Sleep(2 * time.Second)
+				cancel()
+			}()
+
+			err := r.Reconcile(ctx)
+			assert.Contains(t, context.Canceled.Error(), err.Error())
+
+			mockHelper2 := &mocks.Helper{}
+			mockHandler2 := &mocks.Handler{}
+			r.helper = mockHelper2
+			r.handler = mockHandler2
+			ctx = context.Background()
+			ctx, cancel = context.WithCancel(ctx)
+
+			mockHelper2.On("CurrentBlock", mock.Anything).Return(block2, nil)
+			mockReconcilerCalls(
+				mockHelper2,
+				mockHandler2,
+				lookup,
+				accountCurrency,
+				"200",
+				"200",
+				block2,
+				block2,
+				true,
+				InactiveReconciliation,
+			)
+
+			go func() {
+				time.Sleep(2 * time.Second)
+				cancel()
+			}()
+			err = r.Reconcile(ctx)
+			assert.Contains(t, context.Canceled.Error(), err.Error())
+
+			mockHelper.AssertExpectations(t)
+			mockHandler.AssertExpectations(t)
+			mockHelper2.AssertExpectations(t)
+			mockHandler2.AssertExpectations(t)
+		})
+	}
+}
+
+func TestReconcile_FailureOnlyInactive(t *testing.T) {
+	var (
+		block = &types.BlockIdentifier{
+			Hash:  "block 1",
+			Index: 1,
+		}
+		accountCurrency = &AccountCurrency{
+			Account: &types.AccountIdentifier{
+				Address: "addr 1",
+			},
+			Currency: &types.Currency{
+				Symbol:   "BTC",
+				Decimals: 8,
+			},
+		}
+	)
+
+	lookupBalanceByBlocks := []bool{true, false}
+	for _, lookup := range lookupBalanceByBlocks {
+		t.Run(fmt.Sprintf("lookup balance by block %t", lookup), func(t *testing.T) {
+			mockHelper := &mocks.Helper{}
+			mockHandler := &mocks.Handler{}
+			r := New(
+				mockHelper,
+				mockHandler,
+				WithActiveConcurrency(0),
+				WithInactiveConcurrency(1),
+				WithSeenAccounts([]*AccountCurrency{accountCurrency}),
+				WithLookupBalanceByBlock(lookup),
+				WithInactiveFrequency(1),
+				WithDebugLogging(true),
+			)
+			ctx := context.Background()
+			ctx, cancel := context.WithCancel(ctx)
+
+			mockHelper.On("CurrentBlock", mock.Anything).Return(block, nil)
+			mockReconcilerCalls(
+				mockHelper,
+				mockHandler,
+				lookup,
+				accountCurrency,
+				"100",
+				"105",
+				block,
+				block,
+				false,
+				InactiveReconciliation,
+			)
+
+			go func() {
+				time.Sleep(2 * time.Second)
+				cancel()
+			}()
+
+			err := r.Reconcile(ctx)
+			assert.Contains(t, "reconciliation failed", err.Error())
+
+			mockHelper.AssertExpectations(t)
+			mockHandler.AssertExpectations(t)
+		})
+	}
 }

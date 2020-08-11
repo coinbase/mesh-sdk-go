@@ -67,3 +67,5 @@ release: shellcheck check-gen check-license check-format test lint salus
 mocks:
 	rm -rf mocks;
 	mockery --dir syncer --all --case underscore --outpkg syncer --output mocks/syncer;
+	mockery --dir reconciler --all --case underscore --outpkg reconciler --output mocks/reconciler;
+	${ADDLICENCE_SCRIPT} .;

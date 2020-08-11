@@ -22,7 +22,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/coinbase/rosetta-sdk-go/fetcher"
 	"github.com/coinbase/rosetta-sdk-go/parser"
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"golang.org/x/sync/errgroup"
@@ -116,11 +115,18 @@ type Helper interface {
 		ctx context.Context,
 	) (*types.BlockIdentifier, error)
 
-	AccountBalance(
+	ComputedBalance(
 		ctx context.Context,
 		account *types.AccountIdentifier,
 		currency *types.Currency,
 		headBlock *types.BlockIdentifier,
+	) (*types.Amount, *types.BlockIdentifier, error)
+
+	LiveBalance(
+		ctx context.Context,
+		account *types.AccountIdentifier,
+		currency *types.Currency,
+		block *types.BlockIdentifier,
 	) (*types.Amount, *types.BlockIdentifier, error)
 }
 
@@ -134,7 +140,7 @@ type Handler interface {
 		account *types.AccountIdentifier,
 		currency *types.Currency,
 		computedBalance string,
-		nodeBalance string,
+		liveBalance string,
 		block *types.BlockIdentifier,
 	) error
 
@@ -167,10 +173,8 @@ type AccountCurrency struct {
 // types.AccountIdentifiers returned in types.Operations
 // by a Rosetta Server.
 type Reconciler struct {
-	network              *types.NetworkIdentifier
 	helper               Helper
 	handler              Handler
-	fetcher              *fetcher.Fetcher
 	lookupBalanceByBlock bool
 	interestingAccounts  []*AccountCurrency
 	changeQueue          chan *parser.BalanceChange
@@ -209,17 +213,13 @@ type Reconciler struct {
 
 // New creates a new Reconciler.
 func New(
-	network *types.NetworkIdentifier,
 	helper Helper,
 	handler Handler,
-	fetcher *fetcher.Fetcher,
 	options ...Option,
 ) *Reconciler {
 	r := &Reconciler{
-		network:             network,
 		helper:              helper,
 		handler:             handler,
-		fetcher:             fetcher,
 		inactiveFrequency:   defaultInactiveFrequency,
 		activeConcurrency:   defaultReconcilerConcurrency,
 		inactiveConcurrency: defaultReconcilerConcurrency,
@@ -252,11 +252,15 @@ func (r *Reconciler) QueueChanges(
 		skipAccount := false
 		// Look through balance changes for account + currency
 		for _, change := range balanceChanges {
-			if types.Hash(account) == types.Hash(change) {
+			if types.Hash(account) == types.Hash(&AccountCurrency{
+				Account:  change.Account,
+				Currency: change.Currency,
+			}) {
 				skipAccount = true
 				break
 			}
 		}
+
 		// Account changed on this block
 		if skipAccount {
 			continue
@@ -360,7 +364,7 @@ func (r *Reconciler) CompareBalance(
 	}
 
 	// Check if live block < computed head
-	cachedBalance, balanceBlock, err := r.helper.AccountBalance(
+	computedBalance, computedBlock, err := r.helper.ComputedBalance(
 		ctx,
 		account,
 		currency,
@@ -368,53 +372,67 @@ func (r *Reconciler) CompareBalance(
 	)
 	if err != nil {
 		return zeroString, "", head.Index, fmt.Errorf(
-			"%w: unable to get cached balance for %+v:%+v",
+			"%w: unable to get computed balance for %+v:%+v",
 			err,
 			account,
 			currency,
 		)
 	}
 
-	if liveBlock.Index < balanceBlock.Index {
+	if liveBlock.Index < computedBlock.Index {
 		return zeroString, "", head.Index, fmt.Errorf(
 			"%w %+v updated at %d",
 			ErrAccountUpdated,
 			account,
-			balanceBlock.Index,
+			computedBlock.Index,
 		)
 	}
 
-	difference, err := types.SubtractValues(cachedBalance.Value, amount)
+	difference, err := types.SubtractValues(computedBalance.Value, amount)
 	if err != nil {
 		return "", "", -1, err
 	}
 
-	return difference, cachedBalance.Value, head.Index, nil
+	return difference, computedBalance.Value, head.Index, nil
 }
 
-// bestBalance returns the balance for an account
+// bestLiveBalance returns the balance for an account
 // at either the current block (if lookupBalanceByBlock is
 // disabled) or at some historical block.
-func (r *Reconciler) bestBalance(
+func (r *Reconciler) bestLiveBalance(
 	ctx context.Context,
 	account *types.AccountIdentifier,
 	currency *types.Currency,
-	block *types.PartialBlockIdentifier,
-) (*types.BlockIdentifier, string, error) {
-	if !r.lookupBalanceByBlock {
-		// Use the current balance to reconcile balances when lookupBalanceByBlock
-		// is disabled. This could be the case when a rosetta server does not
-		// support historical balance lookups.
-		block = nil
+	block *types.BlockIdentifier,
+) (*types.Amount, *types.BlockIdentifier, error) {
+	// Use the current balance to reconcile balances when lookupBalanceByBlock
+	// is disabled. This could be the case when a rosetta server does not
+	// support historical balance lookups.
+	var lookupBlock *types.BlockIdentifier
+
+	if r.lookupBalanceByBlock {
+		lookupBlock = block
 	}
-	return GetCurrencyBalance(
+
+	amount, currentBlock, err := r.helper.LiveBalance(
 		ctx,
-		r.fetcher,
-		r.network,
 		account,
 		currency,
-		block,
+		lookupBlock,
 	)
+	if err == nil {
+		return amount, currentBlock, nil
+	}
+
+	// If there is a reorg, there is a chance that balance
+	// lookup can fail if we try to query an orphaned block.
+	// If this is the case, we continue reconciling.
+	exists, existsErr := r.helper.BlockExists(ctx, block)
+	if existsErr != nil || !exists {
+		return nil, nil, ErrBlockGone
+	}
+
+	return nil, nil, err
 }
 
 // accountReconciliation returns an error if the provided
@@ -439,7 +457,7 @@ func (r *Reconciler) accountReconciliation(
 
 		// If don't have previous balance because stateless, check diff on block
 		// instead of comparing entire computed balance
-		difference, cachedBalance, headIndex, err := r.CompareBalance(
+		difference, computedBalance, headIndex, err := r.CompareBalance(
 			ctx,
 			account,
 			currency,
@@ -500,7 +518,7 @@ func (r *Reconciler) accountReconciliation(
 				reconciliationType,
 				accountCurrency.Account,
 				accountCurrency.Currency,
-				cachedBalance,
+				computedBalance,
 				liveAmount,
 				liveBlock,
 			)
@@ -568,21 +586,25 @@ func (r *Reconciler) reconcileActiveAccounts(
 				continue
 			}
 
-			block, value, err := r.bestBalance(
+			amount, block, err := r.bestLiveBalance(
 				ctx,
 				balanceChange.Account,
 				balanceChange.Currency,
-				types.ConstructPartialBlockIdentifier(balanceChange.Block),
+				balanceChange.Block,
 			)
+			if errors.Is(err, ErrBlockGone) {
+				continue
+			}
+
 			if err != nil {
-				return err
+				return fmt.Errorf("%w: unable to lookup live balance", err)
 			}
 
 			err = r.accountReconciliation(
 				ctx,
 				balanceChange.Account,
 				balanceChange.Currency,
-				value,
+				amount.Value,
 				block,
 				false,
 			)
@@ -663,26 +685,27 @@ func (r *Reconciler) reconcileInactiveAccounts(
 			r.inactiveQueue = r.inactiveQueue[1:]
 			r.inactiveQueueMutex.Unlock()
 
-			block, amount, err := r.bestBalance(
+			amount, block, err := r.bestLiveBalance(
 				ctx,
 				nextAcct.Entry.Account,
 				nextAcct.Entry.Currency,
-				types.ConstructPartialBlockIdentifier(head),
+				head,
 			)
-			if err != nil {
-				return err
-			}
-
-			err = r.accountReconciliation(
-				ctx,
-				nextAcct.Entry.Account,
-				nextAcct.Entry.Currency,
-				amount,
-				block,
-				true,
-			)
-			if err != nil {
-				return err
+			switch {
+			case err == nil:
+				err = r.accountReconciliation(
+					ctx,
+					nextAcct.Entry.Account,
+					nextAcct.Entry.Currency,
+					amount.Value,
+					block,
+					true,
+				)
+				if err != nil {
+					return err
+				}
+			case !errors.Is(err, ErrBlockGone):
+				return fmt.Errorf("%w: unable to lookup live balance", err)
 			}
 
 			// Always re-enqueue accounts after they have been inactively
@@ -729,26 +752,6 @@ func (r *Reconciler) Reconcile(ctx context.Context) error {
 	return nil
 }
 
-// ExtractAmount returns the types.Amount from a slice of types.Balance
-// pertaining to an AccountAndCurrency.
-func ExtractAmount(
-	balances []*types.Amount,
-	currency *types.Currency,
-) (*types.Amount, error) {
-	for _, b := range balances {
-		if types.Hash(b.Currency) != types.Hash(currency) {
-			continue
-		}
-
-		return b, nil
-	}
-
-	return nil, fmt.Errorf(
-		"account balance response does could not contain currency %s",
-		types.PrettyPrintStruct(currency),
-	)
-}
-
 // ContainsAccountCurrency returns a boolean indicating if a
 // AccountCurrency set already contains an Account and Currency combination.
 func ContainsAccountCurrency(
@@ -757,37 +760,4 @@ func ContainsAccountCurrency(
 ) bool {
 	_, exists := m[types.Hash(change)]
 	return exists
-}
-
-// GetCurrencyBalance fetches the balance of a *types.AccountIdentifier
-// for a particular *types.Currency.
-func GetCurrencyBalance(
-	ctx context.Context,
-	fetcher *fetcher.Fetcher,
-	network *types.NetworkIdentifier,
-	account *types.AccountIdentifier,
-	currency *types.Currency,
-	block *types.PartialBlockIdentifier,
-) (*types.BlockIdentifier, string, error) {
-	liveBlock, liveBalances, _, _, err := fetcher.AccountBalanceRetry(
-		ctx,
-		network,
-		account,
-		block,
-	)
-	if err != nil {
-		return nil, "", err
-	}
-
-	liveAmount, err := ExtractAmount(liveBalances, currency)
-	if err != nil {
-		return nil, "", fmt.Errorf(
-			"%w: could not get %s currency balance for %s",
-			err,
-			types.PrettyPrintStruct(currency),
-			types.PrettyPrintStruct(account),
-		)
-	}
-
-	return liveBlock, liveAmount.Value, nil
 }
