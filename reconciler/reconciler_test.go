@@ -729,6 +729,15 @@ func TestReconcile_SuccessOnlyActiveLookupByBlock(t *testing.T) {
 		block,
 	)
 
+	mockSuccessfulReconcilerCalls(
+		mockHelper,
+		mockHandler,
+		accountCurrency2,
+		"120",
+		block2,
+		block2,
+	)
+
 	go func() {
 		err := r.Reconcile(ctx)
 		assert.Contains(t, context.Canceled.Error(), err.Error())
@@ -739,6 +748,14 @@ func TestReconcile_SuccessOnlyActiveLookupByBlock(t *testing.T) {
 			Account:  accountCurrency.Account,
 			Currency: accountCurrency.Currency,
 			Block:    block,
+		},
+	})
+	assert.NoError(t, err)
+	err = r.QueueChanges(ctx, block2, []*parser.BalanceChange{
+		{
+			Account:  accountCurrency2.Account,
+			Currency: accountCurrency2.Currency,
+			Block:    block2,
 		},
 	})
 	assert.NoError(t, err)
