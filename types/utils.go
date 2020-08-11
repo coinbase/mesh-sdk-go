@@ -156,7 +156,7 @@ func NegateValue(
 }
 
 // AccountString returns a human-readable representation of a
-// *types.AccountIdentifier.
+// *AccountIdentifier.
 func AccountString(account *AccountIdentifier) string {
 	if account.SubAccount == nil {
 		return account.Address
@@ -179,7 +179,7 @@ func AccountString(account *AccountIdentifier) string {
 }
 
 // CurrencyString returns a human-readable representation
-// of a *types.Currency.
+// of a *Currency.
 func CurrencyString(currency *Currency) string {
 	if currency.Metadata == nil {
 		return fmt.Sprintf("%s:%d", currency.Symbol, currency.Decimals)
@@ -245,4 +245,24 @@ func UnmarshalMap(metadata map[string]interface{}, output interface{}) error {
 	}
 
 	return decoder.Decode(metadata)
+}
+
+// ExtractAmount returns the Amount from a slice of Balance
+// pertaining to an AccountAndCurrency.
+func ExtractAmount(
+	balances []*Amount,
+	currency *Currency,
+) (*Amount, error) {
+	for _, b := range balances {
+		if Hash(b.Currency) != Hash(currency) {
+			continue
+		}
+
+		return b, nil
+	}
+
+	return nil, fmt.Errorf(
+		"account balance response does could not contain currency %s",
+		PrettyPrintStruct(currency),
+	)
 }

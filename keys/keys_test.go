@@ -46,6 +46,11 @@ func TestJSONEncoding(t *testing.T) {
 		b, err := hex.DecodeString(simpleType.HexBytes)
 		assert.NoError(t, err)
 		assert.Equal(t, keypair.PrivateKey, b)
+
+		var kp KeyPair
+		err = json.Unmarshal(kpb, &kp)
+		assert.NoError(t, err)
+		assert.Equal(t, keypair.PrivateKey, kp.PrivateKey)
 	}
 }
 

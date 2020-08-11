@@ -17,6 +17,7 @@ package types
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math/big"
 	"testing"
 
@@ -572,4 +573,63 @@ func TestAmountValue(t *testing.T) {
 			assert.Equal(test.err, err)
 		})
 	}
+}
+
+func TestExtractAmount(t *testing.T) {
+	var (
+		currency1 = &Currency{
+			Symbol:   "curr1",
+			Decimals: 4,
+		}
+
+		currency2 = &Currency{
+			Symbol:   "curr2",
+			Decimals: 7,
+		}
+
+		amount1 = &Amount{
+			Value:    "100",
+			Currency: currency1,
+		}
+
+		amount2 = &Amount{
+			Value:    "200",
+			Currency: currency2,
+		}
+
+		balances = []*Amount{
+			amount1,
+			amount2,
+		}
+
+		badCurr = &Currency{
+			Symbol:   "no curr",
+			Decimals: 100,
+		}
+	)
+
+	t.Run("Non-existent currency", func(t *testing.T) {
+		result, err := ExtractAmount(balances, badCurr)
+		assert.Nil(t, result)
+		assert.EqualError(
+			t,
+			err,
+			fmt.Errorf(
+				"account balance response does could not contain currency %s",
+				PrettyPrintStruct(badCurr),
+			).Error(),
+		)
+	})
+
+	t.Run("Simple account", func(t *testing.T) {
+		result, err := ExtractAmount(balances, currency1)
+		assert.Equal(t, amount1, result)
+		assert.NoError(t, err)
+	})
+
+	t.Run("SubAccount", func(t *testing.T) {
+		result, err := ExtractAmount(balances, currency2)
+		assert.Equal(t, amount2, result)
+		assert.NoError(t, err)
+	})
 }
