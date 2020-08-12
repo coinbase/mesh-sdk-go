@@ -41,14 +41,22 @@ func (f *Fetcher) AccountBalance(
 		},
 	)
 	if err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("%w: /account/balance %s", ErrRequestFailed, err.Error())
+		return nil, nil, nil, nil, fmt.Errorf(
+			"%w: /account/balance %s",
+			ErrRequestFailed,
+			err.Error(),
+		)
 	}
 
 	if err := asserter.AccountBalanceResponse(
 		block,
 		response,
 	); err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("%w: /account/balance %s", ErrAssertionFailed, err.Error())
+		return nil, nil, nil, nil, fmt.Errorf(
+			"%w: /account/balance %s",
+			ErrAssertionFailed,
+			err.Error(),
+		)
 	}
 
 	return response.BlockIdentifier, response.Balances, response.Coins, response.Metadata, nil

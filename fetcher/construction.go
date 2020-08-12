@@ -148,11 +148,19 @@ func (f *Fetcher) ConstructionParse(
 		},
 	)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("%w: /construction/parse %s", ErrRequestFailed, err.Error())
+		return nil, nil, nil, fmt.Errorf(
+			"%w: /construction/parse %s",
+			ErrRequestFailed,
+			err.Error(),
+		)
 	}
 
 	if err := f.Asserter.ConstructionParseResponse(response, signed); err != nil {
-		return nil, nil, nil, fmt.Errorf("%w: /construction/parse %s", ErrAssertionFailed, err.Error())
+		return nil, nil, nil, fmt.Errorf(
+			"%w: /construction/parse %s",
+			ErrAssertionFailed,
+			err.Error(),
+		)
 	}
 
 	return response.Operations, response.Signers, response.Metadata, nil
