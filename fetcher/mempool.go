@@ -36,12 +36,12 @@ func (f *Fetcher) Mempool(
 		},
 	)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %s", ErrRequestFailed, err.Error())
+		return nil, fmt.Errorf("%w: /mempool %s", ErrRequestFailed, err.Error())
 	}
 
 	mempool := response.TransactionIdentifiers
 	if err := asserter.MempoolTransactions(mempool); err != nil {
-		return nil, fmt.Errorf("%w: %s", ErrAssertionFailed, err.Error())
+		return nil, fmt.Errorf("%w: /mempool %s", ErrAssertionFailed, err.Error())
 	}
 
 	return mempool, nil
@@ -62,12 +62,12 @@ func (f *Fetcher) MempoolTransaction(
 		},
 	)
 	if err != nil {
-		return nil, nil, fmt.Errorf("%w: %s", ErrRequestFailed, err.Error())
+		return nil, nil, fmt.Errorf("%w: /mempool/transaction %s", ErrRequestFailed, err.Error())
 	}
 
 	mempoolTransaction := response.Transaction
 	if err := f.Asserter.Transaction(mempoolTransaction); err != nil {
-		return nil, nil, fmt.Errorf("%w: %s", ErrAssertionFailed, err.Error())
+		return nil, nil, fmt.Errorf("%w: /mempool/transaction %s", ErrAssertionFailed, err.Error())
 	}
 
 	return mempoolTransaction, response.Metadata, nil

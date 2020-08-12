@@ -41,14 +41,14 @@ func (f *Fetcher) AccountBalance(
 		},
 	)
 	if err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("%w: %s", ErrRequestFailed, err.Error())
+		return nil, nil, nil, nil, fmt.Errorf("%w: /account/balance %s", ErrRequestFailed, err.Error())
 	}
 
 	if err := asserter.AccountBalanceResponse(
 		block,
 		response,
 	); err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("%w: %s", ErrAssertionFailed, err.Error())
+		return nil, nil, nil, nil, fmt.Errorf("%w: /account/balance %s", ErrAssertionFailed, err.Error())
 	}
 
 	return response.BlockIdentifier, response.Balances, response.Coins, response.Metadata, nil
@@ -76,7 +76,7 @@ func (f *Fetcher) AccountBalanceRetry(
 			block,
 		)
 		if errors.Is(err, ErrAssertionFailed) {
-			return nil, nil, nil, nil, fmt.Errorf("%w: not attempting retry", err)
+			return nil, nil, nil, nil, fmt.Errorf("%w: /account/balance not attempting retry", err)
 		}
 
 		if err == nil {

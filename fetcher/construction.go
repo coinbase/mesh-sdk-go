@@ -42,11 +42,11 @@ func (f *Fetcher) ConstructionCombine(
 		},
 	)
 	if err != nil {
-		return "", fmt.Errorf("%w: %s", ErrRequestFailed, err.Error())
+		return "", fmt.Errorf("%w: /construction/combine %s", ErrRequestFailed, err.Error())
 	}
 
 	if err := asserter.ConstructionCombineResponse(response); err != nil {
-		return "", fmt.Errorf("%w: %s", ErrAssertionFailed, err.Error())
+		return "", fmt.Errorf("%w: /construction/combine %s", ErrAssertionFailed, err.Error())
 	}
 
 	return response.SignedTransaction, nil
@@ -71,11 +71,11 @@ func (f *Fetcher) ConstructionDerive(
 		},
 	)
 	if err != nil {
-		return "", nil, fmt.Errorf("%w: %s", ErrRequestFailed, err.Error())
+		return "", nil, fmt.Errorf("%w: /construction/derive %s", ErrRequestFailed, err.Error())
 	}
 
 	if err := asserter.ConstructionDeriveResponse(response); err != nil {
-		return "", nil, fmt.Errorf("%w: %s", ErrAssertionFailed, err.Error())
+		return "", nil, fmt.Errorf("%w: /construction/derive %s", ErrAssertionFailed, err.Error())
 	}
 
 	return response.Address, response.Metadata, nil
@@ -95,11 +95,11 @@ func (f *Fetcher) ConstructionHash(
 		},
 	)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %s", ErrRequestFailed, err.Error())
+		return nil, fmt.Errorf("%w: /construction/hash %s", ErrRequestFailed, err.Error())
 	}
 
 	if err := asserter.TransactionIdentifierResponse(response); err != nil {
-		return nil, fmt.Errorf("%w: %s", ErrAssertionFailed, err.Error())
+		return nil, fmt.Errorf("%w: /construction/hash %s", ErrAssertionFailed, err.Error())
 	}
 
 	return response.TransactionIdentifier, nil
@@ -119,11 +119,11 @@ func (f *Fetcher) ConstructionMetadata(
 		},
 	)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %s", ErrRequestFailed, err.Error())
+		return nil, fmt.Errorf("%w: /construction/metadata %s", ErrRequestFailed, err.Error())
 	}
 
 	if err := asserter.ConstructionMetadataResponse(metadata); err != nil {
-		return nil, fmt.Errorf("%w: %s", ErrAssertionFailed, err.Error())
+		return nil, fmt.Errorf("%w: /construction/metadata %s", ErrAssertionFailed, err.Error())
 	}
 
 	return metadata.Metadata, nil
@@ -148,11 +148,11 @@ func (f *Fetcher) ConstructionParse(
 		},
 	)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("%w: %s", ErrRequestFailed, err.Error())
+		return nil, nil, nil, fmt.Errorf("%w: /construction/parse %s", ErrRequestFailed, err.Error())
 	}
 
 	if err := f.Asserter.ConstructionParseResponse(response, signed); err != nil {
-		return nil, nil, nil, fmt.Errorf("%w: %s", ErrAssertionFailed, err.Error())
+		return nil, nil, nil, fmt.Errorf("%w: /construction/parse %s", ErrAssertionFailed, err.Error())
 	}
 
 	return response.Operations, response.Signers, response.Metadata, nil
@@ -183,11 +183,11 @@ func (f *Fetcher) ConstructionPayloads(
 		},
 	)
 	if err != nil {
-		return "", nil, fmt.Errorf("%w: %s", ErrRequestFailed, err.Error())
+		return "", nil, fmt.Errorf("%w: /construction/payloads %s", ErrRequestFailed, err.Error())
 	}
 
 	if err := asserter.ConstructionPayloadsResponse(response); err != nil {
-		return "", nil, fmt.Errorf("%w: %s", ErrAssertionFailed, err.Error())
+		return "", nil, fmt.Errorf("%w: /construction/payloads %s", ErrAssertionFailed, err.Error())
 	}
 
 	return response.UnsignedTransaction, response.Payloads, nil
@@ -214,7 +214,7 @@ func (f *Fetcher) ConstructionPreprocess(
 		},
 	)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %s", ErrRequestFailed, err.Error())
+		return nil, fmt.Errorf("%w: /construction/preprocess %s", ErrRequestFailed, err.Error())
 	}
 
 	// We do not assert the response here because the only object
@@ -238,11 +238,11 @@ func (f *Fetcher) ConstructionSubmit(
 		},
 	)
 	if err != nil {
-		return nil, nil, fmt.Errorf("%w: %s", ErrRequestFailed, err.Error())
+		return nil, nil, fmt.Errorf("%w: /connection/submit %s", ErrRequestFailed, err.Error())
 	}
 
 	if err := asserter.TransactionIdentifierResponse(submitResponse); err != nil {
-		return nil, nil, fmt.Errorf("%w: %s", ErrAssertionFailed, err.Error())
+		return nil, nil, fmt.Errorf("%w: /connection/submit %s", ErrAssertionFailed, err.Error())
 	}
 
 	return submitResponse.TransactionIdentifier, submitResponse.Metadata, nil

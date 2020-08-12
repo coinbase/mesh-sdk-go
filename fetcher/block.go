@@ -66,7 +66,7 @@ func (f *Fetcher) fetchChannelTransactions(
 		)
 
 		if err != nil {
-			return fmt.Errorf("%w: %s", ErrRequestFailed, err.Error())
+			return fmt.Errorf("%w: /block/transaction %s", ErrRequestFailed, err.Error())
 		}
 
 		select {
@@ -140,7 +140,7 @@ func (f *Fetcher) UnsafeBlock(
 		BlockIdentifier:   blockIdentifier,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("%w: %s", ErrRequestFailed, err.Error())
+		return nil, fmt.Errorf("%w: /block %s", ErrRequestFailed, err.Error())
 	}
 
 	// Exit early if no need to fetch txs
@@ -155,7 +155,7 @@ func (f *Fetcher) UnsafeBlock(
 		blockResponse.OtherTransactions,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %s", ErrRequestFailed, err.Error())
+		return nil, fmt.Errorf("%w: /block/transaction %s", ErrRequestFailed, err.Error())
 	}
 
 	blockResponse.Block.Transactions = append(blockResponse.Block.Transactions, batchFetch...)
@@ -175,7 +175,7 @@ func (f *Fetcher) Block(
 ) (*types.Block, error) {
 	block, err := f.UnsafeBlock(ctx, network, blockIdentifier)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %s", ErrRequestFailed, err.Error())
+		return nil, fmt.Errorf("%w: /block %s", ErrRequestFailed, err.Error())
 	}
 
 	// If a block is omitted, it will return a non-error
@@ -185,7 +185,7 @@ func (f *Fetcher) Block(
 	}
 
 	if err := f.Asserter.Block(block); err != nil {
-		return nil, fmt.Errorf("%w: %s", ErrAssertionFailed, err.Error())
+		return nil, fmt.Errorf("%w: /block %s", ErrAssertionFailed, err.Error())
 	}
 
 	return block, nil
@@ -214,7 +214,7 @@ func (f *Fetcher) BlockRetry(
 			blockIdentifier,
 		)
 		if errors.Is(err, ErrAssertionFailed) {
-			return nil, fmt.Errorf("%w: not attempting retry", err)
+			return nil, fmt.Errorf("%w: /block not attempting retry", err)
 		}
 
 		if err == nil {
