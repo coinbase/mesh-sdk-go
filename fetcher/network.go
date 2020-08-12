@@ -68,7 +68,7 @@ func (f *Fetcher) NetworkStatusRetry(
 			metadata,
 		)
 		if errors.Is(err, ErrAssertionFailed) {
-			return nil, fmt.Errorf("%w: not attempting network status retry", err)
+			return nil, fmt.Errorf("%w: not attempting retry", err)
 		}
 
 		if err == nil {
@@ -135,7 +135,7 @@ func (f *Fetcher) NetworkListRetry(
 			metadata,
 		)
 		if errors.Is(err, ErrAssertionFailed) {
-			return nil, fmt.Errorf("%w: not attempting network status retry", err)
+			return nil, fmt.Errorf("%w: not attempting retry", err)
 		}
 
 		if err == nil {
@@ -201,7 +201,7 @@ func (f *Fetcher) NetworkOptionsRetry(
 			metadata,
 		)
 		if errors.Is(err, ErrAssertionFailed) {
-			return nil, fmt.Errorf("%w: not attempting network status retry", err)
+			return nil, fmt.Errorf("%w: not attempting retry", err)
 		}
 
 		if err == nil {
