@@ -24,26 +24,39 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
+type ErrorRes struct {
+	goErr		error
+	rosettaErr	*types.Error
+}
+
 // NetworkStatus returns the validated response
 // from the NetworkStatus method.
 func (f *Fetcher) NetworkStatus(
 	ctx context.Context,
 	network *types.NetworkIdentifier,
 	metadata map[string]interface{},
-) (*types.NetworkStatusResponse, error) {
-	networkStatus, _, err := f.rosettaClient.NetworkAPI.NetworkStatus(
+) (*types.NetworkStatusResponse, *ErrorRes) {
+	networkStatus, rosettaErr, goErr := f.rosettaClient.NetworkAPI.NetworkStatus(
 		ctx,
 		&types.NetworkRequest{
 			NetworkIdentifier: network,
 			Metadata:          metadata,
 		},
 	)
-	if err != nil {
-		return nil, fmt.Errorf("%w: /network/status %s", ErrRequestFailed, err.Error())
+	if goErr != nil {
+		res := &ErrorRes{
+			goErr: fmt.Errorf("%w: /network/status %s", ErrRequestFailed, goErr.Error()),
+			rosettaErr: rosettaErr,
+		}
+		return nil, res
 	}
 
 	if err := asserter.NetworkStatusResponse(networkStatus); err != nil {
-		return nil, fmt.Errorf("%w: /network/status %s", ErrAssertionFailed, err.Error())
+		res := &ErrorRes{
+			goErr: fmt.Errorf("%w: /network/status %s", ErrAssertionFailed, err.Error()),
+			rosettaErr: rosettaErr,
+		}
+		return nil, res
 	}
 
 	return networkStatus, nil
@@ -62,16 +75,16 @@ func (f *Fetcher) NetworkStatusRetry(
 	)
 
 	for {
-		networkStatus, err := f.NetworkStatus(
+		networkStatus, errRes := f.NetworkStatus(
 			ctx,
 			network,
 			metadata,
 		)
-		if errors.Is(err, ErrAssertionFailed) {
-			return nil, fmt.Errorf("%w: /network/status not attempting retry", err)
+		if errors.Is(errRes.goErr, ErrAssertionFailed) {
+			return nil, fmt.Errorf("%w: /network/status not attempting retry", errRes.goErr)
 		}
 
-		if err == nil {
+		if errRes.goErr == nil {
 			return networkStatus, nil
 		}
 
@@ -82,7 +95,7 @@ func (f *Fetcher) NetworkStatusRetry(
 		if !tryAgain(
 			fmt.Sprintf("network status %s", types.PrettyPrintStruct(network)),
 			backoffRetries,
-			err,
+			errRes.goErr,
 		) {
 			break
 		}
@@ -96,23 +109,32 @@ func (f *Fetcher) NetworkStatusRetry(
 }
 
 // NetworkList returns the validated response
-// from the NetworList method.
+// from the NetworkList method.
 func (f *Fetcher) NetworkList(
 	ctx context.Context,
 	metadata map[string]interface{},
-) (*types.NetworkListResponse, error) {
-	networkList, _, err := f.rosettaClient.NetworkAPI.NetworkList(
+) (*types.NetworkListResponse, *ErrorRes) {
+	networkList, rosettaErr, goErr := f.rosettaClient.NetworkAPI.NetworkList(
 		ctx,
 		&types.MetadataRequest{
 			Metadata: metadata,
 		},
 	)
-	if err != nil {
-		return nil, fmt.Errorf("%w: /network/list %s", ErrRequestFailed, err.Error())
+
+	if goErr != nil {
+		res := &ErrorRes{
+			goErr: fmt.Errorf("%w: /network/list %s", ErrRequestFailed, goErr.Error()),
+			rosettaErr: rosettaErr,
+		}
+		return nil, res
 	}
 
 	if err := asserter.NetworkListResponse(networkList); err != nil {
-		return nil, fmt.Errorf("%w: /network/list %s", ErrAssertionFailed, err.Error())
+		res := &ErrorRes{
+			goErr: fmt.Errorf("%w: /network/list %s", ErrAssertionFailed, err.Error()),
+			rosettaErr: rosettaErr,
+		}
+		return nil, res
 	}
 
 	return networkList, nil
@@ -130,15 +152,15 @@ func (f *Fetcher) NetworkListRetry(
 	)
 
 	for {
-		networkList, err := f.NetworkList(
+		networkList, errRes := f.NetworkList(
 			ctx,
 			metadata,
 		)
-		if errors.Is(err, ErrAssertionFailed) {
-			return nil, fmt.Errorf("%w: /network/list not attempting retry", err)
+		if errors.Is(errRes.goErr, ErrAssertionFailed) {
+			return nil, fmt.Errorf("%w: /network/list not attempting retry", errRes.goErr)
 		}
 
-		if err == nil {
+		if errRes.goErr == nil {
 			return networkList, nil
 		}
 
@@ -146,7 +168,7 @@ func (f *Fetcher) NetworkListRetry(
 			return nil, ctx.Err()
 		}
 
-		if !tryAgain("NetworkList", backoffRetries, err) {
+		if !tryAgain("NetworkList", backoffRetries, errRes.goErr) {
 			break
 		}
 	}
@@ -158,28 +180,37 @@ func (f *Fetcher) NetworkListRetry(
 }
 
 // NetworkOptions returns the validated response
-// from the NetworList method.
+// from the NetworkOptions method.
 func (f *Fetcher) NetworkOptions(
 	ctx context.Context,
 	network *types.NetworkIdentifier,
 	metadata map[string]interface{},
-) (*types.NetworkOptionsResponse, error) {
-	NetworkOptions, _, err := f.rosettaClient.NetworkAPI.NetworkOptions(
+) (*types.NetworkOptionsResponse, *ErrorRes) {
+	networkOptions, rosettaErr, goErr := f.rosettaClient.NetworkAPI.NetworkOptions(
 		ctx,
 		&types.NetworkRequest{
 			NetworkIdentifier: network,
 			Metadata:          metadata,
 		},
 	)
-	if err != nil {
-		return nil, fmt.Errorf("%w: /network/options %s", ErrRequestFailed, err.Error())
+
+	if goErr != nil {
+		res := &ErrorRes{
+			goErr: fmt.Errorf("%w: /network/options %s", ErrRequestFailed, goErr.Error()),
+			rosettaErr: rosettaErr,
+		}
+		return nil, res
 	}
 
-	if err := asserter.NetworkOptionsResponse(NetworkOptions); err != nil {
-		return nil, fmt.Errorf("%w: /network/options %s", ErrAssertionFailed, err.Error())
+	if err := asserter.NetworkOptionsResponse(networkOptions); err != nil {
+		res := &ErrorRes{
+			goErr: fmt.Errorf("%w: /network/options %s", ErrAssertionFailed, err.Error()),
+			rosettaErr: rosettaErr,
+		}
+		return nil, res
 	}
 
-	return NetworkOptions, nil
+	return networkOptions, nil
 }
 
 // NetworkOptionsRetry retrieves the validated NetworkOptions
@@ -195,16 +226,16 @@ func (f *Fetcher) NetworkOptionsRetry(
 	)
 
 	for {
-		networkOptions, err := f.NetworkOptions(
+		networkOptions, errRes := f.NetworkOptions(
 			ctx,
 			network,
 			metadata,
 		)
-		if errors.Is(err, ErrAssertionFailed) {
-			return nil, fmt.Errorf("%w: /network/options not attempting retry", err)
+		if errors.Is(errRes.goErr, ErrAssertionFailed) {
+			return nil, fmt.Errorf("%w: /network/options not attempting retry", errRes.goErr)
 		}
 
-		if err == nil {
+		if errRes.goErr == nil {
 			return networkOptions, nil
 		}
 
@@ -215,7 +246,7 @@ func (f *Fetcher) NetworkOptionsRetry(
 		if !tryAgain(
 			fmt.Sprintf("network options %s", types.PrettyPrintStruct(network)),
 			backoffRetries,
-			err,
+			errRes.goErr,
 		) {
 			break
 		}
