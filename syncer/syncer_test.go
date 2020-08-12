@@ -312,7 +312,7 @@ func TestProcessBlock(t *testing.T) {
 			ctx,
 			blockSequence[5],
 		)
-		assert.EqualError(t, err, "Got block 5 instead of 3")
+		assert.Contains(t, err.Error(), "got block 5 instead of 3")
 		assert.Equal(t, int64(3), syncer.nextIndex)
 		assert.Equal(t, blockSequence[2].BlockIdentifier, lastBlockIdentifier(syncer))
 		assert.Equal(
