@@ -16,6 +16,7 @@ package fetcher
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
 
@@ -35,12 +36,12 @@ func (f *Fetcher) Mempool(
 		},
 	)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w: /mempool %s", ErrRequestFailed, err.Error())
 	}
 
 	mempool := response.TransactionIdentifiers
 	if err := asserter.MempoolTransactions(mempool); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w: /mempool %s", ErrAssertionFailed, err.Error())
 	}
 
 	return mempool, nil
@@ -61,12 +62,12 @@ func (f *Fetcher) MempoolTransaction(
 		},
 	)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("%w: /mempool/transaction %s", ErrRequestFailed, err.Error())
 	}
 
 	mempoolTransaction := response.Transaction
 	if err := f.Asserter.Transaction(mempoolTransaction); err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("%w: /mempool/transaction %s", ErrAssertionFailed, err.Error())
 	}
 
 	return mempoolTransaction, response.Metadata, nil
