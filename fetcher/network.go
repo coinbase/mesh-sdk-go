@@ -16,6 +16,7 @@ package fetcher
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
@@ -38,11 +39,11 @@ func (f *Fetcher) NetworkStatus(
 		},
 	)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w: /network/status %s", ErrRequestFailed, err.Error())
 	}
 
 	if err := asserter.NetworkStatusResponse(networkStatus); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w: /network/status %s", ErrAssertionFailed, err.Error())
 	}
 
 	return networkStatus, nil
@@ -66,6 +67,10 @@ func (f *Fetcher) NetworkStatusRetry(
 			network,
 			metadata,
 		)
+		if errors.Is(err, ErrAssertionFailed) {
+			return nil, fmt.Errorf("%w: /network/status not attempting retry", err)
+		}
+
 		if err == nil {
 			return networkStatus, nil
 		}
@@ -103,11 +108,11 @@ func (f *Fetcher) NetworkList(
 		},
 	)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w: /network/list %s", ErrRequestFailed, err.Error())
 	}
 
 	if err := asserter.NetworkListResponse(networkList); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w: /network/list %s", ErrAssertionFailed, err.Error())
 	}
 
 	return networkList, nil
@@ -129,6 +134,10 @@ func (f *Fetcher) NetworkListRetry(
 			ctx,
 			metadata,
 		)
+		if errors.Is(err, ErrAssertionFailed) {
+			return nil, fmt.Errorf("%w: /network/list not attempting retry", err)
+		}
+
 		if err == nil {
 			return networkList, nil
 		}
@@ -163,11 +172,11 @@ func (f *Fetcher) NetworkOptions(
 		},
 	)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w: /network/options %s", ErrRequestFailed, err.Error())
 	}
 
 	if err := asserter.NetworkOptionsResponse(NetworkOptions); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w: /network/options %s", ErrAssertionFailed, err.Error())
 	}
 
 	return NetworkOptions, nil
@@ -191,6 +200,10 @@ func (f *Fetcher) NetworkOptionsRetry(
 			network,
 			metadata,
 		)
+		if errors.Is(err, ErrAssertionFailed) {
+			return nil, fmt.Errorf("%w: /network/options not attempting retry", err)
+		}
+
 		if err == nil {
 			return networkOptions, nil
 		}

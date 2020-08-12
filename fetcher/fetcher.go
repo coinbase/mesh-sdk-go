@@ -51,9 +51,20 @@ const (
 )
 
 var (
-	// ErrExhaustedRetries is returned when a fetch with retries
+	// ErrNoNetworks is returned when there are no
+	// networks available for syncing.
+	ErrNoNetworks = errors.New("no networks available")
+
+	// ErrRequestFailed is returned when a request fails.
+	ErrRequestFailed = errors.New("request failed")
+
+	// ErrExhaustedRetries is returned when a request with retries
 	// fails because it was attempted too many times.
 	ErrExhaustedRetries = errors.New("retries exhausted")
+
+	// ErrAssertionFailed is returned when a fetch succeeds
+	// but fails assertion.
+	ErrAssertionFailed = errors.New("assertion failed")
 )
 
 // Fetcher contains all logic to communicate with a Rosetta Server.
@@ -127,7 +138,7 @@ func (f *Fetcher) InitializeAsserter(
 	}
 
 	if len(networkList.NetworkIdentifiers) == 0 {
-		return nil, nil, errors.New("no networks available")
+		return nil, nil, ErrNoNetworks
 	}
 	primaryNetwork := networkList.NetworkIdentifiers[0]
 
