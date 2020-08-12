@@ -48,6 +48,16 @@ var (
 	// when we are loading more blocks to fetch but we
 	// already have a backlog >= to concurrency.
 	defaultFetchSleep = 500 * time.Millisecond
+
+	// ErrCannotRemoveGenesisBlock is returned when
+	// a Rosetta implementation indicates that the
+	// genesis block should be orphaned.
+	ErrCannotRemoveGenesisBlock = errors.New("cannot remove genesis block")
+
+	// ErrOutOfOrder is returned when the syncer examines
+	// a block that is out of order. This typically
+	// means the Helper has a bug.
+	ErrOutOfOrder = errors.New("out of order")
 )
 
 // Handler is called at various times during the sync cycle
@@ -196,7 +206,8 @@ func (s *Syncer) checkRemove(
 	// Ensure processing correct index
 	if block.BlockIdentifier.Index != s.nextIndex {
 		return false, nil, fmt.Errorf(
-			"Got block %d instead of %d",
+			"%w: got block %d instead of %d",
+			ErrOutOfOrder,
 			block.BlockIdentifier.Index,
 			s.nextIndex,
 		)
@@ -206,7 +217,7 @@ func (s *Syncer) checkRemove(
 	lastBlock := s.pastBlocks[len(s.pastBlocks)-1]
 	if types.Hash(block.ParentBlockIdentifier) != types.Hash(lastBlock) {
 		if types.Hash(s.genesisBlock) == types.Hash(lastBlock) {
-			return false, nil, fmt.Errorf("cannot remove genesis block")
+			return false, nil, ErrCannotRemoveGenesisBlock
 		}
 
 		return true, lastBlock, nil
