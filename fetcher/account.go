@@ -41,25 +41,25 @@ func (f *Fetcher) AccountBalance(
 		},
 	)
 	if err != nil {
-		res := &Error{
+		fetcherErr := &Error{
 			Err:       fmt.Errorf("%w: /account/balance %s", ErrRequestFailed, err.Error()),
 			ClientErr: clientErr,
 		}
-		return nil, nil, nil, nil, res
+		return nil, nil, nil, nil, fetcherErr
 	}
 
 	if err := asserter.AccountBalanceResponse(
 		block,
 		response,
 	); err != nil {
-		res := &Error{
+		fetcherErr := &Error{
 			Err: fmt.Errorf(
 				"%w: /account/balance %s",
 				ErrAssertionFailed,
 				err.Error(),
 			),
 		}
-		return nil, nil, nil, nil, res
+		return nil, nil, nil, nil, fetcherErr
 	}
 
 	return response.BlockIdentifier, response.Balances, response.Coins, response.Metadata, nil
@@ -91,19 +91,19 @@ func (f *Fetcher) AccountBalanceRetry(
 		}
 
 		if errors.Is(err.Err, ErrAssertionFailed) {
-			res := &Error{
+			fetcherErr := &Error{
 				Err:       fmt.Errorf("%w: /account/balance not attempting retry", err.Err),
 				ClientErr: err.ClientErr,
 			}
-			return nil, nil, nil, nil, res
+			return nil, nil, nil, nil, fetcherErr
 		}
 
 		if ctx.Err() != nil {
-			res := &Error{
+			fetcherErr := &Error{
 				Err:       ctx.Err(),
 				ClientErr: err.ClientErr,
 			}
-			return nil, nil, nil, nil, res
+			return nil, nil, nil, nil, fetcherErr
 		}
 
 		if !tryAgain(

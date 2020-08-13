@@ -140,11 +140,11 @@ func (f *Fetcher) UnsafeBlock(
 		BlockIdentifier:   blockIdentifier,
 	})
 	if err != nil {
-		res := &Error{
+		fetcherErr := &Error{
 			Err:       fmt.Errorf("%w: /block %s", ErrRequestFailed, err.Error()),
 			ClientErr: clientErr,
 		}
-		return nil, res
+		return nil, fetcherErr
 	}
 
 	// Exit early if no need to fetch txs
@@ -191,10 +191,10 @@ func (f *Fetcher) Block(
 	}
 
 	if err := f.Asserter.Block(block); err != nil {
-		res := &Error{
+		fetcherErr := &Error{
 			Err: fmt.Errorf("%w: /block %s", ErrAssertionFailed, err.Error()),
 		}
-		return nil, res
+		return nil, fetcherErr
 	}
 
 	return block, nil
@@ -227,19 +227,19 @@ func (f *Fetcher) BlockRetry(
 		}
 
 		if errors.Is(err.Err, ErrAssertionFailed) {
-			res := &Error{
+			fetcherErr := &Error{
 				Err:       fmt.Errorf("%w: /block not attempting retry", err.Err),
 				ClientErr: err.ClientErr,
 			}
-			return nil, res
+			return nil, fetcherErr
 		}
 
 		if ctx.Err() != nil {
-			res := &Error{
+			fetcherErr := &Error{
 				Err:       ctx.Err(),
 				ClientErr: err.ClientErr,
 			}
-			return nil, res
+			return nil, fetcherErr
 		}
 
 		var blockFetchErr string

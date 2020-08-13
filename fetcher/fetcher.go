@@ -175,7 +175,7 @@ func (f *Fetcher) InitializeAsserter(
 		networkOptions,
 	)
 	if assertErr != nil {
-		return nil, nil, err
+		return nil, nil, &Error{Err: assertErr}
 	}
 	f.Asserter = newAsserter
 

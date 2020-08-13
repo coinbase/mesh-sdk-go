@@ -39,18 +39,18 @@ func (f *Fetcher) NetworkStatus(
 		},
 	)
 	if err != nil {
-		res := &Error{
+		fetcherErr := &Error{
 			Err:       fmt.Errorf("%w: /network/status %s", ErrRequestFailed, err.Error()),
 			ClientErr: clientErr,
 		}
-		return nil, res
+		return nil, fetcherErr
 	}
 
 	if err := asserter.NetworkStatusResponse(networkStatus); err != nil {
-		res := &Error{
+		fetcherErr := &Error{
 			Err: fmt.Errorf("%w: /network/status %s", ErrAssertionFailed, err.Error()),
 		}
-		return nil, res
+		return nil, fetcherErr
 	}
 
 	return networkStatus, nil
@@ -79,19 +79,19 @@ func (f *Fetcher) NetworkStatusRetry(
 		}
 
 		if errors.Is(err.Err, ErrAssertionFailed) {
-			res := &Error{
+			fetcherErr := &Error{
 				Err:       fmt.Errorf("%w: /network/status not attempting retry", err.Err),
 				ClientErr: err.ClientErr,
 			}
-			return nil, res
+			return nil, fetcherErr
 		}
 
 		if ctx.Err() != nil {
-			res := &Error{
+			fetcherErr := &Error{
 				Err:       ctx.Err(),
 				ClientErr: err.ClientErr,
 			}
-			return nil, res
+			return nil, fetcherErr
 		}
 
 		if !tryAgain(
@@ -125,18 +125,18 @@ func (f *Fetcher) NetworkList(
 	)
 
 	if err != nil {
-		res := &Error{
+		fetcherErr := &Error{
 			Err:       fmt.Errorf("%w: /network/list %s", ErrRequestFailed, err.Error()),
 			ClientErr: clientErr,
 		}
-		return nil, res
+		return nil, fetcherErr
 	}
 
 	if err := asserter.NetworkListResponse(networkList); err != nil {
-		res := &Error{
+		fetcherErr := &Error{
 			Err: fmt.Errorf("%w: /network/list %s", ErrAssertionFailed, err.Error()),
 		}
-		return nil, res
+		return nil, fetcherErr
 	}
 
 	return networkList, nil
@@ -163,19 +163,19 @@ func (f *Fetcher) NetworkListRetry(
 		}
 
 		if errors.Is(err.Err, ErrAssertionFailed) {
-			res := &Error{
+			fetcherErr := &Error{
 				Err:       fmt.Errorf("%w: /network/list not attempting retry", err.Err),
 				ClientErr: err.ClientErr,
 			}
-			return nil, res
+			return nil, fetcherErr
 		}
 
 		if ctx.Err() != nil {
-			res := &Error{
+			fetcherErr := &Error{
 				Err:       ctx.Err(),
 				ClientErr: err.ClientErr,
 			}
-			return nil, res
+			return nil, fetcherErr
 		}
 
 		if !tryAgain("NetworkList", backoffRetries, err.Err) {
@@ -206,18 +206,18 @@ func (f *Fetcher) NetworkOptions(
 	)
 
 	if err != nil {
-		res := &Error{
+		fetcherErr := &Error{
 			Err:       fmt.Errorf("%w: /network/options %s", ErrRequestFailed, err.Error()),
 			ClientErr: clientErr,
 		}
-		return nil, res
+		return nil, fetcherErr
 	}
 
 	if err := asserter.NetworkOptionsResponse(networkOptions); err != nil {
-		res := &Error{
+		fetcherErr := &Error{
 			Err: fmt.Errorf("%w: /network/options %s", ErrAssertionFailed, err.Error()),
 		}
-		return nil, res
+		return nil, fetcherErr
 	}
 
 	return networkOptions, nil
@@ -246,19 +246,19 @@ func (f *Fetcher) NetworkOptionsRetry(
 		}
 
 		if errors.Is(err.Err, ErrAssertionFailed) {
-			res := &Error{
+			fetcherErr := &Error{
 				Err:       fmt.Errorf("%w: /network/options not attempting retry", err.Err),
 				ClientErr: err.ClientErr,
 			}
-			return nil, res
+			return nil, fetcherErr
 		}
 
 		if ctx.Err() != nil {
-			res := &Error{
+			fetcherErr := &Error{
 				Err:       ctx.Err(),
 				ClientErr: err.ClientErr,
 			}
-			return nil, res
+			return nil, fetcherErr
 		}
 
 		if !tryAgain(
