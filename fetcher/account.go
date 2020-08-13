@@ -73,7 +73,7 @@ func (f *Fetcher) AccountBalanceRetry(
 	network *types.NetworkIdentifier,
 	account *types.AccountIdentifier,
 	block *types.PartialBlockIdentifier,
-) (*types.BlockIdentifier, []*types.Amount, []*types.Coin, map[string]interface{}, error) {
+) (*types.BlockIdentifier, []*types.Amount, []*types.Coin, map[string]interface{}, *Error) {
 	backoffRetries := backoffRetries(
 		f.retryElapsedTime,
 		f.maxRetries,
@@ -91,14 +91,19 @@ func (f *Fetcher) AccountBalanceRetry(
 		}
 
 		if errors.Is(err.Err, ErrAssertionFailed) {
-			return nil, nil, nil, nil, fmt.Errorf(
-				"%w: /account/balance not attempting retry",
-				err.Err,
-			)
+			res := &Error{
+				Err:       fmt.Errorf("%w: /account/balance not attempting retry", err.Err),
+				ClientErr: err.ClientErr,
+			}
+			return nil, nil, nil, nil, res
 		}
 
 		if ctx.Err() != nil {
-			return nil, nil, nil, nil, ctx.Err()
+			res := &Error{
+				Err:       ctx.Err(),
+				ClientErr: err.ClientErr,
+			}
+			return nil, nil, nil, nil, res
 		}
 
 		if !tryAgain(
@@ -110,9 +115,11 @@ func (f *Fetcher) AccountBalanceRetry(
 		}
 	}
 
-	return nil, nil, nil, nil, fmt.Errorf(
-		"%w: unable to fetch account %s",
-		ErrExhaustedRetries,
-		types.PrettyPrintStruct(account),
-	)
+	return nil, nil, nil, nil, &Error{
+		Err: fmt.Errorf(
+			"%w: unable to fetch account %s",
+			ErrExhaustedRetries,
+			types.PrettyPrintStruct(account),
+		),
+	}
 }

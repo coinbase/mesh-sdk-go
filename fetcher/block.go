@@ -206,9 +206,9 @@ func (f *Fetcher) BlockRetry(
 	ctx context.Context,
 	network *types.NetworkIdentifier,
 	blockIdentifier *types.PartialBlockIdentifier,
-) (*types.Block, error) {
+) (*types.Block, *Error) {
 	if err := asserter.PartialBlockIdentifier(blockIdentifier); err != nil {
-		return nil, err
+		return nil, &Error{Err: err}
 	}
 
 	backoffRetries := backoffRetries(
@@ -227,11 +227,19 @@ func (f *Fetcher) BlockRetry(
 		}
 
 		if errors.Is(err.Err, ErrAssertionFailed) {
-			return nil, fmt.Errorf("%w: /block not attempting retry", err.Err)
+			res := &Error{
+				Err:       fmt.Errorf("%w: /block not attempting retry", err.Err),
+				ClientErr: err.ClientErr,
+			}
+			return nil, res
 		}
 
 		if ctx.Err() != nil {
-			return nil, ctx.Err()
+			res := &Error{
+				Err:       ctx.Err(),
+				ClientErr: err.ClientErr,
+			}
+			return nil, res
 		}
 
 		var blockFetchErr string
@@ -246,9 +254,11 @@ func (f *Fetcher) BlockRetry(
 		}
 	}
 
-	return nil, fmt.Errorf(
-		"%w: unable to fetch block %s",
-		ErrExhaustedRetries,
-		types.PrettyPrintStruct(blockIdentifier),
-	)
+	return nil, &Error{
+		Err: fmt.Errorf(
+			"%w: unable to fetch block %s",
+			ErrExhaustedRetries,
+			types.PrettyPrintStruct(blockIdentifier),
+		),
+	}
 }

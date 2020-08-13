@@ -17,7 +17,6 @@ package fetcher
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -158,7 +157,7 @@ func TestAccountBalanceRetry(t *testing.T) {
 			assert.Equal(test.expectedBlock, block)
 			assert.Equal(test.expectedAmounts, amounts)
 			assert.Nil(metadata)
-			assert.True(errors.Is(err, test.expectedError))
+			assert.True(checkError(err, test.expectedError))
 		})
 	}
 }

@@ -132,10 +132,10 @@ func (f *Fetcher) InitializeAsserter(
 ) (
 	*types.NetworkIdentifier,
 	*types.NetworkStatusResponse,
-	error,
+	*Error,
 ) {
 	if f.Asserter != nil {
-		return nil, nil, errors.New("asserter already initialized")
+		return nil, nil, &Error{Err: errors.New("asserter already initialized")}
 	}
 
 	// Attempt to fetch network list
@@ -145,7 +145,7 @@ func (f *Fetcher) InitializeAsserter(
 	}
 
 	if len(networkList.NetworkIdentifiers) == 0 {
-		return nil, nil, ErrNoNetworks
+		return nil, nil, &Error{Err: ErrNoNetworks}
 	}
 	primaryNetwork := networkList.NetworkIdentifiers[0]
 
@@ -169,14 +169,15 @@ func (f *Fetcher) InitializeAsserter(
 		return nil, nil, err
 	}
 
-	f.Asserter, err = asserter.NewClientWithResponses(
+	newAsserter, assertErr := asserter.NewClientWithResponses(
 		primaryNetwork,
 		networkStatus,
 		networkOptions,
 	)
-	if err != nil {
+	if assertErr != nil {
 		return nil, nil, err
 	}
+	f.Asserter = newAsserter
 
 	return primaryNetwork, networkStatus, nil
 }
