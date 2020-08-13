@@ -25,7 +25,7 @@ import (
 )
 
 type Error struct {
-	err      error
+	err       error
 	clientErr *types.Error
 }
 
@@ -45,7 +45,7 @@ func (f *Fetcher) NetworkStatus(
 	)
 	if err != nil {
 		res := &Error{
-			err:      fmt.Errorf("%w: /network/status %s", ErrRequestFailed, err.Error()),
+			err:       fmt.Errorf("%w: /network/status %s", ErrRequestFailed, err.Error()),
 			clientErr: clientErr,
 		}
 		return nil, res
@@ -53,7 +53,7 @@ func (f *Fetcher) NetworkStatus(
 
 	if err := asserter.NetworkStatusResponse(networkStatus); err != nil {
 		res := &Error{
-			err:      fmt.Errorf("%w: /network/status %s", ErrAssertionFailed, err.Error()),
+			err:       fmt.Errorf("%w: /network/status %s", ErrAssertionFailed, err.Error()),
 			clientErr: clientErr,
 		}
 		return nil, res
@@ -127,7 +127,7 @@ func (f *Fetcher) NetworkList(
 
 	if err != nil {
 		res := &Error{
-			err:      fmt.Errorf("%w: /network/list %s", ErrRequestFailed, err.Error()),
+			err:       fmt.Errorf("%w: /network/list %s", ErrRequestFailed, err.Error()),
 			clientErr: clientErr,
 		}
 		return nil, res
@@ -135,7 +135,7 @@ func (f *Fetcher) NetworkList(
 
 	if err := asserter.NetworkListResponse(networkList); err != nil {
 		res := &Error{
-			err:      fmt.Errorf("%w: /network/list %s", ErrAssertionFailed, err.Error()),
+			err:       fmt.Errorf("%w: /network/list %s", ErrAssertionFailed, err.Error()),
 			clientErr: clientErr,
 		}
 		return nil, res
@@ -204,7 +204,7 @@ func (f *Fetcher) NetworkOptions(
 
 	if err != nil {
 		res := &Error{
-			err:      fmt.Errorf("%w: /network/options %s", ErrRequestFailed, err.Error()),
+			err:       fmt.Errorf("%w: /network/options %s", ErrRequestFailed, err.Error()),
 			clientErr: clientErr,
 		}
 		return nil, res
@@ -212,7 +212,7 @@ func (f *Fetcher) NetworkOptions(
 
 	if err := asserter.NetworkOptionsResponse(networkOptions); err != nil {
 		res := &Error{
-			err:      fmt.Errorf("%w: /network/options %s", ErrAssertionFailed, err.Error()),
+			err:       fmt.Errorf("%w: /network/options %s", ErrAssertionFailed, err.Error()),
 			clientErr: clientErr,
 		}
 		return nil, res
