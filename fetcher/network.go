@@ -25,8 +25,8 @@ import (
 )
 
 type Error struct {
-	err       error
-	clientErr *types.Error
+	Err       error        `json:"err"`
+	ClientErr *types.Error `json:"client_err"`
 }
 
 // NetworkStatus returns the validated response
@@ -45,16 +45,16 @@ func (f *Fetcher) NetworkStatus(
 	)
 	if err != nil {
 		res := &Error{
-			err:       fmt.Errorf("%w: /network/status %s", ErrRequestFailed, err.Error()),
-			clientErr: clientErr,
+			Err:       fmt.Errorf("%w: /network/status %s", ErrRequestFailed, err.Error()),
+			ClientErr: clientErr,
 		}
 		return nil, res
 	}
 
 	if err := asserter.NetworkStatusResponse(networkStatus); err != nil {
 		res := &Error{
-			err:       fmt.Errorf("%w: /network/status %s", ErrAssertionFailed, err.Error()),
-			clientErr: clientErr,
+			Err:       fmt.Errorf("%w: /network/status %s", ErrAssertionFailed, err.Error()),
+			ClientErr: clientErr,
 		}
 		return nil, res
 	}
@@ -84,11 +84,11 @@ func (f *Fetcher) NetworkStatusRetry(
 			continue
 		}
 
-		if errors.Is(err.err, ErrAssertionFailed) {
-			return nil, fmt.Errorf("%w: /network/status not attempting retry", err.err)
+		if errors.Is(err.Err, ErrAssertionFailed) {
+			return nil, fmt.Errorf("%w: /network/status not attempting retry", err.Err)
 		}
 
-		if err.err == nil {
+		if err.Err == nil {
 			return networkStatus, nil
 		}
 
@@ -99,7 +99,7 @@ func (f *Fetcher) NetworkStatusRetry(
 		if !tryAgain(
 			fmt.Sprintf("network status %s", types.PrettyPrintStruct(network)),
 			backoffRetries,
-			err.err,
+			err.Err,
 		) {
 			break
 		}
@@ -127,16 +127,16 @@ func (f *Fetcher) NetworkList(
 
 	if err != nil {
 		res := &Error{
-			err:       fmt.Errorf("%w: /network/list %s", ErrRequestFailed, err.Error()),
-			clientErr: clientErr,
+			Err:       fmt.Errorf("%w: /network/list %s", ErrRequestFailed, err.Error()),
+			ClientErr: clientErr,
 		}
 		return nil, res
 	}
 
 	if err := asserter.NetworkListResponse(networkList); err != nil {
 		res := &Error{
-			err:       fmt.Errorf("%w: /network/list %s", ErrAssertionFailed, err.Error()),
-			clientErr: clientErr,
+			Err:       fmt.Errorf("%w: /network/list %s", ErrAssertionFailed, err.Error()),
+			ClientErr: clientErr,
 		}
 		return nil, res
 	}
@@ -164,11 +164,11 @@ func (f *Fetcher) NetworkListRetry(
 			continue
 		}
 
-		if errors.Is(err.err, ErrAssertionFailed) {
-			return nil, fmt.Errorf("%w: /network/list not attempting retry", err.err)
+		if errors.Is(err.Err, ErrAssertionFailed) {
+			return nil, fmt.Errorf("%w: /network/list not attempting retry", err.Err)
 		}
 
-		if err.err == nil {
+		if err.Err == nil {
 			return networkList, nil
 		}
 
@@ -176,7 +176,7 @@ func (f *Fetcher) NetworkListRetry(
 			return nil, ctx.Err()
 		}
 
-		if !tryAgain("NetworkList", backoffRetries, err.err) {
+		if !tryAgain("NetworkList", backoffRetries, err.Err) {
 			break
 		}
 	}
@@ -204,16 +204,16 @@ func (f *Fetcher) NetworkOptions(
 
 	if err != nil {
 		res := &Error{
-			err:       fmt.Errorf("%w: /network/options %s", ErrRequestFailed, err.Error()),
-			clientErr: clientErr,
+			Err:       fmt.Errorf("%w: /network/options %s", ErrRequestFailed, err.Error()),
+			ClientErr: clientErr,
 		}
 		return nil, res
 	}
 
 	if err := asserter.NetworkOptionsResponse(networkOptions); err != nil {
 		res := &Error{
-			err:       fmt.Errorf("%w: /network/options %s", ErrAssertionFailed, err.Error()),
-			clientErr: clientErr,
+			Err:       fmt.Errorf("%w: /network/options %s", ErrAssertionFailed, err.Error()),
+			ClientErr: clientErr,
 		}
 		return nil, res
 	}
@@ -243,11 +243,11 @@ func (f *Fetcher) NetworkOptionsRetry(
 			continue
 		}
 
-		if errors.Is(err.err, ErrAssertionFailed) {
-			return nil, fmt.Errorf("%w: /network/options not attempting retry", err.err)
+		if errors.Is(err.Err, ErrAssertionFailed) {
+			return nil, fmt.Errorf("%w: /network/options not attempting retry", err.Err)
 		}
 
-		if err.err == nil {
+		if err.Err == nil {
 			return networkOptions, nil
 		}
 
@@ -258,7 +258,7 @@ func (f *Fetcher) NetworkOptionsRetry(
 		if !tryAgain(
 			fmt.Sprintf("network options %s", types.PrettyPrintStruct(network)),
 			backoffRetries,
-			err.err,
+			err.Err,
 		) {
 			break
 		}
