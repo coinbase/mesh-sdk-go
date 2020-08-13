@@ -91,7 +91,10 @@ func (f *Fetcher) AccountBalanceRetry(
 		}
 
 		if errors.Is(err.Err, ErrAssertionFailed) {
-			return nil, nil, nil, nil, fmt.Errorf("%w: /account/balance not attempting retry", err.Err)
+			return nil, nil, nil, nil, fmt.Errorf(
+				"%w: /account/balance not attempting retry",
+				err.Err,
+			)
 		}
 
 		if ctx.Err() != nil {
