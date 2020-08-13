@@ -25,8 +25,8 @@ import (
 )
 
 type ErrorRes struct {
-	goErr		error
-	rosettaErr	*types.Error
+	goErr      error
+	rosettaErr *types.Error
 }
 
 // NetworkStatus returns the validated response
@@ -45,7 +45,7 @@ func (f *Fetcher) NetworkStatus(
 	)
 	if goErr != nil {
 		res := &ErrorRes{
-			goErr: fmt.Errorf("%w: /network/status %s", ErrRequestFailed, goErr.Error()),
+			goErr:      fmt.Errorf("%w: /network/status %s", ErrRequestFailed, goErr.Error()),
 			rosettaErr: rosettaErr,
 		}
 		return nil, res
@@ -53,7 +53,7 @@ func (f *Fetcher) NetworkStatus(
 
 	if err := asserter.NetworkStatusResponse(networkStatus); err != nil {
 		res := &ErrorRes{
-			goErr: fmt.Errorf("%w: /network/status %s", ErrAssertionFailed, err.Error()),
+			goErr:      fmt.Errorf("%w: /network/status %s", ErrAssertionFailed, err.Error()),
 			rosettaErr: rosettaErr,
 		}
 		return nil, res
@@ -127,7 +127,7 @@ func (f *Fetcher) NetworkList(
 
 	if goErr != nil {
 		res := &ErrorRes{
-			goErr: fmt.Errorf("%w: /network/list %s", ErrRequestFailed, goErr.Error()),
+			goErr:      fmt.Errorf("%w: /network/list %s", ErrRequestFailed, goErr.Error()),
 			rosettaErr: rosettaErr,
 		}
 		return nil, res
@@ -135,7 +135,7 @@ func (f *Fetcher) NetworkList(
 
 	if err := asserter.NetworkListResponse(networkList); err != nil {
 		res := &ErrorRes{
-			goErr: fmt.Errorf("%w: /network/list %s", ErrAssertionFailed, err.Error()),
+			goErr:      fmt.Errorf("%w: /network/list %s", ErrAssertionFailed, err.Error()),
 			rosettaErr: rosettaErr,
 		}
 		return nil, res
@@ -204,7 +204,7 @@ func (f *Fetcher) NetworkOptions(
 
 	if goErr != nil {
 		res := &ErrorRes{
-			goErr: fmt.Errorf("%w: /network/options %s", ErrRequestFailed, goErr.Error()),
+			goErr:      fmt.Errorf("%w: /network/options %s", ErrRequestFailed, goErr.Error()),
 			rosettaErr: rosettaErr,
 		}
 		return nil, res
@@ -212,7 +212,7 @@ func (f *Fetcher) NetworkOptions(
 
 	if err := asserter.NetworkOptionsResponse(networkOptions); err != nil {
 		res := &ErrorRes{
-			goErr: fmt.Errorf("%w: /network/options %s", ErrAssertionFailed, err.Error()),
+			goErr:      fmt.Errorf("%w: /network/options %s", ErrAssertionFailed, err.Error()),
 			rosettaErr: rosettaErr,
 		}
 		return nil, res
