@@ -57,6 +57,5 @@ func checkError(fetcherErr *Error, err error) bool {
 	if fetcherErr == nil {
 		return err == nil
 	}
-
 	return errors.Is(fetcherErr.Err, err)
 }
