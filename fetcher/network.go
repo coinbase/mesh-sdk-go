@@ -24,9 +24,9 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
-type ErrorRes struct {
-	goErr      error
-	rosettaErr *types.Error
+type Error struct {
+	err      error
+	clientErr *types.Error
 }
 
 // NetworkStatus returns the validated response
@@ -35,26 +35,26 @@ func (f *Fetcher) NetworkStatus(
 	ctx context.Context,
 	network *types.NetworkIdentifier,
 	metadata map[string]interface{},
-) (*types.NetworkStatusResponse, *ErrorRes) {
-	networkStatus, rosettaErr, goErr := f.rosettaClient.NetworkAPI.NetworkStatus(
+) (*types.NetworkStatusResponse, *Error) {
+	networkStatus, clientErr, err := f.rosettaClient.NetworkAPI.NetworkStatus(
 		ctx,
 		&types.NetworkRequest{
 			NetworkIdentifier: network,
 			Metadata:          metadata,
 		},
 	)
-	if goErr != nil {
-		res := &ErrorRes{
-			goErr:      fmt.Errorf("%w: /network/status %s", ErrRequestFailed, goErr.Error()),
-			rosettaErr: rosettaErr,
+	if err != nil {
+		res := &Error{
+			err:      fmt.Errorf("%w: /network/status %s", ErrRequestFailed, err.Error()),
+			clientErr: clientErr,
 		}
 		return nil, res
 	}
 
 	if err := asserter.NetworkStatusResponse(networkStatus); err != nil {
-		res := &ErrorRes{
-			goErr:      fmt.Errorf("%w: /network/status %s", ErrAssertionFailed, err.Error()),
-			rosettaErr: rosettaErr,
+		res := &Error{
+			err:      fmt.Errorf("%w: /network/status %s", ErrAssertionFailed, err.Error()),
+			clientErr: clientErr,
 		}
 		return nil, res
 	}
@@ -84,11 +84,11 @@ func (f *Fetcher) NetworkStatusRetry(
 			continue
 		}
 
-		if errors.Is(errRes.goErr, ErrAssertionFailed) {
-			return nil, fmt.Errorf("%w: /network/status not attempting retry", errRes.goErr)
+		if errors.Is(errRes.err, ErrAssertionFailed) {
+			return nil, fmt.Errorf("%w: /network/status not attempting retry", errRes.err)
 		}
 
-		if errRes.goErr == nil {
+		if errRes.err == nil {
 			return networkStatus, nil
 		}
 
@@ -99,7 +99,7 @@ func (f *Fetcher) NetworkStatusRetry(
 		if !tryAgain(
 			fmt.Sprintf("network status %s", types.PrettyPrintStruct(network)),
 			backoffRetries,
-			errRes.goErr,
+			errRes.err,
 		) {
 			break
 		}
@@ -117,26 +117,26 @@ func (f *Fetcher) NetworkStatusRetry(
 func (f *Fetcher) NetworkList(
 	ctx context.Context,
 	metadata map[string]interface{},
-) (*types.NetworkListResponse, *ErrorRes) {
-	networkList, rosettaErr, goErr := f.rosettaClient.NetworkAPI.NetworkList(
+) (*types.NetworkListResponse, *Error) {
+	networkList, clientErr, err := f.rosettaClient.NetworkAPI.NetworkList(
 		ctx,
 		&types.MetadataRequest{
 			Metadata: metadata,
 		},
 	)
 
-	if goErr != nil {
-		res := &ErrorRes{
-			goErr:      fmt.Errorf("%w: /network/list %s", ErrRequestFailed, goErr.Error()),
-			rosettaErr: rosettaErr,
+	if err != nil {
+		res := &Error{
+			err:      fmt.Errorf("%w: /network/list %s", ErrRequestFailed, err.Error()),
+			clientErr: clientErr,
 		}
 		return nil, res
 	}
 
 	if err := asserter.NetworkListResponse(networkList); err != nil {
-		res := &ErrorRes{
-			goErr:      fmt.Errorf("%w: /network/list %s", ErrAssertionFailed, err.Error()),
-			rosettaErr: rosettaErr,
+		res := &Error{
+			err:      fmt.Errorf("%w: /network/list %s", ErrAssertionFailed, err.Error()),
+			clientErr: clientErr,
 		}
 		return nil, res
 	}
@@ -164,11 +164,11 @@ func (f *Fetcher) NetworkListRetry(
 			continue
 		}
 
-		if errors.Is(errRes.goErr, ErrAssertionFailed) {
-			return nil, fmt.Errorf("%w: /network/list not attempting retry", errRes.goErr)
+		if errors.Is(errRes.err, ErrAssertionFailed) {
+			return nil, fmt.Errorf("%w: /network/list not attempting retry", errRes.err)
 		}
 
-		if errRes.goErr == nil {
+		if errRes.err == nil {
 			return networkList, nil
 		}
 
@@ -176,7 +176,7 @@ func (f *Fetcher) NetworkListRetry(
 			return nil, ctx.Err()
 		}
 
-		if !tryAgain("NetworkList", backoffRetries, errRes.goErr) {
+		if !tryAgain("NetworkList", backoffRetries, errRes.err) {
 			break
 		}
 	}
@@ -193,8 +193,8 @@ func (f *Fetcher) NetworkOptions(
 	ctx context.Context,
 	network *types.NetworkIdentifier,
 	metadata map[string]interface{},
-) (*types.NetworkOptionsResponse, *ErrorRes) {
-	networkOptions, rosettaErr, goErr := f.rosettaClient.NetworkAPI.NetworkOptions(
+) (*types.NetworkOptionsResponse, *Error) {
+	networkOptions, clientErr, err := f.rosettaClient.NetworkAPI.NetworkOptions(
 		ctx,
 		&types.NetworkRequest{
 			NetworkIdentifier: network,
@@ -202,18 +202,18 @@ func (f *Fetcher) NetworkOptions(
 		},
 	)
 
-	if goErr != nil {
-		res := &ErrorRes{
-			goErr:      fmt.Errorf("%w: /network/options %s", ErrRequestFailed, goErr.Error()),
-			rosettaErr: rosettaErr,
+	if err != nil {
+		res := &Error{
+			err:      fmt.Errorf("%w: /network/options %s", ErrRequestFailed, err.Error()),
+			clientErr: clientErr,
 		}
 		return nil, res
 	}
 
 	if err := asserter.NetworkOptionsResponse(networkOptions); err != nil {
-		res := &ErrorRes{
-			goErr:      fmt.Errorf("%w: /network/options %s", ErrAssertionFailed, err.Error()),
-			rosettaErr: rosettaErr,
+		res := &Error{
+			err:      fmt.Errorf("%w: /network/options %s", ErrAssertionFailed, err.Error()),
+			clientErr: clientErr,
 		}
 		return nil, res
 	}
@@ -243,11 +243,11 @@ func (f *Fetcher) NetworkOptionsRetry(
 			continue
 		}
 
-		if errors.Is(errRes.goErr, ErrAssertionFailed) {
-			return nil, fmt.Errorf("%w: /network/options not attempting retry", errRes.goErr)
+		if errors.Is(errRes.err, ErrAssertionFailed) {
+			return nil, fmt.Errorf("%w: /network/options not attempting retry", errRes.err)
 		}
 
-		if errRes.goErr == nil {
+		if errRes.err == nil {
 			return networkOptions, nil
 		}
 
@@ -258,7 +258,7 @@ func (f *Fetcher) NetworkOptionsRetry(
 		if !tryAgain(
 			fmt.Sprintf("network options %s", types.PrettyPrintStruct(network)),
 			backoffRetries,
-			errRes.goErr,
+			errRes.err,
 		) {
 			break
 		}
