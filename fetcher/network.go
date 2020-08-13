@@ -81,15 +81,11 @@ func (f *Fetcher) NetworkStatusRetry(
 			metadata,
 		)
 		if err == nil {
-			continue
+			return networkStatus, nil
 		}
 
 		if errors.Is(err.Err, ErrAssertionFailed) {
 			return nil, fmt.Errorf("%w: /network/status not attempting retry", err.Err)
-		}
-
-		if err.Err == nil {
-			return networkStatus, nil
 		}
 
 		if ctx.Err() != nil {
@@ -161,15 +157,11 @@ func (f *Fetcher) NetworkListRetry(
 			metadata,
 		)
 		if err == nil {
-			continue
+			return networkList, nil
 		}
 
 		if errors.Is(err.Err, ErrAssertionFailed) {
 			return nil, fmt.Errorf("%w: /network/list not attempting retry", err.Err)
-		}
-
-		if err.Err == nil {
-			return networkList, nil
 		}
 
 		if ctx.Err() != nil {
@@ -240,15 +232,11 @@ func (f *Fetcher) NetworkOptionsRetry(
 			metadata,
 		)
 		if err == nil {
-			continue
+			return networkOptions, nil
 		}
 
 		if errors.Is(err.Err, ErrAssertionFailed) {
 			return nil, fmt.Errorf("%w: /network/options not attempting retry", err.Err)
-		}
-
-		if err.Err == nil {
-			return networkOptions, nil
 		}
 
 		if ctx.Err() != nil {
