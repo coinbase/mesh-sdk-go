@@ -15,6 +15,7 @@
 package fetcher
 
 import (
+	"errors"
 	"log"
 	"strings"
 	"time"
@@ -48,4 +49,13 @@ func tryAgain(fetchMsg string, thisBackoff backoff.BackOff, err error) bool {
 	time.Sleep(nextBackoff)
 
 	return true
+}
+
+// checkError compares a *fetcher.Error to a simple type error and returns
+// a boolean indicating if they are equivalent
+func checkError(fetcherErr *Error, err error) bool {
+	if fetcherErr == nil {
+		return err == nil
+	}
+	return errors.Is(fetcherErr.Err, err)
 }

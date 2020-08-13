@@ -30,8 +30,8 @@ func (f *Fetcher) NetworkStatus(
 	ctx context.Context,
 	network *types.NetworkIdentifier,
 	metadata map[string]interface{},
-) (*types.NetworkStatusResponse, error) {
-	networkStatus, _, err := f.rosettaClient.NetworkAPI.NetworkStatus(
+) (*types.NetworkStatusResponse, *Error) {
+	networkStatus, clientErr, err := f.rosettaClient.NetworkAPI.NetworkStatus(
 		ctx,
 		&types.NetworkRequest{
 			NetworkIdentifier: network,
@@ -39,11 +39,18 @@ func (f *Fetcher) NetworkStatus(
 		},
 	)
 	if err != nil {
-		return nil, fmt.Errorf("%w: /network/status %s", ErrRequestFailed, err.Error())
+		fetcherErr := &Error{
+			Err:       fmt.Errorf("%w: /network/status %s", ErrRequestFailed, err.Error()),
+			ClientErr: clientErr,
+		}
+		return nil, fetcherErr
 	}
 
 	if err := asserter.NetworkStatusResponse(networkStatus); err != nil {
-		return nil, fmt.Errorf("%w: /network/status %s", ErrAssertionFailed, err.Error())
+		fetcherErr := &Error{
+			Err: fmt.Errorf("%w: /network/status %s", ErrAssertionFailed, err.Error()),
+		}
+		return nil, fetcherErr
 	}
 
 	return networkStatus, nil
@@ -55,7 +62,7 @@ func (f *Fetcher) NetworkStatusRetry(
 	ctx context.Context,
 	network *types.NetworkIdentifier,
 	metadata map[string]interface{},
-) (*types.NetworkStatusResponse, error) {
+) (*types.NetworkStatusResponse, *Error) {
 	backoffRetries := backoffRetries(
 		f.retryElapsedTime,
 		f.maxRetries,
@@ -67,52 +74,69 @@ func (f *Fetcher) NetworkStatusRetry(
 			network,
 			metadata,
 		)
-		if errors.Is(err, ErrAssertionFailed) {
-			return nil, fmt.Errorf("%w: /network/status not attempting retry", err)
-		}
-
 		if err == nil {
 			return networkStatus, nil
 		}
 
+		if errors.Is(err.Err, ErrAssertionFailed) {
+			fetcherErr := &Error{
+				Err:       fmt.Errorf("%w: /network/status not attempting retry", err.Err),
+				ClientErr: err.ClientErr,
+			}
+			return nil, fetcherErr
+		}
+
 		if ctx.Err() != nil {
-			return nil, ctx.Err()
+			fetcherErr := &Error{
+				Err:       ctx.Err(),
+				ClientErr: err.ClientErr,
+			}
+			return nil, fetcherErr
 		}
 
 		if !tryAgain(
 			fmt.Sprintf("network status %s", types.PrettyPrintStruct(network)),
 			backoffRetries,
-			err,
+			err.Err,
 		) {
 			break
 		}
 	}
 
-	return nil, fmt.Errorf(
-		"%w: unable to fetch network status %s",
-		ErrExhaustedRetries,
-		types.PrettyPrintStruct(network),
-	)
+	return nil, &Error{
+		Err: fmt.Errorf(
+			"%w: unable to fetch network status %s",
+			ErrExhaustedRetries,
+			types.PrettyPrintStruct(network),
+		)}
 }
 
 // NetworkList returns the validated response
-// from the NetworList method.
+// from the NetworkList method.
 func (f *Fetcher) NetworkList(
 	ctx context.Context,
 	metadata map[string]interface{},
-) (*types.NetworkListResponse, error) {
-	networkList, _, err := f.rosettaClient.NetworkAPI.NetworkList(
+) (*types.NetworkListResponse, *Error) {
+	networkList, clientErr, err := f.rosettaClient.NetworkAPI.NetworkList(
 		ctx,
 		&types.MetadataRequest{
 			Metadata: metadata,
 		},
 	)
+
 	if err != nil {
-		return nil, fmt.Errorf("%w: /network/list %s", ErrRequestFailed, err.Error())
+		fetcherErr := &Error{
+			Err:       fmt.Errorf("%w: /network/list %s", ErrRequestFailed, err.Error()),
+			ClientErr: clientErr,
+		}
+		return nil, fetcherErr
 	}
 
 	if err := asserter.NetworkListResponse(networkList); err != nil {
-		return nil, fmt.Errorf("%w: /network/list %s", ErrAssertionFailed, err.Error())
+		fetcherErr := &Error{
+			Err: fmt.Errorf("%w: /network/list %s", ErrAssertionFailed, err.Error()),
+		}
+		return nil, fetcherErr
 	}
 
 	return networkList, nil
@@ -123,7 +147,7 @@ func (f *Fetcher) NetworkList(
 func (f *Fetcher) NetworkListRetry(
 	ctx context.Context,
 	metadata map[string]interface{},
-) (*types.NetworkListResponse, error) {
+) (*types.NetworkListResponse, *Error) {
 	backoffRetries := backoffRetries(
 		f.retryElapsedTime,
 		f.maxRetries,
@@ -134,52 +158,69 @@ func (f *Fetcher) NetworkListRetry(
 			ctx,
 			metadata,
 		)
-		if errors.Is(err, ErrAssertionFailed) {
-			return nil, fmt.Errorf("%w: /network/list not attempting retry", err)
-		}
-
 		if err == nil {
 			return networkList, nil
 		}
 
-		if ctx.Err() != nil {
-			return nil, ctx.Err()
+		if errors.Is(err.Err, ErrAssertionFailed) {
+			fetcherErr := &Error{
+				Err:       fmt.Errorf("%w: /network/list not attempting retry", err.Err),
+				ClientErr: err.ClientErr,
+			}
+			return nil, fetcherErr
 		}
 
-		if !tryAgain("NetworkList", backoffRetries, err) {
+		if ctx.Err() != nil {
+			fetcherErr := &Error{
+				Err:       ctx.Err(),
+				ClientErr: err.ClientErr,
+			}
+			return nil, fetcherErr
+		}
+
+		if !tryAgain("NetworkList", backoffRetries, err.Err) {
 			break
 		}
 	}
 
-	return nil, fmt.Errorf(
-		"%w: unable to fetch network list",
-		ErrExhaustedRetries,
-	)
+	return nil, &Error{
+		Err: fmt.Errorf(
+			"%w: unable to fetch network list",
+			ErrExhaustedRetries,
+		)}
 }
 
 // NetworkOptions returns the validated response
-// from the NetworList method.
+// from the NetworkOptions method.
 func (f *Fetcher) NetworkOptions(
 	ctx context.Context,
 	network *types.NetworkIdentifier,
 	metadata map[string]interface{},
-) (*types.NetworkOptionsResponse, error) {
-	NetworkOptions, _, err := f.rosettaClient.NetworkAPI.NetworkOptions(
+) (*types.NetworkOptionsResponse, *Error) {
+	networkOptions, clientErr, err := f.rosettaClient.NetworkAPI.NetworkOptions(
 		ctx,
 		&types.NetworkRequest{
 			NetworkIdentifier: network,
 			Metadata:          metadata,
 		},
 	)
+
 	if err != nil {
-		return nil, fmt.Errorf("%w: /network/options %s", ErrRequestFailed, err.Error())
+		fetcherErr := &Error{
+			Err:       fmt.Errorf("%w: /network/options %s", ErrRequestFailed, err.Error()),
+			ClientErr: clientErr,
+		}
+		return nil, fetcherErr
 	}
 
-	if err := asserter.NetworkOptionsResponse(NetworkOptions); err != nil {
-		return nil, fmt.Errorf("%w: /network/options %s", ErrAssertionFailed, err.Error())
+	if err := asserter.NetworkOptionsResponse(networkOptions); err != nil {
+		fetcherErr := &Error{
+			Err: fmt.Errorf("%w: /network/options %s", ErrAssertionFailed, err.Error()),
+		}
+		return nil, fetcherErr
 	}
 
-	return NetworkOptions, nil
+	return networkOptions, nil
 }
 
 // NetworkOptionsRetry retrieves the validated NetworkOptions
@@ -188,7 +229,7 @@ func (f *Fetcher) NetworkOptionsRetry(
 	ctx context.Context,
 	network *types.NetworkIdentifier,
 	metadata map[string]interface{},
-) (*types.NetworkOptionsResponse, error) {
+) (*types.NetworkOptionsResponse, *Error) {
 	backoffRetries := backoffRetries(
 		f.retryElapsedTime,
 		f.maxRetries,
@@ -200,30 +241,39 @@ func (f *Fetcher) NetworkOptionsRetry(
 			network,
 			metadata,
 		)
-		if errors.Is(err, ErrAssertionFailed) {
-			return nil, fmt.Errorf("%w: /network/options not attempting retry", err)
-		}
-
 		if err == nil {
 			return networkOptions, nil
 		}
 
+		if errors.Is(err.Err, ErrAssertionFailed) {
+			fetcherErr := &Error{
+				Err:       fmt.Errorf("%w: /network/options not attempting retry", err.Err),
+				ClientErr: err.ClientErr,
+			}
+			return nil, fetcherErr
+		}
+
 		if ctx.Err() != nil {
-			return nil, ctx.Err()
+			fetcherErr := &Error{
+				Err:       ctx.Err(),
+				ClientErr: err.ClientErr,
+			}
+			return nil, fetcherErr
 		}
 
 		if !tryAgain(
 			fmt.Sprintf("network options %s", types.PrettyPrintStruct(network)),
 			backoffRetries,
-			err,
+			err.Err,
 		) {
 			break
 		}
 	}
 
-	return nil, fmt.Errorf(
-		"%w: unable to fetch network options %s",
-		ErrExhaustedRetries,
-		types.PrettyPrintStruct(network),
-	)
+	return nil, &Error{
+		Err: fmt.Errorf(
+			"%w: unable to fetch network options %s",
+			ErrExhaustedRetries,
+			types.PrettyPrintStruct(network)),
+	}
 }
