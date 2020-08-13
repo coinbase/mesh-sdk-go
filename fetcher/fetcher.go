@@ -80,6 +80,13 @@ type Fetcher struct {
 	retryElapsedTime       time.Duration
 }
 
+// Error wraps the two possible types of error responses returned
+// by the Rosetta Client
+type Error struct {
+	Err       error        `json:"err"`
+	ClientErr *types.Error `json:"client_err"`
+}
+
 // New constructs a new Fetcher with provided options.
 func New(
 	serverAddress string,

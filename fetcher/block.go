@@ -134,13 +134,17 @@ func (f *Fetcher) UnsafeBlock(
 	ctx context.Context,
 	network *types.NetworkIdentifier,
 	blockIdentifier *types.PartialBlockIdentifier,
-) (*types.Block, error) {
-	blockResponse, _, err := f.rosettaClient.BlockAPI.Block(ctx, &types.BlockRequest{
+) (*types.Block, *Error) {
+	blockResponse, clientErr, err := f.rosettaClient.BlockAPI.Block(ctx, &types.BlockRequest{
 		NetworkIdentifier: network,
 		BlockIdentifier:   blockIdentifier,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("%w: /block %s", ErrRequestFailed, err.Error())
+		res := &Error{
+			Err:       fmt.Errorf("%w: /block %s", ErrRequestFailed, err.Error()),
+			ClientErr: clientErr,
+		}
+		return nil, res
 	}
 
 	// Exit early if no need to fetch txs
@@ -155,7 +159,9 @@ func (f *Fetcher) UnsafeBlock(
 		blockResponse.OtherTransactions,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("%w: /block/transaction %s", ErrRequestFailed, err.Error())
+		return nil, &Error{
+			Err: fmt.Errorf("%w: /block/transaction %s", ErrRequestFailed, err.Error()),
+		}
 	}
 
 	blockResponse.Block.Transactions = append(blockResponse.Block.Transactions, batchFetch...)
@@ -172,10 +178,10 @@ func (f *Fetcher) Block(
 	ctx context.Context,
 	network *types.NetworkIdentifier,
 	blockIdentifier *types.PartialBlockIdentifier,
-) (*types.Block, error) {
+) (*types.Block, *Error) {
 	block, err := f.UnsafeBlock(ctx, network, blockIdentifier)
 	if err != nil {
-		return nil, fmt.Errorf("%w: /block %s", ErrRequestFailed, err.Error())
+		return nil, err
 	}
 
 	// If a block is omitted, it will return a non-error
@@ -185,7 +191,10 @@ func (f *Fetcher) Block(
 	}
 
 	if err := f.Asserter.Block(block); err != nil {
-		return nil, fmt.Errorf("%w: /block %s", ErrAssertionFailed, err.Error())
+		res := &Error{
+			Err: fmt.Errorf("%w: /block %s", ErrAssertionFailed, err.Error()),
+		}
+		return nil, res
 	}
 
 	return block, nil
@@ -213,12 +222,12 @@ func (f *Fetcher) BlockRetry(
 			network,
 			blockIdentifier,
 		)
-		if errors.Is(err, ErrAssertionFailed) {
-			return nil, fmt.Errorf("%w: /block not attempting retry", err)
-		}
-
 		if err == nil {
 			return block, nil
+		}
+
+		if errors.Is(err.Err, ErrAssertionFailed) {
+			return nil, fmt.Errorf("%w: /block not attempting retry", err.Err)
 		}
 
 		if ctx.Err() != nil {
@@ -232,7 +241,7 @@ func (f *Fetcher) BlockRetry(
 			blockFetchErr = fmt.Sprintf("block %s", *blockIdentifier.Hash)
 		}
 
-		if !tryAgain(blockFetchErr, backoffRetries, err) {
+		if !tryAgain(blockFetchErr, backoffRetries, err.Err) {
 			break
 		}
 	}

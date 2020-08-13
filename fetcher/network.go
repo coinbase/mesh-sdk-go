@@ -24,11 +24,6 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
-type Error struct {
-	Err       error        `json:"err"`
-	ClientErr *types.Error `json:"client_err"`
-}
-
 // NetworkStatus returns the validated response
 // from the NetworkStatus method.
 func (f *Fetcher) NetworkStatus(
@@ -53,8 +48,7 @@ func (f *Fetcher) NetworkStatus(
 
 	if err := asserter.NetworkStatusResponse(networkStatus); err != nil {
 		res := &Error{
-			Err:       fmt.Errorf("%w: /network/status %s", ErrAssertionFailed, err.Error()),
-			ClientErr: clientErr,
+			Err: fmt.Errorf("%w: /network/status %s", ErrAssertionFailed, err.Error()),
 		}
 		return nil, res
 	}
@@ -131,8 +125,7 @@ func (f *Fetcher) NetworkList(
 
 	if err := asserter.NetworkListResponse(networkList); err != nil {
 		res := &Error{
-			Err:       fmt.Errorf("%w: /network/list %s", ErrAssertionFailed, err.Error()),
-			ClientErr: clientErr,
+			Err: fmt.Errorf("%w: /network/list %s", ErrAssertionFailed, err.Error()),
 		}
 		return nil, res
 	}
@@ -204,8 +197,7 @@ func (f *Fetcher) NetworkOptions(
 
 	if err := asserter.NetworkOptionsResponse(networkOptions); err != nil {
 		res := &Error{
-			Err:       fmt.Errorf("%w: /network/options %s", ErrAssertionFailed, err.Error()),
-			ClientErr: clientErr,
+			Err: fmt.Errorf("%w: /network/options %s", ErrAssertionFailed, err.Error()),
 		}
 		return nil, res
 	}

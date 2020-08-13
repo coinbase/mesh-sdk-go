@@ -28,20 +28,27 @@ import (
 func (f *Fetcher) Mempool(
 	ctx context.Context,
 	network *types.NetworkIdentifier,
-) ([]*types.TransactionIdentifier, error) {
-	response, _, err := f.rosettaClient.MempoolAPI.Mempool(
+) ([]*types.TransactionIdentifier, *Error) {
+	response, clientErr, err := f.rosettaClient.MempoolAPI.Mempool(
 		ctx,
 		&types.NetworkRequest{
 			NetworkIdentifier: network,
 		},
 	)
 	if err != nil {
-		return nil, fmt.Errorf("%w: /mempool %s", ErrRequestFailed, err.Error())
+		res := &Error{
+			Err:       fmt.Errorf("%w: /mempool %s", ErrRequestFailed, err.Error()),
+			ClientErr: clientErr,
+		}
+		return nil, res
 	}
 
 	mempool := response.TransactionIdentifiers
 	if err := asserter.MempoolTransactions(mempool); err != nil {
-		return nil, fmt.Errorf("%w: /mempool %s", ErrAssertionFailed, err.Error())
+		res := &Error{
+			Err: fmt.Errorf("%w: /mempool %s", ErrAssertionFailed, err.Error()),
+		}
+		return nil, res
 	}
 
 	return mempool, nil
@@ -53,8 +60,8 @@ func (f *Fetcher) MempoolTransaction(
 	ctx context.Context,
 	network *types.NetworkIdentifier,
 	transaction *types.TransactionIdentifier,
-) (*types.Transaction, map[string]interface{}, error) {
-	response, _, err := f.rosettaClient.MempoolAPI.MempoolTransaction(
+) (*types.Transaction, map[string]interface{}, *Error) {
+	response, clientErr, err := f.rosettaClient.MempoolAPI.MempoolTransaction(
 		ctx,
 		&types.MempoolTransactionRequest{
 			NetworkIdentifier:     network,
@@ -62,12 +69,19 @@ func (f *Fetcher) MempoolTransaction(
 		},
 	)
 	if err != nil {
-		return nil, nil, fmt.Errorf("%w: /mempool/transaction %s", ErrRequestFailed, err.Error())
+		res := &Error{
+			Err:       fmt.Errorf("%w: /mempool/transaction %s", ErrRequestFailed, err.Error()),
+			ClientErr: clientErr,
+		}
+		return nil, nil, res
 	}
 
 	mempoolTransaction := response.Transaction
 	if err := f.Asserter.Transaction(mempoolTransaction); err != nil {
-		return nil, nil, fmt.Errorf("%w: /mempool/transaction %s", ErrAssertionFailed, err.Error())
+		res := &Error{
+			Err: fmt.Errorf("%w: /mempool/transaction %s", ErrAssertionFailed, err.Error()),
+		}
+		return nil, nil, res
 	}
 
 	return mempoolTransaction, response.Metadata, nil

@@ -32,8 +32,8 @@ func (f *Fetcher) AccountBalance(
 	network *types.NetworkIdentifier,
 	account *types.AccountIdentifier,
 	block *types.PartialBlockIdentifier,
-) (*types.BlockIdentifier, []*types.Amount, []*types.Coin, map[string]interface{}, error) {
-	response, _, err := f.rosettaClient.AccountAPI.AccountBalance(ctx,
+) (*types.BlockIdentifier, []*types.Amount, []*types.Coin, map[string]interface{}, *Error) {
+	response, clientErr, err := f.rosettaClient.AccountAPI.AccountBalance(ctx,
 		&types.AccountBalanceRequest{
 			NetworkIdentifier: network,
 			AccountIdentifier: account,
@@ -41,22 +41,25 @@ func (f *Fetcher) AccountBalance(
 		},
 	)
 	if err != nil {
-		return nil, nil, nil, nil, fmt.Errorf(
-			"%w: /account/balance %s",
-			ErrRequestFailed,
-			err.Error(),
-		)
+		res := &Error{
+			Err:       fmt.Errorf("%w: /account/balance %s", ErrRequestFailed, err.Error()),
+			ClientErr: clientErr,
+		}
+		return nil, nil, nil, nil, res
 	}
 
 	if err := asserter.AccountBalanceResponse(
 		block,
 		response,
 	); err != nil {
-		return nil, nil, nil, nil, fmt.Errorf(
-			"%w: /account/balance %s",
-			ErrAssertionFailed,
-			err.Error(),
-		)
+		res := &Error{
+			Err: fmt.Errorf(
+				"%w: /account/balance %s",
+				ErrAssertionFailed,
+				err.Error(),
+			),
+		}
+		return nil, nil, nil, nil, res
 	}
 
 	return response.BlockIdentifier, response.Balances, response.Coins, response.Metadata, nil
@@ -83,12 +86,12 @@ func (f *Fetcher) AccountBalanceRetry(
 			account,
 			block,
 		)
-		if errors.Is(err, ErrAssertionFailed) {
-			return nil, nil, nil, nil, fmt.Errorf("%w: /account/balance not attempting retry", err)
-		}
-
 		if err == nil {
 			return responseBlock, balances, coins, metadata, nil
+		}
+
+		if errors.Is(err.Err, ErrAssertionFailed) {
+			return nil, nil, nil, nil, fmt.Errorf("%w: /account/balance not attempting retry", err.Err)
 		}
 
 		if ctx.Err() != nil {
@@ -98,7 +101,7 @@ func (f *Fetcher) AccountBalanceRetry(
 		if !tryAgain(
 			fmt.Sprintf("account %s", types.PrettyPrintStruct(account)),
 			backoffRetries,
-			err,
+			err.Err,
 		) {
 			break
 		}
