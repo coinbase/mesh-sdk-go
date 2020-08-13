@@ -80,6 +80,13 @@ type Fetcher struct {
 	retryElapsedTime       time.Duration
 }
 
+// Error wraps the two possible types of error responses returned
+// by the Rosetta Client
+type Error struct {
+	Err       error        `json:"err"`
+	ClientErr *types.Error `json:"client_err"`
+}
+
 // New constructs a new Fetcher with provided options.
 func New(
 	serverAddress string,
@@ -125,10 +132,10 @@ func (f *Fetcher) InitializeAsserter(
 ) (
 	*types.NetworkIdentifier,
 	*types.NetworkStatusResponse,
-	error,
+	*Error,
 ) {
 	if f.Asserter != nil {
-		return nil, nil, errors.New("asserter already initialized")
+		return nil, nil, &Error{Err: errors.New("asserter already initialized")}
 	}
 
 	// Attempt to fetch network list
@@ -138,7 +145,7 @@ func (f *Fetcher) InitializeAsserter(
 	}
 
 	if len(networkList.NetworkIdentifiers) == 0 {
-		return nil, nil, ErrNoNetworks
+		return nil, nil, &Error{Err: ErrNoNetworks}
 	}
 	primaryNetwork := networkList.NetworkIdentifiers[0]
 
@@ -162,14 +169,15 @@ func (f *Fetcher) InitializeAsserter(
 		return nil, nil, err
 	}
 
-	f.Asserter, err = asserter.NewClientWithResponses(
+	newAsserter, assertErr := asserter.NewClientWithResponses(
 		primaryNetwork,
 		networkStatus,
 		networkOptions,
 	)
-	if err != nil {
-		return nil, nil, err
+	if assertErr != nil {
+		return nil, nil, &Error{Err: assertErr}
 	}
+	f.Asserter = newAsserter
 
 	return primaryNetwork, networkStatus, nil
 }

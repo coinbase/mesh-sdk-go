@@ -32,8 +32,8 @@ func (f *Fetcher) AccountBalance(
 	network *types.NetworkIdentifier,
 	account *types.AccountIdentifier,
 	block *types.PartialBlockIdentifier,
-) (*types.BlockIdentifier, []*types.Amount, []*types.Coin, map[string]interface{}, error) {
-	response, _, err := f.rosettaClient.AccountAPI.AccountBalance(ctx,
+) (*types.BlockIdentifier, []*types.Amount, []*types.Coin, map[string]interface{}, *Error) {
+	response, clientErr, err := f.rosettaClient.AccountAPI.AccountBalance(ctx,
 		&types.AccountBalanceRequest{
 			NetworkIdentifier: network,
 			AccountIdentifier: account,
@@ -41,22 +41,25 @@ func (f *Fetcher) AccountBalance(
 		},
 	)
 	if err != nil {
-		return nil, nil, nil, nil, fmt.Errorf(
-			"%w: /account/balance %s",
-			ErrRequestFailed,
-			err.Error(),
-		)
+		fetcherErr := &Error{
+			Err:       fmt.Errorf("%w: /account/balance %s", ErrRequestFailed, err.Error()),
+			ClientErr: clientErr,
+		}
+		return nil, nil, nil, nil, fetcherErr
 	}
 
 	if err := asserter.AccountBalanceResponse(
 		block,
 		response,
 	); err != nil {
-		return nil, nil, nil, nil, fmt.Errorf(
-			"%w: /account/balance %s",
-			ErrAssertionFailed,
-			err.Error(),
-		)
+		fetcherErr := &Error{
+			Err: fmt.Errorf(
+				"%w: /account/balance %s",
+				ErrAssertionFailed,
+				err.Error(),
+			),
+		}
+		return nil, nil, nil, nil, fetcherErr
 	}
 
 	return response.BlockIdentifier, response.Balances, response.Coins, response.Metadata, nil
@@ -70,7 +73,7 @@ func (f *Fetcher) AccountBalanceRetry(
 	network *types.NetworkIdentifier,
 	account *types.AccountIdentifier,
 	block *types.PartialBlockIdentifier,
-) (*types.BlockIdentifier, []*types.Amount, []*types.Coin, map[string]interface{}, error) {
+) (*types.BlockIdentifier, []*types.Amount, []*types.Coin, map[string]interface{}, *Error) {
 	backoffRetries := backoffRetries(
 		f.retryElapsedTime,
 		f.maxRetries,
@@ -83,30 +86,40 @@ func (f *Fetcher) AccountBalanceRetry(
 			account,
 			block,
 		)
-		if errors.Is(err, ErrAssertionFailed) {
-			return nil, nil, nil, nil, fmt.Errorf("%w: /account/balance not attempting retry", err)
-		}
-
 		if err == nil {
 			return responseBlock, balances, coins, metadata, nil
 		}
 
+		if errors.Is(err.Err, ErrAssertionFailed) {
+			fetcherErr := &Error{
+				Err:       fmt.Errorf("%w: /account/balance not attempting retry", err.Err),
+				ClientErr: err.ClientErr,
+			}
+			return nil, nil, nil, nil, fetcherErr
+		}
+
 		if ctx.Err() != nil {
-			return nil, nil, nil, nil, ctx.Err()
+			fetcherErr := &Error{
+				Err:       ctx.Err(),
+				ClientErr: err.ClientErr,
+			}
+			return nil, nil, nil, nil, fetcherErr
 		}
 
 		if !tryAgain(
 			fmt.Sprintf("account %s", types.PrettyPrintStruct(account)),
 			backoffRetries,
-			err,
+			err.Err,
 		) {
 			break
 		}
 	}
 
-	return nil, nil, nil, nil, fmt.Errorf(
-		"%w: unable to fetch account %s",
-		ErrExhaustedRetries,
-		types.PrettyPrintStruct(account),
-	)
+	return nil, nil, nil, nil, &Error{
+		Err: fmt.Errorf(
+			"%w: unable to fetch account %s",
+			ErrExhaustedRetries,
+			types.PrettyPrintStruct(account),
+		),
+	}
 }

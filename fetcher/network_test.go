@@ -17,7 +17,6 @@ package fetcher
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -148,7 +147,7 @@ func TestNetworkStatusRetry(t *testing.T) {
 				nil,
 			)
 			assert.Equal(test.expectedStatus, status)
-			assert.True(errors.Is(err, test.expectedError))
+			assert.True(checkError(err, test.expectedError))
 		})
 	}
 }
@@ -236,7 +235,7 @@ func TestNetworkListRetry(t *testing.T) {
 				nil,
 			)
 			assert.Equal(test.expectedList, list)
-			assert.True(errors.Is(err, test.expectedError))
+			assert.True(checkError(err, test.expectedError))
 		})
 	}
 }
@@ -327,7 +326,7 @@ func TestNetworkOptionsRetry(t *testing.T) {
 				nil,
 			)
 			assert.Equal(test.expectedOptions, options)
-			assert.True(errors.Is(err, test.expectedError))
+			assert.True(checkError(err, test.expectedError))
 		})
 	}
 }

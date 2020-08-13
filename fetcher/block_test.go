@@ -17,7 +17,6 @@ package fetcher
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -149,13 +148,13 @@ func TestBlockRetry(t *testing.T) {
 				WithMaxRetries(test.fetcherMaxRetries),
 				WithAsserter(a),
 			)
-			block, err := f.BlockRetry(
+			block, blockErr := f.BlockRetry(
 				ctx,
 				test.network,
 				types.ConstructPartialBlockIdentifier(test.block),
 			)
 			assert.Equal(test.expectedBlock, block)
-			assert.True(errors.Is(err, test.expectedError))
+			assert.True(checkError(blockErr, test.expectedError))
 		})
 	}
 }
