@@ -75,20 +75,20 @@ func (f *Fetcher) NetworkStatusRetry(
 	)
 
 	for {
-		networkStatus, errRes := f.NetworkStatus(
+		networkStatus, err := f.NetworkStatus(
 			ctx,
 			network,
 			metadata,
 		)
-		if errRes == nil {
+		if err == nil {
 			continue
 		}
 
-		if errors.Is(errRes.err, ErrAssertionFailed) {
-			return nil, fmt.Errorf("%w: /network/status not attempting retry", errRes.err)
+		if errors.Is(err.err, ErrAssertionFailed) {
+			return nil, fmt.Errorf("%w: /network/status not attempting retry", err.err)
 		}
 
-		if errRes.err == nil {
+		if err.err == nil {
 			return networkStatus, nil
 		}
 
@@ -99,7 +99,7 @@ func (f *Fetcher) NetworkStatusRetry(
 		if !tryAgain(
 			fmt.Sprintf("network status %s", types.PrettyPrintStruct(network)),
 			backoffRetries,
-			errRes.err,
+			err.err,
 		) {
 			break
 		}
@@ -156,19 +156,19 @@ func (f *Fetcher) NetworkListRetry(
 	)
 
 	for {
-		networkList, errRes := f.NetworkList(
+		networkList, err := f.NetworkList(
 			ctx,
 			metadata,
 		)
-		if errRes == nil {
+		if err == nil {
 			continue
 		}
 
-		if errors.Is(errRes.err, ErrAssertionFailed) {
-			return nil, fmt.Errorf("%w: /network/list not attempting retry", errRes.err)
+		if errors.Is(err.err, ErrAssertionFailed) {
+			return nil, fmt.Errorf("%w: /network/list not attempting retry", err.err)
 		}
 
-		if errRes.err == nil {
+		if err.err == nil {
 			return networkList, nil
 		}
 
@@ -176,7 +176,7 @@ func (f *Fetcher) NetworkListRetry(
 			return nil, ctx.Err()
 		}
 
-		if !tryAgain("NetworkList", backoffRetries, errRes.err) {
+		if !tryAgain("NetworkList", backoffRetries, err.err) {
 			break
 		}
 	}
@@ -234,20 +234,20 @@ func (f *Fetcher) NetworkOptionsRetry(
 	)
 
 	for {
-		networkOptions, errRes := f.NetworkOptions(
+		networkOptions, err := f.NetworkOptions(
 			ctx,
 			network,
 			metadata,
 		)
-		if errRes == nil {
+		if err == nil {
 			continue
 		}
 
-		if errors.Is(errRes.err, ErrAssertionFailed) {
-			return nil, fmt.Errorf("%w: /network/options not attempting retry", errRes.err)
+		if errors.Is(err.err, ErrAssertionFailed) {
+			return nil, fmt.Errorf("%w: /network/options not attempting retry", err.err)
 		}
 
-		if errRes.err == nil {
+		if err.err == nil {
 			return networkOptions, nil
 		}
 
@@ -258,7 +258,7 @@ func (f *Fetcher) NetworkOptionsRetry(
 		if !tryAgain(
 			fmt.Sprintf("network options %s", types.PrettyPrintStruct(network)),
 			backoffRetries,
-			errRes.err,
+			err.err,
 		) {
 			break
 		}
