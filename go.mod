@@ -6,15 +6,19 @@ require (
 	github.com/DataDog/zstd v1.4.5 // indirect
 	github.com/btcsuite/btcd v0.20.1-beta
 	github.com/cenkalti/backoff v2.2.1+incompatible
-	github.com/coinbase/rosetta-cli v0.4.1
 	github.com/dgraph-io/badger/v2 v2.0.3
 	github.com/dgraph-io/ristretto v0.0.3 // indirect
 	github.com/dgryski/go-farm v0.0.0-20200201041132-a6ae2369ad13 // indirect
 	github.com/ethereum/go-ethereum v1.9.18
 	github.com/fatih/color v1.9.0
+	github.com/golang/protobuf v1.4.2 // indirect
+	github.com/google/addlicense v0.0.0-20200817051935-6f4cd4aacc89 // indirect
 	github.com/gorilla/mux v1.7.4
+	github.com/kr/pretty v0.2.0 // indirect
 	github.com/mattn/go-colorable v0.1.7 // indirect
 	github.com/mitchellh/mapstructure v1.3.3
+	github.com/pkg/errors v0.9.1 // indirect
+	github.com/segmentio/golines v0.0.0-20200808004416-0a9796b248e8 // indirect
 	github.com/stretchr/testify v1.6.1
 	github.com/vmihailenco/msgpack/v5 v5.0.0-beta.1
 	golang.org/x/crypto v0.0.0-20200728195943-123391ffb6de // indirect
