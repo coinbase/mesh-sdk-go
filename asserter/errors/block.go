@@ -1,9 +1,11 @@
-package asserter
+package errors
 
 import "errors"
 
 var (
 	ErrAmountValueMissing = errors.New("Amount.Value is missing")
+
+	ErrAmountIsNotInt = errors.New("Amount.Value is not an integer ")
 
 	ErrAmountCurrencyIsNil = errors.New("Amount.Currency is nil")
 
@@ -11,10 +13,14 @@ var (
 
 	ErrAmountCurrencyHasNegDecimals = errors.New("Amount.Currency.Decimals must be >= 0")
 
-	ErrOperationIdentifierIndexIsNil = errors.New("Operation.OperationIdentifier.Index invalid")
+	ErrOperationIdentifierIndexIsNil = errors.New("Operation.OperationIdentifier.Index is invalid")
+
+	ErrOperationIdentifierIndexOutOfOrder = errors.New(
+		"Operation.OperationIdentifier.Index is out of order",
+	)
 
 	ErrOperationIdentifierNetworkIndexInvalid = errors.New(
-		"Operation.OperationIdentifier.NetworkIndex invalid",
+		"Operation.OperationIdentifier.NetworkIndex is invalid",
 	)
 
 	ErrAccountIsNil = errors.New("Account is nil")
@@ -23,13 +29,23 @@ var (
 
 	ErrAccountSubAccountAddrMissing = errors.New("Account.SubAccount.Address is missing")
 
-	ErrOperationStatusMissing = errors.New("operation.Status is empty")
+	ErrOperationStatusMissing = errors.New("Operation.Status is empty")
+
+	ErrOperationStatusInvalid = errors.New("Operation.Status is invalid")
+
+	ErrOperationTypeInvalid = errors.New("Operation.Type is invalid")
 
 	ErrOperationIsNil = errors.New("Operation is nil")
 
 	ErrOperationStatusNotEmptyForConstruction = errors.New(
-		"operation.Status must be empty for construction",
+		"Operation.Status must be empty for construction",
 	)
+
+	ErrRelatedOperationIndexOutOfOrder = errors.New(
+		"related operation has index greater than operation",
+	)
+
+	ErrRelatedOperationIndexDuplicate = errors.New("found duplicate related operation index")
 
 	ErrBlockIdentifierIsNil = errors.New("BlockIdentifier is nil")
 
@@ -50,6 +66,10 @@ var (
 	ErrOperationsEmptyForConstruction = errors.New("operations cannot be empty for construction")
 
 	ErrTxIsNil = errors.New("Transaction is nil")
+
+	ErrTimestampBeforeMin = errors.New("timestamp is before 01/01/2000")
+
+	ErrTimestampAfterMax = errors.New("timestamp is after 01/01/2040")
 
 	ErrBlockIsNil = errors.New("Block is nil")
 

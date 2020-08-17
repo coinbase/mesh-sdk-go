@@ -15,9 +15,9 @@
 package asserter
 
 import (
-	"errors"
 	"fmt"
 
+	"github.com/coinbase/rosetta-sdk-go/asserter/errors"
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
@@ -27,11 +27,11 @@ func ConstructionMetadataResponse(
 	response *types.ConstructionMetadataResponse,
 ) error {
 	if response == nil {
-		return errors.New("construction metadata response cannot be nil")
+		return errors.ErrConstructionMetadataResponseIsNil
 	}
 
 	if response.Metadata == nil {
-		return errors.New("Metadata is nil")
+		return errors.ErrConstructionMetadataResponseMetadataMissing
 	}
 
 	if err := assertUniqueAmounts(response.SuggestedFee); err != nil {
@@ -48,7 +48,7 @@ func TransactionIdentifierResponse(
 	response *types.TransactionIdentifierResponse,
 ) error {
 	if response == nil {
-		return errors.New("construction submit response cannot be nil")
+		return errors.ErrTxIdentifierResponseIsNil
 	}
 
 	if err := TransactionIdentifier(response.TransactionIdentifier); err != nil {
@@ -65,11 +65,11 @@ func ConstructionCombineResponse(
 	response *types.ConstructionCombineResponse,
 ) error {
 	if response == nil {
-		return errors.New("construction combine response cannot be nil")
+		return errors.ErrConstructionCombineResponseIsNil
 	}
 
 	if len(response.SignedTransaction) == 0 {
-		return errors.New("signed transaction cannot be empty")
+		return errors.ErrSignedTxEmpty
 	}
 
 	return nil
@@ -82,11 +82,11 @@ func ConstructionDeriveResponse(
 	response *types.ConstructionDeriveResponse,
 ) error {
 	if response == nil {
-		return errors.New("construction derive response cannot be nil")
+		return errors.ErrConstructionDeriveResponseIsNil
 	}
 
 	if len(response.Address) == 0 {
-		return errors.New("address cannot be empty")
+		return errors.ErrConstructionDeriveResponseAddrEmpty
 	}
 
 	return nil
@@ -105,11 +105,11 @@ func (a *Asserter) ConstructionParseResponse(
 	}
 
 	if response == nil {
-		return errors.New("construction parse response cannot be nil")
+		return errors.ErrConstructionParseResponseIsNil
 	}
 
 	if len(response.Operations) == 0 {
-		return errors.New("operations cannot be empty")
+		return errors.ErrConstructionParseResponseOperationsEmpty
 	}
 
 	if err := a.Operations(response.Operations, true); err != nil {
@@ -117,16 +117,16 @@ func (a *Asserter) ConstructionParseResponse(
 	}
 
 	if signed && len(response.Signers) == 0 {
-		return errors.New("signers cannot be empty")
+		return errors.ErrConstructionParseResponseSignersEmptyOnSignedTx
 	}
 
 	if !signed && len(response.Signers) > 0 {
-		return errors.New("signers should be empty for unsigned txs")
+		return errors.ErrConstructionParseResponseSignersNonEmptyOnUnsignedTx
 	}
 
 	for i, signer := range response.Signers {
 		if len(signer) == 0 {
-			return fmt.Errorf("signer %d cannot be empty string", i)
+			return fmt.Errorf("%w: at index %d", errors.ErrConstructionParseResponseSignerEmpty, i)
 		}
 	}
 
@@ -141,15 +141,15 @@ func ConstructionPayloadsResponse(
 	response *types.ConstructionPayloadsResponse,
 ) error {
 	if response == nil {
-		return errors.New("construction payloads response cannot be nil")
+		return errors.ErrConstructionPayloadsResponseIsNil
 	}
 
 	if len(response.UnsignedTransaction) == 0 {
-		return errors.New("unsigned transaction cannot be empty")
+		return errors.ErrConstructionPayloadsResponseUnsignedTxEmpty
 	}
 
 	if len(response.Payloads) == 0 {
-		return errors.New("signing payloads cannot be empty")
+		return errors.ErrConstructionPayloadsResponsePayloadsEmpty
 	}
 
 	for i, payload := range response.Payloads {
@@ -168,11 +168,11 @@ func PublicKey(
 	publicKey *types.PublicKey,
 ) error {
 	if publicKey == nil {
-		return errors.New("PublicKey cannot be nil")
+		return errors.ErrPublicKeyIsNil
 	}
 
 	if len(publicKey.Bytes) == 0 {
-		return errors.New("public key bytes cannot be empty")
+		return errors.ErrPublicKeyBytesEmpty
 	}
 
 	if err := CurveType(publicKey.CurveType); err != nil {
@@ -191,7 +191,7 @@ func CurveType(
 	case types.Secp256k1, types.Edwards25519:
 		return nil
 	default:
-		return fmt.Errorf("%s is not a supported CurveType", curve)
+		return fmt.Errorf("%w: %s", errors.ErrCurveTypeNotSupported, curve)
 	}
 }
 
@@ -203,15 +203,15 @@ func SigningPayload(
 	signingPayload *types.SigningPayload,
 ) error {
 	if signingPayload == nil {
-		return errors.New("signing payload cannot be nil")
+		return errors.ErrSigningPayloadIsNil
 	}
 
 	if len(signingPayload.Address) == 0 {
-		return errors.New("signing payload address cannot be empty")
+		return errors.ErrSigningPayloadAddrEmpty
 	}
 
 	if len(signingPayload.Bytes) == 0 {
-		return errors.New("signing payload bytes cannot be empty")
+		return errors.ErrSigningPayloadBytesEmpty
 	}
 
 	// SignatureType can be optionally populated
@@ -232,7 +232,7 @@ func Signatures(
 	signatures []*types.Signature,
 ) error {
 	if len(signatures) == 0 {
-		return errors.New("signatures cannot be empty")
+		return errors.ErrSignaturesEmpty
 	}
 
 	for i, signature := range signatures {
@@ -249,14 +249,14 @@ func Signatures(
 		}
 
 		// Return an error if the requested signature type does not match the
-		// signture type in the returned signature.
+		// signature type in the returned signature.
 		if len(signature.SigningPayload.SignatureType) > 0 &&
 			signature.SigningPayload.SignatureType != signature.SignatureType {
-			return fmt.Errorf("requested signature type does not match returned signature type")
+			return errors.ErrSignaturesReturnedSigMismatch
 		}
 
 		if len(signature.Bytes) == 0 {
-			return fmt.Errorf("signature %d bytes cannot be empty", i)
+			return fmt.Errorf("%w: signature %d has 0 bytes", errors.ErrSignatureBytesEmpty, i)
 		}
 	}
 
@@ -272,6 +272,6 @@ func SignatureType(
 	case types.Ecdsa, types.EcdsaRecovery, types.Ed25519:
 		return nil
 	default:
-		return fmt.Errorf("%s is not a supported SignatureType", signature)
+		return fmt.Errorf("%w: %s", errors.ErrSignatureTypeNotSupported, signature)
 	}
 }
