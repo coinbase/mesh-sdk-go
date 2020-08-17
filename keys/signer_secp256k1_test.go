@@ -47,7 +47,13 @@ func TestSignSecp256k1(t *testing.T) {
 	var payloadTests = []payloadTest{
 		{mockPayload(hash("hello123"), types.Ecdsa), types.Ecdsa, 64, false, ""},
 		{mockPayload(hash("hello1234"), types.EcdsaRecovery), types.EcdsaRecovery, 65, false, ""},
-		{mockPayload(hash("hello123"), types.Ed25519), types.Ed25519, 64, true, "unsupported signature type"},
+		{
+			mockPayload(hash("hello123"), types.Ed25519),
+			types.Ed25519,
+			64,
+			true,
+			"unsupported signature type",
+		},
 	}
 
 	for _, test := range payloadTests {
