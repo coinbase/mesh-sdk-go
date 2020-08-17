@@ -50,40 +50,52 @@ func TestHash(t *testing.T) {
 		},
 		"complex": {
 			map[string]interface{}{
-				"a":     "b",
-				"b":     "c",
-				"c":     "d",
-				"blahz": json.RawMessage(`{"test":6, "wha":{"sweet":3, "nice":true}, "neat0":"hello"}`),
+				"a": "b",
+				"b": "c",
+				"c": "d",
+				"blahz": json.RawMessage(
+					`{"test":6, "wha":{"sweet":3, "nice":true}, "neat0":"hello"}`,
+				),
 				"d": map[string]interface{}{
-					"t":    "p",
-					"e":    2,
-					"k":    "l",
-					"blah": json.RawMessage(`{"test":2, "neat":"hello", "cool":{"sweet":3, "nice":true}}`),
+					"t": "p",
+					"e": 2,
+					"k": "l",
+					"blah": json.RawMessage(
+						`{"test":2, "neat":"hello", "cool":{"sweet":3, "nice":true}}`,
+					),
 				},
 			},
 			map[string]interface{}{
-				"b":     "c",
-				"blahz": json.RawMessage(`{"wha":{"sweet":3, "nice":true},"test":6, "neat0":"hello"}`),
-				"a":     "b",
+				"b": "c",
+				"blahz": json.RawMessage(
+					`{"wha":{"sweet":3, "nice":true},"test":6, "neat0":"hello"}`,
+				),
+				"a": "b",
 				"d": map[string]interface{}{
-					"e":    2,
-					"k":    "l",
-					"t":    "p",
-					"blah": json.RawMessage(`{"test":2, "neat":"hello", "cool":{"nice":true, "sweet":3}}`),
+					"e": 2,
+					"k": "l",
+					"t": "p",
+					"blah": json.RawMessage(
+						`{"test":2, "neat":"hello", "cool":{"nice":true, "sweet":3}}`,
+					),
 				},
 				"c": "d",
 			},
 			map[string]interface{}{
 				"a": "b",
 				"d": map[string]interface{}{
-					"k":    "l",
-					"t":    "p",
-					"blah": json.RawMessage(`{"test":2, "cool":{"nice":true, "sweet":3}, "neat":"hello"}`),
-					"e":    2,
+					"k": "l",
+					"t": "p",
+					"blah": json.RawMessage(
+						`{"test":2, "cool":{"nice":true, "sweet":3}, "neat":"hello"}`,
+					),
+					"e": 2,
 				},
-				"c":     "d",
-				"blahz": json.RawMessage(`{"wha":{"nice":true, "sweet":3},"test":6, "neat0":"hello"}`),
-				"b":     "c",
+				"c": "d",
+				"blahz": json.RawMessage(
+					`{"wha":{"nice":true, "sweet":3},"test":6, "neat0":"hello"}`,
+				),
+				"b": "c",
 			},
 		},
 	}

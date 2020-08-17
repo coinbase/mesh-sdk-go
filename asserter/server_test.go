@@ -302,7 +302,9 @@ func TestAccountBalanceRequest(t *testing.T) {
 				BlockIdentifier:   &types.PartialBlockIdentifier{},
 			},
 			allowHistorical: true,
-			err:             errors.New("neither PartialBlockIdentifier.Hash nor PartialBlockIdentifier.Index is set"),
+			err: errors.New(
+				"neither PartialBlockIdentifier.Hash nor PartialBlockIdentifier.Index is set",
+			),
 		},
 		"valid historical request when not enabled": {
 			request: &types.AccountBalanceRequest{
@@ -380,7 +382,9 @@ func TestBlockRequest(t *testing.T) {
 				NetworkIdentifier: validNetworkIdentifier,
 				BlockIdentifier:   &types.PartialBlockIdentifier{},
 			},
-			err: errors.New("neither PartialBlockIdentifier.Hash nor PartialBlockIdentifier.Index is set"),
+			err: errors.New(
+				"neither PartialBlockIdentifier.Hash nor PartialBlockIdentifier.Index is set",
+			),
 		},
 	}
 
@@ -772,7 +776,10 @@ func TestConstructionPreprocessRequest(t *testing.T) {
 				Operations:             validOps,
 				SuggestedFeeMultiplier: &negativeFeeMultiplier,
 			},
-			err: fmt.Errorf("suggested fee multiplier %f cannot be less than 0", negativeFeeMultiplier),
+			err: fmt.Errorf(
+				"suggested fee multiplier %f cannot be less than 0",
+				negativeFeeMultiplier,
+			),
 		},
 		"max fee with duplicate currency": {
 			request: &types.ConstructionPreprocessRequest{
