@@ -17,14 +17,14 @@ package asserter
 import (
 	"fmt"
 
-	"github.com/coinbase/rosetta-sdk-go/asserter/errors"
+	"github.com/coinbase/rosetta-sdk-go/asserter/errs"
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
 // Coin returns an error if the provided *types.Coin is invalid.
 func Coin(coin *types.Coin) error {
 	if coin == nil {
-		return errors.ErrCoinIsNil
+		return errs.ErrCoinIsNil
 	}
 
 	if err := CoinIdentifier(coin.CoinIdentifier); err != nil {
@@ -66,11 +66,11 @@ func Coins(coins []*types.Coin) error {
 // is invalid.
 func CoinIdentifier(coinIdentifier *types.CoinIdentifier) error {
 	if coinIdentifier == nil {
-		return errors.ErrCoinIdentifierIsNil
+		return errs.ErrCoinIdentifierIsNil
 	}
 
 	if len(coinIdentifier.Identifier) == 0 {
-		return errors.ErrCoinIdentifierNotSet
+		return errs.ErrCoinIdentifierNotSet
 	}
 
 	return nil
@@ -80,7 +80,7 @@ func CoinIdentifier(coinIdentifier *types.CoinIdentifier) error {
 // is invalid.
 func CoinChange(change *types.CoinChange) error {
 	if change == nil {
-		return errors.ErrCoinChangeIsNil
+		return errs.ErrCoinChangeIsNil
 	}
 
 	if err := CoinIdentifier(change.CoinIdentifier); err != nil {
