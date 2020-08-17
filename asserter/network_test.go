@@ -247,7 +247,7 @@ func TestErrors(t *testing.T) {
 		rosettaErrors []*types.Error
 		err           error
 	}{
-		"valid errors": {
+		"valid errs": {
 			rosettaErrors: []*types.Error{
 				{
 					Code:    0,

@@ -16,8 +16,8 @@
 
 package types
 
-// Error Instead of utilizing HTTP status codes to describe node errors (which often do not have a
-// good analog), rich errors are returned using this object. Both the code and message fields can be
+// Error Instead of utilizing HTTP status codes to describe node errs (which often do not have a
+// good analog), rich errs are returned using this object. Both the code and message fields can be
 // individually used to correctly identify an error. Implementations MUST use unique values for both
 // fields.
 type Error struct {
