@@ -50,7 +50,11 @@ func TestSignEdwards25519(t *testing.T) {
 		{mockPayload(make([]byte, 32), types.Ed25519), false, ""},
 		{mockPayload(make([]byte, 32), ""), false, ""},
 		{mockPayload(make([]byte, 33), types.Ecdsa), true, "payload signature type is not ed25519"},
-		{mockPayload(make([]byte, 34), types.EcdsaRecovery), true, "payload signature type is not ed25519"},
+		{
+			mockPayload(make([]byte, 34), types.EcdsaRecovery),
+			true,
+			"payload signature type is not ed25519",
+		},
 	}
 
 	for _, test := range payloadTests {
