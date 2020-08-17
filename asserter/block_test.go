@@ -212,7 +212,7 @@ func TestOperationIdentifier(t *testing.T) {
 				NetworkIndex: &invalidNetworkIndex,
 			},
 			index: 0,
-			err:  errs.ErrOperationIdentifierNetworkIndexInvalid,
+			err:   errs.ErrOperationIdentifierNetworkIndexInvalid,
 		},
 	}
 
