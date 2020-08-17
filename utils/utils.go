@@ -30,6 +30,7 @@ import (
 
 	"github.com/coinbase/rosetta-sdk-go/fetcher"
 	"github.com/coinbase/rosetta-sdk-go/types"
+
 	"github.com/fatih/color"
 )
 

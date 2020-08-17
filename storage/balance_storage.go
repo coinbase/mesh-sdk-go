@@ -21,12 +21,11 @@ import (
 	"log"
 	"math/big"
 
-	"github.com/coinbase/rosetta-sdk-go/utils"
-
 	"github.com/coinbase/rosetta-sdk-go/asserter"
 	"github.com/coinbase/rosetta-sdk-go/parser"
 	"github.com/coinbase/rosetta-sdk-go/reconciler"
 	"github.com/coinbase/rosetta-sdk-go/types"
+	"github.com/coinbase/rosetta-sdk-go/utils"
 )
 
 var _ BlockWorker = (*BalanceStorage)(nil)
