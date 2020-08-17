@@ -277,7 +277,7 @@ func (a *Asserter) Operations(
 	construction bool,
 ) error {
 	if len(operations) == 0 && construction {
-		return errs.ErrOperationsEmptyForConstruction
+		return errs.ErrNoOperationsForConstruction
 	}
 
 	for i, op := range operations {
