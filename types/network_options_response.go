@@ -17,7 +17,7 @@
 package types
 
 // NetworkOptionsResponse NetworkOptionsResponse contains information about the versioning of the
-// node and the allowed operation statuses, operation types, and errors.
+// node and the allowed operation statuses, operation types, and errs.
 type NetworkOptionsResponse struct {
 	Version *Version `json:"version"`
 	Allow   *Allow   `json:"allow"`

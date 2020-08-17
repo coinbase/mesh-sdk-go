@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/coinbase/rosetta-sdk-go/asserter/errs"
 	"github.com/coinbase/rosetta-sdk-go/types"
 
 	"github.com/stretchr/testify/assert"
@@ -761,7 +762,7 @@ func TestConstructionPreprocessRequest(t *testing.T) {
 				NetworkIdentifier: validNetworkIdentifier,
 				Operations:        unsupportedTypeOps,
 			},
-			err: errors.New("Operation.Type STAKE is invalid"),
+			err: errs.ErrOperationTypeInvalid,
 		},
 		"invalid operations": {
 			request: &types.ConstructionPreprocessRequest{
@@ -848,7 +849,7 @@ func TestConstructionPayloadsRequest(t *testing.T) {
 				NetworkIdentifier: validNetworkIdentifier,
 				Operations:        unsupportedTypeOps,
 			},
-			err: errors.New("Operation.Type STAKE is invalid"),
+			err: errs.ErrOperationTypeInvalid,
 		},
 		"invalid operations": {
 			request: &types.ConstructionPayloadsRequest{
@@ -923,7 +924,7 @@ func TestConstructionCombineRequest(t *testing.T) {
 				UnsignedTransaction: "blah",
 				Signatures:          signatureTypeMismatch,
 			},
-			err: errors.New("requested signature type does not match returned signature type"),
+			err: errs.ErrSignaturesReturnedSigMismatch,
 		},
 		"empty signature": {
 			request: &types.ConstructionCombineRequest{
@@ -931,7 +932,7 @@ func TestConstructionCombineRequest(t *testing.T) {
 				UnsignedTransaction: "blah",
 				Signatures:          emptySignature,
 			},
-			err: errors.New("signature 0 bytes cannot be empty"),
+			err: errs.ErrSignatureBytesEmpty,
 		},
 		"signature type match": {
 			request: &types.ConstructionCombineRequest{

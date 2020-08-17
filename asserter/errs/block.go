@@ -1,11 +1,11 @@
-package errors
+package errs
 
 import "errors"
 
 var (
 	ErrAmountValueMissing = errors.New("Amount.Value is missing")
 
-	ErrAmountIsNotInt = errors.New("Amount.Value is not an integer ")
+	ErrAmountIsNotInt = errors.New("Amount.Value is not an integer")
 
 	ErrAmountCurrencyIsNil = errors.New("Amount.Currency is nil")
 

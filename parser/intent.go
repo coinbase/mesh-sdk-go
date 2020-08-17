@@ -78,7 +78,7 @@ func (p *Parser) ExpectedOperations(
 			// Any error returned here only indicated that intent
 			// does not match observed. For ExpectedOperations,
 			// we don't care about the content of the error, we
-			// just care if it errors so we can evaluate the next
+			// just care if it errs so we can evaluate the next
 			// operation for a match.
 			if err := ExpectedOperation(in, obs); err != nil {
 				continue
