@@ -23,8 +23,6 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/storage"
 	"github.com/coinbase/rosetta-sdk-go/syncer"
 	"github.com/coinbase/rosetta-sdk-go/types"
-
-	"github.com/coinbase/rosetta-cli/pkg/logger"
 )
 
 var _ syncer.Handler = (*StatefulSyncer)(nil)
@@ -41,10 +39,17 @@ type StatefulSyncer struct {
 	cancel         context.CancelFunc
 	blockStorage   *storage.BlockStorage
 	counterStorage *storage.CounterStorage
-	logger         *logger.Logger
+	logger         Logger
 	workers        []storage.BlockWorker
 
 	concurrency uint64
+}
+
+// Logger is used by the statefulsyncer to
+// log the addition and removal of blocks.
+type Logger interface {
+	AddBlockStream(context.Context, *types.Block) error
+	RemoveBlockStream(context.Context, *types.BlockIdentifier) error
 }
 
 // New returns a new *StatefulSyncer.
@@ -54,7 +59,7 @@ func New(
 	fetcher *fetcher.Fetcher,
 	blockStorage *storage.BlockStorage,
 	counterStorage *storage.CounterStorage,
-	logger *logger.Logger,
+	logger Logger,
 	cancel context.CancelFunc,
 	workers []storage.BlockWorker,
 	concurrency uint64,
