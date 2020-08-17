@@ -6,6 +6,7 @@ require (
 	github.com/btcsuite/btcd v0.20.1-beta
 	github.com/cenkalti/backoff v2.2.1+incompatible
 	github.com/ethereum/go-ethereum v1.9.18
+	github.com/google/addlicense v0.0.0-20200817051935-6f4cd4aacc89 // indirect
 	github.com/gorilla/mux v1.7.4
 	github.com/mitchellh/mapstructure v1.3.3
 	github.com/pkg/errors v0.8.1
