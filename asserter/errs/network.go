@@ -25,8 +25,6 @@ var (
 
 	ErrNoAllowedOperationStatuses = errors.New("no Allow.OperationStatuses found")
 
-	ErrOperationStatusMissing = errors.New("Operation.Status is missing")
-
 	ErrNoSuccessfulAllowedOperationStatuses = errors.New(
 		"no successful Allow.OperationStatuses found",
 	)

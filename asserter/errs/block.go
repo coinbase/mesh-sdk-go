@@ -29,6 +29,8 @@ var (
 
 	ErrAccountSubAccountAddrMissing = errors.New("Account.SubAccount.Address is missing")
 
+	ErrOperationStatusMissing = errors.New("Operation.Status is missing")
+
 	ErrOperationStatusInvalid = errors.New("Operation.Status is invalid")
 
 	ErrOperationTypeInvalid = errors.New("Operation.Type is invalid")
@@ -61,7 +63,7 @@ var (
 
 	ErrTxIdentifierHashMissing = errors.New("TransactionIdentifier.Hash is missing")
 
-	ErrOperationsEmptyForConstruction = errors.New("operations cannot be empty for construction")
+	ErrNoOperationsForConstruction = errors.New("operations cannot be empty for construction")
 
 	ErrTxIsNil = errors.New("Transaction is nil")
 
