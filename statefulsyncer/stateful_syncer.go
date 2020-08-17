@@ -20,9 +20,9 @@ import (
 	"math/big"
 
 	"github.com/coinbase/rosetta-cli/pkg/logger"
-	"github.com/coinbase/rosetta-sdk-go/storage"
 
 	"github.com/coinbase/rosetta-sdk-go/fetcher"
+	"github.com/coinbase/rosetta-sdk-go/storage"
 	"github.com/coinbase/rosetta-sdk-go/syncer"
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
