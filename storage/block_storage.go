@@ -20,10 +20,9 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/coinbase/rosetta-sdk-go/utils"
-
 	"github.com/coinbase/rosetta-sdk-go/syncer"
 	"github.com/coinbase/rosetta-sdk-go/types"
+	"github.com/coinbase/rosetta-sdk-go/utils"
 )
 
 const (
