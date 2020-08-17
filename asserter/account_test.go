@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/coinbase/rosetta-sdk-go/asserter/errs"
+
 	"github.com/coinbase/rosetta-sdk-go/types"
 
 	"github.com/stretchr/testify/assert"
@@ -132,7 +134,7 @@ func TestContainsCurrency(t *testing.T) {
 	}
 }
 
-func TestAccoutBalance(t *testing.T) {
+func TestAccountBalance(t *testing.T) {
 	var (
 		validBlock = &types.BlockIdentifier{
 			Index: 1000,
@@ -223,11 +225,7 @@ func TestAccoutBalance(t *testing.T) {
 			balances: []*types.Amount{
 				validAmount,
 			},
-			err: fmt.Errorf(
-				"request block index %d does not match response block index %d",
-				invalidIndex,
-				validBlock.Index,
-			),
+			err: errs.ErrReturnedBlockIndexMismatch,
 		},
 		"invalid historical request hash": {
 			requestBlock: &types.PartialBlockIdentifier{
@@ -238,11 +236,7 @@ func TestAccoutBalance(t *testing.T) {
 			balances: []*types.Amount{
 				validAmount,
 			},
-			err: fmt.Errorf(
-				"request block hash %s does not match response block hash %s",
-				invalidHash,
-				validBlock.Hash,
-			),
+			err: errs.ErrReturnedBlockHashMismatch,
 		},
 	}
 

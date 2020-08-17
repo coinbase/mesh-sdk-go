@@ -29,8 +29,6 @@ var (
 
 	ErrAccountSubAccountAddrMissing = errors.New("Account.SubAccount.Address is missing")
 
-	ErrOperationStatusMissing = errors.New("Operation.Status is empty")
-
 	ErrOperationStatusInvalid = errors.New("Operation.Status is invalid")
 
 	ErrOperationTypeInvalid = errors.New("Operation.Type is invalid")

@@ -17,6 +17,8 @@ package asserter
 import (
 	"fmt"
 
+	"github.com/coinbase/rosetta-sdk-go/asserter/errs"
+
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
@@ -84,7 +86,8 @@ func AccountBalanceResponse(
 
 	if requestBlock.Hash != nil && *requestBlock.Hash != response.BlockIdentifier.Hash {
 		return fmt.Errorf(
-			"request block hash %s does not match response block hash %s",
+			"%w: requested block hash %s but got %s",
+			errs.ErrReturnedBlockHashMismatch,
 			*requestBlock.Hash,
 			response.BlockIdentifier.Hash,
 		)
@@ -92,7 +95,8 @@ func AccountBalanceResponse(
 
 	if requestBlock.Index != nil && *requestBlock.Index != response.BlockIdentifier.Index {
 		return fmt.Errorf(
-			"request block index %d does not match response block index %d",
+			"%w: requested block index %d but got %d",
+			errs.ErrReturnedBlockIndexMismatch,
 			*requestBlock.Index,
 			response.BlockIdentifier.Index,
 		)
