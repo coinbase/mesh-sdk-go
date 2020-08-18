@@ -18,7 +18,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"math/big"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
@@ -477,6 +476,5 @@ func (c *CoinStorage) SetCoinsImported(
 		return err
 	}
 
-	log.Printf("%d Coins Updated\n", len(accountBalances))
 	return nil
 }
