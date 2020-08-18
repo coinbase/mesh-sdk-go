@@ -149,7 +149,7 @@ func (j *Job) BroadcastComplete(
 	newState, err := sjson.SetRaw(
 		j.State,
 		transactionKey,
-		types.PrettyPrintStruct(transaction),
+		types.PrintStruct(transaction),
 	)
 	if err != nil {
 		return fmt.Errorf(

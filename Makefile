@@ -73,4 +73,5 @@ mocks:
 	rm -rf mocks;
 	mockery --dir syncer --all --case underscore --outpkg syncer --output mocks/syncer;
 	mockery --dir reconciler --all --case underscore --outpkg reconciler --output mocks/reconciler;
+	mockery --dir constructor --all --case underscore --outpkg constructor --output mocks/constructor;
 	${ADDLICENCE_SCRIPT} .;
