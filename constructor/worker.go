@@ -121,7 +121,7 @@ func (w *Worker) DeriveWorker(
 		return "", err
 	}
 
-	return types.PrettyPrintStruct(types.ConstructionDeriveResponse{
+	return types.PrintStruct(types.ConstructionDeriveResponse{
 		Address:  address,
 		Metadata: metadata,
 	}), nil
@@ -135,5 +135,5 @@ func GenerateKeyWorker(input *GenerateKeyInput) (string, error) {
 		return "", err
 	}
 
-	return types.PrettyPrintStruct(kp), nil
+	return types.PrintStruct(kp), nil
 }
