@@ -279,20 +279,20 @@ func CurrencyBalance(
 	account *types.AccountIdentifier,
 	currency *types.Currency,
 	block *types.BlockIdentifier,
-) (*types.Amount, *types.BlockIdentifier, error) {
+) (*types.Amount, *types.BlockIdentifier, []*types.Coin, error) {
 	var lookupBlock *types.PartialBlockIdentifier
 	if block != nil {
 		lookupBlock = types.ConstructPartialBlockIdentifier(block)
 	}
 
-	liveBlock, liveBalances, _, _, fetchErr := fetcher.AccountBalanceRetry(
+	liveBlock, liveBalances, liveCoins, _, fetchErr := fetcher.AccountBalanceRetry(
 		ctx,
 		network,
 		account,
 		lookupBlock,
 	)
 	if fetchErr != nil {
-		return nil, nil, fmt.Errorf(
+		return nil, nil, nil, fmt.Errorf(
 			"%w: unable to lookup acccount balance for %s",
 			fetchErr.Err,
 			types.PrettyPrintStruct(account),
@@ -301,7 +301,7 @@ func CurrencyBalance(
 
 	liveAmount, err := types.ExtractAmount(liveBalances, currency)
 	if err != nil {
-		return nil, nil, fmt.Errorf(
+		return nil, nil, nil, fmt.Errorf(
 			"%w: could not get %s currency balance for %s",
 			err,
 			types.PrettyPrintStruct(currency),
@@ -309,5 +309,71 @@ func CurrencyBalance(
 		)
 	}
 
-	return liveAmount, liveBlock, nil
+	return liveAmount, liveBlock, liveCoins, nil
+}
+
+// AccountBalanceRequest defines the required information
+// to get an account's balance.
+type AccountBalanceRequest struct {
+	Account  *types.AccountIdentifier
+	Network  *types.NetworkIdentifier
+	Currency *types.Currency
+}
+
+// AccountBalance defines an account's balance,
+// including either balance or coins, as well as
+// the block which this balance was fetched at.
+type AccountBalance struct {
+	Account       *types.AccountIdentifier
+	BalanceAmount *types.Amount
+	Block         *types.BlockIdentifier
+}
+
+// GetAccountBalances returns an array of AccountBalances
+// for an array of AccountBalanceRequests
+func GetAccountBalances(
+	ctx context.Context,
+	fetcher *fetcher.Fetcher,
+	balanceRequests []*AccountBalanceRequest,
+) ([]*AccountBalance, error) {
+	var accountBalances []*AccountBalance
+	for _, balanceRequest := range balanceRequests {
+		amount, block, coins, err := CurrencyBalance(
+			ctx,
+			balanceRequest.Network,
+			fetcher,
+			balanceRequest.Account,
+			balanceRequest.Currency,
+			nil,
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		// Will return 0 amount if no coins exist
+		coinAmount, err := types.SumCoins(coins)
+		if err != nil {
+			return nil, err
+		}
+
+		totalAmountValue, err := types.AddValues(amount.Value, coinAmount.Value)
+		if err != nil {
+			return nil, err
+		}
+
+		totalAmount := &types.Amount{
+			Value:    totalAmountValue,
+			Currency: balanceRequest.Currency,
+		}
+
+		accountBalance := &AccountBalance{
+			Account:       balanceRequest.Account,
+			BalanceAmount: totalAmount,
+			Block:         block,
+		}
+		accountBalances = append(accountBalances, accountBalance)
+	}
+
+	return accountBalances, nil
 }

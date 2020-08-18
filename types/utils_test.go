@@ -645,3 +645,68 @@ func TestExtractAmount(t *testing.T) {
 		assert.NoError(t, err)
 	})
 }
+
+func TestSumCoins(t *testing.T) {
+	var (
+		currency1 = &Currency{
+			Symbol:   "curr1",
+			Decimals: 4,
+		}
+
+		currency2 = &Currency{
+			Symbol:   "curr2",
+			Decimals: 4,
+		}
+
+		amount1 = &Amount{
+			Value:    "100",
+			Currency: currency1,
+		}
+
+		amount2 = &Amount{
+			Value:    "200",
+			Currency: currency1,
+		}
+
+		amount3 = &Amount{
+			Value:    "200",
+			Currency: currency2,
+		}
+
+		coins = []*Coin{
+			&Coin{
+				Amount: amount1,
+			},
+			&Coin{
+				Amount: amount2,
+			},
+		}
+
+		invalidCoins = []*Coin{
+			&Coin{
+				Amount: amount1,
+			},
+			&Coin{
+				Amount: amount2,
+			},
+			&Coin{
+				Amount: amount3,
+			},
+		}
+	)
+
+	t.Run("Successfully sums coins", func(t *testing.T) {
+		result, err := SumCoins(coins)
+		expectedAmount := &Amount{
+			Value:    "300",
+			Currency: currency1,
+		}
+		assert.NoError(t, err)
+		assert.Equal(t, expectedAmount, result)
+	})
+
+	t.Run("invalid currencies", func(t *testing.T) {
+		_, err := SumCoins(invalidCoins)
+		assert.Equal(t, errors.New("cannot sum coins of different currency"), err)
+	})
+}
