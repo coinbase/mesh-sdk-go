@@ -18,10 +18,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"math/big"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
 	"github.com/coinbase/rosetta-sdk-go/types"
+	"github.com/coinbase/rosetta-sdk-go/utils"
 )
 
 const (
@@ -443,4 +445,38 @@ func (c *CoinStorage) GetLargestCoin(
 	}
 
 	return bal, coinIdentifier, blockIdentifier, nil
+}
+
+// SetCoinsImported sets coins of a set of addresses by
+// getting their coins from the tip block, and populating the database.
+// This is used when importing prefunded addresses.
+func (c *CoinStorage) SetCoinsImported(
+	ctx context.Context,
+	helper BalanceStorageHelper,
+	accountBalances []*utils.AccountBalance,
+) error {
+	// Update balances in database
+	transaction := c.db.NewDatabaseTransaction(ctx, false)
+	defer transaction.Discard(ctx)
+
+	for _, accountBalance := range accountBalances {
+		for _, coin := range accountBalance.Coins {
+			encodedResult, err := encode(coin)
+			if err != nil {
+				return fmt.Errorf("%w: unable to encode coin data", err)
+			}
+
+			if err := transaction.Set(ctx, getCoinKey(coin.CoinIdentifier), encodedResult); err != nil {
+				return fmt.Errorf("%w: unable to store coin", err)
+			}
+		}
+	}
+
+	err := transaction.Commit(ctx)
+	if err != nil {
+		return err
+	}
+
+	log.Printf("%d Coins Updated\n", len(accountBalances))
+	return nil
 }
