@@ -20,6 +20,8 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/segmentio/golines v0.0.0-20200808004416-0a9796b248e8 // indirect
 	github.com/stretchr/testify v1.6.1
+	github.com/tidwall/gjson v1.6.0
+	github.com/tidwall/sjson v1.1.1
 	github.com/vmihailenco/msgpack/v5 v5.0.0-beta.1
 	golang.org/x/crypto v0.0.0-20200728195943-123391ffb6de // indirect
 	golang.org/x/net v0.0.0-20200813134508-3edf25e44fcc // indirect
