@@ -1,5 +1,5 @@
 .PHONY: deps gen lint format check-format test test-coverage add-license \
-	check-license shorten-lines shellcheck salus release mocks
+	check-comments check-license shorten-lines shellcheck salus release mocks
 
 # To run the the following packages as commands,
 # it is necessary to use `go run <pkg>`. Running `go get` does
@@ -10,7 +10,7 @@ ADDLICENCE_SCRIPT=${ADDLICENSE_CMD} -c "Coinbase, Inc." -l "apache" -v
 GOIMPORTS_CMD=go run golang.org/x/tools/cmd/goimports
 GOLINES_CMD=go run github.com/segmentio/golines
 GOVERALLS_CMD=go run github.com/mattn/goveralls
-
+GOLINT_CMD=go run golang.org/x/lint/golint
 GO_PACKAGES=./asserter/... ./fetcher/... ./types/... ./client/... ./server/... \
 	./parser/... ./syncer/... ./reconciler/... ./keys/... \
 	./statefulsyncer/... ./storage/... ./utils/... ./constructor/...
@@ -27,12 +27,16 @@ gen:
 check-gen: | gen
 	git diff --exit-code
 
+check-comments:
+	${GOLINT_CMD} -set_exit_status ${GO_FOLDERS} .
+
 lint-examples:
 	cd examples; \
 	golangci-lint run -v -E ${LINT_SETTINGS}
 
 lint: | lint-examples
-	golangci-lint run -v -E ${LINT_SETTINGS},gomnd
+	golangci-lint run -v -E ${LINT_SETTINGS},gomnd; \
+	make check-comments;
 
 format:
 	gofmt -s -w -l .
