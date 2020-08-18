@@ -324,10 +324,10 @@ type AccountBalanceRequest struct {
 // including either balance or coins, as well as
 // the block which this balance was fetched at.
 type AccountBalance struct {
-	Account       *types.AccountIdentifier
-	BalanceAmount *types.Amount
-	Coins         []*types.Coin
-	Block         *types.BlockIdentifier
+	Account *types.AccountIdentifier
+	Amount  *types.Amount
+	Coins   []*types.Coin
+	Block   *types.BlockIdentifier
 }
 
 // GetAccountBalances returns an array of AccountBalances
@@ -352,20 +352,11 @@ func GetAccountBalances(
 			return nil, err
 		}
 
-		var accountBalance *AccountBalance
-		// Coins exist
-		if len(coins) > 0 {
-			accountBalance = &AccountBalance{
-				Account: balanceRequest.Account,
-				Coins:   coins,
-				Block:   block,
-			}
-		} else {
-			accountBalance = &AccountBalance{
-				Account:       balanceRequest.Account,
-				BalanceAmount: amount,
-				Block:         block,
-			}
+		accountBalance := &AccountBalance{
+			Account: balanceRequest.Account,
+			Amount:  amount,
+			Coins:   coins,
+			Block:   block,
 		}
 
 		accountBalances = append(accountBalances, accountBalance)

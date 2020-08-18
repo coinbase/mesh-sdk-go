@@ -554,8 +554,7 @@ func (b *BalanceStorage) SetBalanceImported(
 		}
 	}
 
-	err := transaction.Commit(ctx)
-	if err != nil {
+	if err := transaction.Commit(ctx); err != nil {
 		return err
 	}
 
