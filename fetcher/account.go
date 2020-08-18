@@ -79,7 +79,7 @@ func (f *Fetcher) AccountBalanceRetry(
 		f.maxRetries,
 	)
 
-	for {
+	for ctx.Err() == nil {
 		responseBlock, balances, coins, metadata, err := f.AccountBalance(
 			ctx,
 			network,
@@ -98,28 +98,16 @@ func (f *Fetcher) AccountBalanceRetry(
 			return nil, nil, nil, nil, fetcherErr
 		}
 
-		if ctx.Err() != nil {
-			fetcherErr := &Error{
-				Err:       ctx.Err(),
-				ClientErr: err.ClientErr,
-			}
-			return nil, nil, nil, nil, fetcherErr
-		}
-
-		if !tryAgain(
+		if err := tryAgain(
 			fmt.Sprintf("account %s", types.PrettyPrintStruct(account)),
 			backoffRetries,
-			err.Err,
-		) {
-			break
+			err,
+		); err != nil {
+			return nil, nil, nil, nil, err
 		}
 	}
 
 	return nil, nil, nil, nil, &Error{
-		Err: fmt.Errorf(
-			"%w: unable to fetch account %s",
-			ErrExhaustedRetries,
-			types.PrettyPrintStruct(account),
-		),
+		Err: ctx.Err(),
 	}
 }

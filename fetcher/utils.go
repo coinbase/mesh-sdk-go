@@ -16,8 +16,8 @@ package fetcher
 
 import (
 	"errors"
+	"fmt"
 	"log"
-	"strings"
 	"time"
 
 	"github.com/cenkalti/backoff"
@@ -36,19 +36,26 @@ func backoffRetries(
 
 // tryAgain handles a backoff and prints error messages depending
 // on the fetchMsg.
-func tryAgain(fetchMsg string, thisBackoff backoff.BackOff, err error) bool {
-	fetchMsg = strings.Replace(fetchMsg, "\n", "", -1)
-	log.Printf("%s fetch error: %s\n", fetchMsg, err.Error())
+func tryAgain(fetchMsg string, thisBackoff backoff.BackOff, err *Error) *Error {
+	if err.ClientErr != nil && !err.ClientErr.Retriable {
+		return err
+	}
 
 	nextBackoff := thisBackoff.NextBackOff()
 	if nextBackoff == backoff.Stop {
-		return false
+		return &Error{
+			Err: fmt.Errorf(
+				"%w: %s",
+				ErrExhaustedRetries,
+				fetchMsg,
+			),
+		}
 	}
 
 	log.Printf("retrying fetch for %s after %fs\n", fetchMsg, nextBackoff.Seconds())
 	time.Sleep(nextBackoff)
 
-	return true
+	return nil
 }
 
 // checkError compares a *fetcher.Error to a simple type error and returns
