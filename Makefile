@@ -1,5 +1,5 @@
 .PHONY: deps gen lint format check-format test test-coverage add-license \
-	check-license shorten-lines shellcheck salus release mocks
+	check-comments check-license shorten-lines shellcheck salus release mocks
 
 # To run the the following packages as commands,
 # it is necessary to use `go run <pkg>`. Running `go get` does
@@ -10,10 +10,10 @@ ADDLICENCE_SCRIPT=${ADDLICENSE_CMD} -c "Coinbase, Inc." -l "apache" -v
 GOIMPORTS_CMD=go run golang.org/x/tools/cmd/goimports
 GOLINES_CMD=go run github.com/segmentio/golines
 GOVERALLS_CMD=go run github.com/mattn/goveralls
-
+GOLINT_CMD=go run golang.org/x/lint/golint
 GO_PACKAGES=./asserter/... ./fetcher/... ./types/... ./client/... ./server/... \
-						./parser/... ./syncer/... ./reconciler/... ./keys/... ./statefulsyncer/... \
-						./storage/... ./utils/...
+	./parser/... ./syncer/... ./reconciler/... ./keys/... \
+	./statefulsyncer/... ./storage/... ./utils/... ./constructor/...
 GO_FOLDERS=$(shell echo ${GO_PACKAGES} | sed -e "s/\.\///g" | sed -e "s/\/\.\.\.//g")
 TEST_SCRIPT=go test ${GO_PACKAGES}
 LINT_SETTINGS=golint,misspell,gocyclo,gocritic,whitespace,goconst,gocognit,bodyclose,unconvert,lll,unparam
@@ -27,12 +27,16 @@ gen:
 check-gen: | gen
 	git diff --exit-code
 
+check-comments:
+	${GOLINT_CMD} -set_exit_status ${GO_FOLDERS} .
+
 lint-examples:
 	cd examples; \
 	golangci-lint run -v -E ${LINT_SETTINGS}
 
 lint: | lint-examples
-	golangci-lint run -v -E ${LINT_SETTINGS},gomnd
+	golangci-lint run -v -E ${LINT_SETTINGS},gomnd; \
+	make check-comments;
 
 format:
 	gofmt -s -w -l .
@@ -69,4 +73,5 @@ mocks:
 	rm -rf mocks;
 	mockery --dir syncer --all --case underscore --outpkg syncer --output mocks/syncer;
 	mockery --dir reconciler --all --case underscore --outpkg reconciler --output mocks/reconciler;
+	mockery --dir constructor --all --case underscore --outpkg constructor --output mocks/constructor;
 	${ADDLICENCE_SCRIPT} .;
