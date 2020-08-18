@@ -28,6 +28,11 @@ var (
 		"request block index does not match response block index",
 	)
 
+	AccountBalanceErrs = []error{
+		ErrReturnedBlockHashMismatch,
+		ErrReturnedBlockIndexMismatch,
+	}
+
 	//////////////////
 	/* BLOCK ERRORS */
 	//////////////////
@@ -81,6 +86,41 @@ var (
 		"BlockIdentifier.Index <= ParentBlockIdentifier.Index",
 	)
 
+	BlockErrs = []error{
+		ErrAmountValueMissing,
+		ErrAmountIsNotInt,
+		ErrAmountCurrencyIsNil,
+		ErrAmountCurrencySymbolEmpty,
+		ErrAmountCurrencyHasNegDecimals,
+		ErrOperationIdentifierIndexIsNil,
+		ErrOperationIdentifierIndexOutOfOrder,
+		ErrOperationIdentifierNetworkIndexInvalid,
+		ErrAccountIsNil,
+		ErrAccountAddrMissing,
+		ErrAccountSubAccountAddrMissing,
+		ErrOperationStatusMissing,
+		ErrOperationStatusInvalid,
+		ErrOperationTypeInvalid,
+		ErrOperationIsNil,
+		ErrOperationStatusNotEmptyForConstruction,
+		ErrRelatedOperationIndexOutOfOrder,
+		ErrRelatedOperationIndexDuplicate,
+		ErrBlockIdentifierIsNil,
+		ErrBlockIdentifierHashMissing,
+		ErrBlockIdentifierIndexIsNeg,
+		ErrPartialBlockIdentifierIsNil,
+		ErrPartialBlockIdentifierFieldsNotSet,
+		ErrTxIdentifierIsNil,
+		ErrTxIdentifierHashMissing,
+		ErrNoOperationsForConstruction,
+		ErrTxIsNil,
+		ErrTimestampBeforeMin,
+		ErrTimestampAfterMax,
+		ErrBlockIsNil,
+		ErrBlockHashEqualsParentBlockHash,
+		ErrBlockIndexPrecedesParentBlockIndex,
+	}
+
 	/////////////////
 	/* COIN ERRORS */
 	/////////////////
@@ -91,6 +131,15 @@ var (
 	ErrCoinIdentifierNotSet = errors.New("coin identifier cannot be empty")
 	ErrCoinChangeIsNil      = errors.New("coin change cannot be nil")
 	ErrCoinActionInvalid    = errors.New("not a valid coin action")
+
+	CoinErrs = []error{
+		ErrCoinIsNil,
+		ErrCoinDuplicate,
+		ErrCoinIdentifierIsNil,
+		ErrCoinIdentifierNotSet,
+		ErrCoinChangeIsNil,
+		ErrCoinActionInvalid,
+	}
 
 	/////////////////////////
 	/* CONSTRUCTION ERRORS */
@@ -148,6 +197,34 @@ var (
 	ErrSignatureBytesEmpty       = errors.New("signature bytes cannot be empty")
 	ErrSignatureTypeNotSupported = errors.New("not a supported SignatureType")
 
+	ConstructionErrs = []error{
+		ErrConstructionMetadataResponseIsNil,
+		ErrConstructionMetadataResponseMetadataMissing,
+		ErrTxIdentifierResponseIsNil,
+		ErrConstructionCombineResponseIsNil,
+		ErrSignedTxEmpty,
+		ErrConstructionDeriveResponseIsNil,
+		ErrConstructionDeriveResponseAddrEmpty,
+		ErrConstructionParseResponseIsNil,
+		ErrConstructionParseResponseOperationsEmpty,
+		ErrConstructionParseResponseSignersEmptyOnSignedTx,
+		ErrConstructionParseResponseSignersNonEmptyOnUnsignedTx,
+		ErrConstructionParseResponseSignerEmpty,
+		ErrConstructionPayloadsResponseIsNil,
+		ErrConstructionPayloadsResponseUnsignedTxEmpty,
+		ErrConstructionPayloadsResponsePayloadsEmpty,
+		ErrPublicKeyIsNil,
+		ErrPublicKeyBytesEmpty,
+		ErrCurveTypeNotSupported,
+		ErrSigningPayloadIsNil,
+		ErrSigningPayloadAddrEmpty,
+		ErrSigningPayloadBytesEmpty,
+		ErrSignaturesEmpty,
+		ErrSignaturesReturnedSigMismatch,
+		ErrSignatureBytesEmpty,
+		ErrSignatureTypeNotSupported,
+	}
+
 	////////////////////
 	/* NETWORK ERRORS */
 	////////////////////
@@ -177,6 +254,28 @@ var (
 	ErrNetworkListResponseNetworksContinsDuplicates = errors.New(
 		"NetworkListResponse.Networks contains duplicates",
 	)
+
+	NetworkErrs = []error{
+		ErrSubNetworkIdentifierInvalid,
+		ErrNetworkIdentifierIsNil,
+		ErrNetworkIdentifierBlockchainMissing,
+		ErrNetworkIdentifierNetworkMissing,
+		ErrPeerIDMissing,
+		ErrVersionIsNil,
+		ErrVersionNodeVersionMissing,
+		ErrVersionMiddlewareVersionMissing,
+		ErrNetworkStatusResponseIsNil,
+		ErrNoAllowedOperationStatuses,
+		ErrNoSuccessfulAllowedOperationStatuses,
+		ErrErrorIsNil,
+		ErrErrorCodeIsNeg,
+		ErrErrorMessageMissing,
+		ErrErrorCodeUsedMultipleTimes,
+		ErrAllowIsNil,
+		ErrNetworkOptionsResponseIsNil,
+		ErrNetworkListResponseIsNil,
+		ErrNetworkListResponseNetworksContinsDuplicates,
+	}
 
 	///////////////////
 	/* SERVER ERRORS */
@@ -232,4 +331,62 @@ var (
 	ErrConstructionHashRequestSignedTxEmpty      = errors.New("SignedTransaction cannot be empty")
 	ErrConstructionParseRequestIsNil             = errors.New("ConstructionParseRequest is nil")
 	ErrConstructionParseRequestEmpty             = errors.New("Transaction cannot be empty")
+
+	ServerErrs = []error{
+		ErrNoSupportedNetworks,
+		ErrSupportedNetworksDuplicate,
+		ErrRequestedNetworkNotSupported,
+		ErrAccountBalanceRequestIsNil,
+		ErrAccountBalanceRequestHistoricalBalanceLookupNotSupported,
+		ErrBlockRequestIsNil,
+		ErrBlockTransactionRequestIsNil,
+		ErrConstructionMetadataRequestIsNil,
+		ErrConstructionMetadataRequestOptionsIsNil,
+		ErrConstructionSubmitRequestIsNil,
+		ErrConstructionSubmitRequestSignedTxEmpty,
+		ErrMempoolTransactionRequestIsNil,
+		ErrMetadataRequestIsNil,
+		ErrNetworkRequestIsNil,
+		ErrConstructionDeriveRequestIsNil,
+		ErrConstructionPreprocessRequestIsNil,
+		ErrConstructionPreprocessRequestSuggestedFeeMultiplierIsNeg,
+		ErrConstructionPayloadsRequestIsNil,
+		ErrConstructionCombineRequestIsNil,
+		ErrConstructionCombineRequestUnsignedTxEmpty,
+		ErrConstructionHashRequestIsNil,
+		ErrConstructionHashRequestSignedTxEmpty,
+		ErrConstructionParseRequestIsNil,
+		ErrConstructionParseRequestEmpty,
+	}
 )
+
+// IsAssertError takes an error as an argument and returns
+// whether or not the error is one thrown by the asserter
+// along with the specific source of the error
+func ErrorAsserter(err error) (bool, string) {
+	assertErrs := map[string][]error{
+		"account balance error": AccountBalanceErrs,
+		"block error":           BlockErrs,
+		"coin error":            CoinErrs,
+		"construction error":    ConstructionErrs,
+		"network error":         NetworkErrs,
+		"server error":          ServerErrs,
+	}
+
+	for key, val := range assertErrs {
+		if findError(val, err) {
+			return true, key
+		}
+	}
+	return false, ""
+}
+
+// findError
+func findError(errorList []error, err error) bool {
+	for _, k := range errorList {
+		if errors.Is(err, k) {
+			return true
+		}
+	}
+	return false
+}
