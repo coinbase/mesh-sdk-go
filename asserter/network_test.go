@@ -19,7 +19,6 @@ import (
 	"testing"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
-
 	"github.com/stretchr/testify/assert"
 )
 
@@ -37,21 +36,21 @@ func TestNetworkIdentifier(t *testing.T) {
 		},
 		"nil network": {
 			network: nil,
-			err:     errors.New("NetworkIdentifier is nil"),
+			err:     ErrNetworkIdentifierIsNil,
 		},
 		"invalid blockchain": {
 			network: &types.NetworkIdentifier{
 				Blockchain: "",
 				Network:    "mainnet",
 			},
-			err: errors.New("NetworkIdentifier.Blockchain is missing"),
+			err: ErrNetworkIdentifierBlockchainMissing,
 		},
 		"invalid network": {
 			network: &types.NetworkIdentifier{
 				Blockchain: "bitcoin",
 				Network:    "",
 			},
-			err: errors.New("NetworkIdentifier.Network is missing"),
+			err: ErrNetworkIdentifierNetworkMissing,
 		},
 		"valid sub_network": {
 			network: &types.NetworkIdentifier{
@@ -69,7 +68,7 @@ func TestNetworkIdentifier(t *testing.T) {
 				Network:              "mainnet",
 				SubNetworkIdentifier: &types.SubNetworkIdentifier{},
 			},
-			err: errors.New("NetworkIdentifier.SubNetworkIdentifier.Network is missing"),
+			err: ErrSubNetworkIdentifierInvalid,
 		},
 	}
 
@@ -122,7 +121,7 @@ func TestVersion(t *testing.T) {
 			version: &types.Version{
 				RosettaVersion: validRosettaVersion,
 			},
-			err: errors.New("Version.NodeVersion is missing"),
+			err: ErrVersionNodeVersionMissing,
 		},
 		"invalid MiddlewareVersion": {
 			version: &types.Version{
@@ -130,7 +129,7 @@ func TestVersion(t *testing.T) {
 				NodeVersion:       "1.0",
 				MiddlewareVersion: &invalidMiddlewareVersion,
 			},
-			err: errors.New("Version.MiddlewareVersion is missing"),
+			err: ErrVersionMiddlewareVersionMissing,
 		},
 	}
 
@@ -172,13 +171,13 @@ func TestAllow(t *testing.T) {
 		},
 		"nil Allow": {
 			allow: nil,
-			err:   errors.New("Allow is nil"),
+			err:   ErrAllowIsNil,
 		},
 		"no OperationStatuses": {
 			allow: &types.Allow{
 				OperationTypes: operationTypes,
 			},
-			err: errors.New("no Allow.OperationStatuses found"),
+			err: ErrNoAllowedOperationStatuses,
 		},
 		"no successful OperationStatuses": {
 			allow: &types.Allow{
@@ -187,7 +186,7 @@ func TestAllow(t *testing.T) {
 				},
 				OperationTypes: operationTypes,
 			},
-			err: errors.New("no successful Allow.OperationStatuses found"),
+			err: ErrNoSuccessfulAllowedOperationStatuses,
 		},
 		"no OperationTypes": {
 			allow: &types.Allow{
@@ -218,20 +217,20 @@ func TestError(t *testing.T) {
 		},
 		"nil error": {
 			rosettaError: nil,
-			err:          errors.New("Error is nil"),
+			err:          ErrErrorIsNil,
 		},
 		"negative code": {
 			rosettaError: &types.Error{
 				Code:    -1,
 				Message: "signature invalid",
 			},
-			err: errors.New("Error.Code is negative"),
+			err: ErrErrorCodeIsNeg,
 		},
 		"empty message": {
 			rosettaError: &types.Error{
 				Code: 0,
 			},
-			err: errors.New("Error.Message is missing"),
+			err: ErrErrorMessageMissing,
 		},
 	}
 
@@ -271,7 +270,7 @@ func TestErrors(t *testing.T) {
 					Message: "error 2",
 				},
 			},
-			err: errors.New("error code used multiple times"),
+			err: ErrErrorCodeUsedMultipleTimes,
 		},
 	}
 
@@ -320,7 +319,7 @@ func TestNetworkListResponse(t *testing.T) {
 		},
 		"nil network list": {
 			networkListResponse: nil,
-			err:                 errors.New("NetworkListResponse is nil"),
+			err:                 ErrNetworkListResponseIsNil,
 		},
 		"network list duplicate": {
 			networkListResponse: &types.NetworkListResponse{
@@ -329,7 +328,7 @@ func TestNetworkListResponse(t *testing.T) {
 					network1Sub,
 				},
 			},
-			err: errors.New("NetworkListResponse.Networks contains duplicates"),
+			err: ErrNetworkListResponseNetworksContinsDuplicates,
 		},
 		"invalid network": {
 			networkListResponse: &types.NetworkListResponse{
@@ -337,7 +336,7 @@ func TestNetworkListResponse(t *testing.T) {
 					network3,
 				},
 			},
-			err: errors.New("NetworkIdentifier.Blockchain is missing"),
+			err: ErrNetworkIdentifierBlockchainMissing,
 		},
 	}
 

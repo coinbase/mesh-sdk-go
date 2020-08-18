@@ -364,7 +364,7 @@ func TestExpectedOperations(t *testing.T) {
 			},
 			confirmSuccess: true,
 		},
-		"simple match (confirm success) err": {
+		"simple match (confirm success) errors": {
 			intent: []*types.Operation{
 				{
 					OperationIdentifier: &types.OperationIdentifier{
@@ -427,7 +427,7 @@ func TestExpectedOperations(t *testing.T) {
 			confirmSuccess: true,
 			err:            true,
 		},
-		"err extra": {
+		"errors extra": {
 			intent: []*types.Operation{
 				{
 					OperationIdentifier: &types.OperationIdentifier{

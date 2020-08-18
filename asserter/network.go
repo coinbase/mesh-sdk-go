@@ -15,7 +15,6 @@
 package asserter
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
@@ -28,7 +27,7 @@ func SubNetworkIdentifier(subNetworkIdentifier *types.SubNetworkIdentifier) erro
 	}
 
 	if subNetworkIdentifier.Network == "" {
-		return errors.New("NetworkIdentifier.SubNetworkIdentifier.Network is missing")
+		return ErrSubNetworkIdentifierInvalid
 	}
 
 	return nil
@@ -38,15 +37,15 @@ func SubNetworkIdentifier(subNetworkIdentifier *types.SubNetworkIdentifier) erro
 // a valid blockchain and network.
 func NetworkIdentifier(network *types.NetworkIdentifier) error {
 	if network == nil {
-		return errors.New("NetworkIdentifier is nil")
+		return ErrNetworkIdentifierIsNil
 	}
 
 	if network.Blockchain == "" {
-		return errors.New("NetworkIdentifier.Blockchain is missing")
+		return ErrNetworkIdentifierBlockchainMissing
 	}
 
 	if network.Network == "" {
-		return errors.New("NetworkIdentifier.Network is missing")
+		return ErrNetworkIdentifierNetworkMissing
 	}
 
 	return SubNetworkIdentifier(network.SubNetworkIdentifier)
@@ -55,7 +54,7 @@ func NetworkIdentifier(network *types.NetworkIdentifier) error {
 // Peer ensures a types.Peer has a valid peer_id.
 func Peer(peer *types.Peer) error {
 	if peer == nil || peer.PeerID == "" {
-		return errors.New("Peer.PeerID is missing")
+		return ErrPeerIDMissing
 	}
 
 	return nil
@@ -65,15 +64,15 @@ func Peer(peer *types.Peer) error {
 // returned.
 func Version(version *types.Version) error {
 	if version == nil {
-		return errors.New("version is nil")
+		return ErrVersionIsNil
 	}
 
 	if version.NodeVersion == "" {
-		return errors.New("Version.NodeVersion is missing")
+		return ErrVersionNodeVersionMissing
 	}
 
 	if version.MiddlewareVersion != nil && *version.MiddlewareVersion == "" {
-		return errors.New("Version.MiddlewareVersion is missing")
+		return ErrVersionMiddlewareVersionMissing
 	}
 
 	return nil
@@ -106,7 +105,7 @@ func StringArray(arrName string, arr []string) error {
 // is valid.
 func NetworkStatusResponse(response *types.NetworkStatusResponse) error {
 	if response == nil {
-		return errors.New("network status response is nil")
+		return ErrNetworkStatusResponseIsNil
 	}
 
 	if err := BlockIdentifier(response.CurrentBlockIdentifier); err != nil {
@@ -134,14 +133,14 @@ func NetworkStatusResponse(response *types.NetworkStatusResponse) error {
 // are valid and that there exists at least 1 successful status.
 func OperationStatuses(statuses []*types.OperationStatus) error {
 	if len(statuses) == 0 {
-		return errors.New("no Allow.OperationStatuses found")
+		return ErrNoAllowedOperationStatuses
 	}
 
 	statusStatuses := make([]string, len(statuses))
 	foundSuccessful := false
 	for i, status := range statuses {
 		if status.Status == "" {
-			return errors.New("Operation.Status is missing")
+			return ErrOperationStatusMissing
 		}
 
 		if status.Successful {
@@ -152,7 +151,7 @@ func OperationStatuses(statuses []*types.OperationStatus) error {
 	}
 
 	if !foundSuccessful {
-		return errors.New("no successful Allow.OperationStatuses found")
+		return ErrNoSuccessfulAllowedOperationStatuses
 	}
 
 	return StringArray("Allow.OperationStatuses", statusStatuses)
@@ -167,15 +166,15 @@ func OperationTypes(types []string) error {
 // Error ensures a types.Error is valid.
 func Error(err *types.Error) error {
 	if err == nil {
-		return errors.New("Error is nil")
+		return ErrErrorIsNil
 	}
 
 	if err.Code < 0 {
-		return errors.New("Error.Code is negative")
+		return ErrErrorCodeIsNeg
 	}
 
 	if err.Message == "" {
-		return errors.New("Error.Message is missing")
+		return ErrErrorMessageMissing
 	}
 
 	return nil
@@ -193,7 +192,7 @@ func Errors(rosettaErrors []*types.Error) error {
 
 		_, exists := statusCodes[rosettaError.Code]
 		if exists {
-			return errors.New("error code used multiple times")
+			return ErrErrorCodeUsedMultipleTimes
 		}
 
 		statusCodes[rosettaError.Code] = struct{}{}
@@ -205,7 +204,7 @@ func Errors(rosettaErrors []*types.Error) error {
 // Allow ensures a types.Allow object is valid.
 func Allow(allowed *types.Allow) error {
 	if allowed == nil {
-		return errors.New("Allow is nil")
+		return ErrAllowIsNil
 	}
 
 	if err := OperationStatuses(allowed.OperationStatuses); err != nil {
@@ -226,7 +225,7 @@ func Allow(allowed *types.Allow) error {
 // NetworkOptionsResponse ensures a types.NetworkOptionsResponse object is valid.
 func NetworkOptionsResponse(options *types.NetworkOptionsResponse) error {
 	if options == nil {
-		return errors.New("options is nil")
+		return ErrNetworkOptionsResponseIsNil
 	}
 
 	if err := Version(options.Version); err != nil {
@@ -257,7 +256,7 @@ func containsNetworkIdentifier(
 // NetworkListResponse ensures a types.NetworkListResponse object is valid.
 func NetworkListResponse(response *types.NetworkListResponse) error {
 	if response == nil {
-		return errors.New("NetworkListResponse is nil")
+		return ErrNetworkListResponseIsNil
 	}
 
 	seen := make([]*types.NetworkIdentifier, 0)
@@ -267,7 +266,7 @@ func NetworkListResponse(response *types.NetworkListResponse) error {
 		}
 
 		if containsNetworkIdentifier(seen, network) {
-			return errors.New("NetworkListResponse.Networks contains duplicates")
+			return ErrNetworkListResponseNetworksContinsDuplicates
 		}
 
 		seen = append(seen, network)
