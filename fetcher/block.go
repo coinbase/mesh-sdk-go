@@ -55,9 +55,9 @@ func (f *Fetcher) fetchChannelTransactions(
 	block *types.BlockIdentifier,
 	txsToFetch chan *types.TransactionIdentifier,
 	fetchedTxs chan *types.Transaction,
-) error {
+) *Error {
 	for transactionIdentifier := range txsToFetch {
-		tx, _, err := f.rosettaClient.BlockAPI.BlockTransaction(ctx,
+		tx, clientErr, err := f.rosettaClient.BlockAPI.BlockTransaction(ctx,
 			&types.BlockTransactionRequest{
 				NetworkIdentifier:     network,
 				BlockIdentifier:       block,
@@ -66,13 +66,18 @@ func (f *Fetcher) fetchChannelTransactions(
 		)
 
 		if err != nil {
-			return fmt.Errorf("%w: /block/transaction %s", ErrRequestFailed, err.Error())
+			return &Error{
+				Err:       fmt.Errorf("%w: /block/transaction %s", ErrRequestFailed, err.Error()),
+				ClientErr: clientErr,
+			}
 		}
 
 		select {
 		case fetchedTxs <- tx.Transaction:
 		case <-ctx.Done():
-			return ctx.Err()
+			return &Error{
+				Err: ctx.Err(),
+			}
 		}
 	}
 
@@ -90,13 +95,14 @@ func (f *Fetcher) UnsafeTransactions(
 	network *types.NetworkIdentifier,
 	block *types.BlockIdentifier,
 	transactionIdentifiers []*types.TransactionIdentifier,
-) ([]*types.Transaction, error) {
+) ([]*types.Transaction, *Error) {
 	if len(transactionIdentifiers) == 0 {
 		return nil, nil
 	}
 
 	txsToFetch := make(chan *types.TransactionIdentifier)
 	fetchedTxs := make(chan *types.Transaction)
+	fetchErrs := make(chan *Error, 1)
 	g, ctx := errgroup.WithContext(ctx)
 	g.Go(func() error {
 		return addTransactionIdentifiers(ctx, txsToFetch, transactionIdentifiers)
@@ -104,7 +110,15 @@ func (f *Fetcher) UnsafeTransactions(
 
 	for i := uint64(0); i < f.transactionConcurrency; i++ {
 		g.Go(func() error {
-			return f.fetchChannelTransactions(ctx, network, block, txsToFetch, fetchedTxs)
+			err := f.fetchChannelTransactions(ctx, network, block, txsToFetch, fetchedTxs)
+			if err != nil {
+				if len(fetchErrs) == 0 {
+					fetchErrs <- err
+				}
+				return err.Err
+			}
+
+			return nil
 		})
 	}
 
@@ -119,7 +133,11 @@ func (f *Fetcher) UnsafeTransactions(
 	}
 
 	if err := g.Wait(); err != nil {
-		return nil, err
+		if len(fetchErrs) > 0 {
+			return nil, <-fetchErrs
+		}
+
+		return nil, &Error{Err: err}
 	}
 
 	return txs, nil
@@ -152,16 +170,14 @@ func (f *Fetcher) UnsafeBlock(
 		return blockResponse.Block, nil
 	}
 
-	batchFetch, err := f.UnsafeTransactions(
+	batchFetch, fetchErr := f.UnsafeTransactions(
 		ctx,
 		network,
 		blockResponse.Block.BlockIdentifier,
 		blockResponse.OtherTransactions,
 	)
-	if err != nil {
-		return nil, &Error{
-			Err: fmt.Errorf("%w: /block/transaction %s", ErrRequestFailed, err.Error()),
-		}
+	if fetchErr != nil {
+		return nil, fetchErr
 	}
 
 	blockResponse.Block.Transactions = append(blockResponse.Block.Transactions, batchFetch...)
@@ -216,7 +232,7 @@ func (f *Fetcher) BlockRetry(
 		f.maxRetries,
 	)
 
-	for {
+	for ctx.Err() == nil {
 		block, err := f.Block(
 			ctx,
 			network,
@@ -234,14 +250,6 @@ func (f *Fetcher) BlockRetry(
 			return nil, fetcherErr
 		}
 
-		if ctx.Err() != nil {
-			fetcherErr := &Error{
-				Err:       ctx.Err(),
-				ClientErr: err.ClientErr,
-			}
-			return nil, fetcherErr
-		}
-
 		var blockFetchErr string
 		if blockIdentifier.Index != nil {
 			blockFetchErr = fmt.Sprintf("block %d", *blockIdentifier.Index)
@@ -249,16 +257,10 @@ func (f *Fetcher) BlockRetry(
 			blockFetchErr = fmt.Sprintf("block %s", *blockIdentifier.Hash)
 		}
 
-		if !tryAgain(blockFetchErr, backoffRetries, err.Err) {
-			break
+		if err := tryAgain(blockFetchErr, backoffRetries, err); err != nil {
+			return nil, err
 		}
 	}
 
-	return nil, &Error{
-		Err: fmt.Errorf(
-			"%w: unable to fetch block %s",
-			ErrExhaustedRetries,
-			types.PrettyPrintStruct(blockIdentifier),
-		),
-	}
+	return nil, &Error{Err: ctx.Err()}
 }

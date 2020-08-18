@@ -48,6 +48,7 @@ func TestBlockRetry(t *testing.T) {
 		errorsBeforeSuccess int
 		expectedBlock       *types.Block
 		expectedError       error
+		unretriableError    bool
 
 		fetcherMaxRetries uint64
 		shouldCancel      bool
@@ -70,6 +71,14 @@ func TestBlockRetry(t *testing.T) {
 			errorsBeforeSuccess: 2,
 			expectedBlock:       basicFullBlock,
 			fetcherMaxRetries:   5,
+		},
+		"unretriable error": {
+			network:             basicNetwork,
+			block:               basicBlock,
+			errorsBeforeSuccess: 2,
+			unretriableError:    true,
+			fetcherMaxRetries:   5,
+			expectedError:       ErrRequestFailed,
 		},
 		"exhausted retries": {
 			network:             basicNetwork,
@@ -115,7 +124,9 @@ func TestBlockRetry(t *testing.T) {
 				if tries < test.errorsBeforeSuccess {
 					w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 					w.WriteHeader(http.StatusInternalServerError)
-					fmt.Fprintln(w, "{}")
+					fmt.Fprintln(w, types.PrettyPrintStruct(&types.Error{
+						Retriable: !test.unretriableError,
+					}))
 					tries++
 					return
 				}
