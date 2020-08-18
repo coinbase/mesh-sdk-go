@@ -18,9 +18,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/coinbase/rosetta-sdk-go/asserter/errs"
 	"github.com/coinbase/rosetta-sdk-go/types"
-
 	"github.com/stretchr/testify/assert"
 )
 
@@ -38,21 +36,21 @@ func TestNetworkIdentifier(t *testing.T) {
 		},
 		"nil network": {
 			network: nil,
-			err:     errs.ErrNetworkIdentifierIsNil,
+			err:     ErrNetworkIdentifierIsNil,
 		},
 		"invalid blockchain": {
 			network: &types.NetworkIdentifier{
 				Blockchain: "",
 				Network:    "mainnet",
 			},
-			err: errs.ErrNetworkIdentifierBlockchainMissing,
+			err: ErrNetworkIdentifierBlockchainMissing,
 		},
 		"invalid network": {
 			network: &types.NetworkIdentifier{
 				Blockchain: "bitcoin",
 				Network:    "",
 			},
-			err: errs.ErrNetworkIdentifierNetworkMissing,
+			err: ErrNetworkIdentifierNetworkMissing,
 		},
 		"valid sub_network": {
 			network: &types.NetworkIdentifier{
@@ -70,7 +68,7 @@ func TestNetworkIdentifier(t *testing.T) {
 				Network:              "mainnet",
 				SubNetworkIdentifier: &types.SubNetworkIdentifier{},
 			},
-			err: errs.ErrSubNetworkIdentifierInvalid,
+			err: ErrSubNetworkIdentifierInvalid,
 		},
 	}
 
@@ -123,7 +121,7 @@ func TestVersion(t *testing.T) {
 			version: &types.Version{
 				RosettaVersion: validRosettaVersion,
 			},
-			err: errs.ErrVersionNodeVersionMissing,
+			err: ErrVersionNodeVersionMissing,
 		},
 		"invalid MiddlewareVersion": {
 			version: &types.Version{
@@ -131,7 +129,7 @@ func TestVersion(t *testing.T) {
 				NodeVersion:       "1.0",
 				MiddlewareVersion: &invalidMiddlewareVersion,
 			},
-			err: errs.ErrVersionMiddlewareVersionMissing,
+			err: ErrVersionMiddlewareVersionMissing,
 		},
 	}
 
@@ -173,13 +171,13 @@ func TestAllow(t *testing.T) {
 		},
 		"nil Allow": {
 			allow: nil,
-			err:   errs.ErrAllowIsNil,
+			err:   ErrAllowIsNil,
 		},
 		"no OperationStatuses": {
 			allow: &types.Allow{
 				OperationTypes: operationTypes,
 			},
-			err: errs.ErrNoAllowedOperationStatuses,
+			err: ErrNoAllowedOperationStatuses,
 		},
 		"no successful OperationStatuses": {
 			allow: &types.Allow{
@@ -188,7 +186,7 @@ func TestAllow(t *testing.T) {
 				},
 				OperationTypes: operationTypes,
 			},
-			err: errs.ErrNoSuccessfulAllowedOperationStatuses,
+			err: ErrNoSuccessfulAllowedOperationStatuses,
 		},
 		"no OperationTypes": {
 			allow: &types.Allow{
@@ -219,20 +217,20 @@ func TestError(t *testing.T) {
 		},
 		"nil error": {
 			rosettaError: nil,
-			err:          errs.ErrErrorIsNil,
+			err:          ErrErrorIsNil,
 		},
 		"negative code": {
 			rosettaError: &types.Error{
 				Code:    -1,
 				Message: "signature invalid",
 			},
-			err: errs.ErrErrorCodeIsNeg,
+			err: ErrErrorCodeIsNeg,
 		},
 		"empty message": {
 			rosettaError: &types.Error{
 				Code: 0,
 			},
-			err: errs.ErrErrorMessageMissing,
+			err: ErrErrorMessageMissing,
 		},
 	}
 
@@ -248,7 +246,7 @@ func TestErrors(t *testing.T) {
 		rosettaErrors []*types.Error
 		err           error
 	}{
-		"valid errs": {
+		"valid errors": {
 			rosettaErrors: []*types.Error{
 				{
 					Code:    0,
@@ -272,7 +270,7 @@ func TestErrors(t *testing.T) {
 					Message: "error 2",
 				},
 			},
-			err: errs.ErrErrorCodeUsedMultipleTimes,
+			err: ErrErrorCodeUsedMultipleTimes,
 		},
 	}
 
@@ -321,7 +319,7 @@ func TestNetworkListResponse(t *testing.T) {
 		},
 		"nil network list": {
 			networkListResponse: nil,
-			err:                 errs.ErrNetworkListResponseIsNil,
+			err:                 ErrNetworkListResponseIsNil,
 		},
 		"network list duplicate": {
 			networkListResponse: &types.NetworkListResponse{
@@ -330,7 +328,7 @@ func TestNetworkListResponse(t *testing.T) {
 					network1Sub,
 				},
 			},
-			err: errs.ErrNetworkListResponseNetworksContinsDuplicates,
+			err: ErrNetworkListResponseNetworksContinsDuplicates,
 		},
 		"invalid network": {
 			networkListResponse: &types.NetworkListResponse{
@@ -338,7 +336,7 @@ func TestNetworkListResponse(t *testing.T) {
 					network3,
 				},
 			},
-			err: errs.ErrNetworkIdentifierBlockchainMissing,
+			err: ErrNetworkIdentifierBlockchainMissing,
 		},
 	}
 

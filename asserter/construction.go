@@ -17,7 +17,6 @@ package asserter
 import (
 	"fmt"
 
-	"github.com/coinbase/rosetta-sdk-go/asserter/errs"
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
@@ -27,11 +26,11 @@ func ConstructionMetadataResponse(
 	response *types.ConstructionMetadataResponse,
 ) error {
 	if response == nil {
-		return errs.ErrConstructionMetadataResponseIsNil
+		return ErrConstructionMetadataResponseIsNil
 	}
 
 	if response.Metadata == nil {
-		return errs.ErrConstructionMetadataResponseMetadataMissing
+		return ErrConstructionMetadataResponseMetadataMissing
 	}
 
 	if err := assertUniqueAmounts(response.SuggestedFee); err != nil {
@@ -48,7 +47,7 @@ func TransactionIdentifierResponse(
 	response *types.TransactionIdentifierResponse,
 ) error {
 	if response == nil {
-		return errs.ErrTxIdentifierResponseIsNil
+		return ErrTxIdentifierResponseIsNil
 	}
 
 	if err := TransactionIdentifier(response.TransactionIdentifier); err != nil {
@@ -65,11 +64,11 @@ func ConstructionCombineResponse(
 	response *types.ConstructionCombineResponse,
 ) error {
 	if response == nil {
-		return errs.ErrConstructionCombineResponseIsNil
+		return ErrConstructionCombineResponseIsNil
 	}
 
 	if len(response.SignedTransaction) == 0 {
-		return errs.ErrSignedTxEmpty
+		return ErrSignedTxEmpty
 	}
 
 	return nil
@@ -82,11 +81,11 @@ func ConstructionDeriveResponse(
 	response *types.ConstructionDeriveResponse,
 ) error {
 	if response == nil {
-		return errs.ErrConstructionDeriveResponseIsNil
+		return ErrConstructionDeriveResponseIsNil
 	}
 
 	if len(response.Address) == 0 {
-		return errs.ErrConstructionDeriveResponseAddrEmpty
+		return ErrConstructionDeriveResponseAddrEmpty
 	}
 
 	return nil
@@ -105,11 +104,11 @@ func (a *Asserter) ConstructionParseResponse(
 	}
 
 	if response == nil {
-		return errs.ErrConstructionParseResponseIsNil
+		return ErrConstructionParseResponseIsNil
 	}
 
 	if len(response.Operations) == 0 {
-		return errs.ErrConstructionParseResponseOperationsEmpty
+		return ErrConstructionParseResponseOperationsEmpty
 	}
 
 	if err := a.Operations(response.Operations, true); err != nil {
@@ -117,16 +116,16 @@ func (a *Asserter) ConstructionParseResponse(
 	}
 
 	if signed && len(response.Signers) == 0 {
-		return errs.ErrConstructionParseResponseSignersEmptyOnSignedTx
+		return ErrConstructionParseResponseSignersEmptyOnSignedTx
 	}
 
 	if !signed && len(response.Signers) > 0 {
-		return errs.ErrConstructionParseResponseSignersNonEmptyOnUnsignedTx
+		return ErrConstructionParseResponseSignersNonEmptyOnUnsignedTx
 	}
 
 	for i, signer := range response.Signers {
 		if len(signer) == 0 {
-			return fmt.Errorf("%w: at index %d", errs.ErrConstructionParseResponseSignerEmpty, i)
+			return fmt.Errorf("%w: at index %d", ErrConstructionParseResponseSignerEmpty, i)
 		}
 	}
 
@@ -141,15 +140,15 @@ func ConstructionPayloadsResponse(
 	response *types.ConstructionPayloadsResponse,
 ) error {
 	if response == nil {
-		return errs.ErrConstructionPayloadsResponseIsNil
+		return ErrConstructionPayloadsResponseIsNil
 	}
 
 	if len(response.UnsignedTransaction) == 0 {
-		return errs.ErrConstructionPayloadsResponseUnsignedTxEmpty
+		return ErrConstructionPayloadsResponseUnsignedTxEmpty
 	}
 
 	if len(response.Payloads) == 0 {
-		return errs.ErrConstructionPayloadsResponsePayloadsEmpty
+		return ErrConstructionPayloadsResponsePayloadsEmpty
 	}
 
 	for i, payload := range response.Payloads {
@@ -168,11 +167,11 @@ func PublicKey(
 	publicKey *types.PublicKey,
 ) error {
 	if publicKey == nil {
-		return errs.ErrPublicKeyIsNil
+		return ErrPublicKeyIsNil
 	}
 
 	if len(publicKey.Bytes) == 0 {
-		return errs.ErrPublicKeyBytesEmpty
+		return ErrPublicKeyBytesEmpty
 	}
 
 	if err := CurveType(publicKey.CurveType); err != nil {
@@ -191,7 +190,7 @@ func CurveType(
 	case types.Secp256k1, types.Edwards25519:
 		return nil
 	default:
-		return fmt.Errorf("%w: %s", errs.ErrCurveTypeNotSupported, curve)
+		return fmt.Errorf("%w: %s", ErrCurveTypeNotSupported, curve)
 	}
 }
 
@@ -203,15 +202,15 @@ func SigningPayload(
 	signingPayload *types.SigningPayload,
 ) error {
 	if signingPayload == nil {
-		return errs.ErrSigningPayloadIsNil
+		return ErrSigningPayloadIsNil
 	}
 
 	if len(signingPayload.Address) == 0 {
-		return errs.ErrSigningPayloadAddrEmpty
+		return ErrSigningPayloadAddrEmpty
 	}
 
 	if len(signingPayload.Bytes) == 0 {
-		return errs.ErrSigningPayloadBytesEmpty
+		return ErrSigningPayloadBytesEmpty
 	}
 
 	// SignatureType can be optionally populated
@@ -232,7 +231,7 @@ func Signatures(
 	signatures []*types.Signature,
 ) error {
 	if len(signatures) == 0 {
-		return errs.ErrSignaturesEmpty
+		return ErrSignaturesEmpty
 	}
 
 	for i, signature := range signatures {
@@ -252,11 +251,11 @@ func Signatures(
 		// signature type in the returned signature.
 		if len(signature.SigningPayload.SignatureType) > 0 &&
 			signature.SigningPayload.SignatureType != signature.SignatureType {
-			return errs.ErrSignaturesReturnedSigMismatch
+			return ErrSignaturesReturnedSigMismatch
 		}
 
 		if len(signature.Bytes) == 0 {
-			return fmt.Errorf("%w: signature %d has 0 bytes", errs.ErrSignatureBytesEmpty, i)
+			return fmt.Errorf("%w: signature %d has 0 bytes", ErrSignatureBytesEmpty, i)
 		}
 	}
 
@@ -272,6 +271,6 @@ func SignatureType(
 	case types.Ecdsa, types.EcdsaRecovery, types.Ed25519:
 		return nil
 	default:
-		return fmt.Errorf("%w: %s", errs.ErrSignatureTypeNotSupported, signature)
+		return fmt.Errorf("%w: %s", ErrSignatureTypeNotSupported, signature)
 	}
 }

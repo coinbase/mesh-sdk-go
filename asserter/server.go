@@ -17,7 +17,6 @@ package asserter
 import (
 	"fmt"
 
-	"github.com/coinbase/rosetta-sdk-go/asserter/errs"
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
@@ -25,7 +24,7 @@ import (
 // types.NetworkIdentifier or there is a duplicate.
 func SupportedNetworks(supportedNetworks []*types.NetworkIdentifier) error {
 	if len(supportedNetworks) == 0 {
-		return errs.ErrNoSupportedNetworks
+		return ErrNoSupportedNetworks
 	}
 
 	parsed := make([]*types.NetworkIdentifier, len(supportedNetworks))
@@ -35,7 +34,7 @@ func SupportedNetworks(supportedNetworks []*types.NetworkIdentifier) error {
 		}
 
 		if containsNetworkIdentifier(parsed, network) {
-			return fmt.Errorf("%w: %+v", errs.ErrSupportedNetworksDuplicate, network)
+			return fmt.Errorf("%w: %+v", ErrSupportedNetworksDuplicate, network)
 		}
 		parsed[i] = network
 	}
@@ -53,7 +52,7 @@ func (a *Asserter) SupportedNetwork(
 	}
 
 	if !containsNetworkIdentifier(a.supportedNetworks, requestNetwork) {
-		return fmt.Errorf("%w: %+v", errs.ErrRequestedNetworkNotSupported, requestNetwork)
+		return fmt.Errorf("%w: %+v", ErrRequestedNetworkNotSupported, requestNetwork)
 	}
 
 	return nil
@@ -83,7 +82,7 @@ func (a *Asserter) AccountBalanceRequest(request *types.AccountBalanceRequest) e
 	}
 
 	if request == nil {
-		return errs.ErrAccountBalanceRequestIsNil
+		return ErrAccountBalanceRequestIsNil
 	}
 
 	if err := a.ValidSupportedNetwork(request.NetworkIdentifier); err != nil {
@@ -99,7 +98,7 @@ func (a *Asserter) AccountBalanceRequest(request *types.AccountBalanceRequest) e
 	}
 
 	if request.BlockIdentifier != nil && !a.historicalBalanceLookup {
-		return errs.ErrAccountBalanceRequestHistoricalBalanceLookupNotSupported
+		return ErrAccountBalanceRequestHistoricalBalanceLookupNotSupported
 	}
 
 	return PartialBlockIdentifier(request.BlockIdentifier)
@@ -113,7 +112,7 @@ func (a *Asserter) BlockRequest(request *types.BlockRequest) error {
 	}
 
 	if request == nil {
-		return errs.ErrBlockRequestIsNil
+		return ErrBlockRequestIsNil
 	}
 
 	if err := a.ValidSupportedNetwork(request.NetworkIdentifier); err != nil {
@@ -131,7 +130,7 @@ func (a *Asserter) BlockTransactionRequest(request *types.BlockTransactionReques
 	}
 
 	if request == nil {
-		return errs.ErrBlockTransactionRequestIsNil
+		return ErrBlockTransactionRequestIsNil
 	}
 
 	if err := a.ValidSupportedNetwork(request.NetworkIdentifier); err != nil {
@@ -153,7 +152,7 @@ func (a *Asserter) ConstructionMetadataRequest(request *types.ConstructionMetada
 	}
 
 	if request == nil {
-		return errs.ErrConstructionMetadataRequestIsNil
+		return ErrConstructionMetadataRequestIsNil
 	}
 
 	if err := a.ValidSupportedNetwork(request.NetworkIdentifier); err != nil {
@@ -161,7 +160,7 @@ func (a *Asserter) ConstructionMetadataRequest(request *types.ConstructionMetada
 	}
 
 	if request.Options == nil {
-		return errs.ErrConstructionMetadataRequestOptionsIsNil
+		return ErrConstructionMetadataRequestOptionsIsNil
 	}
 
 	return nil
@@ -175,7 +174,7 @@ func (a *Asserter) ConstructionSubmitRequest(request *types.ConstructionSubmitRe
 	}
 
 	if request == nil {
-		return errs.ErrConstructionSubmitRequestIsNil
+		return ErrConstructionSubmitRequestIsNil
 	}
 
 	if err := a.ValidSupportedNetwork(request.NetworkIdentifier); err != nil {
@@ -183,7 +182,7 @@ func (a *Asserter) ConstructionSubmitRequest(request *types.ConstructionSubmitRe
 	}
 
 	if request.SignedTransaction == "" {
-		return errs.ErrConstructionSubmitRequestSignedTxEmpty
+		return ErrConstructionSubmitRequestSignedTxEmpty
 	}
 
 	return nil
@@ -197,7 +196,7 @@ func (a *Asserter) MempoolTransactionRequest(request *types.MempoolTransactionRe
 	}
 
 	if request == nil {
-		return errs.ErrMempoolTransactionRequestIsNil
+		return ErrMempoolTransactionRequestIsNil
 	}
 
 	if err := a.ValidSupportedNetwork(request.NetworkIdentifier); err != nil {
@@ -215,7 +214,7 @@ func (a *Asserter) MetadataRequest(request *types.MetadataRequest) error {
 	}
 
 	if request == nil {
-		return errs.ErrMetadataRequestIsNil
+		return ErrMetadataRequestIsNil
 	}
 
 	return nil
@@ -229,7 +228,7 @@ func (a *Asserter) NetworkRequest(request *types.NetworkRequest) error {
 	}
 
 	if request == nil {
-		return errs.ErrNetworkRequestIsNil
+		return ErrNetworkRequestIsNil
 	}
 
 	if err := a.ValidSupportedNetwork(request.NetworkIdentifier); err != nil {
@@ -247,7 +246,7 @@ func (a *Asserter) ConstructionDeriveRequest(request *types.ConstructionDeriveRe
 	}
 
 	if request == nil {
-		return errs.ErrConstructionDeriveRequestIsNil
+		return ErrConstructionDeriveRequestIsNil
 	}
 
 	if err := a.ValidSupportedNetwork(request.NetworkIdentifier); err != nil {
@@ -271,7 +270,7 @@ func (a *Asserter) ConstructionPreprocessRequest(
 	}
 
 	if request == nil {
-		return errs.ErrConstructionPreprocessRequestIsNil
+		return ErrConstructionPreprocessRequestIsNil
 	}
 
 	if err := a.ValidSupportedNetwork(request.NetworkIdentifier); err != nil {
@@ -289,7 +288,7 @@ func (a *Asserter) ConstructionPreprocessRequest(
 	if request.SuggestedFeeMultiplier != nil && *request.SuggestedFeeMultiplier < 0 {
 		return fmt.Errorf(
 			"%w: %f",
-			errs.ErrConstructionPreprocessRequestSuggestedFeeMultiplierIsNeg,
+			ErrConstructionPreprocessRequestSuggestedFeeMultiplierIsNeg,
 			*request.SuggestedFeeMultiplier,
 		)
 	}
@@ -305,7 +304,7 @@ func (a *Asserter) ConstructionPayloadsRequest(request *types.ConstructionPayloa
 	}
 
 	if request == nil {
-		return errs.ErrConstructionPayloadsRequestIsNil
+		return ErrConstructionPayloadsRequestIsNil
 	}
 
 	if err := a.ValidSupportedNetwork(request.NetworkIdentifier); err != nil {
@@ -327,7 +326,7 @@ func (a *Asserter) ConstructionCombineRequest(request *types.ConstructionCombine
 	}
 
 	if request == nil {
-		return errs.ErrConstructionCombineRequestIsNil
+		return ErrConstructionCombineRequestIsNil
 	}
 
 	if err := a.ValidSupportedNetwork(request.NetworkIdentifier); err != nil {
@@ -335,7 +334,7 @@ func (a *Asserter) ConstructionCombineRequest(request *types.ConstructionCombine
 	}
 
 	if len(request.UnsignedTransaction) == 0 {
-		return errs.ErrConstructionCombineRequestUnsignedTxEmpty
+		return ErrConstructionCombineRequestUnsignedTxEmpty
 	}
 
 	if err := Signatures(request.Signatures); err != nil {
@@ -353,7 +352,7 @@ func (a *Asserter) ConstructionHashRequest(request *types.ConstructionHashReques
 	}
 
 	if request == nil {
-		return errs.ErrConstructionHashRequestIsNil
+		return ErrConstructionHashRequestIsNil
 	}
 
 	if err := a.ValidSupportedNetwork(request.NetworkIdentifier); err != nil {
@@ -361,7 +360,7 @@ func (a *Asserter) ConstructionHashRequest(request *types.ConstructionHashReques
 	}
 
 	if len(request.SignedTransaction) == 0 {
-		return errs.ErrConstructionHashRequestSignedTxEmpty
+		return ErrConstructionHashRequestSignedTxEmpty
 	}
 
 	return nil
@@ -375,7 +374,7 @@ func (a *Asserter) ConstructionParseRequest(request *types.ConstructionParseRequ
 	}
 
 	if request == nil {
-		return errs.ErrConstructionParseRequestIsNil
+		return ErrConstructionParseRequestIsNil
 	}
 
 	if err := a.ValidSupportedNetwork(request.NetworkIdentifier); err != nil {
@@ -383,7 +382,7 @@ func (a *Asserter) ConstructionParseRequest(request *types.ConstructionParseRequ
 	}
 
 	if len(request.Transaction) == 0 {
-		return errs.ErrConstructionParseRequestEmpty
+		return ErrConstructionParseRequestEmpty
 	}
 
 	return nil

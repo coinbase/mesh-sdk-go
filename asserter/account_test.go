@@ -19,8 +19,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/coinbase/rosetta-sdk-go/asserter/errs"
-
 	"github.com/coinbase/rosetta-sdk-go/types"
 
 	"github.com/stretchr/testify/assert"
@@ -227,7 +225,7 @@ func TestAccountBalance(t *testing.T) {
 			},
 			err: fmt.Errorf(
 				"%w: requested block index %d but got %d",
-				errs.ErrReturnedBlockIndexMismatch,
+				ErrReturnedBlockIndexMismatch,
 				invalidIndex,
 				validBlock.Index,
 			),
@@ -243,7 +241,7 @@ func TestAccountBalance(t *testing.T) {
 			},
 			err: fmt.Errorf(
 				"%w: requested block hash %s but got %s",
-				errs.ErrReturnedBlockHashMismatch,
+				ErrReturnedBlockHashMismatch,
 				invalidHash,
 				validBlock.Hash,
 			),

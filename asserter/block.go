@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/coinbase/rosetta-sdk-go/asserter/errs"
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
@@ -36,24 +35,24 @@ const (
 // integer value, specified precision, and symbol.
 func Amount(amount *types.Amount) error {
 	if amount == nil || amount.Value == "" {
-		return errs.ErrAmountValueMissing
+		return ErrAmountValueMissing
 	}
 
 	_, ok := new(big.Int).SetString(amount.Value, 10)
 	if !ok {
-		return fmt.Errorf("%w: %s", errs.ErrAmountIsNotInt, amount.Value)
+		return fmt.Errorf("%w: %s", ErrAmountIsNotInt, amount.Value)
 	}
 
 	if amount.Currency == nil {
-		return errs.ErrAmountCurrencyIsNil
+		return ErrAmountCurrencyIsNil
 	}
 
 	if amount.Currency.Symbol == "" {
-		return errs.ErrAmountCurrencySymbolEmpty
+		return ErrAmountCurrencySymbolEmpty
 	}
 
 	if amount.Currency.Decimals < 0 {
-		return errs.ErrAmountCurrencyHasNegDecimals
+		return ErrAmountCurrencyHasNegDecimals
 	}
 
 	return nil
@@ -67,20 +66,20 @@ func OperationIdentifier(
 	index int64,
 ) error {
 	if identifier == nil {
-		return errs.ErrOperationIdentifierIndexIsNil
+		return ErrOperationIdentifierIndexIsNil
 	}
 
 	if identifier.Index != index {
 		return fmt.Errorf(
 			"%w: expected %d but got %d",
-			errs.ErrOperationIdentifierIndexOutOfOrder,
+			ErrOperationIdentifierIndexOutOfOrder,
 			index,
 			identifier.Index,
 		)
 	}
 
 	if identifier.NetworkIndex != nil && *identifier.NetworkIndex < 0 {
-		return errs.ErrOperationIdentifierNetworkIndexInvalid
+		return ErrOperationIdentifierNetworkIndexInvalid
 	}
 
 	return nil
@@ -90,11 +89,11 @@ func OperationIdentifier(
 // is missing an address or a provided SubAccount is missing an identifier.
 func AccountIdentifier(account *types.AccountIdentifier) error {
 	if account == nil {
-		return errs.ErrAccountIsNil
+		return ErrAccountIsNil
 	}
 
 	if account.Address == "" {
-		return errs.ErrAccountAddrMissing
+		return ErrAccountAddrMissing
 	}
 
 	if account.SubAccount == nil {
@@ -102,7 +101,7 @@ func AccountIdentifier(account *types.AccountIdentifier) error {
 	}
 
 	if account.SubAccount.Address == "" {
-		return errs.ErrAccountSubAccountAddrMissing
+		return ErrAccountSubAccountAddrMissing
 	}
 
 	return nil
@@ -140,11 +139,11 @@ func (a *Asserter) OperationStatus(status string) error {
 	}
 
 	if status == "" {
-		return errs.ErrOperationStatusMissing
+		return ErrOperationStatusMissing
 	}
 
 	if _, ok := a.operationStatusMap[status]; !ok {
-		return fmt.Errorf("%w: %s", errs.ErrOperationStatusInvalid, status)
+		return fmt.Errorf("%w: %s", ErrOperationStatusInvalid, status)
 	}
 
 	return nil
@@ -158,7 +157,7 @@ func (a *Asserter) OperationType(t string) error {
 	}
 
 	if t == "" || !containsString(a.operationTypes, t) {
-		return fmt.Errorf("%w: %s", errs.ErrOperationTypeInvalid, t)
+		return fmt.Errorf("%w: %s", ErrOperationTypeInvalid, t)
 	}
 
 	return nil
@@ -176,7 +175,7 @@ func (a *Asserter) Operation(
 	}
 
 	if operation == nil {
-		return errs.ErrOperationIsNil
+		return ErrOperationIsNil
 	}
 
 	if err := OperationIdentifier(operation.OperationIdentifier, index); err != nil {
@@ -188,7 +187,7 @@ func (a *Asserter) Operation(
 	}
 
 	if construction && len(operation.Status) != 0 {
-		return errs.ErrOperationStatusNotEmptyForConstruction
+		return ErrOperationStatusNotEmptyForConstruction
 	}
 
 	if err := a.OperationStatus(operation.Status); err != nil && !construction {
@@ -222,15 +221,15 @@ func (a *Asserter) Operation(
 // is well-formatted.
 func BlockIdentifier(blockIdentifier *types.BlockIdentifier) error {
 	if blockIdentifier == nil {
-		return errs.ErrBlockIdentifierIsNil
+		return ErrBlockIdentifierIsNil
 	}
 
 	if blockIdentifier.Hash == "" {
-		return errs.ErrBlockIdentifierHashMissing
+		return ErrBlockIdentifierHashMissing
 	}
 
 	if blockIdentifier.Index < 0 {
-		return errs.ErrBlockIdentifierIndexIsNeg
+		return ErrBlockIdentifierIndexIsNeg
 	}
 
 	return nil
@@ -240,7 +239,7 @@ func BlockIdentifier(blockIdentifier *types.BlockIdentifier) error {
 // is well-formatted.
 func PartialBlockIdentifier(blockIdentifier *types.PartialBlockIdentifier) error {
 	if blockIdentifier == nil {
-		return errs.ErrPartialBlockIdentifierIsNil
+		return ErrPartialBlockIdentifierIsNil
 	}
 
 	if blockIdentifier.Hash != nil && *blockIdentifier.Hash != "" {
@@ -251,7 +250,7 @@ func PartialBlockIdentifier(blockIdentifier *types.PartialBlockIdentifier) error
 		return nil
 	}
 
-	return errs.ErrPartialBlockIdentifierFieldsNotSet
+	return ErrPartialBlockIdentifierFieldsNotSet
 }
 
 // TransactionIdentifier returns an error if a
@@ -260,11 +259,11 @@ func TransactionIdentifier(
 	transactionIdentifier *types.TransactionIdentifier,
 ) error {
 	if transactionIdentifier == nil {
-		return errs.ErrTxIdentifierIsNil
+		return ErrTxIdentifierIsNil
 	}
 
 	if transactionIdentifier.Hash == "" {
-		return errs.ErrTxIdentifierHashMissing
+		return ErrTxIdentifierHashMissing
 	}
 
 	return nil
@@ -277,7 +276,7 @@ func (a *Asserter) Operations(
 	construction bool,
 ) error {
 	if len(operations) == 0 && construction {
-		return errs.ErrNoOperationsForConstruction
+		return ErrNoOperationsForConstruction
 	}
 
 	for i, op := range operations {
@@ -294,7 +293,7 @@ func (a *Asserter) Operations(
 			if relatedOp.Index >= op.OperationIdentifier.Index {
 				return fmt.Errorf(
 					"%w: related operation index %d >= operation index %d",
-					errs.ErrRelatedOperationIndexOutOfOrder,
+					ErrRelatedOperationIndexOutOfOrder,
 					relatedOp.Index,
 					op.OperationIdentifier.Index,
 				)
@@ -303,7 +302,7 @@ func (a *Asserter) Operations(
 			if containsInt64(relatedIndexes, relatedOp.Index) {
 				return fmt.Errorf(
 					"%w: related operation index %d found for operation index %d",
-					errs.ErrRelatedOperationIndexDuplicate,
+					ErrRelatedOperationIndexDuplicate,
 					relatedOp.Index,
 					op.OperationIdentifier.Index,
 				)
@@ -326,7 +325,7 @@ func (a *Asserter) Transaction(
 	}
 
 	if transaction == nil {
-		return errs.ErrTxIsNil
+		return ErrTxIsNil
 	}
 
 	if err := TransactionIdentifier(transaction.TransactionIdentifier); err != nil {
@@ -349,9 +348,9 @@ func (a *Asserter) Transaction(
 func Timestamp(timestamp int64) error {
 	switch {
 	case timestamp < MinUnixEpoch:
-		return fmt.Errorf("%w: %d", errs.ErrTimestampBeforeMin, timestamp)
+		return fmt.Errorf("%w: %d", ErrTimestampBeforeMin, timestamp)
 	case timestamp > MaxUnixEpoch:
-		return fmt.Errorf("%w: %d", errs.ErrTimestampAfterMax, timestamp)
+		return fmt.Errorf("%w: %d", ErrTimestampAfterMax, timestamp)
 	default:
 		return nil
 	}
@@ -366,7 +365,7 @@ func (a *Asserter) Block(
 	}
 
 	if block == nil {
-		return errs.ErrBlockIsNil
+		return ErrBlockIsNil
 	}
 
 	if err := BlockIdentifier(block.BlockIdentifier); err != nil {
@@ -381,11 +380,11 @@ func (a *Asserter) Block(
 	// genesis index.
 	if a.genesisBlock.Index != block.BlockIdentifier.Index {
 		if block.BlockIdentifier.Hash == block.ParentBlockIdentifier.Hash {
-			return errs.ErrBlockHashEqualsParentBlockHash
+			return ErrBlockHashEqualsParentBlockHash
 		}
 
 		if block.BlockIdentifier.Index <= block.ParentBlockIdentifier.Index {
-			return errs.ErrBlockIndexPrecedesParentBlockIndex
+			return ErrBlockIndexPrecedesParentBlockIndex
 		}
 
 		if err := Timestamp(block.Timestamp); err != nil {
