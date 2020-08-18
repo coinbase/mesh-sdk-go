@@ -279,7 +279,7 @@ func CurrencyBalance(
 	account *types.AccountIdentifier,
 	currency *types.Currency,
 	block *types.BlockIdentifier,
-) (*types.Amount, *types.BlockIdentifier, []*types.Coin, error) {
+) (*types.Amount, *types.BlockIdentifier, *types.Amount, error) {
 	var lookupBlock *types.PartialBlockIdentifier
 	if block != nil {
 		lookupBlock = types.ConstructPartialBlockIdentifier(block)
@@ -309,7 +309,18 @@ func CurrencyBalance(
 		)
 	}
 
-	return liveAmount, liveBlock, liveCoins, nil
+	// Will return 0 amount if no coins exist
+	liveCoinAmount, err := types.SumCoins(liveCoins)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf(
+			"%w: could not get %s coin balance for %s",
+			err,
+			types.PrettyPrintStruct(currency),
+			types.PrettyPrintStruct(account),
+		)
+	}
+
+	return liveAmount, liveBlock, liveCoinAmount, nil
 }
 
 // AccountBalanceRequest defines the required information
@@ -338,7 +349,7 @@ func GetAccountBalances(
 ) ([]*AccountBalance, error) {
 	var accountBalances []*AccountBalance
 	for _, balanceRequest := range balanceRequests {
-		amount, block, coins, err := CurrencyBalance(
+		amount, block, coinAmount, err := CurrencyBalance(
 			ctx,
 			balanceRequest.Network,
 			fetcher,
@@ -351,12 +362,7 @@ func GetAccountBalances(
 			return nil, err
 		}
 
-		// Will return 0 amount if no coins exist
-		coinAmount, err := types.SumCoins(coins)
-		if err != nil {
-			return nil, err
-		}
-
+		// Sums balanceAmount and coinAmount.
 		totalAmountValue, err := types.AddValues(amount.Value, coinAmount.Value)
 		if err != nil {
 			return nil, err
