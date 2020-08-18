@@ -279,7 +279,7 @@ func CurrencyBalance(
 	account *types.AccountIdentifier,
 	currency *types.Currency,
 	block *types.BlockIdentifier,
-) (*types.Amount, *types.BlockIdentifier, *types.Amount, error) {
+) (*types.Amount, *types.BlockIdentifier, []*types.Coin, error) {
 	var lookupBlock *types.PartialBlockIdentifier
 	if block != nil {
 		lookupBlock = types.ConstructPartialBlockIdentifier(block)
@@ -309,18 +309,7 @@ func CurrencyBalance(
 		)
 	}
 
-	// Will return 0 amount if no coins exist
-	liveCoinAmount, err := types.SumCoins(liveCoins)
-	if err != nil {
-		return nil, nil, nil, fmt.Errorf(
-			"%w: could not get %s coin balance for %s",
-			err,
-			types.PrettyPrintStruct(currency),
-			types.PrettyPrintStruct(account),
-		)
-	}
-
-	return liveAmount, liveBlock, liveCoinAmount, nil
+	return liveAmount, liveBlock, liveCoins, nil
 }
 
 // AccountBalanceRequest defines the required information
@@ -337,6 +326,7 @@ type AccountBalanceRequest struct {
 type AccountBalance struct {
 	Account       *types.AccountIdentifier
 	BalanceAmount *types.Amount
+	CoinAmount    []*types.Coin
 	Block         *types.BlockIdentifier
 }
 
@@ -349,7 +339,7 @@ func GetAccountBalances(
 ) ([]*AccountBalance, error) {
 	var accountBalances []*AccountBalance
 	for _, balanceRequest := range balanceRequests {
-		amount, block, coinAmount, err := CurrencyBalance(
+		amount, block, coins, err := CurrencyBalance(
 			ctx,
 			balanceRequest.Network,
 			fetcher,
@@ -362,22 +352,22 @@ func GetAccountBalances(
 			return nil, err
 		}
 
-		// Sums balanceAmount and coinAmount.
-		totalAmountValue, err := types.AddValues(amount.Value, coinAmount.Value)
-		if err != nil {
-			return nil, err
+		var accountBalance *AccountBalance
+		// Coins exist
+		if len(coins) > 0 {
+			accountBalance = &AccountBalance{
+				Account:    balanceRequest.Account,
+				CoinAmount: coins,
+				Block:      block,
+			}
+		} else {
+			accountBalance = &AccountBalance{
+				Account:       balanceRequest.Account,
+				BalanceAmount: amount,
+				Block:         block,
+			}
 		}
 
-		totalAmount := &types.Amount{
-			Value:    totalAmountValue,
-			Currency: balanceRequest.Currency,
-		}
-
-		accountBalance := &AccountBalance{
-			Account:       balanceRequest.Account,
-			BalanceAmount: totalAmount,
-			Block:         block,
-		}
 		accountBalances = append(accountBalances, accountBalance)
 	}
 
