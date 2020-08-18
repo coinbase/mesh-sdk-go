@@ -326,7 +326,7 @@ type AccountBalanceRequest struct {
 type AccountBalance struct {
 	Account       *types.AccountIdentifier
 	BalanceAmount *types.Amount
-	CoinAmount    []*types.Coin
+	Coins         []*types.Coin
 	Block         *types.BlockIdentifier
 }
 
@@ -356,9 +356,9 @@ func GetAccountBalances(
 		// Coins exist
 		if len(coins) > 0 {
 			accountBalance = &AccountBalance{
-				Account:    balanceRequest.Account,
-				CoinAmount: coins,
-				Block:      block,
+				Account: balanceRequest.Account,
+				Coins:   coins,
+				Block:   block,
 			}
 		} else {
 			accountBalance = &AccountBalance{
