@@ -83,7 +83,7 @@ type Fetcher struct {
 // Error wraps the two possible types of error responses returned
 // by the Rosetta Client
 type Error struct {
-	Err       error        `json:"error"`
+	Err       error        `json:"err"`
 	ClientErr *types.Error `json:"client_err"`
 }
 
