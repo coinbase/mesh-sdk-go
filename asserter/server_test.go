@@ -15,7 +15,6 @@
 package asserter
 
 import (
-	"errors"
 	"fmt"
 	"testing"
 
@@ -224,7 +223,7 @@ func TestSupportedNetworks(t *testing.T) {
 		},
 		"no valid networks": {
 			networks: []*types.NetworkIdentifier{},
-			err:      errors.New("no supported networks"),
+			err:      ErrNoSupportedNetworks,
 		},
 		"invalid network": {
 			networks: []*types.NetworkIdentifier{
@@ -232,14 +231,14 @@ func TestSupportedNetworks(t *testing.T) {
 					Blockchain: "blah",
 				},
 			},
-			err: errors.New("NetworkIdentifier.Network is missing"),
+			err: ErrNetworkIdentifierNetworkMissing,
 		},
 		"duplicate networks": {
 			networks: []*types.NetworkIdentifier{
 				validNetworkIdentifier,
 				validNetworkIdentifier,
 			},
-			err: fmt.Errorf("supported network duplicate %+v", validNetworkIdentifier),
+			err: fmt.Errorf("%w: %+v", ErrSupportedNetworksDuplicate, validNetworkIdentifier),
 		},
 	}
 
@@ -268,23 +267,27 @@ func TestAccountBalanceRequest(t *testing.T) {
 				NetworkIdentifier: wrongNetworkIdentifier,
 				AccountIdentifier: validAccountIdentifier,
 			},
-			err: fmt.Errorf("%+v is not supported", wrongNetworkIdentifier),
+			err: fmt.Errorf(
+				"%w: %+v",
+				ErrRequestedNetworkNotSupported,
+				wrongNetworkIdentifier,
+			),
 		},
 		"nil request": {
 			request: nil,
-			err:     errors.New("AccountBalanceRequest is nil"),
+			err:     ErrAccountBalanceRequestIsNil,
 		},
 		"missing network": {
 			request: &types.AccountBalanceRequest{
 				AccountIdentifier: validAccountIdentifier,
 			},
-			err: errors.New("NetworkIdentifier is nil"),
+			err: ErrNetworkIdentifierIsNil,
 		},
 		"missing account": {
 			request: &types.AccountBalanceRequest{
 				NetworkIdentifier: validNetworkIdentifier,
 			},
-			err: errors.New("Account is nil"),
+			err: ErrAccountIsNil,
 		},
 		"valid historical request": {
 			request: &types.AccountBalanceRequest{
@@ -302,9 +305,7 @@ func TestAccountBalanceRequest(t *testing.T) {
 				BlockIdentifier:   &types.PartialBlockIdentifier{},
 			},
 			allowHistorical: true,
-			err: errors.New(
-				"neither PartialBlockIdentifier.Hash nor PartialBlockIdentifier.Index is set",
-			),
+			err:             ErrPartialBlockIdentifierFieldsNotSet,
 		},
 		"valid historical request when not enabled": {
 			request: &types.AccountBalanceRequest{
@@ -313,7 +314,7 @@ func TestAccountBalanceRequest(t *testing.T) {
 				BlockIdentifier:   validPartialBlockIdentifier,
 			},
 			allowHistorical: false,
-			err:             errors.New("historical balance lookup is not supported"),
+			err:             ErrAccountBalanceRequestHistoricalBalanceLookupNotSupported,
 		},
 	}
 
@@ -359,32 +360,34 @@ func TestBlockRequest(t *testing.T) {
 				NetworkIdentifier: wrongNetworkIdentifier,
 				BlockIdentifier:   validPartialBlockIdentifier,
 			},
-			err: fmt.Errorf("%+v is not supported", wrongNetworkIdentifier),
+			err: fmt.Errorf(
+				"%w: %+v",
+				ErrRequestedNetworkNotSupported,
+				wrongNetworkIdentifier,
+			),
 		},
 		"nil request": {
 			request: nil,
-			err:     errors.New("BlockRequest is nil"),
+			err:     ErrBlockRequestIsNil,
 		},
 		"missing network": {
 			request: &types.BlockRequest{
 				BlockIdentifier: validPartialBlockIdentifier,
 			},
-			err: errors.New("NetworkIdentifier is nil"),
+			err: ErrNetworkIdentifierIsNil,
 		},
 		"missing block identifier": {
 			request: &types.BlockRequest{
 				NetworkIdentifier: validNetworkIdentifier,
 			},
-			err: errors.New("PartialBlockIdentifier is nil"),
+			err: ErrPartialBlockIdentifierIsNil,
 		},
 		"invalid PartialBlockIdentifier request": {
 			request: &types.BlockRequest{
 				NetworkIdentifier: validNetworkIdentifier,
 				BlockIdentifier:   &types.PartialBlockIdentifier{},
 			},
-			err: errors.New(
-				"neither PartialBlockIdentifier.Hash nor PartialBlockIdentifier.Index is set",
-			),
+			err: ErrPartialBlockIdentifierFieldsNotSet,
 		},
 	}
 
@@ -415,32 +418,36 @@ func TestBlockTransactionRequest(t *testing.T) {
 				BlockIdentifier:       validBlockIdentifier,
 				TransactionIdentifier: validTransactionIdentifier,
 			},
-			err: fmt.Errorf("%+v is not supported", wrongNetworkIdentifier),
+			err: fmt.Errorf(
+				"%w: %+v",
+				ErrRequestedNetworkNotSupported,
+				wrongNetworkIdentifier,
+			),
 		},
 		"nil request": {
 			request: nil,
-			err:     errors.New("BlockTransactionRequest is nil"),
+			err:     ErrBlockTransactionRequestIsNil,
 		},
 		"missing network": {
 			request: &types.BlockTransactionRequest{
 				BlockIdentifier:       validBlockIdentifier,
 				TransactionIdentifier: validTransactionIdentifier,
 			},
-			err: errors.New("NetworkIdentifier is nil"),
+			err: ErrNetworkIdentifierIsNil,
 		},
 		"missing block identifier": {
 			request: &types.BlockTransactionRequest{
 				NetworkIdentifier:     validNetworkIdentifier,
 				TransactionIdentifier: validTransactionIdentifier,
 			},
-			err: errors.New("BlockIdentifier is nil"),
+			err: ErrBlockIdentifierIsNil,
 		},
 		"invalid BlockIdentifier request": {
 			request: &types.BlockTransactionRequest{
 				NetworkIdentifier: validNetworkIdentifier,
 				BlockIdentifier:   &types.BlockIdentifier{},
 			},
-			err: errors.New("BlockIdentifier.Hash is missing"),
+			err: ErrBlockIdentifierHashMissing,
 		},
 	}
 
@@ -469,23 +476,27 @@ func TestConstructionMetadataRequest(t *testing.T) {
 				NetworkIdentifier: wrongNetworkIdentifier,
 				Options:           map[string]interface{}{},
 			},
-			err: fmt.Errorf("%+v is not supported", wrongNetworkIdentifier),
+			err: fmt.Errorf(
+				"%w: %+v",
+				ErrRequestedNetworkNotSupported,
+				wrongNetworkIdentifier,
+			),
 		},
 		"nil request": {
 			request: nil,
-			err:     errors.New("ConstructionMetadataRequest is nil"),
+			err:     ErrConstructionMetadataRequestIsNil,
 		},
 		"missing network": {
 			request: &types.ConstructionMetadataRequest{
 				Options: map[string]interface{}{},
 			},
-			err: errors.New("NetworkIdentifier is nil"),
+			err: ErrNetworkIdentifierIsNil,
 		},
 		"missing options": {
 			request: &types.ConstructionMetadataRequest{
 				NetworkIdentifier: validNetworkIdentifier,
 			},
-			err: errors.New("ConstructionMetadataRequest.Options is nil"),
+			err: ErrConstructionMetadataRequestOptionsIsNil,
 		},
 	}
 
@@ -514,15 +525,19 @@ func TestConstructionSubmitRequest(t *testing.T) {
 				NetworkIdentifier: wrongNetworkIdentifier,
 				SignedTransaction: "tx",
 			},
-			err: fmt.Errorf("%+v is not supported", wrongNetworkIdentifier),
+			err: fmt.Errorf(
+				"%w: %+v",
+				ErrRequestedNetworkNotSupported,
+				wrongNetworkIdentifier,
+			),
 		},
 		"nil request": {
 			request: nil,
-			err:     errors.New("ConstructionSubmitRequest is nil"),
+			err:     ErrConstructionSubmitRequestIsNil,
 		},
 		"empty tx": {
 			request: &types.ConstructionSubmitRequest{},
-			err:     errors.New("NetworkIdentifier is nil"),
+			err:     ErrNetworkIdentifierIsNil,
 		},
 	}
 
@@ -551,24 +566,28 @@ func TestMempoolTransactionRequest(t *testing.T) {
 				NetworkIdentifier:     wrongNetworkIdentifier,
 				TransactionIdentifier: validTransactionIdentifier,
 			},
-			err: fmt.Errorf("%+v is not supported", wrongNetworkIdentifier),
+			err: fmt.Errorf(
+				"%w: %+v",
+				ErrRequestedNetworkNotSupported,
+				wrongNetworkIdentifier,
+			),
 		},
 		"nil request": {
 			request: nil,
-			err:     errors.New("MempoolTransactionRequest is nil"),
+			err:     ErrMempoolTransactionRequestIsNil,
 		},
 		"missing network": {
 			request: &types.MempoolTransactionRequest{
 				TransactionIdentifier: validTransactionIdentifier,
 			},
-			err: errors.New("NetworkIdentifier is nil"),
+			err: ErrNetworkIdentifierIsNil,
 		},
 		"invalid TransactionIdentifier request": {
 			request: &types.MempoolTransactionRequest{
 				NetworkIdentifier:     validNetworkIdentifier,
 				TransactionIdentifier: &types.TransactionIdentifier{},
 			},
-			err: errors.New("TransactionIdentifier.Hash is missing"),
+			err: ErrTxIdentifierHashMissing,
 		},
 	}
 
@@ -591,7 +610,7 @@ func TestMetadataRequest(t *testing.T) {
 		},
 		"nil request": {
 			request: nil,
-			err:     errors.New("MetadataRequest is nil"),
+			err:     ErrMetadataRequestIsNil,
 		},
 	}
 
@@ -618,15 +637,19 @@ func TestNetworkRequest(t *testing.T) {
 			request: &types.NetworkRequest{
 				NetworkIdentifier: wrongNetworkIdentifier,
 			},
-			err: fmt.Errorf("%+v is not supported", wrongNetworkIdentifier),
+			err: fmt.Errorf(
+				"%w: %+v",
+				ErrRequestedNetworkNotSupported,
+				wrongNetworkIdentifier,
+			),
 		},
 		"nil request": {
 			request: nil,
-			err:     errors.New("NetworkRequest is nil"),
+			err:     ErrNetworkRequestIsNil,
 		},
 		"missing network": {
 			request: &types.NetworkRequest{},
-			err:     errors.New("NetworkIdentifier is nil"),
+			err:     ErrNetworkIdentifierIsNil,
 		},
 	}
 
@@ -654,17 +677,21 @@ func TestConstructionDeriveRequest(t *testing.T) {
 			request: &types.ConstructionDeriveRequest{
 				NetworkIdentifier: wrongNetworkIdentifier,
 			},
-			err: fmt.Errorf("%+v is not supported", wrongNetworkIdentifier),
+			err: fmt.Errorf(
+				"%w: %+v",
+				ErrRequestedNetworkNotSupported,
+				wrongNetworkIdentifier,
+			),
 		},
 		"nil request": {
 			request: nil,
-			err:     errors.New("ConstructionDeriveRequest is nil"),
+			err:     ErrConstructionDeriveRequestIsNil,
 		},
 		"nil public key": {
 			request: &types.ConstructionDeriveRequest{
 				NetworkIdentifier: validNetworkIdentifier,
 			},
-			err: errors.New("PublicKey cannot be nil"),
+			err: ErrPublicKeyIsNil,
 		},
 		"empty public key bytes": {
 			request: &types.ConstructionDeriveRequest{
@@ -673,7 +700,7 @@ func TestConstructionDeriveRequest(t *testing.T) {
 					CurveType: types.Secp256k1,
 				},
 			},
-			err: errors.New("public key bytes cannot be empty"),
+			err: ErrPublicKeyBytesEmpty,
 		},
 	}
 
@@ -737,38 +764,42 @@ func TestConstructionPreprocessRequest(t *testing.T) {
 			request: &types.ConstructionPreprocessRequest{
 				NetworkIdentifier: wrongNetworkIdentifier,
 			},
-			err: fmt.Errorf("%+v is not supported", wrongNetworkIdentifier),
+			err: fmt.Errorf(
+				"%w: %+v",
+				ErrRequestedNetworkNotSupported,
+				wrongNetworkIdentifier,
+			),
 		},
 		"nil request": {
 			request: nil,
-			err:     errors.New("ConstructionPreprocessRequest is nil"),
+			err:     ErrConstructionPreprocessRequestIsNil,
 		},
 		"nil operations": {
 			request: &types.ConstructionPreprocessRequest{
 				NetworkIdentifier: validNetworkIdentifier,
 			},
-			err: errors.New("operations cannot be empty"),
+			err: ErrNoOperationsForConstruction,
 		},
 		"empty operations": {
 			request: &types.ConstructionPreprocessRequest{
 				NetworkIdentifier: validNetworkIdentifier,
 				Operations:        []*types.Operation{},
 			},
-			err: errors.New("operations cannot be empty"),
+			err: ErrNoOperationsForConstruction,
 		},
 		"unsupported operation type": {
 			request: &types.ConstructionPreprocessRequest{
 				NetworkIdentifier: validNetworkIdentifier,
 				Operations:        unsupportedTypeOps,
 			},
-			err: errors.New("Operation.Type STAKE is invalid"),
+			err: ErrOperationTypeInvalid,
 		},
 		"invalid operations": {
 			request: &types.ConstructionPreprocessRequest{
 				NetworkIdentifier: validNetworkIdentifier,
 				Operations:        invalidOps,
 			},
-			err: errors.New("must be empty for construction"),
+			err: ErrOperationStatusNotEmptyForConstruction,
 		},
 		"negaitve suggested fee multiplier": {
 			request: &types.ConstructionPreprocessRequest{
@@ -777,7 +808,8 @@ func TestConstructionPreprocessRequest(t *testing.T) {
 				SuggestedFeeMultiplier: &negativeFeeMultiplier,
 			},
 			err: fmt.Errorf(
-				"suggested fee multiplier %f cannot be less than 0",
+				"%w: %f",
+				ErrConstructionPreprocessRequestSuggestedFeeMultiplierIsNeg,
 				negativeFeeMultiplier,
 			),
 		},
@@ -824,38 +856,42 @@ func TestConstructionPayloadsRequest(t *testing.T) {
 			request: &types.ConstructionPayloadsRequest{
 				NetworkIdentifier: wrongNetworkIdentifier,
 			},
-			err: fmt.Errorf("%+v is not supported", wrongNetworkIdentifier),
+			err: fmt.Errorf(
+				"%w: %+v",
+				ErrRequestedNetworkNotSupported,
+				wrongNetworkIdentifier,
+			),
 		},
 		"nil request": {
 			request: nil,
-			err:     errors.New("ConstructionPayloadsRequest is nil"),
+			err:     ErrConstructionPayloadsRequestIsNil,
 		},
 		"nil operations": {
 			request: &types.ConstructionPayloadsRequest{
 				NetworkIdentifier: validNetworkIdentifier,
 			},
-			err: errors.New("operations cannot be empty"),
+			err: ErrNoOperationsForConstruction,
 		},
 		"empty operations": {
 			request: &types.ConstructionPayloadsRequest{
 				NetworkIdentifier: validNetworkIdentifier,
 				Operations:        []*types.Operation{},
 			},
-			err: errors.New("operations cannot be empty"),
+			err: ErrNoOperationsForConstruction,
 		},
 		"unsupported operation type": {
 			request: &types.ConstructionPayloadsRequest{
 				NetworkIdentifier: validNetworkIdentifier,
 				Operations:        unsupportedTypeOps,
 			},
-			err: errors.New("Operation.Type STAKE is invalid"),
+			err: ErrOperationTypeInvalid,
 		},
 		"invalid operations": {
 			request: &types.ConstructionPayloadsRequest{
 				NetworkIdentifier: validNetworkIdentifier,
 				Operations:        invalidOps,
 			},
-			err: errors.New("must be empty for construction"),
+			err: ErrOperationStatusNotEmptyForConstruction,
 		},
 	}
 
@@ -889,25 +925,29 @@ func TestConstructionCombineRequest(t *testing.T) {
 			request: &types.ConstructionCombineRequest{
 				NetworkIdentifier: wrongNetworkIdentifier,
 			},
-			err: fmt.Errorf("%+v is not supported", wrongNetworkIdentifier),
+			err: fmt.Errorf(
+				"%w: %+v",
+				ErrRequestedNetworkNotSupported,
+				wrongNetworkIdentifier,
+			),
 		},
 		"nil request": {
 			request: nil,
-			err:     errors.New("ConstructionCombineRequest is nil"),
+			err:     ErrConstructionCombineRequestIsNil,
 		},
 		"empty unsigned transaction": {
 			request: &types.ConstructionCombineRequest{
 				NetworkIdentifier: validNetworkIdentifier,
 				Signatures:        validSignatures,
 			},
-			err: errors.New("UnsignedTransaction cannot be empty"),
+			err: ErrConstructionCombineRequestUnsignedTxEmpty,
 		},
 		"nil signatures": {
 			request: &types.ConstructionCombineRequest{
 				NetworkIdentifier:   validNetworkIdentifier,
 				UnsignedTransaction: "blah",
 			},
-			err: errors.New("signatures cannot be empty"),
+			err: ErrSignaturesEmpty,
 		},
 		"empty signatures": {
 			request: &types.ConstructionCombineRequest{
@@ -915,7 +955,7 @@ func TestConstructionCombineRequest(t *testing.T) {
 				UnsignedTransaction: "blah",
 				Signatures:          []*types.Signature{},
 			},
-			err: errors.New("signatures cannot be empty"),
+			err: ErrSignaturesEmpty,
 		},
 		"signature type mismatch": {
 			request: &types.ConstructionCombineRequest{
@@ -923,7 +963,7 @@ func TestConstructionCombineRequest(t *testing.T) {
 				UnsignedTransaction: "blah",
 				Signatures:          signatureTypeMismatch,
 			},
-			err: errors.New("requested signature type does not match returned signature type"),
+			err: ErrSignaturesReturnedSigMismatch,
 		},
 		"empty signature": {
 			request: &types.ConstructionCombineRequest{
@@ -931,7 +971,7 @@ func TestConstructionCombineRequest(t *testing.T) {
 				UnsignedTransaction: "blah",
 				Signatures:          emptySignature,
 			},
-			err: errors.New("signature 0 bytes cannot be empty"),
+			err: ErrSignatureBytesEmpty,
 		},
 		"signature type match": {
 			request: &types.ConstructionCombineRequest{
@@ -971,17 +1011,21 @@ func TestConstructionHashRequest(t *testing.T) {
 			request: &types.ConstructionHashRequest{
 				NetworkIdentifier: wrongNetworkIdentifier,
 			},
-			err: fmt.Errorf("%+v is not supported", wrongNetworkIdentifier),
+			err: fmt.Errorf(
+				"%w: %+v",
+				ErrRequestedNetworkNotSupported,
+				wrongNetworkIdentifier,
+			),
 		},
 		"nil request": {
 			request: nil,
-			err:     errors.New("ConstructionHashRequest is nil"),
+			err:     ErrConstructionHashRequestIsNil,
 		},
 		"empty signed transaction": {
 			request: &types.ConstructionHashRequest{
 				NetworkIdentifier: validNetworkIdentifier,
 			},
-			err: errors.New("SignedTransaction cannot be empty"),
+			err: ErrConstructionHashRequestSignedTxEmpty,
 		},
 	}
 
@@ -1014,17 +1058,21 @@ func TestConstructionParseRequest(t *testing.T) {
 			request: &types.ConstructionParseRequest{
 				NetworkIdentifier: wrongNetworkIdentifier,
 			},
-			err: fmt.Errorf("%+v is not supported", wrongNetworkIdentifier),
+			err: fmt.Errorf(
+				"%w: %+v",
+				ErrRequestedNetworkNotSupported,
+				wrongNetworkIdentifier,
+			),
 		},
 		"nil request": {
 			request: nil,
-			err:     errors.New("ConstructionParseRequest is nil"),
+			err:     ErrConstructionParseRequestIsNil,
 		},
 		"empty signed transaction": {
 			request: &types.ConstructionParseRequest{
 				NetworkIdentifier: validNetworkIdentifier,
 			},
-			err: errors.New("Transaction cannot be empty"),
+			err: ErrConstructionParseRequestEmpty,
 		},
 	}
 

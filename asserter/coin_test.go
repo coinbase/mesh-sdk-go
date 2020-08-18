@@ -39,7 +39,7 @@ func TestCoin(t *testing.T) {
 		},
 		"nil": {
 			coin: nil,
-			err:  errors.New("cannot be nil"),
+			err:  ErrCoinIsNil,
 		},
 		"invalid identifier": {
 			coin: &types.Coin{
@@ -124,7 +124,7 @@ func TestCoins(t *testing.T) {
 					Amount: validAmount,
 				},
 			},
-			err: errors.New("duplicate coin identifier"),
+			err: ErrCoinDuplicate,
 		},
 	}
 
@@ -156,7 +156,7 @@ func TestCoinChange(t *testing.T) {
 		},
 		"nil": {
 			change: nil,
-			err:    errors.New("cannot be nil"),
+			err:    ErrCoinChangeIsNil,
 		},
 		"invalid identifier": {
 			change: &types.CoinChange{
@@ -165,7 +165,7 @@ func TestCoinChange(t *testing.T) {
 				},
 				CoinAction: types.CoinCreated,
 			},
-			err: errors.New("cannot be empty"),
+			err: ErrCoinIdentifierNotSet,
 		},
 		"invalid coin action": {
 			change: &types.CoinChange{
@@ -174,7 +174,7 @@ func TestCoinChange(t *testing.T) {
 				},
 				CoinAction: "hello",
 			},
-			err: errors.New("not a valid coin action"),
+			err: ErrCoinActionInvalid,
 		},
 	}
 
