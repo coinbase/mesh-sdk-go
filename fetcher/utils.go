@@ -20,6 +20,8 @@ import (
 	"log"
 	"time"
 
+	"github.com/coinbase/rosetta-sdk-go/types"
+
 	"github.com/cenkalti/backoff"
 )
 
@@ -52,7 +54,7 @@ func tryAgain(fetchMsg string, thisBackoff backoff.BackOff, err *Error) *Error {
 		}
 	}
 
-	log.Printf("retrying fetch for %s after %fs\n", fetchMsg, nextBackoff.Seconds())
+	log.Printf("%s: retrying fetch for %s after %fs\n", types.PrintStruct(err.ClientErr), fetchMsg, nextBackoff.Seconds())
 	time.Sleep(nextBackoff)
 
 	return nil
