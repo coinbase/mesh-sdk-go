@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/coinbase/rosetta-sdk-go/asserter/errs"
 	"github.com/coinbase/rosetta-sdk-go/types"
 
 	"github.com/stretchr/testify/assert"
@@ -56,11 +55,11 @@ func TestConstructionMetadataResponse(t *testing.T) {
 			err: fmt.Errorf("currency %+v used multiple times", validAmount.Currency),
 		},
 		"nil response": {
-			err: errs.ErrConstructionMetadataResponseIsNil,
+			err: ErrConstructionMetadataResponseIsNil,
 		},
 		"invalid metadata": {
 			response: &types.ConstructionMetadataResponse{},
-			err:      errs.ErrConstructionMetadataResponseMetadataMissing,
+			err:      ErrConstructionMetadataResponseMetadataMissing,
 		},
 	}
 
@@ -90,11 +89,11 @@ func TestTransactionIdentifierResponse(t *testing.T) {
 			err: nil,
 		},
 		"nil response": {
-			err: errs.ErrTxIdentifierResponseIsNil,
+			err: ErrTxIdentifierResponseIsNil,
 		},
 		"invalid transaction identifier": {
 			response: &types.TransactionIdentifierResponse{},
-			err:      errs.ErrTxIdentifierIsNil,
+			err:      ErrTxIdentifierIsNil,
 		},
 	}
 
@@ -118,11 +117,11 @@ func TestConstructionCombineResponse(t *testing.T) {
 			err: nil,
 		},
 		"nil response": {
-			err: errs.ErrConstructionCombineResponseIsNil,
+			err: ErrConstructionCombineResponseIsNil,
 		},
 		"empty signed transaction": {
 			response: &types.ConstructionCombineResponse{},
-			err:      errs.ErrSignedTxEmpty,
+			err:      ErrSignedTxEmpty,
 		},
 	}
 
@@ -149,7 +148,7 @@ func TestConstructionDeriveResponse(t *testing.T) {
 			err: nil,
 		},
 		"nil response": {
-			err: errs.ErrConstructionDeriveResponseIsNil,
+			err: ErrConstructionDeriveResponseIsNil,
 		},
 		"empty address": {
 			response: &types.ConstructionDeriveResponse{
@@ -157,7 +156,7 @@ func TestConstructionDeriveResponse(t *testing.T) {
 					"name": "hello",
 				},
 			},
-			err: errs.ErrConstructionDeriveResponseAddrEmpty,
+			err: ErrConstructionDeriveResponseAddrEmpty,
 		},
 	}
 
@@ -207,7 +206,7 @@ func TestConstructionParseResponse(t *testing.T) {
 			err:    nil,
 		},
 		"nil response": {
-			err: errs.ErrConstructionParseResponseIsNil,
+			err: ErrConstructionParseResponseIsNil,
 		},
 		"no operations": {
 			response: &types.ConstructionParseResponse{
@@ -216,7 +215,7 @@ func TestConstructionParseResponse(t *testing.T) {
 					"extra": "stuff",
 				},
 			},
-			err: errs.ErrConstructionParseResponseOperationsEmpty,
+			err: ErrConstructionParseResponseOperationsEmpty,
 		},
 		"invalid operation ordering": {
 			response: &types.ConstructionParseResponse{
@@ -235,7 +234,7 @@ func TestConstructionParseResponse(t *testing.T) {
 					"extra": "stuff",
 				},
 			},
-			err: errs.ErrOperationIdentifierIndexOutOfOrder,
+			err: ErrOperationIdentifierIndexOutOfOrder,
 		},
 		"no signers": {
 			response: &types.ConstructionParseResponse{
@@ -265,7 +264,7 @@ func TestConstructionParseResponse(t *testing.T) {
 				},
 			},
 			signed: true,
-			err:    errs.ErrConstructionParseResponseSignersEmptyOnSignedTx,
+			err:    ErrConstructionParseResponseSignersEmptyOnSignedTx,
 		},
 		"empty string signer": {
 			response: &types.ConstructionParseResponse{
@@ -296,7 +295,7 @@ func TestConstructionParseResponse(t *testing.T) {
 				},
 			},
 			signed: true,
-			err:    errs.ErrConstructionParseResponseSignerEmpty,
+			err:    ErrConstructionParseResponseSignerEmpty,
 		},
 		"invalid signer unsigned": {
 			response: &types.ConstructionParseResponse{
@@ -327,7 +326,7 @@ func TestConstructionParseResponse(t *testing.T) {
 				Signers: []string{"account 1"},
 			},
 			signed: false,
-			err:    errs.ErrConstructionParseResponseSignersNonEmptyOnUnsignedTx,
+			err:    ErrConstructionParseResponseSignersNonEmptyOnUnsignedTx,
 		},
 		"valid response unsigned": {
 			response: &types.ConstructionParseResponse{
@@ -438,7 +437,7 @@ func TestConstructionPayloadsResponse(t *testing.T) {
 			err: nil,
 		},
 		"nil response": {
-			err: errs.ErrConstructionPayloadsResponseIsNil,
+			err: ErrConstructionPayloadsResponseIsNil,
 		},
 		"empty unsigned transaction": {
 			response: &types.ConstructionPayloadsResponse{
@@ -449,13 +448,13 @@ func TestConstructionPayloadsResponse(t *testing.T) {
 					},
 				},
 			},
-			err: errs.ErrConstructionPayloadsResponseUnsignedTxEmpty,
+			err: ErrConstructionPayloadsResponseUnsignedTxEmpty,
 		},
 		"empty signing payloads": {
 			response: &types.ConstructionPayloadsResponse{
 				UnsignedTransaction: "tx blob",
 			},
-			err: errs.ErrConstructionPayloadsResponsePayloadsEmpty,
+			err: ErrConstructionPayloadsResponsePayloadsEmpty,
 		},
 		"invalid signing payload": {
 			response: &types.ConstructionPayloadsResponse{
@@ -466,7 +465,7 @@ func TestConstructionPayloadsResponse(t *testing.T) {
 					},
 				},
 			},
-			err: errs.ErrSigningPayloadAddrEmpty,
+			err: ErrSigningPayloadAddrEmpty,
 		},
 	}
 
@@ -495,20 +494,20 @@ func TestPublicKey(t *testing.T) {
 			},
 		},
 		"nil public key": {
-			err: errs.ErrPublicKeyIsNil,
+			err: ErrPublicKeyIsNil,
 		},
 		"invalid bytes": {
 			publicKey: &types.PublicKey{
 				CurveType: types.Secp256k1,
 			},
-			err: errs.ErrPublicKeyBytesEmpty,
+			err: ErrPublicKeyBytesEmpty,
 		},
 		"invalid curve": {
 			publicKey: &types.PublicKey{
 				Bytes:     []byte("hello"),
 				CurveType: "test",
 			},
-			err: errs.ErrCurveTypeNotSupported,
+			err: ErrCurveTypeNotSupported,
 		},
 	}
 
@@ -544,19 +543,19 @@ func TestSigningPayload(t *testing.T) {
 			},
 		},
 		"nil signing payload": {
-			err: errs.ErrSigningPayloadIsNil,
+			err: ErrSigningPayloadIsNil,
 		},
 		"empty address": {
 			signingPayload: &types.SigningPayload{
 				Bytes: []byte("blah"),
 			},
-			err: errs.ErrSigningPayloadAddrEmpty,
+			err: ErrSigningPayloadAddrEmpty,
 		},
 		"empty bytes": {
 			signingPayload: &types.SigningPayload{
 				Address: "hello",
 			},
-			err: errs.ErrSigningPayloadBytesEmpty,
+			err: ErrSigningPayloadBytesEmpty,
 		},
 		"invalid signature": {
 			signingPayload: &types.SigningPayload{
@@ -564,7 +563,7 @@ func TestSigningPayload(t *testing.T) {
 				Bytes:         []byte("blah"),
 				SignatureType: "blah",
 			},
-			err: errs.ErrSignatureTypeNotSupported,
+			err: ErrSignatureTypeNotSupported,
 		},
 	}
 
@@ -623,7 +622,7 @@ func TestSignatures(t *testing.T) {
 			},
 		},
 		"nil signatures": {
-			err: errs.ErrSignaturesEmpty,
+			err: ErrSignaturesEmpty,
 		},
 		"empty signature": {
 			signatures: []*types.Signature{
@@ -646,7 +645,7 @@ func TestSignatures(t *testing.T) {
 					SignatureType: types.Ed25519,
 				},
 			},
-			err: errs.ErrSignatureBytesEmpty,
+			err: ErrSignatureBytesEmpty,
 		},
 		"signature type mismatch": {
 			signatures: []*types.Signature{
@@ -661,7 +660,7 @@ func TestSignatures(t *testing.T) {
 					Bytes:         []byte("hello"),
 				},
 			},
-			err: errs.ErrSignaturesReturnedSigMismatch,
+			err: ErrSignaturesReturnedSigMismatch,
 		},
 	}
 

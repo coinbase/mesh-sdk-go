@@ -730,7 +730,7 @@ func (r *Reconciler) reconcileInactiveAccounts(
 }
 
 // Reconcile starts the active and inactive Reconciler goroutines.
-// If any goroutine errs, the function will return an error.
+// If any goroutine errors, the function will return an error.
 func (r *Reconciler) Reconcile(ctx context.Context) error {
 	g, ctx := errgroup.WithContext(ctx)
 	for j := 0; j < r.activeConcurrency; j++ {

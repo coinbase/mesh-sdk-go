@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/coinbase/rosetta-sdk-go/asserter/errs"
 	"github.com/coinbase/rosetta-sdk-go/types"
 
 	"github.com/stretchr/testify/assert"
@@ -39,21 +38,21 @@ func TestBlockIdentifier(t *testing.T) {
 		},
 		"nil identifier": {
 			identifier: nil,
-			err:        errs.ErrBlockIdentifierIsNil,
+			err:        ErrBlockIdentifierIsNil,
 		},
 		"invalid index": {
 			identifier: &types.BlockIdentifier{
 				Index: int64(-1),
 				Hash:  "block 1",
 			},
-			err: errs.ErrBlockIdentifierIndexIsNeg,
+			err: ErrBlockIdentifierIndexIsNeg,
 		},
 		"invalid hash": {
 			identifier: &types.BlockIdentifier{
 				Index: int64(1),
 				Hash:  "",
 			},
-			err: errs.ErrBlockIdentifierHashMissing,
+			err: ErrBlockIdentifierHashMissing,
 		},
 	}
 
@@ -101,13 +100,13 @@ func TestAmount(t *testing.T) {
 		},
 		"nil amount": {
 			amount: nil,
-			err:    errs.ErrAmountValueMissing,
+			err:    ErrAmountValueMissing,
 		},
 		"nil currency": {
 			amount: &types.Amount{
 				Value: "100000",
 			},
-			err: errs.ErrAmountCurrencyIsNil,
+			err: ErrAmountCurrencyIsNil,
 		},
 		"invalid non-number": {
 			amount: &types.Amount{
@@ -117,7 +116,7 @@ func TestAmount(t *testing.T) {
 					Decimals: 1,
 				},
 			},
-			err: errs.ErrAmountIsNotInt,
+			err: ErrAmountIsNotInt,
 		},
 		"invalid integer format": {
 			amount: &types.Amount{
@@ -127,7 +126,7 @@ func TestAmount(t *testing.T) {
 					Decimals: 1,
 				},
 			},
-			err: errs.ErrAmountIsNotInt,
+			err: ErrAmountIsNotInt,
 		},
 		"invalid non-integer": {
 			amount: &types.Amount{
@@ -137,7 +136,7 @@ func TestAmount(t *testing.T) {
 					Decimals: 1,
 				},
 			},
-			err: errs.ErrAmountIsNotInt,
+			err: ErrAmountIsNotInt,
 		},
 		"invalid symbol": {
 			amount: &types.Amount{
@@ -146,7 +145,7 @@ func TestAmount(t *testing.T) {
 					Decimals: 1,
 				},
 			},
-			err: errs.ErrAmountCurrencySymbolEmpty,
+			err: ErrAmountCurrencySymbolEmpty,
 		},
 		"invalid decimals": {
 			amount: &types.Amount{
@@ -156,7 +155,7 @@ func TestAmount(t *testing.T) {
 					Decimals: -1,
 				},
 			},
-			err: errs.ErrAmountCurrencyHasNegDecimals,
+			err: ErrAmountCurrencyHasNegDecimals,
 		},
 	}
 
@@ -189,14 +188,14 @@ func TestOperationIdentifier(t *testing.T) {
 		"nil identifier": {
 			identifier: nil,
 			index:      0,
-			err:        errs.ErrOperationIdentifierIndexIsNil,
+			err:        ErrOperationIdentifierIndexIsNil,
 		},
 		"out-of-order index": {
 			identifier: &types.OperationIdentifier{
 				Index: 0,
 			},
 			index: 1,
-			err:   errs.ErrOperationIdentifierIndexOutOfOrder,
+			err:   ErrOperationIdentifierIndexOutOfOrder,
 		},
 		"valid identifier with network index": {
 			identifier: &types.OperationIdentifier{
@@ -212,7 +211,7 @@ func TestOperationIdentifier(t *testing.T) {
 				NetworkIndex: &invalidNetworkIndex,
 			},
 			index: 0,
-			err:   errs.ErrOperationIdentifierNetworkIndexInvalid,
+			err:   ErrOperationIdentifierNetworkIndexInvalid,
 		},
 	}
 
@@ -239,7 +238,7 @@ func TestAccountIdentifier(t *testing.T) {
 			identifier: &types.AccountIdentifier{
 				Address: "",
 			},
-			err: errs.ErrAccountAddrMissing,
+			err: ErrAccountAddrMissing,
 		},
 		"valid identifier with subaccount": {
 			identifier: &types.AccountIdentifier{
@@ -257,7 +256,7 @@ func TestAccountIdentifier(t *testing.T) {
 					Address: "",
 				},
 			},
-			err: errs.ErrAccountSubAccountAddrMissing,
+			err: ErrAccountSubAccountAddrMissing,
 		},
 	}
 
@@ -320,7 +319,7 @@ func TestOperation(t *testing.T) {
 		"nil operation": {
 			operation: nil,
 			index:     int64(1),
-			err:       errs.ErrOperationIsNil,
+			err:       ErrOperationIsNil,
 		},
 		"invalid operation no account": {
 			operation: &types.Operation{
@@ -332,7 +331,7 @@ func TestOperation(t *testing.T) {
 				Amount: validAmount,
 			},
 			index: int64(1),
-			err:   errs.ErrAccountIsNil,
+			err:   ErrAccountIsNil,
 		},
 		"invalid operation empty account": {
 			operation: &types.Operation{
@@ -345,7 +344,7 @@ func TestOperation(t *testing.T) {
 				Amount:  validAmount,
 			},
 			index: int64(1),
-			err:   errs.ErrAccountAddrMissing,
+			err:   ErrAccountAddrMissing,
 		},
 		"invalid operation invalid index": {
 			operation: &types.Operation{
@@ -356,7 +355,7 @@ func TestOperation(t *testing.T) {
 				Status: "SUCCESS",
 			},
 			index: int64(2),
-			err:   errs.ErrOperationIdentifierIndexOutOfOrder,
+			err:   ErrOperationIdentifierIndexOutOfOrder,
 		},
 		"invalid operation invalid type": {
 			operation: &types.Operation{
@@ -367,7 +366,7 @@ func TestOperation(t *testing.T) {
 				Status: "SUCCESS",
 			},
 			index: int64(1),
-			err:   errs.ErrOperationTypeInvalid,
+			err:   ErrOperationTypeInvalid,
 		},
 		"unsuccessful operation": {
 			operation: &types.Operation{
@@ -390,7 +389,7 @@ func TestOperation(t *testing.T) {
 				Status: "DEFERRED",
 			},
 			index: int64(1),
-			err:   errs.ErrOperationStatusInvalid,
+			err:   ErrOperationStatusInvalid,
 		},
 		"valid construction operation": {
 			operation: &types.Operation{
@@ -419,7 +418,7 @@ func TestOperation(t *testing.T) {
 			index:        int64(1),
 			successful:   false,
 			construction: true,
-			err:          errs.ErrOperationStatusNotEmptyForConstruction,
+			err:          ErrOperationStatusNotEmptyForConstruction,
 		},
 	}
 
@@ -685,7 +684,7 @@ func TestBlock(t *testing.T) {
 				Timestamp:             MinUnixEpoch + 1,
 				Transactions:          []*types.Transaction{outOfOrderTransaction},
 			},
-			err: errs.ErrOperationIdentifierIndexOutOfOrder,
+			err: ErrOperationIdentifierIndexOutOfOrder,
 		},
 		"related to self transaction operations": {
 			block: &types.Block{
@@ -694,7 +693,7 @@ func TestBlock(t *testing.T) {
 				Timestamp:             MinUnixEpoch + 1,
 				Transactions:          []*types.Transaction{relatedToSelfTransaction},
 			},
-			err: errs.ErrRelatedOperationIndexOutOfOrder,
+			err: ErrRelatedOperationIndexOutOfOrder,
 		},
 		"related to later transaction operations": {
 			block: &types.Block{
@@ -703,7 +702,7 @@ func TestBlock(t *testing.T) {
 				Timestamp:             MinUnixEpoch + 1,
 				Transactions:          []*types.Transaction{relatedToLaterTransaction},
 			},
-			err: errs.ErrRelatedOperationIndexOutOfOrder,
+			err: ErrRelatedOperationIndexOutOfOrder,
 		},
 		"duplicate related transaction operations": {
 			block: &types.Block{
@@ -712,11 +711,11 @@ func TestBlock(t *testing.T) {
 				Timestamp:             MinUnixEpoch + 1,
 				Transactions:          []*types.Transaction{relatedDuplicateTransaction},
 			},
-			err: errs.ErrRelatedOperationIndexDuplicate,
+			err: ErrRelatedOperationIndexDuplicate,
 		},
 		"nil block": {
 			block: nil,
-			err:   errs.ErrBlockIsNil,
+			err:   ErrBlockIsNil,
 		},
 		"nil block hash": {
 			block: &types.Block{
@@ -725,7 +724,7 @@ func TestBlock(t *testing.T) {
 				Timestamp:             MinUnixEpoch + 1,
 				Transactions:          []*types.Transaction{validTransaction},
 			},
-			err: errs.ErrBlockIdentifierIsNil,
+			err: ErrBlockIdentifierIsNil,
 		},
 		"invalid block hash": {
 			block: &types.Block{
@@ -734,7 +733,7 @@ func TestBlock(t *testing.T) {
 				Timestamp:             MinUnixEpoch + 1,
 				Transactions:          []*types.Transaction{validTransaction},
 			},
-			err: errs.ErrBlockIdentifierHashMissing,
+			err: ErrBlockIdentifierHashMissing,
 		},
 		"block previous hash missing": {
 			block: &types.Block{
@@ -743,7 +742,7 @@ func TestBlock(t *testing.T) {
 				Timestamp:             MinUnixEpoch + 1,
 				Transactions:          []*types.Transaction{validTransaction},
 			},
-			err: errs.ErrBlockIdentifierHashMissing,
+			err: ErrBlockIdentifierHashMissing,
 		},
 		"invalid parent block index": {
 			block: &types.Block{
@@ -755,7 +754,7 @@ func TestBlock(t *testing.T) {
 				Timestamp:    MinUnixEpoch + 1,
 				Transactions: []*types.Transaction{validTransaction},
 			},
-			err: errs.ErrBlockIndexPrecedesParentBlockIndex,
+			err: ErrBlockIndexPrecedesParentBlockIndex,
 		},
 		"invalid parent block hash": {
 			block: &types.Block{
@@ -767,7 +766,7 @@ func TestBlock(t *testing.T) {
 				Timestamp:    MinUnixEpoch + 1,
 				Transactions: []*types.Transaction{validTransaction},
 			},
-			err: errs.ErrBlockHashEqualsParentBlockHash,
+			err: ErrBlockHashEqualsParentBlockHash,
 		},
 		"invalid block timestamp less than MinUnixEpoch": {
 			block: &types.Block{
@@ -775,7 +774,7 @@ func TestBlock(t *testing.T) {
 				ParentBlockIdentifier: validParentBlockIdentifier,
 				Transactions:          []*types.Transaction{validTransaction},
 			},
-			err: errs.ErrTimestampBeforeMin,
+			err: ErrTimestampBeforeMin,
 		},
 		"invalid block timestamp greater than MaxUnixEpoch": {
 			block: &types.Block{
@@ -784,7 +783,7 @@ func TestBlock(t *testing.T) {
 				Transactions:          []*types.Transaction{validTransaction},
 				Timestamp:             MaxUnixEpoch + 1,
 			},
-			err: errs.ErrTimestampAfterMax,
+			err: ErrTimestampAfterMax,
 		},
 		"invalid block transaction": {
 			block: &types.Block{
@@ -795,7 +794,7 @@ func TestBlock(t *testing.T) {
 					{},
 				},
 			},
-			err: errs.ErrTxIdentifierIsNil,
+			err: ErrTxIdentifierIsNil,
 		},
 	}
 
