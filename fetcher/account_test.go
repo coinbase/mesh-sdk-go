@@ -103,7 +103,7 @@ func TestAccountBalanceRetry(t *testing.T) {
 			network:             basicNetwork,
 			account:             basicAccount,
 			errorsBeforeSuccess: 6,
-			expectedError:       ErrRequestFailed,
+			expectedError:       context.Canceled,
 			fetcherMaxRetries:   5,
 			shouldCancel:        true,
 		},
