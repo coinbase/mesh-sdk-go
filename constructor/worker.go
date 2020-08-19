@@ -44,6 +44,38 @@ func unmarshalInput(input []byte, output interface{}) error {
 	return nil
 }
 
+func (w *Worker) invokeWorker(ctx context.Context, action ActionType, processedInput string) (string, error) {
+	var output interface{}
+	var err error
+	switch action {
+	case SetVariable:
+		return processedInput, nil
+	case GenerateKey:
+		var unmarshaledInput GenerateKeyInput
+		err = unmarshalInput([]byte(processedInput), &unmarshaledInput)
+		if err != nil {
+			return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
+		}
+
+		output, err = GenerateKeyWorker(&unmarshaledInput)
+	case Derive:
+		var unmarshaledInput types.ConstructionDeriveRequest
+		err = unmarshalInput([]byte(processedInput), &unmarshaledInput)
+		if err != nil {
+			return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
+		}
+
+		output, err = w.DeriveWorker(ctx, &unmarshaledInput)
+	default:
+		return "", fmt.Errorf("%w: %s", ErrInvalidActionType, action)
+	}
+	if err != nil {
+		return "", fmt.Errorf("%w: %s %s", ErrActionFailed, action, err.Error())
+	}
+
+	return types.PrintStruct(output), nil
+}
+
 func (w *Worker) actions(ctx context.Context, state string, actions []*Action) (string, error) {
 	for _, action := range actions {
 		processedInput, err := PopulateInput(state, action.Input)
@@ -51,35 +83,9 @@ func (w *Worker) actions(ctx context.Context, state string, actions []*Action) (
 			return "", fmt.Errorf("%w: unable to populate variables", err)
 		}
 
-		var output string
-		switch action.Type {
-		case SetVariable:
-			output = processedInput
-		case GenerateKey:
-			var unmarshaledInput GenerateKeyInput
-			err = unmarshalInput([]byte(processedInput), &unmarshaledInput)
-			if err != nil {
-				return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
-			}
-
-			var keyPair *keys.KeyPair
-			keyPair, err = GenerateKeyWorker(&unmarshaledInput)
-			output = types.PrintStruct(keyPair)
-		case Derive:
-			var unmarshaledInput types.ConstructionDeriveRequest
-			err = unmarshalInput([]byte(processedInput), &unmarshaledInput)
-			if err != nil {
-				return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
-			}
-
-			var deriveResponse *types.ConstructionDeriveResponse
-			deriveResponse, err = w.DeriveWorker(ctx, &unmarshaledInput)
-			output = types.PrintStruct(deriveResponse)
-		default:
-			return "", fmt.Errorf("%w: %s", ErrInvalidActionType, action.Type)
-		}
+		output, err := w.invokeWorker(ctx, action.Type, processedInput)
 		if err != nil {
-			return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
+			return "", fmt.Errorf("%w: unable to process action", err)
 		}
 
 		// Update state at the specified output path.
