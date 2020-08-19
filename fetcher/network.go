@@ -68,7 +68,7 @@ func (f *Fetcher) NetworkStatusRetry(
 		f.maxRetries,
 	)
 
-	for {
+	for ctx.Err() == nil {
 		networkStatus, err := f.NetworkStatus(
 			ctx,
 			network,
@@ -86,29 +86,18 @@ func (f *Fetcher) NetworkStatusRetry(
 			return nil, fetcherErr
 		}
 
-		if ctx.Err() != nil {
-			fetcherErr := &Error{
-				Err:       ctx.Err(),
-				ClientErr: err.ClientErr,
-			}
-			return nil, fetcherErr
-		}
-
-		if !tryAgain(
-			fmt.Sprintf("network status %s", types.PrettyPrintStruct(network)),
+		if err := tryAgain(
+			fmt.Sprintf("network status %s", types.PrintStruct(network)),
 			backoffRetries,
-			err.Err,
-		) {
-			break
+			err,
+		); err != nil {
+			return nil, err
 		}
 	}
 
 	return nil, &Error{
-		Err: fmt.Errorf(
-			"%w: unable to fetch network status %s",
-			ErrExhaustedRetries,
-			types.PrettyPrintStruct(network),
-		)}
+		Err: ctx.Err(),
+	}
 }
 
 // NetworkList returns the validated response
@@ -153,7 +142,7 @@ func (f *Fetcher) NetworkListRetry(
 		f.maxRetries,
 	)
 
-	for {
+	for ctx.Err() == nil {
 		networkList, err := f.NetworkList(
 			ctx,
 			metadata,
@@ -170,24 +159,14 @@ func (f *Fetcher) NetworkListRetry(
 			return nil, fetcherErr
 		}
 
-		if ctx.Err() != nil {
-			fetcherErr := &Error{
-				Err:       ctx.Err(),
-				ClientErr: err.ClientErr,
-			}
-			return nil, fetcherErr
-		}
-
-		if !tryAgain("NetworkList", backoffRetries, err.Err) {
-			break
+		if err := tryAgain("NetworkList", backoffRetries, err); err != nil {
+			return nil, err
 		}
 	}
 
 	return nil, &Error{
-		Err: fmt.Errorf(
-			"%w: unable to fetch network list",
-			ErrExhaustedRetries,
-		)}
+		Err: ctx.Err(),
+	}
 }
 
 // NetworkOptions returns the validated response
@@ -235,7 +214,7 @@ func (f *Fetcher) NetworkOptionsRetry(
 		f.maxRetries,
 	)
 
-	for {
+	for ctx.Err() == nil {
 		networkOptions, err := f.NetworkOptions(
 			ctx,
 			network,
@@ -253,27 +232,16 @@ func (f *Fetcher) NetworkOptionsRetry(
 			return nil, fetcherErr
 		}
 
-		if ctx.Err() != nil {
-			fetcherErr := &Error{
-				Err:       ctx.Err(),
-				ClientErr: err.ClientErr,
-			}
-			return nil, fetcherErr
-		}
-
-		if !tryAgain(
-			fmt.Sprintf("network options %s", types.PrettyPrintStruct(network)),
+		if err := tryAgain(
+			fmt.Sprintf("network options %s", types.PrintStruct(network)),
 			backoffRetries,
-			err.Err,
-		) {
-			break
+			err,
+		); err != nil {
+			return nil, err
 		}
 	}
 
 	return nil, &Error{
-		Err: fmt.Errorf(
-			"%w: unable to fetch network options %s",
-			ErrExhaustedRetries,
-			types.PrettyPrintStruct(network)),
+		Err: ctx.Err(),
 	}
 }
