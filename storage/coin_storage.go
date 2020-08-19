@@ -97,6 +97,94 @@ func getAndDecodeCoin(
 
 type wallets map[string]map[string]struct{}
 
+// AccountCoin contains an AccountIdentifier and a Coin that it owns
+type AccountCoin struct {
+	Account *types.AccountIdentifier
+	Coin    *types.Coin
+}
+
+// AddCoins takes an array of AccountCoins and saves them to the database.
+// It returns an error if the transaction fails.
+func (c *CoinStorage) AddCoins(
+	ctx context.Context,
+	accountCoins []*AccountCoin,
+) error {
+	dbTransaction := c.db.NewDatabaseTransaction(ctx, true)
+	defer dbTransaction.Discard(ctx)
+
+	cache := wallets{}
+	for _, accountCoin := range accountCoins {
+		exists, _, err := getAndDecodeCoin(ctx, dbTransaction, accountCoin.Coin.CoinIdentifier)
+		if err != nil {
+			return fmt.Errorf("%w: unable to get coin", err)
+		}
+
+		if exists {
+			continue
+		}
+
+		err = addCoin(ctx, accountCoin.Account, accountCoin.Coin, dbTransaction, cache)
+		if err != nil {
+			return fmt.Errorf("%w: unable to add coin", err)
+		}
+	}
+
+	if err := writeCache(ctx, dbTransaction, cache); err != nil {
+		return fmt.Errorf("%w: unable to update wallets", err)
+	}
+
+	if err := dbTransaction.Commit(ctx); err != nil {
+		return fmt.Errorf("%w: unable to commit last reconciliation update", err)
+	}
+
+	return nil
+}
+
+func addCoin(
+	ctx context.Context,
+	account *types.AccountIdentifier,
+	coin *types.Coin,
+	transaction DatabaseTransaction,
+	cache wallets,
+) error {
+	encodedResult, err := encode(coin)
+	if err != nil {
+		return fmt.Errorf("%w: unable to encode coin data", err)
+	}
+
+	if err := transaction.Set(ctx, getCoinKey(coin.CoinIdentifier), encodedResult); err != nil {
+		return fmt.Errorf("%w: unable to store coin", err)
+	}
+
+	addressKey := string(getCoinAccountKey(account))
+	coins, ok := cache[addressKey]
+	if !ok {
+		accountExists, accountCoins, err := getAndDecodeCoins(ctx, transaction, account)
+		if err != nil {
+			return fmt.Errorf("%w: unable to query coin account", err)
+		}
+
+		if !accountExists {
+			accountCoins = map[string]struct{}{}
+		}
+
+		coins = accountCoins
+	}
+	coinIdentifier := coin.CoinIdentifier.Identifier
+	if _, exists := coins[coinIdentifier]; exists {
+		return fmt.Errorf(
+			"coin %s already exists in account %s",
+			coinIdentifier,
+			types.PrintStruct(account),
+		)
+	}
+
+	coins[coinIdentifier] = struct{}{}
+	cache[addressKey] = coins
+
+	return nil
+}
+
 func (c *CoinStorage) tryAddingCoin(
 	ctx context.Context,
 	transaction DatabaseTransaction,
@@ -119,42 +207,7 @@ func (c *CoinStorage) tryAddingCoin(
 		Amount:         operation.Amount,
 	}
 
-	encodedResult, err := encode(newCoin)
-	if err != nil {
-		return fmt.Errorf("%w: unable to encode coin data", err)
-	}
-
-	if err := transaction.Set(ctx, getCoinKey(coinIdentifier), encodedResult); err != nil {
-		return fmt.Errorf("%w: unable to store coin", err)
-	}
-
-	addressKey := string(getCoinAccountKey(operation.Account))
-	coins, ok := cache[addressKey]
-	if !ok {
-		accountExists, accountCoins, err := getAndDecodeCoins(ctx, transaction, operation.Account)
-		if err != nil {
-			return fmt.Errorf("%w: unable to query coin account", err)
-		}
-
-		if !accountExists {
-			accountCoins = map[string]struct{}{}
-		}
-
-		coins = accountCoins
-	}
-
-	if _, exists := coins[coinIdentifier.Identifier]; exists {
-		return fmt.Errorf(
-			"coin %s already exists in account %s",
-			coinIdentifier,
-			types.PrettyPrintStruct(operation.Account),
-		)
-	}
-
-	coins[coinIdentifier.Identifier] = struct{}{}
-	cache[addressKey] = coins
-
-	return nil
+	return addCoin(ctx, operation.Account, newCoin, transaction, cache)
 }
 
 func encodeAndSetCoins(

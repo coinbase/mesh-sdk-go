@@ -16,6 +16,7 @@ package asserter
 
 import "errors"
 
+// Named error types for Asserter errors
 var (
 	//////////////////////////////////
 	/* ACCOUNT BALANCE QUERY ERRORS */
@@ -360,7 +361,7 @@ var (
 	}
 )
 
-// IsAssertError takes an error as an argument and returns
+// ErrAsserter takes an error as an argument and returns
 // whether or not the error is one thrown by the asserter
 // along with the specific source of the error
 func ErrAsserter(err error) (bool, string) {
