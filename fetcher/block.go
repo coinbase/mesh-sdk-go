@@ -250,13 +250,7 @@ func (f *Fetcher) BlockRetry(
 			return nil, fetcherErr
 		}
 
-		var blockFetchErr string
-		if blockIdentifier.Index != nil {
-			blockFetchErr = fmt.Sprintf("block %d", *blockIdentifier.Index)
-		} else {
-			blockFetchErr = fmt.Sprintf("block %s", *blockIdentifier.Hash)
-		}
-
+		blockFetchErr := fmt.Sprintf("block %s", types.PrintStruct(blockIdentifier))
 		if err := tryAgain(blockFetchErr, backoffRetries, err); err != nil {
 			return nil, err
 		}
