@@ -71,6 +71,30 @@ var (
 		},
 	}
 
+	coins1 = &types.Coin{
+		CoinIdentifier: &types.CoinIdentifier{Identifier: "bulkCoin1"},
+		Amount: &types.Amount{
+			Value:    "10",
+			Currency: currency,
+		},
+	}
+
+	coins2 = &types.Coin{
+		CoinIdentifier: &types.CoinIdentifier{Identifier: "bulkCoin2"},
+		Amount: &types.Amount{
+			Value:    "20",
+			Currency: currency,
+		},
+	}
+
+	coins3 = &types.Coin{
+		CoinIdentifier: &types.CoinIdentifier{Identifier: "bulkCoin3"},
+		Amount: &types.Amount{
+			Value:    "30",
+			Currency: currency,
+		},
+	}
+
 	successStatus = "success"
 	failureStatus = "failure"
 
@@ -372,6 +396,45 @@ func TestCoinStorage(t *testing.T) {
 		assert.Equal(t, big.NewInt(6), bal)
 		assert.Equal(t, &types.CoinIdentifier{Identifier: "coin4"}, coinIdentifier)
 		assert.Equal(t, blockIdentifier, block)
+	})
+
+	t.Run("AddCoins", func(t *testing.T) {
+		accountCoins := []*AccountCoin{
+			&AccountCoin{
+				Account: account,
+				Coin:    coins1,
+			},
+			&AccountCoin{
+				Account: account2,
+				Coin:    coins2,
+			},
+			&AccountCoin{
+				Account: account3,
+				Coin:    coins3,
+			},
+		}
+
+		account1coins, _, _ := c.GetCoins(ctx, account)
+		account2coins, _, _ := c.GetCoins(ctx, account2)
+		account3coins, _, _ := c.GetCoins(ctx, account3)
+
+		err := c.AddCoins(ctx, accountCoins)
+		assert.NoError(t, err)
+
+		coinsGot, _, err := c.GetCoins(ctx, account)
+		account1coins = append(account1coins, coins1)
+		assert.NoError(t, err)
+		assert.ElementsMatch(t, coinsGot, account1coins)
+
+		coinsGot, _, err = c.GetCoins(ctx, account2)
+		account2coins = append(account2coins, coins2)
+		assert.NoError(t, err)
+		assert.ElementsMatch(t, coinsGot, account2coins)
+
+		coinsGot, _, err = c.GetCoins(ctx, account3)
+		account3coins = append(account3coins, coins3)
+		assert.NoError(t, err)
+		assert.ElementsMatch(t, coinsGot, account3coins)
 	})
 }
 
