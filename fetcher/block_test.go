@@ -160,7 +160,9 @@ func TestBlockRetry(t *testing.T) {
 				if r.URL.RequestURI() == "/block" {
 					expected := &types.BlockRequest{
 						NetworkIdentifier: test.network,
-						BlockIdentifier:   types.ConstructPartialBlockIdentifier(test.blockIdentifier),
+						BlockIdentifier: types.ConstructPartialBlockIdentifier(
+							test.blockIdentifier,
+						),
 					}
 					var blockRequest *types.BlockRequest
 					assert.NoError(json.NewDecoder(r.Body).Decode(&blockRequest))
