@@ -47,6 +47,7 @@ func unmarshalInput(input []byte, output interface{}) error {
 func (w *Worker) invokeWorker(ctx context.Context, action ActionType, processedInput string) (string, error) {
 	var output interface{}
 	var err error
+	shouldSerialize := true
 	switch action {
 	case SetVariable:
 		return processedInput, nil
@@ -66,6 +67,18 @@ func (w *Worker) invokeWorker(ctx context.Context, action ActionType, processedI
 		}
 
 		output, err = w.DeriveWorker(ctx, &unmarshaledInput)
+	case SaveAddress:
+		var unmarshaledInput SaveAddressInput
+		err = unmarshalInput([]byte(processedInput), &unmarshaledInput)
+		if err != nil {
+			return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
+		}
+
+		shouldSerialize = false
+		err = w.SaveAddressWorker(ctx, &unmarshaledInput)
+	case PrintMessage, WaitForFunds, Math, RandomString:
+		// TODO: Complete in this PR
+		return "", fmt.Errorf("%s is not implemented", action)
 	default:
 		return "", fmt.Errorf("%w: %s", ErrInvalidActionType, action)
 	}
@@ -73,7 +86,11 @@ func (w *Worker) invokeWorker(ctx context.Context, action ActionType, processedI
 		return "", fmt.Errorf("%w: %s %s", ErrActionFailed, action, err.Error())
 	}
 
-	return types.PrintStruct(output), nil
+	if shouldSerialize {
+		return types.PrintStruct(output), nil
+	}
+
+	return "", nil
 }
 
 func (w *Worker) actions(ctx context.Context, state string, actions []*Action) (string, error) {
@@ -88,7 +105,11 @@ func (w *Worker) actions(ctx context.Context, state string, actions []*Action) (
 			return "", fmt.Errorf("%w: unable to process action", err)
 		}
 
-		// Update state at the specified output path.
+		if len(output) == 0 {
+			continue
+		}
+
+		// Update state at the specified output path if there is an output.
 		state, err = sjson.SetRaw(state, action.OutputPath, output)
 		if err != nil {
 			return "", fmt.Errorf("%w: unable to update state", err)
@@ -146,4 +167,10 @@ func GenerateKeyWorker(input *GenerateKeyInput) (*keys.KeyPair, error) {
 	}
 
 	return kp, nil
+}
+
+// SaveAddressWorker saves an address and associated KeyPair
+// in KeyStorage.
+func (w *Worker) SaveAddressWorker(ctx context.Context, input *SaveAddressInput) error {
+	return w.helper.StoreKey(ctx, input.Address, input.KeyPair)
 }

@@ -17,6 +17,7 @@ package constructor
 import (
 	"context"
 
+	"github.com/coinbase/rosetta-sdk-go/keys"
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
@@ -98,6 +99,12 @@ type Action struct {
 // GenerateKeyInput is the input for GenerateKey.
 type GenerateKeyInput struct {
 	CurveType types.CurveType `json:"curve_type"`
+}
+
+// SaveAddressInput is the input for SaveAddress.
+type SaveAddressInput struct {
+	Address string        `json:"address"`
+	KeyPair *keys.KeyPair `json:"keypair"`
 }
 
 // Scenario is a collection of Actions with a specific
@@ -206,12 +213,21 @@ type Broadcast struct {
 
 // WorkerHelper is used by the worker to process Jobs.
 type WorkerHelper interface {
+	// Derive returns a new address for a provided publicKey.
 	Derive(
 		context.Context,
 		*types.NetworkIdentifier,
 		*types.PublicKey,
 		map[string]interface{},
 	) (string, map[string]interface{}, error)
+
+	// StoreKey is called to persist an
+	// address + KeyPair.
+	StoreKey(
+		context.Context,
+		string,
+		*keys.KeyPair,
+	) error
 }
 
 // Worker processes jobs.
