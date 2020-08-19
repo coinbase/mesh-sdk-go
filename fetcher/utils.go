@@ -54,7 +54,12 @@ func tryAgain(fetchMsg string, thisBackoff backoff.BackOff, err *Error) *Error {
 		}
 	}
 
-	log.Printf("%s: retrying fetch for %s after %fs\n", types.PrintStruct(err.ClientErr), fetchMsg, nextBackoff.Seconds())
+	errMessage := err.Err.Error()
+	if err.ClientErr != nil {
+		errMessage = types.PrintStruct(err.ClientErr)
+	}
+
+	log.Printf("%s: retrying fetch for %s after %fs\n", errMessage, fetchMsg, nextBackoff.Seconds())
 	time.Sleep(nextBackoff)
 
 	return nil

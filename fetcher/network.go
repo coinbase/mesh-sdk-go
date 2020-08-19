@@ -87,7 +87,7 @@ func (f *Fetcher) NetworkStatusRetry(
 		}
 
 		if err := tryAgain(
-			fmt.Sprintf("network status %s", types.PrettyPrintStruct(network)),
+			fmt.Sprintf("network status %s", types.PrintStruct(network)),
 			backoffRetries,
 			err,
 		); err != nil {
@@ -233,7 +233,7 @@ func (f *Fetcher) NetworkOptionsRetry(
 		}
 
 		if err := tryAgain(
-			fmt.Sprintf("network options %s", types.PrettyPrintStruct(network)),
+			fmt.Sprintf("network options %s", types.PrintStruct(network)),
 			backoffRetries,
 			err,
 		); err != nil {
