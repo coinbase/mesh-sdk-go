@@ -58,6 +58,10 @@ func TestJob_CreateAccount(t *testing.T) {
 				Type:  SaveAddress,
 				Input: `{"address": {{address.address}}, "keypair": {{key.public_key}}}`,
 			},
+			{
+				Type:  PrintMessage,
+				Input: `{{address.address}}`,
+			},
 		},
 	}
 
