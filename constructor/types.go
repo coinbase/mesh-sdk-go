@@ -113,6 +113,15 @@ type SaveAddressInput struct {
 	KeyPair *keys.KeyPair `json:"keypair"`
 }
 
+// RandomStringInput is the input to RandomString.
+type RandomStringInput struct {
+	Regex string `json:"regex"`
+
+	// Limit is the maximum number of times each star, range, or
+	// plus character could be repeated.
+	Limit int `json:"limit"`
+}
+
 // Scenario is a collection of Actions with a specific
 // confirmation depth.
 //

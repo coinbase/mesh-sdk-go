@@ -24,6 +24,7 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/keys"
 	"github.com/coinbase/rosetta-sdk-go/types"
 
+	"github.com/lucasjones/reggen"
 	"github.com/tidwall/sjson"
 )
 
@@ -48,7 +49,10 @@ func unmarshalInput(input []byte, output interface{}) error {
 func (w *Worker) invokeWorker(ctx context.Context, action ActionType, processedInput string) (string, error) {
 	var output interface{}
 	var err error
-	shouldSerialize := true
+
+	shouldReturnOutput := true
+	shouldStructPrint := true
+
 	switch action {
 	case SetVariable:
 		return processedInput, nil
@@ -75,12 +79,21 @@ func (w *Worker) invokeWorker(ctx context.Context, action ActionType, processedI
 			return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
 		}
 
-		shouldSerialize = false
+		shouldReturnOutput = false
 		err = w.SaveAddressWorker(ctx, &unmarshaledInput)
 	case PrintMessage:
-		shouldSerialize = false
+		shouldReturnOutput = false
 		PrintMessageWorker(processedInput)
-	case Math, RandomString:
+	case RandomString:
+		var unmarshaledInput RandomStringInput
+		err = unmarshalInput([]byte(processedInput), &unmarshaledInput)
+		if err != nil {
+			return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
+		}
+
+		shouldStructPrint = false
+		output, err = RandomStringWorker(&unmarshaledInput)
+	case Math:
 		// TODO: Complete in this PR
 		return "", fmt.Errorf("%s is not implemented", action)
 	default:
@@ -90,11 +103,15 @@ func (w *Worker) invokeWorker(ctx context.Context, action ActionType, processedI
 		return "", fmt.Errorf("%w: %s %s", ErrActionFailed, action, err.Error())
 	}
 
-	if shouldSerialize {
+	if !shouldReturnOutput {
+		return "", nil
+	}
+
+	if shouldStructPrint {
 		return types.PrintStruct(output), nil
 	}
 
-	return "", nil
+	return fmt.Sprintf("%s", output), nil
 }
 
 func (w *Worker) actions(ctx context.Context, state string, actions []*Action) (string, error) {
@@ -180,6 +197,12 @@ func (w *Worker) SaveAddressWorker(ctx context.Context, input *SaveAddressInput)
 }
 
 // PrintMessageWorker logs some message to stdout.
-func PrintMessageWorker(input string) {
-	log.Printf("Message: %s\n", input)
+func PrintMessageWorker(message string) {
+	log.Printf("Message: %s\n", message)
+}
+
+// RandomStringWorker generates a string that complies
+// with the provided regex input.
+func RandomStringWorker(input *RandomStringInput) (string, error) {
+	return reggen.Generate(input.Regex, input.Limit)
 }

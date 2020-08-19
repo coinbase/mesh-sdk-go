@@ -17,6 +17,7 @@ package constructor
 import (
 	"context"
 	"encoding/json"
+	"regexp"
 	"testing"
 
 	mocks "github.com/coinbase/rosetta-sdk-go/mocks/constructor"
@@ -65,9 +66,20 @@ func TestJob_CreateAccount(t *testing.T) {
 		},
 	}
 
+	s2 := &Scenario{
+		Name: "random address",
+		Actions: []*Action{
+			{
+				Type:       RandomString,
+				Input:      `{"regex": "[0-9]+", "limit":10}`,
+				OutputPath: "random_address",
+			},
+		},
+	}
+
 	workflow := &Workflow{
 		Name:      string(CreateAccount),
-		Scenarios: []*Scenario{s},
+		Scenarios: []*Scenario{s, s2},
 	}
 	j := NewJob(workflow)
 
@@ -105,12 +117,29 @@ func TestJob_CreateAccount(t *testing.T) {
 	assert.Nil(t, b)
 	assert.NoError(t, err)
 
-	assert.True(t, j.checkComplete())
+	assert.False(t, j.checkComplete())
 	assert.Equal(t, 1, j.Index)
 
 	assertVariableEquality(t, j.State, "network", network)
 	assertVariableEquality(t, j.State, "key.public_key.curve_type", types.Secp256k1)
 	assertVariableEquality(t, j.State, "address.address", address)
+
+	b, err = j.Process(ctx, worker)
+	assert.Nil(t, b)
+	assert.NoError(t, err)
+
+	assert.True(t, j.checkComplete())
+	assert.Equal(t, 2, j.Index)
+
+	assertVariableEquality(t, j.State, "network", network)
+	assertVariableEquality(t, j.State, "key.public_key.curve_type", types.Secp256k1)
+	assertVariableEquality(t, j.State, "address.address", address)
+
+	randomAddress := gjson.Get(j.State, "random_address")
+	assert.True(t, randomAddress.Exists())
+	matched, err := regexp.Match("[0-9]+", []byte(randomAddress.String()))
+	assert.True(t, matched)
+	assert.NoError(t, err)
 
 	mockHelper.AssertExpectations(t)
 }
