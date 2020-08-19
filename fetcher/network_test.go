@@ -195,7 +195,7 @@ func TestNetworkListRetry(t *testing.T) {
 			fetcherMaxRetries:   1,
 			retriableError:      true,
 		},
-		"unretriable error": {
+		"non-retriable error": {
 			network:             basicNetwork,
 			errorsBeforeSuccess: 2,
 			expectedError:       ErrRequestFailed,
