@@ -67,7 +67,14 @@ func (f *Fetcher) fetchChannelTransactions(
 
 		if err != nil {
 			return &Error{
-				Err:       fmt.Errorf("%w: /block/transaction %s", ErrRequestFailed, err.Error()),
+				Err: fmt.Errorf(
+					"%w: /block/transaction %s at block %d:%s %s",
+					ErrRequestFailed,
+					transactionIdentifier.Hash,
+					block.Index,
+					block.Hash,
+					err.Error(),
+				),
 				ClientErr: clientErr,
 			}
 		}
@@ -165,7 +172,12 @@ func (f *Fetcher) UnsafeBlock(
 	})
 	if err != nil {
 		fetcherErr := &Error{
-			Err:       fmt.Errorf("%w: /block %s", ErrRequestFailed, err.Error()),
+			Err: fmt.Errorf(
+				"%w: /block %s %s",
+				ErrRequestFailed,
+				types.PrintStruct(blockIdentifier),
+				err.Error(),
+			),
 			ClientErr: clientErr,
 		}
 		return nil, fetcherErr
