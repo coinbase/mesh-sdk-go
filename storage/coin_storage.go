@@ -507,26 +507,20 @@ func (c *CoinStorage) SetCoinsImported(
 	helper BalanceStorageHelper,
 	accountBalances []*utils.AccountBalance,
 ) error {
-	// Update balances in database
-	transaction := c.db.NewDatabaseTransaction(ctx, false)
-	defer transaction.Discard(ctx)
-
+	var accountCoins []*AccountCoin
 	for _, accountBalance := range accountBalances {
 		for _, coin := range accountBalance.Coins {
-			encodedResult, err := encode(coin)
-			if err != nil {
-				return fmt.Errorf("%w: unable to encode coin data", err)
+			accountCoin := &AccountCoin{
+				Account: accountBalance.Account,
+				Coin:    coin,
 			}
 
-			if err := transaction.Set(ctx, getCoinKey(coin.CoinIdentifier), encodedResult); err != nil {
-				return fmt.Errorf("%w: unable to store coin", err)
-			}
+			accountCoins = append(accountCoins, accountCoin)
 		}
 	}
 
-	err := transaction.Commit(ctx)
-	if err != nil {
-		return err
+	if err := c.AddCoins(ctx, accountCoins); err != nil {
+		return fmt.Errorf("%w: unable to import coins", err)
 	}
 
 	return nil
