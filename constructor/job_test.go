@@ -54,6 +54,10 @@ func TestJob_CreateAccount(t *testing.T) {
 				Input:      `{"network_identifier": {{network}}, "public_key": {{key.public_key}}}`,
 				OutputPath: "address",
 			},
+			{
+				Type:  SaveAddress,
+				Input: `{"address": {{address.address}}, "keypair": {{key.public_key}}}`,
+			},
 		},
 	}
 
@@ -79,6 +83,14 @@ func TestJob_CreateAccount(t *testing.T) {
 	).Return(
 		address,
 		nil,
+		nil,
+	).Once()
+	mockHelper.On(
+		"StoreKey",
+		ctx,
+		address,
+		mock.Anything,
+	).Return(
 		nil,
 	).Once()
 	worker := NewWorker(mockHelper)
