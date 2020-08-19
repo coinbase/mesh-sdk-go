@@ -63,7 +63,7 @@ func TestAccountBalanceRetry(t *testing.T) {
 		expectedBlock       *types.BlockIdentifier
 		expectedAmounts     []*types.Amount
 		expectedError       error
-		unretriableError    bool
+		retriableError      bool
 
 		fetcherMaxRetries uint64
 		shouldCancel      bool
@@ -82,11 +82,11 @@ func TestAccountBalanceRetry(t *testing.T) {
 			expectedBlock:       basicBlock,
 			expectedAmounts:     basicAmounts,
 			fetcherMaxRetries:   5,
+			retriableError:      true,
 		},
-		"unretriable error": {
+		"non-retriable error": {
 			network:             basicNetwork,
 			account:             basicAccount,
-			unretriableError:    true,
 			errorsBeforeSuccess: 2,
 			fetcherMaxRetries:   5,
 			expectedError:       ErrRequestFailed,
@@ -97,6 +97,7 @@ func TestAccountBalanceRetry(t *testing.T) {
 			errorsBeforeSuccess: 2,
 			expectedError:       ErrExhaustedRetries,
 			fetcherMaxRetries:   1,
+			retriableError:      true,
 		},
 		"cancel context": {
 			network:             basicNetwork,
@@ -136,7 +137,7 @@ func TestAccountBalanceRetry(t *testing.T) {
 					w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 					w.WriteHeader(http.StatusInternalServerError)
 					fmt.Fprintln(w, types.PrettyPrintStruct(&types.Error{
-						Retriable: !test.unretriableError,
+						Retriable: test.retriableError,
 					}))
 					tries++
 					return
