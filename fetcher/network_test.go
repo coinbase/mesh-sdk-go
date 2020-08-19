@@ -68,6 +68,7 @@ func TestNetworkStatusRetry(t *testing.T) {
 		errorsBeforeSuccess int
 		expectedStatus      *types.NetworkStatusResponse
 		expectedError       error
+		retriableError      bool
 
 		fetcherMaxRetries uint64
 		shouldCancel      bool
@@ -82,12 +83,20 @@ func TestNetworkStatusRetry(t *testing.T) {
 			errorsBeforeSuccess: 2,
 			expectedStatus:      basicNetworkStatus,
 			fetcherMaxRetries:   5,
+			retriableError:      true,
+		},
+		"non-retriable failure": {
+			network:             basicNetwork,
+			errorsBeforeSuccess: 2,
+			expectedError:       ErrRequestFailed,
+			fetcherMaxRetries:   5,
 		},
 		"exhausted retries": {
 			network:             basicNetwork,
 			errorsBeforeSuccess: 2,
 			expectedError:       ErrExhaustedRetries,
 			fetcherMaxRetries:   1,
+			retriableError:      true,
 		},
 		"cancel context": {
 			network:             basicNetwork,
@@ -95,6 +104,7 @@ func TestNetworkStatusRetry(t *testing.T) {
 			expectedError:       context.Canceled,
 			fetcherMaxRetries:   5,
 			shouldCancel:        true,
+			retriableError:      true,
 		},
 	}
 
@@ -124,7 +134,9 @@ func TestNetworkStatusRetry(t *testing.T) {
 				if tries < test.errorsBeforeSuccess {
 					w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 					w.WriteHeader(http.StatusInternalServerError)
-					fmt.Fprintln(w, "{}")
+					fmt.Fprintln(w, types.PrettyPrintStruct(&types.Error{
+						Retriable: test.retriableError,
+					}))
 					tries++
 					return
 				}
@@ -159,6 +171,7 @@ func TestNetworkListRetry(t *testing.T) {
 		errorsBeforeSuccess int
 		expectedList        *types.NetworkListResponse
 		expectedError       error
+		retriableError      bool
 
 		fetcherMaxRetries uint64
 		shouldCancel      bool
@@ -173,12 +186,20 @@ func TestNetworkListRetry(t *testing.T) {
 			errorsBeforeSuccess: 2,
 			expectedList:        basicNetworkList,
 			fetcherMaxRetries:   5,
+			retriableError:      true,
 		},
 		"exhausted retries": {
 			network:             basicNetwork,
 			errorsBeforeSuccess: 2,
 			expectedError:       ErrExhaustedRetries,
 			fetcherMaxRetries:   1,
+			retriableError:      true,
+		},
+		"non-retriable error": {
+			network:             basicNetwork,
+			errorsBeforeSuccess: 2,
+			expectedError:       ErrRequestFailed,
+			fetcherMaxRetries:   5,
 		},
 		"cancel context": {
 			network:             basicNetwork,
@@ -186,6 +207,7 @@ func TestNetworkListRetry(t *testing.T) {
 			expectedError:       context.Canceled,
 			fetcherMaxRetries:   5,
 			shouldCancel:        true,
+			retriableError:      true,
 		},
 	}
 
@@ -213,7 +235,9 @@ func TestNetworkListRetry(t *testing.T) {
 				if tries < test.errorsBeforeSuccess {
 					w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 					w.WriteHeader(http.StatusInternalServerError)
-					fmt.Fprintln(w, "{}")
+					fmt.Fprintln(w, types.PrettyPrintStruct(&types.Error{
+						Retriable: test.retriableError,
+					}))
 					tries++
 					return
 				}
@@ -247,6 +271,7 @@ func TestNetworkOptionsRetry(t *testing.T) {
 		errorsBeforeSuccess int
 		expectedOptions     *types.NetworkOptionsResponse
 		expectedError       error
+		retriableError      bool
 
 		fetcherMaxRetries uint64
 		shouldCancel      bool
@@ -261,12 +286,20 @@ func TestNetworkOptionsRetry(t *testing.T) {
 			errorsBeforeSuccess: 2,
 			expectedOptions:     basicNetworkOptions,
 			fetcherMaxRetries:   5,
+			retriableError:      true,
 		},
 		"exhausted retries": {
 			network:             basicNetwork,
 			errorsBeforeSuccess: 2,
 			expectedError:       ErrExhaustedRetries,
 			fetcherMaxRetries:   1,
+			retriableError:      true,
+		},
+		"non-retriable error": {
+			network:             basicNetwork,
+			errorsBeforeSuccess: 2,
+			expectedError:       ErrRequestFailed,
+			fetcherMaxRetries:   5,
 		},
 		"cancel context": {
 			network:             basicNetwork,
@@ -274,6 +307,7 @@ func TestNetworkOptionsRetry(t *testing.T) {
 			expectedError:       context.Canceled,
 			fetcherMaxRetries:   5,
 			shouldCancel:        true,
+			retriableError:      true,
 		},
 	}
 
@@ -303,7 +337,9 @@ func TestNetworkOptionsRetry(t *testing.T) {
 				if tries < test.errorsBeforeSuccess {
 					w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 					w.WriteHeader(http.StatusInternalServerError)
-					fmt.Fprintln(w, "{}")
+					fmt.Fprintln(w, types.PrettyPrintStruct(&types.Error{
+						Retriable: test.retriableError,
+					}))
 					tries++
 					return
 				}

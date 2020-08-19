@@ -15,7 +15,6 @@
 package asserter
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
@@ -24,7 +23,7 @@ import (
 // Coin returns an error if the provided *types.Coin is invalid.
 func Coin(coin *types.Coin) error {
 	if coin == nil {
-		return errors.New("coin cannot be nil")
+		return ErrCoinIsNil
 	}
 
 	if err := CoinIdentifier(coin.CoinIdentifier); err != nil {
@@ -51,7 +50,8 @@ func Coins(coins []*types.Coin) error {
 
 		if _, exists := ids[coin.CoinIdentifier.Identifier]; exists {
 			return fmt.Errorf(
-				"duplicate coin identifier detected: %s",
+				"%w: %s",
+				ErrCoinDuplicate,
 				coin.CoinIdentifier.Identifier,
 			)
 		}
@@ -66,11 +66,11 @@ func Coins(coins []*types.Coin) error {
 // is invalid.
 func CoinIdentifier(coinIdentifier *types.CoinIdentifier) error {
 	if coinIdentifier == nil {
-		return errors.New("coin identifier cannot be nil")
+		return ErrCoinIdentifierIsNil
 	}
 
 	if len(coinIdentifier.Identifier) == 0 {
-		return errors.New("coin identifier cannot be empty")
+		return ErrCoinIdentifierNotSet
 	}
 
 	return nil
@@ -80,7 +80,7 @@ func CoinIdentifier(coinIdentifier *types.CoinIdentifier) error {
 // is invalid.
 func CoinChange(change *types.CoinChange) error {
 	if change == nil {
-		return errors.New("coin change cannot be nil")
+		return ErrCoinChangeIsNil
 	}
 
 	if err := CoinIdentifier(change.CoinIdentifier); err != nil {
@@ -100,7 +100,7 @@ func CoinAction(action types.CoinAction) error {
 	switch action {
 	case types.CoinCreated, types.CoinSpent:
 	default:
-		return fmt.Errorf("%s is not a valid coin action", action)
+		return fmt.Errorf("%w: %s", ErrCoinActionInvalid, action)
 	}
 
 	return nil

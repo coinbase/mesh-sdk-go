@@ -16,9 +16,11 @@ package fetcher
 
 import (
 	"errors"
+	"fmt"
 	"log"
-	"strings"
 	"time"
+
+	"github.com/coinbase/rosetta-sdk-go/types"
 
 	"github.com/cenkalti/backoff"
 )
@@ -36,19 +38,32 @@ func backoffRetries(
 
 // tryAgain handles a backoff and prints error messages depending
 // on the fetchMsg.
-func tryAgain(fetchMsg string, thisBackoff backoff.BackOff, err error) bool {
-	fetchMsg = strings.Replace(fetchMsg, "\n", "", -1)
-	log.Printf("%s fetch error: %s\n", fetchMsg, err.Error())
+func tryAgain(fetchMsg string, thisBackoff backoff.BackOff, err *Error) *Error {
+	// Only retry if an error is explicitly retriable.
+	if err.ClientErr == nil || !err.ClientErr.Retriable {
+		return err
+	}
 
 	nextBackoff := thisBackoff.NextBackOff()
 	if nextBackoff == backoff.Stop {
-		return false
+		return &Error{
+			Err: fmt.Errorf(
+				"%w: %s",
+				ErrExhaustedRetries,
+				fetchMsg,
+			),
+		}
 	}
 
-	log.Printf("retrying fetch for %s after %fs\n", fetchMsg, nextBackoff.Seconds())
+	errMessage := err.Err.Error()
+	if err.ClientErr != nil {
+		errMessage = types.PrintStruct(err.ClientErr)
+	}
+
+	log.Printf("%s: retrying fetch for %s after %fs\n", errMessage, fetchMsg, nextBackoff.Seconds())
 	time.Sleep(nextBackoff)
 
-	return true
+	return nil
 }
 
 // checkError compares a *fetcher.Error to a simple type error and returns

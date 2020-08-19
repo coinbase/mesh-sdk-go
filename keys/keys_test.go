@@ -85,7 +85,7 @@ func TestKeypairValidity(t *testing.T) {
 
 	keyPair.PublicKey.CurveType = "blah"
 	err = keyPair.IsValid()
-	assert.Contains(t, err.Error(), "blah is not a supported CurveType")
+	assert.Contains(t, err.Error(), "not a supported CurveType: blah")
 
 	type privKeyTest struct {
 		keypair *KeyPair
