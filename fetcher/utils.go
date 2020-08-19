@@ -39,7 +39,8 @@ func backoffRetries(
 // tryAgain handles a backoff and prints error messages depending
 // on the fetchMsg.
 func tryAgain(fetchMsg string, thisBackoff backoff.BackOff, err *Error) *Error {
-	if err.ClientErr != nil && !err.ClientErr.Retriable {
+	// Only retry if an error is explicitly retriable.
+	if err.ClientErr == nil || !err.ClientErr.Retriable {
 		return err
 	}
 

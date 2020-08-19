@@ -101,7 +101,7 @@ func TestNetworkStatusRetry(t *testing.T) {
 		"cancel context": {
 			network:             basicNetwork,
 			errorsBeforeSuccess: 6,
-			expectedError:       context.Canceled,
+			expectedError:       ErrRequestFailed,
 			fetcherMaxRetries:   5,
 			shouldCancel:        true,
 			retriableError:      true,
@@ -204,7 +204,7 @@ func TestNetworkListRetry(t *testing.T) {
 		"cancel context": {
 			network:             basicNetwork,
 			errorsBeforeSuccess: 6,
-			expectedError:       context.Canceled,
+			expectedError:       ErrRequestFailed,
 			fetcherMaxRetries:   5,
 			shouldCancel:        true,
 			retriableError:      true,
@@ -304,7 +304,7 @@ func TestNetworkOptionsRetry(t *testing.T) {
 		"cancel context": {
 			network:             basicNetwork,
 			errorsBeforeSuccess: 6,
-			expectedError:       context.Canceled,
+			expectedError:       ErrRequestFailed,
 			fetcherMaxRetries:   5,
 			shouldCancel:        true,
 			retriableError:      true,
