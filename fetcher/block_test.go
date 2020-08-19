@@ -38,51 +38,114 @@ var (
 		},
 		Timestamp: 1582833600000,
 	}
+
+	basicTransaction = &types.Transaction{
+		TransactionIdentifier: &types.TransactionIdentifier{
+			Hash: "tx 1",
+		},
+	}
+
+	otherTransactions = []*types.TransactionIdentifier{
+		basicTransaction.TransactionIdentifier,
+	}
+
+	basicBlockWithTransactions = &types.Block{
+		BlockIdentifier: basicBlock,
+		ParentBlockIdentifier: &types.BlockIdentifier{
+			Index: 9,
+			Hash:  "block 9",
+		},
+		Timestamp: 1582833600000,
+		Transactions: []*types.Transaction{
+			basicTransaction,
+		},
+	}
 )
 
 func TestBlockRetry(t *testing.T) {
 	var tests = map[string]struct {
-		network *types.NetworkIdentifier
-		block   *types.BlockIdentifier
+		network                   *types.NetworkIdentifier
+		blockIdentifier           *types.BlockIdentifier
+		containsOtherTransactions bool
+		transaction               *types.Transaction
+		blockResponse             *types.Block
 
-		errorsBeforeSuccess int
-		expectedBlock       *types.Block
-		expectedError       error
+		errorsBeforeSuccess            int
+		transactionErrorsBeforeSuccess int
+		expectedBlock                  *types.Block
+		expectedError                  error
+		retriableError                 bool
+		retriableErrorTransaction      bool
 
 		fetcherMaxRetries uint64
 		shouldCancel      bool
 	}{
 		"omitted block": {
 			network:           basicNetwork,
-			block:             basicBlock,
+			blockIdentifier:   basicBlock,
 			expectedBlock:     nil,
 			fetcherMaxRetries: 0,
 		},
 		"no failures": {
 			network:           basicNetwork,
-			block:             basicBlock,
+			blockIdentifier:   basicBlock,
+			blockResponse:     basicFullBlock,
 			expectedBlock:     basicFullBlock,
 			fetcherMaxRetries: 5,
 		},
+		"retry failures with other transactions": {
+			network:                        basicNetwork,
+			blockIdentifier:                basicBlock,
+			blockResponse:                  basicFullBlock,
+			transaction:                    basicTransaction,
+			containsOtherTransactions:      true,
+			transactionErrorsBeforeSuccess: 2,
+			expectedBlock:                  basicBlockWithTransactions,
+			fetcherMaxRetries:              5,
+			retriableError:                 true,
+			retriableErrorTransaction:      true,
+		},
 		"retry failures": {
 			network:             basicNetwork,
-			block:               basicBlock,
+			blockIdentifier:     basicBlock,
+			blockResponse:       basicFullBlock,
 			errorsBeforeSuccess: 2,
 			expectedBlock:       basicFullBlock,
 			fetcherMaxRetries:   5,
+			retriableError:      true,
+		},
+		"non-retriable error": {
+			network:             basicNetwork,
+			blockIdentifier:     basicBlock,
+			errorsBeforeSuccess: 2,
+			fetcherMaxRetries:   5,
+			expectedError:       ErrRequestFailed,
+		},
+		"non-retriable error with transactions": {
+			network:                        basicNetwork,
+			blockIdentifier:                basicBlock,
+			blockResponse:                  basicFullBlock,
+			transaction:                    basicTransaction,
+			containsOtherTransactions:      true,
+			transactionErrorsBeforeSuccess: 2,
+			retriableError:                 true,
+			expectedError:                  ErrRequestFailed,
+			fetcherMaxRetries:              5,
 		},
 		"exhausted retries": {
 			network:             basicNetwork,
-			block:               basicBlock,
+			blockIdentifier:     basicBlock,
 			errorsBeforeSuccess: 2,
+			retriableError:      true,
 			expectedError:       ErrExhaustedRetries,
 			fetcherMaxRetries:   1,
 		},
 		"cancel context": {
 			network:             basicNetwork,
-			block:               basicBlock,
+			blockIdentifier:     basicBlock,
 			errorsBeforeSuccess: 6,
-			expectedError:       context.Canceled,
+			retriableError:      true,
+			expectedError:       ErrRequestFailed,
 			fetcherMaxRetries:   5,
 			shouldCancel:        true,
 		},
@@ -91,42 +154,78 @@ func TestBlockRetry(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			var (
-				tries       = 0
-				assert      = assert.New(t)
-				ctx, cancel = context.WithCancel(context.Background())
-				endpoint    = "/block"
+				blockTries       = 0
+				transactionTries = 0
+				assert           = assert.New(t)
+				ctx, cancel      = context.WithCancel(context.Background())
 			)
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				assert.Equal("POST", r.Method)
-				assert.Equal(endpoint, r.URL.RequestURI())
+				if r.URL.RequestURI() == "/block" {
+					expected := &types.BlockRequest{
+						NetworkIdentifier: test.network,
+						BlockIdentifier: types.ConstructPartialBlockIdentifier(
+							test.blockIdentifier,
+						),
+					}
+					var blockRequest *types.BlockRequest
+					assert.NoError(json.NewDecoder(r.Body).Decode(&blockRequest))
+					assert.Equal(expected, blockRequest)
 
-				expected := &types.BlockRequest{
-					NetworkIdentifier: test.network,
-					BlockIdentifier:   types.ConstructPartialBlockIdentifier(test.block),
+					if test.shouldCancel {
+						cancel()
+					}
+
+					if blockTries < test.errorsBeforeSuccess {
+						w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+						w.WriteHeader(http.StatusInternalServerError)
+						fmt.Fprintln(w, types.PrettyPrintStruct(&types.Error{
+							Retriable: test.retriableError,
+						}))
+						blockTries++
+						return
+					}
+
+					w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+					w.WriteHeader(http.StatusOK)
+					resp := &types.BlockResponse{
+						Block: test.blockResponse,
+					}
+					if test.containsOtherTransactions {
+						resp.OtherTransactions = otherTransactions
+					}
+
+					fmt.Fprintln(w, types.PrettyPrintStruct(resp))
+					return
 				}
-				var blockRequest *types.BlockRequest
-				assert.NoError(json.NewDecoder(r.Body).Decode(&blockRequest))
-				assert.Equal(expected, blockRequest)
 
-				if test.shouldCancel {
-					cancel()
+				assert.Equal("/block/transaction", r.URL.RequestURI())
+
+				expected := &types.BlockTransactionRequest{
+					NetworkIdentifier:     test.network,
+					BlockIdentifier:       test.blockIdentifier,
+					TransactionIdentifier: test.transaction.TransactionIdentifier,
 				}
 
-				if tries < test.errorsBeforeSuccess {
+				var blockTransactionRequest types.BlockTransactionRequest
+				assert.NoError(json.NewDecoder(r.Body).Decode(&blockTransactionRequest))
+				assert.Equal(expected, &blockTransactionRequest)
+
+				if transactionTries < test.transactionErrorsBeforeSuccess {
 					w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 					w.WriteHeader(http.StatusInternalServerError)
-					fmt.Fprintln(w, "{}")
-					tries++
+					fmt.Fprintln(w, types.PrettyPrintStruct(&types.Error{
+						Retriable: test.retriableErrorTransaction,
+					}))
+					transactionTries++
 					return
 				}
 
 				w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 				w.WriteHeader(http.StatusOK)
-				fmt.Fprintln(w, types.PrettyPrintStruct(
-					&types.BlockResponse{
-						Block: test.expectedBlock,
-					},
-				))
+				fmt.Fprintln(w, types.PrettyPrintStruct(&types.BlockTransactionResponse{
+					Transaction: test.transaction,
+				}))
 			}))
 
 			defer ts.Close()
@@ -151,7 +250,7 @@ func TestBlockRetry(t *testing.T) {
 			block, blockErr := f.BlockRetry(
 				ctx,
 				test.network,
-				types.ConstructPartialBlockIdentifier(test.block),
+				types.ConstructPartialBlockIdentifier(test.blockIdentifier),
 			)
 			assert.Equal(test.expectedBlock, block)
 			assert.True(checkError(blockErr, test.expectedError))
