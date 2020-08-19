@@ -279,33 +279,3 @@ func ExtractAmount(
 		PrettyPrintStruct(currency),
 	)
 }
-
-// SumCoins returns the total Amount from a slice of Coins
-// Does not support summing coins with different currencies
-func SumCoins(
-	coins []*Coin,
-) (*Amount, error) {
-	var coinCurr *Currency
-	amountStr := "0"
-	for i, coin := range coins {
-		// Checks that all the coins' currencies are the same
-		if i == 0 {
-			coinCurr = coin.Amount.Currency
-		}
-
-		if coin.Amount.Currency != coinCurr {
-			return nil, fmt.Errorf("cannot sum coins of different currency")
-		}
-
-		sum, err := AddValues(coin.Amount.Value, amountStr)
-		if err != nil {
-			return nil, fmt.Errorf("%s could not add coin currency values", err)
-		}
-		amountStr = sum
-	}
-
-	return &Amount{
-		Value:    amountStr,
-		Currency: coinCurr,
-	}, nil
-}
