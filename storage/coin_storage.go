@@ -103,9 +103,8 @@ type AccountCoin struct {
 	Coin    *types.Coin
 }
 
-// AddCoins takes an array of AccountIdentifiers and it's respective Coin
-// and saves all of them to the database. It returns an error if the
-// transaction fails.
+// AddCoins takes an array of AccountCoins and saves them to the database.
+// It returns an error if the transaction fails.
 func (c *CoinStorage) AddCoins(
 	ctx context.Context,
 	accountCoins []*AccountCoin,
@@ -176,7 +175,7 @@ func addCoin(
 		return fmt.Errorf(
 			"coin %s already exists in account %s",
 			coinIdentifier,
-			types.PrettyPrintStruct(account),
+			types.PrintStruct(account),
 		)
 	}
 
