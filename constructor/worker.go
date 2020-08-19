@@ -19,6 +19,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 
 	"github.com/coinbase/rosetta-sdk-go/keys"
 	"github.com/coinbase/rosetta-sdk-go/types"
@@ -76,7 +77,10 @@ func (w *Worker) invokeWorker(ctx context.Context, action ActionType, processedI
 
 		shouldSerialize = false
 		err = w.SaveAddressWorker(ctx, &unmarshaledInput)
-	case PrintMessage, WaitForFunds, Math, RandomString:
+	case PrintMessage:
+		shouldSerialize = false
+		PrintMessageWorker(processedInput)
+	case Math, RandomString:
 		// TODO: Complete in this PR
 		return "", fmt.Errorf("%s is not implemented", action)
 	default:
@@ -173,4 +177,9 @@ func GenerateKeyWorker(input *GenerateKeyInput) (*keys.KeyPair, error) {
 // in KeyStorage.
 func (w *Worker) SaveAddressWorker(ctx context.Context, input *SaveAddressInput) error {
 	return w.helper.StoreKey(ctx, input.Address, input.KeyPair)
+}
+
+// PrintMessageWorker logs some message to stdout.
+func PrintMessageWorker(input string) {
+	log.Printf("Message: %s\n", input)
 }

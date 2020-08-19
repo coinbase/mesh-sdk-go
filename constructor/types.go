@@ -69,8 +69,14 @@ const (
 	// possible to specify coins which should not be considered (by identifier).
 	FindCoin ActionType = "find_coin"
 
-	// PrintMessage prints some message to the terminal. This is
-	// typically used for funding an account.
+	// PrintMessage can be used to print any message
+	// to the terminal. This is usually used to indicate
+	// to the caller that they should deposit money to an
+	// address. It is left generic to allow the user to
+	// include whatever content they would like in the
+	// message (especially useful in on-chain origination).
+	// This can also be used to log information during
+	// execution.
 	PrintMessage ActionType = "print_message"
 
 	// WaitForFunds halts execution until a specified
