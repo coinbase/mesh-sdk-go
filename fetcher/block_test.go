@@ -145,7 +145,7 @@ func TestBlockRetry(t *testing.T) {
 			blockIdentifier:     basicBlock,
 			errorsBeforeSuccess: 6,
 			retriableError:      true,
-			expectedError:       context.Canceled,
+			expectedError:       ErrRequestFailed,
 			fetcherMaxRetries:   5,
 			shouldCancel:        true,
 		},
