@@ -306,7 +306,7 @@ func TestCoinStorage(t *testing.T) {
 
 	c := NewCoinStorage(database, mockHelper, a)
 
-	t.Run("AddCoins", func(t *testing.T) {
+	t.Run("AddCoins before blocks", func(t *testing.T) {
 		accountCoins := []*AccountCoin{
 			&AccountCoin{
 				Account: account4,
@@ -321,7 +321,21 @@ func TestCoinStorage(t *testing.T) {
 		err = c.AddCoins(ctx, accountCoins)
 		assert.NoError(t, err)
 
+		// Assert error in getcoins when no CurrentBlockIdentifier
 		coinsGot, block, err := c.GetCoins(ctx, account5)
+		assert.Error(t, err)
+		assert.Nil(t, coinsGot)
+		assert.Nil(t, block)
+
+		coinsGot, block, err = c.GetCoins(ctx, account4)
+		assert.Error(t, err)
+		assert.Nil(t, coinsGot)
+		assert.Nil(t, block)
+
+		// Mock CurrentBlockIdentifier
+		mockHelper.BlockIdentifier = blockIdentifier
+
+		coinsGot, block, err = c.GetCoins(ctx, account5)
 		assert.NoError(t, err)
 		assert.Equal(t, blockIdentifier, block)
 		assert.ElementsMatch(t, coinsGot, []*types.Coin{coins5})
@@ -509,7 +523,9 @@ func TestCoinStorage(t *testing.T) {
 	})
 }
 
-type MockCoinStorageHelper struct{}
+type MockCoinStorageHelper struct {
+	BlockIdentifier *types.BlockIdentifier
+}
 
 var _ CoinStorageHelper = (*MockCoinStorageHelper)(nil)
 
@@ -517,5 +533,8 @@ func (h *MockCoinStorageHelper) CurrentBlockIdentifier(
 	ctx context.Context,
 	transaction DatabaseTransaction,
 ) (*types.BlockIdentifier, error) {
+	if h.BlockIdentifier == nil {
+		return nil, ErrHeadBlockNotFound
+	}
 	return blockIdentifier, nil
 }
