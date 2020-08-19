@@ -102,7 +102,7 @@ func (f *Fetcher) UnsafeTransactions(
 
 	txsToFetch := make(chan *types.TransactionIdentifier)
 	fetchedTxs := make(chan *types.Transaction)
-	fetchErrs := make(chan *Error, 1)
+	var fetchErr *Error
 	g, ctx := errgroup.WithContext(ctx)
 	g.Go(func() error {
 		return addTransactionIdentifiers(ctx, txsToFetch, transactionIdentifiers)
@@ -112,9 +112,10 @@ func (f *Fetcher) UnsafeTransactions(
 		g.Go(func() error {
 			err := f.fetchChannelTransactions(ctx, network, block, txsToFetch, fetchedTxs)
 			if err != nil {
-				if len(fetchErrs) == 0 {
-					fetchErrs <- err
+				if fetchErr == nil {
+					fetchErr = err
 				}
+
 				return err.Err
 			}
 
@@ -133,8 +134,8 @@ func (f *Fetcher) UnsafeTransactions(
 	}
 
 	if err := g.Wait(); err != nil {
-		if len(fetchErrs) > 0 {
-			return nil, <-fetchErrs
+		if fetchErr != nil {
+			return nil, fetchErr
 		}
 
 		return nil, &Error{Err: err}
