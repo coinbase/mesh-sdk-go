@@ -250,7 +250,7 @@ func (f *Fetcher) BlockRetry(
 		f.maxRetries,
 	)
 
-	for ctx.Err() == nil {
+	for {
 		block, err := f.Block(
 			ctx,
 			network,
@@ -258,6 +258,10 @@ func (f *Fetcher) BlockRetry(
 		)
 		if err == nil {
 			return block, nil
+		}
+
+		if ctx.Err() != nil {
+			return nil, &Error{Err: ctx.Err()}
 		}
 
 		if errors.Is(err.Err, ErrAssertionFailed) {
@@ -273,6 +277,4 @@ func (f *Fetcher) BlockRetry(
 			return nil, err
 		}
 	}
-
-	return nil, &Error{Err: ctx.Err()}
 }
