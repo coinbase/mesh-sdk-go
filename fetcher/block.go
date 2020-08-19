@@ -55,9 +55,9 @@ func (f *Fetcher) fetchChannelTransactions(
 	block *types.BlockIdentifier,
 	txsToFetch chan *types.TransactionIdentifier,
 	fetchedTxs chan *types.Transaction,
-) error {
+) *Error {
 	for transactionIdentifier := range txsToFetch {
-		tx, _, err := f.rosettaClient.BlockAPI.BlockTransaction(ctx,
+		tx, clientErr, err := f.rosettaClient.BlockAPI.BlockTransaction(ctx,
 			&types.BlockTransactionRequest{
 				NetworkIdentifier:     network,
 				BlockIdentifier:       block,
@@ -66,13 +66,25 @@ func (f *Fetcher) fetchChannelTransactions(
 		)
 
 		if err != nil {
-			return fmt.Errorf("%w: /block/transaction %s", ErrRequestFailed, err.Error())
+			return &Error{
+				Err: fmt.Errorf(
+					"%w: /block/transaction %s at block %d:%s %s",
+					ErrRequestFailed,
+					transactionIdentifier.Hash,
+					block.Index,
+					block.Hash,
+					err.Error(),
+				),
+				ClientErr: clientErr,
+			}
 		}
 
 		select {
 		case fetchedTxs <- tx.Transaction:
 		case <-ctx.Done():
-			return ctx.Err()
+			return &Error{
+				Err: ctx.Err(),
+			}
 		}
 	}
 
@@ -90,13 +102,14 @@ func (f *Fetcher) UnsafeTransactions(
 	network *types.NetworkIdentifier,
 	block *types.BlockIdentifier,
 	transactionIdentifiers []*types.TransactionIdentifier,
-) ([]*types.Transaction, error) {
+) ([]*types.Transaction, *Error) {
 	if len(transactionIdentifiers) == 0 {
 		return nil, nil
 	}
 
 	txsToFetch := make(chan *types.TransactionIdentifier)
 	fetchedTxs := make(chan *types.Transaction)
+	var fetchErr *Error
 	g, ctx := errgroup.WithContext(ctx)
 	g.Go(func() error {
 		return addTransactionIdentifiers(ctx, txsToFetch, transactionIdentifiers)
@@ -104,7 +117,18 @@ func (f *Fetcher) UnsafeTransactions(
 
 	for i := uint64(0); i < f.transactionConcurrency; i++ {
 		g.Go(func() error {
-			return f.fetchChannelTransactions(ctx, network, block, txsToFetch, fetchedTxs)
+			err := f.fetchChannelTransactions(ctx, network, block, txsToFetch, fetchedTxs)
+			if err != nil {
+				// Only record the first error returned
+				// by fetchChannelTransactions.
+				if fetchErr == nil {
+					fetchErr = err
+				}
+
+				return err.Err
+			}
+
+			return nil
 		})
 	}
 
@@ -119,7 +143,14 @@ func (f *Fetcher) UnsafeTransactions(
 	}
 
 	if err := g.Wait(); err != nil {
-		return nil, err
+		// If there exists a fetchErr, that
+		// should be returned over whatever error
+		// is returned to the errGroup.
+		if fetchErr != nil {
+			return nil, fetchErr
+		}
+
+		return nil, &Error{Err: err}
 	}
 
 	return txs, nil
@@ -141,7 +172,12 @@ func (f *Fetcher) UnsafeBlock(
 	})
 	if err != nil {
 		fetcherErr := &Error{
-			Err:       fmt.Errorf("%w: /block %s", ErrRequestFailed, err.Error()),
+			Err: fmt.Errorf(
+				"%w: /block %s %s",
+				ErrRequestFailed,
+				types.PrintStruct(blockIdentifier),
+				err.Error(),
+			),
 			ClientErr: clientErr,
 		}
 		return nil, fetcherErr
@@ -152,16 +188,14 @@ func (f *Fetcher) UnsafeBlock(
 		return blockResponse.Block, nil
 	}
 
-	batchFetch, err := f.UnsafeTransactions(
+	batchFetch, fetchErr := f.UnsafeTransactions(
 		ctx,
 		network,
 		blockResponse.Block.BlockIdentifier,
 		blockResponse.OtherTransactions,
 	)
-	if err != nil {
-		return nil, &Error{
-			Err: fmt.Errorf("%w: /block/transaction %s", ErrRequestFailed, err.Error()),
-		}
+	if fetchErr != nil {
+		return nil, fetchErr
 	}
 
 	blockResponse.Block.Transactions = append(blockResponse.Block.Transactions, batchFetch...)
@@ -226,6 +260,10 @@ func (f *Fetcher) BlockRetry(
 			return block, nil
 		}
 
+		if ctx.Err() != nil {
+			return nil, &Error{Err: ctx.Err()}
+		}
+
 		if errors.Is(err.Err, ErrAssertionFailed) {
 			fetcherErr := &Error{
 				Err:       fmt.Errorf("%w: /block not attempting retry", err.Err),
@@ -234,31 +272,9 @@ func (f *Fetcher) BlockRetry(
 			return nil, fetcherErr
 		}
 
-		if ctx.Err() != nil {
-			fetcherErr := &Error{
-				Err:       ctx.Err(),
-				ClientErr: err.ClientErr,
-			}
-			return nil, fetcherErr
+		blockFetchErr := fmt.Sprintf("block %s", types.PrintStruct(blockIdentifier))
+		if err := tryAgain(blockFetchErr, backoffRetries, err); err != nil {
+			return nil, err
 		}
-
-		var blockFetchErr string
-		if blockIdentifier.Index != nil {
-			blockFetchErr = fmt.Sprintf("block %d", *blockIdentifier.Index)
-		} else {
-			blockFetchErr = fmt.Sprintf("block %s", *blockIdentifier.Hash)
-		}
-
-		if !tryAgain(blockFetchErr, backoffRetries, err.Err) {
-			break
-		}
-	}
-
-	return nil, &Error{
-		Err: fmt.Errorf(
-			"%w: unable to fetch block %s",
-			ErrExhaustedRetries,
-			types.PrettyPrintStruct(blockIdentifier),
-		),
 	}
 }

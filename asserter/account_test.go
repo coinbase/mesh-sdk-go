@@ -132,7 +132,7 @@ func TestContainsCurrency(t *testing.T) {
 	}
 }
 
-func TestAccoutBalance(t *testing.T) {
+func TestAccountBalance(t *testing.T) {
 	var (
 		validBlock = &types.BlockIdentifier{
 			Index: 1000,
@@ -224,7 +224,8 @@ func TestAccoutBalance(t *testing.T) {
 				validAmount,
 			},
 			err: fmt.Errorf(
-				"request block index %d does not match response block index %d",
+				"%w: requested block index %d but got %d",
+				ErrReturnedBlockIndexMismatch,
 				invalidIndex,
 				validBlock.Index,
 			),
@@ -239,7 +240,8 @@ func TestAccoutBalance(t *testing.T) {
 				validAmount,
 			},
 			err: fmt.Errorf(
-				"request block hash %s does not match response block hash %s",
+				"%w: requested block hash %s but got %s",
+				ErrReturnedBlockHashMismatch,
 				invalidHash,
 				validBlock.Hash,
 			),

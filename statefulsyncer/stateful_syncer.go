@@ -174,7 +174,11 @@ func (s *StatefulSyncer) NetworkStatus(
 	network *types.NetworkIdentifier,
 ) (*types.NetworkStatusResponse, error) {
 	networkStatus, fetchErr := s.fetcher.NetworkStatusRetry(ctx, network, nil)
-	return networkStatus, fetchErr.Err
+	if fetchErr != nil {
+		return nil, fetchErr.Err
+	}
+
+	return networkStatus, nil
 }
 
 // Block is called by the syncer to fetch a block.
@@ -184,5 +188,8 @@ func (s *StatefulSyncer) Block(
 	block *types.PartialBlockIdentifier,
 ) (*types.Block, error) {
 	blockResponse, fetchErr := s.fetcher.BlockRetry(ctx, network, block)
-	return blockResponse, fetchErr.Err
+	if fetchErr != nil {
+		return nil, fetchErr.Err
+	}
+	return blockResponse, nil
 }

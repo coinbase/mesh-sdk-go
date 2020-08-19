@@ -208,6 +208,19 @@ func PrettyPrintStruct(val interface{}) string {
 	return string(prettyStruct)
 }
 
+// PrintStruct marshals a struct to JSON and returns
+// it as a string without newlines.
+func PrintStruct(val interface{}) string {
+	str, err := json.Marshal(
+		val,
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return string(str)
+}
+
 // MarshalMap attempts to marshal an interface into a map[string]interface{}.
 // This function is used similarly to json.Marshal.
 func MarshalMap(input interface{}) (map[string]interface{}, error) {

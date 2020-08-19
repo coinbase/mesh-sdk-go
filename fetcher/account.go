@@ -90,6 +90,12 @@ func (f *Fetcher) AccountBalanceRetry(
 			return responseBlock, balances, coins, metadata, nil
 		}
 
+		if ctx.Err() != nil {
+			return nil, nil, nil, nil, &Error{
+				Err: ctx.Err(),
+			}
+		}
+
 		if errors.Is(err.Err, ErrAssertionFailed) {
 			fetcherErr := &Error{
 				Err:       fmt.Errorf("%w: /account/balance not attempting retry", err.Err),
@@ -98,28 +104,12 @@ func (f *Fetcher) AccountBalanceRetry(
 			return nil, nil, nil, nil, fetcherErr
 		}
 
-		if ctx.Err() != nil {
-			fetcherErr := &Error{
-				Err:       ctx.Err(),
-				ClientErr: err.ClientErr,
-			}
-			return nil, nil, nil, nil, fetcherErr
-		}
-
-		if !tryAgain(
-			fmt.Sprintf("account %s", types.PrettyPrintStruct(account)),
+		if err := tryAgain(
+			fmt.Sprintf("account %s", types.PrintStruct(account)),
 			backoffRetries,
-			err.Err,
-		) {
-			break
+			err,
+		); err != nil {
+			return nil, nil, nil, nil, err
 		}
-	}
-
-	return nil, nil, nil, nil, &Error{
-		Err: fmt.Errorf(
-			"%w: unable to fetch account %s",
-			ErrExhaustedRetries,
-			types.PrettyPrintStruct(account),
-		),
 	}
 }

@@ -78,6 +78,12 @@ func (f *Fetcher) NetworkStatusRetry(
 			return networkStatus, nil
 		}
 
+		if ctx.Err() != nil {
+			return nil, &Error{
+				Err: ctx.Err(),
+			}
+		}
+
 		if errors.Is(err.Err, ErrAssertionFailed) {
 			fetcherErr := &Error{
 				Err:       fmt.Errorf("%w: /network/status not attempting retry", err.Err),
@@ -86,29 +92,14 @@ func (f *Fetcher) NetworkStatusRetry(
 			return nil, fetcherErr
 		}
 
-		if ctx.Err() != nil {
-			fetcherErr := &Error{
-				Err:       ctx.Err(),
-				ClientErr: err.ClientErr,
-			}
-			return nil, fetcherErr
-		}
-
-		if !tryAgain(
-			fmt.Sprintf("network status %s", types.PrettyPrintStruct(network)),
+		if err := tryAgain(
+			fmt.Sprintf("network status %s", types.PrintStruct(network)),
 			backoffRetries,
-			err.Err,
-		) {
-			break
+			err,
+		); err != nil {
+			return nil, err
 		}
 	}
-
-	return nil, &Error{
-		Err: fmt.Errorf(
-			"%w: unable to fetch network status %s",
-			ErrExhaustedRetries,
-			types.PrettyPrintStruct(network),
-		)}
 }
 
 // NetworkList returns the validated response
@@ -162,6 +153,12 @@ func (f *Fetcher) NetworkListRetry(
 			return networkList, nil
 		}
 
+		if ctx.Err() != nil {
+			return nil, &Error{
+				Err: ctx.Err(),
+			}
+		}
+
 		if errors.Is(err.Err, ErrAssertionFailed) {
 			fetcherErr := &Error{
 				Err:       fmt.Errorf("%w: /network/list not attempting retry", err.Err),
@@ -170,24 +167,10 @@ func (f *Fetcher) NetworkListRetry(
 			return nil, fetcherErr
 		}
 
-		if ctx.Err() != nil {
-			fetcherErr := &Error{
-				Err:       ctx.Err(),
-				ClientErr: err.ClientErr,
-			}
-			return nil, fetcherErr
-		}
-
-		if !tryAgain("NetworkList", backoffRetries, err.Err) {
-			break
+		if err := tryAgain("NetworkList", backoffRetries, err); err != nil {
+			return nil, err
 		}
 	}
-
-	return nil, &Error{
-		Err: fmt.Errorf(
-			"%w: unable to fetch network list",
-			ErrExhaustedRetries,
-		)}
 }
 
 // NetworkOptions returns the validated response
@@ -245,6 +228,12 @@ func (f *Fetcher) NetworkOptionsRetry(
 			return networkOptions, nil
 		}
 
+		if ctx.Err() != nil {
+			return nil, &Error{
+				Err: ctx.Err(),
+			}
+		}
+
 		if errors.Is(err.Err, ErrAssertionFailed) {
 			fetcherErr := &Error{
 				Err:       fmt.Errorf("%w: /network/options not attempting retry", err.Err),
@@ -253,27 +242,12 @@ func (f *Fetcher) NetworkOptionsRetry(
 			return nil, fetcherErr
 		}
 
-		if ctx.Err() != nil {
-			fetcherErr := &Error{
-				Err:       ctx.Err(),
-				ClientErr: err.ClientErr,
-			}
-			return nil, fetcherErr
-		}
-
-		if !tryAgain(
-			fmt.Sprintf("network options %s", types.PrettyPrintStruct(network)),
+		if err := tryAgain(
+			fmt.Sprintf("network options %s", types.PrintStruct(network)),
 			backoffRetries,
-			err.Err,
-		) {
-			break
+			err,
+		); err != nil {
+			return nil, err
 		}
-	}
-
-	return nil, &Error{
-		Err: fmt.Errorf(
-			"%w: unable to fetch network options %s",
-			ErrExhaustedRetries,
-			types.PrettyPrintStruct(network)),
 	}
 }

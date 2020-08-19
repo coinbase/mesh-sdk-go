@@ -46,6 +46,14 @@ var (
 		},
 	}
 
+	account4 = &types.AccountIdentifier{
+		Address: "blah4",
+	}
+
+	account5 = &types.AccountIdentifier{
+		Address: "blah5",
+	}
+
 	accountCoins = []*types.Coin{
 		{
 			CoinIdentifier: &types.CoinIdentifier{Identifier: "coin1"},
@@ -68,6 +76,46 @@ var (
 		{
 			CoinIdentifier: &types.CoinIdentifier{Identifier: "coin4"},
 			Amount:         coinBlock3.Transactions[1].Operations[0].Amount,
+		},
+	}
+
+	coins1 = &types.Coin{
+		CoinIdentifier: &types.CoinIdentifier{Identifier: "bulkCoin1"},
+		Amount: &types.Amount{
+			Value:    "10",
+			Currency: currency,
+		},
+	}
+
+	coins2 = &types.Coin{
+		CoinIdentifier: &types.CoinIdentifier{Identifier: "bulkCoin2"},
+		Amount: &types.Amount{
+			Value:    "20",
+			Currency: currency,
+		},
+	}
+
+	coins3 = &types.Coin{
+		CoinIdentifier: &types.CoinIdentifier{Identifier: "bulkCoin3"},
+		Amount: &types.Amount{
+			Value:    "30",
+			Currency: currency,
+		},
+	}
+
+	coins4 = &types.Coin{
+		CoinIdentifier: &types.CoinIdentifier{Identifier: "bulkCoin4"},
+		Amount: &types.Amount{
+			Value:    "40",
+			Currency: currency,
+		},
+	}
+
+	coins5 = &types.Coin{
+		CoinIdentifier: &types.CoinIdentifier{Identifier: "bulkCoin5"},
+		Amount: &types.Amount{
+			Value:    "50",
+			Currency: currency,
 		},
 	}
 
@@ -258,6 +306,46 @@ func TestCoinStorage(t *testing.T) {
 
 	c := NewCoinStorage(database, mockHelper, a)
 
+	t.Run("AddCoins before blocks", func(t *testing.T) {
+		accountCoins := []*AccountCoin{
+			&AccountCoin{
+				Account: account4,
+				Coin:    coins4,
+			},
+			&AccountCoin{
+				Account: account5,
+				Coin:    coins5,
+			},
+		}
+
+		err = c.AddCoins(ctx, accountCoins)
+		assert.NoError(t, err)
+
+		// Assert error in getcoins when no CurrentBlockIdentifier
+		coinsGot, block, err := c.GetCoins(ctx, account5)
+		assert.Error(t, err)
+		assert.Nil(t, coinsGot)
+		assert.Nil(t, block)
+
+		coinsGot, block, err = c.GetCoins(ctx, account4)
+		assert.Error(t, err)
+		assert.Nil(t, coinsGot)
+		assert.Nil(t, block)
+
+		// Mock CurrentBlockIdentifier
+		mockHelper.BlockIdentifier = blockIdentifier
+
+		coinsGot, block, err = c.GetCoins(ctx, account5)
+		assert.NoError(t, err)
+		assert.Equal(t, blockIdentifier, block)
+		assert.ElementsMatch(t, coinsGot, []*types.Coin{coins5})
+
+		coinsGot, block, err = c.GetCoins(ctx, account4)
+		assert.NoError(t, err)
+		assert.Equal(t, blockIdentifier, block)
+		assert.ElementsMatch(t, coinsGot, []*types.Coin{coins4})
+	})
+
 	t.Run("get coins of unset account", func(t *testing.T) {
 		coins, block, err := c.GetCoins(ctx, account)
 		assert.NoError(t, err)
@@ -373,9 +461,71 @@ func TestCoinStorage(t *testing.T) {
 		assert.Equal(t, &types.CoinIdentifier{Identifier: "coin4"}, coinIdentifier)
 		assert.Equal(t, blockIdentifier, block)
 	})
+
+	t.Run("AddCoins after block", func(t *testing.T) {
+		accountCoins := []*AccountCoin{
+			&AccountCoin{
+				Account: account,
+				Coin:    coins1,
+			},
+			&AccountCoin{
+				Account: account2,
+				Coin:    coins2,
+			},
+			&AccountCoin{
+				Account: account3,
+				Coin:    coins3,
+			},
+			&AccountCoin{
+				Account: account4,
+				Coin:    coins4,
+			},
+		}
+
+		account1coins, block, err := c.GetCoins(ctx, account)
+		assert.NoError(t, err)
+		assert.Equal(t, blockIdentifier, block)
+
+		account2coins, block, err := c.GetCoins(ctx, account2)
+		assert.NoError(t, err)
+		assert.Equal(t, blockIdentifier, block)
+
+		account3coins, block, err := c.GetCoins(ctx, account3)
+		assert.NoError(t, err)
+		assert.Equal(t, blockIdentifier, block)
+
+		err = c.AddCoins(ctx, accountCoins)
+		assert.NoError(t, err)
+
+		coinsGot, block, err := c.GetCoins(ctx, account)
+		account1coins = append(account1coins, coins1)
+		assert.NoError(t, err)
+		assert.Equal(t, blockIdentifier, block)
+		assert.ElementsMatch(t, coinsGot, account1coins)
+
+		coinsGot, block, err = c.GetCoins(ctx, account2)
+		account2coins = append(account2coins, coins2)
+		assert.NoError(t, err)
+		assert.Equal(t, blockIdentifier, block)
+		assert.ElementsMatch(t, coinsGot, account2coins)
+
+		coinsGot, block, err = c.GetCoins(ctx, account3)
+		account3coins = append(account3coins, coins3)
+		assert.NoError(t, err)
+		assert.Equal(t, blockIdentifier, block)
+		assert.ElementsMatch(t, coinsGot, account3coins)
+
+		// Does not add duplicate
+		coinsGot, block, err = c.GetCoins(ctx, account4)
+		assert.NoError(t, err)
+		assert.Equal(t, blockIdentifier, block)
+		assert.ElementsMatch(t, coinsGot, []*types.Coin{coins4})
+	})
 }
 
-type MockCoinStorageHelper struct{}
+type MockCoinStorageHelper struct {
+	BlockIdentifier *types.BlockIdentifier
+}
 
 var _ CoinStorageHelper = (*MockCoinStorageHelper)(nil)
 
@@ -383,5 +533,8 @@ func (h *MockCoinStorageHelper) CurrentBlockIdentifier(
 	ctx context.Context,
 	transaction DatabaseTransaction,
 ) (*types.BlockIdentifier, error) {
+	if h.BlockIdentifier == nil {
+		return nil, ErrHeadBlockNotFound
+	}
 	return blockIdentifier, nil
 }
