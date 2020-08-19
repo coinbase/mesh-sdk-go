@@ -538,15 +538,15 @@ func (b *BalanceStorage) SetBalanceImported(
 		log.Printf(
 			"Setting account %s balance to %s %+v\n",
 			accountBalance.Account.Address,
-			accountBalance.BalanceAmount.Value,
-			accountBalance.BalanceAmount.Currency,
+			accountBalance.Amount.Value,
+			accountBalance.Amount.Currency,
 		)
 
 		err := b.SetBalance(
 			ctx,
 			transaction,
 			accountBalance.Account,
-			accountBalance.BalanceAmount,
+			accountBalance.Amount,
 			accountBalance.Block,
 		)
 		if err != nil {
