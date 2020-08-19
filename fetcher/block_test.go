@@ -74,8 +74,8 @@ func TestBlockRetry(t *testing.T) {
 		transactionErrorsBeforeSuccess int
 		expectedBlock                  *types.Block
 		expectedError                  error
-		unretriableError               bool
-		unretriableErrorTransaction    bool
+		retriableError                 bool
+		retriableErrorTransaction      bool
 
 		fetcherMaxRetries uint64
 		shouldCancel      bool
@@ -102,6 +102,8 @@ func TestBlockRetry(t *testing.T) {
 			transactionErrorsBeforeSuccess: 2,
 			expectedBlock:                  basicBlockWithTransactions,
 			fetcherMaxRetries:              5,
+			retriableError:                 true,
+			retriableErrorTransaction:      true,
 		},
 		"retry failures": {
 			network:             basicNetwork,
@@ -110,23 +112,23 @@ func TestBlockRetry(t *testing.T) {
 			errorsBeforeSuccess: 2,
 			expectedBlock:       basicFullBlock,
 			fetcherMaxRetries:   5,
+			retriableError:      true,
 		},
-		"unretriable error": {
+		"non-retriable error": {
 			network:             basicNetwork,
 			blockIdentifier:     basicBlock,
 			errorsBeforeSuccess: 2,
-			unretriableError:    true,
 			fetcherMaxRetries:   5,
 			expectedError:       ErrRequestFailed,
 		},
-		"unretriable error with transactions": {
+		"non-retriable error with transactions": {
 			network:                        basicNetwork,
 			blockIdentifier:                basicBlock,
 			blockResponse:                  basicFullBlock,
 			transaction:                    basicTransaction,
 			containsOtherTransactions:      true,
 			transactionErrorsBeforeSuccess: 2,
-			unretriableErrorTransaction:    true,
+			retriableError:                 true,
 			expectedError:                  ErrRequestFailed,
 			fetcherMaxRetries:              5,
 		},
@@ -134,6 +136,7 @@ func TestBlockRetry(t *testing.T) {
 			network:             basicNetwork,
 			blockIdentifier:     basicBlock,
 			errorsBeforeSuccess: 2,
+			retriableError:      true,
 			expectedError:       ErrExhaustedRetries,
 			fetcherMaxRetries:   1,
 		},
@@ -141,6 +144,7 @@ func TestBlockRetry(t *testing.T) {
 			network:             basicNetwork,
 			blockIdentifier:     basicBlock,
 			errorsBeforeSuccess: 6,
+			retriableError:      true,
 			expectedError:       context.Canceled,
 			fetcherMaxRetries:   5,
 			shouldCancel:        true,
@@ -150,7 +154,7 @@ func TestBlockRetry(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			var (
-				tries            = 0
+				blockTries       = 0
 				transactionTries = 0
 				assert           = assert.New(t)
 				ctx, cancel      = context.WithCancel(context.Background())
@@ -172,13 +176,13 @@ func TestBlockRetry(t *testing.T) {
 						cancel()
 					}
 
-					if tries < test.errorsBeforeSuccess {
+					if blockTries < test.errorsBeforeSuccess {
 						w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 						w.WriteHeader(http.StatusInternalServerError)
 						fmt.Fprintln(w, types.PrettyPrintStruct(&types.Error{
-							Retriable: !test.unretriableError,
+							Retriable: test.retriableError,
 						}))
-						tries++
+						blockTries++
 						return
 					}
 
@@ -211,7 +215,7 @@ func TestBlockRetry(t *testing.T) {
 					w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 					w.WriteHeader(http.StatusInternalServerError)
 					fmt.Fprintln(w, types.PrettyPrintStruct(&types.Error{
-						Retriable: !test.unretriableErrorTransaction,
+						Retriable: test.retriableErrorTransaction,
 					}))
 					transactionTries++
 					return
