@@ -112,6 +112,8 @@ func (f *Fetcher) UnsafeTransactions(
 		g.Go(func() error {
 			err := f.fetchChannelTransactions(ctx, network, block, txsToFetch, fetchedTxs)
 			if err != nil {
+				// Only record the first error returned
+				// by fetchChannelTransactions.
 				if fetchErr == nil {
 					fetchErr = err
 				}
@@ -134,6 +136,9 @@ func (f *Fetcher) UnsafeTransactions(
 	}
 
 	if err := g.Wait(); err != nil {
+		// If there exists a fetchErr, that
+		// should be returned over whatever error
+		// is returned to the errGroup.
 		if fetchErr != nil {
 			return nil, fetchErr
 		}
