@@ -68,7 +68,7 @@ func (f *Fetcher) NetworkStatusRetry(
 		f.maxRetries,
 	)
 
-	for ctx.Err() == nil {
+	for {
 		networkStatus, err := f.NetworkStatus(
 			ctx,
 			network,
@@ -76,6 +76,12 @@ func (f *Fetcher) NetworkStatusRetry(
 		)
 		if err == nil {
 			return networkStatus, nil
+		}
+
+		if ctx.Err() != nil {
+			return nil, &Error{
+				Err: ctx.Err(),
+			}
 		}
 
 		if errors.Is(err.Err, ErrAssertionFailed) {
@@ -93,10 +99,6 @@ func (f *Fetcher) NetworkStatusRetry(
 		); err != nil {
 			return nil, err
 		}
-	}
-
-	return nil, &Error{
-		Err: ctx.Err(),
 	}
 }
 
@@ -142,13 +144,19 @@ func (f *Fetcher) NetworkListRetry(
 		f.maxRetries,
 	)
 
-	for ctx.Err() == nil {
+	for {
 		networkList, err := f.NetworkList(
 			ctx,
 			metadata,
 		)
 		if err == nil {
 			return networkList, nil
+		}
+
+		if ctx.Err() != nil {
+			return nil, &Error{
+				Err: ctx.Err(),
+			}
 		}
 
 		if errors.Is(err.Err, ErrAssertionFailed) {
@@ -162,10 +170,6 @@ func (f *Fetcher) NetworkListRetry(
 		if err := tryAgain("NetworkList", backoffRetries, err); err != nil {
 			return nil, err
 		}
-	}
-
-	return nil, &Error{
-		Err: ctx.Err(),
 	}
 }
 
@@ -214,7 +218,7 @@ func (f *Fetcher) NetworkOptionsRetry(
 		f.maxRetries,
 	)
 
-	for ctx.Err() == nil {
+	for {
 		networkOptions, err := f.NetworkOptions(
 			ctx,
 			network,
@@ -222,6 +226,12 @@ func (f *Fetcher) NetworkOptionsRetry(
 		)
 		if err == nil {
 			return networkOptions, nil
+		}
+
+		if ctx.Err() != nil {
+			return nil, &Error{
+				Err: ctx.Err(),
+			}
 		}
 
 		if errors.Is(err.Err, ErrAssertionFailed) {
@@ -239,9 +249,5 @@ func (f *Fetcher) NetworkOptionsRetry(
 		); err != nil {
 			return nil, err
 		}
-	}
-
-	return nil, &Error{
-		Err: ctx.Err(),
 	}
 }

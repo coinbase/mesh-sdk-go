@@ -79,7 +79,7 @@ func (f *Fetcher) AccountBalanceRetry(
 		f.maxRetries,
 	)
 
-	for ctx.Err() == nil {
+	for {
 		responseBlock, balances, coins, metadata, err := f.AccountBalance(
 			ctx,
 			network,
@@ -88,6 +88,12 @@ func (f *Fetcher) AccountBalanceRetry(
 		)
 		if err == nil {
 			return responseBlock, balances, coins, metadata, nil
+		}
+
+		if ctx.Err() != nil {
+			return nil, nil, nil, nil, &Error{
+				Err: ctx.Err(),
+			}
 		}
 
 		if errors.Is(err.Err, ErrAssertionFailed) {
@@ -105,9 +111,5 @@ func (f *Fetcher) AccountBalanceRetry(
 		); err != nil {
 			return nil, nil, nil, nil, err
 		}
-	}
-
-	return nil, nil, nil, nil, &Error{
-		Err: ctx.Err(),
 	}
 }
