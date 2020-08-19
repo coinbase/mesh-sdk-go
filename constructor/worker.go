@@ -62,7 +62,9 @@ func (w *Worker) actions(ctx context.Context, state string, actions []*Action) (
 				return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
 			}
 
-			output, err = GenerateKeyWorker(&unmarshaledInput)
+			var keyPair *keys.KeyPair
+			keyPair, err = GenerateKeyWorker(&unmarshaledInput)
+			output = types.PrintStruct(keyPair)
 		case Derive:
 			var unmarshaledInput types.ConstructionDeriveRequest
 			err = unmarshalInput([]byte(processedInput), &unmarshaledInput)
@@ -70,7 +72,9 @@ func (w *Worker) actions(ctx context.Context, state string, actions []*Action) (
 				return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
 			}
 
-			output, err = w.DeriveWorker(ctx, &unmarshaledInput)
+			var deriveResponse *types.ConstructionDeriveResponse
+			deriveResponse, err = w.DeriveWorker(ctx, &unmarshaledInput)
+			output = types.PrintStruct(deriveResponse)
 		default:
 			return "", fmt.Errorf("%w: %s", ErrInvalidActionType, action.Type)
 		}
@@ -110,7 +114,7 @@ func (w *Worker) ProcessNextScenario(
 func (w *Worker) DeriveWorker(
 	ctx context.Context,
 	input *types.ConstructionDeriveRequest,
-) (string, error) {
+) (*types.ConstructionDeriveResponse, error) {
 	address, metadata, err := w.helper.Derive(
 		ctx,
 		input.NetworkIdentifier,
@@ -118,22 +122,22 @@ func (w *Worker) DeriveWorker(
 		input.Metadata,
 	)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return types.PrintStruct(types.ConstructionDeriveResponse{
+	return &types.ConstructionDeriveResponse{
 		Address:  address,
 		Metadata: metadata,
-	}), nil
+	}, nil
 }
 
 // GenerateKeyWorker attempts to generate a key given a
 // *GenerateKeyInput input.
-func GenerateKeyWorker(input *GenerateKeyInput) (string, error) {
+func GenerateKeyWorker(input *GenerateKeyInput) (*keys.KeyPair, error) {
 	kp, err := keys.GenerateKeypair(input.CurveType)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return types.PrintStruct(kp), nil
+	return kp, nil
 }
