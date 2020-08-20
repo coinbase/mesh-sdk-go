@@ -67,13 +67,11 @@ const (
 	// other actions).
 	SetVariable ActionType = "set_variable"
 
-	// FindAccount finds some unlocked account that optionally
+	// FindBalance finds some unlocked account that optionally
 	// has a minimum balance of funds.
-	FindAccount ActionType = "find_account"
-
 	// FindCoin finds some coin above a certain amount. It is
 	// possible to specify coins which should not be considered (by identifier).
-	FindCoin ActionType = "find_coin"
+	FindBalance ActionType = "find_balance"
 
 	// PrintMessage can be used to print any message
 	// to the terminal. This is usually used to indicate
@@ -145,6 +143,52 @@ type MathInput struct {
 	Operation  MathOperation `json:"operation"`
 	LeftValue  string        `json:"left_value"`
 	RightValue string        `json:"right_value"`
+}
+
+type FindBalanceInput struct {
+	// Optionally, address can be provided to get the balance (this
+	// is used when fetching the balance of the same account in multiple
+	// currencies or when constructing a multi-input UTXO transfer with the
+	// same address).
+	Address string
+
+	// Optionally, not address can be populated to ensure a different
+	// address is found.
+	NotAddress []string
+
+	// Can be used to find addresses with particular subaccount balances.
+	SubAccount *types.SubAccountIdentifier
+
+	// Will block until found (use in waiting for initial funds).
+	Wait bool
+
+	// Minimum required balance that must be found.
+	MinimumBalance *types.Amount
+
+	// If this is true, there must exist a single coin with the minimum balance.
+	RequireCoin bool
+
+	// If NotCoins is populated, that means that certain coins should not be considered
+	// to return. This is useful for creating a multi-input UTXO send.
+	NotCoins []*types.CoinIdentifier
+
+	// If we can't find an address, we will attempt to create it
+	// using the create_account scenario. This will only occur if the
+	// total number of addresses is under some pre-defined limit.
+	// If the value is -1, we will not attempt to create.
+	Create int
+}
+
+type FindBalanceOutput struct {
+	// Account is the account associated with the balance
+	// (and coin).
+	Account *types.AccountIdentifier
+
+	// Balance found at a particular currency.
+	Balance *types.Amount
+
+	// If RequireCoin is true, this field will be populated.
+	Coin *types.CoinIdentifier
 }
 
 // Scenario is a collection of Actions with a specific
@@ -263,6 +307,17 @@ type WorkerHelper interface {
 		string,
 		*keys.KeyPair,
 	) error
+
+	// AllAddresses returns a slice of all known addresses.
+	AllAddresses(ctx context.Context) ([]string, error)
+
+	// LockedAccounts is a slice of all addresses currently sending or receiving
+	// funds.
+	LockedAddresses(context.Context) ([]string, error)
+
+	Balance(context.Context, *types.AccountIdentifier) ([]*types.Amount, error)
+
+	Coins(context.Context, *types.AccountIdentifier) ([]*types.Coin, error)
 }
 
 // Worker processes jobs.
