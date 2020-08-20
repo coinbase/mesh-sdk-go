@@ -15,8 +15,8 @@
 package constructor
 
 import (
-	"errors"
 	"fmt"
+	"log"
 	"regexp"
 	"strings"
 
@@ -36,7 +36,7 @@ func PopulateInput(state string, input string) (string, error) {
 
 		value := gjson.Get(state, match)
 		if !value.Exists() {
-			err = fmt.Errorf("%s is not present in state", match)
+			err = fmt.Errorf("%w: %s is not present in state", ErrVariableNotFound, match)
 			return ""
 		}
 
@@ -47,7 +47,8 @@ func PopulateInput(state string, input string) (string, error) {
 	}
 
 	if !gjson.Valid(input) {
-		return "", errors.New("populated input is not valid JSON")
+		log.Printf("invalid json: %s\n", input)
+		return "", ErrInvalidJSON
 	}
 
 	return input, nil
