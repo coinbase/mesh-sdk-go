@@ -16,14 +16,12 @@ package utils
 
 import (
 	"context"
-	"fmt"
 	"math/big"
 	"os"
 	"path"
 	"testing"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
-	"github.com/coinbase/rosetta-sdk-go/fetcher"
 	"github.com/coinbase/rosetta-sdk-go/types"
 
 	"github.com/stretchr/testify/assert"
@@ -264,16 +262,15 @@ var (
 
 func TestGetAccountBalances(t *testing.T) {
 	ctx := context.Background()
-	mockHelper := &MockCoinBalanceHelper{}
+	mockHelper := &MockAccountBalanceRetryHelper{}
 
 	accBalances, err := GetAccountBalances(
 		ctx,
-		nil,
 		mockHelper,
 		[]*AccountBalanceRequest{accBalanceRequest1, accBalanceRequest2},
 	)
 
-	assert.NoError(t, err)
+	assert.Nil(t, err)
 	assert.Equal(t, accBalances[0], accBalanceResp1)
 	assert.Equal(t, accBalances[1], accBalanceResp2)
 
@@ -281,39 +278,37 @@ func TestGetAccountBalances(t *testing.T) {
 	mockHelper.IsError = true
 	accBalances, err = GetAccountBalances(
 		ctx,
-		nil,
 		mockHelper,
 		[]*AccountBalanceRequest{accBalanceRequest1},
 	)
 	assert.Nil(t, accBalances)
-	assert.Error(t, err)
+	assert.Equal(t, err.Message, "unable to lookup acccount balance")
 }
 
-type MockCoinBalanceHelper struct {
+type MockAccountBalanceRetryHelper struct {
 	IsError bool
 }
 
-var _ GetAccountBalancesHelper = (*MockCoinBalanceHelper)(nil)
+var _ AccountBalanceRetryHelper = (*MockAccountBalanceRetryHelper)(nil)
 
-func (h *MockCoinBalanceHelper) CurrencyBalance(
+func (h *MockAccountBalanceRetryHelper) AccountBalanceRetry(
 	ctx context.Context,
 	network *types.NetworkIdentifier,
-	fetcher *fetcher.Fetcher,
 	account *types.AccountIdentifier,
-	currency *types.Currency,
-	block *types.BlockIdentifier,
-) (*types.Amount, *types.BlockIdentifier, []*types.Coin, error) {
-	fmt.Println(h.IsError)
+	block *types.PartialBlockIdentifier,
+) (*types.BlockIdentifier, []*types.Amount, []*types.Coin, map[string]interface{}, *types.Error) {
 	if h.IsError {
-		return nil, nil, nil, fmt.Errorf("unable to lookup acccount balance")
+		return nil, nil, nil, nil, &types.Error{
+			Message: "unable to lookup acccount balance",
+		}
 	}
 
 	switch account {
 	case accountCoin:
-		return amountCoins, blockIdentifier, accountCoins, nil
+		return blockIdentifier, []*types.Amount{amountCoins}, accountCoins, nil, nil
 	case accountBalance:
-		return amountBalance, blockIdentifier, nil, nil
+		return blockIdentifier, []*types.Amount{amountBalance}, nil, nil, nil
 	default:
-		return nil, nil, nil, nil
+		return nil, nil, nil, nil, nil
 	}
 }

@@ -270,43 +270,55 @@ func Milliseconds() int64 {
 	return nanos / NanosecondsInMillisecond
 }
 
+// GetAccountBalancesHelper is used by GetAccountBalances to determine
+// the CurrencyBalance at tip for an account
+type AccountBalanceRetryHelper interface {
+	AccountBalanceRetry(
+		ctx context.Context,
+		network *types.NetworkIdentifier,
+		account *types.AccountIdentifier,
+		block *types.PartialBlockIdentifier,
+	) (*types.BlockIdentifier, []*types.Amount, []*types.Coin, map[string]interface{}, *types.Error)
+}
+
 // CurrencyBalance returns the balance of an account
 // for a particular currency.
 func CurrencyBalance(
 	ctx context.Context,
 	network *types.NetworkIdentifier,
-	fetcher *fetcher.Fetcher,
+	helper AccountBalanceRetryHelper,
 	account *types.AccountIdentifier,
 	currency *types.Currency,
 	block *types.BlockIdentifier,
-) (*types.Amount, *types.BlockIdentifier, []*types.Coin, error) {
+) (*types.Amount, *types.BlockIdentifier, []*types.Coin, *types.Error) {
 	var lookupBlock *types.PartialBlockIdentifier
 	if block != nil {
 		lookupBlock = types.ConstructPartialBlockIdentifier(block)
 	}
 
-	liveBlock, liveBalances, liveCoins, _, fetchErr := fetcher.AccountBalanceRetry(
+	liveBlock, liveBalances, liveCoins, _, fetchErr := helper.AccountBalanceRetry(
 		ctx,
 		network,
 		account,
 		lookupBlock,
 	)
+
 	if fetchErr != nil {
-		return nil, nil, nil, fmt.Errorf(
-			"%w: unable to lookup acccount balance for %s",
-			fetchErr.Err,
-			types.PrettyPrintStruct(account),
-		)
+		return nil, nil, nil, fetchErr
 	}
 
 	liveAmount, err := types.ExtractAmount(liveBalances, currency)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf(
-			"%w: could not get %s currency balance for %s",
-			err,
-			types.PrettyPrintStruct(currency),
-			types.PrettyPrintStruct(account),
-		)
+		formattedError := &types.Error{
+			Message: fmt.Errorf(
+				"%w: could not get %s currency balance for %s",
+				err,
+				types.PrettyPrintStruct(currency),
+				types.PrettyPrintStruct(account),
+			).Error(),
+		}
+
+		return nil, nil, nil, formattedError
 	}
 
 	return liveAmount, liveBlock, liveCoins, nil
@@ -330,30 +342,16 @@ type AccountBalance struct {
 	Block   *types.BlockIdentifier
 }
 
-// GetAccountBalancesHelper is used by GetAccountBalances to determine
-// the CurrencyBalance at tip for an account
-type GetAccountBalancesHelper interface {
-	CurrencyBalance(
-		ctx context.Context,
-		network *types.NetworkIdentifier,
-		fetcher *fetcher.Fetcher,
-		account *types.AccountIdentifier,
-		currency *types.Currency,
-		block *types.BlockIdentifier,
-	) (*types.Amount, *types.BlockIdentifier, []*types.Coin, error)
-}
-
 // GetAccountBalances returns an array of AccountBalances
 // for an array of AccountBalanceRequests
 func GetAccountBalances(
 	ctx context.Context,
-	fetcher *fetcher.Fetcher,
-	helper GetAccountBalancesHelper,
+	fetcher AccountBalanceRetryHelper,
 	balanceRequests []*AccountBalanceRequest,
-) ([]*AccountBalance, error) {
+) ([]*AccountBalance, *types.Error) {
 	var accountBalances []*AccountBalance
 	for _, balanceRequest := range balanceRequests {
-		amount, block, coins, err := helper.CurrencyBalance(
+		amount, block, coins, err := CurrencyBalance(
 			ctx,
 			balanceRequest.Network,
 			fetcher,
