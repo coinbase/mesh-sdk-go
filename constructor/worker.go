@@ -20,10 +20,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
 	"github.com/coinbase/rosetta-sdk-go/keys"
 	"github.com/coinbase/rosetta-sdk-go/types"
+	"github.com/coinbase/rosetta-sdk-go/utils"
 
 	"github.com/lucasjones/reggen"
 	"github.com/tidwall/sjson"
@@ -72,6 +74,8 @@ func (w *Worker) invokeWorker(
 		return RandomStringWorker(input)
 	case Math:
 		return MathWorker(input)
+	case FindBalance:
+		return w.FindBalanceWorker(ctx, input)
 	default:
 		return "", fmt.Errorf("%w: %s", ErrInvalidActionType, action)
 	}
@@ -233,4 +237,143 @@ func MathWorker(rawInput string) (string, error) {
 	}
 
 	return marshalString(result), nil
+}
+
+func (w *Worker) FindBalanceWorker(ctx context.Context, rawInput string) (string, error) {
+	var input FindBalanceInput
+	err := unmarshalInput([]byte(rawInput), &input)
+	if err != nil {
+		return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
+	}
+
+	addresses, err := w.helper.AllAddresses(ctx)
+	if err != nil {
+		return "", fmt.Errorf("%w: unable to get all addresses %s", ErrActionFailed, err.Error())
+	}
+
+	// If there are no addresses, we should create one.
+	if len(addresses) == 0 {
+		return "", ErrCreateAccount
+	}
+
+	// get available addresses
+	unlockedAddresses := []string{}
+	lockedAddresses, err := w.helper.LockedAddresses(ctx)
+	if err != nil {
+		return "", fmt.Errorf("%w: unable to get locked addresses %s", ErrActionFailed, err)
+	}
+
+	// Convert to a map so can do fast lookups
+	lockedSet := map[string]struct{}{}
+	for _, address := range lockedAddresses {
+		lockedSet[address] = struct{}{}
+	}
+
+	for _, address := range addresses {
+		if _, exists := lockedSet[address]; !exists {
+			unlockedAddresses = append(unlockedAddresses, address)
+		}
+	}
+
+	// get balances of each unlocked address
+	// -> exit as soon as conditions met
+	for _, address := range unlockedAddresses {
+		if len(input.Address) != 0 && address != input.Address {
+			continue
+		}
+
+		// skip if in NotAccount
+		if utils.ContainsString(input.NotAddress, address) {
+			continue
+		}
+
+		acct := &types.AccountIdentifier{
+			Address:    address,
+			SubAccount: input.SubAccount,
+		}
+		if input.RequireCoin {
+			coins, err := w.helper.Coins(ctx, acct)
+			if err != nil {
+				return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
+			}
+
+			disallowedCoins := []string{}
+			for _, coinIdentifier := range input.NotCoins {
+				disallowedCoins = append(disallowedCoins, types.Hash(coinIdentifier))
+			}
+
+			for _, coin := range coins {
+				if utils.ContainsString(disallowedCoins, types.Hash(coin.CoinIdentifier)) {
+					continue
+				}
+
+				if types.Hash(coin.Amount.Currency) != types.Hash(input.MinimumBalance.Currency) {
+					continue
+				}
+
+				diff, err := types.SubtractValues(coin.Amount.Value, input.MinimumBalance.Value)
+				if err != nil {
+					return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
+				}
+
+				bigIntDiff, err := types.BigInt(diff)
+				if err != nil {
+					return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
+				}
+
+				if bigIntDiff.Sign() < 0 {
+					continue
+				}
+
+				return types.PrintStruct(FindBalanceOutput{
+					Account: acct,
+					Balance: coin.Amount,
+					Coin:    coin.CoinIdentifier,
+				}), nil
+			}
+		} else {
+			amounts, err := w.helper.Balance(ctx, acct)
+			if err != nil {
+				return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
+			}
+
+			// TODO: look for amounts > min
+			for _, amount := range amounts {
+				diff, err := types.SubtractValues(amount.Value, input.MinimumBalance.Value)
+				if err != nil {
+					return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
+				}
+
+				bigIntDiff, err := types.BigInt(diff)
+				if err != nil {
+					return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
+				}
+
+				if bigIntDiff.Sign() < 0 {
+					continue
+				}
+
+				return types.PrintStruct(FindBalanceOutput{
+					Account: acct,
+					Balance: amount,
+				}), nil
+			}
+		}
+	}
+
+	// if wait == true, loop
+	if input.Wait {
+		// TODO: better log message
+		log.Printf("waiting for balance...\n")
+		time.Sleep(5 * time.Second)
+		return w.FindBalanceWorker(ctx, rawInput)
+	}
+
+	// if create -1, exit ErrUnsatisfiable
+	if input.Create == -1 {
+		return "", ErrUnsatisfiable
+	}
+
+	// if totalaccount < create, return ErrCreateAddress
+	return "", ErrCreateAccount
 }
