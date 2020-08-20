@@ -504,7 +504,6 @@ func (c *CoinStorage) GetLargestCoin(
 // This is used when importing prefunded addresses.
 func (c *CoinStorage) SetCoinsImported(
 	ctx context.Context,
-	helper BalanceStorageHelper,
 	accountBalances []*utils.AccountBalance,
 ) error {
 	var accountCoins []*AccountCoin
