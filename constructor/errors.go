@@ -17,6 +17,9 @@ package constructor
 import "errors"
 
 var (
+	// ErrInvalidJSON is returned when a populated value is not valid JSON.
+	ErrInvalidJSON = errors.New("populated input is not valid JSON")
+
 	// ErrVariableNotFound is returned when a variable is not
 	// present in a Job's state.
 	ErrVariableNotFound = errors.New("variable not found")
@@ -49,4 +52,21 @@ var (
 
 	// ErrActionFailed is returned when Action exeuction fails with a valid input.
 	ErrActionFailed = errors.New("action execution failed")
+
+	// ErrOperationFormat is returned when []*types.Operation cannot be unmarshaled
+	// from <scenario_name>.operations.
+	ErrOperationFormat = errors.New("operation format")
+
+	// ErrConfirmationDepthInvalid is returned when <scenario_name>.operations
+	// are populated, but confirmation depth is missing or invalid.
+	ErrConfirmationDepthInvalid = errors.New("invalid confirmation depth")
+
+	// ErrNetworkInvalid is returned when <scenario_name>.operations
+	// are populated, but network is missing or invalid.
+	ErrNetworkInvalid = errors.New("network invalid")
+
+	// ErrMetadataInvalid is returned when <scenario_name>.operations
+	// are populated, but construction preprocess metadata is
+	// invalid (ok to be missing).
+	ErrMetadataInvalid = errors.New("metadata invalid")
 )

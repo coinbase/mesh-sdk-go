@@ -17,6 +17,7 @@ package constructor
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"regexp"
 	"testing"
 
@@ -208,4 +209,218 @@ func TestJob_ComplicatedTransfer(t *testing.T) {
 	assertVariableEquality(t, j.State, "address.address", address)
 
 	mockHelper.AssertExpectations(t)
+}
+
+func TestJob_Failures(t *testing.T) {
+	tests := map[string]struct {
+		scenario    *Scenario
+		helper      *mocks.WorkerHelper
+		newIndex    int
+		complete    bool
+		expectedErr error
+	}{
+		"invalid action": {
+			scenario: &Scenario{
+				Name: "create_address",
+				Actions: []*Action{
+					{
+						Type:       "stuff",
+						Input:      `{"network":"Testnet3", "blockchain":"Bitcoin"}`,
+						OutputPath: "network",
+					},
+				},
+			},
+			expectedErr: ErrInvalidActionType,
+			helper:      &mocks.WorkerHelper{},
+		},
+		"invalid json": {
+			scenario: &Scenario{
+				Name: "create_address",
+				Actions: []*Action{
+					{
+						Type:       SetVariable,
+						Input:      `"network":"Testnet3", "blockchain":"Bitcoin"}`,
+						OutputPath: "network",
+					},
+				},
+			},
+			expectedErr: ErrInvalidJSON,
+			helper:      &mocks.WorkerHelper{},
+		},
+		"missing variable": {
+			scenario: &Scenario{
+				Name: "create_address",
+				Actions: []*Action{
+					{
+						Type:       SetVariable,
+						Input:      `{"network":{{var}}, "blockchain":"Bitcoin"}`,
+						OutputPath: "network",
+					},
+				},
+			},
+			expectedErr: ErrVariableNotFound,
+			helper:      &mocks.WorkerHelper{},
+		},
+		"invalid input: generate key": {
+			scenario: &Scenario{
+				Name: "create_address",
+				Actions: []*Action{
+					{
+						Type:       GenerateKey,
+						Input:      `{"curve_typ": "secp256k1"}`,
+						OutputPath: "key",
+					},
+				},
+			},
+			expectedErr: ErrInvalidInput,
+			helper:      &mocks.WorkerHelper{},
+		},
+		"invalid input: derive": {
+			scenario: &Scenario{
+				Name: "create_address",
+				Actions: []*Action{
+					{
+						Type:       Derive,
+						Input:      `{"public_key": {}}`,
+						OutputPath: "address",
+					},
+				},
+			},
+			expectedErr: ErrInvalidInput,
+			helper:      &mocks.WorkerHelper{},
+		},
+		"invalid input: save address input": {
+			scenario: &Scenario{
+				Name: "create_address",
+				Actions: []*Action{
+					{
+						Type:  SaveAddress,
+						Input: `{}`,
+					},
+				},
+			},
+			expectedErr: ErrInvalidInput,
+			helper:      &mocks.WorkerHelper{},
+		},
+		"invalid action: math": {
+			scenario: &Scenario{
+				Name: "create_address",
+				Actions: []*Action{
+					{
+						Type:  Math,
+						Input: `{"operation":"addition", "left_value":"1", "right_value":"B"}`,
+					},
+				},
+			},
+			expectedErr: ErrActionFailed,
+			helper:      &mocks.WorkerHelper{},
+		},
+		"invalid broadcast: invalid operations": {
+			scenario: &Scenario{
+				Name: "create_send",
+				Actions: []*Action{
+					{
+						Type:       SetVariable,
+						Input:      `[{"operation_identifier":{"index":0},"type":"","statsbf":""}]`, // nolint
+						OutputPath: "create_send.operations",
+					},
+				},
+			},
+			newIndex:    1,
+			complete:    true,
+			expectedErr: ErrOperationFormat,
+			helper:      &mocks.WorkerHelper{},
+		},
+		"invalid broadcast: missing confirmation depth": {
+			scenario: &Scenario{
+				Name: "create_send",
+				Actions: []*Action{
+					{
+						Type:       SetVariable,
+						Input:      `[{"operation_identifier":{"index":0},"type":"","status":""}]`, // nolint
+						OutputPath: "create_send.operations",
+					},
+				},
+			},
+			newIndex:    1,
+			complete:    true,
+			expectedErr: ErrConfirmationDepthInvalid,
+			helper:      &mocks.WorkerHelper{},
+		},
+		"invalid broadcast: missing network identifier": {
+			scenario: &Scenario{
+				Name: "create_send",
+				Actions: []*Action{
+					{
+						Type:       SetVariable,
+						Input:      `[{"operation_identifier":{"index":0},"type":"","status":""}]`, // nolint
+						OutputPath: "create_send.operations",
+					},
+					{
+						Type:       SetVariable,
+						Input:      `"10"`,
+						OutputPath: "create_send.confirmation_depth",
+					},
+				},
+			},
+			newIndex:    1,
+			complete:    true,
+			expectedErr: ErrNetworkInvalid,
+			helper:      &mocks.WorkerHelper{},
+		},
+		"invalid broadcast: metadata incorrect": {
+			scenario: &Scenario{
+				Name: "create_send",
+				Actions: []*Action{
+					{
+						Type:       SetVariable,
+						Input:      `[{"operation_identifier":{"index":0},"type":"","status":""}]`, // nolint
+						OutputPath: "create_send.operations",
+					},
+					{
+						Type:       SetVariable,
+						Input:      `"10"`,
+						OutputPath: "create_send.confirmation_depth",
+					},
+					{
+						Type:       SetVariable,
+						Input:      `{"network":"Testnet3", "blockchain":"Bitcoin"}`,
+						OutputPath: "create_send.network",
+					},
+					{
+						Type:       SetVariable,
+						Input:      `"hello"`,
+						OutputPath: "create_send.preprocess_metadata",
+					},
+				},
+			},
+			newIndex:    1,
+			complete:    true,
+			expectedErr: ErrMetadataInvalid,
+			helper:      &mocks.WorkerHelper{},
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			ctx := context.Background()
+			workflow := &Workflow{
+				Name:      "random",
+				Scenarios: []*Scenario{test.scenario},
+			}
+			j := NewJob(workflow)
+			worker := NewWorker(test.helper)
+
+			assert.False(t, j.checkComplete())
+
+			b, err := j.Process(ctx, worker)
+			assert.Nil(t, b)
+			assert.True(t, errors.Is(err, test.expectedErr))
+
+			assert.Equal(t, test.complete, j.checkComplete())
+			assert.Equal(t, test.newIndex, j.Index)
+
+			test.helper.AssertExpectations(t)
+		})
+	}
 }
