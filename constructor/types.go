@@ -16,9 +16,16 @@ package constructor
 
 import (
 	"context"
+	"time"
 
 	"github.com/coinbase/rosetta-sdk-go/keys"
 	"github.com/coinbase/rosetta-sdk-go/types"
+)
+
+const (
+	// BalanceWaitTime is the amount of time
+	// we wait between balance checks.
+	BalanceWaitTime = 5 * time.Second
 )
 
 // ReservedVariable is a reserved variable
@@ -145,40 +152,48 @@ type MathInput struct {
 	RightValue string        `json:"right_value"`
 }
 
+// FindBalanceInput is the input to FindBalance.
 type FindBalanceInput struct {
-	// Optionally, address can be provided to get the balance (this
-	// is used when fetching the balance of the same account in multiple
-	// currencies or when constructing a multi-input UTXO transfer with the
+	// Address can be optionally provided to ensure the balance returned
+	// is for a particular address (this is used when fetching the balance
+	// of the same account in multiple currencies, when requesting funds,
+	// or when constructing a multi-input UTXO transfer with the
 	// same address).
 	Address string
 
-	// Optionally, not address can be populated to ensure a different
-	// address is found.
+	// NotAddress can be populated to ensure a different
+	// address is found. This is useful when avoiding a
+	// self-transfer.
 	NotAddress []string
 
-	// Can be used to find addresses with particular subaccount balances.
+	// SubAccount can be used to find addresses with particular
+	// SubAccount balances. This is particularly useful for
+	// orchestrating staking transactions.
 	SubAccount *types.SubAccountIdentifier
 
-	// Will block until found (use in waiting for initial funds).
+	// Wait will cause this action to block until an acceptable
+	// balance is found. This is useful when waiting for initial funds.
 	Wait bool
 
-	// Minimum required balance that must be found.
+	// MinimumBalance is the minimum required balance that must be found.
 	MinimumBalance *types.Amount
 
-	// If this is true, there must exist a single coin with the minimum balance.
+	// RequireCoin indicates if a coin must be found with the minimum balance.
+	// This is useful for orchestrating transfers on UTXO-based blockchains.
 	RequireCoin bool
 
-	// If NotCoins is populated, that means that certain coins should not be considered
-	// to return. This is useful for creating a multi-input UTXO send.
+	// NotCoins indicates that certain coins should not be considered. This is useful
+	// for avoiding using the same Coin twice.
 	NotCoins []*types.CoinIdentifier
 
-	// If we can't find an address, we will attempt to create it
-	// using the create_account scenario. This will only occur if the
+	// Create is used to determine if we should create a new address using
+	// the CreateAccount Workflow. This will only occur if the
 	// total number of addresses is under some pre-defined limit.
 	// If the value is -1, we will not attempt to create.
 	Create int
 }
 
+// FindBalanceOutput is returned by FindBalance.
 type FindBalanceOutput struct {
 	// Account is the account associated with the balance
 	// (and coin).
@@ -187,7 +202,7 @@ type FindBalanceOutput struct {
 	// Balance found at a particular currency.
 	Balance *types.Amount
 
-	// If RequireCoin is true, this field will be populated.
+	// Coin is populated if RequireCoin is true.
 	Coin *types.CoinIdentifier
 }
 
