@@ -35,7 +35,7 @@ func assertVariableEquality(t *testing.T, state string, variable string, expecte
 	assert.Equal(t, types.Hash(expected), types.Hash(saved))
 }
 
-func TestJob_CreateComplicatedTransfer(t *testing.T) {
+func TestJob_ComplicatedTransfer(t *testing.T) {
 	ctx := context.Background()
 	s := &Scenario{
 		Name: "create_address",
@@ -76,7 +76,7 @@ func TestJob_CreateComplicatedTransfer(t *testing.T) {
 			},
 			{
 				Type:       SetVariable,
-				Input:      `[{"operation_identifier":{"index":0},"type":"","status":"","account":{"address":{{address.address}}},"amount":{"value":"-90","currency":{"symbol":"BTC","decimals":8}}},{"operation_identifier":{"index":1},"type":"","status":"","account":{"address":{{random_address}}},"amount":{"value":"100","currency":{"symbol":"BTC","decimals":8}}}]`,
+				Input:      `[{"operation_identifier":{"index":0},"type":"","status":"","account":{"address":{{address.address}}},"amount":{"value":"-90","currency":{"symbol":"BTC","decimals":8}}},{"operation_identifier":{"index":1},"type":"","status":"","account":{"address":{{random_address}}},"amount":{"value":"100","currency":{"symbol":"BTC","decimals":8}}}]`, // nolint
 				OutputPath: "create_send.operations",
 			},
 			{
@@ -87,6 +87,21 @@ func TestJob_CreateComplicatedTransfer(t *testing.T) {
 			{
 				Type:       SetVariable,
 				Input:      `"10"`,
+				OutputPath: "valA",
+			},
+			{
+				Type:       SetVariable,
+				Input:      `"16"`,
+				OutputPath: "valB",
+			},
+			{
+				Type:       Math,
+				Input:      `{"operation":"addition", "left_value":{{valA}}, "right_value":{{valB}}}`,
+				OutputPath: "create_send.confirmation_depth",
+			},
+			{ // Attempt to overwrite confirmation depth
+				Type:       Math,
+				Input:      `{"operation":"subtraction", "left_value":"100", "right_value":{{create_send.confirmation_depth}}}`,
 				OutputPath: "create_send.confirmation_depth",
 			},
 		},
@@ -182,7 +197,7 @@ func TestJob_CreateComplicatedTransfer(t *testing.T) {
 				},
 			},
 		},
-		ConfirmationDepth: 10,
+		ConfirmationDepth: 74,
 	}, b)
 
 	assert.True(t, j.checkComplete())

@@ -128,6 +128,25 @@ type RandomStringInput struct {
 	Limit int `json:"limit"`
 }
 
+// MathOperation is some mathematical operation that
+// can be performed on 2 numbers.
+type MathOperation string
+
+const (
+	// Addition is adding LeftValue + RightValue.
+	Addition MathOperation = "addition"
+
+	// Subtraction is LeftValue - RightValue.
+	Subtraction MathOperation = "subtraction"
+)
+
+// MathInput is the input to Math.
+type MathInput struct {
+	Operation  MathOperation `json:"operation"`
+	LeftValue  string        `json:"left_value"`
+	RightValue string        `json:"right_value"`
+}
+
 // Scenario is a collection of Actions with a specific
 // confirmation depth.
 //
