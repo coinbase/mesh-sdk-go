@@ -33,8 +33,8 @@ func (f *Fetcher) ConstructionCombine(
 	network *types.NetworkIdentifier,
 	unsignedTransaction string,
 	signatures []*types.Signature,
-) (string, error) {
-	response, _, err := f.rosettaClient.ConstructionAPI.ConstructionCombine(ctx,
+) (string, *Error) {
+	response, clientErr, err := f.rosettaClient.ConstructionAPI.ConstructionCombine(ctx,
 		&types.ConstructionCombineRequest{
 			NetworkIdentifier:   network,
 			UnsignedTransaction: unsignedTransaction,
@@ -42,11 +42,18 @@ func (f *Fetcher) ConstructionCombine(
 		},
 	)
 	if err != nil {
-		return "", fmt.Errorf("%w: /construction/combine %s", ErrRequestFailed, err.Error())
+		fetcherErr := &Error{
+			Err:       fmt.Errorf("%w: /construction/combine %s", ErrRequestFailed, err.Error()),
+			ClientErr: clientErr,
+		}
+		return "", fetcherErr
 	}
 
 	if err := asserter.ConstructionCombineResponse(response); err != nil {
-		return "", fmt.Errorf("%w: /construction/combine %s", ErrAssertionFailed, err.Error())
+		fetcherErr := &Error{
+			Err: fmt.Errorf("%w: /construction/combine %s", ErrAssertionFailed, err.Error()),
+		}
+		return "", fetcherErr
 	}
 
 	return response.SignedTransaction, nil
@@ -62,8 +69,8 @@ func (f *Fetcher) ConstructionDerive(
 	network *types.NetworkIdentifier,
 	publicKey *types.PublicKey,
 	metadata map[string]interface{},
-) (string, map[string]interface{}, error) {
-	response, _, err := f.rosettaClient.ConstructionAPI.ConstructionDerive(ctx,
+) (string, map[string]interface{}, *Error) {
+	response, clientErr, err := f.rosettaClient.ConstructionAPI.ConstructionDerive(ctx,
 		&types.ConstructionDeriveRequest{
 			NetworkIdentifier: network,
 			PublicKey:         publicKey,
@@ -71,11 +78,18 @@ func (f *Fetcher) ConstructionDerive(
 		},
 	)
 	if err != nil {
-		return "", nil, fmt.Errorf("%w: /construction/derive %s", ErrRequestFailed, err.Error())
+		fetcherErr := &Error{
+			Err:       fmt.Errorf("%w: /construction/derive %s", ErrRequestFailed, err.Error()),
+			ClientErr: clientErr,
+		}
+		return "", nil, fetcherErr
 	}
 
 	if err := asserter.ConstructionDeriveResponse(response); err != nil {
-		return "", nil, fmt.Errorf("%w: /construction/derive %s", ErrAssertionFailed, err.Error())
+		fetcherErr := &Error{
+			Err: fmt.Errorf("%w: /construction/derive %s", ErrAssertionFailed, err.Error()),
+		}
+		return "", nil, fetcherErr
 	}
 
 	return response.Address, response.Metadata, nil
@@ -87,19 +101,26 @@ func (f *Fetcher) ConstructionHash(
 	ctx context.Context,
 	network *types.NetworkIdentifier,
 	signedTransaction string,
-) (*types.TransactionIdentifier, error) {
-	response, _, err := f.rosettaClient.ConstructionAPI.ConstructionHash(ctx,
+) (*types.TransactionIdentifier, *Error) {
+	response, clientErr, err := f.rosettaClient.ConstructionAPI.ConstructionHash(ctx,
 		&types.ConstructionHashRequest{
 			NetworkIdentifier: network,
 			SignedTransaction: signedTransaction,
 		},
 	)
 	if err != nil {
-		return nil, fmt.Errorf("%w: /construction/hash %s", ErrRequestFailed, err.Error())
+		fetcherErr := &Error{
+			Err:       fmt.Errorf("%w: /construction/hash %s", ErrRequestFailed, err.Error()),
+			ClientErr: clientErr,
+		}
+		return nil, fetcherErr
 	}
 
 	if err := asserter.TransactionIdentifierResponse(response); err != nil {
-		return nil, fmt.Errorf("%w: /construction/hash %s", ErrAssertionFailed, err.Error())
+		fetcherErr := &Error{
+			Err: fmt.Errorf("%w: /construction/hash %s", ErrAssertionFailed, err.Error()),
+		}
+		return nil, fetcherErr
 	}
 
 	return response.TransactionIdentifier, nil
@@ -111,19 +132,26 @@ func (f *Fetcher) ConstructionMetadata(
 	ctx context.Context,
 	network *types.NetworkIdentifier,
 	options map[string]interface{},
-) (map[string]interface{}, error) {
-	metadata, _, err := f.rosettaClient.ConstructionAPI.ConstructionMetadata(ctx,
+) (map[string]interface{}, *Error) {
+	metadata, clientErr, err := f.rosettaClient.ConstructionAPI.ConstructionMetadata(ctx,
 		&types.ConstructionMetadataRequest{
 			NetworkIdentifier: network,
 			Options:           options,
 		},
 	)
 	if err != nil {
-		return nil, fmt.Errorf("%w: /construction/metadata %s", ErrRequestFailed, err.Error())
+		fetcherErr := &Error{
+			Err:       fmt.Errorf("%w: /construction/metadata %s", ErrRequestFailed, err.Error()),
+			ClientErr: clientErr,
+		}
+		return nil, fetcherErr
 	}
 
 	if err := asserter.ConstructionMetadataResponse(metadata); err != nil {
-		return nil, fmt.Errorf("%w: /construction/metadata %s", ErrAssertionFailed, err.Error())
+		fetcherErr := &Error{
+			Err: fmt.Errorf("%w: /construction/metadata %s", ErrAssertionFailed, err.Error()),
+		}
+		return nil, fetcherErr
 	}
 
 	return metadata.Metadata, nil
@@ -139,8 +167,8 @@ func (f *Fetcher) ConstructionParse(
 	network *types.NetworkIdentifier,
 	signed bool,
 	transaction string,
-) ([]*types.Operation, []string, map[string]interface{}, error) {
-	response, _, err := f.rosettaClient.ConstructionAPI.ConstructionParse(ctx,
+) ([]*types.Operation, []string, map[string]interface{}, *Error) {
+	response, clientErr, err := f.rosettaClient.ConstructionAPI.ConstructionParse(ctx,
 		&types.ConstructionParseRequest{
 			NetworkIdentifier: network,
 			Signed:            signed,
@@ -148,19 +176,18 @@ func (f *Fetcher) ConstructionParse(
 		},
 	)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf(
-			"%w: /construction/parse %s",
-			ErrRequestFailed,
-			err.Error(),
-		)
+		fetcherErr := &Error{
+			Err:       fmt.Errorf("%w: /construction/parse %s", ErrRequestFailed, err.Error()),
+			ClientErr: clientErr,
+		}
+		return nil, nil, nil, fetcherErr
 	}
 
 	if err := f.Asserter.ConstructionParseResponse(response, signed); err != nil {
-		return nil, nil, nil, fmt.Errorf(
-			"%w: /construction/parse %s",
-			ErrAssertionFailed,
-			err.Error(),
-		)
+		fetcherErr := &Error{
+			Err: fmt.Errorf("%w: /construction/parse %s", ErrAssertionFailed, err.Error()),
+		}
+		return nil, nil, nil, fetcherErr
 	}
 
 	return response.Operations, response.Signers, response.Metadata, nil
