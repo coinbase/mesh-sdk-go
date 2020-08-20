@@ -344,6 +344,10 @@ func (w *Worker) checkAccountBalance(
 
 	// look for amounts > min
 	for _, amount := range amounts {
+		if types.Hash(amount.Currency) != types.Hash(input.MinimumBalance.Currency) {
+			continue
+		}
+
 		diff, err := types.SubtractValues(amount.Value, input.MinimumBalance.Value)
 		if err != nil {
 			return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
@@ -376,8 +380,8 @@ func (w *Worker) FindBalanceWorker(ctx context.Context, rawInput string) (string
 		return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
 	}
 
-	if input.MinimumBalance == nil {
-		return "", fmt.Errorf("%w: minimum balance is nil", ErrInvalidInput)
+	if err := asserter.Amount(input.MinimumBalance); err != nil {
+		return "", fmt.Errorf("%w: minimum balance invalid %s", ErrInvalidInput, err.Error())
 	}
 
 	addresses, err := w.helper.AllAddresses(ctx)
