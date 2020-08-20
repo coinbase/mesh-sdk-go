@@ -67,8 +67,7 @@ func TestJob_CreateComplicatedTransfer(t *testing.T) {
 	}
 
 	s2 := &Scenario{
-		Name:              "create_send",
-		ConfirmationDepth: 10,
+		Name: "create_send",
 		Actions: []*Action{
 			{
 				Type:       RandomString,
@@ -84,6 +83,11 @@ func TestJob_CreateComplicatedTransfer(t *testing.T) {
 				Type:       SetVariable,
 				Input:      `{{network}}`,
 				OutputPath: "create_send.network",
+			},
+			{
+				Type:       SetVariable,
+				Input:      `"10"`,
+				OutputPath: "create_send.confirmation_depth",
 			},
 		},
 	}

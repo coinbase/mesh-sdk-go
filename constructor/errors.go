@@ -21,6 +21,11 @@ var (
 	// present in a Job's state.
 	ErrVariableNotFound = errors.New("variable not found")
 
+	// ErrVariableIncorrectFormat is returned when a variable
+	// is in the incorrect format (i.e. when we find an int
+	// instead of a string).
+	ErrVariableIncorrectFormat = errors.New("variable in incorrect format")
+
 	// ErrJobComplete is returned when there are no more scenarios
 	// to process in a Job.
 	ErrJobComplete = errors.New("job complete")
