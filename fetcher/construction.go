@@ -182,20 +182,28 @@ func (f *Fetcher) ConstructionPayloads(
 	network *types.NetworkIdentifier,
 	operations []*types.Operation,
 	metadata map[string]interface{},
-) (string, []*types.SigningPayload, error) {
-	response, _, err := f.rosettaClient.ConstructionAPI.ConstructionPayloads(ctx,
+) (string, []*types.SigningPayload, *Error) {
+	response, clientErr, err := f.rosettaClient.ConstructionAPI.ConstructionPayloads(ctx,
 		&types.ConstructionPayloadsRequest{
 			NetworkIdentifier: network,
 			Operations:        operations,
 			Metadata:          metadata,
 		},
 	)
+
 	if err != nil {
-		return "", nil, fmt.Errorf("%w: /construction/payloads %s", ErrRequestFailed, err.Error())
+		fetcherErr := &Error{
+			Err:       fmt.Errorf("%w: /construction/payloads %s", ErrRequestFailed, err.Error()),
+			ClientErr: clientErr,
+		}
+		return "", nil, fetcherErr
 	}
 
 	if err := asserter.ConstructionPayloadsResponse(response); err != nil {
-		return "", nil, fmt.Errorf("%w: /construction/payloads %s", ErrAssertionFailed, err.Error())
+		fetcherErr := &Error{
+			Err: fmt.Errorf("%w: /construction/payloads %s", ErrAssertionFailed, err.Error()),
+		}
+		return "", nil, fetcherErr
 	}
 
 	return response.UnsignedTransaction, response.Payloads, nil
@@ -213,16 +221,21 @@ func (f *Fetcher) ConstructionPreprocess(
 	network *types.NetworkIdentifier,
 	operations []*types.Operation,
 	metadata map[string]interface{},
-) (map[string]interface{}, error) {
-	response, _, err := f.rosettaClient.ConstructionAPI.ConstructionPreprocess(ctx,
+) (map[string]interface{}, *Error) {
+	response, clientErr, err := f.rosettaClient.ConstructionAPI.ConstructionPreprocess(ctx,
 		&types.ConstructionPreprocessRequest{
 			NetworkIdentifier: network,
 			Operations:        operations,
 			Metadata:          metadata,
 		},
 	)
+
 	if err != nil {
-		return nil, fmt.Errorf("%w: /construction/preprocess %s", ErrRequestFailed, err.Error())
+		fetcherErr := &Error{
+			Err:       fmt.Errorf("%w: /construction/preprocess %s", ErrRequestFailed, err.Error()),
+			ClientErr: clientErr,
+		}
+		return nil, fetcherErr
 	}
 
 	// We do not assert the response here because the only object
@@ -237,8 +250,8 @@ func (f *Fetcher) ConstructionSubmit(
 	ctx context.Context,
 	network *types.NetworkIdentifier,
 	signedTransaction string,
-) (*types.TransactionIdentifier, map[string]interface{}, error) {
-	submitResponse, _, err := f.rosettaClient.ConstructionAPI.ConstructionSubmit(
+) (*types.TransactionIdentifier, map[string]interface{}, *Error) {
+	submitResponse, clientErr, err := f.rosettaClient.ConstructionAPI.ConstructionSubmit(
 		ctx,
 		&types.ConstructionSubmitRequest{
 			NetworkIdentifier: network,
@@ -246,11 +259,18 @@ func (f *Fetcher) ConstructionSubmit(
 		},
 	)
 	if err != nil {
-		return nil, nil, fmt.Errorf("%w: /connection/submit %s", ErrRequestFailed, err.Error())
+		fetcherErr := &Error{
+			Err:       fmt.Errorf("%w: /construction/submit %s", ErrRequestFailed, err.Error()),
+			ClientErr: clientErr,
+		}
+		return nil, nil, fetcherErr
 	}
 
 	if err := asserter.TransactionIdentifierResponse(submitResponse); err != nil {
-		return nil, nil, fmt.Errorf("%w: /connection/submit %s", ErrAssertionFailed, err.Error())
+		fetcherErr := &Error{
+			Err: fmt.Errorf("%w: /construction/submit %s", ErrAssertionFailed, err.Error()),
+		}
+		return nil, nil, fetcherErr
 	}
 
 	return submitResponse.TransactionIdentifier, submitResponse.Metadata, nil

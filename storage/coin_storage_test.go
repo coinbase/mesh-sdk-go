@@ -308,11 +308,11 @@ func TestCoinStorage(t *testing.T) {
 
 	t.Run("AddCoins before blocks", func(t *testing.T) {
 		accountCoins := []*AccountCoin{
-			&AccountCoin{
+			{
 				Account: account4,
 				Coin:    coins4,
 			},
-			&AccountCoin{
+			{
 				Account: account5,
 				Coin:    coins5,
 			},
@@ -464,19 +464,19 @@ func TestCoinStorage(t *testing.T) {
 
 	t.Run("AddCoins after block", func(t *testing.T) {
 		accountCoins := []*AccountCoin{
-			&AccountCoin{
+			{
 				Account: account,
 				Coin:    coins1,
 			},
-			&AccountCoin{
+			{
 				Account: account2,
 				Coin:    coins2,
 			},
-			&AccountCoin{
+			{
 				Account: account3,
 				Coin:    coins3,
 			},
-			&AccountCoin{
+			{
 				Account: account4,
 				Coin:    coins4,
 			},
