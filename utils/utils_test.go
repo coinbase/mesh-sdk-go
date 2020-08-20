@@ -16,12 +16,14 @@ package utils
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"os"
 	"path"
 	"testing"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
+	"github.com/coinbase/rosetta-sdk-go/fetcher"
 	"github.com/coinbase/rosetta-sdk-go/types"
 
 	"github.com/stretchr/testify/assert"
@@ -282,7 +284,7 @@ func TestGetAccountBalances(t *testing.T) {
 		[]*AccountBalanceRequest{accBalanceRequest1},
 	)
 	assert.Nil(t, accBalances)
-	assert.Equal(t, err.Message, "unable to lookup acccount balance")
+	assert.Error(t, err)
 }
 
 type MockFetcherHelper struct {
@@ -294,7 +296,7 @@ var _ FetcherHelper = (*MockFetcherHelper)(nil)
 func (h *MockFetcherHelper) NetworkList(
 	ctx context.Context,
 	metadata map[string]interface{},
-) (*types.NetworkListResponse, *types.Error) {
+) (*types.NetworkListResponse, *fetcher.Error) {
 	return nil, nil
 }
 
@@ -302,7 +304,7 @@ func (h *MockFetcherHelper) NetworkStatusRetry(
 	ctx context.Context,
 	network *types.NetworkIdentifier,
 	metadata map[string]interface{},
-) (*types.NetworkStatusResponse, *types.Error) {
+) (*types.NetworkStatusResponse, *fetcher.Error) {
 	return nil, nil
 }
 
@@ -311,10 +313,10 @@ func (h *MockFetcherHelper) AccountBalanceRetry(
 	network *types.NetworkIdentifier,
 	account *types.AccountIdentifier,
 	block *types.PartialBlockIdentifier,
-) (*types.BlockIdentifier, []*types.Amount, []*types.Coin, map[string]interface{}, *types.Error) {
+) (*types.BlockIdentifier, []*types.Amount, []*types.Coin, map[string]interface{}, *fetcher.Error) {
 	if h.IsError {
-		return nil, nil, nil, nil, &types.Error{
-			Message: "unable to lookup acccount balance",
+		return nil, nil, nil, nil, &fetcher.Error{
+			Err: fmt.Errorf("unable to lookup acccount balance"),
 		}
 	}
 

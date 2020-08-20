@@ -28,6 +28,7 @@ import (
 	"path"
 	"time"
 
+	"github.com/coinbase/rosetta-sdk-go/fetcher"
 	"github.com/coinbase/rosetta-sdk-go/types"
 
 	"github.com/fatih/color"
@@ -166,20 +167,20 @@ type FetcherHelper interface {
 	NetworkList(
 		ctx context.Context,
 		metadata map[string]interface{},
-	) (*types.NetworkListResponse, *types.Error)
+	) (*types.NetworkListResponse, *fetcher.Error)
 
 	NetworkStatusRetry(
 		ctx context.Context,
 		network *types.NetworkIdentifier,
 		metadata map[string]interface{},
-	) (*types.NetworkStatusResponse, *types.Error)
+	) (*types.NetworkStatusResponse, *fetcher.Error)
 
 	AccountBalanceRetry(
 		ctx context.Context,
 		network *types.NetworkIdentifier,
 		account *types.AccountIdentifier,
 		block *types.PartialBlockIdentifier,
-	) (*types.BlockIdentifier, []*types.Amount, []*types.Coin, map[string]interface{}, *types.Error)
+	) (*types.BlockIdentifier, []*types.Amount, []*types.Coin, map[string]interface{}, *fetcher.Error)
 }
 
 // CheckNetworkSupported checks if a Rosetta implementation supports a given
@@ -191,7 +192,7 @@ func CheckNetworkSupported(
 ) (*types.NetworkStatusResponse, error) {
 	networks, fetchErr := fetcher.NetworkList(ctx, nil)
 	if fetchErr != nil {
-		return nil, fmt.Errorf("%s: unable to fetch network list", fetchErr.Message)
+		return nil, fmt.Errorf("%w: unable to fetch network list", fetchErr.Err)
 	}
 
 	networkMatched := false
@@ -220,7 +221,7 @@ func CheckNetworkSupported(
 		nil,
 	)
 	if fetchErr != nil {
-		return nil, fmt.Errorf("%s: unable to get network status", fetchErr.Message)
+		return nil, fmt.Errorf("%w: unable to get network status", fetchErr.Err)
 	}
 
 	return status, nil
@@ -299,7 +300,7 @@ func CurrencyBalance(
 	account *types.AccountIdentifier,
 	currency *types.Currency,
 	block *types.BlockIdentifier,
-) (*types.Amount, *types.BlockIdentifier, []*types.Coin, *types.Error) {
+) (*types.Amount, *types.BlockIdentifier, []*types.Coin, error) {
 	var lookupBlock *types.PartialBlockIdentifier
 	if block != nil {
 		lookupBlock = types.ConstructPartialBlockIdentifier(block)
@@ -313,19 +314,17 @@ func CurrencyBalance(
 	)
 
 	if fetchErr != nil {
-		return nil, nil, nil, fetchErr
+		return nil, nil, nil, fetchErr.Err
 	}
 
 	liveAmount, err := types.ExtractAmount(liveBalances, currency)
 	if err != nil {
-		formattedError := &types.Error{
-			Message: fmt.Errorf(
-				"%w: could not get %s currency balance for %s",
-				err,
-				types.PrettyPrintStruct(currency),
-				types.PrettyPrintStruct(account),
-			).Error(),
-		}
+		formattedError := fmt.Errorf(
+			"%w: could not get %s currency balance for %s",
+			err,
+			types.PrettyPrintStruct(currency),
+			types.PrettyPrintStruct(account),
+		)
 
 		return nil, nil, nil, formattedError
 	}
@@ -357,7 +356,7 @@ func GetAccountBalances(
 	ctx context.Context,
 	fetcher FetcherHelper,
 	balanceRequests []*AccountBalanceRequest,
-) ([]*AccountBalance, *types.Error) {
+) ([]*AccountBalance, error) {
 	var accountBalances []*AccountBalance
 	for _, balanceRequest := range balanceRequests {
 		amount, block, coins, err := CurrencyBalance(
