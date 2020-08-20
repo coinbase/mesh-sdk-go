@@ -17,7 +17,11 @@ package storage
 import (
 	"context"
 	"fmt"
+	"log"
+	"strings"
 	"sync"
+
+	"github.com/coinbase/rosetta-sdk-go/types"
 
 	"github.com/dgraph-io/badger/v2"
 	"github.com/dgraph-io/badger/v2/options"
@@ -131,6 +135,9 @@ type BadgerTransaction struct {
 	db  *BadgerStorage
 	txn *badger.Txn
 
+	// storage stats
+	stats map[string]float64
+
 	holdsLock bool
 }
 
@@ -155,6 +162,7 @@ func (b *BadgerStorage) NewDatabaseTransaction(
 		db:        b,
 		txn:       b.db.NewTransaction(write),
 		holdsLock: write,
+		stats:     map[string]float64{},
 	}
 }
 
@@ -163,6 +171,21 @@ func (b *BadgerTransaction) Commit(context.Context) error {
 	err := b.txn.Commit()
 	b.holdsLock = false
 	b.db.writer.Unlock()
+
+	// print stats
+	if len(b.stats) > 0 {
+		ratios := map[string]string{}
+		total := float64(0)
+		for _, v := range b.stats {
+			total += v
+		}
+
+		for k, v := range b.stats {
+			ratios[k] = fmt.Sprintf("%f%%", (v/total)*100)
+		}
+
+		log.Printf("Commit Ratios: %s Stats: %s\n", types.PrintStruct(ratios), types.PrintStruct(b.stats))
+	}
 
 	if err != nil {
 		return fmt.Errorf("%w: unable to commit transaction", err)
@@ -186,6 +209,13 @@ func (b *BadgerTransaction) Set(
 	key []byte,
 	value []byte,
 ) error {
+	prefix := strings.Split(string(key), "/")[0]
+	if _, ok := b.stats[prefix]; !ok {
+		b.stats[prefix] = 0
+	}
+	mbValue := float64(len(value)) / 1000000
+	b.stats[prefix] += mbValue
+
 	return b.txn.Set(key, value)
 }
 
