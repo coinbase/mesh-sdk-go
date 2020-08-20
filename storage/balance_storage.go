@@ -115,6 +115,8 @@ func (b *BalanceStorage) AddingBlock(
 		return nil, fmt.Errorf("%w: unable to calculate balance changes", err)
 	}
 
+	log.Printf("Balance changes for %s: %s\n", types.PrintStruct(block.BlockIdentifier), types.PrettyPrintStruct(changes))
+
 	for _, change := range changes {
 		if err := b.UpdateBalance(ctx, transaction, change, block.ParentBlockIdentifier); err != nil {
 			return nil, err
