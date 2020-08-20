@@ -17,6 +17,7 @@ package constructor
 import (
 	"context"
 
+	"github.com/coinbase/rosetta-sdk-go/keys"
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
@@ -39,6 +40,12 @@ const (
 	// Transaction is the *types.Transaction confirmed
 	// on-chain.
 	Transaction ReservedVariable = "transaction"
+
+	// ConfirmationDepth is the amount of blocks we wait to confirm
+	// a transaction. We allow setting this on a per scenario basis because
+	// certain transactions may only be considered complete
+	// after some time (ex: staking transaction).
+	ConfirmationDepth ReservedVariable = "confirmation_depth"
 )
 
 // ActionType is a type of Action that can be processed.
@@ -68,8 +75,14 @@ const (
 	// possible to specify coins which should not be considered (by identifier).
 	FindCoin ActionType = "find_coin"
 
-	// PrintMessage prints some message to the terminal. This is
-	// typically used for funding an account.
+	// PrintMessage can be used to print any message
+	// to the terminal. This is usually used to indicate
+	// to the caller that they should deposit money to an
+	// address. It is left generic to allow the user to
+	// include whatever content they would like in the
+	// message (especially useful in on-chain origination).
+	// This can also be used to log information during
+	// execution.
 	PrintMessage ActionType = "print_message"
 
 	// WaitForFunds halts execution until a specified
@@ -100,6 +113,40 @@ type GenerateKeyInput struct {
 	CurveType types.CurveType `json:"curve_type"`
 }
 
+// SaveAddressInput is the input for SaveAddress.
+type SaveAddressInput struct {
+	Address string        `json:"address"`
+	KeyPair *keys.KeyPair `json:"keypair"`
+}
+
+// RandomStringInput is the input to RandomString.
+type RandomStringInput struct {
+	Regex string `json:"regex"`
+
+	// Limit is the maximum number of times each star, range, or
+	// plus character could be repeated.
+	Limit int `json:"limit"`
+}
+
+// MathOperation is some mathematical operation that
+// can be performed on 2 numbers.
+type MathOperation string
+
+const (
+	// Addition is adding LeftValue + RightValue.
+	Addition MathOperation = "addition"
+
+	// Subtraction is LeftValue - RightValue.
+	Subtraction MathOperation = "subtraction"
+)
+
+// MathInput is the input to Math.
+type MathInput struct {
+	Operation  MathOperation `json:"operation"`
+	LeftValue  string        `json:"left_value"`
+	RightValue string        `json:"right_value"`
+}
+
 // Scenario is a collection of Actions with a specific
 // confirmation depth.
 //
@@ -117,11 +164,6 @@ type GenerateKeyInput struct {
 type Scenario struct {
 	Name    string
 	Actions []*Action
-
-	// We set ConfirmationDepth on a per scenario basis because
-	// certain transactions may only be considered complete
-	// after some time (ex: staking transaction).
-	ConfirmationDepth int64
 }
 
 // ReservedWorkflow is a Workflow reserved for special circumstances.
@@ -206,12 +248,21 @@ type Broadcast struct {
 
 // WorkerHelper is used by the worker to process Jobs.
 type WorkerHelper interface {
+	// Derive returns a new address for a provided publicKey.
 	Derive(
 		context.Context,
 		*types.NetworkIdentifier,
 		*types.PublicKey,
 		map[string]interface{},
 	) (string, map[string]interface{}, error)
+
+	// StoreKey is called to persist an
+	// address + KeyPair.
+	StoreKey(
+		context.Context,
+		string,
+		*keys.KeyPair,
+	) error
 }
 
 // Worker processes jobs.
