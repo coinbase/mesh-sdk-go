@@ -28,7 +28,6 @@ import (
 	"path"
 	"time"
 
-	"github.com/coinbase/rosetta-sdk-go/fetcher"
 	"github.com/coinbase/rosetta-sdk-go/types"
 
 	"github.com/fatih/color"
@@ -162,16 +161,36 @@ func CreateCommandPath(
 	return dataPath, nil
 }
 
+type FetcherHelper interface {
+	NetworkList(
+		ctx context.Context,
+		metadata map[string]interface{},
+	) (*types.NetworkListResponse, *types.Error)
+
+	NetworkStatusRetry(
+		ctx context.Context,
+		network *types.NetworkIdentifier,
+		metadata map[string]interface{},
+	) (*types.NetworkStatusResponse, *types.Error)
+
+	AccountBalanceRetry(
+		ctx context.Context,
+		network *types.NetworkIdentifier,
+		account *types.AccountIdentifier,
+		block *types.PartialBlockIdentifier,
+	) (*types.BlockIdentifier, []*types.Amount, []*types.Coin, map[string]interface{}, *types.Error)
+}
+
 // CheckNetworkSupported checks if a Rosetta implementation supports a given
 // *types.NetworkIdentifier. If it does, the current network status is returned.
 func CheckNetworkSupported(
 	ctx context.Context,
 	networkIdentifier *types.NetworkIdentifier,
-	fetcher *fetcher.Fetcher,
+	fetcher FetcherHelper,
 ) (*types.NetworkStatusResponse, error) {
 	networks, fetchErr := fetcher.NetworkList(ctx, nil)
 	if fetchErr != nil {
-		return nil, fmt.Errorf("%w: unable to fetch network list", fetchErr.Err)
+		return nil, fmt.Errorf("%s: unable to fetch network list", fetchErr.Message)
 	}
 
 	networkMatched := false
@@ -200,7 +219,7 @@ func CheckNetworkSupported(
 		nil,
 	)
 	if fetchErr != nil {
-		return nil, fmt.Errorf("%w: unable to get network status", fetchErr.Err)
+		return nil, fmt.Errorf("%s: unable to get network status", fetchErr.Message)
 	}
 
 	return status, nil
@@ -270,23 +289,12 @@ func Milliseconds() int64 {
 	return nanos / NanosecondsInMillisecond
 }
 
-// GetAccountBalancesHelper is used by GetAccountBalances to determine
-// the CurrencyBalance at tip for an account
-type AccountBalanceRetryHelper interface {
-	AccountBalanceRetry(
-		ctx context.Context,
-		network *types.NetworkIdentifier,
-		account *types.AccountIdentifier,
-		block *types.PartialBlockIdentifier,
-	) (*types.BlockIdentifier, []*types.Amount, []*types.Coin, map[string]interface{}, *types.Error)
-}
-
 // CurrencyBalance returns the balance of an account
 // for a particular currency.
 func CurrencyBalance(
 	ctx context.Context,
 	network *types.NetworkIdentifier,
-	helper AccountBalanceRetryHelper,
+	helper FetcherHelper,
 	account *types.AccountIdentifier,
 	currency *types.Currency,
 	block *types.BlockIdentifier,
@@ -346,7 +354,7 @@ type AccountBalance struct {
 // for an array of AccountBalanceRequests
 func GetAccountBalances(
 	ctx context.Context,
-	fetcher AccountBalanceRetryHelper,
+	fetcher FetcherHelper,
 	balanceRequests []*AccountBalanceRequest,
 ) ([]*AccountBalance, *types.Error) {
 	var accountBalances []*AccountBalance
