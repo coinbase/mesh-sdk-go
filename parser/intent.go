@@ -17,6 +17,7 @@ package parser
 import (
 	"errors"
 	"fmt"
+	"log"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
 	"github.com/coinbase/rosetta-sdk-go/types"
@@ -118,7 +119,7 @@ func (p *Parser) ExpectedOperations(
 
 	if len(missingIntent) > 0 {
 		errString := fmt.Sprintf(
-			"could intent match for %v",
+			"could not match intent for %v",
 			missingIntent,
 		)
 
@@ -129,6 +130,12 @@ func (p *Parser) ExpectedOperations(
 				types.PrettyPrintStruct(failedMatches),
 			)
 		}
+
+		log.Printf(
+			"intent (expected): %s\nobserved: %s\n",
+			types.PrettyPrintStruct(intent),
+			types.PrettyPrintStruct(observed),
+		)
 
 		return errors.New(errString)
 	}
