@@ -161,6 +161,7 @@ func CreateCommandPath(
 	return dataPath, nil
 }
 
+// FetcherHelper is used by util functions to mock Fetcher
 type FetcherHelper interface {
 	NetworkList(
 		ctx context.Context,
