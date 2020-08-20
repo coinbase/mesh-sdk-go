@@ -54,88 +54,27 @@ func marshalString(value string) string {
 func (w *Worker) invokeWorker(
 	ctx context.Context,
 	action ActionType,
-	processedInput string,
+	input string,
 ) (string, error) {
-	var err error
-
 	switch action {
 	case SetVariable:
-		return processedInput, nil
+		return input, nil
 	case GenerateKey:
-		var unmarshaledInput GenerateKeyInput
-		err = unmarshalInput([]byte(processedInput), &unmarshaledInput)
-		if err != nil {
-			return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
-		}
-
-		var output *keys.KeyPair
-		output, err = GenerateKeyWorker(&unmarshaledInput)
-		if err == nil {
-			return types.PrintStruct(output), nil
-		}
+		return GenerateKeyWorker(input)
 	case Derive:
-		var unmarshaledInput types.ConstructionDeriveRequest
-		err = unmarshalInput([]byte(processedInput), &unmarshaledInput)
-		if err != nil {
-			return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
-		}
-
-		if err := asserter.PublicKey(unmarshaledInput.PublicKey); err != nil {
-			return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
-		}
-
-		var output *types.ConstructionDeriveResponse
-		output, err = w.DeriveWorker(ctx, &unmarshaledInput)
-		if err == nil {
-			return types.PrintStruct(output), nil
-		}
+		return w.DeriveWorker(ctx, input)
 	case SaveAddress:
-		var unmarshaledInput SaveAddressInput
-		err = unmarshalInput([]byte(processedInput), &unmarshaledInput)
-		if err != nil {
-			return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
-		}
-
-		if len(unmarshaledInput.Address) == 0 {
-			return "", fmt.Errorf("%w: %s", ErrInvalidInput, "empty address")
-		}
-
-		err = w.SaveAddressWorker(ctx, &unmarshaledInput)
+		return "", w.SaveAddressWorker(ctx, input)
 	case PrintMessage:
-		PrintMessageWorker(processedInput)
+		PrintMessageWorker(input)
+		return "", nil
 	case RandomString:
-		var unmarshaledInput RandomStringInput
-		err = unmarshalInput([]byte(processedInput), &unmarshaledInput)
-		if err != nil {
-			return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
-		}
-
-		var output string
-		output, err = RandomStringWorker(&unmarshaledInput)
-		if err == nil {
-			return marshalString(output), nil
-		}
+		return RandomStringWorker(input)
 	case Math:
-		var unmarshaledInput MathInput
-		err = unmarshalInput([]byte(processedInput), &unmarshaledInput)
-		if err != nil {
-			return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
-		}
-
-		var output string
-		output, err = MathWorker(&unmarshaledInput)
-		if err == nil {
-			return marshalString(output), nil
-		}
+		return MathWorker(input)
 	default:
 		return "", fmt.Errorf("%w: %s", ErrInvalidActionType, action)
 	}
-
-	if err != nil {
-		return "", fmt.Errorf("%w: %s %s", ErrActionFailed, action, err.Error())
-	}
-
-	return "", nil
 }
 
 func (w *Worker) actions(ctx context.Context, state string, actions []*Action) (string, error) {
@@ -185,8 +124,18 @@ func (w *Worker) ProcessNextScenario(
 // *types.ConstructionDeriveRequest input.
 func (w *Worker) DeriveWorker(
 	ctx context.Context,
-	input *types.ConstructionDeriveRequest,
-) (*types.ConstructionDeriveResponse, error) {
+	rawInput string,
+) (string, error) {
+	var input types.ConstructionDeriveRequest
+	err := unmarshalInput([]byte(rawInput), &input)
+	if err != nil {
+		return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
+	}
+
+	if err := asserter.PublicKey(input.PublicKey); err != nil {
+		return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
+	}
+
 	address, metadata, err := w.helper.Derive(
 		ctx,
 		input.NetworkIdentifier,
@@ -194,30 +143,50 @@ func (w *Worker) DeriveWorker(
 		input.Metadata,
 	)
 	if err != nil {
-		return nil, err
+		return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
 	}
 
-	return &types.ConstructionDeriveResponse{
+	return types.PrintStruct(types.ConstructionDeriveResponse{
 		Address:  address,
 		Metadata: metadata,
-	}, nil
+	}), nil
 }
 
 // GenerateKeyWorker attempts to generate a key given a
 // *GenerateKeyInput input.
-func GenerateKeyWorker(input *GenerateKeyInput) (*keys.KeyPair, error) {
-	kp, err := keys.GenerateKeypair(input.CurveType)
+func GenerateKeyWorker(rawInput string) (string, error) {
+	var input GenerateKeyInput
+	err := unmarshalInput([]byte(rawInput), &input)
 	if err != nil {
-		return nil, err
+		return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
 	}
 
-	return kp, nil
+	kp, err := keys.GenerateKeypair(input.CurveType)
+	if err != nil {
+		return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
+	}
+
+	return types.PrintStruct(kp), nil
 }
 
 // SaveAddressWorker saves an address and associated KeyPair
 // in KeyStorage.
-func (w *Worker) SaveAddressWorker(ctx context.Context, input *SaveAddressInput) error {
-	return w.helper.StoreKey(ctx, input.Address, input.KeyPair)
+func (w *Worker) SaveAddressWorker(ctx context.Context, rawInput string) error {
+	var input SaveAddressInput
+	err := unmarshalInput([]byte(rawInput), &input)
+	if err != nil {
+		return fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
+	}
+
+	if len(input.Address) == 0 {
+		return fmt.Errorf("%w: %s", ErrInvalidInput, "empty address")
+	}
+
+	if err := w.helper.StoreKey(ctx, input.Address, input.KeyPair); err != nil {
+		return fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
+	}
+
+	return nil
 }
 
 // PrintMessageWorker logs some message to stdout.
@@ -227,18 +196,41 @@ func PrintMessageWorker(message string) {
 
 // RandomStringWorker generates a string that complies
 // with the provided regex input.
-func RandomStringWorker(input *RandomStringInput) (string, error) {
-	return reggen.Generate(input.Regex, input.Limit)
+func RandomStringWorker(rawInput string) (string, error) {
+	var input RandomStringInput
+	err := unmarshalInput([]byte(rawInput), &input)
+	if err != nil {
+		return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
+	}
+
+	output, err := reggen.Generate(input.Regex, input.Limit)
+	if err != nil {
+		return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
+	}
+
+	return marshalString(output), nil
 }
 
 // MathWorker performs some MathOperation on 2 numbers.
-func MathWorker(input *MathInput) (string, error) {
+func MathWorker(rawInput string) (string, error) {
+	var input MathInput
+	err := unmarshalInput([]byte(rawInput), &input)
+	if err != nil {
+		return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
+	}
+
+	var result string
 	switch input.Operation {
 	case Addition:
-		return types.AddValues(input.LeftValue, input.RightValue)
+		result, err = types.AddValues(input.LeftValue, input.RightValue)
 	case Subtraction:
-		return types.SubtractValues(input.LeftValue, input.RightValue)
+		result, err = types.SubtractValues(input.LeftValue, input.RightValue)
 	default:
 		return "", fmt.Errorf("%s is not a supported math operation", input.Operation)
 	}
+	if err != nil {
+		return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
+	}
+
+	return marshalString(result), nil
 }
