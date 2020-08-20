@@ -262,7 +262,7 @@ var (
 
 func TestGetAccountBalances(t *testing.T) {
 	ctx := context.Background()
-	mockHelper := &MockAccountBalanceRetryHelper{}
+	mockHelper := &MockFetcherHelper{}
 
 	accBalances, err := GetAccountBalances(
 		ctx,
@@ -285,13 +285,28 @@ func TestGetAccountBalances(t *testing.T) {
 	assert.Equal(t, err.Message, "unable to lookup acccount balance")
 }
 
-type MockAccountBalanceRetryHelper struct {
+type MockFetcherHelper struct {
 	IsError bool
 }
 
-var _ AccountBalanceRetryHelper = (*MockAccountBalanceRetryHelper)(nil)
+var _ FetcherHelper = (*MockFetcherHelper)(nil)
 
-func (h *MockAccountBalanceRetryHelper) AccountBalanceRetry(
+func (h *MockFetcherHelper) NetworkList(
+	ctx context.Context,
+	metadata map[string]interface{},
+) (*types.NetworkListResponse, *types.Error) {
+	return nil, nil
+}
+
+func (h *MockFetcherHelper) NetworkStatusRetry(
+	ctx context.Context,
+	network *types.NetworkIdentifier,
+	metadata map[string]interface{},
+) (*types.NetworkStatusResponse, *types.Error) {
+	return nil, nil
+}
+
+func (h *MockFetcherHelper) AccountBalanceRetry(
 	ctx context.Context,
 	network *types.NetworkIdentifier,
 	account *types.AccountIdentifier,
