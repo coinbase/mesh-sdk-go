@@ -17,6 +17,7 @@ package constructor
 import (
 	"errors"
 	"fmt"
+	"log"
 	"regexp"
 	"strings"
 
@@ -47,6 +48,7 @@ func PopulateInput(state string, input string) (string, error) {
 	}
 
 	if !gjson.Valid(input) {
+		log.Printf("invalid json: %s\n", input)
 		return "", errors.New("populated input is not valid JSON")
 	}
 

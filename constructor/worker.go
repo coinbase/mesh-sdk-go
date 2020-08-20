@@ -50,9 +50,6 @@ func (w *Worker) invokeWorker(ctx context.Context, action ActionType, processedI
 	var output interface{}
 	var err error
 
-	shouldReturnOutput := true
-	shouldStructPrint := true
-
 	switch action {
 	case SetVariable:
 		return processedInput, nil
@@ -64,6 +61,9 @@ func (w *Worker) invokeWorker(ctx context.Context, action ActionType, processedI
 		}
 
 		output, err = GenerateKeyWorker(&unmarshaledInput)
+		if err == nil {
+			return types.PrintStruct(output), nil
+		}
 	case Derive:
 		var unmarshaledInput types.ConstructionDeriveRequest
 		err = unmarshalInput([]byte(processedInput), &unmarshaledInput)
@@ -72,6 +72,9 @@ func (w *Worker) invokeWorker(ctx context.Context, action ActionType, processedI
 		}
 
 		output, err = w.DeriveWorker(ctx, &unmarshaledInput)
+		if err == nil {
+			return types.PrintStruct(output), nil
+		}
 	case SaveAddress:
 		var unmarshaledInput SaveAddressInput
 		err = unmarshalInput([]byte(processedInput), &unmarshaledInput)
@@ -79,10 +82,8 @@ func (w *Worker) invokeWorker(ctx context.Context, action ActionType, processedI
 			return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
 		}
 
-		shouldReturnOutput = false
 		err = w.SaveAddressWorker(ctx, &unmarshaledInput)
 	case PrintMessage:
-		shouldReturnOutput = false
 		PrintMessageWorker(processedInput)
 	case RandomString:
 		var unmarshaledInput RandomStringInput
@@ -91,27 +92,22 @@ func (w *Worker) invokeWorker(ctx context.Context, action ActionType, processedI
 			return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
 		}
 
-		shouldStructPrint = false
 		output, err = RandomStringWorker(&unmarshaledInput)
+		if err == nil {
+			return fmt.Sprintf("\"%s\"", output), nil
+		}
 	case Math:
 		// TODO: Complete in this PR
 		return "", fmt.Errorf("%s is not implemented", action)
 	default:
 		return "", fmt.Errorf("%w: %s", ErrInvalidActionType, action)
 	}
+
 	if err != nil {
 		return "", fmt.Errorf("%w: %s %s", ErrActionFailed, action, err.Error())
 	}
 
-	if !shouldReturnOutput {
-		return "", nil
-	}
-
-	if shouldStructPrint {
-		return types.PrintStruct(output), nil
-	}
-
-	return fmt.Sprintf("%s", output), nil
+	return "", nil
 }
 
 func (w *Worker) actions(ctx context.Context, state string, actions []*Action) (string, error) {

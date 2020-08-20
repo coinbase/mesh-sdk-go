@@ -35,10 +35,10 @@ func assertVariableEquality(t *testing.T, state string, variable string, expecte
 	assert.Equal(t, types.Hash(expected), types.Hash(saved))
 }
 
-func TestJob_CreateAccount(t *testing.T) {
+func TestJob_CreateComplicatedTransfer(t *testing.T) {
 	ctx := context.Background()
 	s := &Scenario{
-		Name: "create address",
+		Name: "create_address",
 		Actions: []*Action{
 			{
 				Type:       SetVariable,
@@ -67,12 +67,23 @@ func TestJob_CreateAccount(t *testing.T) {
 	}
 
 	s2 := &Scenario{
-		Name: "random address",
+		Name:              "create_send",
+		ConfirmationDepth: 10,
 		Actions: []*Action{
 			{
 				Type:       RandomString,
-				Input:      `{"regex": "[0-9]+", "limit":10}`,
+				Input:      `{"regex": "[a-z]+", "limit":10}`,
 				OutputPath: "random_address",
+			},
+			{
+				Type:       SetVariable,
+				Input:      `[{"operation_identifier":{"index":0},"type":"","status":"","account":{"address":{{address.address}}},"amount":{"value":"-90","currency":{"symbol":"BTC","decimals":8}}},{"operation_identifier":{"index":1},"type":"","status":"","account":{"address":{{random_address}}},"amount":{"value":"100","currency":{"symbol":"BTC","decimals":8}}}]`,
+				OutputPath: "create_send.operations",
+			},
+			{
+				Type:       SetVariable,
+				Input:      `{{network}}`,
+				OutputPath: "create_send.network",
 			},
 		},
 	}
@@ -125,8 +136,50 @@ func TestJob_CreateAccount(t *testing.T) {
 	assertVariableEquality(t, j.State, "address.address", address)
 
 	b, err = j.Process(ctx, worker)
-	assert.Nil(t, b)
 	assert.NoError(t, err)
+
+	randomAddress := gjson.Get(j.State, "random_address")
+	assert.True(t, randomAddress.Exists())
+	matched, err := regexp.Match("[a-z]+", []byte(randomAddress.String()))
+	assert.True(t, matched)
+	assert.NoError(t, err)
+
+	assert.Equal(t, &Broadcast{
+		Network: network,
+		Intent: []*types.Operation{
+			{
+				OperationIdentifier: &types.OperationIdentifier{
+					Index: 0,
+				},
+				Account: &types.AccountIdentifier{
+					Address: "test",
+				},
+				Amount: &types.Amount{
+					Value: "-90",
+					Currency: &types.Currency{
+						Symbol:   "BTC",
+						Decimals: 8,
+					},
+				},
+			},
+			{
+				OperationIdentifier: &types.OperationIdentifier{
+					Index: 1,
+				},
+				Account: &types.AccountIdentifier{
+					Address: randomAddress.String(),
+				},
+				Amount: &types.Amount{
+					Value: "100",
+					Currency: &types.Currency{
+						Symbol:   "BTC",
+						Decimals: 8,
+					},
+				},
+			},
+		},
+		ConfirmationDepth: 10,
+	}, b)
 
 	assert.True(t, j.checkComplete())
 	assert.Equal(t, 2, j.Index)
@@ -134,12 +187,6 @@ func TestJob_CreateAccount(t *testing.T) {
 	assertVariableEquality(t, j.State, "network", network)
 	assertVariableEquality(t, j.State, "key.public_key.curve_type", types.Secp256k1)
 	assertVariableEquality(t, j.State, "address.address", address)
-
-	randomAddress := gjson.Get(j.State, "random_address")
-	assert.True(t, randomAddress.Exists())
-	matched, err := regexp.Match("[0-9]+", []byte(randomAddress.String()))
-	assert.True(t, matched)
-	assert.NoError(t, err)
 
 	mockHelper.AssertExpectations(t)
 }
