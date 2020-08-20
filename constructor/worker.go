@@ -376,6 +376,10 @@ func (w *Worker) FindBalanceWorker(ctx context.Context, rawInput string) (string
 		return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
 	}
 
+	if input.MinimumBalance == nil {
+		return "", fmt.Errorf("%w: minimum balance is nil", ErrInvalidInput)
+	}
+
 	addresses, err := w.helper.AllAddresses(ctx)
 	if err != nil {
 		return "", fmt.Errorf("%w: unable to get all addresses %s", ErrActionFailed, err.Error())
