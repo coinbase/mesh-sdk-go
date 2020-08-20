@@ -51,7 +51,11 @@ func marshalString(value string) string {
 	return fmt.Sprintf(`"%s"`, value)
 }
 
-func (w *Worker) invokeWorker(ctx context.Context, action ActionType, processedInput string) (string, error) {
+func (w *Worker) invokeWorker(
+	ctx context.Context,
+	action ActionType,
+	processedInput string,
+) (string, error) {
 	var err error
 
 	switch action {
