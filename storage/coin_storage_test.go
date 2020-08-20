@@ -264,6 +264,50 @@ var (
 			},
 		},
 	}
+
+	accBalance1 = &utils.AccountBalance{
+		Account: &types.AccountIdentifier{
+			Address: "acc1",
+		},
+		Coins: []*types.Coin{
+			&types.Coin{
+				CoinIdentifier: &types.CoinIdentifier{Identifier: "accCoin1"},
+				Amount: &types.Amount{
+					Value:    "30",
+					Currency: currency,
+				},
+			},
+			&types.Coin{
+				CoinIdentifier: &types.CoinIdentifier{Identifier: "accCoin2"},
+				Amount: &types.Amount{
+					Value:    "40",
+					Currency: currency,
+				},
+			},
+		},
+	}
+
+	accBalance2 = &utils.AccountBalance{
+		Account: &types.AccountIdentifier{
+			Address: "acc2",
+		},
+		Coins: []*types.Coin{
+			&types.Coin{
+				CoinIdentifier: &types.CoinIdentifier{Identifier: "accCoin3"},
+				Amount: &types.Amount{
+					Value:    "10",
+					Currency: currency,
+				},
+			},
+			&types.Coin{
+				CoinIdentifier: &types.CoinIdentifier{Identifier: "accCoin4"},
+				Amount: &types.Amount{
+					Value:    "20",
+					Currency: currency,
+				},
+			},
+		},
+	}
 )
 
 func TestCoinStorage(t *testing.T) {
@@ -520,6 +564,23 @@ func TestCoinStorage(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, blockIdentifier, block)
 		assert.ElementsMatch(t, coinsGot, []*types.Coin{coins4})
+	})
+
+	t.Run("SetCoinsImported", func(t *testing.T) {
+		accBalances := []*utils.AccountBalance{accBalance1, accBalance2}
+
+		err := c.SetCoinsImported(ctx, accBalances)
+		assert.NoError(t, err)
+
+		coins, block, err := c.GetCoins(ctx, accBalance1.Account)
+		assert.NoError(t, err)
+		assert.Equal(t, blockIdentifier, block)
+		assert.ElementsMatch(t, accBalance1.Coins, coins)
+
+		coins, block, err = c.GetCoins(ctx, accBalance2.Account)
+		assert.NoError(t, err)
+		assert.Equal(t, blockIdentifier, block)
+		assert.ElementsMatch(t, accBalance2.Coins, coins)
 	})
 }
 
