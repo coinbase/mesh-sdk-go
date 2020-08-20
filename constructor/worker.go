@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/coinbase/rosetta-sdk-go/asserter"
 	"github.com/coinbase/rosetta-sdk-go/keys"
 	"github.com/coinbase/rosetta-sdk-go/types"
 
@@ -75,6 +76,10 @@ func (w *Worker) invokeWorker(ctx context.Context, action ActionType, processedI
 			return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
 		}
 
+		if err := asserter.PublicKey(unmarshaledInput.PublicKey); err != nil {
+			return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
+		}
+
 		var output *types.ConstructionDeriveResponse
 		output, err = w.DeriveWorker(ctx, &unmarshaledInput)
 		if err == nil {
@@ -85,6 +90,10 @@ func (w *Worker) invokeWorker(ctx context.Context, action ActionType, processedI
 		err = unmarshalInput([]byte(processedInput), &unmarshaledInput)
 		if err != nil {
 			return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
+		}
+
+		if len(unmarshaledInput.Address) == 0 {
+			return "", fmt.Errorf("%w: %s", ErrInvalidInput, "empty address")
 		}
 
 		err = w.SaveAddressWorker(ctx, &unmarshaledInput)

@@ -16,7 +16,6 @@ package constructor
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
@@ -69,11 +68,7 @@ func (j *Job) unmarshalStruct(
 		return ErrVariableNotFound
 	}
 
-	if err := json.Unmarshal([]byte(value.Raw), &output); err != nil {
-		return fmt.Errorf("%w: could not unmarshal variable %s", err, variable)
-	}
-
-	return nil
+	return unmarshalInput([]byte(value.Raw), output)
 }
 
 func (j *Job) checkComplete() bool {
@@ -117,24 +112,24 @@ func (j *Job) Process(
 		return nil, nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("%w: could not unmarshal operations", err)
+		return nil, fmt.Errorf("%w: %s", ErrOperationFormat, err.Error())
 	}
 
 	confirmationDepth, err := j.unmarshalNumber(scenario.Name, ConfirmationDepth)
 	if err != nil {
-		return nil, fmt.Errorf("%w: could not unmarshal confirmation depth", err)
+		return nil, fmt.Errorf("%w: %s", ErrConfirmationDepthInvalid, err.Error())
 	}
 
 	var network types.NetworkIdentifier
 	err = j.unmarshalStruct(scenario.Name, Network, &network)
 	if err != nil {
-		return nil, fmt.Errorf("%w: could not unmarshal network", err)
+		return nil, fmt.Errorf("%w: %s", ErrNetworkInvalid, err.Error())
 	}
 
 	var metadata map[string]interface{}
 	err = j.unmarshalStruct(scenario.Name, PreprocessMetadata, &metadata)
 	if err != nil && !errors.Is(err, ErrVariableNotFound) {
-		return nil, fmt.Errorf("%w: could not unmarshal preprocess metadata", err)
+		return nil, fmt.Errorf("%w: %s", ErrMetadataInvalid, err.Error())
 	}
 
 	j.Status = Broadcasting
