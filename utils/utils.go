@@ -330,16 +330,30 @@ type AccountBalance struct {
 	Block   *types.BlockIdentifier
 }
 
+// GetAccountBalancesHelper is used by GetAccountBalances to determine
+// the CurrencyBalance at tip for an account
+type GetAccountBalancesHelper interface {
+	CurrencyBalance(
+		ctx context.Context,
+		network *types.NetworkIdentifier,
+		fetcher *fetcher.Fetcher,
+		account *types.AccountIdentifier,
+		currency *types.Currency,
+		block *types.BlockIdentifier,
+	) (*types.Amount, *types.BlockIdentifier, []*types.Coin, error)
+}
+
 // GetAccountBalances returns an array of AccountBalances
 // for an array of AccountBalanceRequests
 func GetAccountBalances(
 	ctx context.Context,
 	fetcher *fetcher.Fetcher,
+	helper GetAccountBalancesHelper,
 	balanceRequests []*AccountBalanceRequest,
 ) ([]*AccountBalance, error) {
 	var accountBalances []*AccountBalance
 	for _, balanceRequest := range balanceRequests {
-		amount, block, coins, err := CurrencyBalance(
+		amount, block, coins, err := helper.CurrencyBalance(
 			ctx,
 			balanceRequest.Network,
 			fetcher,
