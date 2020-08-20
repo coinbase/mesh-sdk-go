@@ -46,8 +46,11 @@ func unmarshalInput(input []byte, output interface{}) error {
 	return nil
 }
 
+func marshalString(value string) string {
+	return fmt.Sprintf(`"%s"`, value)
+}
+
 func (w *Worker) invokeWorker(ctx context.Context, action ActionType, processedInput string) (string, error) {
-	var output interface{}
 	var err error
 
 	switch action {
@@ -60,6 +63,7 @@ func (w *Worker) invokeWorker(ctx context.Context, action ActionType, processedI
 			return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
 		}
 
+		var output *keys.KeyPair
 		output, err = GenerateKeyWorker(&unmarshaledInput)
 		if err == nil {
 			return types.PrintStruct(output), nil
@@ -71,6 +75,7 @@ func (w *Worker) invokeWorker(ctx context.Context, action ActionType, processedI
 			return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
 		}
 
+		var output *types.ConstructionDeriveResponse
 		output, err = w.DeriveWorker(ctx, &unmarshaledInput)
 		if err == nil {
 			return types.PrintStruct(output), nil
@@ -92,13 +97,23 @@ func (w *Worker) invokeWorker(ctx context.Context, action ActionType, processedI
 			return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
 		}
 
+		var output string
 		output, err = RandomStringWorker(&unmarshaledInput)
 		if err == nil {
-			return fmt.Sprintf("\"%s\"", output), nil
+			return marshalString(output), nil
 		}
 	case Math:
-		// TODO: Complete in this PR
-		return "", fmt.Errorf("%s is not implemented", action)
+		var unmarshaledInput MathInput
+		err = unmarshalInput([]byte(processedInput), &unmarshaledInput)
+		if err != nil {
+			return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
+		}
+
+		var output string
+		output, err = MathWorker(&unmarshaledInput)
+		if err == nil {
+			return marshalString(output), nil
+		}
 	default:
 		return "", fmt.Errorf("%w: %s", ErrInvalidActionType, action)
 	}
@@ -201,4 +216,16 @@ func PrintMessageWorker(message string) {
 // with the provided regex input.
 func RandomStringWorker(input *RandomStringInput) (string, error) {
 	return reggen.Generate(input.Regex, input.Limit)
+}
+
+// MathWorker performs some MathOperation on 2 numbers.
+func MathWorker(input *MathInput) (string, error) {
+	switch input.Operation {
+	case Addition:
+		return types.AddValues(input.LeftValue, input.RightValue)
+	case Subtraction:
+		return types.SubtractValues(input.LeftValue, input.RightValue)
+	default:
+		return "", fmt.Errorf("%s is not a supported math operation", input.Operation)
+	}
 }
