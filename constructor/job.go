@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/big"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/tidwall/gjson"
@@ -37,7 +38,26 @@ func NewJob(workflow *Workflow) *Job {
 	}
 }
 
-func (j *Job) unmarshalReserved(
+func (j *Job) unmarshalNumber(
+	scenarioName string,
+	reservedVariable ReservedVariable,
+) (*big.Int, error) {
+	variable := fmt.Sprintf("%s.%s", scenarioName, reservedVariable)
+
+	value := gjson.Get(j.State, variable)
+	if !value.Exists() {
+		return nil, ErrVariableNotFound
+	}
+
+	i, ok := new(big.Int).SetString(value.String(), 10)
+	if !ok {
+		return nil, ErrVariableIncorrectFormat
+	}
+
+	return i, nil
+}
+
+func (j *Job) unmarshalStruct(
 	scenarioName string,
 	reservedVariable ReservedVariable,
 	output interface{},
@@ -85,7 +105,7 @@ func (j *Job) Process(
 	scenario := j.Scenarios[broadcastIndex]
 
 	var operations []*types.Operation
-	err := j.unmarshalReserved(scenario.Name, Operations, &operations)
+	err := j.unmarshalStruct(scenario.Name, Operations, &operations)
 	if errors.Is(err, ErrVariableNotFound) {
 		// If <scenario.Name>.operations are not provided, no broadcast
 		// is required.
@@ -100,14 +120,19 @@ func (j *Job) Process(
 		return nil, fmt.Errorf("%w: could not unmarshal operations", err)
 	}
 
+	confirmationDepth, err := j.unmarshalNumber(scenario.Name, ConfirmationDepth)
+	if err != nil {
+		return nil, fmt.Errorf("%w: could not unmarshal confirmation depth", err)
+	}
+
 	var network types.NetworkIdentifier
-	err = j.unmarshalReserved(scenario.Name, Network, &network)
+	err = j.unmarshalStruct(scenario.Name, Network, &network)
 	if err != nil {
 		return nil, fmt.Errorf("%w: could not unmarshal network", err)
 	}
 
 	var metadata map[string]interface{}
-	err = j.unmarshalReserved(scenario.Name, PreprocessMetadata, &metadata)
+	err = j.unmarshalStruct(scenario.Name, PreprocessMetadata, &metadata)
 	if err != nil && !errors.Is(err, ErrVariableNotFound) {
 		return nil, fmt.Errorf("%w: could not unmarshal preprocess metadata", err)
 	}
@@ -117,7 +142,7 @@ func (j *Job) Process(
 		Network:           &network,
 		Intent:            operations,
 		Metadata:          metadata,
-		ConfirmationDepth: scenario.ConfirmationDepth,
+		ConfirmationDepth: confirmationDepth.Int64(),
 	}, nil
 }
 

@@ -40,6 +40,12 @@ const (
 	// Transaction is the *types.Transaction confirmed
 	// on-chain.
 	Transaction ReservedVariable = "transaction"
+
+	// ConfirmationDepth is the amount of blocks we wait to confirm
+	// a transaction. We allow setting this on a per scenario basis because
+	// certain transactions may only be considered complete
+	// after some time (ex: staking transaction).
+	ConfirmationDepth ReservedVariable = "confirmation_depth"
 )
 
 // ActionType is a type of Action that can be processed.
@@ -139,11 +145,6 @@ type RandomStringInput struct {
 type Scenario struct {
 	Name    string
 	Actions []*Action
-
-	// We set ConfirmationDepth on a per scenario basis because
-	// certain transactions may only be considered complete
-	// after some time (ex: staking transaction).
-	ConfirmationDepth int64
 }
 
 // ReservedWorkflow is a Workflow reserved for special circumstances.
