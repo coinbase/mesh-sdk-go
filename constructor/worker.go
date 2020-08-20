@@ -19,10 +19,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 
+	"github.com/coinbase/rosetta-sdk-go/asserter"
 	"github.com/coinbase/rosetta-sdk-go/keys"
 	"github.com/coinbase/rosetta-sdk-go/types"
 
+	"github.com/lucasjones/reggen"
 	"github.com/tidwall/sjson"
 )
 
@@ -44,6 +47,36 @@ func unmarshalInput(input []byte, output interface{}) error {
 	return nil
 }
 
+func marshalString(value string) string {
+	return fmt.Sprintf(`"%s"`, value)
+}
+
+func (w *Worker) invokeWorker(
+	ctx context.Context,
+	action ActionType,
+	input string,
+) (string, error) {
+	switch action {
+	case SetVariable:
+		return input, nil
+	case GenerateKey:
+		return GenerateKeyWorker(input)
+	case Derive:
+		return w.DeriveWorker(ctx, input)
+	case SaveAddress:
+		return "", w.SaveAddressWorker(ctx, input)
+	case PrintMessage:
+		PrintMessageWorker(input)
+		return "", nil
+	case RandomString:
+		return RandomStringWorker(input)
+	case Math:
+		return MathWorker(input)
+	default:
+		return "", fmt.Errorf("%w: %s", ErrInvalidActionType, action)
+	}
+}
+
 func (w *Worker) actions(ctx context.Context, state string, actions []*Action) (string, error) {
 	for _, action := range actions {
 		processedInput, err := PopulateInput(state, action.Input)
@@ -51,34 +84,16 @@ func (w *Worker) actions(ctx context.Context, state string, actions []*Action) (
 			return "", fmt.Errorf("%w: unable to populate variables", err)
 		}
 
-		var output string
-		switch action.Type {
-		case SetVariable:
-			output = processedInput
-		case GenerateKey:
-			var unmarshaledInput GenerateKeyInput
-			err = unmarshalInput([]byte(processedInput), &unmarshaledInput)
-			if err != nil {
-				return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
-			}
-
-			output, err = GenerateKeyWorker(&unmarshaledInput)
-		case Derive:
-			var unmarshaledInput types.ConstructionDeriveRequest
-			err = unmarshalInput([]byte(processedInput), &unmarshaledInput)
-			if err != nil {
-				return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
-			}
-
-			output, err = w.DeriveWorker(ctx, &unmarshaledInput)
-		default:
-			return "", fmt.Errorf("%w: %s", ErrInvalidActionType, action.Type)
-		}
+		output, err := w.invokeWorker(ctx, action.Type, processedInput)
 		if err != nil {
-			return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
+			return "", fmt.Errorf("%w: unable to process action", err)
 		}
 
-		// Update state at the specified output path.
+		if len(output) == 0 {
+			continue
+		}
+
+		// Update state at the specified output path if there is an output.
 		state, err = sjson.SetRaw(state, action.OutputPath, output)
 		if err != nil {
 			return "", fmt.Errorf("%w: unable to update state", err)
@@ -109,8 +124,18 @@ func (w *Worker) ProcessNextScenario(
 // *types.ConstructionDeriveRequest input.
 func (w *Worker) DeriveWorker(
 	ctx context.Context,
-	input *types.ConstructionDeriveRequest,
+	rawInput string,
 ) (string, error) {
+	var input types.ConstructionDeriveRequest
+	err := unmarshalInput([]byte(rawInput), &input)
+	if err != nil {
+		return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
+	}
+
+	if err := asserter.PublicKey(input.PublicKey); err != nil {
+		return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
+	}
+
 	address, metadata, err := w.helper.Derive(
 		ctx,
 		input.NetworkIdentifier,
@@ -118,7 +143,7 @@ func (w *Worker) DeriveWorker(
 		input.Metadata,
 	)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
 	}
 
 	return types.PrintStruct(types.ConstructionDeriveResponse{
@@ -129,11 +154,83 @@ func (w *Worker) DeriveWorker(
 
 // GenerateKeyWorker attempts to generate a key given a
 // *GenerateKeyInput input.
-func GenerateKeyWorker(input *GenerateKeyInput) (string, error) {
+func GenerateKeyWorker(rawInput string) (string, error) {
+	var input GenerateKeyInput
+	err := unmarshalInput([]byte(rawInput), &input)
+	if err != nil {
+		return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
+	}
+
 	kp, err := keys.GenerateKeypair(input.CurveType)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
 	}
 
 	return types.PrintStruct(kp), nil
+}
+
+// SaveAddressWorker saves an address and associated KeyPair
+// in KeyStorage.
+func (w *Worker) SaveAddressWorker(ctx context.Context, rawInput string) error {
+	var input SaveAddressInput
+	err := unmarshalInput([]byte(rawInput), &input)
+	if err != nil {
+		return fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
+	}
+
+	if len(input.Address) == 0 {
+		return fmt.Errorf("%w: %s", ErrInvalidInput, "empty address")
+	}
+
+	if err := w.helper.StoreKey(ctx, input.Address, input.KeyPair); err != nil {
+		return fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
+	}
+
+	return nil
+}
+
+// PrintMessageWorker logs some message to stdout.
+func PrintMessageWorker(message string) {
+	log.Printf("Message: %s\n", message)
+}
+
+// RandomStringWorker generates a string that complies
+// with the provided regex input.
+func RandomStringWorker(rawInput string) (string, error) {
+	var input RandomStringInput
+	err := unmarshalInput([]byte(rawInput), &input)
+	if err != nil {
+		return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
+	}
+
+	output, err := reggen.Generate(input.Regex, input.Limit)
+	if err != nil {
+		return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
+	}
+
+	return marshalString(output), nil
+}
+
+// MathWorker performs some MathOperation on 2 numbers.
+func MathWorker(rawInput string) (string, error) {
+	var input MathInput
+	err := unmarshalInput([]byte(rawInput), &input)
+	if err != nil {
+		return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
+	}
+
+	var result string
+	switch input.Operation {
+	case Addition:
+		result, err = types.AddValues(input.LeftValue, input.RightValue)
+	case Subtraction:
+		result, err = types.SubtractValues(input.LeftValue, input.RightValue)
+	default:
+		return "", fmt.Errorf("%s is not a supported math operation", input.Operation)
+	}
+	if err != nil {
+		return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
+	}
+
+	return marshalString(result), nil
 }
