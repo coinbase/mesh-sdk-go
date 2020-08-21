@@ -21,7 +21,7 @@ import (
 	"regexp"
 	"testing"
 
-	mocks "github.com/coinbase/rosetta-sdk-go/mocks/constructor"
+	mocks "github.com/coinbase/rosetta-sdk-go/mocks/constructor/executor"
 	"github.com/coinbase/rosetta-sdk-go/types"
 
 	"github.com/stretchr/testify/assert"
