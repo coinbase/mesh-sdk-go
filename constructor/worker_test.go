@@ -296,6 +296,267 @@ func TestFindBalanceWorker(t *testing.T) {
 				},
 			},
 		},
+		"could not find coin (no create)": {
+			input: &FindBalanceInput{
+				MinimumBalance: &types.Amount{
+					Value: "100",
+					Currency: &types.Currency{
+						Symbol:   "BTC",
+						Decimals: 8,
+					},
+				},
+				NotAddress:  []string{"addr4"},
+				RequireCoin: true,
+				NotCoins: []*types.CoinIdentifier{
+					{
+						Identifier: "coin1",
+					},
+				},
+				Create: -1,
+			},
+			mockHelper: func() *mocks.WorkerHelper {
+				helper := &mocks.WorkerHelper{}
+				helper.On("AllAddresses", ctx).Return([]string{"addr2", "addr1", "addr3", "addr4"}, nil).Once()
+				helper.On("LockedAddresses", ctx).Return([]string{"addr2"}, nil).Once()
+				helper.On("Coins", ctx, &types.AccountIdentifier{
+					Address:    "addr1",
+					SubAccount: (*types.SubAccountIdentifier)(nil),
+				}).Return([]*types.Coin{
+					{
+						CoinIdentifier: &types.CoinIdentifier{
+							Identifier: "coin1",
+						},
+						Amount: &types.Amount{
+							Value: "20000",
+							Currency: &types.Currency{
+								Symbol:   "BTC",
+								Decimals: 8,
+							},
+						},
+					},
+					{
+						CoinIdentifier: &types.CoinIdentifier{
+							Identifier: "coin2",
+						},
+						Amount: &types.Amount{
+							Value: "99",
+							Currency: &types.Currency{
+								Symbol:   "BTC",
+								Decimals: 8,
+							},
+						},
+					},
+				}, nil).Once()
+				helper.On("Coins", ctx, &types.AccountIdentifier{
+					Address:    "addr3",
+					SubAccount: (*types.SubAccountIdentifier)(nil),
+				}).Return([]*types.Coin{
+					{
+						CoinIdentifier: &types.CoinIdentifier{
+							Identifier: "coin4",
+						},
+						Amount: &types.Amount{
+							Value: "101",
+							Currency: &types.Currency{
+								Symbol:   "ETH",
+								Decimals: 18,
+							},
+						},
+					},
+				}, nil).Once()
+
+				return helper
+			}(),
+			err: ErrUnsatisfiable,
+		},
+		"could not find coin (should create)": {
+			input: &FindBalanceInput{
+				MinimumBalance: &types.Amount{
+					Value: "100",
+					Currency: &types.Currency{
+						Symbol:   "BTC",
+						Decimals: 8,
+					},
+				},
+				NotAddress:  []string{"addr4"},
+				RequireCoin: true,
+				NotCoins: []*types.CoinIdentifier{
+					{
+						Identifier: "coin1",
+					},
+				},
+				Create: 10,
+			},
+			mockHelper: func() *mocks.WorkerHelper {
+				helper := &mocks.WorkerHelper{}
+				helper.On("AllAddresses", ctx).Return([]string{"addr2", "addr1", "addr3", "addr4"}, nil).Once()
+				helper.On("LockedAddresses", ctx).Return([]string{"addr2"}, nil).Once()
+				helper.On("Coins", ctx, &types.AccountIdentifier{
+					Address:    "addr1",
+					SubAccount: (*types.SubAccountIdentifier)(nil),
+				}).Return([]*types.Coin{
+					{
+						CoinIdentifier: &types.CoinIdentifier{
+							Identifier: "coin1",
+						},
+						Amount: &types.Amount{
+							Value: "20000",
+							Currency: &types.Currency{
+								Symbol:   "BTC",
+								Decimals: 8,
+							},
+						},
+					},
+					{
+						CoinIdentifier: &types.CoinIdentifier{
+							Identifier: "coin2",
+						},
+						Amount: &types.Amount{
+							Value: "99",
+							Currency: &types.Currency{
+								Symbol:   "BTC",
+								Decimals: 8,
+							},
+						},
+					},
+				}, nil).Once()
+				helper.On("Coins", ctx, &types.AccountIdentifier{
+					Address:    "addr3",
+					SubAccount: (*types.SubAccountIdentifier)(nil),
+				}).Return([]*types.Coin{
+					{
+						CoinIdentifier: &types.CoinIdentifier{
+							Identifier: "coin4",
+						},
+						Amount: &types.Amount{
+							Value: "101",
+							Currency: &types.Currency{
+								Symbol:   "ETH",
+								Decimals: 18,
+							},
+						},
+					},
+				}, nil).Once()
+
+				return helper
+			}(),
+			err: ErrCreateAccount,
+		},
+		"could not find coin (too many accounts)": {
+			input: &FindBalanceInput{
+				MinimumBalance: &types.Amount{
+					Value: "100",
+					Currency: &types.Currency{
+						Symbol:   "BTC",
+						Decimals: 8,
+					},
+				},
+				NotAddress:  []string{"addr4"},
+				RequireCoin: true,
+				NotCoins: []*types.CoinIdentifier{
+					{
+						Identifier: "coin1",
+					},
+				},
+				Create: 2,
+			},
+			mockHelper: func() *mocks.WorkerHelper {
+				helper := &mocks.WorkerHelper{}
+				helper.On("AllAddresses", ctx).Return([]string{"addr2", "addr1", "addr3", "addr4"}, nil).Once()
+				helper.On("LockedAddresses", ctx).Return([]string{"addr2"}, nil).Once()
+				helper.On("Coins", ctx, &types.AccountIdentifier{
+					Address:    "addr1",
+					SubAccount: (*types.SubAccountIdentifier)(nil),
+				}).Return([]*types.Coin{
+					{
+						CoinIdentifier: &types.CoinIdentifier{
+							Identifier: "coin1",
+						},
+						Amount: &types.Amount{
+							Value: "20000",
+							Currency: &types.Currency{
+								Symbol:   "BTC",
+								Decimals: 8,
+							},
+						},
+					},
+					{
+						CoinIdentifier: &types.CoinIdentifier{
+							Identifier: "coin2",
+						},
+						Amount: &types.Amount{
+							Value: "99",
+							Currency: &types.Currency{
+								Symbol:   "BTC",
+								Decimals: 8,
+							},
+						},
+					},
+				}, nil).Once()
+				helper.On("Coins", ctx, &types.AccountIdentifier{
+					Address:    "addr3",
+					SubAccount: (*types.SubAccountIdentifier)(nil),
+				}).Return([]*types.Coin{
+					{
+						CoinIdentifier: &types.CoinIdentifier{
+							Identifier: "coin4",
+						},
+						Amount: &types.Amount{
+							Value: "101",
+							Currency: &types.Currency{
+								Symbol:   "ETH",
+								Decimals: 18,
+							},
+						},
+					},
+				}, nil).Once()
+
+				return helper
+			}(),
+			err: ErrUnsatisfiable,
+		},
+		"invalid amount": {
+			input: &FindBalanceInput{
+				MinimumBalance: &types.Amount{
+					Value: "",
+					Currency: &types.Currency{
+						Symbol:   "BTC",
+						Decimals: 8,
+					},
+				},
+				NotAddress:  []string{"addr4"},
+				RequireCoin: true,
+				NotCoins: []*types.CoinIdentifier{
+					{
+						Identifier: "coin1",
+					},
+				},
+				Create: 2,
+			},
+			mockHelper: &mocks.WorkerHelper{},
+			err:        ErrInvalidInput,
+		},
+		"invalid currency": {
+			input: &FindBalanceInput{
+				MinimumBalance: &types.Amount{
+					Value: "100",
+					Currency: &types.Currency{
+						Symbol:   "",
+						Decimals: 8,
+					},
+				},
+				NotAddress:  []string{"addr4"},
+				RequireCoin: true,
+				NotCoins: []*types.CoinIdentifier{
+					{
+						Identifier: "coin1",
+					},
+				},
+				Create: 2,
+			},
+			mockHelper: &mocks.WorkerHelper{},
+			err:        ErrInvalidInput,
+		},
 	}
 
 	for name, test := range tests {
