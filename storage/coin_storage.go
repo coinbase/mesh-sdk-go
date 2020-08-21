@@ -22,6 +22,7 @@ import (
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
 	"github.com/coinbase/rosetta-sdk-go/types"
+	"github.com/coinbase/rosetta-sdk-go/utils"
 )
 
 const (
@@ -496,4 +497,30 @@ func (c *CoinStorage) GetLargestCoin(
 	}
 
 	return bal, coinIdentifier, blockIdentifier, nil
+}
+
+// SetCoinsImported sets coins of a set of addresses by
+// getting their coins from the tip block, and populating the database.
+// This is used when importing prefunded addresses.
+func (c *CoinStorage) SetCoinsImported(
+	ctx context.Context,
+	accountBalances []*utils.AccountBalance,
+) error {
+	var accountCoins []*AccountCoin
+	for _, accountBalance := range accountBalances {
+		for _, coin := range accountBalance.Coins {
+			accountCoin := &AccountCoin{
+				Account: accountBalance.Account,
+				Coin:    coin,
+			}
+
+			accountCoins = append(accountCoins, accountCoin)
+		}
+	}
+
+	if err := c.AddCoins(ctx, accountCoins); err != nil {
+		return fmt.Errorf("%w: unable to import coins", err)
+	}
+
+	return nil
 }

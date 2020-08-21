@@ -162,12 +162,33 @@ func CreateCommandPath(
 	return dataPath, nil
 }
 
+// FetcherHelper is used by util functions to mock Fetcher
+type FetcherHelper interface {
+	NetworkList(
+		ctx context.Context,
+		metadata map[string]interface{},
+	) (*types.NetworkListResponse, *fetcher.Error)
+
+	NetworkStatusRetry(
+		ctx context.Context,
+		network *types.NetworkIdentifier,
+		metadata map[string]interface{},
+	) (*types.NetworkStatusResponse, *fetcher.Error)
+
+	AccountBalanceRetry(
+		ctx context.Context,
+		network *types.NetworkIdentifier,
+		account *types.AccountIdentifier,
+		block *types.PartialBlockIdentifier,
+	) (*types.BlockIdentifier, []*types.Amount, []*types.Coin, map[string]interface{}, *fetcher.Error)
+}
+
 // CheckNetworkSupported checks if a Rosetta implementation supports a given
 // *types.NetworkIdentifier. If it does, the current network status is returned.
 func CheckNetworkSupported(
 	ctx context.Context,
 	networkIdentifier *types.NetworkIdentifier,
-	fetcher *fetcher.Fetcher,
+	fetcher FetcherHelper,
 ) (*types.NetworkStatusResponse, error) {
 	networks, fetchErr := fetcher.NetworkList(ctx, nil)
 	if fetchErr != nil {
@@ -275,39 +296,91 @@ func Milliseconds() int64 {
 func CurrencyBalance(
 	ctx context.Context,
 	network *types.NetworkIdentifier,
-	fetcher *fetcher.Fetcher,
+	helper FetcherHelper,
 	account *types.AccountIdentifier,
 	currency *types.Currency,
 	block *types.BlockIdentifier,
-) (*types.Amount, *types.BlockIdentifier, error) {
+) (*types.Amount, *types.BlockIdentifier, []*types.Coin, error) {
 	var lookupBlock *types.PartialBlockIdentifier
 	if block != nil {
 		lookupBlock = types.ConstructPartialBlockIdentifier(block)
 	}
 
-	liveBlock, liveBalances, _, _, fetchErr := fetcher.AccountBalanceRetry(
+	liveBlock, liveBalances, liveCoins, _, fetchErr := helper.AccountBalanceRetry(
 		ctx,
 		network,
 		account,
 		lookupBlock,
 	)
+
 	if fetchErr != nil {
-		return nil, nil, fmt.Errorf(
-			"%w: unable to lookup acccount balance for %s",
-			fetchErr.Err,
-			types.PrettyPrintStruct(account),
-		)
+		return nil, nil, nil, fetchErr.Err
 	}
 
 	liveAmount, err := types.ExtractAmount(liveBalances, currency)
 	if err != nil {
-		return nil, nil, fmt.Errorf(
+		formattedError := fmt.Errorf(
 			"%w: could not get %s currency balance for %s",
 			err,
 			types.PrettyPrintStruct(currency),
 			types.PrettyPrintStruct(account),
 		)
+
+		return nil, nil, nil, formattedError
 	}
 
-	return liveAmount, liveBlock, nil
+	return liveAmount, liveBlock, liveCoins, nil
+}
+
+// AccountBalanceRequest defines the required information
+// to get an account's balance.
+type AccountBalanceRequest struct {
+	Account  *types.AccountIdentifier
+	Network  *types.NetworkIdentifier
+	Currency *types.Currency
+}
+
+// AccountBalance defines an account's balance,
+// including either balance or coins, as well as
+// the block which this balance was fetched at.
+type AccountBalance struct {
+	Account *types.AccountIdentifier
+	Amount  *types.Amount
+	Coins   []*types.Coin
+	Block   *types.BlockIdentifier
+}
+
+// GetAccountBalances returns an array of AccountBalances
+// for an array of AccountBalanceRequests
+func GetAccountBalances(
+	ctx context.Context,
+	fetcher FetcherHelper,
+	balanceRequests []*AccountBalanceRequest,
+) ([]*AccountBalance, error) {
+	var accountBalances []*AccountBalance
+	for _, balanceRequest := range balanceRequests {
+		amount, block, coins, err := CurrencyBalance(
+			ctx,
+			balanceRequest.Network,
+			fetcher,
+			balanceRequest.Account,
+			balanceRequest.Currency,
+			nil,
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		accountBalance := &AccountBalance{
+			Account: balanceRequest.Account,
+			Amount:  amount,
+			Coins:   coins,
+			Block:   block,
+		}
+
+		accountBalances = append(accountBalances, accountBalance)
+	}
+
+	return accountBalances, nil
 }
