@@ -69,4 +69,14 @@ var (
 	// are populated, but construction preprocess metadata is
 	// invalid (ok to be missing).
 	ErrMetadataInvalid = errors.New("metadata invalid")
+
+	// ErrCreateAccount is returned when a new account should
+	// be created using the `create_account` workflow.
+	ErrCreateAccount = errors.New("create account")
+
+	// ErrUnsatisfiable is returned when there is no available
+	// balance that can satisfy a FindBalance request. If there
+	// are no pending broadcasts, this usually means that we need
+	// to request funds.
+	ErrUnsatisfiable = errors.New("unsatisfiable balance")
 )
