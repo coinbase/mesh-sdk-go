@@ -255,9 +255,18 @@ func (b *BlockStorage) GetBlock(
 	block := blockResponse.Block
 	txs := make([]*types.Transaction, len(blockResponse.OtherTransactions))
 	for i, transactionIdentifier := range blockResponse.OtherTransactions {
-		tx, err := b.findBlockTransaction(ctx, block.BlockIdentifier, transactionIdentifier, transaction)
+		tx, err := b.findBlockTransaction(
+			ctx,
+			block.BlockIdentifier,
+			transactionIdentifier,
+			transaction,
+		)
 		if err != nil {
-			return nil, fmt.Errorf("%w: could not get transaction %s", err, transactionIdentifier.Hash)
+			return nil, fmt.Errorf(
+				"%w: could not get transaction %s",
+				err,
+				transactionIdentifier.Hash,
+			)
 		}
 
 		txs[i] = tx
@@ -665,7 +674,11 @@ func (b *BlockStorage) findBlockTransaction(
 
 	val, ok := blocks[blockIdentifier.Hash]
 	if !ok {
-		return nil, fmt.Errorf("transaction %s does not exist in block %s", transactionIdentifier.Hash, blockIdentifier.Hash)
+		return nil, fmt.Errorf(
+			"transaction %s does not exist in block %s",
+			transactionIdentifier.Hash,
+			blockIdentifier.Hash,
+		)
 	}
 
 	return val.Transaction, nil

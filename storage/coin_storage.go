@@ -74,8 +74,13 @@ func getCoinAccountPrefix(accountIdentifier *types.AccountIdentifier) []byte {
 	return []byte(fmt.Sprintf("%s/%s", coinAccountNamespace, types.Hash(accountIdentifier)))
 }
 
-func getCoinAccountCoin(accountIdentifier *types.AccountIdentifier, coinIdentifier *types.CoinIdentifier) []byte {
-	return []byte(fmt.Sprintf("%s/%s", getCoinAccountPrefix(accountIdentifier), coinIdentifier.Identifier))
+func getCoinAccountCoin(
+	accountIdentifier *types.AccountIdentifier,
+	coinIdentifier *types.CoinIdentifier,
+) []byte {
+	return []byte(
+		fmt.Sprintf("%s/%s", getCoinAccountPrefix(accountIdentifier), coinIdentifier.Identifier),
+	)
 }
 
 func getAndDecodeCoin(
