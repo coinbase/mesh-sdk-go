@@ -96,4 +96,9 @@ var (
 	// ErrRequestFundsWorkflowMissing is returned when we want
 	// to request funds but the request funds workflow is missing.
 	ErrRequestFundsWorkflowMissing = errors.New("request funds workflow missing")
+
+	// ErrJobMissing is returned when the coordinator is invoked with
+	// a broadcast complete call but the job that is affected does
+	// not exist.
+	ErrJobMissing = errors.New("job missing")
 )

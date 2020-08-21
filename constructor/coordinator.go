@@ -8,32 +8,14 @@ import (
 	"time"
 
 	"github.com/coinbase/rosetta-sdk-go/parser"
-	"github.com/coinbase/rosetta-sdk-go/storage"
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/coinbase/rosetta-sdk-go/utils"
 )
 
-type JobStorage interface {
-	// Ready returns the jobs that are ready to be processed.
-	Ready(context.Context) ([]*Job, error)
-
-	// Processing returns the number of jobs processing
-	// for a particular workflow.
-	Processing(context.Context, string) (int, error)
-
-	// Update stores an updated *Job in storage
-	// and returns its UUID (which won't exist
-	// on first update).
-	Update(context.Context, storage.DatabaseTransaction, *Job) error
-}
-
-type Fetcher interface{}
-
 // TODO: move to types
 type Coordinator struct {
 	storage JobStorage
-	helper  WorkerHelper
-	worker  *Worker
+	helper  Helper
 	parser  *parser.Parser
 
 	attemptedJobs        []string
@@ -232,6 +214,41 @@ func (c *Coordinator) createTransaction(
 	return transactionIdentifier, networkTransaction, nil
 }
 
+// BroadcastComplete is called by the broadcast coordinator
+// when a transaction broadcast has completed. If the transaction
+// is nil, then the transaction did not succeed.
+func (c *Coordinator) BroadcastComplete(
+	ctx context.Context,
+	jobIdentifier string,
+	transaction *types.Transaction,
+) error {
+	dbTx := c.helper.DatabaseTransaction(ctx)
+	defer dbTx.Discard(ctx)
+
+	job, err := c.storage.Get(ctx, dbTx, jobIdentifier)
+	if err != nil {
+		return fmt.Errorf(
+			"%w: %s",
+			ErrJobMissing,
+			err.Error(),
+		)
+	}
+
+	if err := job.BroadcastComplete(ctx, transaction); err != nil {
+		return fmt.Errorf("%w: unable to mark broadcast complete", err)
+	}
+
+	if _, err := c.storage.Update(ctx, dbTx, job); err != nil {
+		return fmt.Errorf("%w: unable to update job", err)
+	}
+
+	if err := dbTx.Commit(ctx); err != nil {
+		return fmt.Errorf("%w: unable to commit job update", err)
+	}
+
+	return nil
+}
+
 func (c *Coordinator) resetVars() {
 	c.attemptedJobs = []string{}
 	c.attemptedWorkflows = []string{}
@@ -262,7 +279,7 @@ func (c *Coordinator) Process(
 			return fmt.Errorf("%w: unable to find job", err)
 		}
 
-		broadcast, err := job.Process(ctx, c.worker)
+		broadcast, err := job.Process(ctx, NewWorker(c.helper))
 		if errors.Is(err, ErrCreateAccount) {
 			c.seenErrCreateAccount = true
 			continue
@@ -276,11 +293,12 @@ func (c *Coordinator) Process(
 		}
 
 		// Update job and store broadcast in a single DB transaction.
-		dbTransaction := c.helper.CreateDatabaseTransaction(ctx)
+		dbTransaction := c.helper.DatabaseTransaction(ctx)
 		defer dbTransaction.Discard(ctx)
 
 		// Update job (or store for the first time)
-		if err := c.storage.Update(ctx, dbTransaction, job); err != nil {
+		jobIdentifier, err := c.storage.Update(ctx, dbTransaction, job)
+		if err != nil {
 			return fmt.Errorf("%w: unable to update job")
 		}
 
@@ -292,7 +310,7 @@ func (c *Coordinator) Process(
 			}
 
 			// Invoke Broadcast storage (in same TX as update job)
-			if err := c.helper.Broadcast(ctx, dbTransaction, broadcast.Network, broadcast.Intent, transactionIdentifier, networkTransaction); err != nil {
+			if err := c.helper.Broadcast(ctx, dbTransaction, jobIdentifier, broadcast.Network, broadcast.Intent, transactionIdentifier, networkTransaction); err != nil {
 				return fmt.Errorf("%w: unable to enque broadcast", err)
 			}
 		}

@@ -32,7 +32,7 @@ import (
 )
 
 // NewWorker returns a new Worker.
-func NewWorker(helper WorkerHelper) *Worker {
+func NewWorker(helper Helper) *Worker {
 	return &Worker{helper: helper}
 }
 
