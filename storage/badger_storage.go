@@ -17,7 +17,14 @@ package storage
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path"
+	"strings"
 	"sync"
+
+	"github.com/coinbase/rosetta-sdk-go/types"
+	"github.com/coinbase/rosetta-sdk-go/utils"
 
 	"github.com/dgraph-io/badger/v2"
 	"github.com/dgraph-io/badger/v2/options"
@@ -186,6 +193,23 @@ func (b *BadgerTransaction) Set(
 	key []byte,
 	value []byte,
 ) error {
+	// Output file based on key namespace to directory
+	namespace := strings.Split(string(key), "/")[0]
+	filename := types.Hash(string(key)) + ".msgpack"
+	filePath := path.Join("training_data", namespace)
+	if err := utils.EnsurePathExists(filePath); err != nil {
+		return fmt.Errorf("%w: unable to check if path exists", err)
+	}
+
+	err := ioutil.WriteFile(
+		path.Join(filePath, filename),
+		value,
+		os.FileMode(utils.DefaultFilePermissions),
+	)
+	if err != nil {
+		return fmt.Errorf("%w: unable to write to file path %s", err, filePath)
+	}
+
 	return b.txn.Set(key, value)
 }
 
