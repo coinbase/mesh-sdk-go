@@ -20,10 +20,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
 	"github.com/coinbase/rosetta-sdk-go/keys"
 	"github.com/coinbase/rosetta-sdk-go/types"
+	"github.com/coinbase/rosetta-sdk-go/utils"
 
 	"github.com/lucasjones/reggen"
 	"github.com/tidwall/sjson"
@@ -72,6 +74,8 @@ func (w *Worker) invokeWorker(
 		return RandomStringWorker(input)
 	case Math:
 		return MathWorker(input)
+	case FindBalance:
+		return w.FindBalanceWorker(ctx, input)
 	default:
 		return "", fmt.Errorf("%w: %s", ErrInvalidActionType, action)
 	}
@@ -233,4 +237,243 @@ func MathWorker(rawInput string) (string, error) {
 	}
 
 	return marshalString(result), nil
+}
+
+// waitMessage prints out a log message while waiting
+// that reflects the *FindBalanceInput.
+func waitMessage(input *FindBalanceInput) string {
+	waitObject := "balance"
+	if input.RequireCoin {
+		waitObject = "coin"
+	}
+
+	message := fmt.Sprintf(
+		"Waiting for %s %s",
+		waitObject,
+		types.PrintStruct(input.MinimumBalance),
+	)
+
+	if len(input.Address) > 0 {
+		message = fmt.Sprintf(
+			"%s on address %s",
+			message,
+			input.Address,
+		)
+	}
+
+	if input.SubAccount != nil {
+		message = fmt.Sprintf(
+			"%s with sub_account %s",
+			message,
+			types.PrintStruct(input.SubAccount),
+		)
+	}
+
+	if len(input.NotAddress) > 0 {
+		message = fmt.Sprintf(
+			"%s != to addresses %s",
+			message,
+			types.PrintStruct(input.NotAddress),
+		)
+	}
+
+	if len(input.NotCoins) > 0 {
+		message = fmt.Sprintf(
+			"%s != to coins %s",
+			message,
+			types.PrintStruct(input.NotCoins),
+		)
+	}
+
+	return message
+}
+
+func (w *Worker) checkAccountCoins(
+	ctx context.Context,
+	input *FindBalanceInput,
+	account *types.AccountIdentifier,
+) (string, error) {
+	coins, err := w.helper.Coins(ctx, account)
+	if err != nil {
+		return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
+	}
+
+	disallowedCoins := []string{}
+	for _, coinIdentifier := range input.NotCoins {
+		disallowedCoins = append(disallowedCoins, types.Hash(coinIdentifier))
+	}
+
+	for _, coin := range coins {
+		if utils.ContainsString(disallowedCoins, types.Hash(coin.CoinIdentifier)) {
+			continue
+		}
+
+		if types.Hash(coin.Amount.Currency) != types.Hash(input.MinimumBalance.Currency) {
+			continue
+		}
+
+		diff, err := types.SubtractValues(coin.Amount.Value, input.MinimumBalance.Value)
+		if err != nil {
+			return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
+		}
+
+		bigIntDiff, err := types.BigInt(diff)
+		if err != nil {
+			return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
+		}
+
+		if bigIntDiff.Sign() < 0 {
+			continue
+		}
+
+		return types.PrintStruct(FindBalanceOutput{
+			Account: account,
+			Balance: coin.Amount,
+			Coin:    coin.CoinIdentifier,
+		}), nil
+	}
+
+	return "", nil
+}
+
+func (w *Worker) checkAccountBalance(
+	ctx context.Context,
+	input *FindBalanceInput,
+	account *types.AccountIdentifier,
+) (string, error) {
+	amounts, err := w.helper.Balance(ctx, account)
+	if err != nil {
+		return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
+	}
+
+	// look for amounts > min
+	for _, amount := range amounts {
+		if types.Hash(amount.Currency) != types.Hash(input.MinimumBalance.Currency) {
+			continue
+		}
+
+		diff, err := types.SubtractValues(amount.Value, input.MinimumBalance.Value)
+		if err != nil {
+			return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
+		}
+
+		bigIntDiff, err := types.BigInt(diff)
+		if err != nil {
+			return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
+		}
+
+		if bigIntDiff.Sign() < 0 {
+			continue
+		}
+
+		return types.PrintStruct(FindBalanceOutput{
+			Account: account,
+			Balance: amount,
+		}), nil
+	}
+
+	return "", nil
+}
+
+// FindBalanceWorker attempts to find an account (and coin) with some minimum
+// balance in a particular currency.
+func (w *Worker) FindBalanceWorker(ctx context.Context, rawInput string) (string, error) {
+	var input FindBalanceInput
+	err := unmarshalInput([]byte(rawInput), &input)
+	if err != nil {
+		return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
+	}
+
+	if err := asserter.Amount(input.MinimumBalance); err != nil {
+		return "", fmt.Errorf("%w: minimum balance invalid %s", ErrInvalidInput, err.Error())
+	}
+
+	addresses, err := w.helper.AllAddresses(ctx)
+	if err != nil {
+		return "", fmt.Errorf("%w: unable to get all addresses %s", ErrActionFailed, err.Error())
+	}
+
+	// If there are no addresses, we should create one.
+	if len(addresses) == 0 {
+		return "", ErrCreateAccount
+	}
+
+	// We fetch all locked addresses to subtract them from AllAddresses.
+	// We consider an address "locked" if it is actively involved in a broadcast.
+	unlockedAddresses := []string{}
+	lockedAddresses, err := w.helper.LockedAddresses(ctx)
+	if err != nil {
+		return "", fmt.Errorf("%w: unable to get locked addresses %s", ErrActionFailed, err)
+	}
+
+	// Convert to a map so can do fast lookups
+	lockedSet := map[string]struct{}{}
+	for _, address := range lockedAddresses {
+		lockedSet[address] = struct{}{}
+	}
+
+	for _, address := range addresses {
+		if _, exists := lockedSet[address]; !exists {
+			unlockedAddresses = append(unlockedAddresses, address)
+		}
+	}
+
+	// Consider each unlockedAddress as a potential account.
+	for _, address := range unlockedAddresses {
+		// If we require an address and that address
+		// is not equal to the address we are considering,
+		// we should continue.
+		if len(input.Address) != 0 && address != input.Address {
+			continue
+		}
+
+		// If we specify that we do not use certain addresses
+		// and the address we are considering is one of them,
+		// we should continue.
+		if utils.ContainsString(input.NotAddress, address) {
+			continue
+		}
+
+		account := &types.AccountIdentifier{
+			Address:    address,
+			SubAccount: input.SubAccount,
+		}
+
+		var output string
+		var err error
+		if input.RequireCoin {
+			output, err = w.checkAccountCoins(ctx, &input, account)
+		} else {
+			output, err = w.checkAccountBalance(ctx, &input, account)
+		}
+		if err != nil {
+			return "", err
+		}
+
+		// If we did not fund a match, we should continue.
+		if len(output) == 0 {
+			continue
+		}
+
+		return output, nil
+	}
+
+	// If we are supposed to wait, we sleep for BalanceWaitTime
+	// and then invoke FindBalanceWorker.
+	if input.Wait {
+		log.Printf("%s\n", waitMessage(&input))
+
+		time.Sleep(BalanceWaitTime)
+		return w.FindBalanceWorker(ctx, rawInput)
+	}
+
+	// If we should create an account and the number of addresses
+	// we have is less than the limit, we return ErrCreateAccount.
+	if input.Create != -1 && len(addresses) <= input.Create {
+		return "", ErrCreateAccount
+	}
+
+	// If we can't do anything and we aren't supposed to wait, we should
+	// return with ErrUnsatisfiable.
+	return "", ErrUnsatisfiable
 }

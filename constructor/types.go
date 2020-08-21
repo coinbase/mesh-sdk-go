@@ -16,9 +16,16 @@ package constructor
 
 import (
 	"context"
+	"time"
 
 	"github.com/coinbase/rosetta-sdk-go/keys"
 	"github.com/coinbase/rosetta-sdk-go/types"
+)
+
+const (
+	// BalanceWaitTime is the amount of time
+	// we wait between balance checks.
+	BalanceWaitTime = 5 * time.Second
 )
 
 // ReservedVariable is a reserved variable
@@ -67,13 +74,11 @@ const (
 	// other actions).
 	SetVariable ActionType = "set_variable"
 
-	// FindAccount finds some unlocked account that optionally
+	// FindBalance finds some unlocked account that optionally
 	// has a minimum balance of funds.
-	FindAccount ActionType = "find_account"
-
 	// FindCoin finds some coin above a certain amount. It is
 	// possible to specify coins which should not be considered (by identifier).
-	FindCoin ActionType = "find_coin"
+	FindBalance ActionType = "find_balance"
 
 	// PrintMessage can be used to print any message
 	// to the terminal. This is usually used to indicate
@@ -84,10 +89,6 @@ const (
 	// This can also be used to log information during
 	// execution.
 	PrintMessage ActionType = "print_message"
-
-	// WaitForFunds halts execution until a specified
-	// address has a minimum balance.
-	WaitForFunds ActionType = "wait_for_funds"
 
 	// Math is used to perform addition or subtraction of variables. It is
 	// most commonly used to determine how much to send to a change output
@@ -145,6 +146,60 @@ type MathInput struct {
 	Operation  MathOperation `json:"operation"`
 	LeftValue  string        `json:"left_value"`
 	RightValue string        `json:"right_value"`
+}
+
+// FindBalanceInput is the input to FindBalance.
+type FindBalanceInput struct {
+	// Address can be optionally provided to ensure the balance returned
+	// is for a particular address (this is used when fetching the balance
+	// of the same account in multiple currencies, when requesting funds,
+	// or when constructing a multi-input UTXO transfer with the
+	// same address).
+	Address string `json:"address,omitempty"`
+
+	// NotAddress can be populated to ensure a different
+	// address is found. This is useful when avoiding a
+	// self-transfer.
+	NotAddress []string `json:"not_address,omitempty"`
+
+	// SubAccount can be used to find addresses with particular
+	// SubAccount balances. This is particularly useful for
+	// orchestrating staking transactions.
+	SubAccount *types.SubAccountIdentifier `json:"sub_account,omitempty"`
+
+	// Wait will cause this action to block until an acceptable
+	// balance is found. This is useful when waiting for initial funds.
+	Wait bool `json:"wait,omitempty"`
+
+	// MinimumBalance is the minimum required balance that must be found.
+	MinimumBalance *types.Amount `json:"minimum_balance,omitempty"`
+
+	// RequireCoin indicates if a coin must be found with the minimum balance.
+	// This is useful for orchestrating transfers on UTXO-based blockchains.
+	RequireCoin bool `json:"require_coin,omitempty"`
+
+	// NotCoins indicates that certain coins should not be considered. This is useful
+	// for avoiding using the same Coin twice.
+	NotCoins []*types.CoinIdentifier `json:"not_coins,omitempty"`
+
+	// Create is used to determine if we should create a new address using
+	// the CreateAccount Workflow. This will only occur if the
+	// total number of addresses is under some pre-defined limit.
+	// If the value is -1, we will not attempt to create.
+	Create int `json:"create,omitempty"`
+}
+
+// FindBalanceOutput is returned by FindBalance.
+type FindBalanceOutput struct {
+	// Account is the account associated with the balance
+	// (and coin).
+	Account *types.AccountIdentifier `json:"account"`
+
+	// Balance found at a particular currency.
+	Balance *types.Amount `json:"balance"`
+
+	// Coin is populated if RequireCoin is true.
+	Coin *types.CoinIdentifier `json:"coin,omitempty"`
 }
 
 // Scenario is a collection of Actions with a specific
@@ -263,6 +318,17 @@ type WorkerHelper interface {
 		string,
 		*keys.KeyPair,
 	) error
+
+	// AllAddresses returns a slice of all known addresses.
+	AllAddresses(ctx context.Context) ([]string, error)
+
+	// LockedAccounts is a slice of all addresses currently sending or receiving
+	// funds.
+	LockedAddresses(context.Context) ([]string, error)
+
+	Balance(context.Context, *types.AccountIdentifier) ([]*types.Amount, error)
+
+	Coins(context.Context, *types.AccountIdentifier) ([]*types.Coin, error)
 }
 
 // Worker processes jobs.
