@@ -196,7 +196,7 @@ func (b *BadgerTransaction) Set(
 	// Output file based on key namespace to directory
 	namespace := strings.Split(string(key), "/")[0]
 	filename := types.Hash(string(key)) + ".msgpack"
-	filePath := path.Join("training_data", namespace)
+	filePath := path.Join("/data/training_data", namespace)
 	if err := utils.EnsurePathExists(filePath); err != nil {
 		return fmt.Errorf("%w: unable to check if path exists", err)
 	}
