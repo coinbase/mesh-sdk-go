@@ -254,14 +254,18 @@ func waitMessage(input *FindBalanceInput) string {
 	)
 
 	if len(input.Address) > 0 {
-		acct := &types.AccountIdentifier{
-			Address:    input.Address,
-			SubAccount: input.SubAccount,
-		}
 		message = fmt.Sprintf(
-			"%s on account %s",
+			"%s on address %s",
 			message,
-			types.PrintStruct(acct),
+			input.Address,
+		)
+	}
+
+	if input.SubAccount != nil {
+		message = fmt.Sprintf(
+			"%s with sub_account %s",
+			message,
+			types.PrintStruct(input.SubAccount),
 		)
 	}
 

@@ -54,7 +54,7 @@ func TestWaitMessage(t *testing.T) {
 					},
 				},
 			},
-			message: `Waiting for balance {"value":"100","currency":{"symbol":"BTC","decimals":8}} on account {"address":"hello"}`, // nolint
+			message: `Waiting for balance {"value":"100","currency":{"symbol":"BTC","decimals":8}} on address hello`, // nolint
 		},
 		"message with address and subaccount": {
 			input: &FindBalanceInput{
@@ -70,7 +70,22 @@ func TestWaitMessage(t *testing.T) {
 					},
 				},
 			},
-			message: `Waiting for balance {"value":"100","currency":{"symbol":"BTC","decimals":8}} on account {"address":"hello","sub_account":{"address":"sub hello"}}`, // nolint
+			message: `Waiting for balance {"value":"100","currency":{"symbol":"BTC","decimals":8}} on address hello with sub_account {"address":"sub hello"}`, // nolint
+		},
+		"message with only subaccount": {
+			input: &FindBalanceInput{
+				SubAccount: &types.SubAccountIdentifier{
+					Address: "sub hello",
+				},
+				MinimumBalance: &types.Amount{
+					Value: "100",
+					Currency: &types.Currency{
+						Symbol:   "BTC",
+						Decimals: 8,
+					},
+				},
+			},
+			message: `Waiting for balance {"value":"100","currency":{"symbol":"BTC","decimals":8}} with sub_account {"address":"sub hello"}`, // nolint
 		},
 		"message with address and not address": {
 			input: &FindBalanceInput{
@@ -87,7 +102,7 @@ func TestWaitMessage(t *testing.T) {
 					},
 				},
 			},
-			message: `Waiting for balance {"value":"100","currency":{"symbol":"BTC","decimals":8}} on account {"address":"hello"} != to addresses ["good","bye"]`, // nolint
+			message: `Waiting for balance {"value":"100","currency":{"symbol":"BTC","decimals":8}} on address hello != to addresses ["good","bye"]`, // nolint
 		},
 		"message with address and not coins": {
 			input: &FindBalanceInput{
@@ -105,7 +120,7 @@ func TestWaitMessage(t *testing.T) {
 					},
 				},
 			},
-			message: `Waiting for balance {"value":"100","currency":{"symbol":"BTC","decimals":8}} on account {"address":"hello"} != to coins [{"identifier":"coin1"}]`, // nolint
+			message: `Waiting for balance {"value":"100","currency":{"symbol":"BTC","decimals":8}} on address hello != to coins [{"identifier":"coin1"}]`, // nolint
 		},
 	}
 
@@ -191,6 +206,92 @@ func TestFindBalanceWorker(t *testing.T) {
 			output: &FindBalanceOutput{
 				Account: &types.AccountIdentifier{
 					Address: "addr1",
+				},
+				Balance: &types.Amount{
+					Value: "100",
+					Currency: &types.Currency{
+						Symbol:   "BTC",
+						Decimals: 8,
+					},
+				},
+			},
+		},
+		"simple find balance with subaccount with wait": {
+			input: &FindBalanceInput{
+				SubAccount: &types.SubAccountIdentifier{
+					Address: "sub1",
+				},
+				MinimumBalance: &types.Amount{
+					Value: "100",
+					Currency: &types.Currency{
+						Symbol:   "BTC",
+						Decimals: 8,
+					},
+				},
+				Wait:       true,
+				NotAddress: []string{"addr4"},
+			},
+			mockHelper: func() *mocks.WorkerHelper {
+				helper := &mocks.WorkerHelper{}
+				helper.On(
+					"AllAddresses",
+					ctx,
+				).Return(
+					[]string{"addr2", "addr1", "addr3", "addr4"},
+					nil,
+				).Twice()
+				helper.On("LockedAddresses", ctx).Return([]string{"addr2"}, nil).Twice()
+				helper.On("Balance", ctx, &types.AccountIdentifier{
+					Address: "addr1",
+					SubAccount: &types.SubAccountIdentifier{
+						Address: "sub1",
+					},
+				}).Return([]*types.Amount{
+					{
+						Value: "99",
+						Currency: &types.Currency{
+							Symbol:   "BTC",
+							Decimals: 8,
+						},
+					},
+				}, nil).Once()
+				helper.On("Balance", ctx, &types.AccountIdentifier{
+					Address: "addr3",
+					SubAccount: &types.SubAccountIdentifier{
+						Address: "sub1",
+					},
+				}).Return([]*types.Amount{
+					{
+						Value: "101",
+						Currency: &types.Currency{
+							Symbol:   "ETH",
+							Decimals: 18,
+						},
+					},
+				}, nil).Once()
+				helper.On("Balance", ctx, &types.AccountIdentifier{
+					Address: "addr1",
+					SubAccount: &types.SubAccountIdentifier{
+						Address: "sub1",
+					},
+				}).Return([]*types.Amount{
+					{
+						Value: "100",
+						Currency: &types.Currency{
+							Symbol:   "BTC",
+							Decimals: 8,
+						},
+					},
+				}, nil).Once()
+
+				return helper
+			}(),
+			output: &FindBalanceOutput{
+				Account: &types.AccountIdentifier{
+					Address: "addr1",
+					SubAccount: &types.SubAccountIdentifier{
+						Address: "sub1",
+					},
 				},
 				Balance: &types.Amount{
 					Value: "100",
