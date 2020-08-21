@@ -1,3 +1,17 @@
+// Copyright 2020 Coinbase, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package constructor
 
 import (
@@ -40,7 +54,7 @@ func TestWaitMessage(t *testing.T) {
 					},
 				},
 			},
-			message: `Waiting for balance {"value":"100","currency":{"symbol":"BTC","decimals":8}} on account {"address":"hello"}`,
+			message: `Waiting for balance {"value":"100","currency":{"symbol":"BTC","decimals":8}} on account {"address":"hello"}`, // nolint
 		},
 		"message with address and subaccount": {
 			input: &FindBalanceInput{
@@ -56,7 +70,7 @@ func TestWaitMessage(t *testing.T) {
 					},
 				},
 			},
-			message: `Waiting for balance {"value":"100","currency":{"symbol":"BTC","decimals":8}} on account {"address":"hello","sub_account":{"address":"sub hello"}}`,
+			message: `Waiting for balance {"value":"100","currency":{"symbol":"BTC","decimals":8}} on account {"address":"hello","sub_account":{"address":"sub hello"}}`, // nolint
 		},
 		"message with address and not address": {
 			input: &FindBalanceInput{
@@ -73,7 +87,7 @@ func TestWaitMessage(t *testing.T) {
 					},
 				},
 			},
-			message: `Waiting for balance {"value":"100","currency":{"symbol":"BTC","decimals":8}} on account {"address":"hello"} != to addresses ["good","bye"]`,
+			message: `Waiting for balance {"value":"100","currency":{"symbol":"BTC","decimals":8}} on account {"address":"hello"} != to addresses ["good","bye"]`, // nolint
 		},
 		"message with address and not coins": {
 			input: &FindBalanceInput{
@@ -91,7 +105,7 @@ func TestWaitMessage(t *testing.T) {
 					},
 				},
 			},
-			message: `Waiting for balance {"value":"100","currency":{"symbol":"BTC","decimals":8}} on account {"address":"hello"} != to coins [{"identifier":"coin1"}]`,
+			message: `Waiting for balance {"value":"100","currency":{"symbol":"BTC","decimals":8}} on account {"address":"hello"} != to coins [{"identifier":"coin1"}]`, // nolint
 		},
 	}
 
@@ -127,7 +141,13 @@ func TestFindBalanceWorker(t *testing.T) {
 			},
 			mockHelper: func() *mocks.WorkerHelper {
 				helper := &mocks.WorkerHelper{}
-				helper.On("AllAddresses", ctx).Return([]string{"addr2", "addr1", "addr3", "addr4"}, nil).Twice()
+				helper.On(
+					"AllAddresses",
+					ctx,
+				).Return(
+					[]string{"addr2", "addr1", "addr3", "addr4"},
+					nil,
+				).Twice()
 				helper.On("LockedAddresses", ctx).Return([]string{"addr2"}, nil).Twice()
 				helper.On("Balance", ctx, &types.AccountIdentifier{
 					Address:    "addr1",
@@ -201,7 +221,13 @@ func TestFindBalanceWorker(t *testing.T) {
 			},
 			mockHelper: func() *mocks.WorkerHelper {
 				helper := &mocks.WorkerHelper{}
-				helper.On("AllAddresses", ctx).Return([]string{"addr2", "addr1", "addr3", "addr4"}, nil).Twice()
+				helper.On(
+					"AllAddresses",
+					ctx,
+				).Return(
+					[]string{"addr2", "addr1", "addr3", "addr4"},
+					nil,
+				).Twice()
 				helper.On("LockedAddresses", ctx).Return([]string{"addr2"}, nil).Twice()
 				helper.On("Coins", ctx, &types.AccountIdentifier{
 					Address:    "addr1",
@@ -316,7 +342,13 @@ func TestFindBalanceWorker(t *testing.T) {
 			},
 			mockHelper: func() *mocks.WorkerHelper {
 				helper := &mocks.WorkerHelper{}
-				helper.On("AllAddresses", ctx).Return([]string{"addr2", "addr1", "addr3", "addr4"}, nil).Once()
+				helper.On(
+					"AllAddresses",
+					ctx,
+				).Return(
+					[]string{"addr2", "addr1", "addr3", "addr4"},
+					nil,
+				).Once()
 				helper.On("LockedAddresses", ctx).Return([]string{"addr2"}, nil).Once()
 				helper.On("Coins", ctx, &types.AccountIdentifier{
 					Address:    "addr1",
@@ -389,7 +421,13 @@ func TestFindBalanceWorker(t *testing.T) {
 			},
 			mockHelper: func() *mocks.WorkerHelper {
 				helper := &mocks.WorkerHelper{}
-				helper.On("AllAddresses", ctx).Return([]string{"addr2", "addr1", "addr3", "addr4"}, nil).Once()
+				helper.On(
+					"AllAddresses",
+					ctx,
+				).Return(
+					[]string{"addr2", "addr1", "addr3", "addr4"},
+					nil,
+				).Once()
 				helper.On("LockedAddresses", ctx).Return([]string{"addr2"}, nil).Once()
 				helper.On("Coins", ctx, &types.AccountIdentifier{
 					Address:    "addr1",
@@ -462,7 +500,13 @@ func TestFindBalanceWorker(t *testing.T) {
 			},
 			mockHelper: func() *mocks.WorkerHelper {
 				helper := &mocks.WorkerHelper{}
-				helper.On("AllAddresses", ctx).Return([]string{"addr2", "addr1", "addr3", "addr4"}, nil).Once()
+				helper.On(
+					"AllAddresses",
+					ctx,
+				).Return(
+					[]string{"addr2", "addr1", "addr3", "addr4"},
+					nil,
+				).Once()
 				helper.On("LockedAddresses", ctx).Return([]string{"addr2"}, nil).Once()
 				helper.On("Coins", ctx, &types.AccountIdentifier{
 					Address:    "addr1",

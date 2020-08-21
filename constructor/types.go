@@ -90,10 +90,6 @@ const (
 	// execution.
 	PrintMessage ActionType = "print_message"
 
-	// WaitForFunds halts execution until a specified
-	// address has a minimum balance.
-	WaitForFunds ActionType = "wait_for_funds"
-
 	// Math is used to perform addition or subtraction of variables. It is
 	// most commonly used to determine how much to send to a change output
 	// on UTXO blockchains.
