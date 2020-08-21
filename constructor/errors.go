@@ -79,4 +79,13 @@ var (
 	// are no pending broadcasts, this usually means that we need
 	// to request funds.
 	ErrUnsatisfiable = errors.New("unsatisfiable balance")
+
+	// ErrJobsUnretrievable is returned when an error
+	// is returned when querying for jobs.
+	ErrJobsUnretrievable = errors.New("unable to retrieve jobs")
+
+	// ErrNoAvailableJobs is returned when it is not possible
+	// to process any jobs. If this is returned, you should wait
+	// and retry.
+	ErrNoAvailableJobs = errors.New("no jobs available")
 )
