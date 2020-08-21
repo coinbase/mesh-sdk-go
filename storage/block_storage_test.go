@@ -407,6 +407,10 @@ func TestBlock(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, lazyBlock2, blockLazy)
 
+		blockTransaction, err := storage.GetBlockTransaction(ctx, blockLazy.Block.BlockIdentifier, blockLazy.OtherTransactions[0])
+		assert.NoError(t, err)
+		assert.Equal(t, newBlock2.Transactions[0], blockTransaction)
+
 		head, err := storage.GetHeadBlockIdentifier(ctx)
 		assert.NoError(t, err)
 		assert.Equal(t, newBlock2.BlockIdentifier, head)

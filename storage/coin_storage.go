@@ -25,8 +25,8 @@ import (
 )
 
 const (
-	coinNamespace        = "coinNamespace"
-	coinAccountNamespace = "coinAccountNamespace"
+	coinNamespace        = "coin"
+	coinAccountNamespace = "coin-account"
 )
 
 var _ BlockWorker = (*CoinStorage)(nil)
