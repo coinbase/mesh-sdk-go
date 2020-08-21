@@ -165,7 +165,7 @@ func (k *KeyStorage) GetAllAddresses(ctx context.Context) ([]string, error) {
 
 	addresses := make([]string, len(rawKeys))
 	for i, rawKey := range rawKeys {
-		kp, err := parseKey(rawKey)
+		kp, err := parseKey(rawKey.Value)
 		if err != nil {
 			return nil, fmt.Errorf("%w: unable to parse key pair", err)
 		}

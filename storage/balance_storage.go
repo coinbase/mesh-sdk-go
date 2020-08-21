@@ -483,12 +483,12 @@ func (b *BalanceStorage) getAllBalanceEntries(ctx context.Context) ([]*balanceEn
 	balances := make([]*balanceEntry, len(rawBalances))
 	for i, rawBalance := range rawBalances {
 		var deserialBal balanceEntry
-		err := decode(rawBalance, &deserialBal)
+		err := decode(rawBalance.Value, &deserialBal)
 		if err != nil {
 			return nil, fmt.Errorf(
 				"%w: unable to parse balance entry for %s",
 				err,
-				string(rawBalance),
+				string(rawBalance.Value),
 			)
 		}
 

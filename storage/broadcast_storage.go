@@ -348,7 +348,7 @@ func (b *BroadcastStorage) GetAllBroadcasts(ctx context.Context) ([]*Broadcast, 
 	broadcasts := make([]*Broadcast, len(rawBroadcasts))
 	for i, rawBroadcast := range rawBroadcasts {
 		var b Broadcast
-		if err := decode(rawBroadcast, &b); err != nil {
+		if err := decode(rawBroadcast.Value, &b); err != nil {
 			return nil, fmt.Errorf("%w: unable to decode broadcast", err)
 		}
 
