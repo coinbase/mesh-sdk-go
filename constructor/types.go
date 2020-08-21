@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/coinbase/rosetta-sdk-go/keys"
+	"github.com/coinbase/rosetta-sdk-go/parser"
 	"github.com/coinbase/rosetta-sdk-go/storage"
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
@@ -430,6 +431,8 @@ type Helper interface {
 	) ([]*types.Signature, error)
 }
 
+// JobStorage allows for the persistent and transactional
+// storage of Jobs.
 type JobStorage interface {
 	// Ready returns the jobs that are ready to be processed.
 	Ready(context.Context) ([]*Job, error)
@@ -451,4 +454,20 @@ type JobStorage interface {
 // Worker processes jobs.
 type Worker struct {
 	helper Helper
+}
+
+// Coordinator faciliates the creation and processing
+// of jobs.
+type Coordinator struct {
+	storage JobStorage
+	helper  Helper
+	parser  *parser.Parser
+
+	attemptedJobs        []string
+	attemptedWorkflows   []string
+	seenErrCreateAccount bool
+
+	workflows             []*Workflow
+	createAccountWorkflow *Workflow
+	requestFundsWorkflow  *Workflow
 }

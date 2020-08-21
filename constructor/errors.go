@@ -101,4 +101,8 @@ var (
 	// a broadcast complete call but the job that is affected does
 	// not exist.
 	ErrJobMissing = errors.New("job missing")
+
+	// ErrDuplicateWorkflows is returned when 2 Workflows with the same name
+	// are provided as an input to NewCoordinator.
+	ErrDuplicateWorkflows = errors.New("duplicate workflows")
 )

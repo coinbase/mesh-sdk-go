@@ -12,30 +12,48 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/utils"
 )
 
-// TODO: move to types
-type Coordinator struct {
-	storage JobStorage
-	helper  Helper
-	parser  *parser.Parser
+// NewCoordinator parses a slice of input Workflows
+// and creates a new *Coordinator.
+func NewCoordinator(
+	storage JobStorage,
+	helper Helper,
+	parser *parser.Parser,
+	inputWorkflows []*Workflow,
+) (*Coordinator, error) {
+	workflowNames := make([]string, len(inputWorkflows))
+	workflows := []*Workflow{}
+	var createAccountWorkflow *Workflow
+	var requestFundsWorkflow *Workflow
+	for i, workflow := range inputWorkflows {
+		if utils.ContainsString(workflowNames, workflow.Name) {
+			return nil, ErrDuplicateWorkflows
+		}
+		workflowNames[i] = workflow.Name
 
-	attemptedJobs        []string
-	attemptedWorkflows   []string
-	seenErrCreateAccount bool
+		if workflow.Name == string(CreateAccount) {
+			createAccountWorkflow = workflow
+			continue
+		}
 
-	workflows             []*Workflow
-	createAccountWorkflow *Workflow
-	requestFundsWorkflow  *Workflow
-}
+		if workflow.Name == string(RequestFunds) {
+			requestFundsWorkflow = workflow
+			continue
+		}
 
-func NewCoordinator() *Coordinator {
-	// TODO: set worker
-	// TODO: set JobStorage (for tracking state of jobs)
-	// TODO: set Fetcher (for construction API calls)
-	return &Coordinator{
-		attemptedJobs:        []string{},
-		attemptedWorkflows:   []string{},
-		seenErrCreateAccount: false,
+		workflows = append(workflows, workflow)
 	}
+
+	return &Coordinator{
+		storage:               storage,
+		helper:                helper,
+		parser:                parser,
+		attemptedJobs:         []string{},
+		attemptedWorkflows:    []string{},
+		seenErrCreateAccount:  false,
+		workflows:             workflows,
+		createAccountWorkflow: createAccountWorkflow,
+		requestFundsWorkflow:  requestFundsWorkflow,
+	}, nil
 }
 
 func (c *Coordinator) findJob(
@@ -255,6 +273,8 @@ func (c *Coordinator) resetVars() {
 	c.seenErrCreateAccount = false
 }
 
+// Process creates and executes jobs
+// until failure.
 func (c *Coordinator) Process(
 	ctx context.Context,
 ) error {
