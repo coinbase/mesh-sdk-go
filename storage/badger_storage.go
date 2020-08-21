@@ -249,6 +249,35 @@ func (b *BadgerTransaction) Delete(ctx context.Context, key []byte) error {
 	return b.txn.Delete(key)
 }
 
+// Scan retrieves all elements with a given prefix in a database
+// transaction.
+func (b *BadgerTransaction) Scan(
+	ctx context.Context,
+	prefix []byte,
+) ([]*ScanItem, error) {
+	values := []*ScanItem{}
+	opts := badger.DefaultIteratorOptions
+	opts.PrefetchValues = false
+
+	it := b.txn.NewIterator(opts)
+	defer it.Close()
+	for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
+		item := it.Item()
+		key := item.KeyCopy(nil)
+		v, err := item.ValueCopy(nil)
+		if err != nil {
+			return nil, fmt.Errorf("%w: unable to get value for key %s", err, string(key))
+		}
+
+		values = append(values, &ScanItem{
+			Key:   []byte(string(key)),
+			Value: v,
+		})
+	}
+
+	return values, nil
+}
+
 // Set changes the value of the key to the value in its own transaction.
 func (b *BadgerStorage) Set(
 	ctx context.Context,
@@ -297,39 +326,9 @@ func (b *BadgerStorage) Get(
 func (b *BadgerStorage) Scan(
 	ctx context.Context,
 	prefix []byte,
-) ([][]byte, error) {
-	values := [][]byte{}
-	err := b.db.View(func(txn *badger.Txn) error {
-		opts := badger.DefaultIteratorOptions
-		opts.PrefetchValues = false
+) ([]*ScanItem, error) {
+	txn := b.NewDatabaseTransaction(ctx, false)
+	defer txn.Discard(ctx)
 
-		it := txn.NewIterator(opts)
-		defer it.Close()
-		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
-			item := it.Item()
-			key := item.Key()
-
-			// There is some strange issue with BadgerDB where the value returned
-			// on the item is sometimes corrupted (which causes decoding errors).
-			// Until this is fixed, the workaround I found was to fetch the value
-			// in a separate transaction with the key from the scan. Instead of
-			// spending more time investigating these issues, we will work
-			// on prioritizing a switch to a different backend.
-			exists, v, err := b.Get(ctx, key)
-			if err != nil {
-				return fmt.Errorf("%w unable to get key %s", err, string(key))
-			}
-			if !exists {
-				return fmt.Errorf("key %s does not exist", string(key))
-			}
-
-			values = append(values, v)
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return values, nil
+	return txn.Scan(ctx, prefix)
 }

@@ -18,6 +18,12 @@ import (
 	"context"
 )
 
+// ScanItem is returned by a call to Scan.
+type ScanItem struct {
+	Key   []byte
+	Value []byte
+}
+
 // Database is an interface that provides transactional
 // access to a KV store.
 type Database interface {
@@ -25,7 +31,7 @@ type Database interface {
 	Close(context.Context) error
 	Set(context.Context, []byte, []byte) error
 	Get(context.Context, []byte) (bool, []byte, error)
-	Scan(ctx context.Context, prefix []byte) ([][]byte, error)
+	Scan(ctx context.Context, prefix []byte) ([]*ScanItem, error)
 }
 
 // DatabaseTransaction is an interface that provides
@@ -37,4 +43,5 @@ type DatabaseTransaction interface {
 	Delete(context.Context, []byte) error
 	Commit(context.Context) error
 	Discard(context.Context)
+	Scan(ctx context.Context, prefix []byte) ([]*ScanItem, error)
 }

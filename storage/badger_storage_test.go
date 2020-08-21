@@ -55,13 +55,17 @@ func TestDatabase(t *testing.T) {
 	})
 
 	t.Run("Scan", func(t *testing.T) {
-		storedValues := make([][]byte, 100)
+		storedValues := []*ScanItem{}
 		for i := 0; i < 100; i++ {
+			k := []byte(fmt.Sprintf("test/%d", i))
 			v := []byte(fmt.Sprintf("%d", i))
-			err := database.Set(ctx, []byte(fmt.Sprintf("test/%d", i)), v)
+			err := database.Set(ctx, k, v)
 			assert.NoError(t, err)
 
-			storedValues[i] = v
+			storedValues = append(storedValues, &ScanItem{
+				Key:   k,
+				Value: v,
+			})
 		}
 
 		values, err := database.Scan(ctx, []byte("test/"))

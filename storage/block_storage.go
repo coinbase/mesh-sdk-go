@@ -279,11 +279,11 @@ func (b *BlockStorage) storeBlock(
 
 	blockIdentifier := blockResponse.Block.BlockIdentifier
 
-	if err := b.storeUniqueKey(ctx, transaction, getBlockHashKey(blockIdentifier.Hash), buf); err != nil {
+	if err := storeUniqueKey(ctx, transaction, getBlockHashKey(blockIdentifier.Hash), buf); err != nil {
 		return fmt.Errorf("%w: unable to store block", err)
 	}
 
-	if err := b.storeUniqueKey(
+	if err := storeUniqueKey(
 		ctx,
 		transaction,
 		getBlockIndexKey(blockIdentifier.Index),
@@ -509,7 +509,7 @@ func (b *BlockStorage) CreateBlockCache(ctx context.Context) []*types.BlockIdent
 	return cache
 }
 
-func (b *BlockStorage) storeUniqueKey(
+func storeUniqueKey(
 	ctx context.Context,
 	transaction DatabaseTransaction,
 	key []byte,
