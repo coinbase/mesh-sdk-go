@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"time"
 
+	"github.com/coinbase/rosetta-sdk-go/storage"
 	"github.com/coinbase/rosetta-sdk-go/utils"
 )
 
@@ -20,7 +22,7 @@ type JobStorage interface {
 	// Update stores an updated *Job in storage
 	// and returns its UUID (which won't exist
 	// on first update).
-	Update(context.Context, *Job) error
+	Update(context.Context, storage.DatabaseTransaction, *Job) error
 }
 
 type Fetcher interface{}
@@ -28,6 +30,7 @@ type Fetcher interface{}
 // TODO: move to types
 type Coordinator struct {
 	storage JobStorage
+	helper  WorkerHelper
 	worker  *Worker
 
 	workflows             []*Workflow
@@ -39,12 +42,14 @@ func NewCoordinator() *Coordinator {
 	// TODO: set worker
 	// TODO: set JobStorage (for tracking state of jobs)
 	// TODO: set Fetcher (for construction API calls)
+	return &Coordinator{}
 }
 
 func (c *Coordinator) findJob(
 	ctx context.Context,
 	notJobs []string,
 	notWorkflows []string,
+	seenErrCreateAccount bool,
 ) (*Job, error) {
 	// Look for any jobs ready for processing. If one is found,
 	// we return that as the next job to process.
@@ -89,12 +94,34 @@ func (c *Coordinator) findJob(
 	}
 
 	// Check if broadcasts, then ErrNoAvailableJobs
+	allBroadcasts, err := c.helper.AllBroadcasts(ctx)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"%w: %s",
+			ErrBroadcastsUnretrievable,
+			err.Error(),
+		)
+	}
+
+	if len(allBroadcasts) > 0 {
+		return nil, ErrNoAvailableJobs
+	}
 
 	// Check if ErrCreateAccount, then create account if exists
+	if seenErrCreateAccount {
+		if c.createAccountWorkflow != nil {
+			return NewJob(c.createAccountWorkflow), nil
+		}
+
+		log.Println("Create account workflow is missing!")
+	}
 
 	// Return request funds (if defined, else error)
+	if c.requestFundsWorkflow == nil {
+		return nil, ErrRequestFundsWorkflowMissing
+	}
 
-	return nil, ErrNoAvailableJobs
+	return NewJob(c.requestFundsWorkflow), nil
 }
 
 func (c *Coordinator) Process(
@@ -111,7 +138,7 @@ func (c *Coordinator) Process(
 	// Reset after a success
 	attemptedJobs := []string{}
 	attemptedWorkflows := []string{}
-	receivedCreateAccount := false
+	seenErrCreateAccount := false
 
 	for ctx.Err() == nil {
 		if !c.helper.HeadBlockExists(ctx) {
@@ -124,7 +151,7 @@ func (c *Coordinator) Process(
 		}
 
 		// Attempt to find a Job to process.
-		job, err := c.findJob(ctx, attemptedJobs, attemptedWorkflows)
+		job, err := c.findJob(ctx, attemptedJobs, attemptedWorkflows, seenErrCreateAccount)
 		if errors.Is(err, ErrNoAvailableJobs) {
 			// TODO: if no broadcasting jobs, we may need to request funds
 			// TODO: if create account
@@ -132,7 +159,7 @@ func (c *Coordinator) Process(
 			time.Sleep(NoJobsWaitTime)
 			attemptedJobs = []string{}
 			attemptedWorkflows = []string{}
-			receivedCreateAccount = false
+			seenErrCreateAccount = false
 			continue
 		}
 		if err != nil {
@@ -141,7 +168,7 @@ func (c *Coordinator) Process(
 
 		broadcast, err := job.Process(ctx, c.worker)
 		if errors.Is(err, ErrCreateAccount) {
-			receivedCreateAccount = true
+			seenErrCreateAccount = true
 			continue
 		}
 		if errors.Is(err, ErrUnsatisfiable) {
@@ -152,30 +179,38 @@ func (c *Coordinator) Process(
 			return fmt.Errorf("%w: unable to process job", err)
 		}
 
+		// Update job and store broadcast in a single DB transaction.
+		dbTransaction := c.helper.CreateDatabaseTransaction(ctx)
+		defer dbTransaction.Discard(ctx)
+
 		// Update job (or store for the first time)
-		if err := c.storage.Update(ctx, job); err != nil {
+		if err := c.storage.Update(ctx, dbTransaction, job); err != nil {
 			return fmt.Errorf("%w: unable to update job")
 		}
 
 		// Reset all stats
 		attemptedJobs = []string{}
 		attemptedWorkflows = []string{}
-		receivedCreateAccount = false
+		seenErrCreateAccount = false
 
-		if broadcast == nil {
-			// Commit db transaction
-			continue
+		if broadcast != nil {
+			// Construct Transaction
+
+			// Invoke Broadcast storage (in same TX as update job)
+			if err := c.helper.Broadcast(ctx, dbTransaction, broadcast); err != nil {
+				return fmt.Errorf("%w: unable to enque broadcast", err)
+			}
 		}
 
-		// Construct Transaction
-		// TODO: if construction fails, the status of a job in storage
-		// will be broadcasting but it will have never made it to broadcast storage.
-
-		// Invoke Broadcast storage (in same TX as update job)
-
 		// Commit db transaction
+		if err := dbTransaction.Commit(ctx); err != nil {
+			return fmt.Errorf("%w: unable to commit job update", err)
+		}
 
 		// Run Broadcast all (instead of running inside Broadcast)
+		if err := c.helper.BroadcastAll(ctx); err != nil {
+			return fmt.Errorf("%w: unable to broadcast all transactions", err)
+		}
 	}
 
 	return ctx.Err()

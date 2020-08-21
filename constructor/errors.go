@@ -84,8 +84,16 @@ var (
 	// is returned when querying for jobs.
 	ErrJobsUnretrievable = errors.New("unable to retrieve jobs")
 
+	// ErrBroadcastsUnretrievable is returned when an error
+	// is returned when querying for broadcasts.
+	ErrBroadcastsUnretrievable = errors.New("unable to retrieve broadcasts")
+
 	// ErrNoAvailableJobs is returned when it is not possible
 	// to process any jobs. If this is returned, you should wait
 	// and retry.
 	ErrNoAvailableJobs = errors.New("no jobs available")
+
+	// ErrRequestFundsWorkflowMissing is returned when we want
+	// to request funds but the request funds workflow is missing.
+	ErrRequestFundsWorkflowMissing = errors.New("request funds workflow missing")
 )

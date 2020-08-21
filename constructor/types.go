@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/coinbase/rosetta-sdk-go/keys"
+	"github.com/coinbase/rosetta-sdk-go/storage"
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
@@ -339,6 +340,24 @@ type WorkerHelper interface {
 	Balance(context.Context, *types.AccountIdentifier) ([]*types.Amount, error)
 
 	Coins(context.Context, *types.AccountIdentifier) ([]*types.Coin, error)
+
+	BroadcastAll(context.Context) error
+
+	// HeadBlockExists returns a boolean indicating if a block
+	// has been synced by BlockStorage.
+	HeadBlockExists(context.Context) bool
+
+	CreateDatabaseTransaction(context.Context) storage.DatabaseTransaction
+
+	// AllBroadcasts returns a slice of all in-progress broadcasts.
+	AllBroadcasts(ctx context.Context) ([]*storage.Broadcast, error)
+
+	// Broadcast enqueues a particular intent for broadcast.
+	Broadcast(
+		context.Context,
+		storage.DatabaseTransaction,
+		*Broadcast,
+	) error
 }
 
 // Worker processes jobs.
