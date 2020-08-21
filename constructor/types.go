@@ -312,16 +312,8 @@ type Broadcast struct {
 	ConfirmationDepth int64
 }
 
-// WorkerHelper is used by the worker to process Jobs.
-type WorkerHelper interface {
-	// Derive returns a new address for a provided publicKey.
-	Derive(
-		context.Context,
-		*types.NetworkIdentifier,
-		*types.PublicKey,
-		map[string]interface{},
-	) (string, map[string]interface{}, error)
-
+// Helper is used by the worker to process Jobs.
+type Helper interface {
 	// StoreKey is called to persist an
 	// address + KeyPair.
 	StoreKey(
@@ -337,17 +329,24 @@ type WorkerHelper interface {
 	// funds.
 	LockedAddresses(context.Context) ([]string, error)
 
+	// Balance returns the balance
+	// for a provided address.
 	Balance(context.Context, *types.AccountIdentifier) ([]*types.Amount, error)
 
+	// Coins returns all *types.Coin owned by an address.
 	Coins(context.Context, *types.AccountIdentifier) ([]*types.Coin, error)
 
+	// BroadcastAll broadcasts all transactions considered ready for
+	// broadcast (unbroadcasted or stale).
 	BroadcastAll(context.Context) error
 
 	// HeadBlockExists returns a boolean indicating if a block
 	// has been synced by BlockStorage.
 	HeadBlockExists(context.Context) bool
 
-	CreateDatabaseTransaction(context.Context) storage.DatabaseTransaction
+	// DatabaseTransaction returns a new storage.DatabaseTransaction.
+	// This is used to update jobs and enque them for broadcast atomically.
+	DatabaseTransaction(context.Context) storage.DatabaseTransaction
 
 	// AllBroadcasts returns a slice of all in-progress broadcasts.
 	AllBroadcasts(ctx context.Context) ([]*storage.Broadcast, error)
@@ -356,11 +355,20 @@ type WorkerHelper interface {
 	Broadcast(
 		context.Context,
 		storage.DatabaseTransaction,
+		string, // Job.Identifier
 		*types.NetworkIdentifier,
 		[]*types.Operation,
 		*types.TransactionIdentifier,
 		string, // network transaction
 	) error
+
+	// Derive returns a new address for a provided publicKey.
+	Derive(
+		context.Context,
+		*types.NetworkIdentifier,
+		*types.PublicKey,
+		map[string]interface{},
+	) (string, map[string]interface{}, error)
 
 	// Preprocess calls the /construction/preprocess endpoint
 	// on an offline node.
@@ -422,7 +430,25 @@ type WorkerHelper interface {
 	) ([]*types.Signature, error)
 }
 
+type JobStorage interface {
+	// Ready returns the jobs that are ready to be processed.
+	Ready(context.Context) ([]*Job, error)
+
+	// Processing returns the number of jobs processing
+	// for a particular workflow.
+	Processing(context.Context, string) (int, error)
+
+	// Update stores an updated *Job in storage
+	// and returns its UUID (which won't exist
+	// on first update).
+	Update(context.Context, storage.DatabaseTransaction, *Job) (string, error)
+
+	// Get fetches a *Job by Identifier. It returns an error
+	// if the identifier doesn't exist.
+	Get(context.Context, storage.DatabaseTransaction, string) (*Job, error)
+}
+
 // Worker processes jobs.
 type Worker struct {
-	helper WorkerHelper
+	helper Helper
 }
