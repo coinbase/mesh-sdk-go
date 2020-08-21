@@ -7,7 +7,9 @@ import (
 	"log"
 	"time"
 
+	"github.com/coinbase/rosetta-sdk-go/parser"
 	"github.com/coinbase/rosetta-sdk-go/storage"
+	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/coinbase/rosetta-sdk-go/utils"
 )
 
@@ -32,6 +34,11 @@ type Coordinator struct {
 	storage JobStorage
 	helper  WorkerHelper
 	worker  *Worker
+	parser  *parser.Parser
+
+	attemptedJobs        []string
+	attemptedWorkflows   []string
+	seenErrCreateAccount bool
 
 	workflows             []*Workflow
 	createAccountWorkflow *Workflow
@@ -42,14 +49,15 @@ func NewCoordinator() *Coordinator {
 	// TODO: set worker
 	// TODO: set JobStorage (for tracking state of jobs)
 	// TODO: set Fetcher (for construction API calls)
-	return &Coordinator{}
+	return &Coordinator{
+		attemptedJobs:        []string{},
+		attemptedWorkflows:   []string{},
+		seenErrCreateAccount: false,
+	}
 }
 
 func (c *Coordinator) findJob(
 	ctx context.Context,
-	notJobs []string,
-	notWorkflows []string,
-	seenErrCreateAccount bool,
 ) (*Job, error) {
 	// Look for any jobs ready for processing. If one is found,
 	// we return that as the next job to process.
@@ -62,7 +70,7 @@ func (c *Coordinator) findJob(
 		)
 	}
 	for _, job := range ready {
-		if utils.ContainsString(notJobs, job.Identifier) {
+		if utils.ContainsString(c.attemptedJobs, job.Identifier) {
 			continue
 		}
 
@@ -73,7 +81,7 @@ func (c *Coordinator) findJob(
 	// -> if jobs of workflows already has existing == concurrency, skip
 	// -> create Job for workflow
 	for _, workflow := range c.workflows {
-		if utils.ContainsString(notWorkflows, workflow.Name) {
+		if utils.ContainsString(c.attemptedWorkflows, workflow.Name) {
 			continue
 		}
 
@@ -108,7 +116,7 @@ func (c *Coordinator) findJob(
 	}
 
 	// Check if ErrCreateAccount, then create account if exists
-	if seenErrCreateAccount {
+	if c.seenErrCreateAccount {
 		if c.createAccountWorkflow != nil {
 			return NewJob(c.createAccountWorkflow), nil
 		}
@@ -124,22 +132,115 @@ func (c *Coordinator) findJob(
 	return NewJob(c.requestFundsWorkflow), nil
 }
 
+// createTransaction constructs and signs a transaction with the provided intent.
+func (c *Coordinator) createTransaction(
+	ctx context.Context,
+	broadcast *Broadcast,
+) (*types.TransactionIdentifier, string, error) {
+	metadataRequest, err := c.helper.Preprocess(
+		ctx,
+		broadcast.Network,
+		broadcast.Intent,
+		broadcast.Metadata,
+	)
+	if err != nil {
+		return nil, "", fmt.Errorf("%w: unable to preprocess", err)
+	}
+
+	requiredMetadata, err := c.helper.Metadata(
+		ctx,
+		broadcast.Network,
+		metadataRequest,
+	)
+	if err != nil {
+		return nil, "", fmt.Errorf("%w: unable to construct metadata", err)
+	}
+
+	unsignedTransaction, payloads, err := c.helper.Payloads(
+		ctx,
+		broadcast.Network,
+		broadcast.Intent,
+		requiredMetadata,
+	)
+	if err != nil {
+		return nil, "", fmt.Errorf("%w: unable to construct payloads", err)
+	}
+
+	parsedOps, signers, _, err := c.helper.Parse(
+		ctx,
+		broadcast.Network,
+		false,
+		unsignedTransaction,
+	)
+	if err != nil {
+		return nil, "", fmt.Errorf("%w: unable to parse unsigned transaction", err)
+	}
+
+	if len(signers) != 0 {
+		return nil, "", fmt.Errorf(
+			"signers should be empty in unsigned transaction but found %d",
+			len(signers),
+		)
+	}
+
+	if err := c.parser.ExpectedOperations(broadcast.Intent, parsedOps, false, false); err != nil {
+		return nil, "", fmt.Errorf("%w: unsigned parsed ops do not match intent", err)
+	}
+
+	signatures, err := c.helper.Sign(ctx, payloads)
+	if err != nil {
+		return nil, "", fmt.Errorf("%w: unable to sign payloads", err)
+	}
+
+	networkTransaction, err := c.helper.Combine(
+		ctx,
+		broadcast.Network,
+		unsignedTransaction,
+		signatures,
+	)
+	if err != nil {
+		return nil, "", fmt.Errorf("%w: unable to combine signatures", err)
+	}
+
+	signedParsedOps, signers, _, err := c.helper.Parse(
+		ctx,
+		broadcast.Network,
+		true,
+		networkTransaction,
+	)
+	if err != nil {
+		return nil, "", fmt.Errorf("%w: unable to parse signed transaction", err)
+	}
+
+	if err := c.parser.ExpectedOperations(broadcast.Intent, signedParsedOps, false, false); err != nil {
+		return nil, "", fmt.Errorf("%w: signed parsed ops do not match intent", err)
+	}
+
+	if err := parser.ExpectedSigners(payloads, signers); err != nil {
+		return nil, "", fmt.Errorf("%w: signed transactions signers do not match intent", err)
+	}
+
+	transactionIdentifier, err := c.helper.Hash(
+		ctx,
+		broadcast.Network,
+		networkTransaction,
+	)
+	if err != nil {
+		return nil, "", fmt.Errorf("%w: unable to get transaction hash", err)
+	}
+
+	return transactionIdentifier, networkTransaction, nil
+}
+
+func (c *Coordinator) resetVars() {
+	c.attemptedJobs = []string{}
+	c.attemptedWorkflows = []string{}
+	c.seenErrCreateAccount = false
+}
+
 func (c *Coordinator) Process(
 	ctx context.Context,
 ) error {
-	// ** Process Job
-	// -> if workflow completed, attempt broadcast, restart
-	// -> if # of jobs changed, restart before creating account or requesting funds
-	// -> if any return ErrCreateAccount, attempt to create account, restart
-	// -> -> if create account doesn't exist, move to funds request and log message (dont' exit)
-	// -> if all return ErrUnsatisfiable && no pending jobs, request funds
-	// -> -> if request funds doesn't exist, error
-
-	// Reset after a success
-	attemptedJobs := []string{}
-	attemptedWorkflows := []string{}
-	seenErrCreateAccount := false
-
 	for ctx.Err() == nil {
 		if !c.helper.HeadBlockExists(ctx) {
 			// We will sleep until at least one block has been synced.
@@ -151,15 +252,10 @@ func (c *Coordinator) Process(
 		}
 
 		// Attempt to find a Job to process.
-		job, err := c.findJob(ctx, attemptedJobs, attemptedWorkflows, seenErrCreateAccount)
+		job, err := c.findJob(ctx)
 		if errors.Is(err, ErrNoAvailableJobs) {
-			// TODO: if no broadcasting jobs, we may need to request funds
-			// TODO: if create account
-			// TODO: if only unsatisfiable, request
 			time.Sleep(NoJobsWaitTime)
-			attemptedJobs = []string{}
-			attemptedWorkflows = []string{}
-			seenErrCreateAccount = false
+			c.resetVars()
 			continue
 		}
 		if err != nil {
@@ -168,7 +264,7 @@ func (c *Coordinator) Process(
 
 		broadcast, err := job.Process(ctx, c.worker)
 		if errors.Is(err, ErrCreateAccount) {
-			seenErrCreateAccount = true
+			c.seenErrCreateAccount = true
 			continue
 		}
 		if errors.Is(err, ErrUnsatisfiable) {
@@ -188,16 +284,15 @@ func (c *Coordinator) Process(
 			return fmt.Errorf("%w: unable to update job")
 		}
 
-		// Reset all stats
-		attemptedJobs = []string{}
-		attemptedWorkflows = []string{}
-		seenErrCreateAccount = false
-
 		if broadcast != nil {
 			// Construct Transaction
+			transactionIdentifier, networkTransaction, err := c.createTransaction(ctx, broadcast)
+			if err != nil {
+				return fmt.Errorf("%w: unable to create transaction")
+			}
 
 			// Invoke Broadcast storage (in same TX as update job)
-			if err := c.helper.Broadcast(ctx, dbTransaction, broadcast); err != nil {
+			if err := c.helper.Broadcast(ctx, dbTransaction, broadcast.Network, broadcast.Intent, transactionIdentifier, networkTransaction); err != nil {
 				return fmt.Errorf("%w: unable to enque broadcast", err)
 			}
 		}
@@ -211,6 +306,9 @@ func (c *Coordinator) Process(
 		if err := c.helper.BroadcastAll(ctx); err != nil {
 			return fmt.Errorf("%w: unable to broadcast all transactions", err)
 		}
+
+		// Reset all vars
+		c.resetVars()
 	}
 
 	return ctx.Err()

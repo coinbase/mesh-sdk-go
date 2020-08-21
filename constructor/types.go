@@ -356,8 +356,70 @@ type WorkerHelper interface {
 	Broadcast(
 		context.Context,
 		storage.DatabaseTransaction,
-		*Broadcast,
+		*types.NetworkIdentifier,
+		[]*types.Operation,
+		*types.TransactionIdentifier,
+		string, // network transaction
 	) error
+
+	// Preprocess calls the /construction/preprocess endpoint
+	// on an offline node.
+	Preprocess(
+		context.Context,
+		*types.NetworkIdentifier,
+		[]*types.Operation,
+		map[string]interface{},
+	) (map[string]interface{}, error)
+
+	// Metadata calls the /construction/metadata endpoint
+	// using the online node.
+	Metadata(
+		context.Context,
+		*types.NetworkIdentifier,
+		map[string]interface{},
+	) (map[string]interface{}, error)
+
+	// Payloads calls the /construction/payloads endpoint
+	// using the offline node.
+	Payloads(
+		context.Context,
+		*types.NetworkIdentifier,
+		[]*types.Operation,
+		map[string]interface{},
+	) (string, []*types.SigningPayload, error)
+
+	// Parse calls the /construction/parse endpoint
+	// using the offline node.
+	Parse(
+		context.Context,
+		*types.NetworkIdentifier,
+		bool, // signed
+		string, // transaction
+	) ([]*types.Operation, []string, map[string]interface{}, error)
+
+	// Combine calls the /construction/combine endpoint
+	// using the offline node.
+	Combine(
+		context.Context,
+		*types.NetworkIdentifier,
+		string, // unsigned transaction
+		[]*types.Signature,
+	) (string, error)
+
+	// Hash calls the /construction/hash endpoint
+	// using the offline node.
+	Hash(
+		context.Context,
+		*types.NetworkIdentifier,
+		string, // network transaction
+	) (*types.TransactionIdentifier, error)
+
+	// Sign returns signatures for the provided
+	// payloads.
+	Sign(
+		context.Context,
+		[]*types.SigningPayload,
+	) ([]*types.Signature, error)
 }
 
 // Worker processes jobs.
