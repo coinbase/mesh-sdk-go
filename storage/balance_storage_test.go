@@ -450,6 +450,115 @@ func TestBalance(t *testing.T) {
 	})
 }
 
+func TestSetBalanceImported(t *testing.T) {
+	var (
+		blockIdentifier = &types.BlockIdentifier{
+			Hash:  "block",
+			Index: 1,
+		}
+
+		accountCoin = &types.AccountIdentifier{
+			Address: "test",
+		}
+
+		currency = &types.Currency{
+			Symbol:   "BLAH",
+			Decimals: 2,
+		}
+
+		amountCoins = &types.Amount{
+			Value:    "60",
+			Currency: currency,
+		}
+
+		accountCoins = []*types.Coin{
+			&types.Coin{
+				CoinIdentifier: &types.CoinIdentifier{Identifier: "coin1"},
+				Amount: &types.Amount{
+					Value:    "30",
+					Currency: currency,
+				},
+			},
+			&types.Coin{
+				CoinIdentifier: &types.CoinIdentifier{Identifier: "coin2"},
+				Amount: &types.Amount{
+					Value:    "30",
+					Currency: currency,
+				},
+			},
+		}
+
+		accountBalance = &types.AccountIdentifier{
+			Address: "test2",
+		}
+
+		amountBalance = &types.Amount{
+			Value:    "100",
+			Currency: currency,
+		}
+
+		accBalance1 = &utils.AccountBalance{
+			Account: accountCoin,
+			Amount:  amountCoins,
+			Coins:   accountCoins,
+			Block:   blockIdentifier,
+		}
+
+		accBalance2 = &utils.AccountBalance{
+			Account: accountBalance,
+			Amount:  amountBalance,
+			Block:   blockIdentifier,
+		}
+		mockHelper = &MockBalanceStorageHelper{
+			AccountBalances: map[string]string{
+				"genesis": "100",
+			},
+		}
+	)
+
+	ctx := context.Background()
+
+	newDir, err := utils.CreateTempDir()
+	assert.NoError(t, err)
+	defer utils.RemoveTempDir(newDir)
+
+	database, err := NewBadgerStorage(ctx, newDir, false)
+	assert.NoError(t, err)
+	defer database.Close(ctx)
+
+	storage := NewBalanceStorage(database)
+	storage.Initialize(mockHelper, nil)
+
+	t.Run("Set balance successfully", func(t *testing.T) {
+		err = storage.SetBalanceImported(
+			ctx,
+			nil,
+			[]*utils.AccountBalance{accBalance1, accBalance2},
+		)
+		assert.NoError(t, err)
+
+		amount1, block, err := storage.GetBalance(
+			ctx,
+			accountCoin,
+			currency,
+			blockIdentifier,
+		)
+		assert.NoError(t, err)
+		assert.Equal(t, block, blockIdentifier)
+		assert.Equal(t, amount1.Value, amountCoins.Value)
+
+		amount2, block, err := storage.GetBalance(
+			ctx,
+			accountBalance,
+			currency,
+			blockIdentifier,
+		)
+		assert.NoError(t, err)
+		assert.Equal(t, block, blockIdentifier)
+		assert.Equal(t, amount2.Value, amountBalance.Value)
+	})
+}
+
 func TestBootstrapBalances(t *testing.T) {
 	var (
 		genesisBlockIdentifier = &types.BlockIdentifier{

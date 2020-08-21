@@ -15,12 +15,16 @@
 package utils
 
 import (
+	"context"
+	"fmt"
 	"math/big"
 	"os"
 	"path"
 	"testing"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
+	"github.com/coinbase/rosetta-sdk-go/fetcher"
+	mocks "github.com/coinbase/rosetta-sdk-go/mocks/utils"
 	"github.com/coinbase/rosetta-sdk-go/types"
 
 	"github.com/stretchr/testify/assert"
@@ -187,4 +191,150 @@ func TestRandomNumber(t *testing.T) {
 		assert.NotEqual(t, -1, new(big.Int).Sub(result, minAmount).Sign())
 		assert.Equal(t, 1, new(big.Int).Sub(maxAmount, result).Sign())
 	}
+}
+
+var (
+	network = &types.NetworkIdentifier{
+		Blockchain: "bitcoin",
+		Network:    "mainnet",
+	}
+
+	blockIdentifier = &types.BlockIdentifier{
+		Hash:  "block",
+		Index: 1,
+	}
+
+	accountCoin = &types.AccountIdentifier{
+		Address: "test",
+	}
+
+	currency = &types.Currency{
+		Symbol:   "BLAH",
+		Decimals: 2,
+	}
+
+	amountCoins = &types.Amount{
+		Value:    "60",
+		Currency: currency,
+	}
+
+	accountCoins = []*types.Coin{
+		&types.Coin{
+			CoinIdentifier: &types.CoinIdentifier{Identifier: "coin1"},
+			Amount: &types.Amount{
+				Value:    "30",
+				Currency: currency,
+			},
+		},
+		&types.Coin{
+			CoinIdentifier: &types.CoinIdentifier{Identifier: "coin2"},
+			Amount: &types.Amount{
+				Value:    "30",
+				Currency: currency,
+			},
+		},
+	}
+
+	accountBalance = &types.AccountIdentifier{
+		Address: "test2",
+	}
+
+	amountBalance = &types.Amount{
+		Value:    "100",
+		Currency: currency,
+	}
+
+	accBalanceRequest1 = &AccountBalanceRequest{
+		Account:  accountCoin,
+		Currency: currency,
+		Network:  network,
+	}
+
+	accBalanceResp1 = &AccountBalance{
+		Account: accountCoin,
+		Amount:  amountCoins,
+		Coins:   accountCoins,
+		Block:   blockIdentifier,
+	}
+
+	accBalanceRequest2 = &AccountBalanceRequest{
+		Account:  accountBalance,
+		Currency: currency,
+		Network:  network,
+	}
+
+	accBalanceResp2 = &AccountBalance{
+		Account: accountBalance,
+		Amount:  amountBalance,
+		Block:   blockIdentifier,
+	}
+)
+
+func TestGetAccountBalances(t *testing.T) {
+	ctx := context.Background()
+	mockHelper := &mocks.FetcherHelper{}
+
+	// Mock fetcher behavior
+	mockHelper.On(
+		"AccountBalanceRetry",
+		ctx,
+		network,
+		accountCoin,
+		(*types.PartialBlockIdentifier)(nil),
+	).Return(
+		blockIdentifier,
+		[]*types.Amount{amountCoins},
+		accountCoins,
+		nil,
+		nil,
+	).Once()
+
+	mockHelper.On(
+		"AccountBalanceRetry",
+		ctx,
+		network,
+		accountBalance,
+		(*types.PartialBlockIdentifier)(nil),
+	).Return(
+		blockIdentifier,
+		[]*types.Amount{amountBalance},
+		nil,
+		nil,
+		nil,
+	).Once()
+
+	accBalances, err := GetAccountBalances(
+		ctx,
+		mockHelper,
+		[]*AccountBalanceRequest{accBalanceRequest1, accBalanceRequest2},
+	)
+
+	assert.Nil(t, err)
+	assert.Equal(t, accBalances[0], accBalanceResp1)
+	assert.Equal(t, accBalances[1], accBalanceResp2)
+
+	// Error in fetcher
+	mockHelper.On(
+		"AccountBalanceRetry",
+		ctx,
+		network,
+		accountBalance,
+		(*types.PartialBlockIdentifier)(nil),
+	).Return(
+		nil,
+		nil,
+		nil,
+		nil,
+		&fetcher.Error{
+			Err: fmt.Errorf("invalid account balance"),
+		},
+	).Once()
+
+	accBalances, err = GetAccountBalances(
+		ctx,
+		mockHelper,
+		[]*AccountBalanceRequest{accBalanceRequest2},
+	)
+	assert.Nil(t, accBalances)
+	assert.Error(t, err)
 }

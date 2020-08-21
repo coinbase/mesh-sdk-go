@@ -521,3 +521,43 @@ func (b *BalanceStorage) GetAllAccountCurrency(
 
 	return accounts, nil
 }
+
+// SetBalanceImported sets the balances of a set of addresses by
+// getting their balances from the tip block, and populating the database.
+// This is used when importing prefunded addresses.
+func (b *BalanceStorage) SetBalanceImported(
+	ctx context.Context,
+	helper BalanceStorageHelper,
+	accountBalances []*utils.AccountBalance,
+) error {
+	// Update balances in database
+	transaction := b.db.NewDatabaseTransaction(ctx, true)
+	defer transaction.Discard(ctx)
+
+	for _, accountBalance := range accountBalances {
+		log.Printf(
+			"Setting account %s balance to %s %+v\n",
+			accountBalance.Account.Address,
+			accountBalance.Amount.Value,
+			accountBalance.Amount.Currency,
+		)
+
+		err := b.SetBalance(
+			ctx,
+			transaction,
+			accountBalance.Account,
+			accountBalance.Amount,
+			accountBalance.Block,
+		)
+		if err != nil {
+			return err
+		}
+	}
+
+	if err := transaction.Commit(ctx); err != nil {
+		return err
+	}
+
+	log.Printf("%d Balances Updated\n", len(accountBalances))
+	return nil
+}
