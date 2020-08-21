@@ -671,6 +671,20 @@ func (b *BlockStorage) findBlockTransaction(
 	return val.Transaction, nil
 }
 
+// GetBlockTransaction retrieves a transaction belonging to a certain
+// block in a database transaction. This is usually used to implement
+// /block/transaction.
+func (b *BlockStorage) GetBlockTransaction(
+	ctx context.Context,
+	blockIdentifier *types.BlockIdentifier,
+	transactionIdentifier *types.TransactionIdentifier,
+) (*types.Transaction, error) {
+	transaction := b.db.NewDatabaseTransaction(ctx, false)
+	defer transaction.Discard(ctx)
+
+	return b.findBlockTransaction(ctx, blockIdentifier, transactionIdentifier, transaction)
+}
+
 // AtTip returns a boolean indicating if we
 // are at tip (provided some acceptable
 // tip delay).
