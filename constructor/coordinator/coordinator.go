@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package constructor
+package coordinator
 
 import (
 	"context"
@@ -21,6 +21,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/coinbase/rosetta-sdk-go/constructor/executor"
 	"github.com/coinbase/rosetta-sdk-go/parser"
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/coinbase/rosetta-sdk-go/utils"
@@ -32,24 +33,24 @@ func NewCoordinator(
 	storage JobStorage,
 	helper Helper,
 	parser *parser.Parser,
-	inputWorkflows []*Workflow,
+	inputWorkflows []*executor.Workflow,
 ) (*Coordinator, error) {
 	workflowNames := make([]string, len(inputWorkflows))
-	workflows := []*Workflow{}
-	var createAccountWorkflow *Workflow
-	var requestFundsWorkflow *Workflow
+	workflows := []*executor.Workflow{}
+	var createAccountWorkflow *executor.Workflow
+	var requestFundsWorkflow *executor.Workflow
 	for i, workflow := range inputWorkflows {
 		if utils.ContainsString(workflowNames, workflow.Name) {
 			return nil, ErrDuplicateWorkflows
 		}
 		workflowNames[i] = workflow.Name
 
-		if workflow.Name == string(CreateAccount) {
+		if workflow.Name == string(executor.CreateAccount) {
 			createAccountWorkflow = workflow
 			continue
 		}
 
-		if workflow.Name == string(RequestFunds) {
+		if workflow.Name == string(executor.RequestFunds) {
 			requestFundsWorkflow = workflow
 			continue
 		}
@@ -72,7 +73,7 @@ func NewCoordinator(
 
 func (c *Coordinator) findJob(
 	ctx context.Context,
-) (*Job, error) {
+) (*executor.Job, error) {
 	// Look for any jobs ready for processing. If one is found,
 	// we return that as the next job to process.
 	ready, err := c.storage.Ready(ctx)
@@ -112,7 +113,7 @@ func (c *Coordinator) findJob(
 			continue
 		}
 
-		return NewJob(workflow), nil
+		return executor.NewJob(workflow), nil
 	}
 
 	// Check if broadcasts, then ErrNoAvailableJobs
@@ -132,7 +133,7 @@ func (c *Coordinator) findJob(
 	// Check if ErrCreateAccount, then create account if exists
 	if c.seenErrCreateAccount {
 		if c.createAccountWorkflow != nil {
-			return NewJob(c.createAccountWorkflow), nil
+			return executor.NewJob(c.createAccountWorkflow), nil
 		}
 
 		log.Println("Create account workflow is missing!")
@@ -143,13 +144,13 @@ func (c *Coordinator) findJob(
 		return nil, ErrRequestFundsWorkflowMissing
 	}
 
-	return NewJob(c.requestFundsWorkflow), nil
+	return executor.NewJob(c.requestFundsWorkflow), nil
 }
 
 // createTransaction constructs and signs a transaction with the provided intent.
 func (c *Coordinator) createTransaction(
 	ctx context.Context,
-	broadcast *Broadcast,
+	broadcast *executor.Broadcast,
 ) (*types.TransactionIdentifier, string, error) {
 	metadataRequest, err := c.helper.Preprocess(
 		ctx,
@@ -313,12 +314,12 @@ func (c *Coordinator) Process(
 			return fmt.Errorf("%w: unable to find job", err)
 		}
 
-		broadcast, err := job.Process(ctx, NewWorker(c.helper))
-		if errors.Is(err, ErrCreateAccount) {
+		broadcast, err := job.Process(ctx, executor.NewWorker(c.helper))
+		if errors.Is(err, executor.ErrCreateAccount) {
 			c.seenErrCreateAccount = true
 			continue
 		}
-		if errors.Is(err, ErrUnsatisfiable) {
+		if errors.Is(err, executor.ErrUnsatisfiable) {
 			// We do nothing if unsatisfiable.
 			continue
 		}
@@ -333,14 +334,14 @@ func (c *Coordinator) Process(
 		// Update job (or store for the first time)
 		jobIdentifier, err := c.storage.Update(ctx, dbTransaction, job)
 		if err != nil {
-			return fmt.Errorf("%w: unable to update job")
+			return fmt.Errorf("%w: unable to update job", err)
 		}
 
 		if broadcast != nil {
 			// Construct Transaction
 			transactionIdentifier, networkTransaction, err := c.createTransaction(ctx, broadcast)
 			if err != nil {
-				return fmt.Errorf("%w: unable to create transaction")
+				return fmt.Errorf("%w: unable to create transaction", err)
 			}
 
 			// Invoke Broadcast storage (in same TX as update job)
