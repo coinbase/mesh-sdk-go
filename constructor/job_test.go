@@ -114,7 +114,7 @@ func TestJob_ComplicatedTransfer(t *testing.T) {
 	}
 	j := NewJob(workflow)
 
-	mockHelper := &mocks.WorkerHelper{}
+	mockHelper := &mocks.Helper{}
 
 	network := &types.NetworkIdentifier{
 		Blockchain: "Bitcoin",
@@ -214,7 +214,7 @@ func TestJob_ComplicatedTransfer(t *testing.T) {
 func TestJob_Failures(t *testing.T) {
 	tests := map[string]struct {
 		scenario    *Scenario
-		helper      *mocks.WorkerHelper
+		helper      *mocks.Helper
 		newIndex    int
 		complete    bool
 		expectedErr error
@@ -231,7 +231,7 @@ func TestJob_Failures(t *testing.T) {
 				},
 			},
 			expectedErr: ErrInvalidActionType,
-			helper:      &mocks.WorkerHelper{},
+			helper:      &mocks.Helper{},
 		},
 		"invalid json": {
 			scenario: &Scenario{
@@ -245,7 +245,7 @@ func TestJob_Failures(t *testing.T) {
 				},
 			},
 			expectedErr: ErrInvalidJSON,
-			helper:      &mocks.WorkerHelper{},
+			helper:      &mocks.Helper{},
 		},
 		"missing variable": {
 			scenario: &Scenario{
@@ -259,7 +259,7 @@ func TestJob_Failures(t *testing.T) {
 				},
 			},
 			expectedErr: ErrVariableNotFound,
-			helper:      &mocks.WorkerHelper{},
+			helper:      &mocks.Helper{},
 		},
 		"invalid input: generate key": {
 			scenario: &Scenario{
@@ -273,7 +273,7 @@ func TestJob_Failures(t *testing.T) {
 				},
 			},
 			expectedErr: ErrInvalidInput,
-			helper:      &mocks.WorkerHelper{},
+			helper:      &mocks.Helper{},
 		},
 		"invalid input: derive": {
 			scenario: &Scenario{
@@ -287,7 +287,7 @@ func TestJob_Failures(t *testing.T) {
 				},
 			},
 			expectedErr: ErrInvalidInput,
-			helper:      &mocks.WorkerHelper{},
+			helper:      &mocks.Helper{},
 		},
 		"invalid input: save address input": {
 			scenario: &Scenario{
@@ -300,7 +300,7 @@ func TestJob_Failures(t *testing.T) {
 				},
 			},
 			expectedErr: ErrInvalidInput,
-			helper:      &mocks.WorkerHelper{},
+			helper:      &mocks.Helper{},
 		},
 		"invalid action: math": {
 			scenario: &Scenario{
@@ -313,7 +313,7 @@ func TestJob_Failures(t *testing.T) {
 				},
 			},
 			expectedErr: ErrActionFailed,
-			helper:      &mocks.WorkerHelper{},
+			helper:      &mocks.Helper{},
 		},
 		"invalid broadcast: invalid operations": {
 			scenario: &Scenario{
@@ -329,7 +329,7 @@ func TestJob_Failures(t *testing.T) {
 			newIndex:    1,
 			complete:    true,
 			expectedErr: ErrOperationFormat,
-			helper:      &mocks.WorkerHelper{},
+			helper:      &mocks.Helper{},
 		},
 		"invalid broadcast: missing confirmation depth": {
 			scenario: &Scenario{
@@ -345,7 +345,7 @@ func TestJob_Failures(t *testing.T) {
 			newIndex:    1,
 			complete:    true,
 			expectedErr: ErrConfirmationDepthInvalid,
-			helper:      &mocks.WorkerHelper{},
+			helper:      &mocks.Helper{},
 		},
 		"invalid broadcast: missing network identifier": {
 			scenario: &Scenario{
@@ -366,7 +366,7 @@ func TestJob_Failures(t *testing.T) {
 			newIndex:    1,
 			complete:    true,
 			expectedErr: ErrNetworkInvalid,
-			helper:      &mocks.WorkerHelper{},
+			helper:      &mocks.Helper{},
 		},
 		"invalid broadcast: metadata incorrect": {
 			scenario: &Scenario{
@@ -397,7 +397,7 @@ func TestJob_Failures(t *testing.T) {
 			newIndex:    1,
 			complete:    true,
 			expectedErr: ErrMetadataInvalid,
-			helper:      &mocks.WorkerHelper{},
+			helper:      &mocks.Helper{},
 		},
 	}
 
