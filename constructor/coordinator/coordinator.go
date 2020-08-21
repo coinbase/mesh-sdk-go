@@ -345,7 +345,15 @@ func (c *Coordinator) Process(
 			}
 
 			// Invoke Broadcast storage (in same TX as update job)
-			if err := c.helper.Broadcast(ctx, dbTransaction, jobIdentifier, broadcast.Network, broadcast.Intent, transactionIdentifier, networkTransaction); err != nil {
+			if err := c.helper.Broadcast(
+				ctx,
+				dbTransaction,
+				jobIdentifier,
+				broadcast.Network,
+				broadcast.Intent,
+				transactionIdentifier,
+				networkTransaction,
+			); err != nil {
 				return fmt.Errorf("%w: unable to enque broadcast", err)
 			}
 		}
