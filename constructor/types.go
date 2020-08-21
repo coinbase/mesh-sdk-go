@@ -23,9 +23,19 @@ import (
 )
 
 const (
+	// NoHeadBlockWaitTime is the amount of
+	// time we wait when no blocks have been
+	// synced.
+	NoHeadBlockWaitTime = 1 * time.Second
+
 	// BalanceWaitTime is the amount of time
 	// we wait between balance checks.
 	BalanceWaitTime = 5 * time.Second
+
+	// NoJobsWaitTime is the amount of time
+	// we wait when no jobs are available
+	// to process.
+	NoJobsWaitTime = 10 * time.Second
 )
 
 // ReservedVariable is a reserved variable
