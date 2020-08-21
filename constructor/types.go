@@ -155,51 +155,51 @@ type FindBalanceInput struct {
 	// of the same account in multiple currencies, when requesting funds,
 	// or when constructing a multi-input UTXO transfer with the
 	// same address).
-	Address string
+	Address string `json:"address,omitempty"`
 
 	// NotAddress can be populated to ensure a different
 	// address is found. This is useful when avoiding a
 	// self-transfer.
-	NotAddress []string
+	NotAddress []string `json:"not_address,omitempty"`
 
 	// SubAccount can be used to find addresses with particular
 	// SubAccount balances. This is particularly useful for
 	// orchestrating staking transactions.
-	SubAccount *types.SubAccountIdentifier
+	SubAccount *types.SubAccountIdentifier `json:"sub_account,omitempty"`
 
 	// Wait will cause this action to block until an acceptable
 	// balance is found. This is useful when waiting for initial funds.
-	Wait bool
+	Wait bool `json:"wait,omitempty"`
 
 	// MinimumBalance is the minimum required balance that must be found.
-	MinimumBalance *types.Amount
+	MinimumBalance *types.Amount `json:"minimum_balance,omitempty"`
 
 	// RequireCoin indicates if a coin must be found with the minimum balance.
 	// This is useful for orchestrating transfers on UTXO-based blockchains.
-	RequireCoin bool
+	RequireCoin bool `json:"require_coin,omitempty"`
 
 	// NotCoins indicates that certain coins should not be considered. This is useful
 	// for avoiding using the same Coin twice.
-	NotCoins []*types.CoinIdentifier
+	NotCoins []*types.CoinIdentifier `json:"not_coins,omitempty"`
 
 	// Create is used to determine if we should create a new address using
 	// the CreateAccount Workflow. This will only occur if the
 	// total number of addresses is under some pre-defined limit.
 	// If the value is -1, we will not attempt to create.
-	Create int
+	Create int `json:"create,omitempty"`
 }
 
 // FindBalanceOutput is returned by FindBalance.
 type FindBalanceOutput struct {
 	// Account is the account associated with the balance
 	// (and coin).
-	Account *types.AccountIdentifier
+	Account *types.AccountIdentifier `json:"account"`
 
 	// Balance found at a particular currency.
-	Balance *types.Amount
+	Balance *types.Amount `json:"balance"`
 
 	// Coin is populated if RequireCoin is true.
-	Coin *types.CoinIdentifier
+	Coin *types.CoinIdentifier `json:"coin,omitempty"`
 }
 
 // Scenario is a collection of Actions with a specific
