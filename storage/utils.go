@@ -16,8 +16,11 @@ package storage
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
+
+	"github.com/coinbase/rosetta-sdk-go/types"
 
 	"github.com/DataDog/zstd"
 	msgpack "github.com/vmihailenco/msgpack/v5"
@@ -61,6 +64,15 @@ func decode(b []byte, object interface{}) error {
 	err = getDecoder(bytes.NewReader(decompressed)).Decode(&object)
 	if err != nil {
 		return fmt.Errorf("%w: unable to decode bytes", err)
+	}
+
+	return nil
+}
+
+func copyStruct(input interface{}, output interface{}) error {
+	inputString := types.PrintStruct(input)
+	if err := json.Unmarshal([]byte(inputString), &output); err != nil {
+		return fmt.Errorf("%w: unable to copy block", err)
 	}
 
 	return nil
