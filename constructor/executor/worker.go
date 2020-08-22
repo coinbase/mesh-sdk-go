@@ -375,27 +375,19 @@ func (w *Worker) checkAccountBalance(
 	return "", nil
 }
 
-// FindBalanceWorker attempts to find an account (and coin) with some minimum
-// balance in a particular currency.
-func (w *Worker) FindBalanceWorker(ctx context.Context, rawInput string) (string, error) {
-	var input FindBalanceInput
-	err := unmarshalInput([]byte(rawInput), &input)
-	if err != nil {
-		return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
-	}
-
-	if err := asserter.Amount(input.MinimumBalance); err != nil {
-		return "", fmt.Errorf("%w: minimum balance invalid %s", ErrInvalidInput, err.Error())
-	}
-
+func (w *Worker) availableAddresses(ctx context.Context) ([]string, []string, error) {
 	addresses, err := w.helper.AllAddresses(ctx)
 	if err != nil {
-		return "", fmt.Errorf("%w: unable to get all addresses %s", ErrActionFailed, err.Error())
+		return nil, nil, fmt.Errorf(
+			"%w: unable to get all addresses %s",
+			ErrActionFailed,
+			err.Error(),
+		)
 	}
 
 	// If there are no addresses, we should create one.
 	if len(addresses) == 0 {
-		return "", ErrCreateAccount
+		return nil, nil, ErrCreateAccount
 	}
 
 	// We fetch all locked addresses to subtract them from AllAddresses.
@@ -403,7 +395,7 @@ func (w *Worker) FindBalanceWorker(ctx context.Context, rawInput string) (string
 	unlockedAddresses := []string{}
 	lockedAddresses, err := w.helper.LockedAddresses(ctx)
 	if err != nil {
-		return "", fmt.Errorf("%w: unable to get locked addresses %s", ErrActionFailed, err)
+		return nil, nil, fmt.Errorf("%w: unable to get locked addresses %s", ErrActionFailed, err)
 	}
 
 	// Convert to a map so can do fast lookups
@@ -418,8 +410,29 @@ func (w *Worker) FindBalanceWorker(ctx context.Context, rawInput string) (string
 		}
 	}
 
-	// Consider each unlockedAddress as a potential account.
-	for _, address := range unlockedAddresses {
+	return addresses, unlockedAddresses, nil
+}
+
+// FindBalanceWorker attempts to find an account (and coin) with some minimum
+// balance in a particular currency.
+func (w *Worker) FindBalanceWorker(ctx context.Context, rawInput string) (string, error) {
+	var input FindBalanceInput
+	err := unmarshalInput([]byte(rawInput), &input)
+	if err != nil {
+		return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
+	}
+
+	if err := asserter.Amount(input.MinimumBalance); err != nil {
+		return "", fmt.Errorf("%w: minimum balance invalid %s", ErrInvalidInput, err.Error())
+	}
+
+	addresses, availableAddresses, err := w.availableAddresses(ctx)
+	if err != nil {
+		return "", fmt.Errorf("%w: unable to get available addresses", err)
+	}
+
+	// Consider each availableAddress as a potential account.
+	for _, address := range availableAddresses {
 		// If we require an address and that address
 		// is not equal to the address we are considering,
 		// we should continue.

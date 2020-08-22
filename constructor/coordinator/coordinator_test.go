@@ -427,9 +427,19 @@ func TestProcess(t *testing.T) {
 	dbTx4 := db.NewDatabaseTransaction(ctx, true)
 	helper.On("DatabaseTransaction", ctx).Return(dbTx4).Once()
 	var job4 *executor.Job
-	jobStorage.On("Update", ctx, dbTx4, mock.Anything).Return("job4", nil).Run(func(args mock.Arguments) {
-		job4 = args.Get(2).(*executor.Job)
-	}).Once()
+	jobStorage.On(
+		"Update",
+		ctx,
+		dbTx4,
+		mock.Anything,
+	).Return(
+		"job4",
+		nil,
+	).Run(
+		func(args mock.Arguments) {
+			job4 = args.Get(2).(*executor.Job)
+		},
+	).Once()
 
 	// Construct Transaction
 	network := &types.NetworkIdentifier{
@@ -582,9 +592,19 @@ func TestProcess(t *testing.T) {
 	dbTx5 := db.NewDatabaseTransaction(ctx, true)
 	helper.On("DatabaseTransaction", ctx).Return(dbTx5).Once()
 	jobStorage.On("Get", ctx, dbTx5, "job4").Return(job4, nil).Once()
-	jobStorage.On("Update", ctx, dbTx5, mock.Anything).Return("job4", nil).Run(func(args mock.Arguments) {
-		close(broadcastComplete)
-	}).Once()
+	jobStorage.On(
+		"Update",
+		ctx,
+		dbTx5,
+		mock.Anything,
+	).Return(
+		"job4",
+		nil,
+	).Run(
+		func(args mock.Arguments) {
+			close(broadcastComplete)
+		},
+	).Once()
 	tx := &types.Transaction{
 		TransactionIdentifier: txIdentifier,
 		Operations:            ops,
