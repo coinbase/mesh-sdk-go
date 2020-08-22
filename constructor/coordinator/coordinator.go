@@ -140,6 +140,19 @@ func (c *Coordinator) findJob(
 
 	// Check if ErrCreateAccount, then create account if exists
 	if c.seenErrCreateAccount {
+		processing, err := c.storage.Processing(ctx, string(executor.CreateAccount))
+		if err != nil {
+			return nil, fmt.Errorf(
+				"%w: %s",
+				ErrJobsUnretrievable,
+				err.Error(),
+			)
+		}
+
+		if processing > ReservedWorkflowConcurrency {
+			return nil, ErrNoAvailableJobs
+		}
+
 		if c.createAccountWorkflow != nil {
 			return executor.NewJob(c.createAccountWorkflow), nil
 		}
@@ -150,6 +163,19 @@ func (c *Coordinator) findJob(
 	// Return request funds (if defined, else error)
 	if c.requestFundsWorkflow == nil {
 		return nil, ErrRequestFundsWorkflowMissing
+	}
+
+	processing, err := c.storage.Processing(ctx, string(executor.RequestFunds))
+	if err != nil {
+		return nil, fmt.Errorf(
+			"%w: %s",
+			ErrJobsUnretrievable,
+			err.Error(),
+		)
+	}
+
+	if processing > ReservedWorkflowConcurrency {
+		return nil, ErrNoAvailableJobs
 	}
 
 	return executor.NewJob(c.requestFundsWorkflow), nil
@@ -303,6 +329,8 @@ func (c *Coordinator) Process(
 ) error {
 	for ctx.Err() == nil {
 		if !c.helper.HeadBlockExists(ctx) {
+			log.Println("Waiting for first block synced...")
+
 			// We will sleep until at least one block has been synced.
 			// Many of the storage-based commands require a synced block
 			// to work correctly (i.e. when fetching a balance, a block
@@ -314,6 +342,8 @@ func (c *Coordinator) Process(
 		// Attempt to find a Job to process.
 		job, err := c.findJob(ctx)
 		if errors.Is(err, ErrNoAvailableJobs) {
+			log.Println("No available jobs...")
+
 			time.Sleep(NoJobsWaitTime)
 			c.resetVars()
 			continue
@@ -321,6 +351,12 @@ func (c *Coordinator) Process(
 		if err != nil {
 			return fmt.Errorf("%w: unable to find job", err)
 		}
+
+		statusMessage := fmt.Sprintf(`Processing workflow "%s"`, job.Workflow)
+		if len(job.Identifier) > 0 {
+			statusMessage = fmt.Sprintf(`%s with identifier "%s"`, statusMessage, job.Identifier)
+		}
+		log.Println(statusMessage)
 
 		broadcast, err := job.Process(ctx, executor.NewWorker(c.helper))
 		if errors.Is(err, executor.ErrCreateAccount) {
@@ -340,6 +376,10 @@ func (c *Coordinator) Process(
 		defer dbTransaction.Discard(ctx)
 
 		// Update job (or store for the first time)
+		//
+		// Note, we ALWAYS store jobs even if they are complete on
+		// their first run so that we can have a full view of everything
+		// we've done in JobStorage.
 		jobIdentifier, err := c.storage.Update(ctx, dbTransaction, job)
 		if err != nil {
 			return fmt.Errorf("%w: unable to update job", err)
