@@ -182,6 +182,15 @@ func TestProcess(t *testing.T) {
 						},
 					},
 				},
+				{
+					Name: "print_transaction",
+					Actions: []*executor.Action{
+						{
+							Type:  executor.PrintMessage,
+							Input: `{{transfer.transaction}}`,
+						},
+					},
+				},
 			},
 		},
 	}
@@ -597,20 +606,41 @@ func TestProcess(t *testing.T) {
 		ctx,
 		dbTx5,
 		mock.Anything,
-	).Return(
+	).Run(func(args mock.Arguments) {
+		job4 = args.Get(2).(*executor.Job)
+	}).Return(
 		"job4",
 		nil,
-	).Run(
-		func(args mock.Arguments) {
-			close(broadcastComplete)
-		},
-	).Once()
+	)
 	tx := &types.Transaction{
 		TransactionIdentifier: txIdentifier,
 		Operations:            ops,
 	}
 	err = c.BroadcastComplete(ctx, "job4", tx)
 	assert.NoError(t, err)
+
+	// Process second step of job4
+	dbTxLock5 := make(chan struct{})
+	helper.On("HeadBlockExists", ctx).Return(true).Run(func(args mock.Arguments) {
+		close(dbTxLock5)
+	}).Once()
+	jobStorage.On("Ready", ctx).Return([]*executor.Job{job4}, nil).Once()
+
+	<-dbTxLock5
+	dbTx6 := db.NewDatabaseTransaction(ctx, true)
+	helper.On("DatabaseTransaction", ctx).Return(dbTx6).Once()
+	jobStorage.On(
+		"Update",
+		ctx,
+		dbTx6,
+		mock.Anything,
+	).Run(func(args mock.Arguments) {
+		close(broadcastComplete)
+	}).Return(
+		"job4",
+		nil,
+	)
+	helper.On("BroadcastAll", ctx).Return(nil).Once()
 
 	<-broadcastComplete
 	cancel()
