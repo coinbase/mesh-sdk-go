@@ -502,7 +502,7 @@ func TestFindBalanceWorker(t *testing.T) {
 			}(),
 			err: ErrUnsatisfiable,
 		},
-		"could not find coin (should create)": {
+		"could not find coin (unsatisfiable)": {
 			input: &FindBalanceInput{
 				MinimumBalance: &types.Amount{
 					Value: "100",
@@ -579,7 +579,7 @@ func TestFindBalanceWorker(t *testing.T) {
 
 				return helper
 			}(),
-			err: ErrCreateAccount,
+			err: ErrUnsatisfiable,
 		},
 		"could not find coin (too many accounts)": {
 			input: &FindBalanceInput{
