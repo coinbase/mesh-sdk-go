@@ -455,6 +455,13 @@ func (w *Worker) FindBalanceWorker(ctx context.Context, rawInput string) (string
 			continue
 		}
 
+		if input.Wait {
+			log.Printf(
+				"Found balance %s\n",
+				output,
+			)
+		}
+
 		return output, nil
 	}
 
