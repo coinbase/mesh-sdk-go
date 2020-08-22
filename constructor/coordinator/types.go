@@ -26,6 +26,10 @@ import (
 )
 
 const (
+	// ReservedWorkflowConcurrency is the expected concurrency
+	// of the create account and request funds scenario.
+	ReservedWorkflowConcurrency = 1
+
 	// NoHeadBlockWaitTime is the amount of
 	// time we wait when no blocks have been
 	// synced.
