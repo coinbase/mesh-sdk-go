@@ -185,7 +185,7 @@ type FindBalanceInput struct {
 	// Create is used to determine if we should create a new address using
 	// the CreateAccount Workflow. This will only occur if the
 	// total number of addresses is under some pre-defined limit.
-	// If the value is -1, we will not attempt to create.
+	// If the value is <= 0, we will not attempt to create.
 	Create int `json:"create,omitempty"`
 }
 

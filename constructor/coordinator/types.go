@@ -78,9 +78,6 @@ type Helper interface {
 	// This is used to update jobs and enque them for broadcast atomically.
 	DatabaseTransaction(context.Context) storage.DatabaseTransaction
 
-	// AllBroadcasts returns a slice of all in-progress broadcasts.
-	AllBroadcasts(ctx context.Context) ([]*storage.Broadcast, error)
-
 	// Broadcast enqueues a particular intent for broadcast.
 	Broadcast(
 		context.Context,
@@ -181,6 +178,9 @@ type Coordinator struct {
 type JobStorage interface {
 	// Ready returns the jobs that are ready to be processed.
 	Ready(context.Context) ([]*executor.Job, error)
+
+	// Broadcasting returns all jobs that are broadcasting.
+	Broadcasting(context.Context) ([]*executor.Job, error)
 
 	// Processing returns the number of jobs processing
 	// for a particular workflow.

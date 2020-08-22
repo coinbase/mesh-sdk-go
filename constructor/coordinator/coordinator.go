@@ -100,9 +100,7 @@ func (c *Coordinator) findJob(
 		return job, nil
 	}
 
-	// Attempt all workflows other than required
-	// -> if jobs of workflows already has existing == concurrency, skip
-	// -> create Job for workflow
+	// Attempt non-reserved workflows
 	for _, workflow := range c.workflows {
 		if utils.ContainsString(c.attemptedWorkflows, workflow.Name) {
 			continue
@@ -125,7 +123,7 @@ func (c *Coordinator) findJob(
 	}
 
 	// Check if broadcasts, then ErrNoAvailableJobs
-	allBroadcasts, err := c.helper.AllBroadcasts(ctx)
+	allBroadcasts, err := c.storage.Broadcasting(ctx)
 	if err != nil {
 		return nil, fmt.Errorf(
 			"%w: %s",
@@ -360,16 +358,30 @@ func (c *Coordinator) Process(
 
 		broadcast, err := job.Process(ctx, executor.NewWorker(c.helper))
 		if errors.Is(err, executor.ErrCreateAccount) {
+			// TODO: unify this error logic
+			if len(job.Identifier) == 0 {
+				c.attemptedWorkflows = append(c.attemptedWorkflows, job.Workflow)
+			} else {
+				c.attemptedJobs = append(c.attemptedJobs, job.Identifier)
+			}
+
 			c.seenErrCreateAccount = true
 			continue
 		}
 		if errors.Is(err, executor.ErrUnsatisfiable) {
-			// We do nothing if unsatisfiable.
+			if len(job.Identifier) == 0 {
+				c.attemptedWorkflows = append(c.attemptedWorkflows, job.Workflow)
+			} else {
+				c.attemptedJobs = append(c.attemptedJobs, job.Identifier)
+			}
+
 			continue
 		}
 		if err != nil {
 			return fmt.Errorf("%w: unable to process job", err)
 		}
+
+		log.Printf("processed %s\n", job.Workflow)
 
 		// Update job and store broadcast in a single DB transaction.
 		dbTransaction := c.helper.DatabaseTransaction(ctx)
@@ -385,6 +397,7 @@ func (c *Coordinator) Process(
 			return fmt.Errorf("%w: unable to update job", err)
 		}
 
+		log.Printf("broadcast for %s is %v\n", job.Workflow, broadcast)
 		if broadcast != nil {
 			// Construct Transaction
 			transactionIdentifier, networkTransaction, err := c.createTransaction(ctx, broadcast)
@@ -418,6 +431,8 @@ func (c *Coordinator) Process(
 
 		// Reset all vars
 		c.resetVars()
+
+		// TODO: print message "processed workflow (+ job)"
 	}
 
 	return ctx.Err()
