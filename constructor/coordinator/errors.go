@@ -44,4 +44,8 @@ var (
 	// ErrDuplicateWorkflows is returned when 2 Workflows with the same name
 	// are provided as an input to NewCoordinator.
 	ErrDuplicateWorkflows = errors.New("duplicate workflows")
+
+	// ErrIncorrectConcurrency is returned when CreateAccount or RequestFunds
+	// have a concurrency greater than 1.
+	ErrIncorrectConcurrency = errors.New("incorrect concurrency")
 )

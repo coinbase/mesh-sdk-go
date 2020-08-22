@@ -46,11 +46,19 @@ func NewCoordinator(
 		workflowNames[i] = workflow.Name
 
 		if workflow.Name == string(executor.CreateAccount) {
+			if workflow.Concurrency != ReservedWorkflowConcurrency {
+				return nil, ErrIncorrectConcurrency
+			}
+
 			createAccountWorkflow = workflow
 			continue
 		}
 
 		if workflow.Name == string(executor.RequestFunds) {
+			if workflow.Concurrency != ReservedWorkflowConcurrency {
+				return nil, ErrIncorrectConcurrency
+			}
+
 			requestFundsWorkflow = workflow
 			continue
 		}
