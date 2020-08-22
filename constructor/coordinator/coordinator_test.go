@@ -17,8 +17,8 @@ package coordinator
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
-	"time"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
 	"github.com/coinbase/rosetta-sdk-go/constructor/executor"
@@ -86,12 +86,13 @@ func TestProcess_RequestCreate(t *testing.T) {
 						},
 						{ // ensure we have some balance that exists
 							Type:       executor.FindBalance,
-							Input:      `{"minimum_balance":{"value": "0", "currency": {{currency}}}}`, // nolint
+							Input:      `{"minimum_balance":{"value": "0", "currency": {{currency}}}, "create":1}`, // nolint
 							OutputPath: "random_address",
 						},
 						{
-							Type:  executor.FindBalance,
-							Input: `{"address": {{random_address.account.address}}, "wait": true, "minimum_balance":{"value": "100", "currency": {{currency}}}`, // nolint
+							Type:       executor.FindBalance,
+							Input:      `{"address": {{random_address.account.address}}, "wait": true, "minimum_balance":{"value": "100", "currency": {{currency}}}}`, // nolint
+							OutputPath: "loaded_address",
 						},
 					},
 				},
@@ -159,7 +160,6 @@ func TestProcess_RequestCreate(t *testing.T) {
 	helper.On("HeadBlockExists", ctx).Return(true).Once()
 	jobStorage.On("Ready", ctx).Return([]*executor.Job{}, nil).Once()
 	helper.On("AllBroadcasts", ctx).Return([]*storage.Broadcast{}, nil).Once()
-	helper.On("AllAddresses", ctx).Return([]string{}, nil).Once()
 	jobStorage.On("Processing", ctx, "create_account").Return(0, nil).Once()
 
 	// Perform create_account
@@ -182,20 +182,91 @@ func TestProcess_RequestCreate(t *testing.T) {
 	dbTx := db.NewDatabaseTransaction(ctx, true)
 	helper.On("DatabaseTransaction", ctx).Return(dbTx).Once()
 	jobStorage.On("Update", ctx, dbTx, mock.Anything).Return("job1", nil).Once()
-	helper.On("BroadcastAll", ctx).Return(nil)
+	helper.On("BroadcastAll", ctx).Return(nil).Once()
 
 	// Attempt to request funds on "address1"
+	helper.On("HeadBlockExists", ctx).Return(true).Once()
+	jobStorage.On("Ready", ctx).Return([]*executor.Job{}, nil).Once()
+	helper.On("AllBroadcasts", ctx).Return([]*storage.Broadcast{}, nil).Once()
+	jobStorage.On("Processing", ctx, "request_funds").Return(0, nil).Once()
+	helper.On("AllAddresses", ctx).Return([]string{"address1"}, nil).Once()
+	helper.On("LockedAddresses", ctx).Return([]string{}, nil).Once()
+	helper.On(
+		"Balance",
+		ctx,
+		&types.AccountIdentifier{Address: "address1"},
+	).Return(
+		[]*types.Amount{
+			{
+				Value: "0",
+				Currency: &types.Currency{
+					Symbol:   "tBTC",
+					Decimals: 8,
+				},
+			},
+		},
+		nil,
+	).Once()
 
+	// Load "address1"
 	fundsProvided := make(chan struct{})
+	helper.On("AllAddresses", ctx).Return([]string{"address1"}, nil).Once()
+	helper.On("LockedAddresses", ctx).Return([]string{}, nil).Once()
+	helper.On(
+		"Balance",
+		ctx,
+		&types.AccountIdentifier{Address: "address1"},
+	).Return(
+		[]*types.Amount{
+			{
+				Value: "0",
+				Currency: &types.Currency{
+					Symbol:   "tBTC",
+					Decimals: 8,
+				},
+			},
+		},
+		nil,
+	).Once()
+	helper.On("AllAddresses", ctx).Return([]string{"address1"}, nil).Once()
+	helper.On("LockedAddresses", ctx).Return([]string{}, nil).Once()
+	helper.On(
+		"Balance",
+		ctx,
+		&types.AccountIdentifier{Address: "address1"},
+	).Return(
+		[]*types.Amount{
+			{
+				Value: "100",
+				Currency: &types.Currency{
+					Symbol:   "tBTC",
+					Decimals: 8,
+				},
+			},
+		},
+		nil,
+	).Once()
+	go func() {
+		dbTx2 := db.NewDatabaseTransaction(ctx, true)
+		helper.On("DatabaseTransaction", ctx).Return(dbTx2).Once()
+		jobStorage.On("Update", ctx, dbTx2, mock.Anything).Return("job2", nil).Once()
+		helper.On("BroadcastAll", ctx).Return(nil).Run(func(args mock.Arguments) {
+			close(fundsProvided)
+		}).Once()
+
+		// This will trigger a loop until context is canceled.
+		helper.On("HeadBlockExists", ctx).Return(false).Once()
+	}()
+
 	processCanceled := make(chan struct{})
 	go func() {
 		err := c.Process(ctx)
+		fmt.Println(err)
 		assert.True(t, errors.Is(err, context.Canceled))
 		close(processCanceled)
 	}()
 
 	<-fundsProvided
-	time.Sleep(5 * time.Second)
 	cancel()
 	<-processCanceled
 
