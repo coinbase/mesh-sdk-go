@@ -24,9 +24,12 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/constructor/executor"
 	mocks "github.com/coinbase/rosetta-sdk-go/mocks/constructor/coordinator"
 	"github.com/coinbase/rosetta-sdk-go/parser"
+	"github.com/coinbase/rosetta-sdk-go/storage"
 	"github.com/coinbase/rosetta-sdk-go/types"
+	"github.com/coinbase/rosetta-sdk-go/utils"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 func simpleAsserterConfiguration() (*asserter.Asserter, error) {
@@ -83,7 +86,7 @@ func TestProcess_RequestCreate(t *testing.T) {
 						},
 						{ // ensure we have some balance that exists
 							Type:       executor.FindBalance,
-							Input:      `{"minimum_balance":{"value": "0", "currency": {{currency}}}`, // nolint
+							Input:      `{"minimum_balance":{"value": "0", "currency": {{currency}}}}`, // nolint
 							OutputPath: "random_address",
 						},
 						{
@@ -134,6 +137,54 @@ func TestProcess_RequestCreate(t *testing.T) {
 	)
 	assert.NotNil(t, c)
 	assert.NoError(t, err)
+
+	dir, err := utils.CreateTempDir()
+	assert.NoError(t, err)
+
+	db, err := storage.NewBadgerStorage(ctx, dir, false)
+	assert.NoError(t, err)
+	assert.NotNil(t, db)
+
+	// HeadBlockExists is false first
+	helper.On("HeadBlockExists", ctx).Return(false).Once()
+	helper.On("HeadBlockExists", ctx).Return(true).Once()
+
+	// Determine should request_funds
+	jobStorage.On("Ready", ctx).Return([]*executor.Job{}, nil).Once()
+	helper.On("AllBroadcasts", ctx).Return([]*storage.Broadcast{}, nil).Once()
+	helper.On("AllAddresses", ctx).Return([]string{}, nil).Once()
+	jobStorage.On("Processing", ctx, "request_funds").Return(0, nil).Once()
+
+	// Determine need address to request_funds
+	helper.On("HeadBlockExists", ctx).Return(true).Once()
+	jobStorage.On("Ready", ctx).Return([]*executor.Job{}, nil).Once()
+	helper.On("AllBroadcasts", ctx).Return([]*storage.Broadcast{}, nil).Once()
+	helper.On("AllAddresses", ctx).Return([]string{}, nil).Once()
+	jobStorage.On("Processing", ctx, "create_account").Return(0, nil).Once()
+
+	// Perform create_account
+	helper.On(
+		"Derive",
+		ctx,
+		&types.NetworkIdentifier{
+			Blockchain: "Bitcoin",
+			Network:    "Testnet3",
+		},
+		mock.Anything,
+		(map[string]interface{})(nil),
+	).Return("address1", nil, nil).Once()
+	helper.On(
+		"StoreKey",
+		ctx,
+		"address1",
+		mock.Anything,
+	).Return(nil).Once()
+	dbTx := db.NewDatabaseTransaction(ctx, true)
+	helper.On("DatabaseTransaction", ctx).Return(dbTx).Once()
+	jobStorage.On("Update", ctx, dbTx, mock.Anything).Return("job1", nil).Once()
+	helper.On("BroadcastAll", ctx).Return(nil)
+
+	// Attempt to request funds on "address1"
 
 	fundsProvided := make(chan struct{})
 	processCanceled := make(chan struct{})
