@@ -37,9 +37,9 @@ const (
 	// blockIndexNamespace is prepended to any stored block index.
 	blockIndexNamespace = "block-index"
 
-	// transactionHashNamespace is prepended to any stored
-	// transaction hash.
-	transactionHashNamespace = "transaction-hash"
+	// transactionNamespace is prepended to any stored
+	// transaction.
+	transactionNamespace = "transaction"
 )
 
 var (
@@ -60,6 +60,11 @@ var (
 	ErrDuplicateTransactionHash = errors.New("duplicate transaction hash")
 )
 
+type blockTransaction struct {
+	Transaction *types.Transaction `json:"transaction"`
+	BlockIndex  int64              `json:"block_index"`
+}
+
 func getHeadBlockKey() []byte {
 	return []byte(headBlockKey)
 }
@@ -73,7 +78,7 @@ func getBlockIndexKey(index int64) []byte {
 }
 
 func getTransactionHashKey(transactionIdentifier *types.TransactionIdentifier) []byte {
-	return []byte(fmt.Sprintf("%s/%s", transactionHashNamespace, transactionIdentifier.Hash))
+	return []byte(fmt.Sprintf("%s/%s", transactionNamespace, transactionIdentifier.Hash))
 }
 
 // BlockWorker is an interface that allows for work
@@ -165,16 +170,13 @@ func (b *BlockStorage) StoreHeadBlockIdentifier(
 	return transaction.Set(ctx, getHeadBlockKey(), buf)
 }
 
-// GetBlock returns a block, if it exists.
-func (b *BlockStorage) GetBlock(
+func (b *BlockStorage) getBlockResponse(
 	ctx context.Context,
 	blockIdentifier *types.PartialBlockIdentifier,
-) (*types.Block, error) {
-	transaction := b.db.NewDatabaseTransaction(ctx, false)
-	defer transaction.Discard(ctx)
-
+	transaction DatabaseTransaction,
+) (*types.BlockResponse, error) {
 	var exists bool
-	var block []byte
+	var blockResponse []byte
 	var err error
 	switch {
 	case blockIdentifier == nil || (blockIdentifier.Hash == nil && blockIdentifier.Index == nil):
@@ -185,16 +187,16 @@ func (b *BlockStorage) GetBlock(
 			return nil, fmt.Errorf("%w: cannot get head block identifier", err)
 		}
 
-		exists, block, err = transaction.Get(ctx, getBlockHashKey(head.Hash))
+		exists, blockResponse, err = transaction.Get(ctx, getBlockHashKey(head.Hash))
 	case blockIdentifier.Hash != nil:
 		// Get block by hash if provided
-		exists, block, err = transaction.Get(ctx, getBlockHashKey(*blockIdentifier.Hash))
+		exists, blockResponse, err = transaction.Get(ctx, getBlockHashKey(*blockIdentifier.Hash))
 	default:
 		// Get block by index if hash not provided
 		var blockKey []byte
 		exists, blockKey, err = transaction.Get(ctx, getBlockIndexKey(*blockIdentifier.Index))
 		if exists {
-			exists, block, err = transaction.Get(ctx, blockKey)
+			exists, blockResponse, err = transaction.Get(ctx, blockKey)
 		}
 	}
 
@@ -206,39 +208,100 @@ func (b *BlockStorage) GetBlock(
 		return nil, fmt.Errorf("%w: %+v", ErrBlockNotFound, blockIdentifier)
 	}
 
-	var rosettaBlock types.Block
-	err = decode(block, &rosettaBlock)
+	var rosettaBlockResponse types.BlockResponse
+	err = decode(blockResponse, &rosettaBlockResponse)
 	if err != nil {
 		return nil, err
 	}
 
-	return &rosettaBlock, nil
+	return &rosettaBlockResponse, nil
+}
+
+// GetBlockLazy returns a *types.BlockResponse
+// with populated OtherTransactions array containing
+// all the transactions the caller must retrieve.
+// This is typically used to serve /block queries.
+func (b *BlockStorage) GetBlockLazy(
+	ctx context.Context,
+	blockIdentifier *types.PartialBlockIdentifier,
+) (*types.BlockResponse, error) {
+	transaction := b.db.NewDatabaseTransaction(ctx, false)
+	defer transaction.Discard(ctx)
+
+	return b.getBlockResponse(ctx, blockIdentifier, transaction)
+}
+
+// GetBlock returns a block, if it exists. GetBlock
+// will fetch all transactions contained in a block
+// automatically. If you don't wish to do this for
+// performance reasons, use GetBlockLazy.
+func (b *BlockStorage) GetBlock(
+	ctx context.Context,
+	blockIdentifier *types.PartialBlockIdentifier,
+) (*types.Block, error) {
+	transaction := b.db.NewDatabaseTransaction(ctx, false)
+	defer transaction.Discard(ctx)
+
+	blockResponse, err := b.getBlockResponse(ctx, blockIdentifier, transaction)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(blockResponse.OtherTransactions) == 0 {
+		return blockResponse.Block, nil
+	}
+
+	// Fetch all transactions in block
+	block := blockResponse.Block
+	txs := make([]*types.Transaction, len(blockResponse.OtherTransactions))
+	for i, transactionIdentifier := range blockResponse.OtherTransactions {
+		tx, err := b.findBlockTransaction(
+			ctx,
+			block.BlockIdentifier,
+			transactionIdentifier,
+			transaction,
+		)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"%w: could not get transaction %s",
+				err,
+				transactionIdentifier.Hash,
+			)
+		}
+
+		txs[i] = tx
+	}
+	block.Transactions = txs
+
+	return block, nil
 }
 
 func (b *BlockStorage) storeBlock(
 	ctx context.Context,
 	transaction DatabaseTransaction,
-	block *types.Block,
+	blockResponse *types.BlockResponse,
 ) error {
-	buf, err := encode(block)
+	buf, err := encode(blockResponse)
 	if err != nil {
 		return fmt.Errorf("%w: unable to encode block", err)
 	}
 
-	if err := b.storeUniqueKey(ctx, transaction, getBlockHashKey(block.BlockIdentifier.Hash), buf); err != nil {
+	blockIdentifier := blockResponse.Block.BlockIdentifier
+
+	if err := storeUniqueKey(ctx, transaction, getBlockHashKey(blockIdentifier.Hash), buf); err != nil {
 		return fmt.Errorf("%w: unable to store block", err)
 	}
 
-	if err := b.storeUniqueKey(
+	if err := storeUniqueKey(
 		ctx,
 		transaction,
-		getBlockIndexKey(block.BlockIdentifier.Index),
-		getBlockHashKey(block.BlockIdentifier.Hash),
+		getBlockIndexKey(blockIdentifier.Index),
+		getBlockHashKey(blockIdentifier.Hash),
 	); err != nil {
 		return fmt.Errorf("%w: unable to store block index", err)
 	}
 
-	if err := b.StoreHeadBlockIdentifier(ctx, transaction, block.BlockIdentifier); err != nil {
+	if err := b.StoreHeadBlockIdentifier(ctx, transaction, blockIdentifier); err != nil {
 		return fmt.Errorf("%w: unable to update head block identifier", err)
 	}
 
@@ -253,19 +316,38 @@ func (b *BlockStorage) AddBlock(
 	transaction := b.db.NewDatabaseTransaction(ctx, true)
 	defer transaction.Discard(ctx)
 
+	// Store all transactions
+	identifiers := make([]*types.TransactionIdentifier, len(block.Transactions))
+	for i, txn := range block.Transactions {
+		identifiers[i] = txn.TransactionIdentifier
+	}
+
+	// Make copy of block and remove all transactions
+	var copyBlock types.Block
+	if err := copyStruct(block, &copyBlock); err != nil {
+		return fmt.Errorf("%w: unable to copy block", err)
+	}
+
+	copyBlock.Transactions = nil
+
+	// Prepare block for storage
+	blockWithoutTransactions := &types.BlockResponse{
+		Block:             &copyBlock,
+		OtherTransactions: identifiers,
+	}
+
 	// Store block
-	err := b.storeBlock(ctx, transaction, block)
+	err := b.storeBlock(ctx, transaction, blockWithoutTransactions)
 	if err != nil {
 		return fmt.Errorf("%w: unable to store block", err)
 	}
 
-	// Store all transaction hashes
 	for _, txn := range block.Transactions {
-		err = b.storeTransactionHash(
+		err := b.storeTransaction(
 			ctx,
 			transaction,
 			block.BlockIdentifier,
-			txn.TransactionIdentifier,
+			txn,
 		)
 		if err != nil {
 			return fmt.Errorf("%w: unable to store transaction hash", err)
@@ -314,7 +396,7 @@ func (b *BlockStorage) RemoveBlock(
 
 	// Remove all transaction hashes
 	for _, txn := range block.Transactions {
-		err = b.removeTransactionHash(ctx, transaction, blockIdentifier, txn.TransactionIdentifier)
+		err = b.removeTransaction(ctx, transaction, blockIdentifier, txn.TransactionIdentifier)
 		if err != nil {
 			return err
 		}
@@ -436,7 +518,7 @@ func (b *BlockStorage) CreateBlockCache(ctx context.Context) []*types.BlockIdent
 	return cache
 }
 
-func (b *BlockStorage) storeUniqueKey(
+func storeUniqueKey(
 	ctx context.Context,
 	transaction DatabaseTransaction,
 	key []byte,
@@ -454,21 +536,21 @@ func (b *BlockStorage) storeUniqueKey(
 	return transaction.Set(ctx, key, value)
 }
 
-func (b *BlockStorage) storeTransactionHash(
+func (b *BlockStorage) storeTransaction(
 	ctx context.Context,
 	transaction DatabaseTransaction,
 	blockIdentifier *types.BlockIdentifier,
-	transactionIdentifier *types.TransactionIdentifier,
+	tx *types.Transaction,
 ) error {
-	hashKey := getTransactionHashKey(transactionIdentifier)
+	hashKey := getTransactionHashKey(tx.TransactionIdentifier)
 	exists, val, err := transaction.Get(ctx, hashKey)
 	if err != nil {
 		return err
 	}
 
-	var blocks map[string]int64
+	var blocks map[string]*blockTransaction
 	if !exists {
-		blocks = make(map[string]int64)
+		blocks = make(map[string]*blockTransaction)
 	} else {
 		if err := decode(val, &blocks); err != nil {
 			return fmt.Errorf("%w: could not decode transaction hash contents", err)
@@ -478,13 +560,16 @@ func (b *BlockStorage) storeTransactionHash(
 			return fmt.Errorf(
 				"%w: duplicate transaction %s found in block %s:%d",
 				ErrDuplicateTransactionHash,
-				transactionIdentifier.Hash,
+				tx.TransactionIdentifier.Hash,
 				blockIdentifier.Hash,
 				blockIdentifier.Index,
 			)
 		}
 	}
-	blocks[blockIdentifier.Hash] = blockIdentifier.Index
+	blocks[blockIdentifier.Hash] = &blockTransaction{
+		Transaction: tx,
+		BlockIndex:  blockIdentifier.Index,
+	}
 
 	encodedResult, err := encode(blocks)
 	if err != nil {
@@ -494,7 +579,7 @@ func (b *BlockStorage) storeTransactionHash(
 	return transaction.Set(ctx, hashKey, encodedResult)
 }
 
-func (b *BlockStorage) removeTransactionHash(
+func (b *BlockStorage) removeTransaction(
 	ctx context.Context,
 	transaction DatabaseTransaction,
 	blockIdentifier *types.BlockIdentifier,
@@ -510,7 +595,7 @@ func (b *BlockStorage) removeTransactionHash(
 		return fmt.Errorf("could not remove transaction %s", transactionIdentifier.Hash)
 	}
 
-	var blocks map[string]int64
+	var blocks map[string]*blockTransaction
 	if err := decode(val, &blocks); err != nil {
 		return fmt.Errorf("%w: could not decode transaction hash contents", err)
 	}
@@ -549,46 +634,68 @@ func (b *BlockStorage) FindTransaction(
 		return nil, nil, nil
 	}
 
-	var blocks map[string]int64
+	var blocks map[string]*blockTransaction
 	if err := decode(tx, &blocks); err != nil {
 		return nil, nil, fmt.Errorf("%w: unable to decode block data for transaction", err)
 	}
 
 	var newestBlock *types.BlockIdentifier
-	for hash, index := range blocks {
-		b := &types.BlockIdentifier{Hash: hash, Index: index}
-		if newestBlock == nil || b.Index > newestBlock.Index {
+	var newestTransaction *types.Transaction
+	for hash, blockTransaction := range blocks {
+		b := &types.BlockIdentifier{Hash: hash, Index: blockTransaction.BlockIndex}
+		if newestBlock == nil || blockTransaction.BlockIndex > newestBlock.Index {
 			newestBlock = b
+			newestTransaction = blockTransaction.Transaction
 		}
 	}
 
-	blockExists, block, err := txn.Get(ctx, getBlockHashKey(newestBlock.Hash))
+	return newestBlock, newestTransaction, nil
+}
+
+func (b *BlockStorage) findBlockTransaction(
+	ctx context.Context,
+	blockIdentifier *types.BlockIdentifier,
+	transactionIdentifier *types.TransactionIdentifier,
+	txn DatabaseTransaction,
+) (*types.Transaction, error) {
+	txExists, tx, err := txn.Get(ctx, getTransactionHashKey(transactionIdentifier))
 	if err != nil {
-		return nil, nil, fmt.Errorf("%w: unable to query database for block", err)
+		return nil, fmt.Errorf("%w: unable to query database for transaction", err)
 	}
 
-	if !blockExists {
-		return nil, nil, ErrBlockNotFound
+	if !txExists {
+		return nil, fmt.Errorf("unable to find transaction %s", transactionIdentifier.Hash)
 	}
 
-	var parsedBlock *types.Block
-	err = decode(block, &parsedBlock)
-	if err != nil {
-		return nil, nil, fmt.Errorf("%w: could not decode block", err)
+	var blocks map[string]*blockTransaction
+	if err := decode(tx, &blocks); err != nil {
+		return nil, fmt.Errorf("%w: unable to decode block data for transaction", err)
 	}
 
-	for _, tx := range parsedBlock.Transactions {
-		if types.Hash(tx.TransactionIdentifier) == types.Hash(transactionIdentifier) {
-			return newestBlock, tx, nil
-		}
+	val, ok := blocks[blockIdentifier.Hash]
+	if !ok {
+		return nil, fmt.Errorf(
+			"transaction %s does not exist in block %s",
+			transactionIdentifier.Hash,
+			blockIdentifier.Hash,
+		)
 	}
 
-	return nil, nil, fmt.Errorf(
-		"unable to find transaction %s in expected block %s:%d",
-		transactionIdentifier.Hash,
-		newestBlock.Hash,
-		newestBlock.Index,
-	)
+	return val.Transaction, nil
+}
+
+// GetBlockTransaction retrieves a transaction belonging to a certain
+// block in a database transaction. This is usually used to implement
+// /block/transaction.
+func (b *BlockStorage) GetBlockTransaction(
+	ctx context.Context,
+	blockIdentifier *types.BlockIdentifier,
+	transactionIdentifier *types.TransactionIdentifier,
+) (*types.Transaction, error) {
+	transaction := b.db.NewDatabaseTransaction(ctx, false)
+	defer transaction.Discard(ctx)
+
+	return b.findBlockTransaction(ctx, blockIdentifier, transactionIdentifier, transaction)
 }
 
 // AtTip returns a boolean indicating if we
