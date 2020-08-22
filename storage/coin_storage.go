@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"strings"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
 	"github.com/coinbase/rosetta-sdk-go/types"
@@ -26,8 +27,8 @@ import (
 )
 
 const (
-	coinNamespace        = "coinNamespace"
-	coinAccountNamespace = "coinAccountNamespace"
+	coinNamespace        = "coin"
+	coinAccountNamespace = "coin-account"
 )
 
 var _ BlockWorker = (*CoinStorage)(nil)
@@ -70,8 +71,17 @@ func getCoinKey(identifier *types.CoinIdentifier) []byte {
 	return []byte(fmt.Sprintf("%s/%s", coinNamespace, identifier.Identifier))
 }
 
-func getCoinAccountKey(accountIdentifier *types.AccountIdentifier) []byte {
+func getCoinAccountPrefix(accountIdentifier *types.AccountIdentifier) []byte {
 	return []byte(fmt.Sprintf("%s/%s", coinAccountNamespace, types.Hash(accountIdentifier)))
+}
+
+func getCoinAccountCoin(
+	accountIdentifier *types.AccountIdentifier,
+	coinIdentifier *types.CoinIdentifier,
+) []byte {
+	return []byte(
+		fmt.Sprintf("%s/%s", getCoinAccountPrefix(accountIdentifier), coinIdentifier.Identifier),
+	)
 }
 
 func getAndDecodeCoin(
@@ -96,8 +106,6 @@ func getAndDecodeCoin(
 	return true, &coin, nil
 }
 
-type wallets map[string]map[string]struct{}
-
 // AccountCoin contains an AccountIdentifier and a Coin that it owns
 type AccountCoin struct {
 	Account *types.AccountIdentifier
@@ -113,7 +121,6 @@ func (c *CoinStorage) AddCoins(
 	dbTransaction := c.db.NewDatabaseTransaction(ctx, true)
 	defer dbTransaction.Discard(ctx)
 
-	cache := wallets{}
 	for _, accountCoin := range accountCoins {
 		exists, _, err := getAndDecodeCoin(ctx, dbTransaction, accountCoin.Coin.CoinIdentifier)
 		if err != nil {
@@ -124,14 +131,10 @@ func (c *CoinStorage) AddCoins(
 			continue
 		}
 
-		err = addCoin(ctx, accountCoin.Account, accountCoin.Coin, dbTransaction, cache)
+		err = addCoin(ctx, accountCoin.Account, accountCoin.Coin, dbTransaction)
 		if err != nil {
 			return fmt.Errorf("%w: unable to add coin", err)
 		}
-	}
-
-	if err := writeCache(ctx, dbTransaction, cache); err != nil {
-		return fmt.Errorf("%w: unable to update wallets", err)
 	}
 
 	if err := dbTransaction.Commit(ctx); err != nil {
@@ -146,42 +149,19 @@ func addCoin(
 	account *types.AccountIdentifier,
 	coin *types.Coin,
 	transaction DatabaseTransaction,
-	cache wallets,
 ) error {
 	encodedResult, err := encode(coin)
 	if err != nil {
 		return fmt.Errorf("%w: unable to encode coin data", err)
 	}
 
-	if err := transaction.Set(ctx, getCoinKey(coin.CoinIdentifier), encodedResult); err != nil {
+	if err := storeUniqueKey(ctx, transaction, getCoinKey(coin.CoinIdentifier), encodedResult); err != nil {
 		return fmt.Errorf("%w: unable to store coin", err)
 	}
 
-	addressKey := string(getCoinAccountKey(account))
-	coins, ok := cache[addressKey]
-	if !ok {
-		accountExists, accountCoins, err := getAndDecodeCoins(ctx, transaction, account)
-		if err != nil {
-			return fmt.Errorf("%w: unable to query coin account", err)
-		}
-
-		if !accountExists {
-			accountCoins = map[string]struct{}{}
-		}
-
-		coins = accountCoins
+	if err := storeUniqueKey(ctx, transaction, getCoinAccountCoin(account, coin.CoinIdentifier), []byte("")); err != nil {
+		return fmt.Errorf("%w: unable to store account coin", err)
 	}
-	coinIdentifier := coin.CoinIdentifier.Identifier
-	if _, exists := coins[coinIdentifier]; exists {
-		return fmt.Errorf(
-			"coin %s already exists in account %s",
-			coinIdentifier,
-			types.PrintStruct(account),
-		)
-	}
-
-	coins[coinIdentifier] = struct{}{}
-	cache[addressKey] = coins
 
 	return nil
 }
@@ -191,7 +171,6 @@ func (c *CoinStorage) tryAddingCoin(
 	transaction DatabaseTransaction,
 	operation *types.Operation,
 	action types.CoinAction,
-	cache wallets,
 ) error {
 	if operation.CoinChange == nil {
 		return errors.New("coin change cannot be nil")
@@ -208,47 +187,27 @@ func (c *CoinStorage) tryAddingCoin(
 		Amount:         operation.Amount,
 	}
 
-	return addCoin(ctx, operation.Account, newCoin, transaction, cache)
-}
-
-func encodeAndSetCoins(
-	ctx context.Context,
-	transaction DatabaseTransaction,
-	accountKey []byte,
-	coins map[string]struct{},
-) error {
-	encodedResult, err := encode(coins)
-	if err != nil {
-		return fmt.Errorf("%w: unable to encode coins", err)
-	}
-
-	if err := transaction.Set(ctx, accountKey, encodedResult); err != nil {
-		return fmt.Errorf("%w: unable to set coin account", err)
-	}
-
-	return nil
+	return addCoin(ctx, operation.Account, newCoin, transaction)
 }
 
 func getAndDecodeCoins(
 	ctx context.Context,
 	transaction DatabaseTransaction,
 	accountIdentifier *types.AccountIdentifier,
-) (bool, map[string]struct{}, error) {
-	accountExists, val, err := transaction.Get(ctx, getCoinAccountKey(accountIdentifier))
+) (map[string]struct{}, error) {
+	items, err := transaction.Scan(ctx, getCoinAccountPrefix(accountIdentifier))
 	if err != nil {
-		return false, nil, fmt.Errorf("%w: unable to query coin account", err)
+		return nil, fmt.Errorf("%w: unable to query coins for account", err)
 	}
 
-	if !accountExists {
-		return false, nil, nil
+	coins := map[string]struct{}{}
+	for _, item := range items {
+		vals := strings.Split(string(item.Key), "/")
+		coinIdentifier := vals[len(vals)-1]
+		coins[coinIdentifier] = struct{}{}
 	}
 
-	var coins map[string]struct{}
-	if err := decode(val, &coins); err != nil {
-		return false, nil, fmt.Errorf("%w: unable to decode coin account", err)
-	}
-
-	return true, coins, nil
+	return coins, nil
 }
 
 func (c *CoinStorage) tryRemovingCoin(
@@ -256,7 +215,6 @@ func (c *CoinStorage) tryRemovingCoin(
 	transaction DatabaseTransaction,
 	operation *types.Operation,
 	action types.CoinAction,
-	cache wallets,
 ) error {
 	if operation.CoinChange == nil {
 		return errors.New("coin change cannot be nil")
@@ -281,43 +239,8 @@ func (c *CoinStorage) tryRemovingCoin(
 		return fmt.Errorf("%w: unable to delete coin", err)
 	}
 
-	addressKey := string(getCoinAccountKey(operation.Account))
-	coins, ok := cache[addressKey]
-	if !ok {
-		accountExists, accountCoins, err := getAndDecodeCoins(ctx, transaction, operation.Account)
-		if err != nil {
-			return fmt.Errorf("%w: unable to query coin account", err)
-		}
-
-		if !accountExists {
-			return fmt.Errorf("%w: unable to find owner of coin", err)
-		}
-
-		coins = accountCoins
-	}
-
-	if _, exists := coins[coinIdentifier.Identifier]; !exists {
-		return fmt.Errorf(
-			"unable to find coin %s in account %s",
-			coinIdentifier,
-			types.PrettyPrintStruct(operation.Account),
-		)
-	}
-
-	delete(coins, coinIdentifier.Identifier)
-	cache[addressKey] = coins
-
-	return nil
-}
-
-// writeCache commits all changes stored in the cache to the database. This ensures
-// that any block only ever contains 1 write per account identifier to update
-// their persisted wallet.
-func writeCache(ctx context.Context, transaction DatabaseTransaction, cache wallets) error {
-	for account, coins := range cache {
-		if err := encodeAndSetCoins(ctx, transaction, []byte(account), coins); err != nil {
-			return fmt.Errorf("%w: unable to set coins", err)
-		}
+	if err := transaction.Delete(ctx, getCoinAccountCoin(operation.Account, coinIdentifier)); err != nil {
+		return fmt.Errorf("%w: unable to delete coin", err)
 	}
 
 	return nil
@@ -329,7 +252,6 @@ func (c *CoinStorage) AddingBlock(
 	block *types.Block,
 	transaction DatabaseTransaction,
 ) (CommitWorker, error) {
-	cache := wallets{}
 	for _, txn := range block.Transactions {
 		for _, operation := range txn.Operations {
 			if operation.CoinChange == nil {
@@ -349,18 +271,14 @@ func (c *CoinStorage) AddingBlock(
 				continue
 			}
 
-			if err := c.tryAddingCoin(ctx, transaction, operation, types.CoinCreated, cache); err != nil {
+			if err := c.tryAddingCoin(ctx, transaction, operation, types.CoinCreated); err != nil {
 				return nil, fmt.Errorf("%w: unable to add coin", err)
 			}
 
-			if err := c.tryRemovingCoin(ctx, transaction, operation, types.CoinSpent, cache); err != nil {
+			if err := c.tryRemovingCoin(ctx, transaction, operation, types.CoinSpent); err != nil {
 				return nil, fmt.Errorf("%w: unable to remove coin", err)
 			}
 		}
-	}
-
-	if err := writeCache(ctx, transaction, cache); err != nil {
-		return nil, fmt.Errorf("%w: unable to update wallets", err)
 	}
 
 	return nil, nil
@@ -372,7 +290,6 @@ func (c *CoinStorage) RemovingBlock(
 	block *types.Block,
 	transaction DatabaseTransaction,
 ) (CommitWorker, error) {
-	cache := wallets{}
 	for _, txn := range block.Transactions {
 		for _, operation := range txn.Operations {
 			if operation.CoinChange == nil {
@@ -394,18 +311,14 @@ func (c *CoinStorage) RemovingBlock(
 
 			// We add spent coins and remove created coins during a re-org (opposite of
 			// AddingBlock).
-			if err := c.tryAddingCoin(ctx, transaction, operation, types.CoinSpent, cache); err != nil {
+			if err := c.tryAddingCoin(ctx, transaction, operation, types.CoinSpent); err != nil {
 				return nil, fmt.Errorf("%w: unable to add coin", err)
 			}
 
-			if err := c.tryRemovingCoin(ctx, transaction, operation, types.CoinCreated, cache); err != nil {
+			if err := c.tryRemovingCoin(ctx, transaction, operation, types.CoinCreated); err != nil {
 				return nil, fmt.Errorf("%w: unable to remove coin", err)
 			}
 		}
-	}
-
-	if err := writeCache(ctx, transaction, cache); err != nil {
-		return nil, fmt.Errorf("%w: unable to update wallets", err)
 	}
 
 	return nil, nil
@@ -419,7 +332,7 @@ func (c *CoinStorage) GetCoins(
 	transaction := c.db.NewDatabaseTransaction(ctx, false)
 	defer transaction.Discard(ctx)
 
-	accountExists, coins, err := getAndDecodeCoins(ctx, transaction, accountIdentifier)
+	coins, err := getAndDecodeCoins(ctx, transaction, accountIdentifier)
 	if err != nil {
 		return nil, nil, fmt.Errorf("%w: unable to query account identifier", err)
 	}
@@ -427,10 +340,6 @@ func (c *CoinStorage) GetCoins(
 	headBlockIdentifier, err := c.helper.CurrentBlockIdentifier(ctx, transaction)
 	if err != nil {
 		return nil, nil, fmt.Errorf("%w: unable to get current block identifier", err)
-	}
-
-	if !accountExists {
-		return []*types.Coin{}, headBlockIdentifier, nil
 	}
 
 	coinArr := []*types.Coin{}

@@ -16,9 +16,13 @@ package storage
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 
+	"github.com/coinbase/rosetta-sdk-go/types"
+
+	"github.com/DataDog/zstd"
 	msgpack "github.com/vmihailenco/msgpack/v5"
 )
 
@@ -36,7 +40,12 @@ func encode(object interface{}) ([]byte, error) {
 		return nil, fmt.Errorf("%w: could not encode object", err)
 	}
 
-	return buf.Bytes(), nil
+	compressed, err := zstd.Compress(nil, buf.Bytes())
+	if err != nil {
+		return nil, fmt.Errorf("%w: could not compress object", err)
+	}
+
+	return compressed, nil
 }
 
 func getDecoder(r io.Reader) *msgpack.Decoder {
@@ -47,9 +56,23 @@ func getDecoder(r io.Reader) *msgpack.Decoder {
 }
 
 func decode(b []byte, object interface{}) error {
-	err := getDecoder(bytes.NewReader(b)).Decode(&object)
+	decompressed, err := zstd.Decompress(nil, b)
+	if err != nil {
+		return fmt.Errorf("%w: unable to decompress object", err)
+	}
+
+	err = getDecoder(bytes.NewReader(decompressed)).Decode(&object)
 	if err != nil {
 		return fmt.Errorf("%w: unable to decode bytes", err)
+	}
+
+	return nil
+}
+
+func copyStruct(input interface{}, output interface{}) error {
+	inputString := types.PrintStruct(input)
+	if err := json.Unmarshal([]byte(inputString), &output); err != nil {
+		return fmt.Errorf("%w: unable to copy block", err)
 	}
 
 	return nil

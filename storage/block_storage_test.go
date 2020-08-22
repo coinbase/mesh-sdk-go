@@ -168,6 +168,24 @@ var (
 			simpleTransactionFactory("blahTx", "addr1", "100", &types.Currency{Symbol: "hello"}),
 		},
 	}
+	lazyBlock2 = &types.BlockResponse{
+		Block: &types.Block{
+			BlockIdentifier: &types.BlockIdentifier{
+				Hash:  "blah 2",
+				Index: 2,
+			},
+			ParentBlockIdentifier: &types.BlockIdentifier{
+				Hash:  "blah 1",
+				Index: 1,
+			},
+			Timestamp: 1,
+		},
+		OtherTransactions: []*types.TransactionIdentifier{
+			{
+				Hash: "blahTx",
+			},
+		},
+	}
 
 	complexBlock = &types.Block{
 		BlockIdentifier: &types.BlockIdentifier{
@@ -384,6 +402,18 @@ func TestBlock(t *testing.T) {
 		block, err = storage.GetBlock(ctx, nil)
 		assert.NoError(t, err)
 		assert.Equal(t, newBlock2, block)
+
+		blockLazy, err := storage.GetBlockLazy(ctx, nil)
+		assert.NoError(t, err)
+		assert.Equal(t, lazyBlock2, blockLazy)
+
+		blockTransaction, err := storage.GetBlockTransaction(
+			ctx,
+			blockLazy.Block.BlockIdentifier,
+			blockLazy.OtherTransactions[0],
+		)
+		assert.NoError(t, err)
+		assert.Equal(t, newBlock2.Transactions[0], blockTransaction)
 
 		head, err := storage.GetHeadBlockIdentifier(ctx)
 		assert.NoError(t, err)
