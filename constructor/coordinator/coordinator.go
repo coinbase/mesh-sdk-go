@@ -322,6 +322,14 @@ func (c *Coordinator) resetVars() {
 	c.seenErrCreateAccount = false
 }
 
+func (c *Coordinator) addToUnprocessed(job *executor.Job) {
+	if len(job.Identifier) == 0 {
+		c.attemptedWorkflows = append(c.attemptedWorkflows, job.Workflow)
+		return
+	}
+	c.attemptedJobs = append(c.attemptedJobs, job.Identifier)
+}
+
 // Process creates and executes jobs
 // until failure.
 func (c *Coordinator) Process(
@@ -360,23 +368,12 @@ func (c *Coordinator) Process(
 
 		broadcast, err := job.Process(ctx, executor.NewWorker(c.helper))
 		if errors.Is(err, executor.ErrCreateAccount) {
-			// TODO: unify this error logic
-			if len(job.Identifier) == 0 {
-				c.attemptedWorkflows = append(c.attemptedWorkflows, job.Workflow)
-			} else {
-				c.attemptedJobs = append(c.attemptedJobs, job.Identifier)
-			}
-
+			c.addToUnprocessed(job)
 			c.seenErrCreateAccount = true
 			continue
 		}
 		if errors.Is(err, executor.ErrUnsatisfiable) {
-			if len(job.Identifier) == 0 {
-				c.attemptedWorkflows = append(c.attemptedWorkflows, job.Workflow)
-			} else {
-				c.attemptedJobs = append(c.attemptedJobs, job.Identifier)
-			}
-
+			c.addToUnprocessed(job)
 			continue
 		}
 		if err != nil {
