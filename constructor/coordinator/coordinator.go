@@ -311,7 +311,7 @@ func (c *Coordinator) BroadcastComplete(
 		return fmt.Errorf("%w: unable to commit job update", err)
 	}
 
-	log.Printf("broadcast complete for %s\n", jobIdentifier)
+	log.Printf(`broadcast complete for "%s"`, jobIdentifier)
 
 	return nil
 }
@@ -329,7 +329,7 @@ func (c *Coordinator) Process(
 ) error {
 	for ctx.Err() == nil {
 		if !c.helper.HeadBlockExists(ctx) {
-			log.Println("Waiting for first block synced...")
+			log.Println("waiting for first block synced...")
 
 			// We will sleep until at least one block has been synced.
 			// Many of the storage-based commands require a synced block
@@ -342,7 +342,7 @@ func (c *Coordinator) Process(
 		// Attempt to find a Job to process.
 		job, err := c.findJob(ctx)
 		if errors.Is(err, ErrNoAvailableJobs) {
-			log.Println("No available jobs...")
+			log.Println("waiting for available jobs...")
 
 			time.Sleep(NoJobsWaitTime)
 			c.resetVars()
@@ -352,7 +352,7 @@ func (c *Coordinator) Process(
 			return fmt.Errorf("%w: unable to find job", err)
 		}
 
-		statusMessage := fmt.Sprintf(`Processing workflow "%s"`, job.Workflow)
+		statusMessage := fmt.Sprintf(`processing workflow "%s"`, job.Workflow)
 		if len(job.Identifier) > 0 {
 			statusMessage = fmt.Sprintf(`%s with identifier "%s"`, statusMessage, job.Identifier)
 		}
@@ -383,8 +383,6 @@ func (c *Coordinator) Process(
 			return fmt.Errorf("%w: unable to process job", err)
 		}
 
-		log.Printf("processed %s\n", job.Workflow)
-
 		// Update job and store broadcast in a single DB transaction.
 		dbTransaction := c.helper.DatabaseTransaction(ctx)
 		defer dbTransaction.Discard(ctx)
@@ -399,7 +397,6 @@ func (c *Coordinator) Process(
 			return fmt.Errorf("%w: unable to update job", err)
 		}
 
-		log.Printf("broadcast for %s is %v\n", job.Workflow, broadcast)
 		if broadcast != nil {
 			// Construct Transaction
 			transactionIdentifier, networkTransaction, err := c.createTransaction(ctx, broadcast)
@@ -419,6 +416,8 @@ func (c *Coordinator) Process(
 			); err != nil {
 				return fmt.Errorf("%w: unable to enque broadcast", err)
 			}
+
+			log.Printf("created transaction for job %s\n", jobIdentifier)
 		}
 
 		// Commit db transaction
@@ -434,7 +433,7 @@ func (c *Coordinator) Process(
 		// Reset all vars
 		c.resetVars()
 
-		// TODO: print message "processed workflow (+ job)"
+		log.Printf(`processed workflow "%s" with identifier "%s"`, job.Workflow, jobIdentifier)
 	}
 
 	return ctx.Err()
