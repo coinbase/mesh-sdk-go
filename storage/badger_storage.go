@@ -233,14 +233,14 @@ func (b *BadgerTransaction) Scan(
 	defer it.Close()
 	for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
 		item := it.Item()
-		key := item.KeyCopy(nil)
+		k := item.KeyCopy(nil)
 		v, err := item.ValueCopy(nil)
 		if err != nil {
-			return nil, fmt.Errorf("%w: unable to get value for key %s", err, string(key))
+			return nil, fmt.Errorf("%w: unable to get value for key %s", err, string(k))
 		}
 
 		values = append(values, &ScanItem{
-			Key:   []byte(string(key)),
+			Key:   k,
 			Value: v,
 		})
 	}
