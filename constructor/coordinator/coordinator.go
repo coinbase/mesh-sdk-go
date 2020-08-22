@@ -115,7 +115,7 @@ func (c *Coordinator) findJob(
 			)
 		}
 
-		if processing > workflow.Concurrency {
+		if processing >= workflow.Concurrency {
 			continue
 		}
 
@@ -147,7 +147,7 @@ func (c *Coordinator) findJob(
 			)
 		}
 
-		if processing > ReservedWorkflowConcurrency {
+		if processing >= ReservedWorkflowConcurrency {
 			return nil, ErrNoAvailableJobs
 		}
 
@@ -172,7 +172,7 @@ func (c *Coordinator) findJob(
 		)
 	}
 
-	if processing > ReservedWorkflowConcurrency {
+	if processing >= ReservedWorkflowConcurrency {
 		return nil, ErrNoAvailableJobs
 	}
 
@@ -310,6 +310,8 @@ func (c *Coordinator) BroadcastComplete(
 	if err := dbTx.Commit(ctx); err != nil {
 		return fmt.Errorf("%w: unable to commit job update", err)
 	}
+
+	log.Printf("broadcast complete for %s\n", jobIdentifier)
 
 	return nil
 }
