@@ -476,7 +476,8 @@ func (w *Worker) FindBalanceWorker(ctx context.Context, rawInput string) (string
 
 	// If we should create an account and the number of addresses
 	// we have is less than the limit, we return ErrCreateAccount.
-	if input.Create != -1 && len(addresses) <= input.Create {
+	// Note, we must also be looking for an account with a 0 balance.
+	if input.Create > 0 && len(addresses) <= input.Create && input.MinimumBalance.Value == "0" {
 		return "", ErrCreateAccount
 	}
 

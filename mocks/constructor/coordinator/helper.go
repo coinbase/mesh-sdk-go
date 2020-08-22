@@ -42,29 +42,6 @@ func (_m *Helper) AllAddresses(ctx context.Context) ([]string, error) {
 	return r0, r1
 }
 
-// AllBroadcasts provides a mock function with given fields: ctx
-func (_m *Helper) AllBroadcasts(ctx context.Context) ([]*storage.Broadcast, error) {
-	ret := _m.Called(ctx)
-
-	var r0 []*storage.Broadcast
-	if rf, ok := ret.Get(0).(func(context.Context) []*storage.Broadcast); ok {
-		r0 = rf(ctx)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]*storage.Broadcast)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
-		r1 = rf(ctx)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
 // Balance provides a mock function with given fields: _a0, _a1
 func (_m *Helper) Balance(_a0 context.Context, _a1 *types.AccountIdentifier) ([]*types.Amount, error) {
 	ret := _m.Called(_a0, _a1)

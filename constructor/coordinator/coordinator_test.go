@@ -64,7 +64,7 @@ func defaultParser(t *testing.T) *parser.Parser {
 	return parser.New(asserter, nil)
 }
 
-func TestProcess_RequestCreate(t *testing.T) {
+func TestProcess(t *testing.T) {
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
 
@@ -128,6 +128,62 @@ func TestProcess_RequestCreate(t *testing.T) {
 				},
 			},
 		},
+		{
+			Name:        "transfer",
+			Concurrency: 1,
+			Scenarios: []*executor.Scenario{
+				{
+					Name: "transfer",
+					Actions: []*executor.Action{
+						{
+							Type:       executor.SetVariable,
+							Input:      `{"network":"Testnet3", "blockchain":"Bitcoin"}`,
+							OutputPath: "transfer.network",
+						},
+						{
+							Type:       executor.SetVariable,
+							Input:      `{"symbol":"tBTC", "decimals":8}`,
+							OutputPath: "currency",
+						},
+						{
+							Type:       executor.FindBalance,
+							Input:      `{"minimum_balance":{"value": "100", "currency": {{currency}}}, "create": 100}`, // nolint
+							OutputPath: "sender",
+						},
+						{
+							Type:       executor.Math,
+							Input:      `{"operation":"subtraction", "left_value": "0", "right_value":{{sender.balance.value}}}`,
+							OutputPath: "sender_amount",
+						},
+						{
+							Type:       executor.FindBalance,
+							Input:      `{"not_address":[{{sender.account.address}}], "minimum_balance":{"value": "0", "currency": {{currency}}}, "create": 100}`, // nolint
+							OutputPath: "recipient",
+						},
+						{
+							Type:       executor.Math,
+							Input:      `{"operation":"subtraction", "left_value":{{sender.balance.value}}, "right_value":"10"}`,
+							OutputPath: "recipient_amount",
+						},
+						{
+							Type:       executor.SetVariable,
+							Input:      `"1"`,
+							OutputPath: "transfer.confirmation_depth",
+						},
+						{
+							Type:       executor.SetVariable,
+							Input:      `{"test": "works"}`,
+							OutputPath: "transfer.preprocess_metadata",
+						},
+						{
+							Type:       executor.SetVariable,
+							Input:      `[{"operation_identifier":{"index":0},"type":"Vin","status":"","account":{"address":{{sender.account.address}}},"amount":{"value":{{sender_amount}},"currency":{{currency}}}},{"operation_identifier":{"index":1},"type":"Vout","status":"","account":{"address":{{recipient.account.address}}},"amount":{"value":{{recipient_amount}},"currency":{{currency}}}}]`, // nolint
+							OutputPath: "transfer.operations",
+						},
+					},
+				},
+			},
+		},
 	}
 
 	c, err := NewCoordinator(
@@ -138,6 +194,10 @@ func TestProcess_RequestCreate(t *testing.T) {
 	)
 	assert.NotNil(t, c)
 	assert.NoError(t, err)
+
+	// Create coordination channels
+	processCanceled := make(chan struct{})
+	fundsProvided := make(chan struct{})
 
 	dir, err := utils.CreateTempDir()
 	assert.NoError(t, err)
@@ -150,19 +210,16 @@ func TestProcess_RequestCreate(t *testing.T) {
 	helper.On("HeadBlockExists", ctx).Return(false).Once()
 	helper.On("HeadBlockExists", ctx).Return(true).Once()
 
-	// Determine should request_funds
+	// Attempt to transfer
 	jobStorage.On("Ready", ctx).Return([]*executor.Job{}, nil).Once()
-	helper.On("AllBroadcasts", ctx).Return([]*storage.Broadcast{}, nil).Once()
-	helper.On("AllAddresses", ctx).Return([]string{}, nil).Once()
-	jobStorage.On("Processing", ctx, "request_funds").Return(0, nil).Once()
+	jobStorage.On("Processing", ctx, "transfer").Return(0, nil).Once()
 
-	// Determine need address to request_funds
+	// Determine account must be created
 	helper.On("HeadBlockExists", ctx).Return(true).Once()
 	jobStorage.On("Ready", ctx).Return([]*executor.Job{}, nil).Once()
-	helper.On("AllBroadcasts", ctx).Return([]*storage.Broadcast{}, nil).Once()
+	helper.On("AllAddresses", ctx).Return([]string{}, nil).Once()
+	jobStorage.On("Broadcasting", ctx).Return([]*executor.Job{}, nil).Once()
 	jobStorage.On("Processing", ctx, "create_account").Return(0, nil).Once()
-
-	// Perform create_account
 	helper.On(
 		"Derive",
 		ctx,
@@ -184,10 +241,43 @@ func TestProcess_RequestCreate(t *testing.T) {
 	jobStorage.On("Update", ctx, dbTx, mock.Anything).Return("job1", nil).Once()
 	helper.On("BroadcastAll", ctx).Return(nil).Once()
 
-	// Attempt to request funds on "address1"
+	// Attempt to run transfer again (but determine funds are needed)
 	helper.On("HeadBlockExists", ctx).Return(true).Once()
 	jobStorage.On("Ready", ctx).Return([]*executor.Job{}, nil).Once()
-	helper.On("AllBroadcasts", ctx).Return([]*storage.Broadcast{}, nil).Once()
+	jobStorage.On("Processing", ctx, "transfer").Return(0, nil).Once()
+	helper.On("AllAddresses", ctx).Return([]string{"address1"}, nil).Once()
+	helper.On("LockedAddresses", ctx).Return([]string{}, nil).Once()
+	helper.On(
+		"Balance",
+		ctx,
+		&types.AccountIdentifier{Address: "address1"},
+	).Return(
+		[]*types.Amount{
+			{
+				Value: "0",
+				Currency: &types.Currency{
+					Symbol:   "tBTC",
+					Decimals: 8,
+				},
+			},
+		},
+		nil,
+	).Once()
+
+	go func() {
+		err := c.Process(ctx)
+		fmt.Println(err)
+		assert.True(t, errors.Is(err, context.Canceled))
+		close(processCanceled)
+	}()
+
+	dbTxLock := make(chan struct{})
+	// Attempt funds request
+	helper.On("HeadBlockExists", ctx).Return(true).Run(func(args mock.Arguments) {
+		close(dbTxLock)
+	}).Once()
+	jobStorage.On("Ready", ctx).Return([]*executor.Job{}, nil).Once()
+	jobStorage.On("Broadcasting", ctx).Return([]*executor.Job{}, nil).Once()
 	jobStorage.On("Processing", ctx, "request_funds").Return(0, nil).Once()
 	helper.On("AllAddresses", ctx).Return([]string{"address1"}, nil).Once()
 	helper.On("LockedAddresses", ctx).Return([]string{}, nil).Once()
@@ -208,26 +298,7 @@ func TestProcess_RequestCreate(t *testing.T) {
 		nil,
 	).Once()
 
-	// Load "address1"
-	fundsProvided := make(chan struct{})
-	helper.On("AllAddresses", ctx).Return([]string{"address1"}, nil).Once()
-	helper.On("LockedAddresses", ctx).Return([]string{}, nil).Once()
-	helper.On(
-		"Balance",
-		ctx,
-		&types.AccountIdentifier{Address: "address1"},
-	).Return(
-		[]*types.Amount{
-			{
-				Value: "0",
-				Currency: &types.Currency{
-					Symbol:   "tBTC",
-					Decimals: 8,
-				},
-			},
-		},
-		nil,
-	).Once()
+	// Load funds
 	helper.On("AllAddresses", ctx).Return([]string{"address1"}, nil).Once()
 	helper.On("LockedAddresses", ctx).Return([]string{}, nil).Once()
 	helper.On(
@@ -247,26 +318,356 @@ func TestProcess_RequestCreate(t *testing.T) {
 		nil,
 	).Once()
 
-	go func() {
-		// We must wait for lock on this database transaction
-		dbTx2 := db.NewDatabaseTransaction(ctx, true)
-		helper.On("DatabaseTransaction", ctx).Return(dbTx2).Once()
-		jobStorage.On("Update", ctx, dbTx2, mock.Anything).Return("job2", nil).Once()
-		helper.On("BroadcastAll", ctx).Return(nil).Run(func(args mock.Arguments) {
-			close(fundsProvided)
-		}).Once()
+	// Wait until we get here to continue setting up mocks
+	<-dbTxLock
+	dbTx2 := db.NewDatabaseTransaction(ctx, true)
+	helper.On("DatabaseTransaction", ctx).Return(dbTx2).Once()
+	jobStorage.On("Update", ctx, dbTx2, mock.Anything).Return("job2", nil).Once()
+	helper.On("BroadcastAll", ctx).Return(nil).Once()
 
-		// We will exit once ErrNoJobs is returned
-		helper.On("HeadBlockExists", ctx).Return(false).Once()
-	}()
+	// Attempt to transfer again
+	helper.On("HeadBlockExists", ctx).Return(true).Once()
+	jobStorage.On("Ready", ctx).Return([]*executor.Job{}, nil).Once()
+	jobStorage.On("Processing", ctx, "transfer").Return(0, nil).Once()
+	helper.On("AllAddresses", ctx).Return([]string{"address1"}, nil).Once()
+	helper.On("LockedAddresses", ctx).Return([]string{}, nil).Once()
+	helper.On(
+		"Balance",
+		ctx,
+		&types.AccountIdentifier{Address: "address1"},
+	).Return(
+		[]*types.Amount{
+			{
+				Value: "100",
+				Currency: &types.Currency{
+					Symbol:   "tBTC",
+					Decimals: 8,
+				},
+			},
+		},
+		nil,
+	).Once()
+	helper.On("AllAddresses", ctx).Return([]string{"address1"}, nil).Once()
+	helper.On("LockedAddresses", ctx).Return([]string{}, nil).Once()
 
-	processCanceled := make(chan struct{})
-	go func() {
-		err := c.Process(ctx)
-		fmt.Println(err)
-		assert.True(t, errors.Is(err, context.Canceled))
-		close(processCanceled)
-	}()
+	// Attempt to create recipient
+	dbTxLock2 := make(chan struct{})
+	helper.On("HeadBlockExists", ctx).Return(true).Run(func(args mock.Arguments) {
+		close(dbTxLock2)
+	}).Once()
+	jobStorage.On("Ready", ctx).Return([]*executor.Job{}, nil).Once()
+	jobStorage.On("Broadcasting", ctx).Return([]*executor.Job{}, nil).Once()
+	jobStorage.On("Processing", ctx, "create_account").Return(0, nil).Once()
+	helper.On(
+		"Derive",
+		ctx,
+		&types.NetworkIdentifier{
+			Blockchain: "Bitcoin",
+			Network:    "Testnet3",
+		},
+		mock.Anything,
+		(map[string]interface{})(nil),
+	).Return("address2", nil, nil).Once()
+	helper.On(
+		"StoreKey",
+		ctx,
+		"address2",
+		mock.Anything,
+	).Return(nil).Once()
+	<-dbTxLock2
+	dbTx3 := db.NewDatabaseTransaction(ctx, true)
+	helper.On("DatabaseTransaction", ctx).Return(dbTx3).Once()
+	jobStorage.On("Update", ctx, dbTx3, mock.Anything).Return("job3", nil).Once()
+	helper.On("BroadcastAll", ctx).Return(nil).Once()
+
+	// Attempt to create transfer
+	dbTxLock3 := make(chan struct{})
+	helper.On("HeadBlockExists", ctx).Return(true).Run(func(args mock.Arguments) {
+		close(dbTxLock3)
+	}).Once()
+	jobStorage.On("Ready", ctx).Return([]*executor.Job{}, nil).Once()
+	jobStorage.On("Broadcasting", ctx).Return([]*executor.Job{}, nil).Once()
+	jobStorage.On("Processing", ctx, "transfer").Return(0, nil).Once()
+	helper.On("AllAddresses", ctx).Return([]string{"address1", "address2"}, nil).Once()
+	helper.On("LockedAddresses", ctx).Return([]string{}, nil).Once()
+	helper.On(
+		"Balance",
+		ctx,
+		&types.AccountIdentifier{Address: "address1"},
+	).Return(
+		[]*types.Amount{
+			{
+				Value: "100",
+				Currency: &types.Currency{
+					Symbol:   "tBTC",
+					Decimals: 8,
+				},
+			},
+		},
+		nil,
+	).Once()
+	helper.On("AllAddresses", ctx).Return([]string{"address1", "address2"}, nil).Once()
+	helper.On("LockedAddresses", ctx).Return([]string{}, nil).Once()
+	helper.On(
+		"Balance",
+		ctx,
+		&types.AccountIdentifier{Address: "address2"},
+	).Return(
+		[]*types.Amount{
+			{
+				Value: "0",
+				Currency: &types.Currency{
+					Symbol:   "tBTC",
+					Decimals: 8,
+				},
+			},
+		},
+		nil,
+	).Once()
+	<-dbTxLock3
+	dbTx4 := db.NewDatabaseTransaction(ctx, true)
+	helper.On("DatabaseTransaction", ctx).Return(dbTx4).Once()
+	jobStorage.On("Update", ctx, dbTx4, mock.Anything).Return("job4", nil).Once()
+
+	// Construct Transaction
+	network := &types.NetworkIdentifier{
+		Blockchain: "Bitcoin",
+		Network:    "Testnet3",
+	}
+	currency := &types.Currency{
+		Symbol:   "tBTC",
+		Decimals: 8,
+	}
+	ops := []*types.Operation{
+		{
+			OperationIdentifier: &types.OperationIdentifier{
+				Index: 0,
+			},
+			Type: "Vin",
+			Account: &types.AccountIdentifier{
+				Address: "address1",
+			},
+			Amount: &types.Amount{
+				Value:    "-100",
+				Currency: currency,
+			},
+		},
+		{
+			OperationIdentifier: &types.OperationIdentifier{
+				Index: 1,
+			},
+			Type: "Vout",
+			Account: &types.AccountIdentifier{
+				Address: "address2",
+			},
+			Amount: &types.Amount{
+				Value:    "90",
+				Currency: currency,
+			},
+		},
+	}
+	metadataOptions := map[string]interface{}{
+		"metadata": "test",
+	}
+	helper.On(
+		"Preprocess",
+		ctx,
+		network,
+		ops,
+		map[string]interface{}{
+			"test": "works",
+		},
+	).Return(metadataOptions, nil).Once()
+	fetchedMetadata := map[string]interface{}{
+		"tx_meta": "help",
+	}
+	helper.On(
+		"Metadata",
+		ctx,
+		network,
+		metadataOptions,
+	).Return(fetchedMetadata, nil).Once()
+
+	unsignedTx := "unsigned transaction"
+	signingPayloads := []*types.SigningPayload{
+		{
+			Address:       "address1",
+			Bytes:         []byte("blah"),
+			SignatureType: types.Ecdsa,
+		},
+	}
+	helper.On(
+		"Payloads",
+		ctx,
+		network,
+		ops,
+		fetchedMetadata,
+	).Return(unsignedTx, signingPayloads, nil).Once()
+	helper.On(
+		"Parse",
+		ctx,
+		network,
+		false,
+		unsignedTx,
+	).Return(ops, []string{}, nil, nil).Once()
+	signatures := []*types.Signature{
+		{
+			SigningPayload: signingPayloads[0],
+			PublicKey: &types.PublicKey{
+				Bytes:     []byte("pubkey"),
+				CurveType: types.Secp256k1,
+			},
+			SignatureType: types.Ecdsa,
+			Bytes:         []byte("signature"),
+		},
+	}
+	helper.On(
+		"Sign",
+		ctx,
+		signingPayloads,
+	).Return(signatures, nil).Once()
+	networkTx := "network transaction"
+	helper.On(
+		"Combine",
+		ctx,
+		network,
+		unsignedTx,
+		signatures,
+	).Return(networkTx, nil).Once()
+	helper.On(
+		"Parse",
+		ctx,
+		network,
+		true,
+		networkTx,
+	).Return(ops, []string{"address1"}, nil, nil).Once()
+	txIdentifier := &types.TransactionIdentifier{Hash: "transaction hash"}
+	helper.On(
+		"Hash",
+		ctx,
+		network,
+		networkTx,
+	).Return(txIdentifier, nil).Once()
+	helper.On(
+		"Broadcast",
+		ctx,
+		dbTx4,
+		"job4",
+		network,
+		ops,
+		txIdentifier,
+		networkTx,
+	).Return(nil).Once()
+	helper.On("BroadcastAll", ctx).Return(nil).Once()
+
+	// Determine should request_funds
+	// jobStorage.On("Ready", ctx).Return([]*executor.Job{}, nil).Once()
+	// helper.On("AllBroadcasts", ctx).Return([]*storage.Broadcast{}, nil).Once()
+	// helper.On("AllAddresses", ctx).Return([]string{}, nil).Once()
+	// jobStorage.On("Processing", ctx, "request_funds").Return(0, nil).Once()
+
+	// // Determine need address to request_funds
+	// helper.On("HeadBlockExists", ctx).Return(true).Once()
+	// jobStorage.On("Ready", ctx).Return([]*executor.Job{}, nil).Once()
+	// helper.On("AllBroadcasts", ctx).Return([]*storage.Broadcast{}, nil).Once()
+	// jobStorage.On("Processing", ctx, "create_account").Return(0, nil).Once()
+
+	// // Perform create_account
+	// helper.On(
+	// 	"Derive",
+	// 	ctx,
+	// 	&types.NetworkIdentifier{
+	// 		Blockchain: "Bitcoin",
+	// 		Network:    "Testnet3",
+	// 	},
+	// 	mock.Anything,
+	// 	(map[string]interface{})(nil),
+	// ).Return("address1", nil, nil).Once()
+	// helper.On(
+	// 	"StoreKey",
+	// 	ctx,
+	// 	"address1",
+	// 	mock.Anything,
+	// ).Return(nil).Once()
+	// dbTx := db.NewDatabaseTransaction(ctx, true)
+	// helper.On("DatabaseTransaction", ctx).Return(dbTx).Once()
+	// jobStorage.On("Update", ctx, dbTx, mock.Anything).Return("job1", nil).Once()
+	// helper.On("BroadcastAll", ctx).Return(nil).Once()
+
+	// // Attempt to request funds on "address1"
+	// helper.On("HeadBlockExists", ctx).Return(true).Once()
+	// jobStorage.On("Ready", ctx).Return([]*executor.Job{}, nil).Once()
+	// helper.On("AllBroadcasts", ctx).Return([]*storage.Broadcast{}, nil).Once()
+	// jobStorage.On("Processing", ctx, "request_funds").Return(0, nil).Once()
+	// helper.On("AllAddresses", ctx).Return([]string{"address1"}, nil).Once()
+	// helper.On("LockedAddresses", ctx).Return([]string{}, nil).Once()
+	// helper.On(
+	// 	"Balance",
+	// 	ctx,
+	// 	&types.AccountIdentifier{Address: "address1"},
+	// ).Return(
+	// 	[]*types.Amount{
+	// 		{
+	// 			Value: "0",
+	// 			Currency: &types.Currency{
+	// 				Symbol:   "tBTC",
+	// 				Decimals: 8,
+	// 			},
+	// 		},
+	// 	},
+	// 	nil,
+	// ).Once()
+
+	// // Load "address1"
+	// helper.On("AllAddresses", ctx).Return([]string{"address1"}, nil).Once()
+	// helper.On("LockedAddresses", ctx).Return([]string{}, nil).Once()
+	// helper.On(
+	// 	"Balance",
+	// 	ctx,
+	// 	&types.AccountIdentifier{Address: "address1"},
+	// ).Return(
+	// 	[]*types.Amount{
+	// 		{
+	// 			Value: "0",
+	// 			Currency: &types.Currency{
+	// 				Symbol:   "tBTC",
+	// 				Decimals: 8,
+	// 			},
+	// 		},
+	// 	},
+	// 	nil,
+	// ).Once()
+	// helper.On("AllAddresses", ctx).Return([]string{"address1"}, nil).Once()
+	// helper.On("LockedAddresses", ctx).Return([]string{}, nil).Once()
+	// helper.On(
+	// 	"Balance",
+	// 	ctx,
+	// 	&types.AccountIdentifier{Address: "address1"},
+	// ).Return(
+	// 	[]*types.Amount{
+	// 		{
+	// 			Value: "100",
+	// 			Currency: &types.Currency{
+	// 				Symbol:   "tBTC",
+	// 				Decimals: 8,
+	// 			},
+	// 		},
+	// 	},
+	// 	nil,
+	// ).Once()
+
+	// go func() {
+	// 	// We must wait for lock on this database transaction
+	// 	dbTx2 := db.NewDatabaseTransaction(ctx, true)
+	// 	helper.On("DatabaseTransaction", ctx).Return(dbTx2).Once()
+	// 	jobStorage.On("Update", ctx, dbTx2, mock.Anything).Return("job2", nil).Once()
+	// 	helper.On("BroadcastAll", ctx).Return(nil).Run(func(args mock.Arguments) {
+	// 		close(fundsProvided)
+	// 	}).Once()
+
+	// 	// We will exit once ErrNoJobs is returned
+	// 	helper.On("HeadBlockExists", ctx).Return(false).Once()
+	// }()
 
 	<-fundsProvided
 	cancel()
