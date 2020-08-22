@@ -246,7 +246,9 @@ func TestProcess_RequestCreate(t *testing.T) {
 		},
 		nil,
 	).Once()
+
 	go func() {
+		// We must wait for lock on this database transaction
 		dbTx2 := db.NewDatabaseTransaction(ctx, true)
 		helper.On("DatabaseTransaction", ctx).Return(dbTx2).Once()
 		jobStorage.On("Update", ctx, dbTx2, mock.Anything).Return("job2", nil).Once()
@@ -254,7 +256,7 @@ func TestProcess_RequestCreate(t *testing.T) {
 			close(fundsProvided)
 		}).Once()
 
-		// This will trigger a loop until context is canceled.
+		// We will exit once ErrNoJobs is returned
 		helper.On("HeadBlockExists", ctx).Return(false).Once()
 	}()
 
