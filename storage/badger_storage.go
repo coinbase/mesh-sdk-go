@@ -23,6 +23,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"sync"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
@@ -336,6 +337,41 @@ func (b *BadgerStorage) Scan(
 	return txn.Scan(ctx, prefix)
 }
 
+// LimitedMemoryScan calls a worker for each item in a scan instead
+// of reading all items into memory.
+func (b *BadgerStorage) LimitedMemoryScan(
+	ctx context.Context,
+	prefix []byte,
+	worker func([]byte, []byte) error,
+) (int, error) {
+	txn := b.db.NewTransaction(false)
+	defer txn.Discard()
+
+	entries := 0
+
+	opts := badger.DefaultIteratorOptions
+	opts.PrefetchValues = false
+
+	it := txn.NewIterator(opts)
+	defer it.Close()
+	for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
+		item := it.Item()
+		k := item.KeyCopy(nil)
+		v, err := item.ValueCopy(nil)
+		if err != nil {
+			return -1, fmt.Errorf("%w: unable to get value for key %s", err, string(k))
+		}
+
+		if err := worker(k, v); err != nil {
+			return -1, fmt.Errorf("%w: worker failed for key %s", err, string(k))
+		}
+
+		entries++
+	}
+
+	return entries, nil
+}
+
 // BadgerTrain creates a zstd dictionary for a given BadgerStorage DB namespace.
 func BadgerTrain(
 	ctx context.Context,
@@ -349,48 +385,54 @@ func BadgerTrain(
 	}
 	defer badgerDb.Close(ctx)
 
-	// We must use a restricted namespace or we will inadvertently
-	// fetch all namespaces that contain the namespace we care about.
-	restrictedNamespace := fmt.Sprintf("%s/", namespace)
-	entries, err := badgerDb.Scan(ctx, []byte(restrictedNamespace))
-	if err != nil {
-		return -1, -1, fmt.Errorf("%w: unable to scan for %s", err, namespace)
-	}
-
-	if len(entries) == 0 {
-		return -1, -1, fmt.Errorf("found 0 entries for %s", namespace)
-	}
-
+	// Create directory to sore uncompressed files for training
 	tmpDir, err := utils.CreateTempDir()
 	if err != nil {
 		return -1, -1, fmt.Errorf("%w: unable to create temporary directory", err)
 	}
 	defer utils.RemoveTempDir(tmpDir)
 
+	// We must use a restricted namespace or we will inadvertently
+	// fetch all namespaces that contain the namespace we care about.
+	restrictedNamespace := fmt.Sprintf("%s/", namespace)
+
 	totalUncompressedSize := float64(0)
-	for _, entry := range entries {
-		decompressed, err := zstd.Decompress(nil, entry.Value)
-		if err != nil {
-			return -1, -1, fmt.Errorf("%w: unable to decompress %s", err, string(entry.Key))
-		}
+	entries, err := badgerDb.LimitedMemoryScan(
+		ctx,
+		[]byte(restrictedNamespace),
+		func(k []byte, v []byte) error {
+			decompressed, err := zstd.Decompress(nil, v)
+			if err != nil {
+				return fmt.Errorf("%w: unable to decompress %s", err, string(k))
+			}
 
-		totalUncompressedSize += float64(len(decompressed))
+			totalUncompressedSize += float64(len(decompressed))
 
-		err = ioutil.WriteFile(
-			path.Join(tmpDir, types.Hash(string(entry.Key))),
-			decompressed,
-			os.FileMode(utils.DefaultFilePermissions),
-		)
-		if err != nil {
-			return -1, -1, fmt.Errorf("%w: unable to store decompressed file", err)
-		}
+			err = ioutil.WriteFile(
+				path.Join(tmpDir, types.Hash(string(k))),
+				decompressed,
+				os.FileMode(utils.DefaultFilePermissions),
+			)
+			if err != nil {
+				return fmt.Errorf("%w: unable to store decompressed file", err)
+			}
+
+			return nil
+		},
+	)
+	if err != nil {
+		return -1, -1, fmt.Errorf("%w: unable to scan for %s", err, namespace)
+	}
+
+	if entries == 0 {
+		return -1, -1, fmt.Errorf("found 0 entries for %s", namespace)
 	}
 
 	log.Printf(
 		"found %d entries for %s (average size: %fB)\n",
-		len(entries),
+		entries,
 		namespace,
-		totalUncompressedSize/float64(len(entries)),
+		totalUncompressedSize/float64(entries),
 	)
 
 	// Invoke ZSTD
@@ -425,34 +467,47 @@ func BadgerTrain(
 	sizeUncompressed := float64(0)
 	sizeNormal := float64(0)
 	sizeDictionary := float64(0)
-	for _, entry := range entries {
-		decompressed, err := zstd.Decompress(nil, entry.Value)
+	err = filepath.Walk(tmpDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
-			return -1, -1, fmt.Errorf("%w: unable to decompress %s", err, string(entry.Key))
+			return err
+		}
+
+		if info.IsDir() {
+			return nil
+		}
+
+		decompressed, err := ioutil.ReadFile(path)
+		if err != nil {
+			return fmt.Errorf("%w: unable to load file %s", err, path)
 		}
 
 		sizeUncompressed += float64(len(decompressed))
 		normalCompress, err := zstd.Compress(nil, decompressed)
 		if err != nil {
-			return -1, -1, fmt.Errorf("%w: unable to compress nomral", err)
+			return fmt.Errorf("%w: unable to compress nomral", err)
 		}
 		sizeNormal += float64(len(normalCompress))
 
 		dictCompress, err := compressor.Encode(namespace, decompressed)
 		if err != nil {
-			return -1, -1, fmt.Errorf("%w: unable to compress with dictionary", err)
+			return fmt.Errorf("%w: unable to compress with dictionary", err)
 		}
 		sizeDictionary += float64(len(dictCompress))
 
 		// Ensure dict works
 		var dictDecode []byte
 		if err := compressor.Decode(namespace, dictCompress, &dictDecode); err != nil {
-			return -1, -1, fmt.Errorf("%w: unable to decompress with dictionary", err)
+			return fmt.Errorf("%w: unable to decompress with dictionary", err)
 		}
 
 		if types.Hash(decompressed) != types.Hash(dictDecode) {
-			return -1, -1, errors.New("decompressed dictionary output does not match")
+			return errors.New("decompressed dictionary output does not match")
 		}
+
+		return nil
+	})
+	if err != nil {
+		return -1, -1, fmt.Errorf("%w: unable to walk files", err)
 	}
 
 	log.Printf("Total Size Uncompressed: %fMB", sizeUncompressed/bytesInMb)
