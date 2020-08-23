@@ -128,7 +128,12 @@ func TestDatabaseTransaction(t *testing.T) {
 	})
 }
 
-func TestBadgerTrain(t *testing.T) {
+type BogusEntry struct {
+	Index int    `json:"index"`
+	Stuff string `json:"stuff"`
+}
+
+func TestBadgerTrain_NoLimit(t *testing.T) {
 	ctx := context.Background()
 
 	newDir, err := utils.CreateTempDir()
@@ -139,10 +144,6 @@ func TestBadgerTrain(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Load storage with entries in namespace
-	type BogusEntry struct {
-		Index int    `json:"index"`
-		Stuff string `json:"stuff"`
-	}
 	namespace := "bogus"
 	for i := 0; i < 10000; i++ {
 		entry := &BogusEntry{
@@ -166,6 +167,47 @@ func TestBadgerTrain(t *testing.T) {
 		namespace,
 		newDir,
 		path.Join(newDir, "bogus_dict"),
+		-1,
+	)
+	assert.NoError(t, err)
+	assert.True(t, normalSize > dictSize)
+}
+
+func TestBadgerTrain_Limit(t *testing.T) {
+	ctx := context.Background()
+
+	newDir, err := utils.CreateTempDir()
+	assert.NoError(t, err)
+	defer utils.RemoveTempDir(newDir)
+
+	database, err := NewBadgerStorage(ctx, newDir)
+	assert.NoError(t, err)
+
+	// Load storage with entries in namespace
+	namespace := "bogus"
+	for i := 0; i < 10000; i++ {
+		entry := &BogusEntry{
+			Index: i,
+			Stuff: fmt.Sprintf("block %d", i),
+		}
+		compressedEntry, err := database.Compressor().Encode(namespace, entry)
+		assert.NoError(t, err)
+		assert.NoError(
+			t,
+			database.Set(ctx, []byte(fmt.Sprintf("%s/%d", namespace, i)), compressedEntry),
+		)
+	}
+
+	// Close DB
+	database.Close(ctx)
+
+	// Train
+	normalSize, dictSize, err := BadgerTrain(
+		ctx,
+		namespace,
+		newDir,
+		path.Join(newDir, "bogus_dict"),
+		6000,
 	)
 	assert.NoError(t, err)
 	assert.True(t, normalSize > dictSize)
