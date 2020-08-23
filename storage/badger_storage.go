@@ -337,7 +337,12 @@ func (b *BadgerStorage) Scan(
 }
 
 // BadgerTrain creates a zstd dictionary for a given BadgerStorage DB namespace.
-func BadgerTrain(ctx context.Context, namespace string, db string, output string) (float64, float64, error) {
+func BadgerTrain(
+	ctx context.Context,
+	namespace string,
+	db string,
+	output string,
+) (float64, float64, error) {
 	badgerDb, err := NewBadgerStorage(ctx, path.Clean(db))
 	if err != nil {
 		return -1, -1, fmt.Errorf("%w: unable to load database", err)

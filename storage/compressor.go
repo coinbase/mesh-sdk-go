@@ -32,7 +32,8 @@ import (
 // Compressor handles the compression and decompression
 // of data using zstd. Optionally, the caller can provide
 // a map of dicts on initialization that can be used by zstd.
-// You can read more about these "dicts" here: https://github.com/facebook/zstd#the-case-for-small-data-compression.
+// You can read more about these "dicts" here:
+// https://github.com/facebook/zstd#the-case-for-small-data-compression.
 //
 // NOTE: If you change these dicts, you will not be able
 // to decode previously encoded data. For many users, providing
@@ -55,7 +56,11 @@ func NewCompressor(entries []*CompressorEntry) (*Compressor, error) {
 	for _, entry := range entries {
 		b, err := ioutil.ReadFile(path.Clean(entry.DictionaryPath))
 		if err != nil {
-			return nil, fmt.Errorf("%w: unable to load dictionary from %s", err, entry.DictionaryPath)
+			return nil, fmt.Errorf(
+				"%w: unable to load dictionary from %s",
+				err,
+				entry.DictionaryPath,
+			)
 		}
 
 		log.Printf("loaded zstd dictionary for %s\n", entry.Namespace)

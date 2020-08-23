@@ -78,7 +78,9 @@ func getBlockIndexKey(index int64) []byte {
 }
 
 func getTransactionHashKey(transactionIdentifier *types.TransactionIdentifier) (string, []byte) {
-	return transactionNamespace, []byte(fmt.Sprintf("%s/%s", transactionNamespace, transactionIdentifier.Hash))
+	return transactionNamespace, []byte(
+		fmt.Sprintf("%s/%s", transactionNamespace, transactionIdentifier.Hash),
+	)
 }
 
 // BlockWorker is an interface that allows for work
