@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"path"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
 
@@ -39,12 +40,29 @@ type Compressor struct {
 	dicts map[string][]byte
 }
 
+// CompressorEntry is used to initialize a Compressor.
+// All DictionaryPaths are loaded from disk at initialization.
+type CompressorEntry struct {
+	Namespace      string
+	DictionaryPath string
+}
+
 // NewCompressor returns a new *Compressor. The dicts
 // provided should contain k:v of namespace:zstd dict.
-func NewCompressor(dicts map[string][]byte) *Compressor {
+func NewCompressor(entries []*CompressorEntry) (*Compressor, error) {
+	dicts := map[string][]byte{}
+	for _, entry := range entries {
+		b, err := ioutil.ReadFile(path.Clean(entry.DictionaryPath))
+		if err != nil {
+			return nil, fmt.Errorf("%w: unable to load dictionary from %s", err, entry.DictionaryPath)
+		}
+
+		dicts[entry.Namespace] = b
+	}
+
 	return &Compressor{
 		dicts: dicts,
-	}
+	}, nil
 }
 
 // Encode attempts to compress the object and will use a dict if

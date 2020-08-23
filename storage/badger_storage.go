@@ -37,7 +37,11 @@ const (
 // BadgerStorage is a wrapper around Badger DB
 // that implements the Database interface.
 type BadgerStorage struct {
-	db *badger.DB
+	limitMemory       bool
+	compressorEntries []*CompressorEntry
+
+	db         *badger.DB
+	compressor *Compressor
 
 	writer sync.Mutex
 }
@@ -98,19 +102,30 @@ func performanceOptions(dir string) badger.Options {
 }
 
 // NewBadgerStorage creates a new BadgerStorage.
-func NewBadgerStorage(ctx context.Context, dir string, disableMemoryLimit bool) (Database, error) {
-	options := lowMemoryOptions(dir)
-	if disableMemoryLimit {
-		options = performanceOptions(dir)
+func NewBadgerStorage(ctx context.Context, dir string, options ...BadgerOption) (Database, error) {
+	b := &BadgerStorage{}
+	for _, opt := range options {
+		opt(b)
 	}
 
-	db, err := badger.Open(options)
+	dbOpts := lowMemoryOptions(dir)
+	if !b.limitMemory {
+		dbOpts = performanceOptions(dir)
+	}
+
+	db, err := badger.Open(dbOpts)
 	if err != nil {
-		return nil, fmt.Errorf("%w could not open badger database", err)
+		return nil, fmt.Errorf("%w: could not open badger database", err)
+	}
+
+	compressor, err := NewCompressor(b.compressorEntries)
+	if err != nil {
+		return nil, fmt.Errorf("%w: could not load compressor", err)
 	}
 
 	return &BadgerStorage{
-		db: db,
+		db:         db,
+		compressor: compressor,
 	}, nil
 }
 
@@ -122,6 +137,11 @@ func (b *BadgerStorage) Close(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+// Compressor returns the BadgerStorage compressor.
+func (b *BadgerStorage) Compressor() *Compressor {
+	return b.compressor
 }
 
 // BadgerTransaction is a wrapper around a Badger
