@@ -96,10 +96,6 @@ func encode(object interface{}, zstdDict []byte) ([]byte, error) {
 		compressBuf := new(bytes.Buffer)
 		writer := zstd.NewWriterLevelDict(compressBuf, zstd.DefaultCompression, zstdDict)
 		_, err = writer.Write(buf.Bytes())
-
-		if err == nil {
-			err = writer.Flush()
-		}
 		if err == nil {
 			err = writer.Close()
 		}

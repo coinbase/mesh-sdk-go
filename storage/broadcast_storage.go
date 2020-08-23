@@ -34,8 +34,8 @@ const (
 	depthOffset = 1
 )
 
-func getBroadcastKey(transactionIdentifier *types.TransactionIdentifier) []byte {
-	return []byte(
+func getBroadcastKey(transactionIdentifier *types.TransactionIdentifier) (string, []byte) {
+	return transactionBroadcastNamespace, []byte(
 		fmt.Sprintf("%s/%s", transactionBroadcastNamespace, transactionIdentifier.Hash),
 	)
 }
@@ -218,7 +218,7 @@ func (b *BroadcastStorage) AddingBlock(
 			continue
 		}
 
-		key := getBroadcastKey(broadcast.Identifier)
+		namespace, key := getBroadcastKey(broadcast.Identifier)
 
 		// We perform the FindTransaction search in the context of the block database
 		// transaction so we can access any transactions of depth 1 (in the current
@@ -237,7 +237,7 @@ func (b *BroadcastStorage) AddingBlock(
 			block.BlockIdentifier.Index-broadcast.LastBroadcast.Index >= b.staleDepth-depthOffset {
 			staleTransactions = append(staleTransactions, broadcast.Identifier)
 			broadcast.LastBroadcast = nil
-			bytes, err := encode(broadcast)
+			bytes, err := b.db.Compressor().Encode(namespace, broadcast)
 			if err != nil {
 				return nil, fmt.Errorf("%w: unable to encode updated broadcast", err)
 			}
@@ -299,7 +299,7 @@ func (b *BroadcastStorage) Broadcast(
 	txn := b.db.NewDatabaseTransaction(ctx, true)
 	defer txn.Discard(ctx)
 
-	broadcastKey := getBroadcastKey(transactionIdentifier)
+	namespace, broadcastKey := getBroadcastKey(transactionIdentifier)
 
 	exists, _, err := txn.Get(ctx, broadcastKey)
 	if err != nil {
@@ -310,7 +310,7 @@ func (b *BroadcastStorage) Broadcast(
 		return fmt.Errorf("already broadcasting transaction %s", transactionIdentifier.Hash)
 	}
 
-	bytes, err := encode(&Broadcast{
+	bytes, err := b.db.Compressor().Encode(namespace, &Broadcast{
 		Identifier: transactionIdentifier,
 		Sender:     sender,
 		Intent:     intent,
@@ -340,19 +340,20 @@ func (b *BroadcastStorage) Broadcast(
 
 // GetAllBroadcasts returns all currently in-process broadcasts.
 func (b *BroadcastStorage) GetAllBroadcasts(ctx context.Context) ([]*Broadcast, error) {
-	rawBroadcasts, err := b.db.Scan(ctx, []byte(transactionBroadcastNamespace))
+	namespace := transactionBroadcastNamespace
+	rawBroadcasts, err := b.db.Scan(ctx, []byte(namespace))
 	if err != nil {
 		return nil, fmt.Errorf("%w: unable to scan for all broadcasts", err)
 	}
 
 	broadcasts := make([]*Broadcast, len(rawBroadcasts))
 	for i, rawBroadcast := range rawBroadcasts {
-		var b Broadcast
-		if err := decode(rawBroadcast.Value, &b); err != nil {
+		var broadcast Broadcast
+		if err := b.db.Compressor().Decode(namespace, rawBroadcast.Value, &broadcast); err != nil {
 			return nil, fmt.Errorf("%w: unable to decode broadcast", err)
 		}
 
-		broadcasts[i] = &b
+		broadcasts[i] = &broadcast
 	}
 
 	return broadcasts, nil
@@ -363,7 +364,8 @@ func (b *BroadcastStorage) performBroadcast(
 	broadcast *Broadcast,
 	onlyEligible bool,
 ) error {
-	bytes, err := encode(broadcast)
+	namespace, key := getBroadcastKey(broadcast.Identifier)
+	bytes, err := b.db.Compressor().Encode(namespace, broadcast)
 	if err != nil {
 		return fmt.Errorf("%w: unable to encode broadcast", err)
 	}
@@ -371,7 +373,7 @@ func (b *BroadcastStorage) performBroadcast(
 	txn := b.db.NewDatabaseTransaction(ctx, true)
 	defer txn.Discard(ctx)
 
-	if err := txn.Set(ctx, getBroadcastKey(broadcast.Identifier), bytes); err != nil {
+	if err := txn.Set(ctx, key, bytes); err != nil {
 		return fmt.Errorf("%w: unable to update broadcast", err)
 	}
 
@@ -452,7 +454,8 @@ func (b *BroadcastStorage) BroadcastAll(ctx context.Context, onlyEligible bool) 
 			txn := b.db.NewDatabaseTransaction(ctx, true)
 			defer txn.Discard(ctx)
 
-			if err := txn.Delete(ctx, getBroadcastKey(broadcast.Identifier)); err != nil {
+			_, key := getBroadcastKey(broadcast.Identifier)
+			if err := txn.Delete(ctx, key); err != nil {
 				return fmt.Errorf("%w: unable to delete broadcast", err)
 			}
 
@@ -528,7 +531,8 @@ func (b *BroadcastStorage) ClearBroadcasts(ctx context.Context) ([]*Broadcast, e
 
 	txn := b.db.NewDatabaseTransaction(ctx, true)
 	for _, broadcast := range broadcasts {
-		if err := txn.Delete(ctx, getBroadcastKey(broadcast.Identifier)); err != nil {
+		_, key := getBroadcastKey(broadcast.Identifier)
+		if err := txn.Delete(ctx, key); err != nil {
 			return nil, fmt.Errorf(
 				"%w: unable to delete broadcast %s",
 				err,
