@@ -387,7 +387,7 @@ func BadgerTrain(ctx context.Context, namespace string, db string, output string
 		tmpDir,
 		"-o",
 		dictPath,
-	)
+	) // #nosec G204
 	if err := cmd.Start(); err != nil {
 		return -1, -1, fmt.Errorf("%w: unable to start zstd", err)
 	}
