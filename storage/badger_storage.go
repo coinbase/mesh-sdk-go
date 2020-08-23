@@ -439,13 +439,13 @@ func BadgerTrain(ctx context.Context, namespace string, db string, output string
 	log.Printf(
 		"Total Size Compressed: %fMB (%% of original size %f%%)",
 		sizeNormal/bytesInMb,
-		normalSize*100,
+		normalSize*utils.OneHundred,
 	)
 	dictionarySize := sizeDictionary / sizeUncompressed
 	log.Printf(
 		"Total Size Compressed (with dictionary): %fMB (%% of original size %f%%)",
 		sizeDictionary/bytesInMb,
-		dictionarySize*100,
+		dictionarySize*utils.OneHundred,
 	)
 
 	return normalSize, dictionarySize, nil
