@@ -28,6 +28,7 @@ type ScanItem struct {
 // access to a KV store.
 type Database interface {
 	NewDatabaseTransaction(context.Context, bool) DatabaseTransaction
+	Compressor() *Compressor
 	Close(context.Context) error
 	Set(context.Context, []byte, []byte) error
 	Get(context.Context, []byte) (bool, []byte, error)
