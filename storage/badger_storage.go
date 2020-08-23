@@ -361,19 +361,20 @@ func BadgerTrain(
 		return -1, -1, fmt.Errorf("found 0 entries for %s", namespace)
 	}
 
-	log.Printf("found %d entries for %s\n", len(entries), namespace)
-
 	tmpDir, err := utils.CreateTempDir()
 	if err != nil {
 		return -1, -1, fmt.Errorf("%w: unable to create temporary directory", err)
 	}
 	defer utils.RemoveTempDir(tmpDir)
 
+	totalUncompressedSize := float64(0)
 	for _, entry := range entries {
 		decompressed, err := zstd.Decompress(nil, entry.Value)
 		if err != nil {
 			return -1, -1, fmt.Errorf("%w: unable to decompress %s", err, string(entry.Key))
 		}
+
+		totalUncompressedSize += float64(len(decompressed))
 
 		err = ioutil.WriteFile(
 			path.Join(tmpDir, types.Hash(string(entry.Key))),
@@ -384,6 +385,13 @@ func BadgerTrain(
 			return -1, -1, fmt.Errorf("%w: unable to store decompressed file", err)
 		}
 	}
+
+	log.Printf(
+		"found %d entries for %s (average size: %fB)\n",
+		len(entries),
+		namespace,
+		totalUncompressedSize/float64(len(entries)),
+	)
 
 	// Invoke ZSTD
 	dictPath := path.Clean(output)
@@ -418,14 +426,19 @@ func BadgerTrain(
 	sizeNormal := float64(0)
 	sizeDictionary := float64(0)
 	for _, entry := range entries {
-		sizeUncompressed += float64(len(entry.Value))
-		normalCompress, err := zstd.Compress(nil, entry.Value)
+		decompressed, err := zstd.Decompress(nil, entry.Value)
+		if err != nil {
+			return -1, -1, fmt.Errorf("%w: unable to decompress %s", err, string(entry.Key))
+		}
+
+		sizeUncompressed += float64(len(decompressed))
+		normalCompress, err := zstd.Compress(nil, decompressed)
 		if err != nil {
 			return -1, -1, fmt.Errorf("%w: unable to compress nomral", err)
 		}
 		sizeNormal += float64(len(normalCompress))
 
-		dictCompress, err := compressor.Encode(namespace, entry.Value)
+		dictCompress, err := compressor.Encode(namespace, decompressed)
 		if err != nil {
 			return -1, -1, fmt.Errorf("%w: unable to compress with dictionary", err)
 		}
@@ -437,7 +450,7 @@ func BadgerTrain(
 			return -1, -1, fmt.Errorf("%w: unable to decompress with dictionary", err)
 		}
 
-		if types.Hash(entry.Value) != types.Hash(dictDecode) {
+		if types.Hash(decompressed) != types.Hash(dictDecode) {
 			return -1, -1, errors.New("decompressed dictionary output does not match")
 		}
 	}
