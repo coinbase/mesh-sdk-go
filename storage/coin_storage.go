@@ -67,8 +67,8 @@ func NewCoinStorage(
 	}
 }
 
-func getCoinKey(identifier *types.CoinIdentifier) []byte {
-	return []byte(fmt.Sprintf("%s/%s", coinNamespace, identifier.Identifier))
+func getCoinKey(identifier *types.CoinIdentifier) (string, []byte) {
+	return coinNamespace, []byte(fmt.Sprintf("%s/%s", coinNamespace, identifier.Identifier))
 }
 
 func getCoinAccountPrefix(accountIdentifier *types.AccountIdentifier) []byte {
@@ -84,12 +84,13 @@ func getCoinAccountCoin(
 	)
 }
 
-func getAndDecodeCoin(
+func (c *CoinStorage) getAndDecodeCoin(
 	ctx context.Context,
 	transaction DatabaseTransaction,
 	coinIdentifier *types.CoinIdentifier,
 ) (bool, *types.Coin, error) {
-	exists, val, err := transaction.Get(ctx, getCoinKey(coinIdentifier))
+	namespace, key := getCoinKey(coinIdentifier)
+	exists, val, err := transaction.Get(ctx, key)
 	if err != nil {
 		return false, nil, fmt.Errorf("%w: unable to query for coin", err)
 	}
@@ -99,7 +100,7 @@ func getAndDecodeCoin(
 	}
 
 	var coin types.Coin
-	if err := decode(val, &coin); err != nil {
+	if err := c.db.Compressor().Decode(namespace, val, &coin); err != nil {
 		return false, nil, fmt.Errorf("%w: unable to decode coin", err)
 	}
 
@@ -122,7 +123,7 @@ func (c *CoinStorage) AddCoins(
 	defer dbTransaction.Discard(ctx)
 
 	for _, accountCoin := range accountCoins {
-		exists, _, err := getAndDecodeCoin(ctx, dbTransaction, accountCoin.Coin.CoinIdentifier)
+		exists, _, err := c.getAndDecodeCoin(ctx, dbTransaction, accountCoin.Coin.CoinIdentifier)
 		if err != nil {
 			return fmt.Errorf("%w: unable to get coin", err)
 		}
@@ -131,7 +132,7 @@ func (c *CoinStorage) AddCoins(
 			continue
 		}
 
-		err = addCoin(ctx, accountCoin.Account, accountCoin.Coin, dbTransaction)
+		err = c.addCoin(ctx, accountCoin.Account, accountCoin.Coin, dbTransaction)
 		if err != nil {
 			return fmt.Errorf("%w: unable to add coin", err)
 		}
@@ -144,18 +145,19 @@ func (c *CoinStorage) AddCoins(
 	return nil
 }
 
-func addCoin(
+func (c *CoinStorage) addCoin(
 	ctx context.Context,
 	account *types.AccountIdentifier,
 	coin *types.Coin,
 	transaction DatabaseTransaction,
 ) error {
-	encodedResult, err := encode(coin)
+	namespace, key := getCoinKey(coin.CoinIdentifier)
+	encodedResult, err := c.db.Compressor().Encode(namespace, coin)
 	if err != nil {
 		return fmt.Errorf("%w: unable to encode coin data", err)
 	}
 
-	if err := storeUniqueKey(ctx, transaction, getCoinKey(coin.CoinIdentifier), encodedResult); err != nil {
+	if err := storeUniqueKey(ctx, transaction, key, encodedResult); err != nil {
 		return fmt.Errorf("%w: unable to store coin", err)
 	}
 
@@ -187,7 +189,7 @@ func (c *CoinStorage) tryAddingCoin(
 		Amount:         operation.Amount,
 	}
 
-	return addCoin(ctx, operation.Account, newCoin, transaction)
+	return c.addCoin(ctx, operation.Account, newCoin, transaction)
 }
 
 func getAndDecodeCoins(
@@ -226,7 +228,8 @@ func (c *CoinStorage) tryRemovingCoin(
 
 	coinIdentifier := operation.CoinChange.CoinIdentifier
 
-	exists, _, err := transaction.Get(ctx, getCoinKey(coinIdentifier))
+	_, key := getCoinKey(coinIdentifier)
+	exists, _, err := transaction.Get(ctx, key)
 	if err != nil {
 		return fmt.Errorf("%w: unable to query for coin", err)
 	}
@@ -235,7 +238,7 @@ func (c *CoinStorage) tryRemovingCoin(
 		return nil
 	}
 
-	if err := transaction.Delete(ctx, getCoinKey(coinIdentifier)); err != nil {
+	if err := transaction.Delete(ctx, key); err != nil {
 		return fmt.Errorf("%w: unable to delete coin", err)
 	}
 
@@ -344,7 +347,7 @@ func (c *CoinStorage) GetCoins(
 
 	coinArr := []*types.Coin{}
 	for coinIdentifier := range coins {
-		exists, coin, err := getAndDecodeCoin(
+		exists, coin, err := c.getAndDecodeCoin(
 			ctx,
 			transaction,
 			&types.CoinIdentifier{Identifier: coinIdentifier},
