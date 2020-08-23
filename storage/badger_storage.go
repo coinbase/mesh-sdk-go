@@ -49,6 +49,10 @@ const (
 	logModulo = 5000
 )
 
+var (
+	errMaxEntries = errors.New("max entries reached")
+)
+
 // BadgerStorage is a wrapper around Badger DB
 // that implements the Database interface.
 type BadgerStorage struct {
@@ -379,12 +383,66 @@ func (b *BadgerStorage) LimitedMemoryScan(
 	return entries, nil
 }
 
+func decompressAndSave(tmpDir string, k []byte, v []byte) (float64, error) {
+	decompressed, err := zstd.Decompress(nil, v)
+	if err != nil {
+		return -1, fmt.Errorf("%w: unable to decompress %s", err, string(k))
+	}
+
+	err = ioutil.WriteFile(
+		path.Join(tmpDir, types.Hash(string(k))),
+		decompressed,
+		os.FileMode(utils.DefaultFilePermissions),
+	)
+	if err != nil {
+		return -1, fmt.Errorf("%w: unable to store decompressed file", err)
+	}
+
+	return float64(len(decompressed)), nil
+}
+
+func decompressAndEncode(
+	path string,
+	namespace string,
+	compressor *Compressor,
+) (float64, float64, float64, error) {
+	decompressed, err := ioutil.ReadFile(path)
+	if err != nil {
+		return -1, -1, -1, fmt.Errorf("%w: unable to load file %s", err, path)
+	}
+
+	normalCompress, err := zstd.Compress(nil, decompressed)
+	if err != nil {
+		return -1, -1, -1, fmt.Errorf("%w: unable to compress nomral", err)
+	}
+
+	dictCompress, err := compressor.Encode(namespace, decompressed)
+	if err != nil {
+		return -1, -1, -1, fmt.Errorf("%w: unable to compress with dictionary", err)
+	}
+
+	// Ensure dict works
+	var dictDecode []byte
+	if err := compressor.Decode(namespace, dictCompress, &dictDecode); err != nil {
+		return -1, -1, -1, fmt.Errorf("%w: unable to decompress with dictionary", err)
+	}
+
+	if types.Hash(decompressed) != types.Hash(dictDecode) {
+		return -1, -1, -1, errors.New("decompressed dictionary output does not match")
+	}
+
+	return float64(len(decompressed)), float64(len(normalCompress)), float64(len(dictCompress)), nil
+}
+
 // BadgerTrain creates a zstd dictionary for a given BadgerStorage DB namespace.
+// Optionally, you can specify the maximum number of entries to load into
+// storage (if -1 is provided, then all possible are loaded).
 func BadgerTrain(
 	ctx context.Context,
 	namespace string,
 	db string,
 	output string,
+	maxEntries int,
 ) (float64, float64, error) {
 	badgerDb, err := NewBadgerStorage(ctx, path.Clean(db))
 	if err != nil {
@@ -404,42 +462,39 @@ func BadgerTrain(
 	restrictedNamespace := fmt.Sprintf("%s/", namespace)
 
 	totalUncompressedSize := float64(0)
-	entries, err := badgerDb.LimitedMemoryScan(
+	entriesSeen := 0
+	_, err = badgerDb.LimitedMemoryScan(
 		ctx,
 		[]byte(restrictedNamespace),
 		func(k []byte, v []byte) error {
-			decompressed, err := zstd.Decompress(nil, v)
+			decompressedSize, err := decompressAndSave(tmpDir, k, v)
 			if err != nil {
-				return fmt.Errorf("%w: unable to decompress %s", err, string(k))
+				return fmt.Errorf("%w: unable to decompress and save", err)
 			}
 
-			totalUncompressedSize += float64(len(decompressed))
+			totalUncompressedSize += decompressedSize
+			entriesSeen++
 
-			err = ioutil.WriteFile(
-				path.Join(tmpDir, types.Hash(string(k))),
-				decompressed,
-				os.FileMode(utils.DefaultFilePermissions),
-			)
-			if err != nil {
-				return fmt.Errorf("%w: unable to store decompressed file", err)
+			if entriesSeen > maxEntries-1 && maxEntries != -1 {
+				return errMaxEntries
 			}
 
 			return nil
 		},
 	)
-	if err != nil {
+	if err != nil && !errors.Is(err, errMaxEntries) {
 		return -1, -1, fmt.Errorf("%w: unable to scan for %s", err, namespace)
 	}
 
-	if entries == 0 {
+	if entriesSeen == 0 {
 		return -1, -1, fmt.Errorf("found 0 entries for %s", namespace)
 	}
 
 	log.Printf(
 		"found %d entries for %s (average size: %fB)\n",
-		entries,
+		entriesSeen,
 		namespace,
-		totalUncompressedSize/float64(entries),
+		totalUncompressedSize/float64(entriesSeen),
 	)
 
 	// Invoke ZSTD
@@ -483,33 +538,18 @@ func BadgerTrain(
 			return nil
 		}
 
-		decompressed, err := ioutil.ReadFile(path)
+		decompressed, normalCompress, dictCompress, err := decompressAndEncode(
+			path,
+			namespace,
+			compressor,
+		)
 		if err != nil {
-			return fmt.Errorf("%w: unable to load file %s", err, path)
+			return fmt.Errorf("%w: unable to decompress and encode", err)
 		}
 
-		sizeUncompressed += float64(len(decompressed))
-		normalCompress, err := zstd.Compress(nil, decompressed)
-		if err != nil {
-			return fmt.Errorf("%w: unable to compress nomral", err)
-		}
-		sizeNormal += float64(len(normalCompress))
-
-		dictCompress, err := compressor.Encode(namespace, decompressed)
-		if err != nil {
-			return fmt.Errorf("%w: unable to compress with dictionary", err)
-		}
-		sizeDictionary += float64(len(dictCompress))
-
-		// Ensure dict works
-		var dictDecode []byte
-		if err := compressor.Decode(namespace, dictCompress, &dictDecode); err != nil {
-			return fmt.Errorf("%w: unable to decompress with dictionary", err)
-		}
-
-		if types.Hash(decompressed) != types.Hash(dictDecode) {
-			return errors.New("decompressed dictionary output does not match")
-		}
+		sizeUncompressed += decompressed
+		sizeNormal += normalCompress
+		sizeDictionary += dictCompress
 
 		return nil
 	})
