@@ -89,6 +89,7 @@ func CreateTempDir() (string, error) {
 // RemoveTempDir deletes a directory at
 // a provided path for usage within testing.
 func RemoveTempDir(dir string) {
+	color.Yellow("Removing temporary directory %s", dir)
 	if err := os.RemoveAll(dir); err != nil {
 		log.Fatal(err)
 	}
