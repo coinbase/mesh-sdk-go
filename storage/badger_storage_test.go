@@ -151,14 +151,22 @@ func TestBadgerTrain(t *testing.T) {
 		}
 		compressedEntry, err := database.Compressor().Encode(namespace, entry)
 		assert.NoError(t, err)
-		assert.NoError(t, database.Set(ctx, []byte(fmt.Sprintf("%s/%d", namespace, i)), compressedEntry))
+		assert.NoError(
+			t,
+			database.Set(ctx, []byte(fmt.Sprintf("%s/%d", namespace, i)), compressedEntry),
+		)
 	}
 
 	// Close DB
 	database.Close(ctx)
 
 	// Train
-	normalSize, dictSize, err := BadgerTrain(ctx, namespace, newDir, path.Join(newDir, "bogus_dict"))
+	normalSize, dictSize, err := BadgerTrain(
+		ctx,
+		namespace,
+		newDir,
+		path.Join(newDir, "bogus_dict"),
+	)
 	assert.NoError(t, err)
 	assert.True(t, normalSize > dictSize)
 }

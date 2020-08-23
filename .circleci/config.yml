@@ -31,7 +31,6 @@ jobs:
     executor:
       name: default
     steps:
-      - run: apt-get install -y zstd
       - checkout
       - run: make deps
       - persist_to_workspace:
@@ -45,6 +44,7 @@ jobs:
       name: default
     steps:
       - *fast-checkout
+      - run: apt-get install -y zstd
       - run: make test
   lint:
     executor:
