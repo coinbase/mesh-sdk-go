@@ -45,6 +45,8 @@ const (
 	DefaultValueLogFileSize = 100 << 20
 
 	bytesInMb = 1000000
+
+	logModulo = 5000
 )
 
 // BadgerStorage is a wrapper around Badger DB
@@ -356,17 +358,22 @@ func (b *BadgerStorage) LimitedMemoryScan(
 	defer it.Close()
 	for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
 		item := it.Item()
-		k := item.KeyCopy(nil)
-		v, err := item.ValueCopy(nil)
+		k := item.Key()
+		err := item.Value(func(v []byte) error {
+			if err := worker(k, v); err != nil {
+				return fmt.Errorf("%w: worker failed for key %s", err, string(k))
+			}
+
+			return nil
+		})
 		if err != nil {
 			return -1, fmt.Errorf("%w: unable to get value for key %s", err, string(k))
 		}
 
-		if err := worker(k, v); err != nil {
-			return -1, fmt.Errorf("%w: worker failed for key %s", err, string(k))
-		}
-
 		entries++
+		if entries%logModulo == 0 {
+			log.Printf("scanned %d entries\n", entries)
+		}
 	}
 
 	return entries, nil
