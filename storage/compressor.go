@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"path"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
@@ -57,6 +58,7 @@ func NewCompressor(entries []*CompressorEntry) (*Compressor, error) {
 			return nil, fmt.Errorf("%w: unable to load dictionary from %s", err, entry.DictionaryPath)
 		}
 
+		log.Printf("loaded zstd dictionary for %s\n", entry.Namespace)
 		dicts[entry.Namespace] = b
 	}
 
@@ -99,6 +101,8 @@ func encode(object interface{}, zstdDict []byte) ([]byte, error) {
 		if err == nil {
 			err = writer.Close()
 		}
+
+		compressed = compressBuf.Bytes()
 	} else {
 		compressed, err = zstd.Compress(nil, buf.Bytes())
 	}

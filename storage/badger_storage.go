@@ -16,9 +16,19 @@ package storage
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io/ioutil"
+	"log"
+	"os"
+	"os/exec"
+	"path"
 	"sync"
 
+	"github.com/coinbase/rosetta-sdk-go/types"
+	"github.com/coinbase/rosetta-sdk-go/utils"
+
+	"github.com/DataDog/zstd"
 	"github.com/dgraph-io/badger/v2"
 	"github.com/dgraph-io/badger/v2/options"
 )
@@ -32,6 +42,8 @@ const (
 
 	// DefaultValueLogFileSize is 100 MB.
 	DefaultValueLogFileSize = 100 << 20
+
+	bytesInMb = 1000000
 )
 
 // BadgerStorage is a wrapper around Badger DB
@@ -108,6 +120,7 @@ func NewBadgerStorage(ctx context.Context, dir string, options ...BadgerOption) 
 		opt(b)
 	}
 
+	dir = path.Clean(dir)
 	dbOpts := lowMemoryOptions(dir)
 	if !b.limitMemory {
 		dbOpts = performanceOptions(dir)
@@ -321,4 +334,119 @@ func (b *BadgerStorage) Scan(
 	defer txn.Discard(ctx)
 
 	return txn.Scan(ctx, prefix)
+}
+
+// BadgerTrain creates a zstd dictionary for a given BadgerStorage DB namespace.
+func BadgerTrain(ctx context.Context, namespace string, db string, output string) (float64, float64, error) {
+	badgerDb, err := NewBadgerStorage(ctx, path.Clean(db))
+	if err != nil {
+		return -1, -1, fmt.Errorf("%w: unable to load database", err)
+	}
+	defer badgerDb.Close(ctx)
+
+	entries, err := badgerDb.Scan(ctx, []byte(namespace))
+	if err != nil {
+		return -1, -1, fmt.Errorf("%w: unable to scan for %s", err, namespace)
+	}
+
+	if len(entries) == 0 {
+		return -1, -1, fmt.Errorf("found 0 entries for %s", namespace)
+	}
+
+	log.Printf("found %d entries for %s\n", len(entries), namespace)
+
+	tmpDir, err := utils.CreateTempDir()
+	if err != nil {
+		return -1, -1, fmt.Errorf("%w: unable to create temporary directory", err)
+	}
+	defer utils.RemoveTempDir(tmpDir)
+
+	for _, entry := range entries {
+		decompressed, err := zstd.Decompress(nil, entry.Value)
+		if err != nil {
+			return -1, -1, fmt.Errorf("%w: unable to decompress %s", err, string(entry.Key))
+		}
+
+		err = ioutil.WriteFile(
+			path.Join(tmpDir, types.Hash(string(entry.Key))),
+			decompressed,
+			os.FileMode(utils.DefaultFilePermissions),
+		)
+		if err != nil {
+			return -1, -1, fmt.Errorf("%w: unable to store decompressed file", err)
+		}
+	}
+
+	// Invoke ZSTD
+	dictPath := path.Clean(output)
+	log.Printf("creating dictionary %s\n", dictPath)
+	cmd := exec.Command(
+		"zstd",
+		"--train",
+		"-r",
+		tmpDir,
+		"-o",
+		dictPath,
+	)
+	if err := cmd.Start(); err != nil {
+		return -1, -1, fmt.Errorf("%w: unable to start zstd", err)
+	}
+
+	if err := cmd.Wait(); err != nil {
+		return -1, -1, fmt.Errorf("%w: unable to train zstd", err)
+	}
+
+	compressor, err := NewCompressor([]*CompressorEntry{
+		{
+			Namespace:      namespace,
+			DictionaryPath: dictPath,
+		},
+	})
+	if err != nil {
+		return -1, -1, fmt.Errorf("%w: unable to load compressor", err)
+	}
+
+	sizeUncompressed := float64(0)
+	sizeNormal := float64(0)
+	sizeDictionary := float64(0)
+	for _, entry := range entries {
+		sizeUncompressed += float64(len(entry.Value))
+		normalCompress, err := zstd.Compress(nil, entry.Value)
+		if err != nil {
+			return -1, -1, fmt.Errorf("%w: unable to compress nomral", err)
+		}
+		sizeNormal += float64(len(normalCompress))
+
+		dictCompress, err := compressor.Encode(namespace, entry.Value)
+		if err != nil {
+			return -1, -1, fmt.Errorf("%w: unable to compress with dictionary", err)
+		}
+		sizeDictionary += float64(len(dictCompress))
+
+		// Ensure dict works
+		var dictDecode []byte
+		if err := compressor.Decode(namespace, dictCompress, &dictDecode); err != nil {
+			return -1, -1, fmt.Errorf("%w: unable to decompress with dictionary", err)
+		}
+
+		if types.Hash(entry.Value) != types.Hash(dictDecode) {
+			return -1, -1, errors.New("decompressed dictionary output does not match")
+		}
+	}
+
+	log.Printf("Total Size Uncompressed: %fMB", sizeUncompressed/bytesInMb)
+	normalSize := sizeNormal / sizeUncompressed
+	log.Printf(
+		"Total Size Compressed: %fMB (%% of original size %f%%)",
+		sizeNormal/bytesInMb,
+		normalSize*100,
+	)
+	dictionarySize := sizeDictionary / sizeUncompressed
+	log.Printf(
+		"Total Size Compressed (with dictionary): %fMB (%% of original size %f%%)",
+		sizeDictionary/bytesInMb,
+		dictionarySize*100,
+	)
+
+	return normalSize, dictionarySize, nil
 }
