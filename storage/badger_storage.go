@@ -349,7 +349,10 @@ func BadgerTrain(
 	}
 	defer badgerDb.Close(ctx)
 
-	entries, err := badgerDb.Scan(ctx, []byte(namespace))
+	// We must use a restricted namespace or we will inadvertently
+	// fetch all namespaces that contain the namespace we care about.
+	restrictedNamespace := fmt.Sprintf("%s/", namespace)
+	entries, err := badgerDb.Scan(ctx, []byte(restrictedNamespace))
 	if err != nil {
 		return -1, -1, fmt.Errorf("%w: unable to scan for %s", err, namespace)
 	}
