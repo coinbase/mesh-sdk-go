@@ -17,6 +17,7 @@ package storage
 import (
 	"context"
 	"fmt"
+	"path"
 	"testing"
 
 	"github.com/coinbase/rosetta-sdk-go/utils"
@@ -125,4 +126,39 @@ func TestDatabaseTransaction(t *testing.T) {
 		assert.Nil(t, value)
 		assert.NoError(t, err)
 	})
+}
+
+func TestBadgerTrain(t *testing.T) {
+	ctx := context.Background()
+
+	newDir, err := utils.CreateTempDir()
+	assert.NoError(t, err)
+	defer utils.RemoveTempDir(newDir)
+
+	database, err := NewBadgerStorage(ctx, newDir)
+	assert.NoError(t, err)
+
+	// Load storage with entries in namespace
+	type BogusEntry struct {
+		Index int    `json:"index"`
+		Stuff string `json:"stuff"`
+	}
+	namespace := "bogus"
+	for i := 0; i < 10000; i++ {
+		entry := &BogusEntry{
+			Index: i,
+			Stuff: fmt.Sprintf("block %d", i),
+		}
+		compressedEntry, err := database.Compressor().Encode(namespace, entry)
+		assert.NoError(t, err)
+		assert.NoError(t, database.Set(ctx, []byte(fmt.Sprintf("%s/%d", namespace, i)), compressedEntry))
+	}
+
+	// Close DB
+	database.Close(ctx)
+
+	// Train
+	normalSize, dictSize, err := BadgerTrain(ctx, namespace, newDir, path.Join(newDir, "bogus_dict"))
+	assert.NoError(t, err)
+	assert.True(t, normalSize > dictSize)
 }
