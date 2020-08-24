@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package constructor
+package executor
 
 import (
 	"context"
@@ -185,7 +185,7 @@ type FindBalanceInput struct {
 	// Create is used to determine if we should create a new address using
 	// the CreateAccount Workflow. This will only occur if the
 	// total number of addresses is under some pre-defined limit.
-	// If the value is -1, we will not attempt to create.
+	// If the value is <= 0, we will not attempt to create.
 	Create int `json:"create,omitempty"`
 }
 
@@ -301,16 +301,8 @@ type Broadcast struct {
 	ConfirmationDepth int64
 }
 
-// WorkerHelper is used by the worker to process Jobs.
-type WorkerHelper interface {
-	// Derive returns a new address for a provided publicKey.
-	Derive(
-		context.Context,
-		*types.NetworkIdentifier,
-		*types.PublicKey,
-		map[string]interface{},
-	) (string, map[string]interface{}, error)
-
+// Helper is used by the worker to process Jobs.
+type Helper interface {
 	// StoreKey is called to persist an
 	// address + KeyPair.
 	StoreKey(
@@ -319,19 +311,30 @@ type WorkerHelper interface {
 		*keys.KeyPair,
 	) error
 
+	// Balance returns the balance
+	// for a provided address.
+	Balance(context.Context, *types.AccountIdentifier) ([]*types.Amount, error)
+
+	// Coins returns all *types.Coin owned by an address.
+	Coins(context.Context, *types.AccountIdentifier) ([]*types.Coin, error)
+
+	// Derive returns a new address for a provided publicKey.
+	Derive(
+		context.Context,
+		*types.NetworkIdentifier,
+		*types.PublicKey,
+		map[string]interface{},
+	) (string, map[string]interface{}, error)
+
 	// AllAddresses returns a slice of all known addresses.
 	AllAddresses(ctx context.Context) ([]string, error)
 
 	// LockedAccounts is a slice of all addresses currently sending or receiving
 	// funds.
 	LockedAddresses(context.Context) ([]string, error)
-
-	Balance(context.Context, *types.AccountIdentifier) ([]*types.Amount, error)
-
-	Coins(context.Context, *types.AccountIdentifier) ([]*types.Coin, error)
 }
 
 // Worker processes jobs.
 type Worker struct {
-	helper WorkerHelper
+	helper Helper
 }

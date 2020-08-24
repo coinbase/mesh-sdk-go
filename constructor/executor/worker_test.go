@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package constructor
+package executor
 
 import (
 	"context"
 	"errors"
 	"testing"
 
-	mocks "github.com/coinbase/rosetta-sdk-go/mocks/constructor"
+	mocks "github.com/coinbase/rosetta-sdk-go/mocks/constructor/executor"
 	"github.com/coinbase/rosetta-sdk-go/types"
 
 	"github.com/stretchr/testify/assert"
@@ -137,7 +137,7 @@ func TestFindBalanceWorker(t *testing.T) {
 	tests := map[string]struct {
 		input *FindBalanceInput
 
-		mockHelper *mocks.WorkerHelper
+		mockHelper *mocks.Helper
 
 		output *FindBalanceOutput
 		err    error
@@ -154,8 +154,8 @@ func TestFindBalanceWorker(t *testing.T) {
 				Wait:       true,
 				NotAddress: []string{"addr4"},
 			},
-			mockHelper: func() *mocks.WorkerHelper {
-				helper := &mocks.WorkerHelper{}
+			mockHelper: func() *mocks.Helper {
+				helper := &mocks.Helper{}
 				helper.On(
 					"AllAddresses",
 					ctx,
@@ -231,8 +231,8 @@ func TestFindBalanceWorker(t *testing.T) {
 				Wait:       true,
 				NotAddress: []string{"addr4"},
 			},
-			mockHelper: func() *mocks.WorkerHelper {
-				helper := &mocks.WorkerHelper{}
+			mockHelper: func() *mocks.Helper {
+				helper := &mocks.Helper{}
 				helper.On(
 					"AllAddresses",
 					ctx,
@@ -320,8 +320,8 @@ func TestFindBalanceWorker(t *testing.T) {
 					},
 				},
 			},
-			mockHelper: func() *mocks.WorkerHelper {
-				helper := &mocks.WorkerHelper{}
+			mockHelper: func() *mocks.Helper {
+				helper := &mocks.Helper{}
 				helper.On(
 					"AllAddresses",
 					ctx,
@@ -441,8 +441,8 @@ func TestFindBalanceWorker(t *testing.T) {
 				},
 				Create: -1,
 			},
-			mockHelper: func() *mocks.WorkerHelper {
-				helper := &mocks.WorkerHelper{}
+			mockHelper: func() *mocks.Helper {
+				helper := &mocks.Helper{}
 				helper.On(
 					"AllAddresses",
 					ctx,
@@ -502,7 +502,7 @@ func TestFindBalanceWorker(t *testing.T) {
 			}(),
 			err: ErrUnsatisfiable,
 		},
-		"could not find coin (should create)": {
+		"could not find coin (unsatisfiable)": {
 			input: &FindBalanceInput{
 				MinimumBalance: &types.Amount{
 					Value: "100",
@@ -520,8 +520,8 @@ func TestFindBalanceWorker(t *testing.T) {
 				},
 				Create: 10,
 			},
-			mockHelper: func() *mocks.WorkerHelper {
-				helper := &mocks.WorkerHelper{}
+			mockHelper: func() *mocks.Helper {
+				helper := &mocks.Helper{}
 				helper.On(
 					"AllAddresses",
 					ctx,
@@ -579,7 +579,7 @@ func TestFindBalanceWorker(t *testing.T) {
 
 				return helper
 			}(),
-			err: ErrCreateAccount,
+			err: ErrUnsatisfiable,
 		},
 		"could not find coin (too many accounts)": {
 			input: &FindBalanceInput{
@@ -599,8 +599,8 @@ func TestFindBalanceWorker(t *testing.T) {
 				},
 				Create: 2,
 			},
-			mockHelper: func() *mocks.WorkerHelper {
-				helper := &mocks.WorkerHelper{}
+			mockHelper: func() *mocks.Helper {
+				helper := &mocks.Helper{}
 				helper.On(
 					"AllAddresses",
 					ctx,
@@ -678,7 +678,7 @@ func TestFindBalanceWorker(t *testing.T) {
 				},
 				Create: 2,
 			},
-			mockHelper: &mocks.WorkerHelper{},
+			mockHelper: &mocks.Helper{},
 			err:        ErrInvalidInput,
 		},
 		"invalid currency": {
@@ -699,7 +699,7 @@ func TestFindBalanceWorker(t *testing.T) {
 				},
 				Create: 2,
 			},
-			mockHelper: &mocks.WorkerHelper{},
+			mockHelper: &mocks.Helper{},
 			err:        ErrInvalidInput,
 		},
 	}
