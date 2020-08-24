@@ -257,5 +257,4 @@ func TestBadgerTrain_Limit(t *testing.T) {
 	)
 	assert.NoError(t, err)
 	assert.True(t, normalSize2 > dictSize2)
-	assert.True(t, dictSize > dictSize2)
 }

@@ -383,7 +383,13 @@ func (b *BadgerStorage) LimitedMemoryScan(
 	return entries, nil
 }
 
-func decompressAndSave(compressor *Compressor, namespace string, tmpDir string, k []byte, v []byte) (float64, error) {
+func decompressAndSave(
+	compressor *Compressor,
+	namespace string,
+	tmpDir string,
+	k []byte,
+	v []byte,
+) (float64, error) {
 	decompressed, err := compressor.DecodeRaw(namespace, v)
 	if err != nil {
 		return -1, fmt.Errorf("%w: unable to decompress %s", err, string(k))
@@ -472,7 +478,13 @@ func BadgerTrain(
 		ctx,
 		[]byte(restrictedNamespace),
 		func(k []byte, v []byte) error {
-			decompressedSize, err := decompressAndSave(badgerDb.Compressor(), namespace, tmpDir, k, v)
+			decompressedSize, err := decompressAndSave(
+				badgerDb.Compressor(),
+				namespace,
+				tmpDir,
+				k,
+				v,
+			)
 			if err != nil {
 				return fmt.Errorf("%w: unable to decompress and save", err)
 			}
