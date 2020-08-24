@@ -205,7 +205,6 @@ func TestProcess(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Create coordination channels
-	broadcastComplete := make(chan struct{})
 	processCanceled := make(chan struct{})
 
 	dir, err := utils.CreateTempDir()
@@ -220,15 +219,32 @@ func TestProcess(t *testing.T) {
 	helper.On("HeadBlockExists", ctx).Return(true).Once()
 
 	// Attempt to transfer
-	jobStorage.On("Ready", ctx).Return([]*executor.Job{}, nil).Once()
-	jobStorage.On("Processing", ctx, "transfer").Return(0, nil).Once()
+	// We use a "read" database transaction in this test because we mock
+	// all responses from the database and "write" transactions require a
+	// lock. While it would be possible to orchestrate these locks in this
+	// test, it is simpler to just use a "read" transaction.
+	dbTxFail := db.NewDatabaseTransaction(ctx, false)
+	helper.On("DatabaseTransaction", ctx).Return(dbTxFail).Once()
+	jobStorage.On("Ready", ctx, dbTxFail).Return([]*executor.Job{}, nil).Once()
+	jobStorage.On("Processing", ctx, dbTxFail, "transfer").Return(0, nil).Once()
+	helper.On("AllAddresses", ctx, dbTxFail).Return([]string{}, nil).Once()
+
+	// Start processor
+	go func() {
+		err := c.Process(ctx)
+		fmt.Println(err)
+		assert.True(t, errors.Is(err, context.Canceled))
+		close(processCanceled)
+	}()
 
 	// Determine account must be created
 	helper.On("HeadBlockExists", ctx).Return(true).Once()
-	jobStorage.On("Ready", ctx).Return([]*executor.Job{}, nil).Once()
-	helper.On("AllAddresses", ctx).Return([]string{}, nil).Once()
-	jobStorage.On("Broadcasting", ctx).Return([]*executor.Job{}, nil).Once()
-	jobStorage.On("Processing", ctx, "create_account").Return(0, nil).Once()
+
+	dbTx := db.NewDatabaseTransaction(ctx, false)
+	helper.On("DatabaseTransaction", ctx).Return(dbTx).Once()
+	jobStorage.On("Ready", ctx, dbTx).Return([]*executor.Job{}, nil).Once()
+	jobStorage.On("Broadcasting", ctx, dbTx).Return([]*executor.Job{}, nil).Once()
+	jobStorage.On("Processing", ctx, dbTx, "create_account").Return(0, nil).Once()
 	helper.On(
 		"Derive",
 		ctx,
@@ -242,23 +258,25 @@ func TestProcess(t *testing.T) {
 	helper.On(
 		"StoreKey",
 		ctx,
+		dbTx,
 		"address1",
 		mock.Anything,
 	).Return(nil).Once()
-	dbTx := db.NewDatabaseTransaction(ctx, true)
-	helper.On("DatabaseTransaction", ctx).Return(dbTx).Once()
 	jobStorage.On("Update", ctx, dbTx, mock.Anything).Return("job1", nil).Once()
 	helper.On("BroadcastAll", ctx).Return(nil).Once()
 
 	// Attempt to run transfer again (but determine funds are needed)
 	helper.On("HeadBlockExists", ctx).Return(true).Once()
-	jobStorage.On("Ready", ctx).Return([]*executor.Job{}, nil).Once()
-	jobStorage.On("Processing", ctx, "transfer").Return(0, nil).Once()
-	helper.On("AllAddresses", ctx).Return([]string{"address1"}, nil).Once()
-	helper.On("LockedAddresses", ctx).Return([]string{}, nil).Once()
+	dbTxFail2 := db.NewDatabaseTransaction(ctx, false)
+	helper.On("DatabaseTransaction", ctx).Return(dbTxFail2).Once()
+	jobStorage.On("Ready", ctx, dbTxFail2).Return([]*executor.Job{}, nil).Once()
+	jobStorage.On("Processing", ctx, dbTxFail2, "transfer").Return(0, nil).Once()
+	helper.On("AllAddresses", ctx, dbTxFail2).Return([]string{"address1"}, nil).Once()
+	helper.On("LockedAddresses", ctx, dbTxFail2).Return([]string{}, nil).Once()
 	helper.On(
 		"Balance",
 		ctx,
+		dbTxFail2,
 		&types.AccountIdentifier{Address: "address1"},
 	).Return(
 		[]*types.Amount{
@@ -273,26 +291,20 @@ func TestProcess(t *testing.T) {
 		nil,
 	).Once()
 
-	go func() {
-		err := c.Process(ctx)
-		fmt.Println(err)
-		assert.True(t, errors.Is(err, context.Canceled))
-		close(processCanceled)
-	}()
-
-	dbTxLock := make(chan struct{})
 	// Attempt funds request
-	helper.On("HeadBlockExists", ctx).Return(true).Run(func(args mock.Arguments) {
-		close(dbTxLock)
-	}).Once()
-	jobStorage.On("Ready", ctx).Return([]*executor.Job{}, nil).Once()
-	jobStorage.On("Broadcasting", ctx).Return([]*executor.Job{}, nil).Once()
-	jobStorage.On("Processing", ctx, "request_funds").Return(0, nil).Once()
-	helper.On("AllAddresses", ctx).Return([]string{"address1"}, nil).Once()
-	helper.On("LockedAddresses", ctx).Return([]string{}, nil).Once()
+	helper.On("HeadBlockExists", ctx).Return(true).Once()
+
+	dbTx2 := db.NewDatabaseTransaction(ctx, false)
+	helper.On("DatabaseTransaction", ctx).Return(dbTx2).Once()
+	jobStorage.On("Ready", ctx, dbTx2).Return([]*executor.Job{}, nil).Once()
+	jobStorage.On("Broadcasting", ctx, dbTx2).Return([]*executor.Job{}, nil).Once()
+	jobStorage.On("Processing", ctx, dbTx2, "request_funds").Return(0, nil).Once()
+	helper.On("AllAddresses", ctx, dbTx2).Return([]string{"address1"}, nil).Once()
+	helper.On("LockedAddresses", ctx, dbTx2).Return([]string{}, nil).Once()
 	helper.On(
 		"Balance",
 		ctx,
+		dbTx2,
 		&types.AccountIdentifier{Address: "address1"},
 	).Return(
 		[]*types.Amount{
@@ -308,11 +320,12 @@ func TestProcess(t *testing.T) {
 	).Once()
 
 	// Load funds
-	helper.On("AllAddresses", ctx).Return([]string{"address1"}, nil).Once()
-	helper.On("LockedAddresses", ctx).Return([]string{}, nil).Once()
+	helper.On("AllAddresses", ctx, dbTx2).Return([]string{"address1"}, nil).Once()
+	helper.On("LockedAddresses", ctx, dbTx2).Return([]string{}, nil).Once()
 	helper.On(
 		"Balance",
 		ctx,
+		dbTx2,
 		&types.AccountIdentifier{Address: "address1"},
 	).Return(
 		[]*types.Amount{
@@ -328,21 +341,21 @@ func TestProcess(t *testing.T) {
 	).Once()
 
 	// Wait until we get here to continue setting up mocks
-	<-dbTxLock
-	dbTx2 := db.NewDatabaseTransaction(ctx, true)
-	helper.On("DatabaseTransaction", ctx).Return(dbTx2).Once()
 	jobStorage.On("Update", ctx, dbTx2, mock.Anything).Return("job2", nil).Once()
 	helper.On("BroadcastAll", ctx).Return(nil).Once()
 
 	// Attempt to transfer again
 	helper.On("HeadBlockExists", ctx).Return(true).Once()
-	jobStorage.On("Ready", ctx).Return([]*executor.Job{}, nil).Once()
-	jobStorage.On("Processing", ctx, "transfer").Return(0, nil).Once()
-	helper.On("AllAddresses", ctx).Return([]string{"address1"}, nil).Once()
-	helper.On("LockedAddresses", ctx).Return([]string{}, nil).Once()
+	dbTxFail3 := db.NewDatabaseTransaction(ctx, false)
+	helper.On("DatabaseTransaction", ctx).Return(dbTxFail3).Once()
+	jobStorage.On("Ready", ctx, dbTxFail3).Return([]*executor.Job{}, nil).Once()
+	jobStorage.On("Processing", ctx, dbTxFail3, "transfer").Return(0, nil).Once()
+	helper.On("AllAddresses", ctx, dbTxFail3).Return([]string{"address1"}, nil).Once()
+	helper.On("LockedAddresses", ctx, dbTxFail3).Return([]string{}, nil).Once()
 	helper.On(
 		"Balance",
 		ctx,
+		dbTxFail3,
 		&types.AccountIdentifier{Address: "address1"},
 	).Return(
 		[]*types.Amount{
@@ -356,17 +369,16 @@ func TestProcess(t *testing.T) {
 		},
 		nil,
 	).Once()
-	helper.On("AllAddresses", ctx).Return([]string{"address1"}, nil).Once()
-	helper.On("LockedAddresses", ctx).Return([]string{}, nil).Once()
+	helper.On("AllAddresses", ctx, dbTxFail3).Return([]string{"address1"}, nil).Once()
+	helper.On("LockedAddresses", ctx, dbTxFail3).Return([]string{}, nil).Once()
 
 	// Attempt to create recipient
-	dbTxLock2 := make(chan struct{})
-	helper.On("HeadBlockExists", ctx).Return(true).Run(func(args mock.Arguments) {
-		close(dbTxLock2)
-	}).Once()
-	jobStorage.On("Ready", ctx).Return([]*executor.Job{}, nil).Once()
-	jobStorage.On("Broadcasting", ctx).Return([]*executor.Job{}, nil).Once()
-	jobStorage.On("Processing", ctx, "create_account").Return(0, nil).Once()
+	helper.On("HeadBlockExists", ctx).Return(true).Once()
+	dbTx3 := db.NewDatabaseTransaction(ctx, false)
+	helper.On("DatabaseTransaction", ctx).Return(dbTx3).Once()
+	jobStorage.On("Ready", ctx, dbTx3).Return([]*executor.Job{}, nil).Once()
+	jobStorage.On("Broadcasting", ctx, dbTx3).Return([]*executor.Job{}, nil).Once()
+	jobStorage.On("Processing", ctx, dbTx3, "create_account").Return(0, nil).Once()
 	helper.On(
 		"Derive",
 		ctx,
@@ -380,27 +392,25 @@ func TestProcess(t *testing.T) {
 	helper.On(
 		"StoreKey",
 		ctx,
+		dbTx3,
 		"address2",
 		mock.Anything,
 	).Return(nil).Once()
-	<-dbTxLock2
-	dbTx3 := db.NewDatabaseTransaction(ctx, true)
-	helper.On("DatabaseTransaction", ctx).Return(dbTx3).Once()
 	jobStorage.On("Update", ctx, dbTx3, mock.Anything).Return("job3", nil).Once()
 	helper.On("BroadcastAll", ctx).Return(nil).Once()
 
 	// Attempt to create transfer
-	dbTxLock3 := make(chan struct{})
-	helper.On("HeadBlockExists", ctx).Return(true).Run(func(args mock.Arguments) {
-		close(dbTxLock3)
-	}).Once()
-	jobStorage.On("Ready", ctx).Return([]*executor.Job{}, nil).Once()
-	jobStorage.On("Processing", ctx, "transfer").Return(0, nil).Once()
-	helper.On("AllAddresses", ctx).Return([]string{"address1", "address2"}, nil).Once()
-	helper.On("LockedAddresses", ctx).Return([]string{}, nil).Once()
+	helper.On("HeadBlockExists", ctx).Return(true).Once()
+	dbTx4 := db.NewDatabaseTransaction(ctx, false)
+	helper.On("DatabaseTransaction", ctx).Return(dbTx4).Once()
+	jobStorage.On("Ready", ctx, dbTx4).Return([]*executor.Job{}, nil).Once()
+	jobStorage.On("Processing", ctx, dbTx4, "transfer").Return(0, nil).Once()
+	helper.On("AllAddresses", ctx, dbTx4).Return([]string{"address1", "address2"}, nil).Once()
+	helper.On("LockedAddresses", ctx, dbTx4).Return([]string{}, nil).Once()
 	helper.On(
 		"Balance",
 		ctx,
+		dbTx4,
 		&types.AccountIdentifier{Address: "address1"},
 	).Return(
 		[]*types.Amount{
@@ -414,11 +424,12 @@ func TestProcess(t *testing.T) {
 		},
 		nil,
 	).Once()
-	helper.On("AllAddresses", ctx).Return([]string{"address1", "address2"}, nil).Once()
-	helper.On("LockedAddresses", ctx).Return([]string{}, nil).Once()
+	helper.On("AllAddresses", ctx, dbTx4).Return([]string{"address1", "address2"}, nil).Once()
+	helper.On("LockedAddresses", ctx, dbTx4).Return([]string{}, nil).Once()
 	helper.On(
 		"Balance",
 		ctx,
+		dbTx4,
 		&types.AccountIdentifier{Address: "address2"},
 	).Return(
 		[]*types.Amount{
@@ -432,9 +443,6 @@ func TestProcess(t *testing.T) {
 		},
 		nil,
 	).Once()
-	<-dbTxLock3
-	dbTx4 := db.NewDatabaseTransaction(ctx, true)
-	helper.On("DatabaseTransaction", ctx).Return(dbTx4).Once()
 	var job4 *executor.Job
 	jobStorage.On(
 		"Update",
@@ -582,24 +590,20 @@ func TestProcess(t *testing.T) {
 	helper.On("BroadcastAll", ctx).Return(nil).Once()
 
 	// Wait for transfer to complete
-	dbTxLock4 := make(chan struct{})
-	helper.On("HeadBlockExists", ctx).Return(true).Run(func(args mock.Arguments) {
-		close(dbTxLock4)
-	}).Once()
-	jobStorage.On("Ready", ctx).Return([]*executor.Job{}, nil).Once()
-	jobStorage.On("Processing", ctx, "transfer").Return(1, nil).Once()
+	helper.On("HeadBlockExists", ctx).Return(true).Once()
+	dbTx5 := db.NewDatabaseTransaction(ctx, false)
+	helper.On("DatabaseTransaction", ctx).Return(dbTx5).Once()
+	jobStorage.On("Ready", ctx, dbTx5).Return([]*executor.Job{}, nil).Once()
+	jobStorage.On("Processing", ctx, dbTx5, "transfer").Return(1, nil).Once()
 
 	markConfirmed := make(chan struct{})
-	jobStorage.On("Broadcasting", ctx).Return([]*executor.Job{
+	jobStorage.On("Broadcasting", ctx, dbTx5).Return([]*executor.Job{
 		job4,
 	}, nil).Run(func(args mock.Arguments) {
 		close(markConfirmed)
 	}).Once()
 
-	<-dbTxLock4
 	<-markConfirmed
-	dbTx5 := db.NewDatabaseTransaction(ctx, true)
-	helper.On("DatabaseTransaction", ctx).Return(dbTx5).Once()
 	jobStorage.On("Get", ctx, dbTx5, "job4").Return(job4, nil).Once()
 	jobStorage.On(
 		"Update",
@@ -616,36 +620,30 @@ func TestProcess(t *testing.T) {
 		TransactionIdentifier: txIdentifier,
 		Operations:            ops,
 	}
-	err = c.BroadcastComplete(ctx, "job4", tx)
-	assert.NoError(t, err)
 
 	// Process second step of job4
-	dbTxLock5 := make(chan struct{})
-	helper.On("HeadBlockExists", ctx).Return(true).Run(func(args mock.Arguments) {
-		close(dbTxLock5)
-	}).Once()
-	jobStorage.On("Ready", ctx).Return([]*executor.Job{job4}, nil).Once()
+	dbTx6 := db.NewDatabaseTransaction(ctx, false)
+	err = c.BroadcastComplete(ctx, dbTx6, "job4", tx)
+	assert.NoError(t, err)
 
-	<-dbTxLock5
-	dbTx6 := db.NewDatabaseTransaction(ctx, true)
-	helper.On("DatabaseTransaction", ctx).Return(dbTx6).Once()
+	helper.On("HeadBlockExists", ctx).Return(true).Once()
+	dbTx7 := db.NewDatabaseTransaction(ctx, false)
+	helper.On("DatabaseTransaction", ctx).Return(dbTx7).Once()
+	jobStorage.On("Ready", ctx, dbTx7).Return([]*executor.Job{job4}, nil).Once()
 	jobStorage.On(
 		"Update",
 		ctx,
-		dbTx6,
+		dbTx7,
 		mock.Anything,
-	).Run(func(args mock.Arguments) {
-		close(broadcastComplete)
-	}).Return(
+	).Return(
 		"job4",
 		nil,
 	)
-	helper.On("BroadcastAll", ctx).Return(nil).Once()
+	helper.On("BroadcastAll", ctx).Return(nil).Run(func(args mock.Arguments) {
+		cancel()
+	}).Once()
 
-	<-broadcastComplete
-	cancel()
 	<-processCanceled
-
 	jobStorage.AssertExpectations(t)
 	helper.AssertExpectations(t)
 }

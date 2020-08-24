@@ -24,6 +24,7 @@ import (
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
 	"github.com/coinbase/rosetta-sdk-go/keys"
+	"github.com/coinbase/rosetta-sdk-go/storage"
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/coinbase/rosetta-sdk-go/utils"
 
@@ -55,6 +56,7 @@ func marshalString(value string) string {
 
 func (w *Worker) invokeWorker(
 	ctx context.Context,
+	dbTx storage.DatabaseTransaction,
 	action ActionType,
 	input string,
 ) (string, error) {
@@ -66,7 +68,7 @@ func (w *Worker) invokeWorker(
 	case Derive:
 		return w.DeriveWorker(ctx, input)
 	case SaveAddress:
-		return "", w.SaveAddressWorker(ctx, input)
+		return "", w.SaveAddressWorker(ctx, dbTx, input)
 	case PrintMessage:
 		PrintMessageWorker(input)
 		return "", nil
@@ -75,20 +77,25 @@ func (w *Worker) invokeWorker(
 	case Math:
 		return MathWorker(input)
 	case FindBalance:
-		return w.FindBalanceWorker(ctx, input)
+		return w.FindBalanceWorker(ctx, dbTx, input)
 	default:
 		return "", fmt.Errorf("%w: %s", ErrInvalidActionType, action)
 	}
 }
 
-func (w *Worker) actions(ctx context.Context, state string, actions []*Action) (string, error) {
+func (w *Worker) actions(
+	ctx context.Context,
+	dbTx storage.DatabaseTransaction,
+	state string,
+	actions []*Action,
+) (string, error) {
 	for _, action := range actions {
 		processedInput, err := PopulateInput(state, action.Input)
 		if err != nil {
 			return "", fmt.Errorf("%w: unable to populate variables", err)
 		}
 
-		output, err := w.invokeWorker(ctx, action.Type, processedInput)
+		output, err := w.invokeWorker(ctx, dbTx, action.Type, processedInput)
 		if err != nil {
 			return "", fmt.Errorf("%w: unable to process action", err)
 		}
@@ -111,10 +118,11 @@ func (w *Worker) actions(ctx context.Context, state string, actions []*Action) (
 // scenario.
 func (w *Worker) ProcessNextScenario(
 	ctx context.Context,
+	dbTx storage.DatabaseTransaction,
 	j *Job,
 ) error {
 	scenario := j.Scenarios[j.Index]
-	newState, err := w.actions(ctx, j.State, scenario.Actions)
+	newState, err := w.actions(ctx, dbTx, j.State, scenario.Actions)
 	if err != nil {
 		return fmt.Errorf("%w: unable to process %s actions", err, scenario.Name)
 	}
@@ -175,7 +183,11 @@ func GenerateKeyWorker(rawInput string) (string, error) {
 
 // SaveAddressWorker saves an address and associated KeyPair
 // in KeyStorage.
-func (w *Worker) SaveAddressWorker(ctx context.Context, rawInput string) error {
+func (w *Worker) SaveAddressWorker(
+	ctx context.Context,
+	dbTx storage.DatabaseTransaction,
+	rawInput string,
+) error {
 	var input SaveAddressInput
 	err := unmarshalInput([]byte(rawInput), &input)
 	if err != nil {
@@ -186,7 +198,7 @@ func (w *Worker) SaveAddressWorker(ctx context.Context, rawInput string) error {
 		return fmt.Errorf("%w: %s", ErrInvalidInput, "empty address")
 	}
 
-	if err := w.helper.StoreKey(ctx, input.Address, input.KeyPair); err != nil {
+	if err := w.helper.StoreKey(ctx, dbTx, input.Address, input.KeyPair); err != nil {
 		return fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
 	}
 
@@ -290,10 +302,11 @@ func waitMessage(input *FindBalanceInput) string {
 
 func (w *Worker) checkAccountCoins(
 	ctx context.Context,
+	dbTx storage.DatabaseTransaction,
 	input *FindBalanceInput,
 	account *types.AccountIdentifier,
 ) (string, error) {
-	coins, err := w.helper.Coins(ctx, account)
+	coins, err := w.helper.Coins(ctx, dbTx, account)
 	if err != nil {
 		return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
 	}
@@ -338,10 +351,11 @@ func (w *Worker) checkAccountCoins(
 
 func (w *Worker) checkAccountBalance(
 	ctx context.Context,
+	dbTx storage.DatabaseTransaction,
 	input *FindBalanceInput,
 	account *types.AccountIdentifier,
 ) (string, error) {
-	amounts, err := w.helper.Balance(ctx, account)
+	amounts, err := w.helper.Balance(ctx, dbTx, account)
 	if err != nil {
 		return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
 	}
@@ -375,8 +389,11 @@ func (w *Worker) checkAccountBalance(
 	return "", nil
 }
 
-func (w *Worker) availableAddresses(ctx context.Context) ([]string, []string, error) {
-	addresses, err := w.helper.AllAddresses(ctx)
+func (w *Worker) availableAddresses(
+	ctx context.Context,
+	dbTx storage.DatabaseTransaction,
+) ([]string, []string, error) {
+	addresses, err := w.helper.AllAddresses(ctx, dbTx)
 	if err != nil {
 		return nil, nil, fmt.Errorf(
 			"%w: unable to get all addresses %s",
@@ -393,7 +410,7 @@ func (w *Worker) availableAddresses(ctx context.Context) ([]string, []string, er
 	// We fetch all locked addresses to subtract them from AllAddresses.
 	// We consider an address "locked" if it is actively involved in a broadcast.
 	unlockedAddresses := []string{}
-	lockedAddresses, err := w.helper.LockedAddresses(ctx)
+	lockedAddresses, err := w.helper.LockedAddresses(ctx, dbTx)
 	if err != nil {
 		return nil, nil, fmt.Errorf("%w: unable to get locked addresses %s", ErrActionFailed, err)
 	}
@@ -415,7 +432,11 @@ func (w *Worker) availableAddresses(ctx context.Context) ([]string, []string, er
 
 // FindBalanceWorker attempts to find an account (and coin) with some minimum
 // balance in a particular currency.
-func (w *Worker) FindBalanceWorker(ctx context.Context, rawInput string) (string, error) {
+func (w *Worker) FindBalanceWorker(
+	ctx context.Context,
+	dbTx storage.DatabaseTransaction,
+	rawInput string,
+) (string, error) {
 	var input FindBalanceInput
 	err := unmarshalInput([]byte(rawInput), &input)
 	if err != nil {
@@ -426,7 +447,7 @@ func (w *Worker) FindBalanceWorker(ctx context.Context, rawInput string) (string
 		return "", fmt.Errorf("%w: minimum balance invalid %s", ErrInvalidInput, err.Error())
 	}
 
-	addresses, availableAddresses, err := w.availableAddresses(ctx)
+	addresses, availableAddresses, err := w.availableAddresses(ctx, dbTx)
 	if err != nil {
 		return "", fmt.Errorf("%w: unable to get available addresses", err)
 	}
@@ -455,9 +476,9 @@ func (w *Worker) FindBalanceWorker(ctx context.Context, rawInput string) (string
 		var output string
 		var err error
 		if input.RequireCoin {
-			output, err = w.checkAccountCoins(ctx, &input, account)
+			output, err = w.checkAccountCoins(ctx, dbTx, &input, account)
 		} else {
-			output, err = w.checkAccountBalance(ctx, &input, account)
+			output, err = w.checkAccountBalance(ctx, dbTx, &input, account)
 		}
 		if err != nil {
 			return "", err
@@ -484,7 +505,7 @@ func (w *Worker) FindBalanceWorker(ctx context.Context, rawInput string) (string
 		log.Printf("%s\n", waitMessage(&input))
 
 		time.Sleep(BalanceWaitTime)
-		return w.FindBalanceWorker(ctx, rawInput)
+		return w.FindBalanceWorker(ctx, dbTx, rawInput)
 	}
 
 	// If we should create an account and the number of addresses

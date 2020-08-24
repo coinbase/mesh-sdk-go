@@ -22,7 +22,9 @@ import (
 	"testing"
 
 	mocks "github.com/coinbase/rosetta-sdk-go/mocks/constructor/executor"
+	"github.com/coinbase/rosetta-sdk-go/storage"
 	"github.com/coinbase/rosetta-sdk-go/types"
+	"github.com/coinbase/rosetta-sdk-go/utils"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -116,6 +118,18 @@ func TestJob_ComplicatedTransfer(t *testing.T) {
 
 	mockHelper := &mocks.Helper{}
 
+	// Setup DB
+	dir, err := utils.CreateTempDir()
+	assert.NoError(t, err)
+	defer utils.RemoveTempDir(dir)
+
+	db, err := storage.NewBadgerStorage(ctx, dir, false)
+	assert.NoError(t, err)
+	assert.NotNil(t, db)
+	defer db.Close(ctx)
+
+	dbTx := db.NewDatabaseTransaction(ctx, true)
+
 	network := &types.NetworkIdentifier{
 		Blockchain: "Bitcoin",
 		Network:    "Testnet3",
@@ -135,6 +149,7 @@ func TestJob_ComplicatedTransfer(t *testing.T) {
 	mockHelper.On(
 		"StoreKey",
 		ctx,
+		dbTx,
 		address,
 		mock.Anything,
 	).Return(
@@ -144,7 +159,7 @@ func TestJob_ComplicatedTransfer(t *testing.T) {
 
 	assert.False(t, j.checkComplete())
 
-	b, err := j.Process(ctx, worker)
+	b, err := j.Process(ctx, dbTx, worker)
 	assert.Nil(t, b)
 	assert.NoError(t, err)
 
@@ -155,7 +170,7 @@ func TestJob_ComplicatedTransfer(t *testing.T) {
 	assertVariableEquality(t, j.State, "key.public_key.curve_type", types.Secp256k1)
 	assertVariableEquality(t, j.State, "address.address", address)
 
-	b, err = j.Process(ctx, worker)
+	b, err = j.Process(ctx, dbTx, worker)
 	assert.NoError(t, err)
 
 	randomAddress := gjson.Get(j.State, "random_address")
@@ -411,9 +426,21 @@ func TestJob_Failures(t *testing.T) {
 			j := NewJob(workflow)
 			worker := NewWorker(test.helper)
 
+			// Setup DB
+			dir, err := utils.CreateTempDir()
+			assert.NoError(t, err)
+			defer utils.RemoveTempDir(dir)
+
+			db, err := storage.NewBadgerStorage(ctx, dir, false)
+			assert.NoError(t, err)
+			assert.NotNil(t, db)
+			defer db.Close(ctx)
+
+			dbTx := db.NewDatabaseTransaction(ctx, true)
+
 			assert.False(t, j.checkComplete())
 
-			b, err := j.Process(ctx, worker)
+			b, err := j.Process(ctx, dbTx, worker)
 			assert.Nil(t, b)
 			assert.True(t, errors.Is(err, test.expectedErr))
 

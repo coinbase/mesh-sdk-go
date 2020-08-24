@@ -44,32 +44,6 @@ const (
 // Helper is used by the coordinator to process Jobs.
 // It is a superset of functions required by the constructor/executor.Helper.
 type Helper interface {
-	// StoreKey is called to persist an
-	// address + KeyPair.
-	StoreKey(
-		context.Context,
-		string,
-		*keys.KeyPair,
-	) error
-
-	// AllAddresses returns a slice of all known addresses.
-	AllAddresses(ctx context.Context) ([]string, error)
-
-	// LockedAccounts is a slice of all addresses currently sending or receiving
-	// funds.
-	LockedAddresses(context.Context) ([]string, error)
-
-	// Balance returns the balance
-	// for a provided address.
-	Balance(context.Context, *types.AccountIdentifier) ([]*types.Amount, error)
-
-	// Coins returns all *types.Coin owned by an address.
-	Coins(context.Context, *types.AccountIdentifier) ([]*types.Coin, error)
-
-	// BroadcastAll broadcasts all transactions considered ready for
-	// broadcast (unbroadcasted or stale).
-	BroadcastAll(context.Context) error
-
 	// HeadBlockExists returns a boolean indicating if a block
 	// has been synced by BlockStorage.
 	HeadBlockExists(context.Context) bool
@@ -77,6 +51,47 @@ type Helper interface {
 	// DatabaseTransaction returns a new storage.DatabaseTransaction.
 	// This is used to update jobs and enque them for broadcast atomically.
 	DatabaseTransaction(context.Context) storage.DatabaseTransaction
+
+	// StoreKey is called to persist an
+	// address + KeyPair.
+	StoreKey(
+		context.Context,
+		storage.DatabaseTransaction,
+		string,
+		*keys.KeyPair,
+	) error
+
+	// AllAddresses returns a slice of all known addresses.
+	AllAddresses(
+		context.Context,
+		storage.DatabaseTransaction,
+	) ([]string, error)
+
+	// LockedAccounts is a slice of all addresses currently sending or receiving
+	// funds.
+	LockedAddresses(
+		context.Context,
+		storage.DatabaseTransaction,
+	) ([]string, error)
+
+	// Balance returns the balance
+	// for a provided address.
+	Balance(
+		context.Context,
+		storage.DatabaseTransaction,
+		*types.AccountIdentifier,
+	) ([]*types.Amount, error)
+
+	// Coins returns all *types.Coin owned by an address.
+	Coins(
+		context.Context,
+		storage.DatabaseTransaction,
+		*types.AccountIdentifier,
+	) ([]*types.Coin, error)
+
+	// BroadcastAll broadcasts all transactions considered ready for
+	// broadcast (unbroadcasted or stale).
+	BroadcastAll(context.Context) error
 
 	// Broadcast enqueues a particular intent for broadcast.
 	Broadcast(
@@ -177,14 +192,24 @@ type Coordinator struct {
 // storage of Jobs.
 type JobStorage interface {
 	// Ready returns the jobs that are ready to be processed.
-	Ready(context.Context) ([]*executor.Job, error)
+	Ready(
+		context.Context,
+		storage.DatabaseTransaction,
+	) ([]*executor.Job, error)
 
 	// Broadcasting returns all jobs that are broadcasting.
-	Broadcasting(context.Context) ([]*executor.Job, error)
+	Broadcasting(
+		context.Context,
+		storage.DatabaseTransaction,
+	) ([]*executor.Job, error)
 
 	// Processing returns the number of jobs processing
 	// for a particular workflow.
-	Processing(context.Context, string) (int, error)
+	Processing(
+		context.Context,
+		storage.DatabaseTransaction,
+		string,
+	) (int, error)
 
 	// Update stores an updated *Job in storage
 	// and returns its UUID (which won't exist
