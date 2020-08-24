@@ -168,6 +168,7 @@ func TestBadgerTrain_NoLimit(t *testing.T) {
 		newDir,
 		path.Join(newDir, "bogus_dict"),
 		-1,
+		[]*CompressorEntry{},
 	)
 	assert.NoError(t, err)
 	assert.True(t, normalSize > dictSize)
@@ -202,13 +203,59 @@ func TestBadgerTrain_Limit(t *testing.T) {
 	database.Close(ctx)
 
 	// Train
+	dictionaryPath := path.Join(newDir, "bogus_dict")
 	normalSize, dictSize, err := BadgerTrain(
 		ctx,
 		namespace,
 		newDir,
-		path.Join(newDir, "bogus_dict"),
-		6000,
+		dictionaryPath,
+		-1,
+		[]*CompressorEntry{},
 	)
 	assert.NoError(t, err)
 	assert.True(t, normalSize > dictSize)
+
+	// Train again using dictionary
+	newDir2, err := utils.CreateTempDir()
+	assert.NoError(t, err)
+	defer utils.RemoveTempDir(newDir2)
+
+	database2, err := NewBadgerStorage(
+		ctx,
+		newDir2,
+		WithCompressorEntries([]*CompressorEntry{
+			{
+				Namespace:      namespace,
+				DictionaryPath: dictionaryPath,
+			},
+		}),
+	)
+	assert.NoError(t, err)
+
+	for i := 0; i < 10000; i++ {
+		entry := &BogusEntry{
+			Index: i,
+			Stuff: fmt.Sprintf("block %d", i),
+		}
+		compressedEntry, err := database2.Compressor().Encode(namespace, entry)
+		assert.NoError(t, err)
+		assert.NoError(
+			t,
+			database2.Set(ctx, []byte(fmt.Sprintf("%s/%d", namespace, i)), compressedEntry),
+		)
+	}
+
+	// Train from Dictionary
+	database2.Close(ctx)
+	normalSize2, dictSize2, err := BadgerTrain(
+		ctx,
+		namespace,
+		newDir,
+		path.Join(newDir2, "bogus_dict_2"),
+		100,
+		nil,
+	)
+	assert.NoError(t, err)
+	assert.True(t, normalSize2 > dictSize2)
+	assert.True(t, dictSize > dictSize2)
 }
