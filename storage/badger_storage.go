@@ -389,10 +389,12 @@ func decompressAndSave(
 	tmpDir string,
 	k []byte,
 	v []byte,
-) (float64, error) {
+) (float64, float64, error) {
+	// We use a compressor.DecodeRaw here because the v may be
+	// encoded using dictionary compression.
 	decompressed, err := compressor.DecodeRaw(namespace, v)
 	if err != nil {
-		return -1, fmt.Errorf("%w: unable to decompress %s", err, string(k))
+		return -1, -1, fmt.Errorf("%w: unable to decompress %s", err, string(k))
 	}
 
 	err = ioutil.WriteFile(
@@ -401,10 +403,10 @@ func decompressAndSave(
 		os.FileMode(utils.DefaultFilePermissions),
 	)
 	if err != nil {
-		return -1, fmt.Errorf("%w: unable to store decompressed file", err)
+		return -1, -1, fmt.Errorf("%w: unable to store decompressed file", err)
 	}
 
-	return float64(len(decompressed)), nil
+	return float64(len(decompressed)), float64(len(v)), nil
 }
 
 func decompressAndEncode(
@@ -440,6 +442,54 @@ func decompressAndEncode(
 	return float64(len(decompressed)), float64(len(normalCompress)), float64(len(dictCompress)), nil
 }
 
+// recompress compares the new compressor versus
+// what is already on-chain. It returns the old
+// on-disk size vs the new on-disk size with the new
+// compressor.
+func recompress(
+	ctx context.Context,
+	badgerDb Database,
+	namespace string,
+	restrictedNamespace string,
+	newCompressor *Compressor,
+) (float64, float64, error) {
+	onDiskSize := float64(0)
+	newSize := float64(0)
+
+	_, err := badgerDb.LimitedMemoryScan(
+		ctx,
+		[]byte(restrictedNamespace),
+		func(k []byte, v []byte) error {
+			decompressed, err := badgerDb.Compressor().DecodeRaw(namespace, v)
+			if err != nil {
+				return fmt.Errorf("%w: unable to decompress %s", err, string(k))
+			}
+
+			newCompressed, err := newCompressor.Encode(namespace, decompressed)
+			if err != nil {
+				return fmt.Errorf("%w: unable to compress with dictionary", err)
+			}
+			onDiskSize += float64(len(v))
+			newSize += float64(len(newCompressed))
+
+			return nil
+		},
+	)
+	if err != nil {
+		return -1, -1, fmt.Errorf("%w: unable to recompress", err)
+	}
+
+	// Negative savings here means that the new dictionary
+	// is worse.
+	savings := (onDiskSize - newSize) / onDiskSize
+	log.Printf(
+		"[OUT OF SAMPLE] Savings: %f%%)",
+		savings*utils.OneHundred,
+	)
+
+	return onDiskSize, newSize, nil
+}
+
 // BadgerTrain creates a zstd dictionary for a given BadgerStorage DB namespace.
 // Optionally, you can specify the maximum number of entries to load into
 // storage (if -1 is provided, then all possible are loaded).
@@ -473,12 +523,13 @@ func BadgerTrain(
 	restrictedNamespace := fmt.Sprintf("%s/", namespace)
 
 	totalUncompressedSize := float64(0)
+	totalDiskSize := float64(0)
 	entriesSeen := 0
 	_, err = badgerDb.LimitedMemoryScan(
 		ctx,
 		[]byte(restrictedNamespace),
 		func(k []byte, v []byte) error {
-			decompressedSize, err := decompressAndSave(
+			decompressedSize, diskSize, err := decompressAndSave(
 				badgerDb.Compressor(),
 				namespace,
 				tmpDir,
@@ -490,6 +541,7 @@ func BadgerTrain(
 			}
 
 			totalUncompressedSize += decompressedSize
+			totalDiskSize += diskSize
 			entriesSeen++
 
 			if entriesSeen > maxEntries-1 && maxEntries != -1 {
@@ -508,10 +560,17 @@ func BadgerTrain(
 	}
 
 	log.Printf(
-		"found %d entries for %s (average size: %fB)\n",
+		"found %d entries for %s (average uncompressed size: %fB)\n",
 		entriesSeen,
 		namespace,
 		totalUncompressedSize/float64(entriesSeen),
+	)
+
+	log.Printf(
+		"found %d entries for %s (average disk size: %fB)\n",
+		entriesSeen,
+		namespace,
+		totalDiskSize/float64(entriesSeen),
 	)
 
 	// Invoke ZSTD
@@ -574,19 +633,36 @@ func BadgerTrain(
 		return -1, -1, fmt.Errorf("%w: unable to walk files", err)
 	}
 
-	log.Printf("Total Size Uncompressed: %fMB", sizeUncompressed/bytesInMb)
+	log.Printf("[IN SAMPLE] Total Size Uncompressed: %fMB", sizeUncompressed/bytesInMb)
 	normalSize := sizeNormal / sizeUncompressed
 	log.Printf(
-		"Total Size Compressed: %fMB (%% of original size %f%%)",
+		"[IN SAMPLE] Total Size Compressed: %fMB (%% of original size %f%%)",
 		sizeNormal/bytesInMb,
 		normalSize*utils.OneHundred,
 	)
+
+	if len(compressorEntries) > 0 {
+		oldDictionarySize := totalDiskSize / sizeUncompressed
+		log.Printf(
+			"[IN SAMPLE] Total Size Compressed (with old dictionary): %fMB (%% of original size %f%%)",
+			totalDiskSize/bytesInMb,
+			oldDictionarySize*utils.OneHundred,
+		)
+	}
+
 	dictionarySize := sizeDictionary / sizeUncompressed
 	log.Printf(
-		"Total Size Compressed (with dictionary): %fMB (%% of original size %f%%)",
+		"[IN SAMPLE] Total Size Compressed (with new dictionary): %fMB (%% of original size %f%%)",
 		sizeDictionary/bytesInMb,
 		dictionarySize*utils.OneHundred,
 	)
 
-	return normalSize, dictionarySize, nil
+	// Run through all values in scan and compare size
+	return recompress(
+		ctx,
+		badgerDb,
+		namespace,
+		restrictedNamespace,
+		compressor,
+	)
 }

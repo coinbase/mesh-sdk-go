@@ -22,6 +22,7 @@ import (
 
 	"github.com/coinbase/rosetta-sdk-go/utils"
 
+	"github.com/lucasjones/reggen"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -186,10 +187,12 @@ func TestBadgerTrain_Limit(t *testing.T) {
 
 	// Load storage with entries in namespace
 	namespace := "bogus"
-	for i := 0; i < 10000; i++ {
+	for i := 0; i < 100000; i++ {
+		output, err := reggen.Generate(`[a-z]+`, 50)
+		assert.NoError(t, err)
 		entry := &BogusEntry{
 			Index: i,
-			Stuff: fmt.Sprintf("block %d", i),
+			Stuff: output,
 		}
 		compressedEntry, err := database.Compressor().Encode(namespace, entry)
 		assert.NoError(t, err)
@@ -204,38 +207,41 @@ func TestBadgerTrain_Limit(t *testing.T) {
 
 	// Train
 	dictionaryPath := path.Join(newDir, "bogus_dict")
-	normalSize, dictSize, err := BadgerTrain(
+	oldSize, newSize, err := BadgerTrain(
 		ctx,
 		namespace,
 		newDir,
 		dictionaryPath,
-		-1,
+		10,
 		[]*CompressorEntry{},
 	)
 	assert.NoError(t, err)
-	assert.True(t, normalSize > dictSize)
+	assert.True(t, oldSize > newSize)
 
 	// Train again using dictionary
 	newDir2, err := utils.CreateTempDir()
 	assert.NoError(t, err)
 	defer utils.RemoveTempDir(newDir2)
 
+	entries := []*CompressorEntry{
+		{
+			Namespace:      namespace,
+			DictionaryPath: dictionaryPath,
+		},
+	}
 	database2, err := NewBadgerStorage(
 		ctx,
 		newDir2,
-		WithCompressorEntries([]*CompressorEntry{
-			{
-				Namespace:      namespace,
-				DictionaryPath: dictionaryPath,
-			},
-		}),
+		WithCompressorEntries(entries),
 	)
 	assert.NoError(t, err)
 
-	for i := 0; i < 10000; i++ {
+	for i := 0; i < 100000; i++ {
+		output, err := reggen.Generate(`[a-z]+`, 50)
+		assert.NoError(t, err)
 		entry := &BogusEntry{
 			Index: i,
-			Stuff: fmt.Sprintf("block %d", i),
+			Stuff: output,
 		}
 		compressedEntry, err := database2.Compressor().Encode(namespace, entry)
 		assert.NoError(t, err)
@@ -247,14 +253,15 @@ func TestBadgerTrain_Limit(t *testing.T) {
 
 	// Train from Dictionary
 	database2.Close(ctx)
-	normalSize2, dictSize2, err := BadgerTrain(
+	oldSize2, newSize2, err := BadgerTrain(
 		ctx,
 		namespace,
-		newDir,
+		newDir2,
 		path.Join(newDir2, "bogus_dict_2"),
-		100,
-		nil,
+		-1,
+		entries,
 	)
 	assert.NoError(t, err)
-	assert.True(t, normalSize2 > dictSize2)
+	assert.True(t, oldSize2 > newSize2)
+	assert.True(t, newSize > newSize2)
 }
