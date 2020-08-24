@@ -20,7 +20,9 @@ import (
 	"testing"
 
 	mocks "github.com/coinbase/rosetta-sdk-go/mocks/constructor/executor"
+	"github.com/coinbase/rosetta-sdk-go/storage"
 	"github.com/coinbase/rosetta-sdk-go/types"
+	"github.com/coinbase/rosetta-sdk-go/utils"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -134,6 +136,18 @@ func TestWaitMessage(t *testing.T) {
 func TestFindBalanceWorker(t *testing.T) {
 	ctx := context.Background()
 
+	// Setup DB
+	dir, err := utils.CreateTempDir()
+	assert.NoError(t, err)
+	defer utils.RemoveTempDir(dir)
+
+	db, err := storage.NewBadgerStorage(ctx, dir, false)
+	assert.NoError(t, err)
+	assert.NotNil(t, db)
+	defer db.Close(ctx)
+
+	dbTx := db.NewDatabaseTransaction(ctx, true)
+
 	tests := map[string]struct {
 		input *FindBalanceInput
 
@@ -159,12 +173,13 @@ func TestFindBalanceWorker(t *testing.T) {
 				helper.On(
 					"AllAddresses",
 					ctx,
+					dbTx,
 				).Return(
 					[]string{"addr2", "addr1", "addr3", "addr4"},
 					nil,
 				).Twice()
-				helper.On("LockedAddresses", ctx).Return([]string{"addr2"}, nil).Twice()
-				helper.On("Balance", ctx, &types.AccountIdentifier{
+				helper.On("LockedAddresses", ctx, dbTx).Return([]string{"addr2"}, nil).Twice()
+				helper.On("Balance", ctx, dbTx, &types.AccountIdentifier{
 					Address:    "addr1",
 					SubAccount: (*types.SubAccountIdentifier)(nil),
 				}).Return([]*types.Amount{
@@ -176,7 +191,7 @@ func TestFindBalanceWorker(t *testing.T) {
 						},
 					},
 				}, nil).Once()
-				helper.On("Balance", ctx, &types.AccountIdentifier{
+				helper.On("Balance", ctx, dbTx, &types.AccountIdentifier{
 					Address:    "addr3",
 					SubAccount: (*types.SubAccountIdentifier)(nil),
 				}).Return([]*types.Amount{
@@ -188,7 +203,7 @@ func TestFindBalanceWorker(t *testing.T) {
 						},
 					},
 				}, nil).Once()
-				helper.On("Balance", ctx, &types.AccountIdentifier{
+				helper.On("Balance", ctx, dbTx, &types.AccountIdentifier{
 					Address:    "addr1",
 					SubAccount: (*types.SubAccountIdentifier)(nil),
 				}).Return([]*types.Amount{
@@ -236,12 +251,13 @@ func TestFindBalanceWorker(t *testing.T) {
 				helper.On(
 					"AllAddresses",
 					ctx,
+					dbTx,
 				).Return(
 					[]string{"addr2", "addr1", "addr3", "addr4"},
 					nil,
 				).Twice()
-				helper.On("LockedAddresses", ctx).Return([]string{"addr2"}, nil).Twice()
-				helper.On("Balance", ctx, &types.AccountIdentifier{
+				helper.On("LockedAddresses", ctx, dbTx).Return([]string{"addr2"}, nil).Twice()
+				helper.On("Balance", ctx, dbTx, &types.AccountIdentifier{
 					Address: "addr1",
 					SubAccount: &types.SubAccountIdentifier{
 						Address: "sub1",
@@ -255,7 +271,7 @@ func TestFindBalanceWorker(t *testing.T) {
 						},
 					},
 				}, nil).Once()
-				helper.On("Balance", ctx, &types.AccountIdentifier{
+				helper.On("Balance", ctx, dbTx, &types.AccountIdentifier{
 					Address: "addr3",
 					SubAccount: &types.SubAccountIdentifier{
 						Address: "sub1",
@@ -269,7 +285,7 @@ func TestFindBalanceWorker(t *testing.T) {
 						},
 					},
 				}, nil).Once()
-				helper.On("Balance", ctx, &types.AccountIdentifier{
+				helper.On("Balance", ctx, dbTx, &types.AccountIdentifier{
 					Address: "addr1",
 					SubAccount: &types.SubAccountIdentifier{
 						Address: "sub1",
@@ -325,12 +341,13 @@ func TestFindBalanceWorker(t *testing.T) {
 				helper.On(
 					"AllAddresses",
 					ctx,
+					dbTx,
 				).Return(
 					[]string{"addr2", "addr1", "addr3", "addr4"},
 					nil,
 				).Twice()
-				helper.On("LockedAddresses", ctx).Return([]string{"addr2"}, nil).Twice()
-				helper.On("Coins", ctx, &types.AccountIdentifier{
+				helper.On("LockedAddresses", ctx, dbTx).Return([]string{"addr2"}, nil).Twice()
+				helper.On("Coins", ctx, dbTx, &types.AccountIdentifier{
 					Address:    "addr1",
 					SubAccount: (*types.SubAccountIdentifier)(nil),
 				}).Return([]*types.Coin{
@@ -359,7 +376,7 @@ func TestFindBalanceWorker(t *testing.T) {
 						},
 					},
 				}, nil).Once()
-				helper.On("Coins", ctx, &types.AccountIdentifier{
+				helper.On("Coins", ctx, dbTx, &types.AccountIdentifier{
 					Address:    "addr3",
 					SubAccount: (*types.SubAccountIdentifier)(nil),
 				}).Return([]*types.Coin{
@@ -376,7 +393,7 @@ func TestFindBalanceWorker(t *testing.T) {
 						},
 					},
 				}, nil).Once()
-				helper.On("Coins", ctx, &types.AccountIdentifier{
+				helper.On("Coins", ctx, dbTx, &types.AccountIdentifier{
 					Address:    "addr1",
 					SubAccount: (*types.SubAccountIdentifier)(nil),
 				}).Return([]*types.Coin{
@@ -446,12 +463,13 @@ func TestFindBalanceWorker(t *testing.T) {
 				helper.On(
 					"AllAddresses",
 					ctx,
+					dbTx,
 				).Return(
 					[]string{"addr2", "addr1", "addr3", "addr4"},
 					nil,
 				).Once()
-				helper.On("LockedAddresses", ctx).Return([]string{"addr2"}, nil).Once()
-				helper.On("Coins", ctx, &types.AccountIdentifier{
+				helper.On("LockedAddresses", ctx, dbTx).Return([]string{"addr2"}, nil).Once()
+				helper.On("Coins", ctx, dbTx, &types.AccountIdentifier{
 					Address:    "addr1",
 					SubAccount: (*types.SubAccountIdentifier)(nil),
 				}).Return([]*types.Coin{
@@ -480,7 +498,7 @@ func TestFindBalanceWorker(t *testing.T) {
 						},
 					},
 				}, nil).Once()
-				helper.On("Coins", ctx, &types.AccountIdentifier{
+				helper.On("Coins", ctx, dbTx, &types.AccountIdentifier{
 					Address:    "addr3",
 					SubAccount: (*types.SubAccountIdentifier)(nil),
 				}).Return([]*types.Coin{
@@ -525,12 +543,13 @@ func TestFindBalanceWorker(t *testing.T) {
 				helper.On(
 					"AllAddresses",
 					ctx,
+					dbTx,
 				).Return(
 					[]string{"addr2", "addr1", "addr3", "addr4"},
 					nil,
 				).Once()
-				helper.On("LockedAddresses", ctx).Return([]string{"addr2"}, nil).Once()
-				helper.On("Coins", ctx, &types.AccountIdentifier{
+				helper.On("LockedAddresses", ctx, dbTx).Return([]string{"addr2"}, nil).Once()
+				helper.On("Coins", ctx, dbTx, &types.AccountIdentifier{
 					Address:    "addr1",
 					SubAccount: (*types.SubAccountIdentifier)(nil),
 				}).Return([]*types.Coin{
@@ -559,7 +578,7 @@ func TestFindBalanceWorker(t *testing.T) {
 						},
 					},
 				}, nil).Once()
-				helper.On("Coins", ctx, &types.AccountIdentifier{
+				helper.On("Coins", ctx, dbTx, &types.AccountIdentifier{
 					Address:    "addr3",
 					SubAccount: (*types.SubAccountIdentifier)(nil),
 				}).Return([]*types.Coin{
@@ -604,12 +623,13 @@ func TestFindBalanceWorker(t *testing.T) {
 				helper.On(
 					"AllAddresses",
 					ctx,
+					dbTx,
 				).Return(
 					[]string{"addr2", "addr1", "addr3", "addr4"},
 					nil,
 				).Once()
-				helper.On("LockedAddresses", ctx).Return([]string{"addr2"}, nil).Once()
-				helper.On("Coins", ctx, &types.AccountIdentifier{
+				helper.On("LockedAddresses", ctx, dbTx).Return([]string{"addr2"}, nil).Once()
+				helper.On("Coins", ctx, dbTx, &types.AccountIdentifier{
 					Address:    "addr1",
 					SubAccount: (*types.SubAccountIdentifier)(nil),
 				}).Return([]*types.Coin{
@@ -638,7 +658,7 @@ func TestFindBalanceWorker(t *testing.T) {
 						},
 					},
 				}, nil).Once()
-				helper.On("Coins", ctx, &types.AccountIdentifier{
+				helper.On("Coins", ctx, dbTx, &types.AccountIdentifier{
 					Address:    "addr3",
 					SubAccount: (*types.SubAccountIdentifier)(nil),
 				}).Return([]*types.Coin{
@@ -707,7 +727,7 @@ func TestFindBalanceWorker(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			worker := NewWorker(test.mockHelper)
-			output, err := worker.FindBalanceWorker(ctx, types.PrintStruct(test.input))
+			output, err := worker.FindBalanceWorker(ctx, dbTx, types.PrintStruct(test.input))
 			if test.err != nil {
 				assert.Equal(t, "", output)
 				assert.True(t, errors.Is(err, test.err))

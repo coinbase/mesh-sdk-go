@@ -20,7 +20,9 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/coinbase/rosetta-sdk-go/storage"
 	"github.com/coinbase/rosetta-sdk-go/types"
+
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
 )
@@ -80,13 +82,14 @@ func (j *Job) checkComplete() bool {
 // are remaining, this will return an error.
 func (j *Job) Process(
 	ctx context.Context,
+	dbTx storage.DatabaseTransaction,
 	worker *Worker,
 ) (*Broadcast, error) {
 	if j.checkComplete() {
 		return nil, ErrJobComplete
 	}
 
-	if err := worker.ProcessNextScenario(ctx, j); err != nil {
+	if err := worker.ProcessNextScenario(ctx, dbTx, j); err != nil {
 		return nil, fmt.Errorf("%w: could not process next scenario", err)
 	}
 

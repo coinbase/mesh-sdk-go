@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/coinbase/rosetta-sdk-go/keys"
+	"github.com/coinbase/rosetta-sdk-go/storage"
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
@@ -307,16 +308,38 @@ type Helper interface {
 	// address + KeyPair.
 	StoreKey(
 		context.Context,
+		storage.DatabaseTransaction,
 		string,
 		*keys.KeyPair,
 	) error
 
+	// AllAddresses returns a slice of all known addresses.
+	AllAddresses(
+		context.Context,
+		storage.DatabaseTransaction,
+	) ([]string, error)
+
+	// LockedAccounts is a slice of all addresses currently sending or receiving
+	// funds.
+	LockedAddresses(
+		context.Context,
+		storage.DatabaseTransaction,
+	) ([]string, error)
+
 	// Balance returns the balance
 	// for a provided address.
-	Balance(context.Context, *types.AccountIdentifier) ([]*types.Amount, error)
+	Balance(
+		context.Context,
+		storage.DatabaseTransaction,
+		*types.AccountIdentifier,
+	) ([]*types.Amount, error)
 
 	// Coins returns all *types.Coin owned by an address.
-	Coins(context.Context, *types.AccountIdentifier) ([]*types.Coin, error)
+	Coins(
+		context.Context,
+		storage.DatabaseTransaction,
+		*types.AccountIdentifier,
+	) ([]*types.Coin, error)
 
 	// Derive returns a new address for a provided publicKey.
 	Derive(
@@ -325,13 +348,6 @@ type Helper interface {
 		*types.PublicKey,
 		map[string]interface{},
 	) (string, map[string]interface{}, error)
-
-	// AllAddresses returns a slice of all known addresses.
-	AllAddresses(ctx context.Context) ([]string, error)
-
-	// LockedAccounts is a slice of all addresses currently sending or receiving
-	// funds.
-	LockedAddresses(context.Context) ([]string, error)
 }
 
 // Worker processes jobs.
