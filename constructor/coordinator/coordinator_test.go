@@ -18,7 +18,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"testing"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
@@ -220,6 +219,10 @@ func TestProcess(t *testing.T) {
 	helper.On("HeadBlockExists", ctx).Return(true).Once()
 
 	// Attempt to transfer
+	// We use a "read" database transaction in this test because we mock
+	// all responses from the database and "write" transactions require a
+	// lock. While it would be possible to orchestrate these locks in this
+	// test, it is simpler to just use a "read" transaction.
 	dbTxFail := db.NewDatabaseTransaction(ctx, false)
 	helper.On("DatabaseTransaction", ctx).Return(dbTxFail).Once()
 	jobStorage.On("Ready", ctx, dbTxFail).Return([]*executor.Job{}, nil).Once()
@@ -637,7 +640,6 @@ func TestProcess(t *testing.T) {
 		nil,
 	)
 	helper.On("BroadcastAll", ctx).Return(nil).Run(func(args mock.Arguments) {
-		log.Println("canceling")
 		cancel()
 	}).Once()
 
