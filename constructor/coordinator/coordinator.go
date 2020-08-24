@@ -372,7 +372,7 @@ func (c *Coordinator) Process(
 		}
 		log.Println(statusMessage)
 
-		broadcast, err := job.Process(ctx, executor.NewWorker(c.helper))
+		broadcast, err := job.Process(ctx, dbTx, executor.NewWorker(c.helper))
 		if errors.Is(err, executor.ErrCreateAccount) {
 			c.addToUnprocessed(job)
 			c.seenErrCreateAccount = true
