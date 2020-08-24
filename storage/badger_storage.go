@@ -376,7 +376,7 @@ func (b *BadgerStorage) LimitedMemoryScan(
 
 		entries++
 		if entries%logModulo == 0 {
-			log.Printf("scanned %d entries\n", entries)
+			log.Printf("scanned %d entries for %s\n", entries, string(prefix))
 		}
 	}
 
@@ -414,7 +414,7 @@ func decompressAndEncode(
 	namespace string,
 	compressor *Compressor,
 ) (float64, float64, float64, error) {
-	decompressed, err := ioutil.ReadFile(path)
+	decompressed, err := ioutil.ReadFile(path) // #nosec G304
 	if err != nil {
 		return -1, -1, -1, fmt.Errorf("%w: unable to load file %s", err, path)
 	}
