@@ -81,7 +81,22 @@ func (c *Compressor) Encode(namespace string, object interface{}) ([]byte, error
 // Decode attempts to decompress the object and will use a dict if
 // one exists for the namespace.
 func (c *Compressor) Decode(namespace string, input []byte, object interface{}) error {
-	return decode(input, object, c.dicts[namespace])
+	decompressed, err := c.DecodeRaw(namespace, input)
+	if err != nil {
+		return fmt.Errorf("%w: unable to decompress raw bytes", err)
+	}
+
+	if err := getDecoder(bytes.NewReader(decompressed)).Decode(&object); err != nil {
+		return fmt.Errorf("%w: unable to decode bytes", err)
+	}
+
+	return nil
+}
+
+// DecodeRaw only decompresses an input, leaving decoding to the caller.
+// This is particularly useful for training a compressor.
+func (c *Compressor) DecodeRaw(namespace string, input []byte) ([]byte, error) {
+	return decode(input, c.dicts[namespace])
 }
 
 func getEncoder(w io.Writer) *msgpack.Encoder {
@@ -125,7 +140,7 @@ func getDecoder(r io.Reader) *msgpack.Decoder {
 	return dec
 }
 
-func decode(b []byte, object interface{}, zstdDict []byte) error {
+func decode(b []byte, zstdDict []byte) ([]byte, error) {
 	var decompressed []byte
 	var err error
 	if len(zstdDict) > 0 {
@@ -137,15 +152,10 @@ func decode(b []byte, object interface{}, zstdDict []byte) error {
 		decompressed, err = zstd.Decompress(nil, b)
 	}
 	if err != nil {
-		return fmt.Errorf("%w: unable to decompress object", err)
+		return nil, fmt.Errorf("%w: unable to decompress object", err)
 	}
 
-	err = getDecoder(bytes.NewReader(decompressed)).Decode(&object)
-	if err != nil {
-		return fmt.Errorf("%w: unable to decode bytes", err)
-	}
-
-	return nil
+	return decompressed, nil
 }
 
 func copyStruct(input interface{}, output interface{}) error {
