@@ -50,8 +50,8 @@ var (
 */
 
 // GetBalanceKey returns a deterministic hash of an types.Account + types.Currency.
-func GetBalanceKey(account *types.AccountIdentifier, currency *types.Currency) []byte {
-	return []byte(
+func GetBalanceKey(account *types.AccountIdentifier, currency *types.Currency) (string, []byte) {
+	return balanceNamespace, []byte(
 		fmt.Sprintf("%s/%s/%s", balanceNamespace, types.Hash(account), types.Hash(currency)),
 	)
 }
@@ -164,9 +164,9 @@ func (b *BalanceStorage) SetBalance(
 	amount *types.Amount,
 	block *types.BlockIdentifier,
 ) error {
-	key := GetBalanceKey(account, amount.Currency)
+	namespace, key := GetBalanceKey(account, amount.Currency)
 
-	serialBal, err := encode(&balanceEntry{
+	serialBal, err := b.db.Compressor().Encode(namespace, &balanceEntry{
 		Account: account,
 		Amount:  amount,
 		Block:   block,
@@ -194,7 +194,7 @@ func (b *BalanceStorage) Reconciled(
 	dbTransaction := b.db.NewDatabaseTransaction(ctx, true)
 	defer dbTransaction.Discard(ctx)
 
-	key := GetBalanceKey(account, currency)
+	namespace, key := GetBalanceKey(account, currency)
 	exists, balance, err := dbTransaction.Get(ctx, key)
 	if err != nil {
 		return fmt.Errorf(
@@ -214,13 +214,13 @@ func (b *BalanceStorage) Reconciled(
 	}
 
 	var bal balanceEntry
-	if err := decode(balance, &bal); err != nil {
+	if err := b.db.Compressor().Decode(namespace, balance, &bal); err != nil {
 		return fmt.Errorf("%w: unable to decode balance entry", err)
 	}
 
 	bal.LastReconciled = block
 
-	serialBal, err := encode(bal)
+	serialBal, err := b.db.Compressor().Encode(namespace, bal)
 	if err != nil {
 		return fmt.Errorf("%w: unable to encod balance entry", err)
 	}
@@ -278,7 +278,7 @@ func (b *BalanceStorage) UpdateBalance(
 		return errors.New("invalid currency")
 	}
 
-	key := GetBalanceKey(change.Account, change.Currency)
+	namespace, key := GetBalanceKey(change.Account, change.Currency)
 	// Get existing balance on key
 	exists, balance, err := dbTransaction.Get(ctx, key)
 	if err != nil {
@@ -291,7 +291,7 @@ func (b *BalanceStorage) UpdateBalance(
 		// This could happen if balances are bootstrapped and should not be
 		// overridden.
 		var bal balanceEntry
-		err := decode(balance, &bal)
+		err := b.db.Compressor().Decode(namespace, balance, &bal)
 		if err != nil {
 			return err
 		}
@@ -332,7 +332,7 @@ func (b *BalanceStorage) UpdateBalance(
 		)
 	}
 
-	serialBal, err := encode(&balanceEntry{
+	serialBal, err := b.db.Compressor().Encode(namespace, &balanceEntry{
 		Account: change.Account,
 		Amount: &types.Amount{
 			Value:    newVal,
@@ -358,7 +358,7 @@ func (b *BalanceStorage) GetBalance(
 	transaction := b.db.NewDatabaseTransaction(ctx, false)
 	defer transaction.Discard(ctx)
 
-	key := GetBalanceKey(account, currency)
+	namespace, key := GetBalanceKey(account, currency)
 	exists, bal, err := transaction.Get(ctx, key)
 	if err != nil {
 		return nil, nil, err
@@ -396,7 +396,7 @@ func (b *BalanceStorage) GetBalance(
 	}
 
 	var popBal balanceEntry
-	err = decode(bal, &popBal)
+	err = b.db.Compressor().Decode(namespace, bal, &popBal)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -475,7 +475,8 @@ func (b *BalanceStorage) BootstrapBalances(
 }
 
 func (b *BalanceStorage) getAllBalanceEntries(ctx context.Context) ([]*balanceEntry, error) {
-	rawBalances, err := b.db.Scan(ctx, []byte(balanceNamespace))
+	namespace := balanceNamespace
+	rawBalances, err := b.db.Scan(ctx, []byte(namespace))
 	if err != nil {
 		return nil, fmt.Errorf("%w: database scan failed", err)
 	}
@@ -483,7 +484,7 @@ func (b *BalanceStorage) getAllBalanceEntries(ctx context.Context) ([]*balanceEn
 	balances := make([]*balanceEntry, len(rawBalances))
 	for i, rawBalance := range rawBalances {
 		var deserialBal balanceEntry
-		err := decode(rawBalance.Value, &deserialBal)
+		err := b.db.Compressor().Decode(namespace, rawBalance.Value, &deserialBal)
 		if err != nil {
 			return nil, fmt.Errorf(
 				"%w: unable to parse balance entry for %s",

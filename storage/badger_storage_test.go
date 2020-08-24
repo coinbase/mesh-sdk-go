@@ -17,10 +17,12 @@ package storage
 import (
 	"context"
 	"fmt"
+	"path"
 	"testing"
 
 	"github.com/coinbase/rosetta-sdk-go/utils"
 
+	"github.com/lucasjones/reggen"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -31,7 +33,7 @@ func TestDatabase(t *testing.T) {
 	assert.NoError(t, err)
 	defer utils.RemoveTempDir(newDir)
 
-	database, err := NewBadgerStorage(ctx, newDir, false)
+	database, err := NewBadgerStorage(ctx, newDir)
 	assert.NoError(t, err)
 	defer database.Close(ctx)
 
@@ -81,7 +83,7 @@ func TestDatabaseTransaction(t *testing.T) {
 	assert.NoError(t, err)
 	defer utils.RemoveTempDir(newDir)
 
-	database, err := NewBadgerStorage(ctx, newDir, false)
+	database, err := NewBadgerStorage(ctx, newDir)
 	assert.NoError(t, err)
 	defer database.Close(ctx)
 
@@ -125,4 +127,141 @@ func TestDatabaseTransaction(t *testing.T) {
 		assert.Nil(t, value)
 		assert.NoError(t, err)
 	})
+}
+
+type BogusEntry struct {
+	Index int    `json:"index"`
+	Stuff string `json:"stuff"`
+}
+
+func TestBadgerTrain_NoLimit(t *testing.T) {
+	ctx := context.Background()
+
+	newDir, err := utils.CreateTempDir()
+	assert.NoError(t, err)
+	defer utils.RemoveTempDir(newDir)
+
+	database, err := NewBadgerStorage(ctx, newDir)
+	assert.NoError(t, err)
+
+	// Load storage with entries in namespace
+	namespace := "bogus"
+	for i := 0; i < 10000; i++ {
+		entry := &BogusEntry{
+			Index: i,
+			Stuff: fmt.Sprintf("block %d", i),
+		}
+		compressedEntry, err := database.Compressor().Encode(namespace, entry)
+		assert.NoError(t, err)
+		assert.NoError(
+			t,
+			database.Set(ctx, []byte(fmt.Sprintf("%s/%d", namespace, i)), compressedEntry),
+		)
+	}
+
+	// Close DB
+	database.Close(ctx)
+
+	// Train
+	normalSize, dictSize, err := BadgerTrain(
+		ctx,
+		namespace,
+		newDir,
+		path.Join(newDir, "bogus_dict"),
+		-1,
+		[]*CompressorEntry{},
+	)
+	assert.NoError(t, err)
+	assert.True(t, normalSize > dictSize)
+}
+
+func TestBadgerTrain_Limit(t *testing.T) {
+	ctx := context.Background()
+
+	newDir, err := utils.CreateTempDir()
+	assert.NoError(t, err)
+	defer utils.RemoveTempDir(newDir)
+
+	database, err := NewBadgerStorage(ctx, newDir)
+	assert.NoError(t, err)
+
+	// Load storage with entries in namespace
+	namespace := "bogus"
+	for i := 0; i < 100000; i++ {
+		output, err := reggen.Generate(`[a-z]+`, 50)
+		assert.NoError(t, err)
+		entry := &BogusEntry{
+			Index: i,
+			Stuff: output,
+		}
+		compressedEntry, err := database.Compressor().Encode(namespace, entry)
+		assert.NoError(t, err)
+		assert.NoError(
+			t,
+			database.Set(ctx, []byte(fmt.Sprintf("%s/%d", namespace, i)), compressedEntry),
+		)
+	}
+
+	// Close DB
+	database.Close(ctx)
+
+	// Train
+	dictionaryPath := path.Join(newDir, "bogus_dict")
+	oldSize, newSize, err := BadgerTrain(
+		ctx,
+		namespace,
+		newDir,
+		dictionaryPath,
+		10,
+		[]*CompressorEntry{},
+	)
+	assert.NoError(t, err)
+	assert.True(t, oldSize > newSize)
+
+	// Train again using dictionary
+	newDir2, err := utils.CreateTempDir()
+	assert.NoError(t, err)
+	defer utils.RemoveTempDir(newDir2)
+
+	entries := []*CompressorEntry{
+		{
+			Namespace:      namespace,
+			DictionaryPath: dictionaryPath,
+		},
+	}
+	database2, err := NewBadgerStorage(
+		ctx,
+		newDir2,
+		WithCompressorEntries(entries),
+	)
+	assert.NoError(t, err)
+
+	for i := 0; i < 100000; i++ {
+		output, err := reggen.Generate(`[a-z]+`, 50)
+		assert.NoError(t, err)
+		entry := &BogusEntry{
+			Index: i,
+			Stuff: output,
+		}
+		compressedEntry, err := database2.Compressor().Encode(namespace, entry)
+		assert.NoError(t, err)
+		assert.NoError(
+			t,
+			database2.Set(ctx, []byte(fmt.Sprintf("%s/%d", namespace, i)), compressedEntry),
+		)
+	}
+
+	// Train from Dictionary
+	database2.Close(ctx)
+	oldSize2, newSize2, err := BadgerTrain(
+		ctx,
+		namespace,
+		newDir2,
+		path.Join(newDir2, "bogus_dict_2"),
+		-1,
+		entries,
+	)
+	assert.NoError(t, err)
+	assert.True(t, oldSize2 > newSize2)
+	assert.True(t, newSize > newSize2)
 }
