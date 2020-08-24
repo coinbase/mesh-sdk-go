@@ -211,7 +211,7 @@ func TestProcess(t *testing.T) {
 	dir, err := utils.CreateTempDir()
 	assert.NoError(t, err)
 
-	db, err := storage.NewBadgerStorage(ctx, dir, false)
+	db, err := storage.NewBadgerStorage(ctx, dir)
 	assert.NoError(t, err)
 	assert.NotNil(t, db)
 
