@@ -83,7 +83,7 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 	assert.NoError(t, err)
 	defer utils.RemoveTempDir(newDir)
 
-	database, err := NewBadgerStorage(ctx, newDir, false)
+	database, err := NewBadgerStorage(ctx, newDir)
 	assert.NoError(t, err)
 	defer database.Close(ctx)
 
@@ -456,7 +456,7 @@ func TestBroadcastStorageBroadcastFailure(t *testing.T) {
 	assert.NoError(t, err)
 	defer utils.RemoveTempDir(newDir)
 
-	database, err := NewBadgerStorage(ctx, newDir, false)
+	database, err := NewBadgerStorage(ctx, newDir)
 	assert.NoError(t, err)
 	defer database.Close(ctx)
 
@@ -593,7 +593,7 @@ func TestBroadcastStorageBehindTip(t *testing.T) {
 	assert.NoError(t, err)
 	defer utils.RemoveTempDir(newDir)
 
-	database, err := NewBadgerStorage(ctx, newDir, false)
+	database, err := NewBadgerStorage(ctx, newDir)
 	assert.NoError(t, err)
 	defer database.Close(ctx)
 
@@ -753,7 +753,7 @@ func TestBroadcastStorageClearBroadcasts(t *testing.T) {
 	assert.NoError(t, err)
 	defer utils.RemoveTempDir(newDir)
 
-	database, err := NewBadgerStorage(ctx, newDir, false)
+	database, err := NewBadgerStorage(ctx, newDir)
 	assert.NoError(t, err)
 	defer database.Close(ctx)
 

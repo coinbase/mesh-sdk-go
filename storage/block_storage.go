@@ -69,16 +69,18 @@ func getHeadBlockKey() []byte {
 	return []byte(headBlockKey)
 }
 
-func getBlockHashKey(hash string) []byte {
-	return []byte(fmt.Sprintf("%s/%s", blockNamespace, hash))
+func getBlockHashKey(hash string) (string, []byte) {
+	return blockNamespace, []byte(fmt.Sprintf("%s/%s", blockNamespace, hash))
 }
 
 func getBlockIndexKey(index int64) []byte {
 	return []byte(fmt.Sprintf("%s/%d", blockIndexNamespace, index))
 }
 
-func getTransactionHashKey(transactionIdentifier *types.TransactionIdentifier) []byte {
-	return []byte(fmt.Sprintf("%s/%s", transactionNamespace, transactionIdentifier.Hash))
+func getTransactionHashKey(transactionIdentifier *types.TransactionIdentifier) (string, []byte) {
+	return transactionNamespace, []byte(
+		fmt.Sprintf("%s/%s", transactionNamespace, transactionIdentifier.Hash),
+	)
 }
 
 // BlockWorker is an interface that allows for work
@@ -147,7 +149,7 @@ func (b *BlockStorage) GetHeadBlockIdentifierTransactional(
 	}
 
 	var blockIdentifier types.BlockIdentifier
-	err = decode(block, &blockIdentifier)
+	err = b.db.Compressor().Decode("", block, &blockIdentifier)
 	if err != nil {
 		return nil, err
 	}
@@ -162,7 +164,7 @@ func (b *BlockStorage) StoreHeadBlockIdentifier(
 	transaction DatabaseTransaction,
 	blockIdentifier *types.BlockIdentifier,
 ) error {
-	buf, err := encode(blockIdentifier)
+	buf, err := b.db.Compressor().Encode("", blockIdentifier)
 	if err != nil {
 		return err
 	}
@@ -175,6 +177,8 @@ func (b *BlockStorage) getBlockResponse(
 	blockIdentifier *types.PartialBlockIdentifier,
 	transaction DatabaseTransaction,
 ) (*types.BlockResponse, error) {
+	var namespace string
+	var key []byte
 	var exists bool
 	var blockResponse []byte
 	var err error
@@ -187,19 +191,21 @@ func (b *BlockStorage) getBlockResponse(
 			return nil, fmt.Errorf("%w: cannot get head block identifier", err)
 		}
 
-		exists, blockResponse, err = transaction.Get(ctx, getBlockHashKey(head.Hash))
+		namespace, key = getBlockHashKey(head.Hash)
+		exists, blockResponse, err = transaction.Get(ctx, key)
 	case blockIdentifier.Hash != nil:
 		// Get block by hash if provided
-		exists, blockResponse, err = transaction.Get(ctx, getBlockHashKey(*blockIdentifier.Hash))
+		namespace, key = getBlockHashKey(*blockIdentifier.Hash)
+		exists, blockResponse, err = transaction.Get(ctx, key)
 	default:
 		// Get block by index if hash not provided
-		var blockKey []byte
-		exists, blockKey, err = transaction.Get(ctx, getBlockIndexKey(*blockIdentifier.Index))
+		exists, key, err = transaction.Get(ctx, getBlockIndexKey(*blockIdentifier.Index))
+		namespace = blockIndexNamespace
 		if exists {
-			exists, blockResponse, err = transaction.Get(ctx, blockKey)
+			namespace = blockNamespace
+			exists, blockResponse, err = transaction.Get(ctx, key)
 		}
 	}
-
 	if err != nil {
 		return nil, fmt.Errorf("%w: unable to get block", err)
 	}
@@ -209,7 +215,7 @@ func (b *BlockStorage) getBlockResponse(
 	}
 
 	var rosettaBlockResponse types.BlockResponse
-	err = decode(blockResponse, &rosettaBlockResponse)
+	err = b.db.Compressor().Decode(namespace, blockResponse, &rosettaBlockResponse)
 	if err != nil {
 		return nil, err
 	}
@@ -281,14 +287,14 @@ func (b *BlockStorage) storeBlock(
 	transaction DatabaseTransaction,
 	blockResponse *types.BlockResponse,
 ) error {
-	buf, err := encode(blockResponse)
+	blockIdentifier := blockResponse.Block.BlockIdentifier
+	namespace, key := getBlockHashKey(blockIdentifier.Hash)
+	buf, err := b.db.Compressor().Encode(namespace, blockResponse)
 	if err != nil {
 		return fmt.Errorf("%w: unable to encode block", err)
 	}
 
-	blockIdentifier := blockResponse.Block.BlockIdentifier
-
-	if err := storeUniqueKey(ctx, transaction, getBlockHashKey(blockIdentifier.Hash), buf); err != nil {
+	if err := storeUniqueKey(ctx, transaction, key, buf); err != nil {
 		return fmt.Errorf("%w: unable to store block", err)
 	}
 
@@ -296,7 +302,7 @@ func (b *BlockStorage) storeBlock(
 		ctx,
 		transaction,
 		getBlockIndexKey(blockIdentifier.Index),
-		getBlockHashKey(blockIdentifier.Hash),
+		key,
 	); err != nil {
 		return fmt.Errorf("%w: unable to store block index", err)
 	}
@@ -363,7 +369,8 @@ func (b *BlockStorage) deleteBlock(
 	block *types.Block,
 ) error {
 	blockIdentifier := block.BlockIdentifier
-	if err := transaction.Delete(ctx, getBlockHashKey(blockIdentifier.Hash)); err != nil {
+	_, key := getBlockHashKey(blockIdentifier.Hash)
+	if err := transaction.Delete(ctx, key); err != nil {
 		return fmt.Errorf("%w: unable to delete block", err)
 	}
 
@@ -542,7 +549,7 @@ func (b *BlockStorage) storeTransaction(
 	blockIdentifier *types.BlockIdentifier,
 	tx *types.Transaction,
 ) error {
-	hashKey := getTransactionHashKey(tx.TransactionIdentifier)
+	namespace, hashKey := getTransactionHashKey(tx.TransactionIdentifier)
 	exists, val, err := transaction.Get(ctx, hashKey)
 	if err != nil {
 		return err
@@ -552,7 +559,7 @@ func (b *BlockStorage) storeTransaction(
 	if !exists {
 		blocks = make(map[string]*blockTransaction)
 	} else {
-		if err := decode(val, &blocks); err != nil {
+		if err := b.db.Compressor().Decode(namespace, val, &blocks); err != nil {
 			return fmt.Errorf("%w: could not decode transaction hash contents", err)
 		}
 
@@ -571,7 +578,7 @@ func (b *BlockStorage) storeTransaction(
 		BlockIndex:  blockIdentifier.Index,
 	}
 
-	encodedResult, err := encode(blocks)
+	encodedResult, err := b.db.Compressor().Encode(namespace, blocks)
 	if err != nil {
 		return fmt.Errorf("%w: unable to encode transaction data", err)
 	}
@@ -585,7 +592,7 @@ func (b *BlockStorage) removeTransaction(
 	blockIdentifier *types.BlockIdentifier,
 	transactionIdentifier *types.TransactionIdentifier,
 ) error {
-	hashKey := getTransactionHashKey(transactionIdentifier)
+	namespace, hashKey := getTransactionHashKey(transactionIdentifier)
 	exists, val, err := transaction.Get(ctx, hashKey)
 	if err != nil {
 		return err
@@ -596,7 +603,7 @@ func (b *BlockStorage) removeTransaction(
 	}
 
 	var blocks map[string]*blockTransaction
-	if err := decode(val, &blocks); err != nil {
+	if err := b.db.Compressor().Decode(namespace, val, &blocks); err != nil {
 		return fmt.Errorf("%w: could not decode transaction hash contents", err)
 	}
 
@@ -610,7 +617,7 @@ func (b *BlockStorage) removeTransaction(
 		return transaction.Delete(ctx, hashKey)
 	}
 
-	encodedResult, err := encode(blocks)
+	encodedResult, err := b.db.Compressor().Encode(namespace, blocks)
 	if err != nil {
 		return fmt.Errorf("%w: unable to encode transaction data", err)
 	}
@@ -625,7 +632,8 @@ func (b *BlockStorage) FindTransaction(
 	transactionIdentifier *types.TransactionIdentifier,
 	txn DatabaseTransaction,
 ) (*types.BlockIdentifier, *types.Transaction, error) {
-	txExists, tx, err := txn.Get(ctx, getTransactionHashKey(transactionIdentifier))
+	namespace, key := getTransactionHashKey(transactionIdentifier)
+	txExists, tx, err := txn.Get(ctx, key)
 	if err != nil {
 		return nil, nil, fmt.Errorf("%w: unable to query database for transaction", err)
 	}
@@ -635,7 +643,7 @@ func (b *BlockStorage) FindTransaction(
 	}
 
 	var blocks map[string]*blockTransaction
-	if err := decode(tx, &blocks); err != nil {
+	if err := b.db.Compressor().Decode(namespace, tx, &blocks); err != nil {
 		return nil, nil, fmt.Errorf("%w: unable to decode block data for transaction", err)
 	}
 
@@ -658,7 +666,8 @@ func (b *BlockStorage) findBlockTransaction(
 	transactionIdentifier *types.TransactionIdentifier,
 	txn DatabaseTransaction,
 ) (*types.Transaction, error) {
-	txExists, tx, err := txn.Get(ctx, getTransactionHashKey(transactionIdentifier))
+	namespace, key := getTransactionHashKey(transactionIdentifier)
+	txExists, tx, err := txn.Get(ctx, key)
 	if err != nil {
 		return nil, fmt.Errorf("%w: unable to query database for transaction", err)
 	}
@@ -668,7 +677,7 @@ func (b *BlockStorage) findBlockTransaction(
 	}
 
 	var blocks map[string]*blockTransaction
-	if err := decode(tx, &blocks); err != nil {
+	if err := b.db.Compressor().Decode(namespace, tx, &blocks); err != nil {
 		return nil, fmt.Errorf("%w: unable to decode block data for transaction", err)
 	}
 
