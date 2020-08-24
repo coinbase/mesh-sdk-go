@@ -23,6 +23,7 @@ import (
 
 	"github.com/coinbase/rosetta-sdk-go/constructor/executor"
 	"github.com/coinbase/rosetta-sdk-go/parser"
+	"github.com/coinbase/rosetta-sdk-go/storage"
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/coinbase/rosetta-sdk-go/utils"
 )
@@ -81,10 +82,11 @@ func NewCoordinator(
 
 func (c *Coordinator) findJob(
 	ctx context.Context,
+	dbTx storage.DatabaseTransaction,
 ) (*executor.Job, error) {
 	// Look for any jobs ready for processing. If one is found,
 	// we return that as the next job to process.
-	ready, err := c.storage.Ready(ctx)
+	ready, err := c.storage.Ready(ctx, dbTx)
 	if err != nil {
 		return nil, fmt.Errorf(
 			"%w: %s",
@@ -106,7 +108,7 @@ func (c *Coordinator) findJob(
 			continue
 		}
 
-		processing, err := c.storage.Processing(ctx, workflow.Name)
+		processing, err := c.storage.Processing(ctx, dbTx, workflow.Name)
 		if err != nil {
 			return nil, fmt.Errorf(
 				"%w: %s",
@@ -123,7 +125,7 @@ func (c *Coordinator) findJob(
 	}
 
 	// Check if broadcasts, then ErrNoAvailableJobs
-	allBroadcasts, err := c.storage.Broadcasting(ctx)
+	allBroadcasts, err := c.storage.Broadcasting(ctx, dbTx)
 	if err != nil {
 		return nil, fmt.Errorf(
 			"%w: %s",
@@ -138,7 +140,7 @@ func (c *Coordinator) findJob(
 
 	// Check if ErrCreateAccount, then create account if exists
 	if c.seenErrCreateAccount {
-		processing, err := c.storage.Processing(ctx, string(executor.CreateAccount))
+		processing, err := c.storage.Processing(ctx, dbTx, string(executor.CreateAccount))
 		if err != nil {
 			return nil, fmt.Errorf(
 				"%w: %s",
@@ -163,7 +165,7 @@ func (c *Coordinator) findJob(
 		return nil, ErrRequestFundsWorkflowMissing
 	}
 
-	processing, err := c.storage.Processing(ctx, string(executor.RequestFunds))
+	processing, err := c.storage.Processing(ctx, dbTx, string(executor.RequestFunds))
 	if err != nil {
 		return nil, fmt.Errorf(
 			"%w: %s",
@@ -284,12 +286,10 @@ func (c *Coordinator) createTransaction(
 // is nil, then the transaction did not succeed.
 func (c *Coordinator) BroadcastComplete(
 	ctx context.Context,
+	dbTx storage.DatabaseTransaction,
 	jobIdentifier string,
 	transaction *types.Transaction,
 ) error {
-	dbTx := c.helper.DatabaseTransaction(ctx)
-	defer dbTx.Discard(ctx)
-
 	job, err := c.storage.Get(ctx, dbTx, jobIdentifier)
 	if err != nil {
 		return fmt.Errorf(
@@ -347,8 +347,14 @@ func (c *Coordinator) Process(
 			continue
 		}
 
+		// Update job and store broadcast in a single DB transaction.
+		// If job update fails, all associated state changes are rolled
+		// back.
+		dbTx := c.helper.DatabaseTransaction(ctx)
+		defer dbTx.Discard(ctx)
+
 		// Attempt to find a Job to process.
-		job, err := c.findJob(ctx)
+		job, err := c.findJob(ctx, dbTx)
 		if errors.Is(err, ErrNoAvailableJobs) {
 			log.Println("waiting for available jobs...")
 
@@ -366,7 +372,7 @@ func (c *Coordinator) Process(
 		}
 		log.Println(statusMessage)
 
-		broadcast, err := job.Process(ctx, executor.NewWorker(c.helper))
+		broadcast, err := job.Process(ctx, dbTx, executor.NewWorker(c.helper))
 		if errors.Is(err, executor.ErrCreateAccount) {
 			c.addToUnprocessed(job)
 			c.seenErrCreateAccount = true
@@ -380,16 +386,12 @@ func (c *Coordinator) Process(
 			return fmt.Errorf("%w: unable to process job", err)
 		}
 
-		// Update job and store broadcast in a single DB transaction.
-		dbTransaction := c.helper.DatabaseTransaction(ctx)
-		defer dbTransaction.Discard(ctx)
-
 		// Update job (or store for the first time)
 		//
 		// Note, we ALWAYS store jobs even if they are complete on
 		// their first run so that we can have a full view of everything
 		// we've done in JobStorage.
-		jobIdentifier, err := c.storage.Update(ctx, dbTransaction, job)
+		jobIdentifier, err := c.storage.Update(ctx, dbTx, job)
 		if err != nil {
 			return fmt.Errorf("%w: unable to update job", err)
 		}
@@ -404,7 +406,7 @@ func (c *Coordinator) Process(
 			// Invoke Broadcast storage (in same TX as update job)
 			if err := c.helper.Broadcast(
 				ctx,
-				dbTransaction,
+				dbTx,
 				jobIdentifier,
 				broadcast.Network,
 				broadcast.Intent,
@@ -418,11 +420,11 @@ func (c *Coordinator) Process(
 		}
 
 		// Commit db transaction
-		if err := dbTransaction.Commit(ctx); err != nil {
+		if err := dbTx.Commit(ctx); err != nil {
 			return fmt.Errorf("%w: unable to commit job update", err)
 		}
 
-		// Run Broadcast all (instead of running inside Broadcast)
+		// Run Broadcast all after transaction committed.
 		if err := c.helper.BroadcastAll(ctx); err != nil {
 			return fmt.Errorf("%w: unable to broadcast all transactions", err)
 		}

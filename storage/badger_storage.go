@@ -161,8 +161,13 @@ func (b *BadgerStorage) NewDatabaseTransaction(
 // Commit attempts to commit and discard the transaction.
 func (b *BadgerTransaction) Commit(context.Context) error {
 	err := b.txn.Commit()
-	b.holdsLock = false
-	b.db.writer.Unlock()
+
+	// It is possible that we may accidentally call commit twice.
+	// In this case, we only unlock if we hold the lock to avoid a panic.
+	if b.holdsLock {
+		b.holdsLock = false
+		b.db.writer.Unlock()
+	}
 
 	if err != nil {
 		return fmt.Errorf("%w: unable to commit transaction", err)
