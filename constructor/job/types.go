@@ -12,21 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package executor
+package job
 
 import (
-	"context"
-	"time"
-
 	"github.com/coinbase/rosetta-sdk-go/keys"
-	"github.com/coinbase/rosetta-sdk-go/storage"
 	"github.com/coinbase/rosetta-sdk-go/types"
-)
-
-const (
-	// BalanceWaitTime is the amount of time
-	// we wait between balance checks.
-	BalanceWaitTime = 5 * time.Second
 )
 
 // ReservedVariable is a reserved variable
@@ -253,23 +243,23 @@ type Workflow struct {
 	Scenarios   []*Scenario
 }
 
-// JobStatus is status of a Job.
-type JobStatus string
+// Status is status of a Job.
+type Status string
 
 const (
 	// Ready means that a Job is ready to process.
-	Ready JobStatus = "ready"
+	Ready Status = "ready"
 
 	// Broadcasting means that the intent of the last
 	// scenario is broadcasting.
-	Broadcasting JobStatus = "broadcasting"
+	Broadcasting Status = "broadcasting"
 
 	// Failed means that Broadcasting failed.
-	Failed JobStatus = "failed"
+	Failed Status = "failed"
 
 	// Completed means that all scenarios were
 	// completed successfully.
-	Completed JobStatus = "completed"
+	Completed Status = "completed"
 )
 
 // Job is an instantion of a Workflow.
@@ -281,7 +271,7 @@ type Job struct {
 	Identifier string
 	State      string
 	Index      int
-	Status     JobStatus
+	Status     Status
 
 	// Workflow is the name of the workflow being executed.
 	Workflow string
@@ -300,57 +290,4 @@ type Broadcast struct {
 	Intent            []*types.Operation
 	Metadata          map[string]interface{}
 	ConfirmationDepth int64
-}
-
-// Helper is used by the worker to process Jobs.
-type Helper interface {
-	// StoreKey is called to persist an
-	// address + KeyPair.
-	StoreKey(
-		context.Context,
-		storage.DatabaseTransaction,
-		string,
-		*keys.KeyPair,
-	) error
-
-	// AllAddresses returns a slice of all known addresses.
-	AllAddresses(
-		context.Context,
-		storage.DatabaseTransaction,
-	) ([]string, error)
-
-	// LockedAccounts is a slice of all addresses currently sending or receiving
-	// funds.
-	LockedAddresses(
-		context.Context,
-		storage.DatabaseTransaction,
-	) ([]string, error)
-
-	// Balance returns the balance
-	// for a provided address.
-	Balance(
-		context.Context,
-		storage.DatabaseTransaction,
-		*types.AccountIdentifier,
-	) ([]*types.Amount, error)
-
-	// Coins returns all *types.Coin owned by an address.
-	Coins(
-		context.Context,
-		storage.DatabaseTransaction,
-		*types.AccountIdentifier,
-	) ([]*types.Coin, error)
-
-	// Derive returns a new address for a provided publicKey.
-	Derive(
-		context.Context,
-		*types.NetworkIdentifier,
-		*types.PublicKey,
-		map[string]interface{},
-	) (string, map[string]interface{}, error)
-}
-
-// Worker processes jobs.
-type Worker struct {
-	helper Helper
 }

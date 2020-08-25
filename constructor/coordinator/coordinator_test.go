@@ -21,7 +21,7 @@ import (
 	"testing"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
-	"github.com/coinbase/rosetta-sdk-go/constructor/executor"
+	"github.com/coinbase/rosetta-sdk-go/constructor/job"
 	mocks "github.com/coinbase/rosetta-sdk-go/mocks/constructor/coordinator"
 	"github.com/coinbase/rosetta-sdk-go/parser"
 	"github.com/coinbase/rosetta-sdk-go/storage"
@@ -71,26 +71,26 @@ func TestProcess(t *testing.T) {
 	jobStorage := &mocks.JobStorage{}
 	helper := &mocks.Helper{}
 	p := defaultParser(t)
-	workflows := []*executor.Workflow{
+	workflows := []*job.Workflow{
 		{
-			Name:        string(executor.RequestFunds),
+			Name:        string(job.RequestFunds),
 			Concurrency: 1,
-			Scenarios: []*executor.Scenario{
+			Scenarios: []*job.Scenario{
 				{
 					Name: "request_funds",
-					Actions: []*executor.Action{
+					Actions: []*job.Action{
 						{
-							Type:       executor.SetVariable,
+							Type:       job.SetVariable,
 							Input:      `{"symbol":"tBTC", "decimals":8}`,
 							OutputPath: "currency",
 						},
 						{ // ensure we have some balance that exists
-							Type:       executor.FindBalance,
+							Type:       job.FindBalance,
 							Input:      `{"minimum_balance":{"value": "0", "currency": {{currency}}}, "create":1}`, // nolint
 							OutputPath: "random_address",
 						},
 						{
-							Type:       executor.FindBalance,
+							Type:       job.FindBalance,
 							Input:      `{"address": {{random_address.account.address}}, "wait": true, "minimum_balance":{"value": "100", "currency": {{currency}}}}`, // nolint
 							OutputPath: "loaded_address",
 						},
@@ -99,29 +99,29 @@ func TestProcess(t *testing.T) {
 			},
 		},
 		{
-			Name:        string(executor.CreateAccount),
+			Name:        string(job.CreateAccount),
 			Concurrency: 1,
-			Scenarios: []*executor.Scenario{
+			Scenarios: []*job.Scenario{
 				{
 					Name: "create_account",
-					Actions: []*executor.Action{
+					Actions: []*job.Action{
 						{
-							Type:       executor.SetVariable,
+							Type:       job.SetVariable,
 							Input:      `{"network":"Testnet3", "blockchain":"Bitcoin"}`,
 							OutputPath: "network",
 						},
 						{
-							Type:       executor.GenerateKey,
+							Type:       job.GenerateKey,
 							Input:      `{"curve_type": "secp256k1"}`,
 							OutputPath: "key",
 						},
 						{
-							Type:       executor.Derive,
+							Type:       job.Derive,
 							Input:      `{"network_identifier": {{network}}, "public_key": {{key.public_key}}}`,
 							OutputPath: "address",
 						},
 						{
-							Type:  executor.SaveAddress,
+							Type:  job.SaveAddress,
 							Input: `{"address": {{address.address}}, "keypair": {{key.public_key}}}`,
 						},
 					},
@@ -131,52 +131,52 @@ func TestProcess(t *testing.T) {
 		{
 			Name:        "transfer",
 			Concurrency: 1,
-			Scenarios: []*executor.Scenario{
+			Scenarios: []*job.Scenario{
 				{
 					Name: "transfer",
-					Actions: []*executor.Action{
+					Actions: []*job.Action{
 						{
-							Type:       executor.SetVariable,
+							Type:       job.SetVariable,
 							Input:      `{"network":"Testnet3", "blockchain":"Bitcoin"}`,
 							OutputPath: "transfer.network",
 						},
 						{
-							Type:       executor.SetVariable,
+							Type:       job.SetVariable,
 							Input:      `{"symbol":"tBTC", "decimals":8}`,
 							OutputPath: "currency",
 						},
 						{
-							Type:       executor.FindBalance,
+							Type:       job.FindBalance,
 							Input:      `{"minimum_balance":{"value": "100", "currency": {{currency}}}, "create": 100}`, // nolint
 							OutputPath: "sender",
 						},
 						{
-							Type:       executor.Math,
+							Type:       job.Math,
 							Input:      `{"operation":"subtraction", "left_value": "0", "right_value":{{sender.balance.value}}}`,
 							OutputPath: "sender_amount",
 						},
 						{
-							Type:       executor.FindBalance,
+							Type:       job.FindBalance,
 							Input:      `{"not_address":[{{sender.account.address}}], "minimum_balance":{"value": "0", "currency": {{currency}}}, "create": 100}`, // nolint
 							OutputPath: "recipient",
 						},
 						{
-							Type:       executor.Math,
+							Type:       job.Math,
 							Input:      `{"operation":"subtraction", "left_value":{{sender.balance.value}}, "right_value":"10"}`,
 							OutputPath: "recipient_amount",
 						},
 						{
-							Type:       executor.SetVariable,
+							Type:       job.SetVariable,
 							Input:      `"1"`,
 							OutputPath: "transfer.confirmation_depth",
 						},
 						{
-							Type:       executor.SetVariable,
+							Type:       job.SetVariable,
 							Input:      `{"test": "works"}`,
 							OutputPath: "transfer.preprocess_metadata",
 						},
 						{
-							Type:       executor.SetVariable,
+							Type:       job.SetVariable,
 							Input:      `[{"operation_identifier":{"index":0},"type":"Vin","status":"","account":{"address":{{sender.account.address}}},"amount":{"value":{{sender_amount}},"currency":{{currency}}}},{"operation_identifier":{"index":1},"type":"Vout","status":"","account":{"address":{{recipient.account.address}}},"amount":{"value":{{recipient_amount}},"currency":{{currency}}}}]`, // nolint
 							OutputPath: "transfer.operations",
 						},
@@ -184,9 +184,9 @@ func TestProcess(t *testing.T) {
 				},
 				{
 					Name: "print_transaction",
-					Actions: []*executor.Action{
+					Actions: []*job.Action{
 						{
-							Type:  executor.PrintMessage,
+							Type:  job.PrintMessage,
 							Input: `{{transfer.transaction}}`,
 						},
 					},
@@ -195,7 +195,7 @@ func TestProcess(t *testing.T) {
 		},
 	}
 
-	c, err := NewCoordinator(
+	c, err := New(
 		jobStorage,
 		helper,
 		p,
@@ -225,7 +225,7 @@ func TestProcess(t *testing.T) {
 	// test, it is simpler to just use a "read" transaction.
 	dbTxFail := db.NewDatabaseTransaction(ctx, false)
 	helper.On("DatabaseTransaction", ctx).Return(dbTxFail).Once()
-	jobStorage.On("Ready", ctx, dbTxFail).Return([]*executor.Job{}, nil).Once()
+	jobStorage.On("Ready", ctx, dbTxFail).Return([]*job.Job{}, nil).Once()
 	jobStorage.On("Processing", ctx, dbTxFail, "transfer").Return(0, nil).Once()
 	helper.On("AllAddresses", ctx, dbTxFail).Return([]string{}, nil).Once()
 
@@ -242,8 +242,8 @@ func TestProcess(t *testing.T) {
 
 	dbTx := db.NewDatabaseTransaction(ctx, false)
 	helper.On("DatabaseTransaction", ctx).Return(dbTx).Once()
-	jobStorage.On("Ready", ctx, dbTx).Return([]*executor.Job{}, nil).Once()
-	jobStorage.On("Broadcasting", ctx, dbTx).Return([]*executor.Job{}, nil).Once()
+	jobStorage.On("Ready", ctx, dbTx).Return([]*job.Job{}, nil).Once()
+	jobStorage.On("Broadcasting", ctx, dbTx).Return([]*job.Job{}, nil).Once()
 	jobStorage.On("Processing", ctx, dbTx, "create_account").Return(0, nil).Once()
 	helper.On(
 		"Derive",
@@ -269,7 +269,7 @@ func TestProcess(t *testing.T) {
 	helper.On("HeadBlockExists", ctx).Return(true).Once()
 	dbTxFail2 := db.NewDatabaseTransaction(ctx, false)
 	helper.On("DatabaseTransaction", ctx).Return(dbTxFail2).Once()
-	jobStorage.On("Ready", ctx, dbTxFail2).Return([]*executor.Job{}, nil).Once()
+	jobStorage.On("Ready", ctx, dbTxFail2).Return([]*job.Job{}, nil).Once()
 	jobStorage.On("Processing", ctx, dbTxFail2, "transfer").Return(0, nil).Once()
 	helper.On("AllAddresses", ctx, dbTxFail2).Return([]string{"address1"}, nil).Once()
 	helper.On("LockedAddresses", ctx, dbTxFail2).Return([]string{}, nil).Once()
@@ -296,8 +296,8 @@ func TestProcess(t *testing.T) {
 
 	dbTx2 := db.NewDatabaseTransaction(ctx, false)
 	helper.On("DatabaseTransaction", ctx).Return(dbTx2).Once()
-	jobStorage.On("Ready", ctx, dbTx2).Return([]*executor.Job{}, nil).Once()
-	jobStorage.On("Broadcasting", ctx, dbTx2).Return([]*executor.Job{}, nil).Once()
+	jobStorage.On("Ready", ctx, dbTx2).Return([]*job.Job{}, nil).Once()
+	jobStorage.On("Broadcasting", ctx, dbTx2).Return([]*job.Job{}, nil).Once()
 	jobStorage.On("Processing", ctx, dbTx2, "request_funds").Return(0, nil).Once()
 	helper.On("AllAddresses", ctx, dbTx2).Return([]string{"address1"}, nil).Once()
 	helper.On("LockedAddresses", ctx, dbTx2).Return([]string{}, nil).Once()
@@ -348,7 +348,7 @@ func TestProcess(t *testing.T) {
 	helper.On("HeadBlockExists", ctx).Return(true).Once()
 	dbTxFail3 := db.NewDatabaseTransaction(ctx, false)
 	helper.On("DatabaseTransaction", ctx).Return(dbTxFail3).Once()
-	jobStorage.On("Ready", ctx, dbTxFail3).Return([]*executor.Job{}, nil).Once()
+	jobStorage.On("Ready", ctx, dbTxFail3).Return([]*job.Job{}, nil).Once()
 	jobStorage.On("Processing", ctx, dbTxFail3, "transfer").Return(0, nil).Once()
 	helper.On("AllAddresses", ctx, dbTxFail3).Return([]string{"address1"}, nil).Once()
 	helper.On("LockedAddresses", ctx, dbTxFail3).Return([]string{}, nil).Once()
@@ -376,8 +376,8 @@ func TestProcess(t *testing.T) {
 	helper.On("HeadBlockExists", ctx).Return(true).Once()
 	dbTx3 := db.NewDatabaseTransaction(ctx, false)
 	helper.On("DatabaseTransaction", ctx).Return(dbTx3).Once()
-	jobStorage.On("Ready", ctx, dbTx3).Return([]*executor.Job{}, nil).Once()
-	jobStorage.On("Broadcasting", ctx, dbTx3).Return([]*executor.Job{}, nil).Once()
+	jobStorage.On("Ready", ctx, dbTx3).Return([]*job.Job{}, nil).Once()
+	jobStorage.On("Broadcasting", ctx, dbTx3).Return([]*job.Job{}, nil).Once()
 	jobStorage.On("Processing", ctx, dbTx3, "create_account").Return(0, nil).Once()
 	helper.On(
 		"Derive",
@@ -403,7 +403,7 @@ func TestProcess(t *testing.T) {
 	helper.On("HeadBlockExists", ctx).Return(true).Once()
 	dbTx4 := db.NewDatabaseTransaction(ctx, false)
 	helper.On("DatabaseTransaction", ctx).Return(dbTx4).Once()
-	jobStorage.On("Ready", ctx, dbTx4).Return([]*executor.Job{}, nil).Once()
+	jobStorage.On("Ready", ctx, dbTx4).Return([]*job.Job{}, nil).Once()
 	jobStorage.On("Processing", ctx, dbTx4, "transfer").Return(0, nil).Once()
 	helper.On("AllAddresses", ctx, dbTx4).Return([]string{"address1", "address2"}, nil).Once()
 	helper.On("LockedAddresses", ctx, dbTx4).Return([]string{}, nil).Once()
@@ -443,7 +443,7 @@ func TestProcess(t *testing.T) {
 		},
 		nil,
 	).Once()
-	var job4 *executor.Job
+	var job4 *job.Job
 	jobStorage.On(
 		"Update",
 		ctx,
@@ -454,7 +454,7 @@ func TestProcess(t *testing.T) {
 		nil,
 	).Run(
 		func(args mock.Arguments) {
-			job4 = args.Get(2).(*executor.Job)
+			job4 = args.Get(2).(*job.Job)
 		},
 	).Once()
 
@@ -593,11 +593,11 @@ func TestProcess(t *testing.T) {
 	helper.On("HeadBlockExists", ctx).Return(true).Once()
 	dbTx5 := db.NewDatabaseTransaction(ctx, false)
 	helper.On("DatabaseTransaction", ctx).Return(dbTx5).Once()
-	jobStorage.On("Ready", ctx, dbTx5).Return([]*executor.Job{}, nil).Once()
+	jobStorage.On("Ready", ctx, dbTx5).Return([]*job.Job{}, nil).Once()
 	jobStorage.On("Processing", ctx, dbTx5, "transfer").Return(1, nil).Once()
 
 	markConfirmed := make(chan struct{})
-	jobStorage.On("Broadcasting", ctx, dbTx5).Return([]*executor.Job{
+	jobStorage.On("Broadcasting", ctx, dbTx5).Return([]*job.Job{
 		job4,
 	}, nil).Run(func(args mock.Arguments) {
 		close(markConfirmed)
@@ -611,7 +611,7 @@ func TestProcess(t *testing.T) {
 		dbTx5,
 		mock.Anything,
 	).Run(func(args mock.Arguments) {
-		job4 = args.Get(2).(*executor.Job)
+		job4 = args.Get(2).(*job.Job)
 	}).Return(
 		"job4",
 		nil,
@@ -629,7 +629,7 @@ func TestProcess(t *testing.T) {
 	helper.On("HeadBlockExists", ctx).Return(true).Once()
 	dbTx7 := db.NewDatabaseTransaction(ctx, false)
 	helper.On("DatabaseTransaction", ctx).Return(dbTx7).Once()
-	jobStorage.On("Ready", ctx, dbTx7).Return([]*executor.Job{job4}, nil).Once()
+	jobStorage.On("Ready", ctx, dbTx7).Return([]*job.Job{job4}, nil).Once()
 	jobStorage.On(
 		"Update",
 		ctx,

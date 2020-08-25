@@ -12,23 +12,39 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package executor
+package job
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
 
-	"github.com/coinbase/rosetta-sdk-go/storage"
 	"github.com/coinbase/rosetta-sdk-go/types"
 
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
 )
 
-// NewJob creates a new *Job.
-func NewJob(workflow *Workflow) *Job {
+// UnmarshalInput attempts to strictly unmarshal some input
+// into output.
+func UnmarshalInput(input []byte, output interface{}) error {
+	// To prevent silent erroring, we explicitly
+	// reject any unknown fields.
+	dec := json.NewDecoder(bytes.NewReader(input))
+	dec.DisallowUnknownFields()
+
+	if err := dec.Decode(&output); err != nil {
+		return fmt.Errorf("%w: unable to unmarshal", err)
+	}
+
+	return nil
+}
+
+// New creates a new *Job.
+func New(workflow *Workflow) *Job {
 	return &Job{
 		Workflow: workflow.Name,
 		Status:   Ready,
@@ -39,60 +55,9 @@ func NewJob(workflow *Workflow) *Job {
 	}
 }
 
-func (j *Job) unmarshalNumber(
-	scenarioName string,
-	reservedVariable ReservedVariable,
-) (*big.Int, error) {
-	variable := fmt.Sprintf("%s.%s", scenarioName, reservedVariable)
-
-	value := gjson.Get(j.State, variable)
-	if !value.Exists() {
-		return nil, ErrVariableNotFound
-	}
-
-	i, ok := new(big.Int).SetString(value.String(), 10)
-	if !ok {
-		return nil, ErrVariableIncorrectFormat
-	}
-
-	return i, nil
-}
-
-func (j *Job) unmarshalStruct(
-	scenarioName string,
-	reservedVariable ReservedVariable,
-	output interface{},
-) error {
-	variable := fmt.Sprintf("%s.%s", scenarioName, reservedVariable)
-
-	value := gjson.Get(j.State, variable)
-	if !value.Exists() {
-		return ErrVariableNotFound
-	}
-
-	return unmarshalInput([]byte(value.Raw), output)
-}
-
-func (j *Job) checkComplete() bool {
-	return j.Index > len(j.Scenarios)-1
-}
-
-// Process is called on a Job to execute
-// the next available scenario. If no scenarios
-// are remaining, this will return an error.
-func (j *Job) Process(
-	ctx context.Context,
-	dbTx storage.DatabaseTransaction,
-	worker *Worker,
-) (*Broadcast, error) {
-	if j.checkComplete() {
-		return nil, ErrJobComplete
-	}
-
-	if err := worker.ProcessNextScenario(ctx, dbTx, j); err != nil {
-		return nil, fmt.Errorf("%w: could not process next scenario", err)
-	}
-
+// CreateBroadcast returns a *Broadcast for a given job or
+// nil if none is required.
+func (j *Job) CreateBroadcast() (*Broadcast, error) {
 	// ProcessNextScenario will increment the index, so we need to subtract
 	// by 1 when attempting to create a broadcast payload.
 	broadcastIndex := j.Index - 1
@@ -108,7 +73,7 @@ func (j *Job) Process(
 		// If <scenario.Name>.operations are not provided, no broadcast
 		// is required.
 
-		if j.checkComplete() {
+		if j.CheckComplete() {
 			j.Status = Completed
 		}
 
@@ -142,6 +107,46 @@ func (j *Job) Process(
 		Metadata:          metadata,
 		ConfirmationDepth: confirmationDepth.Int64(),
 	}, nil
+}
+
+func (j *Job) unmarshalNumber(
+	scenarioName string,
+	reservedVariable ReservedVariable,
+) (*big.Int, error) {
+	variable := fmt.Sprintf("%s.%s", scenarioName, reservedVariable)
+
+	value := gjson.Get(j.State, variable)
+	if !value.Exists() {
+		return nil, ErrVariableNotFound
+	}
+
+	i, ok := new(big.Int).SetString(value.String(), 10)
+	if !ok {
+		return nil, ErrVariableIncorrectFormat
+	}
+
+	return i, nil
+}
+
+func (j *Job) unmarshalStruct(
+	scenarioName string,
+	reservedVariable ReservedVariable,
+	output interface{},
+) error {
+	variable := fmt.Sprintf("%s.%s", scenarioName, reservedVariable)
+
+	value := gjson.Get(j.State, variable)
+	if !value.Exists() {
+		return ErrVariableNotFound
+	}
+
+	return UnmarshalInput([]byte(value.Raw), output)
+}
+
+// CheckComplete returns a boolean indicating
+// if a job is complete.
+func (j *Job) CheckComplete() bool {
+	return j.Index > len(j.Scenarios)-1
 }
 
 // BroadcastComplete is called either after a broadcast
@@ -183,7 +188,7 @@ func (j *Job) BroadcastComplete(
 	}
 	j.State = newState
 
-	if j.checkComplete() {
+	if j.CheckComplete() {
 		j.Status = Completed
 		return nil
 	}

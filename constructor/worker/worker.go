@@ -12,17 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package executor
+package worker
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"time"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
+	"github.com/coinbase/rosetta-sdk-go/constructor/job"
 	"github.com/coinbase/rosetta-sdk-go/keys"
 	"github.com/coinbase/rosetta-sdk-go/storage"
 	"github.com/coinbase/rosetta-sdk-go/types"
@@ -32,22 +31,9 @@ import (
 	"github.com/tidwall/sjson"
 )
 
-// NewWorker returns a new Worker.
-func NewWorker(helper Helper) *Worker {
+// New returns a new *Worker.
+func New(helper Helper) *Worker {
 	return &Worker{helper: helper}
-}
-
-func unmarshalInput(input []byte, output interface{}) error {
-	// To prevent silent erroring, we explicitly
-	// reject any unknown fields.
-	dec := json.NewDecoder(bytes.NewReader(input))
-	dec.DisallowUnknownFields()
-
-	if err := dec.Decode(&output); err != nil {
-		return fmt.Errorf("%w: unable to unmarshal", err)
-	}
-
-	return nil
 }
 
 func marshalString(value string) string {
@@ -57,26 +43,26 @@ func marshalString(value string) string {
 func (w *Worker) invokeWorker(
 	ctx context.Context,
 	dbTx storage.DatabaseTransaction,
-	action ActionType,
+	action job.ActionType,
 	input string,
 ) (string, error) {
 	switch action {
-	case SetVariable:
+	case job.SetVariable:
 		return input, nil
-	case GenerateKey:
+	case job.GenerateKey:
 		return GenerateKeyWorker(input)
-	case Derive:
+	case job.Derive:
 		return w.DeriveWorker(ctx, input)
-	case SaveAddress:
+	case job.SaveAddress:
 		return "", w.SaveAddressWorker(ctx, dbTx, input)
-	case PrintMessage:
+	case job.PrintMessage:
 		PrintMessageWorker(input)
 		return "", nil
-	case RandomString:
+	case job.RandomString:
 		return RandomStringWorker(input)
-	case Math:
+	case job.Math:
 		return MathWorker(input)
-	case FindBalance:
+	case job.FindBalance:
 		return w.FindBalanceWorker(ctx, dbTx, input)
 	default:
 		return "", fmt.Errorf("%w: %s", ErrInvalidActionType, action)
@@ -87,7 +73,7 @@ func (w *Worker) actions(
 	ctx context.Context,
 	dbTx storage.DatabaseTransaction,
 	state string,
-	actions []*Action,
+	actions []*job.Action,
 ) (string, error) {
 	for _, action := range actions {
 		processedInput, err := PopulateInput(state, action.Input)
@@ -119,7 +105,7 @@ func (w *Worker) actions(
 func (w *Worker) ProcessNextScenario(
 	ctx context.Context,
 	dbTx storage.DatabaseTransaction,
-	j *Job,
+	j *job.Job,
 ) error {
 	scenario := j.Scenarios[j.Index]
 	newState, err := w.actions(ctx, dbTx, j.State, scenario.Actions)
@@ -132,6 +118,25 @@ func (w *Worker) ProcessNextScenario(
 	return nil
 }
 
+// Process is called on a Job to execute
+// the next available scenario. If no scenarios
+// are remaining, this will return an error.
+func (w *Worker) Process(
+	ctx context.Context,
+	dbTx storage.DatabaseTransaction,
+	j *job.Job,
+) (*job.Broadcast, error) {
+	if j.CheckComplete() {
+		return nil, ErrJobComplete
+	}
+
+	if err := w.ProcessNextScenario(ctx, dbTx, j); err != nil {
+		return nil, fmt.Errorf("%w: could not process next scenario", err)
+	}
+
+	return j.CreateBroadcast()
+}
+
 // DeriveWorker attempts to derive an address given a
 // *types.ConstructionDeriveRequest input.
 func (w *Worker) DeriveWorker(
@@ -139,7 +144,7 @@ func (w *Worker) DeriveWorker(
 	rawInput string,
 ) (string, error) {
 	var input types.ConstructionDeriveRequest
-	err := unmarshalInput([]byte(rawInput), &input)
+	err := job.UnmarshalInput([]byte(rawInput), &input)
 	if err != nil {
 		return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
 	}
@@ -167,8 +172,8 @@ func (w *Worker) DeriveWorker(
 // GenerateKeyWorker attempts to generate a key given a
 // *GenerateKeyInput input.
 func GenerateKeyWorker(rawInput string) (string, error) {
-	var input GenerateKeyInput
-	err := unmarshalInput([]byte(rawInput), &input)
+	var input job.GenerateKeyInput
+	err := job.UnmarshalInput([]byte(rawInput), &input)
 	if err != nil {
 		return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
 	}
@@ -188,8 +193,8 @@ func (w *Worker) SaveAddressWorker(
 	dbTx storage.DatabaseTransaction,
 	rawInput string,
 ) error {
-	var input SaveAddressInput
-	err := unmarshalInput([]byte(rawInput), &input)
+	var input job.SaveAddressInput
+	err := job.UnmarshalInput([]byte(rawInput), &input)
 	if err != nil {
 		return fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
 	}
@@ -213,8 +218,8 @@ func PrintMessageWorker(message string) {
 // RandomStringWorker generates a string that complies
 // with the provided regex input.
 func RandomStringWorker(rawInput string) (string, error) {
-	var input RandomStringInput
-	err := unmarshalInput([]byte(rawInput), &input)
+	var input job.RandomStringInput
+	err := job.UnmarshalInput([]byte(rawInput), &input)
 	if err != nil {
 		return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
 	}
@@ -229,17 +234,17 @@ func RandomStringWorker(rawInput string) (string, error) {
 
 // MathWorker performs some MathOperation on 2 numbers.
 func MathWorker(rawInput string) (string, error) {
-	var input MathInput
-	err := unmarshalInput([]byte(rawInput), &input)
+	var input job.MathInput
+	err := job.UnmarshalInput([]byte(rawInput), &input)
 	if err != nil {
 		return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
 	}
 
 	var result string
 	switch input.Operation {
-	case Addition:
+	case job.Addition:
 		result, err = types.AddValues(input.LeftValue, input.RightValue)
-	case Subtraction:
+	case job.Subtraction:
 		result, err = types.SubtractValues(input.LeftValue, input.RightValue)
 	default:
 		return "", fmt.Errorf("%s is not a supported math operation", input.Operation)
@@ -253,7 +258,7 @@ func MathWorker(rawInput string) (string, error) {
 
 // waitMessage prints out a log message while waiting
 // that reflects the *FindBalanceInput.
-func waitMessage(input *FindBalanceInput) string {
+func waitMessage(input *job.FindBalanceInput) string {
 	waitObject := "balance"
 	if input.RequireCoin {
 		waitObject = "coin"
@@ -303,7 +308,7 @@ func waitMessage(input *FindBalanceInput) string {
 func (w *Worker) checkAccountCoins(
 	ctx context.Context,
 	dbTx storage.DatabaseTransaction,
-	input *FindBalanceInput,
+	input *job.FindBalanceInput,
 	account *types.AccountIdentifier,
 ) (string, error) {
 	coins, err := w.helper.Coins(ctx, dbTx, account)
@@ -339,7 +344,7 @@ func (w *Worker) checkAccountCoins(
 			continue
 		}
 
-		return types.PrintStruct(FindBalanceOutput{
+		return types.PrintStruct(job.FindBalanceOutput{
 			Account: account,
 			Balance: coin.Amount,
 			Coin:    coin.CoinIdentifier,
@@ -352,7 +357,7 @@ func (w *Worker) checkAccountCoins(
 func (w *Worker) checkAccountBalance(
 	ctx context.Context,
 	dbTx storage.DatabaseTransaction,
-	input *FindBalanceInput,
+	input *job.FindBalanceInput,
 	account *types.AccountIdentifier,
 ) (string, error) {
 	amounts, err := w.helper.Balance(ctx, dbTx, account)
@@ -380,7 +385,7 @@ func (w *Worker) checkAccountBalance(
 			continue
 		}
 
-		return types.PrintStruct(FindBalanceOutput{
+		return types.PrintStruct(job.FindBalanceOutput{
 			Account: account,
 			Balance: amount,
 		}), nil
@@ -437,8 +442,8 @@ func (w *Worker) FindBalanceWorker(
 	dbTx storage.DatabaseTransaction,
 	rawInput string,
 ) (string, error) {
-	var input FindBalanceInput
-	err := unmarshalInput([]byte(rawInput), &input)
+	var input job.FindBalanceInput
+	err := job.UnmarshalInput([]byte(rawInput), &input)
 	if err != nil {
 		return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
 	}
