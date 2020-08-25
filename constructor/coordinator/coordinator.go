@@ -21,32 +21,33 @@ import (
 	"log"
 	"time"
 
-	"github.com/coinbase/rosetta-sdk-go/constructor/executor"
+	"github.com/coinbase/rosetta-sdk-go/constructor/job"
+	"github.com/coinbase/rosetta-sdk-go/constructor/worker"
 	"github.com/coinbase/rosetta-sdk-go/parser"
 	"github.com/coinbase/rosetta-sdk-go/storage"
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/coinbase/rosetta-sdk-go/utils"
 )
 
-// NewCoordinator parses a slice of input Workflows
+// New parses a slice of input Workflows
 // and creates a new *Coordinator.
-func NewCoordinator(
+func New(
 	storage JobStorage,
 	helper Helper,
 	parser *parser.Parser,
-	inputWorkflows []*executor.Workflow,
+	inputWorkflows []*job.Workflow,
 ) (*Coordinator, error) {
 	workflowNames := make([]string, len(inputWorkflows))
-	workflows := []*executor.Workflow{}
-	var createAccountWorkflow *executor.Workflow
-	var requestFundsWorkflow *executor.Workflow
+	workflows := []*job.Workflow{}
+	var createAccountWorkflow *job.Workflow
+	var requestFundsWorkflow *job.Workflow
 	for i, workflow := range inputWorkflows {
 		if utils.ContainsString(workflowNames, workflow.Name) {
 			return nil, ErrDuplicateWorkflows
 		}
 		workflowNames[i] = workflow.Name
 
-		if workflow.Name == string(executor.CreateAccount) {
+		if workflow.Name == string(job.CreateAccount) {
 			if workflow.Concurrency != ReservedWorkflowConcurrency {
 				return nil, ErrIncorrectConcurrency
 			}
@@ -55,7 +56,7 @@ func NewCoordinator(
 			continue
 		}
 
-		if workflow.Name == string(executor.RequestFunds) {
+		if workflow.Name == string(job.RequestFunds) {
 			if workflow.Concurrency != ReservedWorkflowConcurrency {
 				return nil, ErrIncorrectConcurrency
 			}
@@ -70,6 +71,7 @@ func NewCoordinator(
 	return &Coordinator{
 		storage:               storage,
 		helper:                helper,
+		worker:                worker.New(helper),
 		parser:                parser,
 		attemptedJobs:         []string{},
 		attemptedWorkflows:    []string{},
@@ -83,7 +85,7 @@ func NewCoordinator(
 func (c *Coordinator) findJob(
 	ctx context.Context,
 	dbTx storage.DatabaseTransaction,
-) (*executor.Job, error) {
+) (*job.Job, error) {
 	// Look for any jobs ready for processing. If one is found,
 	// we return that as the next job to process.
 	ready, err := c.storage.Ready(ctx, dbTx)
@@ -121,7 +123,7 @@ func (c *Coordinator) findJob(
 			continue
 		}
 
-		return executor.NewJob(workflow), nil
+		return job.New(workflow), nil
 	}
 
 	// Check if broadcasts, then ErrNoAvailableJobs
@@ -140,7 +142,7 @@ func (c *Coordinator) findJob(
 
 	// Check if ErrCreateAccount, then create account if exists
 	if c.seenErrCreateAccount {
-		processing, err := c.storage.Processing(ctx, dbTx, string(executor.CreateAccount))
+		processing, err := c.storage.Processing(ctx, dbTx, string(job.CreateAccount))
 		if err != nil {
 			return nil, fmt.Errorf(
 				"%w: %s",
@@ -154,7 +156,7 @@ func (c *Coordinator) findJob(
 		}
 
 		if c.createAccountWorkflow != nil {
-			return executor.NewJob(c.createAccountWorkflow), nil
+			return job.New(c.createAccountWorkflow), nil
 		}
 
 		log.Println("Create account workflow is missing!")
@@ -165,7 +167,7 @@ func (c *Coordinator) findJob(
 		return nil, ErrRequestFundsWorkflowMissing
 	}
 
-	processing, err := c.storage.Processing(ctx, dbTx, string(executor.RequestFunds))
+	processing, err := c.storage.Processing(ctx, dbTx, string(job.RequestFunds))
 	if err != nil {
 		return nil, fmt.Errorf(
 			"%w: %s",
@@ -178,13 +180,13 @@ func (c *Coordinator) findJob(
 		return nil, ErrNoAvailableJobs
 	}
 
-	return executor.NewJob(c.requestFundsWorkflow), nil
+	return job.New(c.requestFundsWorkflow), nil
 }
 
 // createTransaction constructs and signs a transaction with the provided intent.
 func (c *Coordinator) createTransaction(
 	ctx context.Context,
-	broadcast *executor.Broadcast,
+	broadcast *job.Broadcast,
 ) (*types.TransactionIdentifier, string, error) {
 	metadataRequest, err := c.helper.Preprocess(
 		ctx,
@@ -322,7 +324,7 @@ func (c *Coordinator) resetVars() {
 	c.seenErrCreateAccount = false
 }
 
-func (c *Coordinator) addToUnprocessed(job *executor.Job) {
+func (c *Coordinator) addToUnprocessed(job *job.Job) {
 	if len(job.Identifier) == 0 {
 		c.attemptedWorkflows = append(c.attemptedWorkflows, job.Workflow)
 		return
@@ -372,13 +374,13 @@ func (c *Coordinator) Process(
 		}
 		log.Println(statusMessage)
 
-		broadcast, err := job.Process(ctx, dbTx, executor.NewWorker(c.helper))
-		if errors.Is(err, executor.ErrCreateAccount) {
+		broadcast, err := c.worker.Process(ctx, dbTx, job)
+		if errors.Is(err, worker.ErrCreateAccount) {
 			c.addToUnprocessed(job)
 			c.seenErrCreateAccount = true
 			continue
 		}
-		if errors.Is(err, executor.ErrUnsatisfiable) {
+		if errors.Is(err, worker.ErrUnsatisfiable) {
 			c.addToUnprocessed(job)
 			continue
 		}

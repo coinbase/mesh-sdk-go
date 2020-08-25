@@ -18,7 +18,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/coinbase/rosetta-sdk-go/constructor/executor"
+	"github.com/coinbase/rosetta-sdk-go/constructor/job"
+	"github.com/coinbase/rosetta-sdk-go/constructor/worker"
 	"github.com/coinbase/rosetta-sdk-go/keys"
 	"github.com/coinbase/rosetta-sdk-go/parser"
 	"github.com/coinbase/rosetta-sdk-go/storage"
@@ -42,7 +43,7 @@ const (
 )
 
 // Helper is used by the coordinator to process Jobs.
-// It is a superset of functions required by the constructor/executor.Helper.
+// It is a superset of functions required by the constructor/worker.Helper.
 type Helper interface {
 	// HeadBlockExists returns a boolean indicating if a block
 	// has been synced by BlockStorage.
@@ -178,14 +179,15 @@ type Coordinator struct {
 	storage JobStorage
 	helper  Helper
 	parser  *parser.Parser
+	worker  *worker.Worker
 
 	attemptedJobs        []string
 	attemptedWorkflows   []string
 	seenErrCreateAccount bool
 
-	workflows             []*executor.Workflow
-	createAccountWorkflow *executor.Workflow
-	requestFundsWorkflow  *executor.Workflow
+	workflows             []*job.Workflow
+	createAccountWorkflow *job.Workflow
+	requestFundsWorkflow  *job.Workflow
 }
 
 // JobStorage allows for the persistent and transactional
@@ -195,13 +197,13 @@ type JobStorage interface {
 	Ready(
 		context.Context,
 		storage.DatabaseTransaction,
-	) ([]*executor.Job, error)
+	) ([]*job.Job, error)
 
 	// Broadcasting returns all jobs that are broadcasting.
 	Broadcasting(
 		context.Context,
 		storage.DatabaseTransaction,
-	) ([]*executor.Job, error)
+	) ([]*job.Job, error)
 
 	// Processing returns the number of jobs processing
 	// for a particular workflow.
@@ -214,9 +216,9 @@ type JobStorage interface {
 	// Update stores an updated *Job in storage
 	// and returns its UUID (which won't exist
 	// on first update).
-	Update(context.Context, storage.DatabaseTransaction, *executor.Job) (string, error)
+	Update(context.Context, storage.DatabaseTransaction, *job.Job) (string, error)
 
 	// Get fetches a *Job by Identifier. It returns an error
 	// if the identifier doesn't exist.
-	Get(context.Context, storage.DatabaseTransaction, string) (*executor.Job, error)
+	Get(context.Context, storage.DatabaseTransaction, string) (*job.Job, error)
 }

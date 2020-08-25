@@ -5,7 +5,7 @@ package coordinator
 import (
 	context "context"
 
-	executor "github.com/coinbase/rosetta-sdk-go/constructor/executor"
+	job "github.com/coinbase/rosetta-sdk-go/constructor/job"
 
 	mock "github.com/stretchr/testify/mock"
 
@@ -18,15 +18,15 @@ type JobStorage struct {
 }
 
 // Broadcasting provides a mock function with given fields: _a0, _a1
-func (_m *JobStorage) Broadcasting(_a0 context.Context, _a1 storage.DatabaseTransaction) ([]*executor.Job, error) {
+func (_m *JobStorage) Broadcasting(_a0 context.Context, _a1 storage.DatabaseTransaction) ([]*job.Job, error) {
 	ret := _m.Called(_a0, _a1)
 
-	var r0 []*executor.Job
-	if rf, ok := ret.Get(0).(func(context.Context, storage.DatabaseTransaction) []*executor.Job); ok {
+	var r0 []*job.Job
+	if rf, ok := ret.Get(0).(func(context.Context, storage.DatabaseTransaction) []*job.Job); ok {
 		r0 = rf(_a0, _a1)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]*executor.Job)
+			r0 = ret.Get(0).([]*job.Job)
 		}
 	}
 
@@ -41,15 +41,15 @@ func (_m *JobStorage) Broadcasting(_a0 context.Context, _a1 storage.DatabaseTran
 }
 
 // Get provides a mock function with given fields: _a0, _a1, _a2
-func (_m *JobStorage) Get(_a0 context.Context, _a1 storage.DatabaseTransaction, _a2 string) (*executor.Job, error) {
+func (_m *JobStorage) Get(_a0 context.Context, _a1 storage.DatabaseTransaction, _a2 string) (*job.Job, error) {
 	ret := _m.Called(_a0, _a1, _a2)
 
-	var r0 *executor.Job
-	if rf, ok := ret.Get(0).(func(context.Context, storage.DatabaseTransaction, string) *executor.Job); ok {
+	var r0 *job.Job
+	if rf, ok := ret.Get(0).(func(context.Context, storage.DatabaseTransaction, string) *job.Job); ok {
 		r0 = rf(_a0, _a1, _a2)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*executor.Job)
+			r0 = ret.Get(0).(*job.Job)
 		}
 	}
 
@@ -85,15 +85,15 @@ func (_m *JobStorage) Processing(_a0 context.Context, _a1 storage.DatabaseTransa
 }
 
 // Ready provides a mock function with given fields: _a0, _a1
-func (_m *JobStorage) Ready(_a0 context.Context, _a1 storage.DatabaseTransaction) ([]*executor.Job, error) {
+func (_m *JobStorage) Ready(_a0 context.Context, _a1 storage.DatabaseTransaction) ([]*job.Job, error) {
 	ret := _m.Called(_a0, _a1)
 
-	var r0 []*executor.Job
-	if rf, ok := ret.Get(0).(func(context.Context, storage.DatabaseTransaction) []*executor.Job); ok {
+	var r0 []*job.Job
+	if rf, ok := ret.Get(0).(func(context.Context, storage.DatabaseTransaction) []*job.Job); ok {
 		r0 = rf(_a0, _a1)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]*executor.Job)
+			r0 = ret.Get(0).([]*job.Job)
 		}
 	}
 
@@ -108,18 +108,18 @@ func (_m *JobStorage) Ready(_a0 context.Context, _a1 storage.DatabaseTransaction
 }
 
 // Update provides a mock function with given fields: _a0, _a1, _a2
-func (_m *JobStorage) Update(_a0 context.Context, _a1 storage.DatabaseTransaction, _a2 *executor.Job) (string, error) {
+func (_m *JobStorage) Update(_a0 context.Context, _a1 storage.DatabaseTransaction, _a2 *job.Job) (string, error) {
 	ret := _m.Called(_a0, _a1, _a2)
 
 	var r0 string
-	if rf, ok := ret.Get(0).(func(context.Context, storage.DatabaseTransaction, *executor.Job) string); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, storage.DatabaseTransaction, *job.Job) string); ok {
 		r0 = rf(_a0, _a1, _a2)
 	} else {
 		r0 = ret.Get(0).(string)
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, storage.DatabaseTransaction, *executor.Job) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, storage.DatabaseTransaction, *job.Job) error); ok {
 		r1 = rf(_a0, _a1, _a2)
 	} else {
 		r1 = ret.Error(1)
