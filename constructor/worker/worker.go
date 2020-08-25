@@ -356,34 +356,30 @@ func (w *Worker) checkAccountBalance(
 	input *job.FindBalanceInput,
 	account *types.AccountIdentifier,
 ) (string, error) {
-	amounts, err := w.helper.Balance(ctx, dbTx, account, input.MinimumBalance.Currency)
+	amount, err := w.helper.Balance(ctx, dbTx, account, input.MinimumBalance.Currency)
 	if err != nil {
 		return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
 	}
 
 	// look for amounts > min
-	for _, amount := range amounts {
-		diff, err := types.SubtractValues(amount.Value, input.MinimumBalance.Value)
-		if err != nil {
-			return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
-		}
-
-		bigIntDiff, err := types.BigInt(diff)
-		if err != nil {
-			return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
-		}
-
-		if bigIntDiff.Sign() < 0 {
-			continue
-		}
-
-		return types.PrintStruct(job.FindBalanceOutput{
-			Account: account,
-			Balance: amount,
-		}), nil
+	diff, err := types.SubtractValues(amount.Value, input.MinimumBalance.Value)
+	if err != nil {
+		return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
 	}
 
-	return "", nil
+	bigIntDiff, err := types.BigInt(diff)
+	if err != nil {
+		return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
+	}
+
+	if bigIntDiff.Sign() < 0 {
+		return "", nil
+	}
+
+	return types.PrintStruct(job.FindBalanceOutput{
+		Account: account,
+		Balance: amount,
+	}), nil
 }
 
 func (w *Worker) availableAddresses(

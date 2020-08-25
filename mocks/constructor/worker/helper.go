@@ -42,15 +42,15 @@ func (_m *Helper) AllAddresses(_a0 context.Context, _a1 storage.DatabaseTransact
 }
 
 // Balance provides a mock function with given fields: _a0, _a1, _a2, _a3
-func (_m *Helper) Balance(_a0 context.Context, _a1 storage.DatabaseTransaction, _a2 *types.AccountIdentifier, _a3 *types.Currency) ([]*types.Amount, error) {
+func (_m *Helper) Balance(_a0 context.Context, _a1 storage.DatabaseTransaction, _a2 *types.AccountIdentifier, _a3 *types.Currency) (*types.Amount, error) {
 	ret := _m.Called(_a0, _a1, _a2, _a3)
 
-	var r0 []*types.Amount
-	if rf, ok := ret.Get(0).(func(context.Context, storage.DatabaseTransaction, *types.AccountIdentifier, *types.Currency) []*types.Amount); ok {
+	var r0 *types.Amount
+	if rf, ok := ret.Get(0).(func(context.Context, storage.DatabaseTransaction, *types.AccountIdentifier, *types.Currency) *types.Amount); ok {
 		r0 = rf(_a0, _a1, _a2, _a3)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]*types.Amount)
+			r0 = ret.Get(0).(*types.Amount)
 		}
 	}
 

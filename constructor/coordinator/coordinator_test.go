@@ -281,14 +281,16 @@ func TestProcess(t *testing.T) {
 		ctx,
 		dbTxFail2,
 		&types.AccountIdentifier{Address: "address1"},
+		&types.Currency{
+			Symbol:   "tBTC",
+			Decimals: 8,
+		},
 	).Return(
-		[]*types.Amount{
-			{
-				Value: "0",
-				Currency: &types.Currency{
-					Symbol:   "tBTC",
-					Decimals: 8,
-				},
+		&types.Amount{
+			Value: "0",
+			Currency: &types.Currency{
+				Symbol:   "tBTC",
+				Decimals: 8,
 			},
 		},
 		nil,
@@ -309,14 +311,16 @@ func TestProcess(t *testing.T) {
 		ctx,
 		dbTx2,
 		&types.AccountIdentifier{Address: "address1"},
+		&types.Currency{
+			Symbol:   "tBTC",
+			Decimals: 8,
+		},
 	).Return(
-		[]*types.Amount{
-			{
-				Value: "0",
-				Currency: &types.Currency{
-					Symbol:   "tBTC",
-					Decimals: 8,
-				},
+		&types.Amount{
+			Value: "0",
+			Currency: &types.Currency{
+				Symbol:   "tBTC",
+				Decimals: 8,
 			},
 		},
 		nil,
@@ -330,14 +334,16 @@ func TestProcess(t *testing.T) {
 		ctx,
 		dbTx2,
 		&types.AccountIdentifier{Address: "address1"},
+		&types.Currency{
+			Symbol:   "tBTC",
+			Decimals: 8,
+		},
 	).Return(
-		[]*types.Amount{
-			{
-				Value: "100",
-				Currency: &types.Currency{
-					Symbol:   "tBTC",
-					Decimals: 8,
-				},
+		&types.Amount{
+			Value: "100",
+			Currency: &types.Currency{
+				Symbol:   "tBTC",
+				Decimals: 8,
 			},
 		},
 		nil,
@@ -360,14 +366,16 @@ func TestProcess(t *testing.T) {
 		ctx,
 		dbTxFail3,
 		&types.AccountIdentifier{Address: "address1"},
+		&types.Currency{
+			Symbol:   "tBTC",
+			Decimals: 8,
+		},
 	).Return(
-		[]*types.Amount{
-			{
-				Value: "100",
-				Currency: &types.Currency{
-					Symbol:   "tBTC",
-					Decimals: 8,
-				},
+		&types.Amount{
+			Value: "100",
+			Currency: &types.Currency{
+				Symbol:   "tBTC",
+				Decimals: 8,
 			},
 		},
 		nil,
@@ -416,14 +424,16 @@ func TestProcess(t *testing.T) {
 		ctx,
 		dbTx4,
 		&types.AccountIdentifier{Address: "address1"},
+		&types.Currency{
+			Symbol:   "tBTC",
+			Decimals: 8,
+		},
 	).Return(
-		[]*types.Amount{
-			{
-				Value: "100",
-				Currency: &types.Currency{
-					Symbol:   "tBTC",
-					Decimals: 8,
-				},
+		&types.Amount{
+			Value: "100",
+			Currency: &types.Currency{
+				Symbol:   "tBTC",
+				Decimals: 8,
 			},
 		},
 		nil,
@@ -435,14 +445,16 @@ func TestProcess(t *testing.T) {
 		ctx,
 		dbTx4,
 		&types.AccountIdentifier{Address: "address2"},
+		&types.Currency{
+			Symbol:   "tBTC",
+			Decimals: 8,
+		},
 	).Return(
-		[]*types.Amount{
-			{
-				Value: "0",
-				Currency: &types.Currency{
-					Symbol:   "tBTC",
-					Decimals: 8,
-				},
+		&types.Amount{
+			Value: "0",
+			Currency: &types.Currency{
+				Symbol:   "tBTC",
+				Decimals: 8,
 			},
 		},
 		nil,
