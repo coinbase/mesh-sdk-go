@@ -356,10 +356,13 @@ func (w *Worker) checkAccountBalance(
 	input *job.FindBalanceInput,
 	account *types.AccountIdentifier,
 ) (string, error) {
+	fmt.Printf("invoking account balance %s for %s\n", types.PrintStruct(account), types.PrintStruct(input.MinimumBalance))
 	amount, err := w.helper.Balance(ctx, dbTx, account, input.MinimumBalance.Currency)
 	if err != nil {
 		return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
 	}
+
+	fmt.Printf("found account balance %s of %s\n", types.PrintStruct(account), types.PrintStruct(amount))
 
 	// look for amounts > min
 	diff, err := types.SubtractValues(amount.Value, input.MinimumBalance.Value)
@@ -445,6 +448,9 @@ func (w *Worker) FindBalanceWorker(
 		return "", fmt.Errorf("%w: unable to get available addresses", err)
 	}
 
+	fmt.Printf("Addresses: %v\n", addresses)
+	fmt.Printf("Available addresses: %v\n", availableAddresses)
+
 	// Consider each availableAddress as a potential account.
 	for _, address := range availableAddresses {
 		// If we require an address and that address
@@ -489,8 +495,14 @@ func (w *Worker) FindBalanceWorker(
 			)
 		}
 
+		log.Printf(
+			"Found balance %s\n",
+			output,
+		)
 		return output, nil
 	}
+
+	fmt.Println("found no balances")
 
 	// If we are supposed to wait, we sleep for BalanceWaitTime
 	// and then invoke FindBalanceWorker.
@@ -510,5 +522,6 @@ func (w *Worker) FindBalanceWorker(
 
 	// If we can't do anything and we aren't supposed to wait, we should
 	// return with ErrUnsatisfiable.
+	fmt.Println("returning unsatisfiable")
 	return "", ErrUnsatisfiable
 }

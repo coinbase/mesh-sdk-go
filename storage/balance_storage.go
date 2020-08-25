@@ -355,11 +355,35 @@ func (b *BalanceStorage) GetBalance(
 	currency *types.Currency,
 	headBlock *types.BlockIdentifier,
 ) (*types.Amount, *types.BlockIdentifier, error) {
-	transaction := b.db.NewDatabaseTransaction(ctx, false)
-	defer transaction.Discard(ctx)
+	// We use a write-ready transaction here in case we need to
+	// inject a non-existent balance into storage.
+	dbTx := b.db.NewDatabaseTransaction(ctx, true)
+	defer dbTx.Discard(ctx)
 
+	amount, headBlock, err := b.GetBalanceTransactional(ctx, dbTx, account, currency, headBlock)
+	if err != nil {
+		return nil, nil, fmt.Errorf("%w: unable to get balance", err)
+	}
+
+	// We commit any changes made during the balance lookup.
+	if err := dbTx.Commit(ctx); err != nil {
+		return nil, nil, fmt.Errorf("%w: unable to commit account balance transaction", err)
+	}
+
+	return amount, headBlock, nil
+}
+
+// GetBalanceTransactional returns all the balances of a types.AccountIdentifier
+// and the types.BlockIdentifier it was last updated at in a database transaction.
+func (b *BalanceStorage) GetBalanceTransactional(
+	ctx context.Context,
+	dbTx DatabaseTransaction,
+	account *types.AccountIdentifier,
+	currency *types.Currency,
+	headBlock *types.BlockIdentifier,
+) (*types.Amount, *types.BlockIdentifier, error) {
 	namespace, key := GetBalanceKey(account, currency)
-	exists, bal, err := transaction.Get(ctx, key)
+	exists, bal, err := dbTx.Get(ctx, key)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -374,22 +398,15 @@ func (b *BalanceStorage) GetBalance(
 			return nil, nil, fmt.Errorf("%w: unable to get account balance from helper", err)
 		}
 
-		writeTransaction := b.db.NewDatabaseTransaction(ctx, true)
-		defer writeTransaction.Discard(ctx)
 		err = b.SetBalance(
 			ctx,
-			writeTransaction,
+			dbTx,
 			account,
 			amount,
 			headBlock,
 		)
 		if err != nil {
 			return nil, nil, fmt.Errorf("%w: unable to set account balance", err)
-		}
-
-		err = writeTransaction.Commit(ctx)
-		if err != nil {
-			return nil, nil, fmt.Errorf("%w: unable to commit account balance transaction", err)
 		}
 
 		return amount, headBlock, nil

@@ -389,15 +389,15 @@ func (c *Coordinator) Process(
 		// If job update fails, all associated state changes are rolled
 		// back.
 		dbTx := c.helper.DatabaseTransaction(ctx)
-		defer dbTx.Discard(ctx)
 
 		// Attempt to find a Job to process.
 		j, err := c.findJob(ctx, dbTx)
 		if errors.Is(err, ErrNoAvailableJobs) {
 			log.Println("waiting for available jobs...")
 
-			time.Sleep(NoJobsWaitTime)
 			c.resetVars()
+			dbTx.Discard(ctx)
+			time.Sleep(NoJobsWaitTime)
 			continue
 		}
 		if err != nil {
@@ -412,12 +412,16 @@ func (c *Coordinator) Process(
 
 		broadcast, err := c.worker.Process(ctx, dbTx, j)
 		if errors.Is(err, worker.ErrCreateAccount) {
+			log.Println("err create account")
 			c.addToUnprocessed(j)
 			c.seenErrCreateAccount = true
+			dbTx.Discard(ctx)
 			continue
 		}
 		if errors.Is(err, worker.ErrUnsatisfiable) {
+			log.Println("err unsatisfiable")
 			c.addToUnprocessed(j)
+			dbTx.Discard(ctx)
 			continue
 		}
 		if err != nil {
