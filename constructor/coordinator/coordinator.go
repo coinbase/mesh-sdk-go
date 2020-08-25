@@ -343,6 +343,32 @@ func (c *Coordinator) addToUnprocessed(job *job.Job) {
 	c.attemptedJobs = append(c.attemptedJobs, job.Identifier)
 }
 
+func (c *Coordinator) invokeHandlersAndBroadcast(
+	ctx context.Context,
+	j *job.Job,
+	jobIdentifier string,
+	transactionCreated *types.TransactionIdentifier,
+) error {
+	if j.Workflow == string(job.CreateAccount) && j.CheckComplete() {
+		if err := c.handler.AddressCreated(ctx, jobIdentifier); err != nil {
+			return fmt.Errorf("%w: unable to handle transaction created", err)
+		}
+	}
+
+	if transactionCreated != nil {
+		if err := c.handler.TransactionCreated(ctx, jobIdentifier, transactionCreated); err != nil {
+			return fmt.Errorf("%w: unable to handle transaction created", err)
+		}
+	}
+
+	// Run Broadcast all after transaction committed.
+	if err := c.helper.BroadcastAll(ctx); err != nil {
+		return fmt.Errorf("%w: unable to broadcast all transactions", err)
+	}
+
+	return nil
+}
+
 // Process creates and executes jobs
 // until failure.
 func (c *Coordinator) Process(
@@ -444,22 +470,9 @@ func (c *Coordinator) Process(
 			return fmt.Errorf("%w: unable to commit job update", err)
 		}
 
-		// Invoke handlers
-		if j.Workflow == string(job.CreateAccount) && j.CheckComplete() {
-			if err := c.handler.AddressCreated(ctx, jobIdentifier); err != nil {
-				return fmt.Errorf("%w: unable to handle transaction created", err)
-			}
-		}
-
-		if transactionCreated != nil {
-			if err := c.handler.TransactionCreated(ctx, jobIdentifier, transactionCreated); err != nil {
-				return fmt.Errorf("%w: unable to handle transaction created", err)
-			}
-		}
-
-		// Run Broadcast all after transaction committed.
-		if err := c.helper.BroadcastAll(ctx); err != nil {
-			return fmt.Errorf("%w: unable to broadcast all transactions", err)
+		// Invoke handlers and broadcast
+		if err := c.invokeHandlersAndBroadcast(ctx, j, jobIdentifier, transactionCreated); err != nil {
+			return fmt.Errorf("%w: unable to handle job success", err)
 		}
 	}
 
