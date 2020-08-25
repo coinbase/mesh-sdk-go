@@ -99,13 +99,14 @@ func serializeKey(k *Key) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// Store saves a keys.KeyPair for a given address. If the address already
-// exists, an error is returned.
-func (k *KeyStorage) Store(ctx context.Context, address string, keyPair *keys.KeyPair) error {
-	transaction := k.db.NewDatabaseTransaction(ctx, true)
-	defer transaction.Discard(ctx)
-
-	exists, _, err := transaction.Get(ctx, getAddressKey(address))
+// StoreTransactional stores a key in a database transaction.
+func (k *KeyStorage) StoreTransactional(
+	ctx context.Context,
+	address string,
+	keyPair *keys.KeyPair,
+	dbTx DatabaseTransaction,
+) error {
+	exists, _, err := dbTx.Get(ctx, getAddressKey(address))
 	if err != nil {
 		return fmt.Errorf("%w: unable to check if address %s exists", err, address)
 	}
@@ -122,12 +123,29 @@ func (k *KeyStorage) Store(ctx context.Context, address string, keyPair *keys.Ke
 		return fmt.Errorf("%w: unable to serialize key", err)
 	}
 
-	err = transaction.Set(ctx, getAddressKey(address), val)
+	err = dbTx.Set(ctx, getAddressKey(address), val)
 	if err != nil {
 		return fmt.Errorf("%w: unable to store key", err)
 	}
 
-	if err := transaction.Commit(ctx); err != nil {
+	return nil
+}
+
+// Store saves a keys.KeyPair for a given address. If the address already
+// exists, an error is returned.
+func (k *KeyStorage) Store(
+	ctx context.Context,
+	address string,
+	keyPair *keys.KeyPair,
+) error {
+	dbTx := k.db.NewDatabaseTransaction(ctx, true)
+	defer dbTx.Discard(ctx)
+
+	if err := k.StoreTransactional(ctx, address, keyPair, dbTx); err != nil {
+		return fmt.Errorf("%w: unable to store key", err)
+	}
+
+	if err := dbTx.Commit(ctx); err != nil {
 		return fmt.Errorf("%w: unable to commit new key to db", err)
 	}
 
@@ -156,9 +174,9 @@ func (k *KeyStorage) Get(ctx context.Context, address string) (*keys.KeyPair, er
 	return key.KeyPair, nil
 }
 
-// GetAllAddresses returns all addresses in key storage.
-func (k *KeyStorage) GetAllAddresses(ctx context.Context) ([]string, error) {
-	rawKeys, err := k.db.Scan(ctx, []byte(keyNamespace))
+// GetAllAddressesTransactional returns all addresses in key storage.
+func (k *KeyStorage) GetAllAddressesTransactional(ctx context.Context, dbTx DatabaseTransaction) ([]string, error) {
+	rawKeys, err := dbTx.Scan(ctx, []byte(keyNamespace))
 	if err != nil {
 		return nil, fmt.Errorf("%w database scan for keys failed", err)
 	}
@@ -174,6 +192,14 @@ func (k *KeyStorage) GetAllAddresses(ctx context.Context) ([]string, error) {
 	}
 
 	return addresses, nil
+}
+
+// GetAllAddresses returns all addresses in key storage.
+func (k *KeyStorage) GetAllAddresses(ctx context.Context) ([]string, error) {
+	dbTx := k.db.NewDatabaseTransaction(ctx, false)
+	defer dbTx.Discard(ctx)
+
+	return k.GetAllAddressesTransactional(ctx, dbTx)
 }
 
 // Sign attempts to sign a slice of *types.SigningPayload with the keys in KeyStorage.
