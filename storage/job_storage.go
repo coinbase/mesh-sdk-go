@@ -49,6 +49,10 @@ func getJobProcessingKey(workflow string) string {
 	return fmt.Sprintf("%s/%s", processingKey, workflow)
 }
 
+func getJobFailedKey(workflow string) string {
+	return fmt.Sprintf("%s/%s", failedKey, workflow)
+}
+
 func getJobCompleteKey(workflow string) string {
 	return fmt.Sprintf("%s/%s", completeKey, workflow)
 }
@@ -57,6 +61,11 @@ func getJobCompleteKey(workflow string) string {
 // jobs.
 type JobStorage struct {
 	db Database
+}
+
+// NewJobStorage returns a new instance of *JobStorage.
+func NewJobStorage(db Database) *JobStorage {
+	return &JobStorage{db: db}
 }
 
 func (j *JobStorage) getAllJobs(ctx context.Context, dbTx DatabaseTransaction, k []byte) ([]*job.Job, error) {
@@ -108,7 +117,7 @@ func (j *JobStorage) Failed(ctx context.Context, workflow string) ([]*job.Job, e
 	dbTx := j.db.NewDatabaseTransaction(ctx, false)
 	defer dbTx.Discard(ctx)
 
-	return j.getAllJobs(ctx, dbTx, getJobMetadataKey(failedKey))
+	return j.getAllJobs(ctx, dbTx, getJobMetadataKey(getJobFailedKey(workflow)))
 }
 
 // Complete gets all successfully completes *job.Job of a certain workflow.
@@ -226,7 +235,7 @@ func getAssociatedKeys(j *job.Job) [][]byte {
 	case job.Completed:
 		keys = append(keys, getJobMetadataKey(getJobCompleteKey(j.Workflow)))
 	case job.Failed:
-		keys = append(keys, getJobMetadataKey(failedKey))
+		keys = append(keys, getJobMetadataKey(getJobFailedKey(j.Workflow)))
 	case job.Broadcasting:
 		keys = append(keys, getJobMetadataKey(broadcastingKey))
 		isProcessing = true
