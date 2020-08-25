@@ -34,6 +34,7 @@ import (
 func New(
 	storage JobStorage,
 	helper Helper,
+	handler Handler,
 	parser *parser.Parser,
 	inputWorkflows []*job.Workflow,
 ) (*Coordinator, error) {
@@ -71,6 +72,7 @@ func New(
 	return &Coordinator{
 		storage:               storage,
 		helper:                helper,
+		handler:               handler,
 		worker:                worker.New(helper),
 		parser:                parser,
 		attemptedJobs:         []string{},
@@ -292,7 +294,7 @@ func (c *Coordinator) BroadcastComplete(
 	jobIdentifier string,
 	transaction *types.Transaction,
 ) error {
-	job, err := c.storage.Get(ctx, dbTx, jobIdentifier)
+	j, err := c.storage.Get(ctx, dbTx, jobIdentifier)
 	if err != nil {
 		return fmt.Errorf(
 			"%w: %s",
@@ -301,16 +303,23 @@ func (c *Coordinator) BroadcastComplete(
 		)
 	}
 
-	if err := job.BroadcastComplete(ctx, transaction); err != nil {
+	if err := j.BroadcastComplete(ctx, transaction); err != nil {
 		return fmt.Errorf("%w: unable to mark broadcast complete", err)
 	}
 
-	if _, err := c.storage.Update(ctx, dbTx, job); err != nil {
+	if _, err := c.storage.Update(ctx, dbTx, j); err != nil {
 		return fmt.Errorf("%w: unable to update job", err)
 	}
 
 	if err := dbTx.Commit(ctx); err != nil {
 		return fmt.Errorf("%w: unable to commit job update", err)
+	}
+
+	// Invoke handler if address creation is complete
+	if j.Workflow == string(job.CreateAccount) && j.CheckComplete() {
+		if err := c.handler.AddressCreated(ctx, jobIdentifier); err != nil {
+			return fmt.Errorf("%w: unable to handle transaction created", err)
+		}
 	}
 
 	// Reset all vars
@@ -358,7 +367,7 @@ func (c *Coordinator) Process(
 		defer dbTx.Discard(ctx)
 
 		// Attempt to find a Job to process.
-		job, err := c.findJob(ctx, dbTx)
+		j, err := c.findJob(ctx, dbTx)
 		if errors.Is(err, ErrNoAvailableJobs) {
 			log.Println("waiting for available jobs...")
 
@@ -370,20 +379,20 @@ func (c *Coordinator) Process(
 			return fmt.Errorf("%w: unable to find job", err)
 		}
 
-		statusMessage := fmt.Sprintf(`processing workflow "%s"`, job.Workflow)
-		if len(job.Identifier) > 0 {
-			statusMessage = fmt.Sprintf(`%s with identifier "%s"`, statusMessage, job.Identifier)
+		statusMessage := fmt.Sprintf(`processing workflow "%s"`, j.Workflow)
+		if len(j.Identifier) > 0 {
+			statusMessage = fmt.Sprintf(`%s with identifier "%s"`, statusMessage, j.Identifier)
 		}
 		log.Println(statusMessage)
 
-		broadcast, err := c.worker.Process(ctx, dbTx, job)
+		broadcast, err := c.worker.Process(ctx, dbTx, j)
 		if errors.Is(err, worker.ErrCreateAccount) {
-			c.addToUnprocessed(job)
+			c.addToUnprocessed(j)
 			c.seenErrCreateAccount = true
 			continue
 		}
 		if errors.Is(err, worker.ErrUnsatisfiable) {
-			c.addToUnprocessed(job)
+			c.addToUnprocessed(j)
 			continue
 		}
 		if err != nil {
@@ -395,11 +404,12 @@ func (c *Coordinator) Process(
 		// Note, we ALWAYS store jobs even if they are complete on
 		// their first run so that we can have a full view of everything
 		// we've done in JobStorage.
-		jobIdentifier, err := c.storage.Update(ctx, dbTx, job)
+		jobIdentifier, err := c.storage.Update(ctx, dbTx, j)
 		if err != nil {
 			return fmt.Errorf("%w: unable to update job", err)
 		}
 
+		var transactionCreated *types.TransactionIdentifier
 		if broadcast != nil {
 			// Construct Transaction
 			transactionIdentifier, networkTransaction, err := c.createTransaction(ctx, broadcast)
@@ -421,16 +431,30 @@ func (c *Coordinator) Process(
 				return fmt.Errorf("%w: unable to enque broadcast", err)
 			}
 
+			transactionCreated = transactionIdentifier
 			log.Printf("created transaction for job %s\n", jobIdentifier)
 		}
 
 		// Reset all vars
 		c.resetVars()
-		log.Printf(`processed workflow "%s" with identifier "%s"`, job.Workflow, jobIdentifier)
+		log.Printf(`processed workflow "%s" with identifier "%s"`, j.Workflow, jobIdentifier)
 
 		// Commit db transaction
 		if err := dbTx.Commit(ctx); err != nil {
 			return fmt.Errorf("%w: unable to commit job update", err)
+		}
+
+		// Invoke handlers
+		if j.Workflow == string(job.CreateAccount) && j.CheckComplete() {
+			if err := c.handler.AddressCreated(ctx, jobIdentifier); err != nil {
+				return fmt.Errorf("%w: unable to handle transaction created", err)
+			}
+		}
+
+		if transactionCreated != nil {
+			if err := c.handler.TransactionCreated(ctx, jobIdentifier, transactionCreated); err != nil {
+				return fmt.Errorf("%w: unable to handle transaction created", err)
+			}
 		}
 
 		// Run Broadcast all after transaction committed.

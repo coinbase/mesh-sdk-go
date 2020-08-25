@@ -70,6 +70,7 @@ func TestProcess(t *testing.T) {
 
 	jobStorage := &mocks.JobStorage{}
 	helper := &mocks.Helper{}
+	handler := &mocks.Handler{}
 	p := defaultParser(t)
 	workflows := []*job.Workflow{
 		{
@@ -198,6 +199,7 @@ func TestProcess(t *testing.T) {
 	c, err := New(
 		jobStorage,
 		helper,
+		handler,
 		p,
 		workflows,
 	)
@@ -263,6 +265,7 @@ func TestProcess(t *testing.T) {
 		mock.Anything,
 	).Return(nil).Once()
 	jobStorage.On("Update", ctx, dbTx, mock.Anything).Return("job1", nil).Once()
+	handler.On("AddressCreated", ctx, "job1").Return(nil).Once()
 	helper.On("BroadcastAll", ctx).Return(nil).Once()
 
 	// Attempt to run transfer again (but determine funds are needed)
@@ -397,6 +400,7 @@ func TestProcess(t *testing.T) {
 		mock.Anything,
 	).Return(nil).Once()
 	jobStorage.On("Update", ctx, dbTx3, mock.Anything).Return("job3", nil).Once()
+	handler.On("AddressCreated", ctx, "job3").Return(nil).Once()
 	helper.On("BroadcastAll", ctx).Return(nil).Once()
 
 	// Attempt to create transfer
@@ -588,6 +592,7 @@ func TestProcess(t *testing.T) {
 		networkTx,
 		int64(1),
 	).Return(nil).Once()
+	handler.On("TransactionCreated", ctx, "job4", txIdentifier).Return(nil).Once()
 	helper.On("BroadcastAll", ctx).Return(nil).Once()
 
 	// Wait for transfer to complete
