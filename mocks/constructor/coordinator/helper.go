@@ -65,13 +65,13 @@ func (_m *Helper) Balance(_a0 context.Context, _a1 storage.DatabaseTransaction, 
 	return r0, r1
 }
 
-// Broadcast provides a mock function with given fields: _a0, _a1, _a2, _a3, _a4, _a5, _a6
-func (_m *Helper) Broadcast(_a0 context.Context, _a1 storage.DatabaseTransaction, _a2 string, _a3 *types.NetworkIdentifier, _a4 []*types.Operation, _a5 *types.TransactionIdentifier, _a6 string) error {
-	ret := _m.Called(_a0, _a1, _a2, _a3, _a4, _a5, _a6)
+// Broadcast provides a mock function with given fields: _a0, _a1, _a2, _a3, _a4, _a5, _a6, _a7
+func (_m *Helper) Broadcast(_a0 context.Context, _a1 storage.DatabaseTransaction, _a2 string, _a3 *types.NetworkIdentifier, _a4 []*types.Operation, _a5 *types.TransactionIdentifier, _a6 string, _a7 int64) error {
+	ret := _m.Called(_a0, _a1, _a2, _a3, _a4, _a5, _a6, _a7)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, storage.DatabaseTransaction, string, *types.NetworkIdentifier, []*types.Operation, *types.TransactionIdentifier, string) error); ok {
-		r0 = rf(_a0, _a1, _a2, _a3, _a4, _a5, _a6)
+	if rf, ok := ret.Get(0).(func(context.Context, storage.DatabaseTransaction, string, *types.NetworkIdentifier, []*types.Operation, *types.TransactionIdentifier, string, int64) error); ok {
+		r0 = rf(_a0, _a1, _a2, _a3, _a4, _a5, _a6, _a7)
 	} else {
 		r0 = ret.Error(0)
 	}

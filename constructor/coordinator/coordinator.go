@@ -313,6 +313,8 @@ func (c *Coordinator) BroadcastComplete(
 		return fmt.Errorf("%w: unable to commit job update", err)
 	}
 
+	// Reset all vars
+	c.resetVars()
 	log.Printf(`broadcast complete for "%s"`, jobIdentifier)
 
 	return nil
@@ -414,12 +416,17 @@ func (c *Coordinator) Process(
 				broadcast.Intent,
 				transactionIdentifier,
 				networkTransaction,
+				broadcast.ConfirmationDepth,
 			); err != nil {
 				return fmt.Errorf("%w: unable to enque broadcast", err)
 			}
 
 			log.Printf("created transaction for job %s\n", jobIdentifier)
 		}
+
+		// Reset all vars
+		c.resetVars()
+		log.Printf(`processed workflow "%s" with identifier "%s"`, job.Workflow, jobIdentifier)
 
 		// Commit db transaction
 		if err := dbTx.Commit(ctx); err != nil {
@@ -430,11 +437,6 @@ func (c *Coordinator) Process(
 		if err := c.helper.BroadcastAll(ctx); err != nil {
 			return fmt.Errorf("%w: unable to broadcast all transactions", err)
 		}
-
-		// Reset all vars
-		c.resetVars()
-
-		log.Printf(`processed workflow "%s" with identifier "%s"`, job.Workflow, jobIdentifier)
 	}
 
 	return ctx.Err()
