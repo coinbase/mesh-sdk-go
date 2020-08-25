@@ -311,7 +311,7 @@ func (w *Worker) checkAccountCoins(
 	input *job.FindBalanceInput,
 	account *types.AccountIdentifier,
 ) (string, error) {
-	coins, err := w.helper.Coins(ctx, dbTx, account)
+	coins, err := w.helper.Coins(ctx, dbTx, account, input.MinimumBalance.Currency)
 	if err != nil {
 		return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
 	}
@@ -323,10 +323,6 @@ func (w *Worker) checkAccountCoins(
 
 	for _, coin := range coins {
 		if utils.ContainsString(disallowedCoins, types.Hash(coin.CoinIdentifier)) {
-			continue
-		}
-
-		if types.Hash(coin.Amount.Currency) != types.Hash(input.MinimumBalance.Currency) {
 			continue
 		}
 
@@ -360,17 +356,13 @@ func (w *Worker) checkAccountBalance(
 	input *job.FindBalanceInput,
 	account *types.AccountIdentifier,
 ) (string, error) {
-	amounts, err := w.helper.Balance(ctx, dbTx, account)
+	amounts, err := w.helper.Balance(ctx, dbTx, account, input.MinimumBalance.Currency)
 	if err != nil {
 		return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
 	}
 
 	// look for amounts > min
 	for _, amount := range amounts {
-		if types.Hash(amount.Currency) != types.Hash(input.MinimumBalance.Currency) {
-			continue
-		}
-
 		diff, err := types.SubtractValues(amount.Value, input.MinimumBalance.Value)
 		if err != nil {
 			return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
