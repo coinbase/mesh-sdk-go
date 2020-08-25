@@ -81,6 +81,7 @@ type Helper interface {
 		context.Context,
 		storage.DatabaseTransaction,
 		*types.AccountIdentifier,
+		*types.Currency,
 	) ([]*types.Amount, error)
 
 	// Coins returns all *types.Coin owned by an address.
@@ -88,6 +89,7 @@ type Helper interface {
 		context.Context,
 		storage.DatabaseTransaction,
 		*types.AccountIdentifier,
+		*types.Currency,
 	) ([]*types.Coin, error)
 
 	// BroadcastAll broadcasts all transactions considered ready for

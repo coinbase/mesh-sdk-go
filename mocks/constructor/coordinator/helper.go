@@ -42,13 +42,13 @@ func (_m *Helper) AllAddresses(_a0 context.Context, _a1 storage.DatabaseTransact
 	return r0, r1
 }
 
-// Balance provides a mock function with given fields: _a0, _a1, _a2
-func (_m *Helper) Balance(_a0 context.Context, _a1 storage.DatabaseTransaction, _a2 *types.AccountIdentifier) ([]*types.Amount, error) {
-	ret := _m.Called(_a0, _a1, _a2)
+// Balance provides a mock function with given fields: _a0, _a1, _a2, _a3
+func (_m *Helper) Balance(_a0 context.Context, _a1 storage.DatabaseTransaction, _a2 *types.AccountIdentifier, _a3 *types.Currency) ([]*types.Amount, error) {
+	ret := _m.Called(_a0, _a1, _a2, _a3)
 
 	var r0 []*types.Amount
-	if rf, ok := ret.Get(0).(func(context.Context, storage.DatabaseTransaction, *types.AccountIdentifier) []*types.Amount); ok {
-		r0 = rf(_a0, _a1, _a2)
+	if rf, ok := ret.Get(0).(func(context.Context, storage.DatabaseTransaction, *types.AccountIdentifier, *types.Currency) []*types.Amount); ok {
+		r0 = rf(_a0, _a1, _a2, _a3)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*types.Amount)
@@ -56,8 +56,8 @@ func (_m *Helper) Balance(_a0 context.Context, _a1 storage.DatabaseTransaction, 
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, storage.DatabaseTransaction, *types.AccountIdentifier) error); ok {
-		r1 = rf(_a0, _a1, _a2)
+	if rf, ok := ret.Get(1).(func(context.Context, storage.DatabaseTransaction, *types.AccountIdentifier, *types.Currency) error); ok {
+		r1 = rf(_a0, _a1, _a2, _a3)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -93,13 +93,13 @@ func (_m *Helper) BroadcastAll(_a0 context.Context) error {
 	return r0
 }
 
-// Coins provides a mock function with given fields: _a0, _a1, _a2
-func (_m *Helper) Coins(_a0 context.Context, _a1 storage.DatabaseTransaction, _a2 *types.AccountIdentifier) ([]*types.Coin, error) {
-	ret := _m.Called(_a0, _a1, _a2)
+// Coins provides a mock function with given fields: _a0, _a1, _a2, _a3
+func (_m *Helper) Coins(_a0 context.Context, _a1 storage.DatabaseTransaction, _a2 *types.AccountIdentifier, _a3 *types.Currency) ([]*types.Coin, error) {
+	ret := _m.Called(_a0, _a1, _a2, _a3)
 
 	var r0 []*types.Coin
-	if rf, ok := ret.Get(0).(func(context.Context, storage.DatabaseTransaction, *types.AccountIdentifier) []*types.Coin); ok {
-		r0 = rf(_a0, _a1, _a2)
+	if rf, ok := ret.Get(0).(func(context.Context, storage.DatabaseTransaction, *types.AccountIdentifier, *types.Currency) []*types.Coin); ok {
+		r0 = rf(_a0, _a1, _a2, _a3)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*types.Coin)
@@ -107,8 +107,8 @@ func (_m *Helper) Coins(_a0 context.Context, _a1 storage.DatabaseTransaction, _a
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, storage.DatabaseTransaction, *types.AccountIdentifier) error); ok {
-		r1 = rf(_a0, _a1, _a2)
+	if rf, ok := ret.Get(1).(func(context.Context, storage.DatabaseTransaction, *types.AccountIdentifier, *types.Currency) error); ok {
+		r1 = rf(_a0, _a1, _a2, _a3)
 	} else {
 		r1 = ret.Error(1)
 	}
