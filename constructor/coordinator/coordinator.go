@@ -119,7 +119,7 @@ func (c *Coordinator) findJob(
 			)
 		}
 
-		if processing >= workflow.Concurrency {
+		if len(processing) >= workflow.Concurrency {
 			continue
 		}
 
@@ -151,7 +151,7 @@ func (c *Coordinator) findJob(
 			)
 		}
 
-		if processing >= ReservedWorkflowConcurrency {
+		if len(processing) >= ReservedWorkflowConcurrency {
 			return nil, ErrNoAvailableJobs
 		}
 
@@ -176,7 +176,7 @@ func (c *Coordinator) findJob(
 		)
 	}
 
-	if processing >= ReservedWorkflowConcurrency {
+	if len(processing) >= ReservedWorkflowConcurrency {
 		return nil, ErrNoAvailableJobs
 	}
 

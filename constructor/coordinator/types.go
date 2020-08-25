@@ -211,7 +211,7 @@ type JobStorage interface {
 		context.Context,
 		storage.DatabaseTransaction,
 		string,
-	) (int, error)
+	) ([]*job.Job, error)
 
 	// Update stores an updated *Job in storage
 	// and returns its UUID (which won't exist

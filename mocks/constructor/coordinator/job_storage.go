@@ -64,14 +64,16 @@ func (_m *JobStorage) Get(_a0 context.Context, _a1 storage.DatabaseTransaction, 
 }
 
 // Processing provides a mock function with given fields: _a0, _a1, _a2
-func (_m *JobStorage) Processing(_a0 context.Context, _a1 storage.DatabaseTransaction, _a2 string) (int, error) {
+func (_m *JobStorage) Processing(_a0 context.Context, _a1 storage.DatabaseTransaction, _a2 string) ([]*job.Job, error) {
 	ret := _m.Called(_a0, _a1, _a2)
 
-	var r0 int
-	if rf, ok := ret.Get(0).(func(context.Context, storage.DatabaseTransaction, string) int); ok {
+	var r0 []*job.Job
+	if rf, ok := ret.Get(0).(func(context.Context, storage.DatabaseTransaction, string) []*job.Job); ok {
 		r0 = rf(_a0, _a1, _a2)
 	} else {
-		r0 = ret.Get(0).(int)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*job.Job)
+		}
 	}
 
 	var r1 error

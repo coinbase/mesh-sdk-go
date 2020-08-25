@@ -226,7 +226,7 @@ func TestProcess(t *testing.T) {
 	dbTxFail := db.NewDatabaseTransaction(ctx, false)
 	helper.On("DatabaseTransaction", ctx).Return(dbTxFail).Once()
 	jobStorage.On("Ready", ctx, dbTxFail).Return([]*job.Job{}, nil).Once()
-	jobStorage.On("Processing", ctx, dbTxFail, "transfer").Return(0, nil).Once()
+	jobStorage.On("Processing", ctx, dbTxFail, "transfer").Return([]*job.Job{}, nil).Once()
 	helper.On("AllAddresses", ctx, dbTxFail).Return([]string{}, nil).Once()
 
 	// Start processor
@@ -244,7 +244,7 @@ func TestProcess(t *testing.T) {
 	helper.On("DatabaseTransaction", ctx).Return(dbTx).Once()
 	jobStorage.On("Ready", ctx, dbTx).Return([]*job.Job{}, nil).Once()
 	jobStorage.On("Broadcasting", ctx, dbTx).Return([]*job.Job{}, nil).Once()
-	jobStorage.On("Processing", ctx, dbTx, "create_account").Return(0, nil).Once()
+	jobStorage.On("Processing", ctx, dbTx, "create_account").Return([]*job.Job{}, nil).Once()
 	helper.On(
 		"Derive",
 		ctx,
@@ -270,7 +270,7 @@ func TestProcess(t *testing.T) {
 	dbTxFail2 := db.NewDatabaseTransaction(ctx, false)
 	helper.On("DatabaseTransaction", ctx).Return(dbTxFail2).Once()
 	jobStorage.On("Ready", ctx, dbTxFail2).Return([]*job.Job{}, nil).Once()
-	jobStorage.On("Processing", ctx, dbTxFail2, "transfer").Return(0, nil).Once()
+	jobStorage.On("Processing", ctx, dbTxFail2, "transfer").Return([]*job.Job{}, nil).Once()
 	helper.On("AllAddresses", ctx, dbTxFail2).Return([]string{"address1"}, nil).Once()
 	helper.On("LockedAddresses", ctx, dbTxFail2).Return([]string{}, nil).Once()
 	helper.On(
@@ -298,7 +298,7 @@ func TestProcess(t *testing.T) {
 	helper.On("DatabaseTransaction", ctx).Return(dbTx2).Once()
 	jobStorage.On("Ready", ctx, dbTx2).Return([]*job.Job{}, nil).Once()
 	jobStorage.On("Broadcasting", ctx, dbTx2).Return([]*job.Job{}, nil).Once()
-	jobStorage.On("Processing", ctx, dbTx2, "request_funds").Return(0, nil).Once()
+	jobStorage.On("Processing", ctx, dbTx2, "request_funds").Return([]*job.Job{}, nil).Once()
 	helper.On("AllAddresses", ctx, dbTx2).Return([]string{"address1"}, nil).Once()
 	helper.On("LockedAddresses", ctx, dbTx2).Return([]string{}, nil).Once()
 	helper.On(
@@ -349,7 +349,7 @@ func TestProcess(t *testing.T) {
 	dbTxFail3 := db.NewDatabaseTransaction(ctx, false)
 	helper.On("DatabaseTransaction", ctx).Return(dbTxFail3).Once()
 	jobStorage.On("Ready", ctx, dbTxFail3).Return([]*job.Job{}, nil).Once()
-	jobStorage.On("Processing", ctx, dbTxFail3, "transfer").Return(0, nil).Once()
+	jobStorage.On("Processing", ctx, dbTxFail3, "transfer").Return([]*job.Job{}, nil).Once()
 	helper.On("AllAddresses", ctx, dbTxFail3).Return([]string{"address1"}, nil).Once()
 	helper.On("LockedAddresses", ctx, dbTxFail3).Return([]string{}, nil).Once()
 	helper.On(
@@ -378,7 +378,7 @@ func TestProcess(t *testing.T) {
 	helper.On("DatabaseTransaction", ctx).Return(dbTx3).Once()
 	jobStorage.On("Ready", ctx, dbTx3).Return([]*job.Job{}, nil).Once()
 	jobStorage.On("Broadcasting", ctx, dbTx3).Return([]*job.Job{}, nil).Once()
-	jobStorage.On("Processing", ctx, dbTx3, "create_account").Return(0, nil).Once()
+	jobStorage.On("Processing", ctx, dbTx3, "create_account").Return([]*job.Job{}, nil).Once()
 	helper.On(
 		"Derive",
 		ctx,
@@ -404,7 +404,7 @@ func TestProcess(t *testing.T) {
 	dbTx4 := db.NewDatabaseTransaction(ctx, false)
 	helper.On("DatabaseTransaction", ctx).Return(dbTx4).Once()
 	jobStorage.On("Ready", ctx, dbTx4).Return([]*job.Job{}, nil).Once()
-	jobStorage.On("Processing", ctx, dbTx4, "transfer").Return(0, nil).Once()
+	jobStorage.On("Processing", ctx, dbTx4, "transfer").Return([]*job.Job{}, nil).Once()
 	helper.On("AllAddresses", ctx, dbTx4).Return([]string{"address1", "address2"}, nil).Once()
 	helper.On("LockedAddresses", ctx, dbTx4).Return([]string{}, nil).Once()
 	helper.On(
@@ -594,7 +594,7 @@ func TestProcess(t *testing.T) {
 	dbTx5 := db.NewDatabaseTransaction(ctx, false)
 	helper.On("DatabaseTransaction", ctx).Return(dbTx5).Once()
 	jobStorage.On("Ready", ctx, dbTx5).Return([]*job.Job{}, nil).Once()
-	jobStorage.On("Processing", ctx, dbTx5, "transfer").Return(1, nil).Once()
+	jobStorage.On("Processing", ctx, dbTx5, "transfer").Return([]*job.Job{job4}, nil).Once()
 
 	markConfirmed := make(chan struct{})
 	jobStorage.On("Broadcasting", ctx, dbTx5).Return([]*job.Job{
