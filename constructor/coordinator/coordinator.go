@@ -49,7 +49,7 @@ func New(
 		workflowNames[i] = workflow.Name
 
 		if workflow.Name == string(job.CreateAccount) {
-			if workflow.Concurrency != ReservedWorkflowConcurrency {
+			if workflow.Concurrency != job.ReservedWorkflowConcurrency {
 				return nil, ErrIncorrectConcurrency
 			}
 
@@ -58,7 +58,7 @@ func New(
 		}
 
 		if workflow.Name == string(job.RequestFunds) {
-			if workflow.Concurrency != ReservedWorkflowConcurrency {
+			if workflow.Concurrency != job.ReservedWorkflowConcurrency {
 				return nil, ErrIncorrectConcurrency
 			}
 
@@ -161,7 +161,7 @@ func (c *Coordinator) findJob(
 			)
 		}
 
-		if len(processing) >= ReservedWorkflowConcurrency {
+		if len(processing) >= job.ReservedWorkflowConcurrency {
 			return nil, ErrNoAvailableJobs
 		}
 
@@ -177,7 +177,7 @@ func (c *Coordinator) findJob(
 		)
 	}
 
-	if len(processing) >= ReservedWorkflowConcurrency {
+	if len(processing) >= job.ReservedWorkflowConcurrency {
 		return nil, ErrNoAvailableJobs
 	}
 

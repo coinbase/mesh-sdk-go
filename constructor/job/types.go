@@ -19,6 +19,12 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
+const (
+	// ReservedWorkflowConcurrency is the expected concurrency
+	// of the create account and request funds scenario.
+	ReservedWorkflowConcurrency = 1
+)
+
 // ReservedVariable is a reserved variable
 // field in a Job's state.
 type ReservedVariable string
