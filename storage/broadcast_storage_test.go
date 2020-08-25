@@ -1037,6 +1037,7 @@ type MockBroadcastStorageHandler struct {
 
 func (m *MockBroadcastStorageHandler) TransactionConfirmed(
 	ctx context.Context,
+	dbTx DatabaseTransaction,
 	identifier string,
 	blockIdentifier *types.BlockIdentifier,
 	transaction *types.Transaction,
@@ -1057,6 +1058,7 @@ func (m *MockBroadcastStorageHandler) TransactionConfirmed(
 
 func (m *MockBroadcastStorageHandler) TransactionStale(
 	ctx context.Context,
+	dbTx DatabaseTransaction,
 	identifier string,
 	transactionIdentifier *types.TransactionIdentifier,
 ) error {
@@ -1071,6 +1073,7 @@ func (m *MockBroadcastStorageHandler) TransactionStale(
 
 func (m *MockBroadcastStorageHandler) BroadcastFailed(
 	ctx context.Context,
+	dbTx DatabaseTransaction,
 	identifier string,
 	transactionIdentifier *types.TransactionIdentifier,
 	intent []*types.Operation,

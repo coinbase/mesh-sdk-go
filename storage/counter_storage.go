@@ -98,27 +98,43 @@ func transactionalGet(
 	return new(big.Int).SetBytes(val), nil
 }
 
-// Update updates the value of a counter by amount and returns the new value.
-func (c *CounterStorage) Update(
+// UpdateTransactional updates the value of a counter by amount and returns the new
+// value in a transaction.
+func (c *CounterStorage) UpdateTransactional(
 	ctx context.Context,
+	dbTx DatabaseTransaction,
 	counter string,
 	amount *big.Int,
 ) (*big.Int, error) {
-	transaction := c.db.NewDatabaseTransaction(ctx, true)
-	defer transaction.Discard(ctx)
-
-	val, err := transactionalGet(ctx, counter, transaction)
+	val, err := transactionalGet(ctx, counter, dbTx)
 	if err != nil {
 		return nil, err
 	}
 
 	newVal := new(big.Int).Add(val, amount)
 
-	if err := transaction.Set(ctx, getCounterKey(counter), newVal.Bytes()); err != nil {
+	if err := dbTx.Set(ctx, getCounterKey(counter), newVal.Bytes()); err != nil {
 		return nil, err
 	}
 
-	if err := transaction.Commit(ctx); err != nil {
+	return newVal, nil
+}
+
+// Update updates the value of a counter by amount and returns the new value.
+func (c *CounterStorage) Update(
+	ctx context.Context,
+	counter string,
+	amount *big.Int,
+) (*big.Int, error) {
+	dbTx := c.db.NewDatabaseTransaction(ctx, true)
+	defer dbTx.Discard(ctx)
+
+	newVal, err := c.UpdateTransactional(ctx, dbTx, counter, amount)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := dbTx.Commit(ctx); err != nil {
 		return nil, err
 	}
 

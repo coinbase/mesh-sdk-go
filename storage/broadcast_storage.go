@@ -98,6 +98,7 @@ type BroadcastStorageHandler interface {
 	// last time at a block height < current block height - confirmationDepth.
 	TransactionConfirmed(
 		context.Context,
+		DatabaseTransaction,
 		string, // identifier
 		*types.BlockIdentifier,
 		*types.Transaction,
@@ -109,6 +110,7 @@ type BroadcastStorageHandler interface {
 	// current block height - last broadcast > staleDepth.
 	TransactionStale(
 		context.Context,
+		DatabaseTransaction,
 		string, // identifier
 		*types.TransactionIdentifier,
 	) error // log in counter (rebroadcast should occur here)
@@ -117,6 +119,7 @@ type BroadcastStorageHandler interface {
 	// put it over the provided broadcast limit.
 	BroadcastFailed(
 		context.Context,
+		DatabaseTransaction,
 		string, // identifier
 		*types.TransactionIdentifier,
 		[]*types.Operation,
@@ -162,43 +165,6 @@ func (b *BroadcastStorage) Initialize(
 ) {
 	b.helper = helper
 	b.handler = handler
-}
-
-func (b *BroadcastStorage) addBlockCommitWorker(
-	ctx context.Context,
-	staleBroadcasts []*Broadcast,
-	confirmedTransactions []*Broadcast,
-	foundTransactions []*types.Transaction,
-	foundBlocks []*types.BlockIdentifier,
-) error {
-	for _, stale := range staleBroadcasts {
-		if err := b.handler.TransactionStale(ctx, stale.Identifier, stale.TransactionIdentifier); err != nil {
-			return fmt.Errorf("%w: unable to handle stale transaction %s", err, stale.TransactionIdentifier.Hash)
-		}
-	}
-
-	for i, broadcast := range confirmedTransactions {
-		err := b.handler.TransactionConfirmed(
-			ctx,
-			broadcast.Identifier,
-			foundBlocks[i],
-			foundTransactions[i],
-			broadcast.Intent,
-		)
-		if err != nil {
-			return fmt.Errorf(
-				"%w: unable to handle confirmed transaction %s",
-				err,
-				broadcast.TransactionIdentifier.Hash,
-			)
-		}
-	}
-
-	if err := b.BroadcastAll(ctx, true); err != nil {
-		return fmt.Errorf("%w: unable to broadcast pending transactions", err)
-	}
-
-	return nil
 }
 
 // AddingBlock is called by BlockStorage when adding a block.
@@ -270,14 +236,36 @@ func (b *BroadcastStorage) AddingBlock(
 		}
 	}
 
-	return func(ctx context.Context) error {
-		return b.addBlockCommitWorker(
+	for _, stale := range staleBroadcasts {
+		if err := b.handler.TransactionStale(ctx, transaction, stale.Identifier, stale.TransactionIdentifier); err != nil {
+			return nil, fmt.Errorf("%w: unable to handle stale transaction %s", err, stale.TransactionIdentifier.Hash)
+		}
+	}
+
+	for i, broadcast := range confirmedTransactions {
+		err := b.handler.TransactionConfirmed(
 			ctx,
-			staleBroadcasts,
-			confirmedTransactions,
-			foundTransactions,
-			foundBlocks,
+			transaction,
+			broadcast.Identifier,
+			foundBlocks[i],
+			foundTransactions[i],
+			broadcast.Intent,
 		)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"%w: unable to handle confirmed transaction %s",
+				err,
+				broadcast.TransactionIdentifier.Hash,
+			)
+		}
+	}
+
+	return func(ctx context.Context) error {
+		if err := b.BroadcastAll(ctx, true); err != nil {
+			return fmt.Errorf("%w: unable to broadcast pending transactions", err)
+		}
+
+		return nil
 	}, nil
 }
 
@@ -462,17 +450,18 @@ func (b *BroadcastStorage) BroadcastAll(ctx context.Context, onlyEligible bool) 
 				return fmt.Errorf("%w: unable to delete broadcast", err)
 			}
 
-			if err := txn.Commit(ctx); err != nil {
-				return fmt.Errorf("%w: unable to commit broadcast delete", err)
-			}
-
 			if err := b.handler.BroadcastFailed(
 				ctx,
+				txn,
 				broadcast.Identifier,
 				broadcast.TransactionIdentifier,
 				broadcast.Intent,
 			); err != nil {
 				return fmt.Errorf("%w: unable to handle broadcast failure", err)
+			}
+
+			if err := txn.Commit(ctx); err != nil {
+				return fmt.Errorf("%w: unable to commit broadcast delete", err)
 			}
 
 			continue
@@ -550,7 +539,7 @@ func (b *BroadcastStorage) ClearBroadcasts(ctx context.Context) ([]*Broadcast, e
 
 		// When clearing broadcasts, make sure to invoke the handler
 		// so other services can be updated.
-		if err := b.handler.BroadcastFailed(ctx, broadcast.Identifier, broadcast.TransactionIdentifier, broadcast.Intent); err != nil {
+		if err := b.handler.BroadcastFailed(ctx, txn, broadcast.Identifier, broadcast.TransactionIdentifier, broadcast.Intent); err != nil {
 			return nil, fmt.Errorf("%w: unable to handle broadcast failure %s", err, broadcast.Identifier)
 		}
 	}
