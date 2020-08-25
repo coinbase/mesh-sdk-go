@@ -112,6 +112,14 @@ func (j *JobStorage) Processing(ctx context.Context, dbTx DatabaseTransaction, w
 	return j.getAllJobs(ctx, dbTx, getJobMetadataKey(getJobProcessingKey(workflow)))
 }
 
+// AllProcessing gets all processing *job.Jobs.
+func (j *JobStorage) AllProcessing(ctx context.Context) ([]*job.Job, error) {
+	dbTx := j.db.NewDatabaseTransaction(ctx, false)
+	defer dbTx.Discard(ctx)
+
+	return j.getAllJobs(ctx, dbTx, getJobMetadataKey(processingKey))
+}
+
 // Failed returns all failed *job.Job of a certain workflow.
 func (j *JobStorage) Failed(ctx context.Context, workflow string) ([]*job.Job, error) {
 	dbTx := j.db.NewDatabaseTransaction(ctx, false)
@@ -120,12 +128,28 @@ func (j *JobStorage) Failed(ctx context.Context, workflow string) ([]*job.Job, e
 	return j.getAllJobs(ctx, dbTx, getJobMetadataKey(getJobFailedKey(workflow)))
 }
 
-// Complete gets all successfully completes *job.Job of a certain workflow.
+// AllFailed returns all failed *job.Jobs.
+func (j *JobStorage) AllFailed(ctx context.Context, workflow string) ([]*job.Job, error) {
+	dbTx := j.db.NewDatabaseTransaction(ctx, false)
+	defer dbTx.Discard(ctx)
+
+	return j.getAllJobs(ctx, dbTx, getJobMetadataKey(failedKey))
+}
+
+// Complete gets all successfully completed *job.Job of a certain workflow.
 func (j *JobStorage) Complete(ctx context.Context, workflow string) ([]*job.Job, error) {
 	dbTx := j.db.NewDatabaseTransaction(ctx, false)
 	defer dbTx.Discard(ctx)
 
 	return j.getAllJobs(ctx, dbTx, getJobMetadataKey(getJobCompleteKey(workflow)))
+}
+
+// AllComplete gets all successfully completed *job.Jobs.
+func (j *JobStorage) AllComplete(ctx context.Context) ([]*job.Job, error) {
+	dbTx := j.db.NewDatabaseTransaction(ctx, false)
+	defer dbTx.Discard(ctx)
+
+	return j.getAllJobs(ctx, dbTx, getJobMetadataKey(completeKey))
 }
 
 func (j *JobStorage) getNextIdentifier(ctx context.Context, dbTx DatabaseTransaction) (string, error) {
@@ -136,16 +160,18 @@ func (j *JobStorage) getNextIdentifier(ctx context.Context, dbTx DatabaseTransac
 	}
 
 	// Get existing identifier
-	nextIdentifier := 0
+	var nextIdentifier int
 	if exists {
 		err = j.db.Compressor().Decode("", v, &nextIdentifier)
 		if err != nil {
 			return "", fmt.Errorf("%w: unable to decode existing identifier", err)
 		}
+	} else {
+		nextIdentifier = 0
 	}
 
 	// Increment and save
-	encoded, err := j.db.Compressor().Encode("", nextIdentifier)
+	encoded, err := j.db.Compressor().Encode("", nextIdentifier+1)
 	if err != nil {
 		return "", fmt.Errorf("%w: unable to encode job identifier", err)
 	}
@@ -234,14 +260,17 @@ func getAssociatedKeys(j *job.Job) [][]byte {
 		isProcessing = true
 	case job.Completed:
 		keys = append(keys, getJobMetadataKey(getJobCompleteKey(j.Workflow)))
+		keys = append(keys, getJobMetadataKey(completeKey))
 	case job.Failed:
 		keys = append(keys, getJobMetadataKey(getJobFailedKey(j.Workflow)))
+		keys = append(keys, getJobMetadataKey(failedKey))
 	case job.Broadcasting:
 		keys = append(keys, getJobMetadataKey(broadcastingKey))
 		isProcessing = true
 	}
 	if isProcessing {
 		keys = append(keys, getJobMetadataKey(getJobProcessingKey(j.Workflow)))
+		keys = append(keys, getJobMetadataKey(processingKey))
 	}
 
 	return keys
