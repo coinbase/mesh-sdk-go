@@ -69,6 +69,14 @@ func New(
 		workflows = append(workflows, workflow)
 	}
 
+	if createAccountWorkflow == nil {
+		return nil, ErrCreateAccountWorkflowMissing
+	}
+
+	if requestFundsWorkflow == nil {
+		return nil, ErrRequestFundsWorkflowMissing
+	}
+
 	return &Coordinator{
 		storage:               storage,
 		helper:                helper,
@@ -157,16 +165,7 @@ func (c *Coordinator) findJob(
 			return nil, ErrNoAvailableJobs
 		}
 
-		if c.createAccountWorkflow != nil {
-			return job.New(c.createAccountWorkflow), nil
-		}
-
-		log.Println("Create account workflow is missing!")
-	}
-
-	// Return request funds (if defined, else error)
-	if c.requestFundsWorkflow == nil {
-		return nil, ErrRequestFundsWorkflowMissing
+		return job.New(c.createAccountWorkflow), nil
 	}
 
 	processing, err := c.storage.Processing(ctx, dbTx, string(job.RequestFunds))

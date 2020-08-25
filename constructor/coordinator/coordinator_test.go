@@ -665,3 +665,75 @@ func TestProcess(t *testing.T) {
 	jobStorage.AssertExpectations(t)
 	helper.AssertExpectations(t)
 }
+
+func TestInitialization_NoWorkflows(t *testing.T) {
+	jobStorage := &mocks.JobStorage{}
+	helper := &mocks.Helper{}
+	handler := &mocks.Handler{}
+	p := defaultParser(t)
+	workflows := []*job.Workflow{}
+
+	c, err := New(
+		jobStorage,
+		helper,
+		handler,
+		p,
+		workflows,
+	)
+	assert.Nil(t, c)
+	assert.Error(t, err)
+
+	helper.AssertExpectations(t)
+	handler.AssertExpectations(t)
+}
+
+func TestInitialization_OnlyCreateAccountWorkflows(t *testing.T) {
+	jobStorage := &mocks.JobStorage{}
+	helper := &mocks.Helper{}
+	handler := &mocks.Handler{}
+	p := defaultParser(t)
+	workflows := []*job.Workflow{
+		{
+			Name:        string(job.CreateAccount),
+			Concurrency: 1,
+		},
+	}
+
+	c, err := New(
+		jobStorage,
+		helper,
+		handler,
+		p,
+		workflows,
+	)
+	assert.Nil(t, c)
+	assert.True(t, errors.Is(err, ErrRequestFundsWorkflowMissing))
+	helper.AssertExpectations(t)
+	handler.AssertExpectations(t)
+}
+
+func TestInitialization_OnlyRequestFundsWorkflows(t *testing.T) {
+	jobStorage := &mocks.JobStorage{}
+	helper := &mocks.Helper{}
+	handler := &mocks.Handler{}
+	p := defaultParser(t)
+	workflows := []*job.Workflow{
+		{
+			Name:        string(job.RequestFunds),
+			Concurrency: 1,
+		},
+	}
+
+	c, err := New(
+		jobStorage,
+		helper,
+		handler,
+		p,
+		workflows,
+	)
+
+	assert.Nil(t, c)
+	assert.True(t, errors.Is(err, ErrCreateAccountWorkflowMissing))
+	helper.AssertExpectations(t)
+	handler.AssertExpectations(t)
+}
