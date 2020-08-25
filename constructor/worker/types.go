@@ -16,17 +16,10 @@ package worker
 
 import (
 	"context"
-	"time"
 
 	"github.com/coinbase/rosetta-sdk-go/keys"
 	"github.com/coinbase/rosetta-sdk-go/storage"
 	"github.com/coinbase/rosetta-sdk-go/types"
-)
-
-const (
-	// BalanceWaitTime is the amount of time
-	// we wait between balance checks.
-	BalanceWaitTime = 5 * time.Second
 )
 
 // Helper is used by the worker to process Jobs.
