@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"time"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
 	"github.com/coinbase/rosetta-sdk-go/constructor/job"
@@ -256,16 +255,16 @@ func MathWorker(rawInput string) (string, error) {
 	return marshalString(result), nil
 }
 
-// waitMessage prints out a log message while waiting
+// balanceMessage prints out a log message while waiting
 // that reflects the *FindBalanceInput.
-func waitMessage(input *job.FindBalanceInput) string {
+func balanceMessage(input *job.FindBalanceInput) string {
 	waitObject := "balance"
 	if input.RequireCoin {
 		waitObject = "coin"
 	}
 
 	message := fmt.Sprintf(
-		"Waiting for %s %s",
+		"looking for %s %s",
 		waitObject,
 		types.PrintStruct(input.MinimumBalance),
 	)
@@ -443,6 +442,8 @@ func (w *Worker) FindBalanceWorker(
 		return "", fmt.Errorf("%w: minimum balance invalid %s", ErrInvalidInput, err.Error())
 	}
 
+	log.Println(balanceMessage(&input))
+
 	addresses, availableAddresses, err := w.availableAddresses(ctx, dbTx)
 	if err != nil {
 		return "", fmt.Errorf("%w: unable to get available addresses", err)
@@ -488,13 +489,6 @@ func (w *Worker) FindBalanceWorker(
 			continue
 		}
 
-		if input.Wait {
-			log.Printf(
-				"Found balance %s\n",
-				output,
-			)
-		}
-
 		log.Printf(
 			"Found balance %s\n",
 			output,
@@ -503,15 +497,6 @@ func (w *Worker) FindBalanceWorker(
 	}
 
 	fmt.Println("found no balances")
-
-	// If we are supposed to wait, we sleep for BalanceWaitTime
-	// and then invoke FindBalanceWorker.
-	if input.Wait {
-		log.Printf("%s\n", waitMessage(&input))
-
-		time.Sleep(BalanceWaitTime)
-		return w.FindBalanceWorker(ctx, dbTx, rawInput)
-	}
 
 	// If we should create an account and the number of addresses
 	// we have is less than the limit, we return ErrCreateAccount.

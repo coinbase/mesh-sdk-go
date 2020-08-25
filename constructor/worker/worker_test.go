@@ -32,7 +32,7 @@ import (
 	"github.com/tidwall/gjson"
 )
 
-func TestWaitMessage(t *testing.T) {
+func TestBalanceMessage(t *testing.T) {
 	tests := map[string]struct {
 		input *job.FindBalanceInput
 
@@ -48,7 +48,7 @@ func TestWaitMessage(t *testing.T) {
 					},
 				},
 			},
-			message: `Waiting for balance {"value":"100","currency":{"symbol":"BTC","decimals":8}}`,
+			message: `looking for balance {"value":"100","currency":{"symbol":"BTC","decimals":8}}`,
 		},
 		"message with address": {
 			input: &job.FindBalanceInput{
@@ -61,7 +61,7 @@ func TestWaitMessage(t *testing.T) {
 					},
 				},
 			},
-			message: `Waiting for balance {"value":"100","currency":{"symbol":"BTC","decimals":8}} on address hello`, // nolint
+			message: `looking for balance {"value":"100","currency":{"symbol":"BTC","decimals":8}} on address hello`, // nolint
 		},
 		"message with address and subaccount": {
 			input: &job.FindBalanceInput{
@@ -77,7 +77,7 @@ func TestWaitMessage(t *testing.T) {
 					},
 				},
 			},
-			message: `Waiting for balance {"value":"100","currency":{"symbol":"BTC","decimals":8}} on address hello with sub_account {"address":"sub hello"}`, // nolint
+			message: `looking for balance {"value":"100","currency":{"symbol":"BTC","decimals":8}} on address hello with sub_account {"address":"sub hello"}`, // nolint
 		},
 		"message with only subaccount": {
 			input: &job.FindBalanceInput{
@@ -92,7 +92,7 @@ func TestWaitMessage(t *testing.T) {
 					},
 				},
 			},
-			message: `Waiting for balance {"value":"100","currency":{"symbol":"BTC","decimals":8}} with sub_account {"address":"sub hello"}`, // nolint
+			message: `looking for balance {"value":"100","currency":{"symbol":"BTC","decimals":8}} with sub_account {"address":"sub hello"}`, // nolint
 		},
 		"message with address and not address": {
 			input: &job.FindBalanceInput{
@@ -109,7 +109,7 @@ func TestWaitMessage(t *testing.T) {
 					},
 				},
 			},
-			message: `Waiting for balance {"value":"100","currency":{"symbol":"BTC","decimals":8}} on address hello != to addresses ["good","bye"]`, // nolint
+			message: `looking for balance {"value":"100","currency":{"symbol":"BTC","decimals":8}} on address hello != to addresses ["good","bye"]`, // nolint
 		},
 		"message with address and not coins": {
 			input: &job.FindBalanceInput{
@@ -127,13 +127,13 @@ func TestWaitMessage(t *testing.T) {
 					},
 				},
 			},
-			message: `Waiting for balance {"value":"100","currency":{"symbol":"BTC","decimals":8}} on address hello != to coins [{"identifier":"coin1"}]`, // nolint
+			message: `looking for balance {"value":"100","currency":{"symbol":"BTC","decimals":8}} on address hello != to coins [{"identifier":"coin1"}]`, // nolint
 		},
 	}
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			assert.Equal(t, test.message, waitMessage(test.input))
+			assert.Equal(t, test.message, balanceMessage(test.input))
 		})
 	}
 }
@@ -149,7 +149,7 @@ func TestFindBalanceWorker(t *testing.T) {
 		output *job.FindBalanceOutput
 		err    error
 	}{
-		"simple find balance with wait": {
+		"simple find balance (satisfiable)": {
 			input: &job.FindBalanceInput{
 				MinimumBalance: &types.Amount{
 					Value: "100",
@@ -158,7 +158,6 @@ func TestFindBalanceWorker(t *testing.T) {
 						Decimals: 8,
 					},
 				},
-				Wait:       true,
 				NotAddress: []string{"addr4"},
 			},
 			mockHelper: func() *mocks.Helper {
@@ -170,7 +169,7 @@ func TestFindBalanceWorker(t *testing.T) {
 				).Return(
 					[]string{"addr2", "addr1", "addr3", "addr4"},
 					nil,
-				).Twice()
+				).Once()
 				helper.On(
 					"LockedAddresses",
 					ctx,
@@ -178,7 +177,71 @@ func TestFindBalanceWorker(t *testing.T) {
 				).Return(
 					[]string{"addr2"},
 					nil,
-				).Twice()
+				).Once()
+				helper.On(
+					"Balance",
+					ctx,
+					mock.Anything,
+					&types.AccountIdentifier{
+						Address:    "addr1",
+						SubAccount: (*types.SubAccountIdentifier)(nil),
+					},
+					&types.Currency{
+						Symbol:   "BTC",
+						Decimals: 8,
+					},
+				).Return(&types.Amount{
+					Value: "100",
+					Currency: &types.Currency{
+						Symbol:   "BTC",
+						Decimals: 8,
+					},
+				}, nil).Once()
+
+				return helper
+			}(),
+			output: &job.FindBalanceOutput{
+				Account: &types.AccountIdentifier{
+					Address: "addr1",
+				},
+				Balance: &types.Amount{
+					Value: "100",
+					Currency: &types.Currency{
+						Symbol:   "BTC",
+						Decimals: 8,
+					},
+				},
+			},
+		},
+		"simple find balance (no create and unsatisfiable)": {
+			input: &job.FindBalanceInput{
+				MinimumBalance: &types.Amount{
+					Value: "100",
+					Currency: &types.Currency{
+						Symbol:   "BTC",
+						Decimals: 8,
+					},
+				},
+				NotAddress: []string{"addr4"},
+			},
+			mockHelper: func() *mocks.Helper {
+				helper := &mocks.Helper{}
+				helper.On(
+					"AllAddresses",
+					ctx,
+					mock.Anything,
+				).Return(
+					[]string{"addr2", "addr1", "addr3", "addr4"},
+					nil,
+				).Once()
+				helper.On(
+					"LockedAddresses",
+					ctx,
+					mock.Anything,
+				).Return(
+					[]string{"addr2"},
+					nil,
+				).Once()
 				helper.On(
 					"Balance",
 					ctx,
@@ -211,36 +274,47 @@ func TestFindBalanceWorker(t *testing.T) {
 						Decimals: 8,
 					},
 				}, nil).Once()
-				helper.On("Balance", ctx, mock.Anything, &types.AccountIdentifier{
-					Address:    "addr1",
-					SubAccount: (*types.SubAccountIdentifier)(nil),
-				}, &types.Currency{
-					Symbol:   "BTC",
-					Decimals: 8,
-				}).Return(&types.Amount{
-					Value: "100",
-					Currency: &types.Currency{
-						Symbol:   "BTC",
-						Decimals: 8,
-					},
-				}, nil).Once()
 
 				return helper
 			}(),
-			output: &job.FindBalanceOutput{
-				Account: &types.AccountIdentifier{
-					Address: "addr1",
-				},
-				Balance: &types.Amount{
-					Value: "100",
+			err: ErrUnsatisfiable,
+		},
+		"simple find balance and create": {
+			input: &job.FindBalanceInput{
+				MinimumBalance: &types.Amount{
+					Value: "0",
 					Currency: &types.Currency{
 						Symbol:   "BTC",
 						Decimals: 8,
 					},
 				},
+				NotAddress: []string{"addr4"},
+				Create:     100,
 			},
+			mockHelper: func() *mocks.Helper {
+				helper := &mocks.Helper{}
+				helper.On(
+					"AllAddresses",
+					ctx,
+					mock.Anything,
+				).Return(
+					[]string{"addr2", "addr1", "addr3", "addr4"},
+					nil,
+				).Once()
+				helper.On(
+					"LockedAddresses",
+					ctx,
+					mock.Anything,
+				).Return(
+					[]string{"addr1", "addr2", "addr3", "addr4"},
+					nil,
+				).Once()
+
+				return helper
+			}(),
+			err: ErrCreateAccount,
 		},
-		"simple find balance with subaccount with wait": {
+		"simple find balance with subaccount": {
 			input: &job.FindBalanceInput{
 				SubAccount: &types.SubAccountIdentifier{
 					Address: "sub1",
@@ -252,7 +326,6 @@ func TestFindBalanceWorker(t *testing.T) {
 						Decimals: 8,
 					},
 				},
-				Wait:       true,
 				NotAddress: []string{"addr4"},
 			},
 			mockHelper: func() *mocks.Helper {
@@ -264,7 +337,7 @@ func TestFindBalanceWorker(t *testing.T) {
 				).Return(
 					[]string{"addr2", "addr1", "addr3", "addr4"},
 					nil,
-				).Twice()
+				).Once()
 				helper.On(
 					"LockedAddresses",
 					ctx,
@@ -272,37 +345,7 @@ func TestFindBalanceWorker(t *testing.T) {
 				).Return(
 					[]string{"addr2"},
 					nil,
-				).Twice()
-				helper.On("Balance", ctx, mock.Anything, &types.AccountIdentifier{
-					Address: "addr1",
-					SubAccount: &types.SubAccountIdentifier{
-						Address: "sub1",
-					},
-				}, &types.Currency{
-					Symbol:   "BTC",
-					Decimals: 8,
-				}).Return(&types.Amount{
-					Value: "99",
-					Currency: &types.Currency{
-						Symbol:   "BTC",
-						Decimals: 8,
-					},
-				}, nil).Once()
-				helper.On("Balance", ctx, mock.Anything, &types.AccountIdentifier{
-					Address: "addr3",
-					SubAccount: &types.SubAccountIdentifier{
-						Address: "sub1",
-					},
-				}, &types.Currency{
-					Symbol:   "BTC",
-					Decimals: 8,
-				}).Return(&types.Amount{
-					Value: "0",
-					Currency: &types.Currency{
-						Symbol:   "BTC",
-						Decimals: 8,
-					},
-				}, nil).Once()
+				).Once()
 				helper.On("Balance", ctx, mock.Anything, &types.AccountIdentifier{
 					Address: "addr1",
 					SubAccount: &types.SubAccountIdentifier{
@@ -337,7 +380,7 @@ func TestFindBalanceWorker(t *testing.T) {
 				},
 			},
 		},
-		"simple find coin with wait": {
+		"simple find coin": {
 			input: &job.FindBalanceInput{
 				MinimumBalance: &types.Amount{
 					Value: "100",
@@ -346,7 +389,6 @@ func TestFindBalanceWorker(t *testing.T) {
 						Decimals: 8,
 					},
 				},
-				Wait:        true,
 				NotAddress:  []string{"addr4"},
 				RequireCoin: true,
 				NotCoins: []*types.CoinIdentifier{
@@ -364,7 +406,7 @@ func TestFindBalanceWorker(t *testing.T) {
 				).Return(
 					[]string{"addr2", "addr1", "addr3", "addr4"},
 					nil,
-				).Twice()
+				).Once()
 				helper.On(
 					"LockedAddresses",
 					ctx,
@@ -372,7 +414,7 @@ func TestFindBalanceWorker(t *testing.T) {
 				).Return(
 					[]string{"addr2"},
 					nil,
-				).Twice()
+				).Once()
 				helper.On("Coins", ctx, mock.Anything, &types.AccountIdentifier{
 					Address:    "addr1",
 					SubAccount: (*types.SubAccountIdentifier)(nil),
@@ -397,45 +439,6 @@ func TestFindBalanceWorker(t *testing.T) {
 							Identifier: "coin2",
 						},
 						Amount: &types.Amount{
-							Value: "99",
-							Currency: &types.Currency{
-								Symbol:   "BTC",
-								Decimals: 8,
-							},
-						},
-					},
-				}, nil).Once()
-				helper.On("Coins", ctx, mock.Anything, &types.AccountIdentifier{
-					Address:    "addr3",
-					SubAccount: (*types.SubAccountIdentifier)(nil),
-				}, &types.Currency{
-					Symbol:   "BTC",
-					Decimals: 8,
-				}).Return([]*types.Coin{}, nil).Once()
-				helper.On("Coins", ctx, mock.Anything, &types.AccountIdentifier{
-					Address:    "addr1",
-					SubAccount: (*types.SubAccountIdentifier)(nil),
-				}, &types.Currency{
-					Symbol:   "BTC",
-					Decimals: 8,
-				}).Return([]*types.Coin{
-					{
-						CoinIdentifier: &types.CoinIdentifier{
-							Identifier: "coin2",
-						},
-						Amount: &types.Amount{
-							Value: "99",
-							Currency: &types.Currency{
-								Symbol:   "BTC",
-								Decimals: 8,
-							},
-						},
-					},
-					{
-						CoinIdentifier: &types.CoinIdentifier{
-							Identifier: "coin3",
-						},
-						Amount: &types.Amount{
 							Value: "100",
 							Currency: &types.Currency{
 								Symbol:   "BTC",
@@ -444,6 +447,7 @@ func TestFindBalanceWorker(t *testing.T) {
 						},
 					},
 				}, nil).Once()
+
 				return helper
 			}(),
 			output: &job.FindBalanceOutput{
@@ -458,7 +462,7 @@ func TestFindBalanceWorker(t *testing.T) {
 					},
 				},
 				Coin: &types.CoinIdentifier{
-					Identifier: "coin3",
+					Identifier: "coin2",
 				},
 			},
 		},

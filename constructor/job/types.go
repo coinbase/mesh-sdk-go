@@ -101,9 +101,9 @@ const (
 // Action is a step of computation that
 // where the result is saved to OutputPath.
 type Action struct {
-	Input      string
-	Type       ActionType
-	OutputPath string
+	Input      string     `json:"input"`
+	Type       ActionType `json:"type"`
+	OutputPath string     `json:"output_path,omitempty"`
 }
 
 // GenerateKeyInput is the input for GenerateKey.
@@ -164,10 +164,6 @@ type FindBalanceInput struct {
 	// orchestrating staking transactions.
 	SubAccount *types.SubAccountIdentifier `json:"sub_account,omitempty"`
 
-	// Wait will cause this action to block until an acceptable
-	// balance is found. This is useful when waiting for initial funds.
-	Wait bool `json:"wait,omitempty"`
-
 	// MinimumBalance is the minimum required balance that must be found.
 	MinimumBalance *types.Amount `json:"minimum_balance,omitempty"`
 
@@ -214,8 +210,8 @@ type FindBalanceOutput struct {
 // variable called "transaction". This can be used
 // in scenarios following the execution of this one.
 type Scenario struct {
-	Name    string
-	Actions []*Action
+	Name    string    `json:"name"`
+	Actions []*Action `json:"actions"`
 }
 
 // ReservedWorkflow is a Workflow reserved for special circumstances.
@@ -239,14 +235,14 @@ const (
 // Workflow is a collection of scenarios to run (i.e.
 // transactions to broadcast) with some shared state.
 type Workflow struct {
-	Name string
+	Name string `json:"name"`
 
 	// Concurrency is the number of workflows of a particular
 	// kind to execute at once. For example, you may not want
 	// to process concurrent workflows of some staking operations
 	// that take days to play out.
-	Concurrency int
-	Scenarios   []*Scenario
+	Concurrency int         `json:"concurrency"`
+	Scenarios   []*Scenario `json:"scenarios"`
 }
 
 // Status is status of a Job.
@@ -274,18 +270,18 @@ type Job struct {
 	// when a Job is stored in JobStorage for the
 	// first time. When executing the first scenario
 	// in a Job, this will be empty.
-	Identifier string
-	State      string
-	Index      int
-	Status     Status
+	Identifier string `json:"identifier"`
+	State      string `json:"state"`
+	Index      int    `json:"index"`
+	Status     Status `json:"status"`
 
 	// Workflow is the name of the workflow being executed.
-	Workflow string
+	Workflow string `json:"workflow"`
 
 	// Scenarios are copied into each context in case
 	// a configuration file changes that could corrupt
 	// in-process flows.
-	Scenarios []*Scenario
+	Scenarios []*Scenario `json:"scenarios"`
 }
 
 // Broadcast contains information needed to create
