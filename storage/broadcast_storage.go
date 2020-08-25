@@ -167,6 +167,41 @@ func (b *BroadcastStorage) Initialize(
 	b.handler = handler
 }
 
+func (b *BroadcastStorage) invokeAddBlockHandlers(
+	ctx context.Context,
+	dbTx DatabaseTransaction,
+	staleBroadcasts []*Broadcast,
+	confirmedTransactions []*Broadcast,
+	foundBlocks []*types.BlockIdentifier,
+	foundTransactions []*types.Transaction,
+) error {
+	for _, stale := range staleBroadcasts {
+		if err := b.handler.TransactionStale(ctx, dbTx, stale.Identifier, stale.TransactionIdentifier); err != nil {
+			return fmt.Errorf("%w: unable to handle stale transaction %s", err, stale.TransactionIdentifier.Hash)
+		}
+	}
+
+	for i, broadcast := range confirmedTransactions {
+		err := b.handler.TransactionConfirmed(
+			ctx,
+			dbTx,
+			broadcast.Identifier,
+			foundBlocks[i],
+			foundTransactions[i],
+			broadcast.Intent,
+		)
+		if err != nil {
+			return fmt.Errorf(
+				"%w: unable to handle confirmed transaction %s",
+				err,
+				broadcast.TransactionIdentifier.Hash,
+			)
+		}
+	}
+
+	return nil
+}
+
 // AddingBlock is called by BlockStorage when adding a block.
 func (b *BroadcastStorage) AddingBlock(
 	ctx context.Context,
@@ -236,28 +271,15 @@ func (b *BroadcastStorage) AddingBlock(
 		}
 	}
 
-	for _, stale := range staleBroadcasts {
-		if err := b.handler.TransactionStale(ctx, transaction, stale.Identifier, stale.TransactionIdentifier); err != nil {
-			return nil, fmt.Errorf("%w: unable to handle stale transaction %s", err, stale.TransactionIdentifier.Hash)
-		}
-	}
-
-	for i, broadcast := range confirmedTransactions {
-		err := b.handler.TransactionConfirmed(
-			ctx,
-			transaction,
-			broadcast.Identifier,
-			foundBlocks[i],
-			foundTransactions[i],
-			broadcast.Intent,
-		)
-		if err != nil {
-			return nil, fmt.Errorf(
-				"%w: unable to handle confirmed transaction %s",
-				err,
-				broadcast.TransactionIdentifier.Hash,
-			)
-		}
+	if err := b.invokeAddBlockHandlers(
+		ctx,
+		transaction,
+		staleBroadcasts,
+		confirmedTransactions,
+		foundBlocks,
+		foundTransactions,
+	); err != nil {
+		return nil, fmt.Errorf("%w: unable to handle block", err)
 	}
 
 	return func(ctx context.Context) error {
@@ -539,7 +561,13 @@ func (b *BroadcastStorage) ClearBroadcasts(ctx context.Context) ([]*Broadcast, e
 
 		// When clearing broadcasts, make sure to invoke the handler
 		// so other services can be updated.
-		if err := b.handler.BroadcastFailed(ctx, txn, broadcast.Identifier, broadcast.TransactionIdentifier, broadcast.Intent); err != nil {
+		if err := b.handler.BroadcastFailed(
+			ctx,
+			txn,
+			broadcast.Identifier,
+			broadcast.TransactionIdentifier,
+			broadcast.Intent,
+		); err != nil {
 			return nil, fmt.Errorf("%w: unable to handle broadcast failure %s", err, broadcast.Identifier)
 		}
 	}
