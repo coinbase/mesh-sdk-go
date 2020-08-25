@@ -34,6 +34,7 @@ type PrefundedAccount struct {
 	PrivateKeyHex string          `json:"privkey"`
 	Address       string          `json:"address"`
 	CurveType     types.CurveType `json:"curve_type"`
+	Currency      *types.Currency `json:"currency"`
 }
 
 func init() {
