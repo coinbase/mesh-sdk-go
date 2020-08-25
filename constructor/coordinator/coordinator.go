@@ -107,6 +107,7 @@ func (c *Coordinator) findJob(
 		)
 	}
 	for _, job := range ready {
+		fmt.Printf("%s\n", types.PrintStruct(job))
 		if utils.ContainsString(c.attemptedJobs, job.Identifier) {
 			continue
 		}

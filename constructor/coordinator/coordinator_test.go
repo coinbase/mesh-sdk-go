@@ -78,21 +78,26 @@ func TestProcess(t *testing.T) {
 			Concurrency: 1,
 			Scenarios: []*job.Scenario{
 				{
-					Name: "request_funds",
+					Name: "find_address",
 					Actions: []*job.Action{
 						{
 							Type:       job.SetVariable,
 							Input:      `{"symbol":"tBTC", "decimals":8}`,
 							OutputPath: "currency",
 						},
-						{ // ensure we have some balance that exists
+						{
 							Type:       job.FindBalance,
 							Input:      `{"minimum_balance":{"value": "0", "currency": {{currency}}}, "create":1}`, // nolint
 							OutputPath: "random_address",
 						},
+					},
+				},
+				{
+					Name: "request",
+					Actions: []*job.Action{
 						{
 							Type:       job.FindBalance,
-							Input:      `{"address": {{random_address.account.address}}, "wait": true, "minimum_balance":{"value": "100", "currency": {{currency}}}}`, // nolint
+							Input:      `{"address": {{random_address.account.address}}, "minimum_balance":{"value": "100", "currency": {{currency}}}}`, // nolint
 							OutputPath: "loaded_address",
 						},
 					},
@@ -325,8 +330,28 @@ func TestProcess(t *testing.T) {
 		},
 		nil,
 	).Once()
+	var jobExtra job.Job
+	jobStorage.On(
+		"Update",
+		ctx,
+		dbTx2,
+		mock.Anything,
+	).Return(
+		"jobExtra",
+		nil,
+	).Run(
+		func(args mock.Arguments) {
+			jobExtra = *args.Get(2).(*job.Job)
+			jobExtra.Identifier = "jobExtra"
+		},
+	).Once()
+	helper.On("BroadcastAll", ctx).Return(nil).Once()
 
 	// Load funds
+	helper.On("HeadBlockExists", ctx).Return(true).Once()
+	dbTxExtra := db.NewDatabaseTransaction(ctx, false)
+	helper.On("DatabaseTransaction", ctx).Return(dbTxExtra).Once()
+	jobStorage.On("Ready", ctx, dbTx2).Return([]*job.Job{&jobExtra}, nil).Once()
 	helper.On("AllAddresses", ctx, dbTx2).Return([]string{"address1"}, nil).Once()
 	helper.On("LockedAddresses", ctx, dbTx2).Return([]string{}, nil).Once()
 	helper.On(
@@ -350,7 +375,7 @@ func TestProcess(t *testing.T) {
 	).Once()
 
 	// Wait until we get here to continue setting up mocks
-	jobStorage.On("Update", ctx, dbTx2, mock.Anything).Return("job2", nil).Once()
+	jobStorage.On("Update", ctx, dbTxExtra, mock.Anything).Return("jobExtra", nil).Once()
 	helper.On("BroadcastAll", ctx).Return(nil).Once()
 
 	// Attempt to transfer again
@@ -459,7 +484,7 @@ func TestProcess(t *testing.T) {
 		},
 		nil,
 	).Once()
-	var job4 *job.Job
+	var job4 job.Job
 	jobStorage.On(
 		"Update",
 		ctx,
@@ -470,7 +495,8 @@ func TestProcess(t *testing.T) {
 		nil,
 	).Run(
 		func(args mock.Arguments) {
-			job4 = args.Get(2).(*job.Job)
+			job4 = *args.Get(2).(*job.Job)
+			job4.Identifier = "job4"
 		},
 	).Once()
 
@@ -612,42 +638,45 @@ func TestProcess(t *testing.T) {
 	dbTx5 := db.NewDatabaseTransaction(ctx, false)
 	helper.On("DatabaseTransaction", ctx).Return(dbTx5).Once()
 	jobStorage.On("Ready", ctx, dbTx5).Return([]*job.Job{}, nil).Once()
-	jobStorage.On("Processing", ctx, dbTx5, "transfer").Return([]*job.Job{job4}, nil).Once()
+	jobStorage.On("Processing", ctx, dbTx5, "transfer").Return([]*job.Job{&job4}, nil).Once()
 
 	markConfirmed := make(chan struct{})
 	jobStorage.On("Broadcasting", ctx, dbTx5).Return([]*job.Job{
-		job4,
+		&job4,
 	}, nil).Run(func(args mock.Arguments) {
 		close(markConfirmed)
 	}).Once()
 
-	<-markConfirmed
-	jobStorage.On("Get", ctx, dbTx5, "job4").Return(job4, nil).Once()
-	jobStorage.On(
-		"Update",
-		ctx,
-		dbTx5,
-		mock.Anything,
-	).Run(func(args mock.Arguments) {
-		job4 = args.Get(2).(*job.Job)
-	}).Return(
-		"job4",
-		nil,
-	)
-	tx := &types.Transaction{
-		TransactionIdentifier: txIdentifier,
-		Operations:            ops,
-	}
+	go func() {
+		<-markConfirmed
+		dbTx6 := db.NewDatabaseTransaction(ctx, false)
+		jobStorage.On("Get", ctx, dbTx6, "job4").Return(&job4, nil).Once()
+		jobStorage.On(
+			"Update",
+			ctx,
+			dbTx6,
+			mock.Anything,
+		).Run(func(args mock.Arguments) {
+			job4 = *args.Get(2).(*job.Job)
+			job4.Identifier = "job4"
+		}).Return(
+			"job4",
+			nil,
+		)
+		tx := &types.Transaction{
+			TransactionIdentifier: txIdentifier,
+			Operations:            ops,
+		}
 
-	// Process second step of job4
-	dbTx6 := db.NewDatabaseTransaction(ctx, false)
-	err = c.BroadcastComplete(ctx, dbTx6, "job4", tx)
-	assert.NoError(t, err)
+		// Process second step of job4
+		err = c.BroadcastComplete(ctx, dbTx6, "job4", tx)
+		assert.NoError(t, err)
+	}()
 
 	helper.On("HeadBlockExists", ctx).Return(true).Once()
 	dbTx7 := db.NewDatabaseTransaction(ctx, false)
 	helper.On("DatabaseTransaction", ctx).Return(dbTx7).Once()
-	jobStorage.On("Ready", ctx, dbTx7).Return([]*job.Job{job4}, nil).Once()
+	jobStorage.On("Ready", ctx, dbTx7).Return([]*job.Job{&job4}, nil).Once()
 	jobStorage.On(
 		"Update",
 		ctx,
