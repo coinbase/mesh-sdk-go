@@ -103,6 +103,7 @@ type Helper interface {
 		[]*types.Operation,
 		*types.TransactionIdentifier,
 		string, // network transaction
+		int64, // confirmation depth
 	) error
 
 	// Derive returns a new address for a provided publicKey.
