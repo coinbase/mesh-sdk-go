@@ -337,20 +337,18 @@ func (c *CoinStorage) RemovingBlock(
 	return nil, c.updateCoins(ctx, block, false, transaction)
 }
 
-// GetCoins returns all unspent coins for a provided *types.AccountIdentifier.
-func (c *CoinStorage) GetCoins(
+// GetCoinsTransactional returns all unspent coins for a provided *types.AccountIdentifier.
+func (c *CoinStorage) GetCoinsTransactional(
 	ctx context.Context,
+	dbTx DatabaseTransaction,
 	accountIdentifier *types.AccountIdentifier,
 ) ([]*types.Coin, *types.BlockIdentifier, error) {
-	transaction := c.db.NewDatabaseTransaction(ctx, false)
-	defer transaction.Discard(ctx)
-
-	coins, err := getAndDecodeCoins(ctx, transaction, accountIdentifier)
+	coins, err := getAndDecodeCoins(ctx, dbTx, accountIdentifier)
 	if err != nil {
 		return nil, nil, fmt.Errorf("%w: unable to query account identifier", err)
 	}
 
-	headBlockIdentifier, err := c.helper.CurrentBlockIdentifier(ctx, transaction)
+	headBlockIdentifier, err := c.helper.CurrentBlockIdentifier(ctx, dbTx)
 	if err != nil {
 		return nil, nil, fmt.Errorf("%w: unable to get current block identifier", err)
 	}
@@ -359,7 +357,7 @@ func (c *CoinStorage) GetCoins(
 	for coinIdentifier := range coins {
 		exists, coin, err := c.getAndDecodeCoin(
 			ctx,
-			transaction,
+			dbTx,
 			&types.CoinIdentifier{Identifier: coinIdentifier},
 		)
 		if err != nil {
@@ -374,6 +372,17 @@ func (c *CoinStorage) GetCoins(
 	}
 
 	return coinArr, headBlockIdentifier, nil
+}
+
+// GetCoins returns all unspent coins for a provided *types.AccountIdentifier.
+func (c *CoinStorage) GetCoins(
+	ctx context.Context,
+	accountIdentifier *types.AccountIdentifier,
+) ([]*types.Coin, *types.BlockIdentifier, error) {
+	dbTx := c.db.NewDatabaseTransaction(ctx, false)
+	defer dbTx.Discard(ctx)
+
+	return c.GetCoinsTransactional(ctx, dbTx, accountIdentifier)
 }
 
 // GetLargestCoin returns the largest Coin for a
