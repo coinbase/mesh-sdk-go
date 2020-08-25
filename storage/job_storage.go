@@ -29,7 +29,7 @@ const (
 	readyKey        = "ready"
 	broadcastingKey = "broadcasting"
 	processingKey   = "processing"
-	completeKey     = "complete"
+	completedKey    = "completed"
 	failedKey       = "failed"
 )
 
@@ -53,8 +53,8 @@ func getJobFailedKey(workflow string) string {
 	return fmt.Sprintf("%s/%s", failedKey, workflow)
 }
 
-func getJobCompleteKey(workflow string) string {
-	return fmt.Sprintf("%s/%s", completeKey, workflow)
+func getJobCompletedKey(workflow string) string {
+	return fmt.Sprintf("%s/%s", completedKey, workflow)
 }
 
 // JobStorage implements storage methods for managing
@@ -129,27 +129,27 @@ func (j *JobStorage) Failed(ctx context.Context, workflow string) ([]*job.Job, e
 }
 
 // AllFailed returns all failed *job.Jobs.
-func (j *JobStorage) AllFailed(ctx context.Context, workflow string) ([]*job.Job, error) {
+func (j *JobStorage) AllFailed(ctx context.Context) ([]*job.Job, error) {
 	dbTx := j.db.NewDatabaseTransaction(ctx, false)
 	defer dbTx.Discard(ctx)
 
 	return j.getAllJobs(ctx, dbTx, getJobMetadataKey(failedKey))
 }
 
-// Complete gets all successfully completed *job.Job of a certain workflow.
-func (j *JobStorage) Complete(ctx context.Context, workflow string) ([]*job.Job, error) {
+// Completed gets all successfully completed *job.Job of a certain workflow.
+func (j *JobStorage) Completed(ctx context.Context, workflow string) ([]*job.Job, error) {
 	dbTx := j.db.NewDatabaseTransaction(ctx, false)
 	defer dbTx.Discard(ctx)
 
-	return j.getAllJobs(ctx, dbTx, getJobMetadataKey(getJobCompleteKey(workflow)))
+	return j.getAllJobs(ctx, dbTx, getJobMetadataKey(getJobCompletedKey(workflow)))
 }
 
-// AllComplete gets all successfully completed *job.Jobs.
-func (j *JobStorage) AllComplete(ctx context.Context) ([]*job.Job, error) {
+// AllCompleted gets all successfully completed *job.Jobs.
+func (j *JobStorage) AllCompleted(ctx context.Context) ([]*job.Job, error) {
 	dbTx := j.db.NewDatabaseTransaction(ctx, false)
 	defer dbTx.Discard(ctx)
 
-	return j.getAllJobs(ctx, dbTx, getJobMetadataKey(completeKey))
+	return j.getAllJobs(ctx, dbTx, getJobMetadataKey(completedKey))
 }
 
 func (j *JobStorage) getNextIdentifier(ctx context.Context, dbTx DatabaseTransaction) (string, error) {
@@ -259,8 +259,8 @@ func getAssociatedKeys(j *job.Job) [][]byte {
 		keys = append(keys, getJobMetadataKey(readyKey))
 		isProcessing = true
 	case job.Completed:
-		keys = append(keys, getJobMetadataKey(getJobCompleteKey(j.Workflow)))
-		keys = append(keys, getJobMetadataKey(completeKey))
+		keys = append(keys, getJobMetadataKey(getJobCompletedKey(j.Workflow)))
+		keys = append(keys, getJobMetadataKey(completedKey))
 	case job.Failed:
 		keys = append(keys, getJobMetadataKey(getJobFailedKey(j.Workflow)))
 		keys = append(keys, getJobMetadataKey(failedKey))

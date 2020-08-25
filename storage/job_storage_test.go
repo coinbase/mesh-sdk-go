@@ -47,7 +47,7 @@ func TestJobStorage(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Len(t, jobs, 0)
 
-		jobs, err = storage.Complete(ctx, "blah")
+		jobs, err = storage.Completed(ctx, "blah")
 		assert.NoError(t, err)
 		assert.Len(t, jobs, 0)
 	})
@@ -88,7 +88,7 @@ func TestJobStorage(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Len(t, jobs, 0)
 
-		jobs, err = storage.Complete(ctx, "blah")
+		jobs, err = storage.Completed(ctx, "blah")
 		assert.NoError(t, err)
 		assert.Len(t, jobs, 0)
 
@@ -135,7 +135,7 @@ func TestJobStorage(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Len(t, jobs, 0)
 
-		jobs, err = storage.Complete(ctx, "blah")
+		jobs, err = storage.Completed(ctx, "blah")
 		assert.NoError(t, err)
 		assert.Len(t, jobs, 0)
 
@@ -144,5 +144,176 @@ func TestJobStorage(t *testing.T) {
 		jobs, err = storage.AllProcessing(ctx)
 		assert.NoError(t, err)
 		assert.ElementsMatch(t, []*job.Job{newJob, newJob2}, jobs)
+	})
+
+	newJob3 := &job.Job{
+		Workflow: "blah",
+		Status:   job.Completed,
+	}
+	t.Run("add another job", func(t *testing.T) {
+		dbTx := database.NewDatabaseTransaction(ctx, true)
+		defer dbTx.Discard(ctx)
+
+		jobIdentifier, err := storage.Update(ctx, dbTx, newJob3)
+		assert.NoError(t, err)
+		assert.Equal(t, "2", jobIdentifier)
+
+		retrievedJob, err := storage.Get(ctx, dbTx, jobIdentifier)
+		assert.NoError(t, err)
+		assert.Equal(t, newJob3, retrievedJob)
+
+		jobs, err := storage.Ready(ctx, dbTx)
+		assert.NoError(t, err)
+		assert.ElementsMatch(t, []*job.Job{newJob2}, jobs)
+
+		jobs, err = storage.Broadcasting(ctx, dbTx)
+		assert.NoError(t, err)
+		assert.ElementsMatch(t, []*job.Job{newJob}, jobs)
+
+		jobs, err = storage.Processing(ctx, dbTx, "blah")
+		assert.NoError(t, err)
+		assert.ElementsMatch(t, []*job.Job{newJob}, jobs)
+
+		jobs, err = storage.Processing(ctx, dbTx, "blah2")
+		assert.NoError(t, err)
+		assert.ElementsMatch(t, []*job.Job{newJob2}, jobs)
+
+		assert.NoError(t, dbTx.Commit(ctx))
+
+		jobs, err = storage.Failed(ctx, "blah")
+		assert.NoError(t, err)
+		assert.Len(t, jobs, 0)
+
+		jobs, err = storage.Completed(ctx, "blah")
+		assert.NoError(t, err)
+		assert.ElementsMatch(t, []*job.Job{newJob3}, jobs)
+
+		jobs, err = storage.AllProcessing(ctx)
+		assert.NoError(t, err)
+		assert.ElementsMatch(t, []*job.Job{newJob, newJob2}, jobs)
+
+		jobs, err = storage.AllCompleted(ctx)
+		assert.NoError(t, err)
+		assert.ElementsMatch(t, []*job.Job{newJob3}, jobs)
+	})
+
+	t.Run("update job 1", func(t *testing.T) {
+		dbTx := database.NewDatabaseTransaction(ctx, true)
+		defer dbTx.Discard(ctx)
+
+		newJob.Status = job.Completed
+		newJob.Identifier = "0"
+
+		jobIdentifier, err := storage.Update(ctx, dbTx, newJob)
+		assert.NoError(t, err)
+		assert.Equal(t, "0", jobIdentifier)
+
+		retrievedJob, err := storage.Get(ctx, dbTx, jobIdentifier)
+		assert.NoError(t, err)
+		assert.Equal(t, newJob, retrievedJob)
+
+		jobs, err := storage.Ready(ctx, dbTx)
+		assert.NoError(t, err)
+		assert.ElementsMatch(t, []*job.Job{newJob2}, jobs)
+
+		jobs, err = storage.Broadcasting(ctx, dbTx)
+		assert.NoError(t, err)
+		assert.ElementsMatch(t, []*job.Job{}, jobs)
+
+		jobs, err = storage.Processing(ctx, dbTx, "blah")
+		assert.NoError(t, err)
+		assert.ElementsMatch(t, []*job.Job{}, jobs)
+
+		jobs, err = storage.Processing(ctx, dbTx, "blah2")
+		assert.NoError(t, err)
+		assert.ElementsMatch(t, []*job.Job{newJob2}, jobs)
+
+		assert.NoError(t, dbTx.Commit(ctx))
+
+		jobs, err = storage.Failed(ctx, "blah")
+		assert.NoError(t, err)
+		assert.Len(t, jobs, 0)
+
+		jobs, err = storage.Completed(ctx, "blah")
+		assert.NoError(t, err)
+		assert.ElementsMatch(t, []*job.Job{newJob, newJob3}, jobs)
+
+		jobs, err = storage.AllProcessing(ctx)
+		assert.NoError(t, err)
+		assert.ElementsMatch(t, []*job.Job{newJob2}, jobs)
+
+		jobs, err = storage.AllCompleted(ctx)
+		assert.NoError(t, err)
+		assert.ElementsMatch(t, []*job.Job{newJob, newJob3}, jobs)
+	})
+
+	t.Run("fail job 2", func(t *testing.T) {
+		dbTx := database.NewDatabaseTransaction(ctx, true)
+		defer dbTx.Discard(ctx)
+
+		newJob2.Status = job.Failed
+		newJob2.Identifier = "1"
+
+		jobIdentifier, err := storage.Update(ctx, dbTx, newJob2)
+		assert.NoError(t, err)
+		assert.Equal(t, "1", jobIdentifier)
+
+		retrievedJob, err := storage.Get(ctx, dbTx, jobIdentifier)
+		assert.NoError(t, err)
+		assert.Equal(t, newJob2, retrievedJob)
+
+		jobs, err := storage.Ready(ctx, dbTx)
+		assert.NoError(t, err)
+		assert.ElementsMatch(t, []*job.Job{}, jobs)
+
+		jobs, err = storage.Broadcasting(ctx, dbTx)
+		assert.NoError(t, err)
+		assert.ElementsMatch(t, []*job.Job{}, jobs)
+
+		jobs, err = storage.Processing(ctx, dbTx, "blah")
+		assert.NoError(t, err)
+		assert.ElementsMatch(t, []*job.Job{}, jobs)
+
+		jobs, err = storage.Processing(ctx, dbTx, "blah2")
+		assert.NoError(t, err)
+		assert.ElementsMatch(t, []*job.Job{}, jobs)
+
+		assert.NoError(t, dbTx.Commit(ctx))
+
+		jobs, err = storage.Failed(ctx, "blah")
+		assert.NoError(t, err)
+		assert.Len(t, jobs, 0)
+
+		jobs, err = storage.Completed(ctx, "blah")
+		assert.NoError(t, err)
+		assert.ElementsMatch(t, []*job.Job{newJob, newJob3}, jobs)
+
+		jobs, err = storage.Failed(ctx, "blah2")
+		assert.NoError(t, err)
+		assert.ElementsMatch(t, []*job.Job{newJob2}, jobs)
+
+		jobs, err = storage.AllProcessing(ctx)
+		assert.NoError(t, err)
+		assert.ElementsMatch(t, []*job.Job{}, jobs)
+
+		jobs, err = storage.AllCompleted(ctx)
+		assert.NoError(t, err)
+		assert.ElementsMatch(t, []*job.Job{newJob, newJob3}, jobs)
+
+		jobs, err = storage.AllFailed(ctx)
+		assert.NoError(t, err)
+		assert.ElementsMatch(t, []*job.Job{newJob2}, jobs)
+	})
+
+	t.Run("attempt to update job 2", func(t *testing.T) {
+		dbTx := database.NewDatabaseTransaction(ctx, true)
+		defer dbTx.Discard(ctx)
+
+		newJob2.Status = job.Completed
+		newJob.Identifier = "1"
+
+		jobIdentifier, err := storage.Update(ctx, dbTx, newJob2)
+		assert.Error(t, err)
+		assert.Equal(t, "", jobIdentifier)
 	})
 }
