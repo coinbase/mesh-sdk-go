@@ -177,7 +177,11 @@ func (b *BroadcastStorage) invokeAddBlockHandlers(
 ) error {
 	for _, stale := range staleBroadcasts {
 		if err := b.handler.TransactionStale(ctx, dbTx, stale.Identifier, stale.TransactionIdentifier); err != nil {
-			return fmt.Errorf("%w: unable to handle stale transaction %s", err, stale.TransactionIdentifier.Hash)
+			return fmt.Errorf(
+				"%w: unable to handle stale transaction %s",
+				err,
+				stale.TransactionIdentifier.Hash,
+			)
 		}
 	}
 
@@ -344,7 +348,10 @@ func (b *BroadcastStorage) Broadcast(
 	return nil
 }
 
-func (b *BroadcastStorage) getAllBroadcasts(ctx context.Context, dbTx DatabaseTransaction) ([]*Broadcast, error) {
+func (b *BroadcastStorage) getAllBroadcasts(
+	ctx context.Context,
+	dbTx DatabaseTransaction,
+) ([]*Broadcast, error) {
 	namespace := transactionBroadcastNamespace
 	rawBroadcasts, err := dbTx.Scan(ctx, []byte(namespace))
 	if err != nil {
@@ -398,7 +405,11 @@ func (b *BroadcastStorage) performBroadcast(
 		log.Printf("Broadcasting: %s\n", types.PrettyPrintStruct(broadcast))
 	}
 
-	broadcastIdentifier, err := b.helper.BroadcastTransaction(ctx, broadcast.NetworkIdentifier, broadcast.Payload)
+	broadcastIdentifier, err := b.helper.BroadcastTransaction(
+		ctx,
+		broadcast.NetworkIdentifier,
+		broadcast.Payload,
+	)
 	if err != nil {
 		// Don't error on broadcast failure, retries will automatically be handled.
 		log.Printf(
@@ -514,7 +525,10 @@ func (b *BroadcastStorage) BroadcastAll(ctx context.Context, onlyEligible bool) 
 // LockedAddresses returns all addresses currently active in transaction broadcasts.
 // The caller SHOULD NOT broadcast a transaction from an account if it is
 // considered locked!
-func (b *BroadcastStorage) LockedAddresses(ctx context.Context, dbTx DatabaseTransaction) ([]string, error) {
+func (b *BroadcastStorage) LockedAddresses(
+	ctx context.Context,
+	dbTx DatabaseTransaction,
+) ([]string, error) {
 	broadcasts, err := b.getAllBroadcasts(ctx, dbTx)
 	if err != nil {
 		return nil, fmt.Errorf("%w: unable to get all broadcasts", err)
@@ -568,7 +582,11 @@ func (b *BroadcastStorage) ClearBroadcasts(ctx context.Context) ([]*Broadcast, e
 			broadcast.TransactionIdentifier,
 			broadcast.Intent,
 		); err != nil {
-			return nil, fmt.Errorf("%w: unable to handle broadcast failure %s", err, broadcast.Identifier)
+			return nil, fmt.Errorf(
+				"%w: unable to handle broadcast failure %s",
+				err,
+				broadcast.Identifier,
+			)
 		}
 	}
 

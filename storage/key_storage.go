@@ -176,7 +176,10 @@ func (k *KeyStorage) Get(ctx context.Context, address string) (*keys.KeyPair, er
 }
 
 // GetAllAddressesTransactional returns all addresses in key storage.
-func (k *KeyStorage) GetAllAddressesTransactional(ctx context.Context, dbTx DatabaseTransaction) ([]string, error) {
+func (k *KeyStorage) GetAllAddressesTransactional(
+	ctx context.Context,
+	dbTx DatabaseTransaction,
+) ([]string, error) {
 	rawKeys, err := dbTx.Scan(ctx, []byte(keyNamespace))
 	if err != nil {
 		return nil, fmt.Errorf("%w database scan for keys failed", err)
