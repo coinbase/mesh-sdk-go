@@ -586,6 +586,7 @@ func TestProcess(t *testing.T) {
 		ops,
 		txIdentifier,
 		networkTx,
+		int64(1),
 	).Return(nil).Once()
 	helper.On("BroadcastAll", ctx).Return(nil).Once()
 
