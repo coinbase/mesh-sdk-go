@@ -184,13 +184,11 @@ func TestFindBalanceWorker(t *testing.T) {
 						Symbol:   "BTC",
 						Decimals: 8,
 					},
-				).Return([]*types.Amount{
-					{
-						Value: "99",
-						Currency: &types.Currency{
-							Symbol:   "BTC",
-							Decimals: 8,
-						},
+				).Return(&types.Amount{
+					Value: "99",
+					Currency: &types.Currency{
+						Symbol:   "BTC",
+						Decimals: 8,
 					},
 				}, nil).Once()
 				helper.On("Balance", ctx, mock.Anything, &types.AccountIdentifier{
@@ -199,20 +197,24 @@ func TestFindBalanceWorker(t *testing.T) {
 				}, &types.Currency{
 					Symbol:   "BTC",
 					Decimals: 8,
-				}).Return([]*types.Amount{}, nil).Once()
+				}).Return(&types.Amount{
+					Value: "0",
+					Currency: &types.Currency{
+						Symbol:   "BTC",
+						Decimals: 8,
+					},
+				}, nil).Once()
 				helper.On("Balance", ctx, mock.Anything, &types.AccountIdentifier{
 					Address:    "addr1",
 					SubAccount: (*types.SubAccountIdentifier)(nil),
 				}, &types.Currency{
 					Symbol:   "BTC",
 					Decimals: 8,
-				}).Return([]*types.Amount{
-					{
-						Value: "100",
-						Currency: &types.Currency{
-							Symbol:   "BTC",
-							Decimals: 8,
-						},
+				}).Return(&types.Amount{
+					Value: "100",
+					Currency: &types.Currency{
+						Symbol:   "BTC",
+						Decimals: 8,
 					},
 				}, nil).Once()
 
@@ -265,13 +267,11 @@ func TestFindBalanceWorker(t *testing.T) {
 				}, &types.Currency{
 					Symbol:   "BTC",
 					Decimals: 8,
-				}).Return([]*types.Amount{
-					{
-						Value: "99",
-						Currency: &types.Currency{
-							Symbol:   "BTC",
-							Decimals: 8,
-						},
+				}).Return(&types.Amount{
+					Value: "99",
+					Currency: &types.Currency{
+						Symbol:   "BTC",
+						Decimals: 8,
 					},
 				}, nil).Once()
 				helper.On("Balance", ctx, mock.Anything, &types.AccountIdentifier{
@@ -282,7 +282,13 @@ func TestFindBalanceWorker(t *testing.T) {
 				}, &types.Currency{
 					Symbol:   "BTC",
 					Decimals: 8,
-				}).Return([]*types.Amount{}, nil).Once()
+				}).Return(&types.Amount{
+					Value: "0",
+					Currency: &types.Currency{
+						Symbol:   "BTC",
+						Decimals: 8,
+					},
+				}, nil).Once()
 				helper.On("Balance", ctx, mock.Anything, &types.AccountIdentifier{
 					Address: "addr1",
 					SubAccount: &types.SubAccountIdentifier{
@@ -291,13 +297,11 @@ func TestFindBalanceWorker(t *testing.T) {
 				}, &types.Currency{
 					Symbol:   "BTC",
 					Decimals: 8,
-				}).Return([]*types.Amount{
-					{
-						Value: "100",
-						Currency: &types.Currency{
-							Symbol:   "BTC",
-							Decimals: 8,
-						},
+				}).Return(&types.Amount{
+					Value: "100",
+					Currency: &types.Currency{
+						Symbol:   "BTC",
+						Decimals: 8,
 					},
 				}, nil).Once()
 

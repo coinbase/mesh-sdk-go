@@ -60,7 +60,7 @@ type Helper interface {
 		storage.DatabaseTransaction,
 		*types.AccountIdentifier,
 		*types.Currency,
-	) ([]*types.Amount, error)
+	) (*types.Amount, error)
 
 	// Coins returns all *types.Coin owned by an address.
 	Coins(
