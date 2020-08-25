@@ -68,7 +68,11 @@ func NewJobStorage(db Database) *JobStorage {
 	return &JobStorage{db: db}
 }
 
-func (j *JobStorage) getAllJobs(ctx context.Context, dbTx DatabaseTransaction, k []byte) ([]*job.Job, error) {
+func (j *JobStorage) getAllJobs(
+	ctx context.Context,
+	dbTx DatabaseTransaction,
+	k []byte,
+) ([]*job.Job, error) {
 	exists, v, err := dbTx.Get(ctx, k)
 	if err != nil {
 		return nil, fmt.Errorf("%w: unable to get all jobs by %s", err, string(k))
@@ -103,12 +107,19 @@ func (j *JobStorage) Ready(ctx context.Context, dbTx DatabaseTransaction) ([]*jo
 }
 
 // Broadcasting returns all broadcasting *job.Job.
-func (j *JobStorage) Broadcasting(ctx context.Context, dbTx DatabaseTransaction) ([]*job.Job, error) {
+func (j *JobStorage) Broadcasting(
+	ctx context.Context,
+	dbTx DatabaseTransaction,
+) ([]*job.Job, error) {
 	return j.getAllJobs(ctx, dbTx, getJobMetadataKey(broadcastingKey))
 }
 
 // Processing gets all processing *job.Job of a certain workflow.
-func (j *JobStorage) Processing(ctx context.Context, dbTx DatabaseTransaction, workflow string) ([]*job.Job, error) {
+func (j *JobStorage) Processing(
+	ctx context.Context,
+	dbTx DatabaseTransaction,
+	workflow string,
+) ([]*job.Job, error) {
 	return j.getAllJobs(ctx, dbTx, getJobMetadataKey(getJobProcessingKey(workflow)))
 }
 
@@ -152,7 +163,10 @@ func (j *JobStorage) AllCompleted(ctx context.Context) ([]*job.Job, error) {
 	return j.getAllJobs(ctx, dbTx, getJobMetadataKey(completedKey))
 }
 
-func (j *JobStorage) getNextIdentifier(ctx context.Context, dbTx DatabaseTransaction) (string, error) {
+func (j *JobStorage) getNextIdentifier(
+	ctx context.Context,
+	dbTx DatabaseTransaction,
+) (string, error) {
 	k := getJobMetadataKey("identifier")
 	exists, v, err := dbTx.Get(ctx, k)
 	if err != nil {
@@ -201,7 +215,12 @@ func (j *JobStorage) updateIdentifiers(
 	return nil
 }
 
-func (j *JobStorage) addJob(ctx context.Context, dbTx DatabaseTransaction, k []byte, identifier string) error {
+func (j *JobStorage) addJob(
+	ctx context.Context,
+	dbTx DatabaseTransaction,
+	k []byte,
+	identifier string,
+) error {
 	exists, v, err := dbTx.Get(ctx, k)
 	if err != nil {
 		return fmt.Errorf("%w: unable to get all jobs by %s", err, string(k))
@@ -222,7 +241,12 @@ func (j *JobStorage) addJob(ctx context.Context, dbTx DatabaseTransaction, k []b
 	return j.updateIdentifiers(ctx, dbTx, k, identifiers)
 }
 
-func (j *JobStorage) removeJob(ctx context.Context, dbTx DatabaseTransaction, k []byte, identifier string) error {
+func (j *JobStorage) removeJob(
+	ctx context.Context,
+	dbTx DatabaseTransaction,
+	k []byte,
+	identifier string,
+) error {
 	exists, v, err := dbTx.Get(ctx, k)
 	if err != nil {
 		return fmt.Errorf("%w: unable to get all jobs by %s", err, string(k))
@@ -300,7 +324,11 @@ func (j *JobStorage) updateMetadata(
 }
 
 // Update overwrites an existing *job.Job or creates a new one (and assigns an identifier).
-func (j *JobStorage) Update(ctx context.Context, dbTx DatabaseTransaction, v *job.Job) (string, error) {
+func (j *JobStorage) Update(
+	ctx context.Context,
+	dbTx DatabaseTransaction,
+	v *job.Job,
+) (string, error) {
 	var oldJob *job.Job
 	if len(v.Identifier) == 0 {
 		newIdentifier, err := j.getNextIdentifier(ctx, dbTx)
@@ -339,7 +367,11 @@ func (j *JobStorage) Update(ctx context.Context, dbTx DatabaseTransaction, v *jo
 }
 
 // Get returns a *job.Job by its identifier.
-func (j *JobStorage) Get(ctx context.Context, dbTx DatabaseTransaction, identifier string) (*job.Job, error) {
+func (j *JobStorage) Get(
+	ctx context.Context,
+	dbTx DatabaseTransaction,
+	identifier string,
+) (*job.Job, error) {
 	k := getJobKey(identifier)
 
 	exists, v, err := dbTx.Get(ctx, k)
