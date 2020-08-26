@@ -319,16 +319,26 @@ func (c *Coordinator) BroadcastComplete(
 	// although the update could get rolled back.
 	c.resetVars()
 	statusString := fmt.Sprintf(
-		"broadcast complete for job \"%s\" with transaction \"%s\"\n",
+		"broadcast complete for job \"%s (%s)\" with transaction hash \"%s\"\n",
+		j.Workflow,
 		jobIdentifier,
 		transaction.TransactionIdentifier.Hash,
 	)
 
+	// To calculate balance changes, we must create a fake block that
+	// only contains the transaction we are completing.
+	//
+	// TODO: modify parser to calculate balance changes for a single
+	// transaction.
 	balanceChanges, err := c.parser.BalanceChanges(ctx, &types.Block{
 		Transactions: []*types.Transaction{
 			transaction,
 		},
 	}, false)
+	if err != nil {
+		return fmt.Errorf("%w: unable to calculate balance changes", err)
+	}
+
 	for _, balanceChange := range balanceChanges {
 		parsedDiff, err := types.BigInt(balanceChange.Difference)
 		if err != nil {

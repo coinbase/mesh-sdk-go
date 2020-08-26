@@ -42,7 +42,7 @@ func simpleAsserterConfiguration() (*asserter.Asserter, error) {
 			Hash:  "block 0",
 			Index: 0,
 		},
-		[]string{"Transfer"},
+		[]string{"Vin", "Vout"},
 		[]*types.OperationStatus{
 			{
 				Status:     "success",
@@ -87,7 +87,7 @@ func TestProcess(t *testing.T) {
 						},
 						{
 							Type:       job.FindBalance,
-							Input:      `{"minimum_balance":{"value": "0", "currency": {{currency}}}, "create":1}`, // nolint
+							Input:      `{"minimum_balance":{"value": "0", "currency": {{currency}}}, "create_limit":1}`, // nolint
 							OutputPath: "random_address",
 						},
 					},
@@ -153,7 +153,7 @@ func TestProcess(t *testing.T) {
 						},
 						{
 							Type:       job.FindBalance,
-							Input:      `{"minimum_balance":{"value": "100", "currency": {{currency}}}, "create": 100}`, // nolint
+							Input:      `{"minimum_balance":{"value": "100", "currency": {{currency}}}, "create_limit": 100}`, // nolint
 							OutputPath: "sender",
 						},
 						{
@@ -163,7 +163,7 @@ func TestProcess(t *testing.T) {
 						},
 						{
 							Type:       job.FindBalance,
-							Input:      `{"not_address":[{{sender.account.address}}], "minimum_balance":{"value": "0", "currency": {{currency}}}, "create": 100}`, // nolint
+							Input:      `{"not_address":[{{sender.account.address}}], "minimum_balance":{"value": "0", "currency": {{currency}}}, "create_limit": 100}`, // nolint
 							OutputPath: "recipient",
 						},
 						{
@@ -645,6 +645,36 @@ func TestProcess(t *testing.T) {
 		close(markConfirmed)
 	}).Once()
 
+	onchainOps := []*types.Operation{
+		{
+			OperationIdentifier: &types.OperationIdentifier{
+				Index: 0,
+			},
+			Status: "success",
+			Type:   "Vin",
+			Account: &types.AccountIdentifier{
+				Address: "address1",
+			},
+			Amount: &types.Amount{
+				Value:    "-100",
+				Currency: currency,
+			},
+		},
+		{
+			OperationIdentifier: &types.OperationIdentifier{
+				Index: 1,
+			},
+			Status: "success",
+			Type:   "Vout",
+			Account: &types.AccountIdentifier{
+				Address: "address2",
+			},
+			Amount: &types.Amount{
+				Value:    "90",
+				Currency: currency,
+			},
+		},
+	}
 	go func() {
 		<-markConfirmed
 		dbTx6 := db.NewDatabaseTransaction(ctx, false)
@@ -663,7 +693,7 @@ func TestProcess(t *testing.T) {
 		)
 		tx := &types.Transaction{
 			TransactionIdentifier: txIdentifier,
-			Operations:            ops,
+			Operations:            onchainOps,
 		}
 
 		// Process second step of job4
