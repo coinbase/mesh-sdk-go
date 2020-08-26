@@ -473,7 +473,7 @@ func (c *Coordinator) Process(
 			}
 
 			transactionCreated = transactionIdentifier
-			log.Printf("created transaction for job %s\n", jobIdentifier)
+			log.Printf(`created transaction "%s" for job "%s"\n`, transactionIdentifier.Hash, jobIdentifier)
 		}
 
 		// Reset all vars
