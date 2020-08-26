@@ -455,7 +455,7 @@ func shouldCreateRandomAccount(input *job.FindBalanceInput, addressCount int) bo
 		return false
 	}
 
-	if input.CreateLimit <= 0 || addressCount > input.CreateLimit {
+	if input.CreateLimit <= 0 || addressCount >= input.CreateLimit {
 		return false
 	}
 
@@ -555,7 +555,7 @@ func (w *Worker) FindBalanceWorker(
 
 	// If we should create an account and the number of addresses
 	// we have is less than the limit, we return ErrCreateAccount.
-	if input.CreateLimit > 0 && len(addresses) <= input.CreateLimit {
+	if input.CreateLimit > 0 && len(addresses) < input.CreateLimit {
 		return "", ErrCreateAccount
 	}
 
