@@ -175,8 +175,11 @@ type Helper interface {
 // Handler is an interface called by the coordinator whenever
 // an address is created or a transaction is created.
 type Handler interface {
-	AddressCreated(context.Context, string) error
-	TransactionCreated(context.Context, string, *types.TransactionIdentifier) error
+	TransactionCreated(
+		context.Context,
+		string, // job identifier
+		*types.TransactionIdentifier,
+	) error
 }
 
 // Coordinator faciliates the creation and processing
