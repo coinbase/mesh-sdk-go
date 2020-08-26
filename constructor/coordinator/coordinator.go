@@ -319,7 +319,7 @@ func (c *Coordinator) BroadcastComplete(
 	// although the update could get rolled back.
 	c.resetVars()
 	statusString := fmt.Sprintf(
-		`broadcast complete for job "%s" with transaction "%s\n"`,
+		"broadcast complete for job \"%s\" with transaction \"%s\"\n",
 		jobIdentifier,
 		transaction.TransactionIdentifier.Hash,
 	)
@@ -336,7 +336,7 @@ func (c *Coordinator) BroadcastComplete(
 		}
 
 		statusString = fmt.Sprintf(
-			`%s%s -> %s\n`,
+			"%s%s -> %s\n",
 			statusString,
 			types.PrintStruct(balanceChange.Account),
 			utils.PrettyAmount(parsedDiff, balanceChange.Currency),
