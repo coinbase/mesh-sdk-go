@@ -542,6 +542,42 @@ func TestCoinStorage(t *testing.T) {
 		assert.Equal(t, blockIdentifier, block)
 	})
 
+	t.Run("remove and add complex block", func(t *testing.T) {
+		tx := c.db.NewDatabaseTransaction(ctx, true)
+		commitFunc, err := c.RemovingBlock(ctx, coinBlock3, tx)
+		assert.Nil(t, commitFunc)
+		assert.NoError(t, err)
+		assert.NoError(t, tx.Commit(ctx))
+
+		tx = c.db.NewDatabaseTransaction(ctx, true)
+		commitFunc, err = c.AddingBlock(ctx, coinBlock3, tx)
+		assert.Nil(t, commitFunc)
+		assert.NoError(t, err)
+		assert.NoError(t, tx.Commit(ctx))
+
+		coins, block, err := c.GetCoins(ctx, account)
+		assert.NoError(t, err)
+		assert.Equal(t, []*types.Coin{}, coins)
+		assert.Equal(t, blockIdentifier, block)
+
+		coins, block, err = c.GetCoins(ctx, account3)
+		assert.NoError(t, err)
+		assert.ElementsMatch(t, account3Coins, coins)
+		assert.Equal(t, blockIdentifier, block)
+
+		bal, coinIdentifier, block, err := c.GetLargestCoin(ctx, account3, currency)
+		assert.NoError(t, err)
+		assert.Equal(t, big.NewInt(4), bal)
+		assert.Equal(t, &types.CoinIdentifier{Identifier: "coin3"}, coinIdentifier)
+		assert.Equal(t, blockIdentifier, block)
+
+		bal, coinIdentifier, block, err = c.GetLargestCoin(ctx, account3, currency2)
+		assert.NoError(t, err)
+		assert.Equal(t, big.NewInt(6), bal)
+		assert.Equal(t, &types.CoinIdentifier{Identifier: "coin4"}, coinIdentifier)
+		assert.Equal(t, blockIdentifier, block)
+	})
+
 	t.Run("AddCoins after block", func(t *testing.T) {
 		accountCoins := []*AccountCoin{
 			{
