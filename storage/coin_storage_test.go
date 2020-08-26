@@ -262,6 +262,42 @@ var (
 					},
 				},
 			},
+			{
+				Operations: []*types.Operation{
+					{
+						Account: account3,
+						Status:  successStatus,
+						Amount: &types.Amount{
+							Value:    "12",
+							Currency: currency,
+						},
+						CoinChange: &types.CoinChange{
+							CoinAction: types.CoinCreated,
+							CoinIdentifier: &types.CoinIdentifier{
+								Identifier: "coin6",
+							},
+						},
+					},
+				},
+			},
+			{
+				Operations: []*types.Operation{
+					{
+						Account: account3,
+						Status:  successStatus,
+						Amount: &types.Amount{
+							Value:    "12",
+							Currency: currency,
+						},
+						CoinChange: &types.CoinChange{
+							CoinAction: types.CoinSpent,
+							CoinIdentifier: &types.CoinIdentifier{
+								Identifier: "coin6",
+							},
+						},
+					},
+				},
+			},
 		},
 	}
 
@@ -270,14 +306,14 @@ var (
 			Address: "acc1",
 		},
 		Coins: []*types.Coin{
-			&types.Coin{
+			{
 				CoinIdentifier: &types.CoinIdentifier{Identifier: "accCoin1"},
 				Amount: &types.Amount{
 					Value:    "30",
 					Currency: currency,
 				},
 			},
-			&types.Coin{
+			{
 				CoinIdentifier: &types.CoinIdentifier{Identifier: "accCoin2"},
 				Amount: &types.Amount{
 					Value:    "40",
@@ -292,14 +328,14 @@ var (
 			Address: "acc2",
 		},
 		Coins: []*types.Coin{
-			&types.Coin{
+			{
 				CoinIdentifier: &types.CoinIdentifier{Identifier: "accCoin3"},
 				Amount: &types.Amount{
 					Value:    "10",
 					Currency: currency,
 				},
 			},
-			&types.Coin{
+			{
 				CoinIdentifier: &types.CoinIdentifier{Identifier: "accCoin4"},
 				Amount: &types.Amount{
 					Value:    "20",
