@@ -313,13 +313,14 @@ func (c *Coordinator) BroadcastComplete(
 		return fmt.Errorf("%w: unable to update job", err)
 	}
 
-	if err := dbTx.Commit(ctx); err != nil {
-		return fmt.Errorf("%w: unable to commit job update", err)
-	}
-
-	// Reset all vars
+	// We are optimisticall reseting all vars here
+	// although the update could get rolled back.
 	c.resetVars()
-	log.Printf(`broadcast complete for "%s"`, jobIdentifier)
+	log.Printf(
+		`broadcast complete for job "%s" with transaction "%s"`,
+		jobIdentifier,
+		transaction.TransactionIdentifier.Hash,
+	)
 
 	return nil
 }
