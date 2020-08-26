@@ -342,7 +342,7 @@ func (c *Coordinator) BroadcastComplete(
 			utils.PrettyAmount(parsedDiff, balanceChange.Currency),
 		)
 	}
-	color.Green(statusString)
+	color.Magenta(statusString)
 
 	return nil
 }
