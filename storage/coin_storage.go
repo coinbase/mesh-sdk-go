@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"math/big"
 	"strings"
 
@@ -165,6 +166,8 @@ func (c *CoinStorage) addCoin(
 		return fmt.Errorf("%w: unable to store account coin", err)
 	}
 
+	log.Printf("storing coin %s\n", coin.CoinIdentifier)
+
 	return nil
 }
 
@@ -245,6 +248,8 @@ func (c *CoinStorage) tryRemovingCoin(
 	if err := transaction.Delete(ctx, getCoinAccountCoin(operation.Account, coinIdentifier)); err != nil {
 		return fmt.Errorf("%w: unable to delete coin", err)
 	}
+
+	log.Printf("removing coin %s\n", coinIdentifier)
 
 	return nil
 }
