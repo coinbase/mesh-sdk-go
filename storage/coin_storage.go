@@ -238,6 +238,7 @@ func (c *CoinStorage) tryRemovingCoin(
 	}
 
 	if !exists { // this could occur if coin was created before we started syncing
+		fmt.Printf("%s does not exist\n", coinIdentifier)
 		return nil
 	}
 
@@ -260,6 +261,8 @@ func (c *CoinStorage) AddingBlock(
 	block *types.Block,
 	transaction DatabaseTransaction,
 ) (CommitWorker, error) {
+	// TODO: don't do anything for coins added and removed
+	// in same block. This can cause issues on re-org.
 	for _, txn := range block.Transactions {
 		for _, operation := range txn.Operations {
 			if operation.CoinChange == nil {
@@ -298,6 +301,8 @@ func (c *CoinStorage) RemovingBlock(
 	block *types.Block,
 	transaction DatabaseTransaction,
 ) (CommitWorker, error) {
+	// TODO: don't do anything for coins added and removed
+	// in same block. This can cause issues on re-org.
 	for _, txn := range block.Transactions {
 		for _, operation := range txn.Operations {
 			if operation.CoinChange == nil {
