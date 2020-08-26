@@ -450,6 +450,23 @@ func (w *Worker) availableAddresses(
 	return addresses, unlockedAddresses, nil
 }
 
+func shouldCreateRandomAccount(input *job.FindBalanceInput, addressCount int) bool {
+	if input.MinimumBalance.Value != "0" {
+		return false
+	}
+
+	if input.CreateLimit <= 0 || addressCount > input.CreateLimit {
+		return false
+	}
+
+	if utils.RandomNumber(utils.ZeroInt, utils.OneHundredInt).Int64() >= int64(input.CreateProbability) {
+		return false
+	}
+
+	log.Println("creating random account")
+	return true
+}
+
 // FindBalanceWorker attempts to find an account (and coin) with some minimum
 // balance in a particular currency.
 func (w *Worker) FindBalanceWorker(
@@ -476,6 +493,13 @@ func (w *Worker) FindBalanceWorker(
 
 	fmt.Printf("Addresses: %v\n", addresses)
 	fmt.Printf("Available addresses: %v\n", availableAddresses)
+
+	// Randomly, we choose to generate a new account. If we didn't do this,
+	// we would never grow past 2 accounts for mocking transfers.
+	if shouldCreateRandomAccount(&input, len(addresses)) {
+		log.Println("creating random account")
+		return "", ErrCreateAccount
+	}
 
 	// Consider each availableAddress as a potential account.
 	for _, address := range availableAddresses {
@@ -523,15 +547,20 @@ func (w *Worker) FindBalanceWorker(
 
 	fmt.Println("found no balances")
 
+	// If we can't do anything, we should return with ErrUnsatisfiable.
+	if input.MinimumBalance.Value != "0" {
+		fmt.Println("returning unsatisfiable as insufficient balance")
+		return "", ErrUnsatisfiable
+	}
+
 	// If we should create an account and the number of addresses
 	// we have is less than the limit, we return ErrCreateAccount.
-	// Note, we must also be looking for an account with a 0 balance.
-	if input.Create > 0 && len(addresses) <= input.Create && input.MinimumBalance.Value == "0" {
+	if input.CreateLimit > 0 && len(addresses) <= input.CreateLimit {
 		return "", ErrCreateAccount
 	}
 
-	// If we can't do anything and we aren't supposed to wait, we should
-	// return with ErrUnsatisfiable.
+	// If we reach here, it means we shouldn't create another account
+	// and should just return unsatisfiable.
 	fmt.Println("returning unsatisfiable")
 	return "", ErrUnsatisfiable
 }

@@ -213,6 +213,110 @@ func TestFindBalanceWorker(t *testing.T) {
 				},
 			},
 		},
+		"simple find balance (random create)": {
+			input: &job.FindBalanceInput{
+				MinimumBalance: &types.Amount{
+					Value: "0",
+					Currency: &types.Currency{
+						Symbol:   "BTC",
+						Decimals: 8,
+					},
+				},
+				NotAddress:        []string{"addr4"},
+				CreateLimit:       100,
+				CreateProbability: 100,
+			},
+			mockHelper: func() *mocks.Helper {
+				helper := &mocks.Helper{}
+				helper.On(
+					"AllAddresses",
+					ctx,
+					mock.Anything,
+				).Return(
+					[]string{"addr2", "addr1", "addr3", "addr4"},
+					nil,
+				).Once()
+				helper.On(
+					"LockedAddresses",
+					ctx,
+					mock.Anything,
+				).Return(
+					[]string{"addr2"},
+					nil,
+				).Once()
+
+				return helper
+			}(),
+			err: ErrCreateAccount,
+		},
+		"simple find balance (can't random create)": {
+			input: &job.FindBalanceInput{
+				MinimumBalance: &types.Amount{
+					Value: "100",
+					Currency: &types.Currency{
+						Symbol:   "BTC",
+						Decimals: 8,
+					},
+				},
+				NotAddress:        []string{"addr4"},
+				CreateLimit:       100,
+				CreateProbability: 100,
+			},
+			mockHelper: func() *mocks.Helper {
+				helper := &mocks.Helper{}
+				helper.On(
+					"AllAddresses",
+					ctx,
+					mock.Anything,
+				).Return(
+					[]string{"addr2", "addr1", "addr3", "addr4"},
+					nil,
+				).Once()
+				helper.On(
+					"LockedAddresses",
+					ctx,
+					mock.Anything,
+				).Return(
+					[]string{"addr2"},
+					nil,
+				).Once()
+				helper.On(
+					"Balance",
+					ctx,
+					mock.Anything,
+					&types.AccountIdentifier{
+						Address:    "addr1",
+						SubAccount: (*types.SubAccountIdentifier)(nil),
+					},
+					&types.Currency{
+						Symbol:   "BTC",
+						Decimals: 8,
+					},
+				).Return(&types.Amount{
+					Value: "10",
+					Currency: &types.Currency{
+						Symbol:   "BTC",
+						Decimals: 8,
+					},
+				}, nil).Once()
+				helper.On("Balance", ctx, mock.Anything, &types.AccountIdentifier{
+					Address:    "addr3",
+					SubAccount: (*types.SubAccountIdentifier)(nil),
+				}, &types.Currency{
+					Symbol:   "BTC",
+					Decimals: 8,
+				}).Return(&types.Amount{
+					Value: "15",
+					Currency: &types.Currency{
+						Symbol:   "BTC",
+						Decimals: 8,
+					},
+				}, nil).Once()
+
+				return helper
+			}(),
+			err: ErrUnsatisfiable,
+		},
 		"simple find balance (no create and unsatisfiable)": {
 			input: &job.FindBalanceInput{
 				MinimumBalance: &types.Amount{
@@ -288,8 +392,8 @@ func TestFindBalanceWorker(t *testing.T) {
 						Decimals: 8,
 					},
 				},
-				NotAddress: []string{"addr4"},
-				Create:     100,
+				NotAddress:  []string{"addr4"},
+				CreateLimit: 100,
 			},
 			mockHelper: func() *mocks.Helper {
 				helper := &mocks.Helper{}
@@ -482,7 +586,7 @@ func TestFindBalanceWorker(t *testing.T) {
 						Identifier: "coin1",
 					},
 				},
-				Create: -1,
+				CreateLimit: -1,
 			},
 			mockHelper: func() *mocks.Helper {
 				helper := &mocks.Helper{}
@@ -562,7 +666,7 @@ func TestFindBalanceWorker(t *testing.T) {
 						Identifier: "coin1",
 					},
 				},
-				Create: 10,
+				CreateLimit: 10,
 			},
 			mockHelper: func() *mocks.Helper {
 				helper := &mocks.Helper{}
@@ -642,7 +746,7 @@ func TestFindBalanceWorker(t *testing.T) {
 						Identifier: "coin1",
 					},
 				},
-				Create: 2,
+				CreateLimit: 2,
 			},
 			mockHelper: func() *mocks.Helper {
 				helper := &mocks.Helper{}
@@ -722,7 +826,7 @@ func TestFindBalanceWorker(t *testing.T) {
 						Identifier: "coin1",
 					},
 				},
-				Create: 2,
+				CreateLimit: 2,
 			},
 			mockHelper: &mocks.Helper{},
 			err:        ErrInvalidInput,
@@ -743,7 +847,7 @@ func TestFindBalanceWorker(t *testing.T) {
 						Identifier: "coin1",
 					},
 				},
-				Create: 2,
+				CreateLimit: 2,
 			},
 			mockHelper: &mocks.Helper{},
 			err:        ErrInvalidInput,

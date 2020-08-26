@@ -179,11 +179,16 @@ type FindBalanceInput struct {
 	// for avoiding using the same Coin twice.
 	NotCoins []*types.CoinIdentifier `json:"not_coins,omitempty"`
 
-	// Create is used to determine if we should create a new address using
+	// CreateLimit is used to determine if we should create a new address using
 	// the CreateAccount Workflow. This will only occur if the
 	// total number of addresses is under some pre-defined limit.
 	// If the value is <= 0, we will not attempt to create.
-	Create int `json:"create,omitempty"`
+	CreateLimit int `json:"create_limit,omitempty"`
+
+	// CreateProbability is used to determine if a new account should be
+	// created with some probability [0, 100). This will override the search
+	// for any valid accounts and instead return ErrCreateAccount.
+	CreateProbability int `json:"create_probability,omitempty"`
 }
 
 // FindBalanceOutput is returned by FindBalance.
