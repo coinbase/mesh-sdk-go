@@ -63,6 +63,8 @@ func (w *Worker) invokeWorker(
 		return MathWorker(input)
 	case job.FindBalance:
 		return w.FindBalanceWorker(ctx, dbTx, input)
+	case job.RandomNumber:
+		return RandomNumberWorker(input)
 	default:
 		return "", fmt.Errorf("%w: %s", ErrInvalidActionType, action)
 	}
@@ -253,6 +255,29 @@ func MathWorker(rawInput string) (string, error) {
 	}
 
 	return marshalString(result), nil
+}
+
+// RandomNumberWorker generates a random number in the range
+// [minimum,maximum).
+func RandomNumberWorker(rawInput string) (string, error) {
+	var input job.RandomNumberInput
+	err := job.UnmarshalInput([]byte(rawInput), &input)
+	if err != nil {
+		return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
+	}
+
+	min, err := types.BigInt(input.Minimum)
+	if err != nil {
+		return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
+	}
+
+	max, err := types.BigInt(input.Maximum)
+	if err != nil {
+		return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
+	}
+
+	randNum := utils.RandomNumber(min, max)
+	return marshalString(randNum.String()), nil
 }
 
 // balanceMessage prints out a log message while waiting

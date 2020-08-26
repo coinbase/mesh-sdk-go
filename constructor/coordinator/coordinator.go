@@ -330,12 +330,16 @@ func (c *Coordinator) BroadcastComplete(
 		},
 	}, false)
 	for _, balanceChange := range balanceChanges {
+		parsedDiff, err := types.BigInt(balanceChange.Difference)
+		if err != nil {
+			return fmt.Errorf("%w: unable to parse Difference", err)
+		}
+
 		statusString = fmt.Sprintf(
-			`%s%s %s%s\n`,
+			`%s%s -> %s\n`,
 			statusString,
 			types.PrintStruct(balanceChange.Account),
-			balanceChange.Difference,
-			balanceChange.Currency.Symbol,
+			utils.PrettyAmount(parsedDiff, balanceChange.Currency),
 		)
 	}
 	color.Green(statusString)
