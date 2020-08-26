@@ -837,6 +837,15 @@ func TestJob_ComplicatedTransfer(t *testing.T) {
 				OutputPath: "create_send.network",
 			},
 			{
+				Type:       job.RandomNumber,
+				Input:      `{"minimum":"10", "maximum":"100"}`,
+				OutputPath: "rand_number",
+			},
+			{
+				Type:  job.PrintMessage,
+				Input: `{"random_number": {{rand_number}}}`,
+			},
+			{
 				Type:       job.SetVariable,
 				Input:      `"10"`,
 				OutputPath: "valA",

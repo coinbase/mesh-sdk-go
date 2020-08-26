@@ -96,6 +96,10 @@ const (
 	// It is used to generate account names for blockchains that require
 	// on-chain origination.
 	RandomString ActionType = "random_string"
+
+	// RandomNumber generates a random number in some range [min, max).
+	// It is used to generate random transaction amounts.
+	RandomNumber ActionType = "random_number"
 )
 
 // Action is a step of computation that
@@ -193,6 +197,13 @@ type FindBalanceOutput struct {
 
 	// Coin is populated if RequireCoin is true.
 	Coin *types.CoinIdentifier `json:"coin,omitempty"`
+}
+
+// RandomNumberInput is used to generate a random
+// number in the range [minimum, maximum).
+type RandomNumberInput struct {
+	Minimum string `json:"minimum"`
+	Maximum string `json:"maximum"`
 }
 
 // Scenario is a collection of Actions with a specific
