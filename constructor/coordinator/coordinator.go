@@ -27,6 +27,8 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/storage"
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/coinbase/rosetta-sdk-go/utils"
+
+	"github.com/fatih/color"
 )
 
 // New parses a slice of input Workflows
@@ -316,11 +318,27 @@ func (c *Coordinator) BroadcastComplete(
 	// We are optimisticall reseting all vars here
 	// although the update could get rolled back.
 	c.resetVars()
-	log.Printf(
-		`broadcast complete for job "%s" with transaction "%s"`,
+	statusString := fmt.Sprintf(
+		`broadcast complete for job "%s" with transaction "%s\n"`,
 		jobIdentifier,
 		transaction.TransactionIdentifier.Hash,
 	)
+
+	balanceChanges, err := c.parser.BalanceChanges(ctx, &types.Block{
+		Transactions: []*types.Transaction{
+			transaction,
+		},
+	}, false)
+	for _, balanceChange := range balanceChanges {
+		statusString = fmt.Sprintf(
+			`%s%s %s%s\n`,
+			statusString,
+			types.PrintStruct(balanceChange.Account),
+			balanceChange.Difference,
+			balanceChange.Currency.Symbol,
+		)
+	}
+	color.Green(statusString)
 
 	return nil
 }
