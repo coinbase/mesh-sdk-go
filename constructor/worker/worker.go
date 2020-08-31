@@ -380,13 +380,21 @@ func (w *Worker) checkAccountBalance(
 	input *job.FindBalanceInput,
 	account *types.AccountIdentifier,
 ) (string, error) {
-	fmt.Printf("invoking account balance %s for %s\n", types.PrintStruct(account), types.PrintStruct(input.MinimumBalance))
+	fmt.Printf(
+		"invoking account balance %s for %s\n",
+		types.PrintStruct(account),
+		types.PrintStruct(input.MinimumBalance),
+	)
 	amount, err := w.helper.Balance(ctx, dbTx, account, input.MinimumBalance.Currency)
 	if err != nil {
 		return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
 	}
 
-	fmt.Printf("found account balance %s of %s\n", types.PrintStruct(account), types.PrintStruct(amount))
+	fmt.Printf(
+		"found account balance %s of %s\n",
+		types.PrintStruct(account),
+		types.PrintStruct(amount),
+	)
 
 	// look for amounts > min
 	diff, err := types.SubtractValues(amount.Value, input.MinimumBalance.Value)
@@ -459,7 +467,12 @@ func shouldCreateRandomAccount(input *job.FindBalanceInput, addressCount int) bo
 		return false
 	}
 
-	if utils.RandomNumber(utils.ZeroInt, utils.OneHundredInt).Int64() >= int64(input.CreateProbability) {
+	if utils.RandomNumber(
+		utils.ZeroInt,
+		utils.OneHundredInt,
+	).Int64() >= int64(
+		input.CreateProbability,
+	) {
 		return false
 	}
 

@@ -239,7 +239,11 @@ func (c *Coordinator) createTransaction(
 	}
 
 	if err := c.parser.ExpectedOperations(broadcast.Intent, parsedOps, false, false); err != nil {
-		log.Printf("expected %s, observed %s\n", types.PrintStruct(broadcast.Intent), types.PrintStruct(parsedOps))
+		log.Printf(
+			"expected %s, observed %s\n",
+			types.PrintStruct(broadcast.Intent),
+			types.PrintStruct(parsedOps),
+		)
 		return nil, "", fmt.Errorf("%w: unsigned parsed ops do not match intent", err)
 	}
 
@@ -269,7 +273,11 @@ func (c *Coordinator) createTransaction(
 	}
 
 	if err := c.parser.ExpectedOperations(broadcast.Intent, signedParsedOps, false, false); err != nil {
-		log.Printf("expected %s, observed %s\n", types.PrintStruct(broadcast.Intent), types.PrintStruct(signedParsedOps))
+		log.Printf(
+			"expected %s, observed %s\n",
+			types.PrintStruct(broadcast.Intent),
+			types.PrintStruct(signedParsedOps),
+		)
 		return nil, "", fmt.Errorf("%w: signed parsed ops do not match intent", err)
 	}
 
@@ -483,7 +491,11 @@ func (c *Coordinator) Process(
 			}
 
 			transactionCreated = transactionIdentifier
-			log.Printf(`created transaction "%s" for job "%s"\n`, transactionIdentifier.Hash, jobIdentifier)
+			log.Printf(
+				`created transaction "%s" for job "%s"\n`,
+				transactionIdentifier.Hash,
+				jobIdentifier,
+			)
 		}
 
 		// Reset all vars
