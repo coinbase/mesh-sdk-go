@@ -296,7 +296,13 @@ func TestBalance(t *testing.T) {
 		// Get balance during transaction
 		readTx := storage.db.NewDatabaseTransaction(ctx, false)
 		defer readTx.Discard(ctx)
-		retrievedAmount, block, err := storage.GetBalanceTransactional(ctx, readTx, account, currency, newBlock2)
+		retrievedAmount, block, err := storage.GetBalanceTransactional(
+			ctx,
+			readTx,
+			account,
+			currency,
+			newBlock2,
+		)
 		assert.NoError(t, err)
 		assert.Equal(t, result, retrievedAmount)
 		assert.Equal(t, newBlock2, block)
