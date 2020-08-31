@@ -542,20 +542,13 @@ func TestCoinStorage(t *testing.T) {
 		assert.Equal(t, blockIdentifier, block)
 	})
 
-	t.Run("remove and add complex block", func(t *testing.T) {
+	t.Run("remove block that creates and spends single coin", func(t *testing.T) {
 		tx := c.db.NewDatabaseTransaction(ctx, true)
 		commitFunc, err := c.RemovingBlock(ctx, coinBlock3, tx)
 		assert.Nil(t, commitFunc)
 		assert.NoError(t, err)
 		assert.NoError(t, tx.Commit(ctx))
 
-		// Error Class: coins created and spent in the same block
-		// during that are orphaned and then added again.
-		//
-		// When adding block here, coin6 will have been created
-		// on the re-org and could be processed before the corresponding
-		// spend on the next tx is processed. This can give
-		// the impression that a duplicate key exists.
 		tx = c.db.NewDatabaseTransaction(ctx, true)
 		commitFunc, err = c.AddingBlock(ctx, coinBlock3, tx)
 		assert.Nil(t, commitFunc)
