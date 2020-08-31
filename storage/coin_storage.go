@@ -238,6 +238,16 @@ func (c *CoinStorage) skipOperation(
 	return false, nil
 }
 
+// updateCoins iterates through the transactions
+// in a block to determine which coins to add
+// and remove from storage.
+//
+// If a coin is created and spent in the same block,
+// it is skipped (i.e. never added/removed from storage).
+//
+// Alternatively, we could add all coins to the database
+// (regardless of whether they are spent in the same block),
+// however, this would put a larger strain on the db.
 func (c *CoinStorage) updateCoins(
 	ctx context.Context,
 	block *types.Block,
