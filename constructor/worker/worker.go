@@ -380,21 +380,10 @@ func (w *Worker) checkAccountBalance(
 	input *job.FindBalanceInput,
 	account *types.AccountIdentifier,
 ) (string, error) {
-	fmt.Printf(
-		"invoking account balance %s for %s\n",
-		types.PrintStruct(account),
-		types.PrintStruct(input.MinimumBalance),
-	)
 	amount, err := w.helper.Balance(ctx, dbTx, account, input.MinimumBalance.Currency)
 	if err != nil {
 		return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
 	}
-
-	fmt.Printf(
-		"found account balance %s of %s\n",
-		types.PrintStruct(account),
-		types.PrintStruct(amount),
-	)
 
 	// look for amounts > min
 	diff, err := types.SubtractValues(amount.Value, input.MinimumBalance.Value)
@@ -476,7 +465,6 @@ func shouldCreateRandomAccount(input *job.FindBalanceInput, addressCount int) bo
 		return false
 	}
 
-	log.Println("creating random account")
 	return true
 }
 
@@ -504,13 +492,9 @@ func (w *Worker) FindBalanceWorker(
 		return "", fmt.Errorf("%w: unable to get available addresses", err)
 	}
 
-	fmt.Printf("Addresses: %v\n", addresses)
-	fmt.Printf("Available addresses: %v\n", availableAddresses)
-
 	// Randomly, we choose to generate a new account. If we didn't do this,
 	// we would never grow past 2 accounts for mocking transfers.
 	if shouldCreateRandomAccount(&input, len(addresses)) {
-		log.Println("creating random account")
 		return "", ErrCreateAccount
 	}
 
@@ -551,18 +535,11 @@ func (w *Worker) FindBalanceWorker(
 			continue
 		}
 
-		log.Printf(
-			"Found balance %s\n",
-			output,
-		)
 		return output, nil
 	}
 
-	fmt.Println("found no balances")
-
 	// If we can't do anything, we should return with ErrUnsatisfiable.
 	if input.MinimumBalance.Value != "0" {
-		fmt.Println("returning unsatisfiable as insufficient balance")
 		return "", ErrUnsatisfiable
 	}
 
@@ -574,6 +551,5 @@ func (w *Worker) FindBalanceWorker(
 
 	// If we reach here, it means we shouldn't create another account
 	// and should just return unsatisfiable.
-	fmt.Println("returning unsatisfiable")
 	return "", ErrUnsatisfiable
 }
