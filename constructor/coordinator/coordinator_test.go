@@ -723,6 +723,360 @@ func TestProcess(t *testing.T) {
 	helper.AssertExpectations(t)
 }
 
+func TestProcess_Failed(t *testing.T) {
+	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
+
+	jobStorage := &mocks.JobStorage{}
+	helper := &mocks.Helper{}
+	handler := &mocks.Handler{}
+	p := defaultParser(t)
+	workflows := []*job.Workflow{
+		{
+			Name:        string(job.RequestFunds),
+			Concurrency: 1,
+		},
+		{
+			Name:        string(job.CreateAccount),
+			Concurrency: 1,
+		},
+		{
+			Name:        "transfer",
+			Concurrency: 1,
+			Scenarios: []*job.Scenario{
+				{
+					Name: "transfer",
+					Actions: []*job.Action{
+						{
+							Type:       job.SetVariable,
+							Input:      `{"network":"Testnet3", "blockchain":"Bitcoin"}`,
+							OutputPath: "transfer.network",
+						},
+						{
+							Type:       job.SetVariable,
+							Input:      `{"symbol":"tBTC", "decimals":8}`,
+							OutputPath: "currency",
+						},
+						{
+							Type:       job.FindBalance,
+							Input:      `{"minimum_balance":{"value": "100", "currency": {{currency}}}, "create_limit": 100}`, // nolint
+							OutputPath: "sender",
+						},
+						{
+							Type:       job.Math,
+							Input:      `{"operation":"subtraction", "left_value": "0", "right_value":{{sender.balance.value}}}`,
+							OutputPath: "sender_amount",
+						},
+						{
+							Type:       job.FindBalance,
+							Input:      `{"not_address":[{{sender.account.address}}], "minimum_balance":{"value": "0", "currency": {{currency}}}, "create_limit": 100}`, // nolint
+							OutputPath: "recipient",
+						},
+						{
+							Type:       job.Math,
+							Input:      `{"operation":"subtraction", "left_value":{{sender.balance.value}}, "right_value":"10"}`,
+							OutputPath: "recipient_amount",
+						},
+						{
+							Type:       job.SetVariable,
+							Input:      `"1"`,
+							OutputPath: "transfer.confirmation_depth",
+						},
+						{
+							Type:       job.SetVariable,
+							Input:      `{"test": "works"}`,
+							OutputPath: "transfer.preprocess_metadata",
+						},
+						{
+							Type:       job.SetVariable,
+							Input:      `[{"operation_identifier":{"index":0},"type":"Vin","status":"","account":{"address":{{sender.account.address}}},"amount":{"value":{{sender_amount}},"currency":{{currency}}}},{"operation_identifier":{"index":1},"type":"Vout","status":"","account":{"address":{{recipient.account.address}}},"amount":{"value":{{recipient_amount}},"currency":{{currency}}}}]`, // nolint
+							OutputPath: "transfer.operations",
+						},
+					},
+				},
+				{
+					Name: "print_transaction",
+					Actions: []*job.Action{
+						{
+							Type:  job.PrintMessage,
+							Input: `{{transfer.transaction}}`,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	c, err := New(
+		jobStorage,
+		helper,
+		handler,
+		p,
+		workflows,
+	)
+	assert.NotNil(t, c)
+	assert.NoError(t, err)
+
+	// Create coordination channels
+	processCanceled := make(chan struct{})
+
+	dir, err := utils.CreateTempDir()
+	assert.NoError(t, err)
+
+	db, err := storage.NewBadgerStorage(ctx, dir)
+	assert.NoError(t, err)
+	assert.NotNil(t, db)
+
+	// HeadBlockExists is false first
+	helper.On("HeadBlockExists", ctx).Return(false).Once()
+
+	// Attempt to create transfer
+	helper.On("HeadBlockExists", ctx).Return(true).Once()
+	dbTx := db.NewDatabaseTransaction(ctx, false)
+	helper.On("DatabaseTransaction", ctx).Return(dbTx).Once()
+	jobStorage.On("Ready", ctx, dbTx).Return([]*job.Job{}, nil).Once()
+	jobStorage.On("Processing", ctx, dbTx, "transfer").Return([]*job.Job{}, nil).Once()
+	helper.On("AllAddresses", ctx, dbTx).Return([]string{"address1", "address2"}, nil).Once()
+	helper.On("LockedAddresses", ctx, dbTx).Return([]string{}, nil).Once()
+	helper.On(
+		"Balance",
+		ctx,
+		dbTx,
+		&types.AccountIdentifier{Address: "address1"},
+		&types.Currency{
+			Symbol:   "tBTC",
+			Decimals: 8,
+		},
+	).Return(
+		&types.Amount{
+			Value: "100",
+			Currency: &types.Currency{
+				Symbol:   "tBTC",
+				Decimals: 8,
+			},
+		},
+		nil,
+	).Once()
+	helper.On("AllAddresses", ctx, dbTx).Return([]string{"address1", "address2"}, nil).Once()
+	helper.On("LockedAddresses", ctx, dbTx).Return([]string{}, nil).Once()
+	helper.On(
+		"Balance",
+		ctx,
+		dbTx,
+		&types.AccountIdentifier{Address: "address2"},
+		&types.Currency{
+			Symbol:   "tBTC",
+			Decimals: 8,
+		},
+	).Return(
+		&types.Amount{
+			Value: "0",
+			Currency: &types.Currency{
+				Symbol:   "tBTC",
+				Decimals: 8,
+			},
+		},
+		nil,
+	).Once()
+	var job4 job.Job
+	jobStorage.On(
+		"Update",
+		ctx,
+		dbTx,
+		mock.Anything,
+	).Return(
+		"job4",
+		nil,
+	).Run(
+		func(args mock.Arguments) {
+			job4 = *args.Get(2).(*job.Job)
+			job4.Identifier = "job4"
+		},
+	).Once()
+
+	// Start processor
+	go func() {
+		err := c.Process(ctx)
+		fmt.Println(err)
+		assert.True(t, errors.Is(err, context.Canceled))
+		close(processCanceled)
+	}()
+
+	// Construct Transaction
+	network := &types.NetworkIdentifier{
+		Blockchain: "Bitcoin",
+		Network:    "Testnet3",
+	}
+	currency := &types.Currency{
+		Symbol:   "tBTC",
+		Decimals: 8,
+	}
+	ops := []*types.Operation{
+		{
+			OperationIdentifier: &types.OperationIdentifier{
+				Index: 0,
+			},
+			Type: "Vin",
+			Account: &types.AccountIdentifier{
+				Address: "address1",
+			},
+			Amount: &types.Amount{
+				Value:    "-100",
+				Currency: currency,
+			},
+		},
+		{
+			OperationIdentifier: &types.OperationIdentifier{
+				Index: 1,
+			},
+			Type: "Vout",
+			Account: &types.AccountIdentifier{
+				Address: "address2",
+			},
+			Amount: &types.Amount{
+				Value:    "90",
+				Currency: currency,
+			},
+		},
+	}
+	metadataOptions := map[string]interface{}{
+		"metadata": "test",
+	}
+	helper.On(
+		"Preprocess",
+		ctx,
+		network,
+		ops,
+		map[string]interface{}{
+			"test": "works",
+		},
+	).Return(metadataOptions, nil).Once()
+	fetchedMetadata := map[string]interface{}{
+		"tx_meta": "help",
+	}
+	helper.On(
+		"Metadata",
+		ctx,
+		network,
+		metadataOptions,
+	).Return(fetchedMetadata, nil).Once()
+
+	unsignedTx := "unsigned transaction"
+	signingPayloads := []*types.SigningPayload{
+		{
+			Address:       "address1",
+			Bytes:         []byte("blah"),
+			SignatureType: types.Ecdsa,
+		},
+	}
+	helper.On(
+		"Payloads",
+		ctx,
+		network,
+		ops,
+		fetchedMetadata,
+	).Return(unsignedTx, signingPayloads, nil).Once()
+	helper.On(
+		"Parse",
+		ctx,
+		network,
+		false,
+		unsignedTx,
+	).Return(ops, []string{}, nil, nil).Once()
+	signatures := []*types.Signature{
+		{
+			SigningPayload: signingPayloads[0],
+			PublicKey: &types.PublicKey{
+				Bytes:     []byte("pubkey"),
+				CurveType: types.Secp256k1,
+			},
+			SignatureType: types.Ecdsa,
+			Bytes:         []byte("signature"),
+		},
+	}
+	helper.On(
+		"Sign",
+		ctx,
+		signingPayloads,
+	).Return(signatures, nil).Once()
+	networkTx := "network transaction"
+	helper.On(
+		"Combine",
+		ctx,
+		network,
+		unsignedTx,
+		signatures,
+	).Return(networkTx, nil).Once()
+	helper.On(
+		"Parse",
+		ctx,
+		network,
+		true,
+		networkTx,
+	).Return(ops, []string{"address1"}, nil, nil).Once()
+	txIdentifier := &types.TransactionIdentifier{Hash: "transaction hash"}
+	helper.On(
+		"Hash",
+		ctx,
+		network,
+		networkTx,
+	).Return(txIdentifier, nil).Once()
+	helper.On(
+		"Broadcast",
+		ctx,
+		dbTx,
+		"job4",
+		network,
+		ops,
+		txIdentifier,
+		networkTx,
+		int64(1),
+	).Return(nil).Once()
+	handler.On("TransactionCreated", ctx, "job4", txIdentifier).Return(nil).Once()
+	helper.On("BroadcastAll", ctx).Return(nil).Once()
+
+	// Wait for transfer to complete
+	helper.On("HeadBlockExists", ctx).Return(true).Once()
+	dbTx2 := db.NewDatabaseTransaction(ctx, false)
+	helper.On("DatabaseTransaction", ctx).Return(dbTx2).Once()
+	jobStorage.On("Ready", ctx, dbTx2).Return([]*job.Job{}, nil).Once()
+	jobStorage.On("Processing", ctx, dbTx2, "transfer").Return([]*job.Job{&job4}, nil).Once()
+
+	markConfirmed := make(chan struct{})
+	jobStorage.On("Broadcasting", ctx, dbTx2).Return([]*job.Job{
+		&job4,
+	}, nil).Run(func(args mock.Arguments) {
+		close(markConfirmed)
+	}).Once()
+
+	go func() {
+		<-markConfirmed
+		dbTx3 := db.NewDatabaseTransaction(ctx, false)
+		jobStorage.On("Get", ctx, dbTx3, "job4").Return(&job4, nil).Once()
+		jobStorage.On(
+			"Update",
+			ctx,
+			dbTx3,
+			mock.Anything,
+		).Run(func(args mock.Arguments) {
+			job4 = *args.Get(2).(*job.Job)
+			job4.Identifier = "job4"
+			cancel()
+		}).Return(
+			"job4",
+			nil,
+		)
+
+		// Process second step of job4
+		err = c.BroadcastComplete(ctx, dbTx3, "job4", nil)
+		assert.NoError(t, err)
+	}()
+
+	<-processCanceled
+	jobStorage.AssertExpectations(t)
+	helper.AssertExpectations(t)
+}
+
 func TestInitialization_NoWorkflows(t *testing.T) {
 	jobStorage := &mocks.JobStorage{}
 	helper := &mocks.Helper{}

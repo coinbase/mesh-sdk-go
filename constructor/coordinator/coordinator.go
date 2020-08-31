@@ -327,6 +327,18 @@ func (c *Coordinator) BroadcastComplete(
 	// case, we will attempt to process a few extra jobs
 	// that are unsatisfiable.
 	c.resetVars()
+
+	// If the transaction is nil, the broadcast failed.
+	if transaction == nil {
+		color.Red(
+			"broadcast failed for job \"%s (%s)\"\n",
+			j.Workflow,
+			jobIdentifier,
+		)
+
+		return nil
+	}
+
 	statusString := fmt.Sprintf(
 		"broadcast complete for job \"%s (%s)\" with transaction hash \"%s\"\n",
 		j.Workflow,
