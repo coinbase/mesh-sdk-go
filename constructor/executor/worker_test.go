@@ -141,7 +141,7 @@ func TestFindBalanceWorker(t *testing.T) {
 	assert.NoError(t, err)
 	defer utils.RemoveTempDir(dir)
 
-	db, err := storage.NewBadgerStorage(ctx, dir, false)
+	db, err := storage.NewBadgerStorage(ctx, dir)
 	assert.NoError(t, err)
 	assert.NotNil(t, db)
 	defer db.Close(ctx)

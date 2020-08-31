@@ -16,7 +16,6 @@ package storage
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"math/big"
 	"strings"
@@ -168,30 +167,6 @@ func (c *CoinStorage) addCoin(
 	return nil
 }
 
-func (c *CoinStorage) tryAddingCoin(
-	ctx context.Context,
-	transaction DatabaseTransaction,
-	operation *types.Operation,
-	action types.CoinAction,
-) error {
-	if operation.CoinChange == nil {
-		return errors.New("coin change cannot be nil")
-	}
-
-	if operation.CoinChange.CoinAction != action {
-		return nil
-	}
-
-	coinIdentifier := operation.CoinChange.CoinIdentifier
-
-	newCoin := &types.Coin{
-		CoinIdentifier: coinIdentifier,
-		Amount:         operation.Amount,
-	}
-
-	return c.addCoin(ctx, operation.Account, newCoin, transaction)
-}
-
 func getAndDecodeCoins(
 	ctx context.Context,
 	transaction DatabaseTransaction,
@@ -212,22 +187,12 @@ func getAndDecodeCoins(
 	return coins, nil
 }
 
-func (c *CoinStorage) tryRemovingCoin(
+func (c *CoinStorage) removeCoin(
 	ctx context.Context,
+	account *types.AccountIdentifier,
+	coinIdentifier *types.CoinIdentifier,
 	transaction DatabaseTransaction,
-	operation *types.Operation,
-	action types.CoinAction,
 ) error {
-	if operation.CoinChange == nil {
-		return errors.New("coin change cannot be nil")
-	}
-
-	if operation.CoinChange.CoinAction != action {
-		return nil
-	}
-
-	coinIdentifier := operation.CoinChange.CoinIdentifier
-
 	_, key := getCoinKey(coinIdentifier)
 	exists, _, err := transaction.Get(ctx, key)
 	if err != nil {
@@ -235,6 +200,7 @@ func (c *CoinStorage) tryRemovingCoin(
 	}
 
 	if !exists { // this could occur if coin was created before we started syncing
+		fmt.Printf("%s does not exist\n", coinIdentifier)
 		return nil
 	}
 
@@ -242,8 +208,112 @@ func (c *CoinStorage) tryRemovingCoin(
 		return fmt.Errorf("%w: unable to delete coin", err)
 	}
 
-	if err := transaction.Delete(ctx, getCoinAccountCoin(operation.Account, coinIdentifier)); err != nil {
+	if err := transaction.Delete(ctx, getCoinAccountCoin(account, coinIdentifier)); err != nil {
 		return fmt.Errorf("%w: unable to delete coin", err)
+	}
+
+	return nil
+}
+
+func (c *CoinStorage) skipOperation(
+	operation *types.Operation,
+) (bool, error) {
+	if operation.CoinChange == nil {
+		return true, nil
+	}
+
+	if operation.Amount == nil {
+		return true, nil
+	}
+
+	success, err := c.asserter.OperationSuccessful(operation)
+	if err != nil {
+		return false, fmt.Errorf("%w: unable to parse operation success", err)
+	}
+
+	if !success {
+		return true, nil
+	}
+
+	return false, nil
+}
+
+// updateCoins iterates through the transactions
+// in a block to determine which coins to add
+// and remove from storage.
+//
+// If a coin is created and spent in the same block,
+// it is skipped (i.e. never added/removed from storage).
+//
+// Alternatively, we could add all coins to the database
+// (regardless of whether they are spent in the same block),
+// however, this would put a larger strain on the db.
+func (c *CoinStorage) updateCoins(
+	ctx context.Context,
+	block *types.Block,
+	addCoinCreated bool,
+	dbTx DatabaseTransaction,
+) error {
+	addCoins := map[string]*types.Operation{}
+	removeCoins := map[string]*types.Operation{}
+
+	for _, txn := range block.Transactions {
+		for _, operation := range txn.Operations {
+			skip, err := c.skipOperation(operation)
+			if err != nil {
+				return fmt.Errorf("%w: unable to to determine if should skip operation", err)
+			}
+			if skip {
+				continue
+			}
+
+			coinChange := operation.CoinChange
+			identifier := coinChange.CoinIdentifier.Identifier
+			addAction := types.CoinCreated
+			if !addCoinCreated {
+				addAction = types.CoinSpent
+			}
+
+			if coinChange.CoinAction == addAction {
+				addCoins[identifier] = operation
+				continue
+			}
+
+			removeCoins[identifier] = operation
+		}
+	}
+
+	for identifier, op := range addCoins {
+		if _, ok := removeCoins[identifier]; ok {
+			continue
+		}
+
+		if err := c.addCoin(
+			ctx,
+			op.Account,
+			&types.Coin{
+				CoinIdentifier: op.CoinChange.CoinIdentifier,
+				Amount:         op.Amount,
+			},
+			dbTx,
+		); err != nil {
+			return fmt.Errorf("%w: unable to add coin", err)
+		}
+	}
+
+	for identifier, op := range removeCoins {
+		if _, ok := addCoins[identifier]; ok {
+			continue
+		}
+
+		if err := c.removeCoin(
+			ctx,
+			op.Account,
+			op.CoinChange.CoinIdentifier,
+			dbTx,
+		); err != nil {
+			return fmt.Errorf("%w: unable to remove coin", err)
+		}
 	}
 
 	return nil
@@ -255,36 +325,7 @@ func (c *CoinStorage) AddingBlock(
 	block *types.Block,
 	transaction DatabaseTransaction,
 ) (CommitWorker, error) {
-	for _, txn := range block.Transactions {
-		for _, operation := range txn.Operations {
-			if operation.CoinChange == nil {
-				continue
-			}
-
-			if operation.Amount == nil {
-				continue
-			}
-
-			success, err := c.asserter.OperationSuccessful(operation)
-			if err != nil {
-				return nil, fmt.Errorf("%w: unable to parse operation success", err)
-			}
-
-			if !success {
-				continue
-			}
-
-			if err := c.tryAddingCoin(ctx, transaction, operation, types.CoinCreated); err != nil {
-				return nil, fmt.Errorf("%w: unable to add coin", err)
-			}
-
-			if err := c.tryRemovingCoin(ctx, transaction, operation, types.CoinSpent); err != nil {
-				return nil, fmt.Errorf("%w: unable to remove coin", err)
-			}
-		}
-	}
-
-	return nil, nil
+	return nil, c.updateCoins(ctx, block, true, transaction)
 }
 
 // RemovingBlock is called by BlockStorage when removing a block.
@@ -293,38 +334,7 @@ func (c *CoinStorage) RemovingBlock(
 	block *types.Block,
 	transaction DatabaseTransaction,
 ) (CommitWorker, error) {
-	for _, txn := range block.Transactions {
-		for _, operation := range txn.Operations {
-			if operation.CoinChange == nil {
-				continue
-			}
-
-			if operation.Amount == nil {
-				continue
-			}
-
-			success, err := c.asserter.OperationSuccessful(operation)
-			if err != nil {
-				return nil, fmt.Errorf("%w: unable to parse operation success", err)
-			}
-
-			if !success {
-				continue
-			}
-
-			// We add spent coins and remove created coins during a re-org (opposite of
-			// AddingBlock).
-			if err := c.tryAddingCoin(ctx, transaction, operation, types.CoinSpent); err != nil {
-				return nil, fmt.Errorf("%w: unable to add coin", err)
-			}
-
-			if err := c.tryRemovingCoin(ctx, transaction, operation, types.CoinCreated); err != nil {
-				return nil, fmt.Errorf("%w: unable to remove coin", err)
-			}
-		}
-	}
-
-	return nil, nil
+	return nil, c.updateCoins(ctx, block, false, transaction)
 }
 
 // GetCoins returns all unspent coins for a provided *types.AccountIdentifier.
