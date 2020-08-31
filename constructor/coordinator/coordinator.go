@@ -109,7 +109,6 @@ func (c *Coordinator) findJob(
 		)
 	}
 	for _, job := range ready {
-		fmt.Printf("%s\n", types.PrintStruct(job))
 		if utils.ContainsString(c.attemptedJobs, job.Identifier) {
 			continue
 		}
@@ -323,8 +322,10 @@ func (c *Coordinator) BroadcastComplete(
 		return fmt.Errorf("%w: unable to update job", err)
 	}
 
-	// We are optimisticall reseting all vars here
-	// although the update could get rolled back.
+	// We are optimistically resetting all vars here
+	// although the update could get rolled back. In the worst
+	// case, we will attempt to process a few extra jobs
+	// that are unsatisfiable.
 	c.resetVars()
 	statusString := fmt.Sprintf(
 		"broadcast complete for job \"%s (%s)\" with transaction hash \"%s\"\n",
@@ -436,20 +437,18 @@ func (c *Coordinator) Process(
 
 		statusMessage := fmt.Sprintf(`processing workflow "%s"`, j.Workflow)
 		if len(j.Identifier) > 0 {
-			statusMessage = fmt.Sprintf(`%s with identifier "%s"`, statusMessage, j.Identifier)
+			statusMessage = fmt.Sprintf(`%s for job "%s"`, statusMessage, j.Identifier)
 		}
 		log.Println(statusMessage)
 
 		broadcast, err := c.worker.Process(ctx, dbTx, j)
 		if errors.Is(err, worker.ErrCreateAccount) {
-			log.Println("err create account")
 			c.addToUnprocessed(j)
 			c.seenErrCreateAccount = true
 			dbTx.Discard(ctx)
 			continue
 		}
 		if errors.Is(err, worker.ErrUnsatisfiable) {
-			log.Println("err unsatisfiable")
 			c.addToUnprocessed(j)
 			dbTx.Discard(ctx)
 			continue
@@ -492,7 +491,7 @@ func (c *Coordinator) Process(
 
 			transactionCreated = transactionIdentifier
 			log.Printf(
-				`created transaction "%s" for job "%s"\n`,
+				`created transaction "%s" for job "%s"`,
 				transactionIdentifier.Hash,
 				jobIdentifier,
 			)
@@ -500,7 +499,7 @@ func (c *Coordinator) Process(
 
 		// Reset all vars
 		c.resetVars()
-		log.Printf(`processed workflow "%s" with identifier "%s"`, j.Workflow, jobIdentifier)
+		log.Printf(`processed workflow "%s" for job "%s"`, j.Workflow, jobIdentifier)
 
 		// Commit db transaction
 		if err := dbTx.Commit(ctx); err != nil {
