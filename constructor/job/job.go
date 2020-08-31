@@ -15,9 +15,7 @@
 package job
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
@@ -27,21 +25,6 @@ import (
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
 )
-
-// UnmarshalInput attempts to strictly unmarshal some input
-// into output.
-func UnmarshalInput(input []byte, output interface{}) error {
-	// To prevent silent erroring, we explicitly
-	// reject any unknown fields.
-	dec := json.NewDecoder(bytes.NewReader(input))
-	dec.DisallowUnknownFields()
-
-	if err := dec.Decode(&output); err != nil {
-		return fmt.Errorf("%w: unable to unmarshal", err)
-	}
-
-	return nil
-}
 
 // New creates a new *Job.
 func New(workflow *Workflow) *Job {
