@@ -215,6 +215,29 @@ func (c *CoinStorage) removeCoin(
 	return nil
 }
 
+func (c *CoinStorage) skipOperation(
+	operation *types.Operation,
+) (bool, error) {
+	if operation.CoinChange == nil {
+		return true, nil
+	}
+
+	if operation.Amount == nil {
+		return true, nil
+	}
+
+	success, err := c.asserter.OperationSuccessful(operation)
+	if err != nil {
+		return false, fmt.Errorf("%w: unable to parse operation success", err)
+	}
+
+	if !success {
+		return true, nil
+	}
+
+	return false, nil
+}
+
 func (c *CoinStorage) updateCoins(
 	ctx context.Context,
 	block *types.Block,
@@ -226,26 +249,17 @@ func (c *CoinStorage) updateCoins(
 
 	for _, txn := range block.Transactions {
 		for _, operation := range txn.Operations {
-			if operation.CoinChange == nil {
-				continue
-			}
-
-			if operation.Amount == nil {
-				continue
-			}
-
-			success, err := c.asserter.OperationSuccessful(operation)
+			skip, err := c.skipOperation(operation)
 			if err != nil {
-				return fmt.Errorf("%w: unable to parse operation success", err)
+				return fmt.Errorf("%w: unable to to determine if should skip operation", err)
 			}
-
-			if !success {
+			if skip {
 				continue
 			}
 
 			coinChange := operation.CoinChange
-			addAction := types.CoinCreated
 			identifier := coinChange.CoinIdentifier.Identifier
+			addAction := types.CoinCreated
 			if !addCoinCreated {
 				addAction = types.CoinSpent
 			}
@@ -264,10 +278,13 @@ func (c *CoinStorage) updateCoins(
 			continue
 		}
 
-		if err := c.addCoin(ctx, op.Account, &types.Coin{
-			CoinIdentifier: op.CoinChange.CoinIdentifier,
-			Amount:         op.Amount,
-		},
+		if err := c.addCoin(
+			ctx,
+			op.Account,
+			&types.Coin{
+				CoinIdentifier: op.CoinChange.CoinIdentifier,
+				Amount:         op.Amount,
+			},
 			dbTx,
 		); err != nil {
 			return fmt.Errorf("%w: unable to add coin", err)
@@ -279,7 +296,12 @@ func (c *CoinStorage) updateCoins(
 			continue
 		}
 
-		if err := c.removeCoin(ctx, op.Account, op.CoinChange.CoinIdentifier, dbTx); err != nil {
+		if err := c.removeCoin(
+			ctx,
+			op.Account,
+			op.CoinChange.CoinIdentifier,
+			dbTx,
+		); err != nil {
 			return fmt.Errorf("%w: unable to remove coin", err)
 		}
 	}
