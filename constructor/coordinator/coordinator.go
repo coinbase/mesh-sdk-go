@@ -152,7 +152,8 @@ func (c *Coordinator) findJob(
 		return nil, ErrNoAvailableJobs
 	}
 
-	// Check if ErrCreateAccount, then create account if exists
+	// Check if ErrCreateAccount, then create account if less
+	// processing CreateAccount jobs than ReservedWorkflowConcurrency.
 	if c.seenErrCreateAccount {
 		processing, err := c.storage.Processing(ctx, dbTx, string(job.CreateAccount))
 		if err != nil {
@@ -498,7 +499,7 @@ func (c *Coordinator) Process(
 				networkTransaction,
 				broadcast.ConfirmationDepth,
 			); err != nil {
-				return fmt.Errorf("%w: unable to enque broadcast", err)
+				return fmt.Errorf("%w: unable to enqueue broadcast", err)
 			}
 
 			transactionCreated = transactionIdentifier
