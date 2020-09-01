@@ -269,17 +269,17 @@ func (c *CoinStorage) updateCoins(
 
 			coinChange := operation.CoinChange
 			identifier := coinChange.CoinIdentifier.Identifier
-			addAction := types.CoinCreated
-			if !addCoinCreated {
-				addAction = types.CoinSpent
+			coinDict := removeCoins
+			if addCoinCreated && coinChange.CoinAction == types.CoinCreated ||
+				!addCoinCreated && coinChange.CoinAction == types.CoinSpent {
+				coinDict = addCoins
 			}
 
-			if coinChange.CoinAction == addAction {
-				addCoins[identifier] = operation
-				continue
+			if _, ok := coinDict[identifier]; ok {
+				return fmt.Errorf("duplicate coin found %s", identifier)
 			}
 
-			removeCoins[identifier] = operation
+			coinDict[identifier] = operation
 		}
 	}
 
