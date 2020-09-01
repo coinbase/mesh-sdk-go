@@ -4,7 +4,7 @@ go 1.13
 
 require (
 	github.com/DataDog/zstd v1.4.5
-	github.com/btcsuite/btcd v0.20.1-beta
+	github.com/btcsuite/btcd v0.21.0-beta
 	github.com/cenkalti/backoff v2.2.1+incompatible
 	github.com/dgraph-io/badger/v2 v2.2007.1
 	github.com/dgraph-io/ristretto v0.0.3 // indirect
