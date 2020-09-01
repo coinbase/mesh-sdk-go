@@ -40,7 +40,7 @@ func main() {
 	// Behind the scenes this makes a call to get the
 	// network status and uses the response to inform
 	// the asserter what are valid responses.
-	primaryNetwork, networkStatus, err := newFetcher.InitializeAsserter(ctx)
+	primaryNetwork, networkStatus, err := newFetcher.InitializeAsserter(ctx, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
