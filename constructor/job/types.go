@@ -12,21 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package executor
+package job
 
 import (
-	"context"
-	"time"
-
 	"github.com/coinbase/rosetta-sdk-go/keys"
-	"github.com/coinbase/rosetta-sdk-go/storage"
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
 const (
-	// BalanceWaitTime is the amount of time
-	// we wait between balance checks.
-	BalanceWaitTime = 5 * time.Second
+	// ReservedWorkflowConcurrency is the expected concurrency
+	// of the create account and request funds scenario.
+	ReservedWorkflowConcurrency = 1
 )
 
 // ReservedVariable is a reserved variable
@@ -100,14 +96,18 @@ const (
 	// It is used to generate account names for blockchains that require
 	// on-chain origination.
 	RandomString ActionType = "random_string"
+
+	// RandomNumber generates a random number in some range [min, max).
+	// It is used to generate random transaction amounts.
+	RandomNumber ActionType = "random_number"
 )
 
 // Action is a step of computation that
 // where the result is saved to OutputPath.
 type Action struct {
-	Input      string
-	Type       ActionType
-	OutputPath string
+	Input      string     `json:"input"`
+	Type       ActionType `json:"type"`
+	OutputPath string     `json:"output_path,omitempty"`
 }
 
 // GenerateKeyInput is the input for GenerateKey.
@@ -168,10 +168,6 @@ type FindBalanceInput struct {
 	// orchestrating staking transactions.
 	SubAccount *types.SubAccountIdentifier `json:"sub_account,omitempty"`
 
-	// Wait will cause this action to block until an acceptable
-	// balance is found. This is useful when waiting for initial funds.
-	Wait bool `json:"wait,omitempty"`
-
 	// MinimumBalance is the minimum required balance that must be found.
 	MinimumBalance *types.Amount `json:"minimum_balance,omitempty"`
 
@@ -183,11 +179,16 @@ type FindBalanceInput struct {
 	// for avoiding using the same Coin twice.
 	NotCoins []*types.CoinIdentifier `json:"not_coins,omitempty"`
 
-	// Create is used to determine if we should create a new address using
+	// CreateLimit is used to determine if we should create a new address using
 	// the CreateAccount Workflow. This will only occur if the
 	// total number of addresses is under some pre-defined limit.
 	// If the value is <= 0, we will not attempt to create.
-	Create int `json:"create,omitempty"`
+	CreateLimit int `json:"create_limit,omitempty"`
+
+	// CreateProbability is used to determine if a new account should be
+	// created with some probability [0, 100). This will override the search
+	// for any valid accounts and instead return ErrCreateAccount.
+	CreateProbability int `json:"create_probability,omitempty"`
 }
 
 // FindBalanceOutput is returned by FindBalance.
@@ -201,6 +202,13 @@ type FindBalanceOutput struct {
 
 	// Coin is populated if RequireCoin is true.
 	Coin *types.CoinIdentifier `json:"coin,omitempty"`
+}
+
+// RandomNumberInput is used to generate a random
+// number in the range [minimum, maximum).
+type RandomNumberInput struct {
+	Minimum string `json:"minimum"`
+	Maximum string `json:"maximum"`
 }
 
 // Scenario is a collection of Actions with a specific
@@ -218,8 +226,8 @@ type FindBalanceOutput struct {
 // variable called "transaction". This can be used
 // in scenarios following the execution of this one.
 type Scenario struct {
-	Name    string
-	Actions []*Action
+	Name    string    `json:"name"`
+	Actions []*Action `json:"actions"`
 }
 
 // ReservedWorkflow is a Workflow reserved for special circumstances.
@@ -243,33 +251,33 @@ const (
 // Workflow is a collection of scenarios to run (i.e.
 // transactions to broadcast) with some shared state.
 type Workflow struct {
-	Name string
+	Name string `json:"name"`
 
 	// Concurrency is the number of workflows of a particular
 	// kind to execute at once. For example, you may not want
 	// to process concurrent workflows of some staking operations
 	// that take days to play out.
-	Concurrency int
-	Scenarios   []*Scenario
+	Concurrency int         `json:"concurrency"`
+	Scenarios   []*Scenario `json:"scenarios"`
 }
 
-// JobStatus is status of a Job.
-type JobStatus string
+// Status is status of a Job.
+type Status string
 
 const (
 	// Ready means that a Job is ready to process.
-	Ready JobStatus = "ready"
+	Ready Status = "ready"
 
 	// Broadcasting means that the intent of the last
 	// scenario is broadcasting.
-	Broadcasting JobStatus = "broadcasting"
+	Broadcasting Status = "broadcasting"
 
 	// Failed means that Broadcasting failed.
-	Failed JobStatus = "failed"
+	Failed Status = "failed"
 
 	// Completed means that all scenarios were
 	// completed successfully.
-	Completed JobStatus = "completed"
+	Completed Status = "completed"
 )
 
 // Job is an instantion of a Workflow.
@@ -278,18 +286,18 @@ type Job struct {
 	// when a Job is stored in JobStorage for the
 	// first time. When executing the first scenario
 	// in a Job, this will be empty.
-	Identifier string
-	State      string
-	Index      int
-	Status     JobStatus
+	Identifier string `json:"identifier"`
+	State      string `json:"state"`
+	Index      int    `json:"index"`
+	Status     Status `json:"status"`
 
 	// Workflow is the name of the workflow being executed.
-	Workflow string
+	Workflow string `json:"workflow"`
 
 	// Scenarios are copied into each context in case
 	// a configuration file changes that could corrupt
 	// in-process flows.
-	Scenarios []*Scenario
+	Scenarios []*Scenario `json:"scenarios"`
 }
 
 // Broadcast contains information needed to create
@@ -300,57 +308,4 @@ type Broadcast struct {
 	Intent            []*types.Operation
 	Metadata          map[string]interface{}
 	ConfirmationDepth int64
-}
-
-// Helper is used by the worker to process Jobs.
-type Helper interface {
-	// StoreKey is called to persist an
-	// address + KeyPair.
-	StoreKey(
-		context.Context,
-		storage.DatabaseTransaction,
-		string,
-		*keys.KeyPair,
-	) error
-
-	// AllAddresses returns a slice of all known addresses.
-	AllAddresses(
-		context.Context,
-		storage.DatabaseTransaction,
-	) ([]string, error)
-
-	// LockedAccounts is a slice of all addresses currently sending or receiving
-	// funds.
-	LockedAddresses(
-		context.Context,
-		storage.DatabaseTransaction,
-	) ([]string, error)
-
-	// Balance returns the balance
-	// for a provided address.
-	Balance(
-		context.Context,
-		storage.DatabaseTransaction,
-		*types.AccountIdentifier,
-	) ([]*types.Amount, error)
-
-	// Coins returns all *types.Coin owned by an address.
-	Coins(
-		context.Context,
-		storage.DatabaseTransaction,
-		*types.AccountIdentifier,
-	) ([]*types.Coin, error)
-
-	// Derive returns a new address for a provided publicKey.
-	Derive(
-		context.Context,
-		*types.NetworkIdentifier,
-		*types.PublicKey,
-		map[string]interface{},
-	) (string, map[string]interface{}, error)
-}
-
-// Worker processes jobs.
-type Worker struct {
-	helper Helper
 }
