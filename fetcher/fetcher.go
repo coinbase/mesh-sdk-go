@@ -55,6 +55,11 @@ var (
 	// networks available for syncing.
 	ErrNoNetworks = errors.New("no networks available")
 
+	// ErrNetworkMissing is returned during asserter initialization
+	// when the provided *types.NetworkIdentifier is not in the
+	// *types.NetworkListResponse.
+	ErrNetworkMissing = errors.New("network missing")
+
 	// ErrRequestFailed is returned when a request fails.
 	ErrRequestFailed = errors.New("request failed")
 
@@ -121,14 +126,16 @@ func New(
 // by fetching the NetworkStatus and NetworkOptions
 // from a Rosetta server.
 //
-// If there is more than one network supported by the
-// Rosetta server, the first network returned by NetworkList
-// is used as the default network.
+// If a *types.NetworkIdentifier is provided,
+// it will be used to fetch status and options. Not providing
+// a *types.NetworkIdentifier will result in the first
+// network returned by NetworkList to be used.
 //
 // This method should be called before making any
 // validated client requests.
 func (f *Fetcher) InitializeAsserter(
 	ctx context.Context,
+	networkIdentifier *types.NetworkIdentifier,
 ) (
 	*types.NetworkIdentifier,
 	*types.NetworkStatusResponse,
@@ -147,7 +154,16 @@ func (f *Fetcher) InitializeAsserter(
 	if len(networkList.NetworkIdentifiers) == 0 {
 		return nil, nil, &Error{Err: ErrNoNetworks}
 	}
+
 	primaryNetwork := networkList.NetworkIdentifiers[0]
+	if networkIdentifier != nil {
+		exists, _ := CheckNetworkListForNetwork(networkList, networkIdentifier)
+		if !exists {
+			return nil, nil, &Error{Err: ErrNetworkMissing}
+		}
+
+		primaryNetwork = networkIdentifier
+	}
 
 	// Attempt to fetch network status
 	networkStatus, err := f.NetworkStatusRetry(
