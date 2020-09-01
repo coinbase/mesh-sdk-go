@@ -47,7 +47,7 @@ type Helper interface {
 	) ([]string, error)
 
 	// Balance returns the balance
-	// for a provided address.
+	// for a provided address and currency.
 	Balance(
 		context.Context,
 		storage.DatabaseTransaction,
