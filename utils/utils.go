@@ -189,24 +189,17 @@ type FetcherHelper interface {
 func CheckNetworkSupported(
 	ctx context.Context,
 	networkIdentifier *types.NetworkIdentifier,
-	fetcher FetcherHelper,
+	helper FetcherHelper,
 ) (*types.NetworkStatusResponse, error) {
-	networks, fetchErr := fetcher.NetworkList(ctx, nil)
+	networks, fetchErr := helper.NetworkList(ctx, nil)
 	if fetchErr != nil {
 		return nil, fmt.Errorf("%w: unable to fetch network list", fetchErr.Err)
 	}
 
-	networkMatched := false
-	supportedNetworks := []*types.NetworkIdentifier{}
-	for _, availableNetwork := range networks.NetworkIdentifiers {
-		if types.Hash(availableNetwork) == types.Hash(networkIdentifier) {
-			networkMatched = true
-			break
-		}
-
-		supportedNetworks = append(supportedNetworks, availableNetwork)
-	}
-
+	networkMatched, supportedNetworks := fetcher.CheckNetworkListForNetwork(
+		networks,
+		networkIdentifier,
+	)
 	if !networkMatched {
 		color.Yellow("Supported networks: %s", types.PrettyPrintStruct(supportedNetworks))
 		return nil, fmt.Errorf(
@@ -216,7 +209,7 @@ func CheckNetworkSupported(
 		)
 	}
 
-	status, fetchErr := fetcher.NetworkStatusRetry(
+	status, fetchErr := helper.NetworkStatusRetry(
 		ctx,
 		networkIdentifier,
 		nil,

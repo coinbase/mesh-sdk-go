@@ -74,3 +74,24 @@ func checkError(fetcherErr *Error, err error) bool {
 	}
 	return errors.Is(fetcherErr.Err, err)
 }
+
+// CheckNetworkListForNetwork returns a boolean
+// indicating if a *types.NetworkIdentifier is present
+// in the list of supported networks.
+func CheckNetworkListForNetwork(
+	networkList *types.NetworkListResponse,
+	networkIdentifier *types.NetworkIdentifier,
+) (bool, []*types.NetworkIdentifier) {
+	networkMatched := false
+	supportedNetworks := []*types.NetworkIdentifier{}
+	for _, availableNetwork := range networkList.NetworkIdentifiers {
+		if types.Hash(availableNetwork) == types.Hash(networkIdentifier) {
+			networkMatched = true
+			break
+		}
+
+		supportedNetworks = append(supportedNetworks, availableNetwork)
+	}
+
+	return networkMatched, supportedNetworks
+}
