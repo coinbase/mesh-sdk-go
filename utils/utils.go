@@ -196,7 +196,10 @@ func CheckNetworkSupported(
 		return nil, fmt.Errorf("%w: unable to fetch network list", fetchErr.Err)
 	}
 
-	networkMatched, supportedNetworks := fetcher.CheckNetworkListForNetwork(networks, networkIdentifier)
+	networkMatched, supportedNetworks := fetcher.CheckNetworkListForNetwork(
+		networks,
+		networkIdentifier,
+	)
 	if !networkMatched {
 		color.Yellow("Supported networks: %s", types.PrettyPrintStruct(supportedNetworks))
 		return nil, fmt.Errorf(
