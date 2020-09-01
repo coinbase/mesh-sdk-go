@@ -44,6 +44,11 @@ const (
 	// DefaultValueLogFileSize is 100 MB.
 	DefaultValueLogFileSize = 100 << 20
 
+	// PerformanceMaxTableSize is 256 MB. The larger
+	// this value is, the larger database transactions
+	// storage can handle.
+	PerformanceMaxTableSize = 256 << 20
+
 	bytesInMb = 1000000
 
 	logModulo = 5000
@@ -116,6 +121,7 @@ func lowMemoryOptions(dir string) badger.Options {
 func performanceOptions(dir string) badger.Options {
 	opts := badger.DefaultOptions(dir)
 	opts.Logger = nil
+	opts.MaxTableSize = PerformanceMaxTableSize
 
 	return opts
 }
