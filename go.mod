@@ -13,7 +13,7 @@ require (
 	github.com/fatih/color v1.9.0
 	github.com/golang/protobuf v1.4.2 // indirect
 	github.com/google/addlicense v0.0.0-20200817051935-6f4cd4aacc89 // indirect
-	github.com/gorilla/mux v1.7.4
+	github.com/gorilla/mux v1.8.0
 	github.com/kr/pretty v0.2.0 // indirect
 	github.com/lucasjones/reggen v0.0.0-20180717132126-cdb49ff09d77
 	github.com/mattn/go-colorable v0.1.7 // indirect
