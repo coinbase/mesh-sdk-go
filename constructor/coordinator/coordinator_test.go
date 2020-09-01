@@ -878,19 +878,19 @@ func TestProcess_Failed(t *testing.T) {
 		},
 		nil,
 	).Once()
-	var job4 job.Job
+	var j job.Job
 	jobStorage.On(
 		"Update",
 		ctx,
 		dbTx,
 		mock.Anything,
 	).Return(
-		"job4",
+		"job",
 		nil,
 	).Run(
 		func(args mock.Arguments) {
-			job4 = *args.Get(2).(*job.Job)
-			job4.Identifier = "job4"
+			j = *args.Get(2).(*job.Job)
+			j.Identifier = "job"
 		},
 	).Once()
 
@@ -1025,14 +1025,14 @@ func TestProcess_Failed(t *testing.T) {
 		"Broadcast",
 		ctx,
 		dbTx,
-		"job4",
+		"job",
 		network,
 		ops,
 		txIdentifier,
 		networkTx,
 		int64(1),
 	).Return(nil).Once()
-	handler.On("TransactionCreated", ctx, "job4", txIdentifier).Return(nil).Once()
+	handler.On("TransactionCreated", ctx, "job", txIdentifier).Return(nil).Once()
 	helper.On("BroadcastAll", ctx).Return(nil).Once()
 
 	// Wait for transfer to complete
@@ -1040,11 +1040,11 @@ func TestProcess_Failed(t *testing.T) {
 	dbTx2 := db.NewDatabaseTransaction(ctx, false)
 	helper.On("DatabaseTransaction", ctx).Return(dbTx2).Once()
 	jobStorage.On("Ready", ctx, dbTx2).Return([]*job.Job{}, nil).Once()
-	jobStorage.On("Processing", ctx, dbTx2, "transfer").Return([]*job.Job{&job4}, nil).Once()
+	jobStorage.On("Processing", ctx, dbTx2, "transfer").Return([]*job.Job{&j}, nil).Once()
 
 	markConfirmed := make(chan struct{})
 	jobStorage.On("Broadcasting", ctx, dbTx2).Return([]*job.Job{
-		&job4,
+		&j,
 	}, nil).Run(func(args mock.Arguments) {
 		close(markConfirmed)
 	}).Once()
@@ -1052,23 +1052,23 @@ func TestProcess_Failed(t *testing.T) {
 	go func() {
 		<-markConfirmed
 		dbTx3 := db.NewDatabaseTransaction(ctx, false)
-		jobStorage.On("Get", ctx, dbTx3, "job4").Return(&job4, nil).Once()
+		jobStorage.On("Get", ctx, dbTx3, "job").Return(&j, nil).Once()
 		jobStorage.On(
 			"Update",
 			ctx,
 			dbTx3,
 			mock.Anything,
 		).Run(func(args mock.Arguments) {
-			job4 = *args.Get(2).(*job.Job)
-			job4.Identifier = "job4"
+			j = *args.Get(2).(*job.Job)
+			j.Identifier = "job"
 			cancel()
 		}).Return(
-			"job4",
+			"job",
 			nil,
 		)
 
-		// Process second step of job4
-		err = c.BroadcastComplete(ctx, dbTx3, "job4", nil)
+		// Process second step of job
+		err = c.BroadcastComplete(ctx, dbTx3, "job", nil)
 		assert.NoError(t, err)
 	}()
 
