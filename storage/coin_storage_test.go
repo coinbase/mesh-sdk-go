@@ -301,6 +301,43 @@ var (
 		},
 	}
 
+	coinBlockRepeat = &types.Block{
+		Transactions: []*types.Transaction{
+			{
+				Operations: []*types.Operation{
+					{
+						Account: account,
+						Status:  successStatus,
+						Amount: &types.Amount{
+							Value:    "10",
+							Currency: currency,
+						},
+						CoinChange: &types.CoinChange{
+							CoinAction: types.CoinCreated,
+							CoinIdentifier: &types.CoinIdentifier{
+								Identifier: "coin_repeat",
+							},
+						},
+					},
+					{
+						Account: account,
+						Status:  successStatus,
+						Amount: &types.Amount{
+							Value:    "20",
+							Currency: currency,
+						},
+						CoinChange: &types.CoinChange{
+							CoinAction: types.CoinCreated,
+							CoinIdentifier: &types.CoinIdentifier{
+								Identifier: "coin_repeat",
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
 	accBalance1 = &utils.AccountBalance{
 		Account: &types.AccountIdentifier{
 			Address: "acc1",
@@ -455,6 +492,19 @@ func TestCoinStorage(t *testing.T) {
 	t.Run("add duplicate coin", func(t *testing.T) {
 		tx := c.db.NewDatabaseTransaction(ctx, true)
 		commitFunc, err := c.AddingBlock(ctx, coinBlock, tx)
+		assert.Nil(t, commitFunc)
+		assert.Error(t, err)
+		tx.Discard(ctx)
+
+		coins, block, err := c.GetCoins(ctx, account)
+		assert.NoError(t, err)
+		assert.Equal(t, accountCoins, coins)
+		assert.Equal(t, blockIdentifier, block)
+	})
+
+	t.Run("add duplicate coin in same block", func(t *testing.T) {
+		tx := c.db.NewDatabaseTransaction(ctx, true)
+		commitFunc, err := c.AddingBlock(ctx, coinBlockRepeat, tx)
 		assert.Nil(t, commitFunc)
 		assert.Error(t, err)
 		tx.Discard(ctx)
