@@ -16,7 +16,6 @@ package keys
 
 import (
 	"crypto/ed25519"
-	"errors"
 	"fmt"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
@@ -46,11 +45,21 @@ func (s *SignerEdwards25519) Sign(
 	}
 
 	if !(payload.SignatureType == types.Ed25519 || payload.SignatureType == "") {
-		return nil, fmt.Errorf("sign: payload signature type is not %v", types.Ed25519)
+		return nil, fmt.Errorf(
+			"%w: expected %v but got %v",
+			ErrSignUnsupportedPayloadSignatureType,
+			types.Ed25519,
+			payload.SignatureType,
+		)
 	}
 
 	if sigType != types.Ed25519 {
-		return nil, fmt.Errorf("sign: signature type is not %v", types.Ed25519)
+		return nil, fmt.Errorf(
+			"%w: expected %v but got %v",
+			ErrSignUnsupportedSigType,
+			types.Ed25519,
+			sigType,
+		)
 	}
 
 	privKeyBytes := s.KeyPair.PrivateKey
@@ -69,7 +78,12 @@ func (s *SignerEdwards25519) Sign(
 // the SigningPayload, and the PublicKey of the Signature.
 func (s *SignerEdwards25519) Verify(signature *types.Signature) error {
 	if signature.SignatureType != types.Ed25519 {
-		return fmt.Errorf("verify: payload signature type is not %v", types.Ed25519)
+		return fmt.Errorf(
+			"%w: expected %v but got %v",
+			ErrVerifyUnsupportedPayloadSignatureType,
+			types.Ed25519,
+			signature.SignatureType,
+		)
 	}
 
 	pubKey := signature.PublicKey.Bytes
@@ -82,7 +96,7 @@ func (s *SignerEdwards25519) Verify(signature *types.Signature) error {
 
 	verify := ed25519.Verify(pubKey, message, sig)
 	if !verify {
-		return errors.New("verify: verify returned false")
+		return ErrVerifyFailed
 	}
 
 	return nil

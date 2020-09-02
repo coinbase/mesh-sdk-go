@@ -219,14 +219,14 @@ var (
 	}
 
 	accountCoins = []*types.Coin{
-		&types.Coin{
+		{
 			CoinIdentifier: &types.CoinIdentifier{Identifier: "coin1"},
 			Amount: &types.Amount{
 				Value:    "30",
 				Currency: currency,
 			},
 		},
-		&types.Coin{
+		{
 			CoinIdentifier: &types.CoinIdentifier{Identifier: "coin2"},
 			Amount: &types.Amount{
 				Value:    "30",

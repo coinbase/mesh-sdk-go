@@ -43,17 +43,17 @@ func TestSignEdwards25519(t *testing.T) {
 	type payloadTest struct {
 		payload *types.SigningPayload
 		err     bool
-		errMsg  string
+		errMsg  error
 	}
 
 	var payloadTests = []payloadTest{
-		{mockPayload(make([]byte, 32), types.Ed25519), false, ""},
-		{mockPayload(make([]byte, 32), ""), false, ""},
-		{mockPayload(make([]byte, 33), types.Ecdsa), true, "payload signature type is not ed25519"},
+		{mockPayload(make([]byte, 32), types.Ed25519), false, nil},
+		{mockPayload(make([]byte, 32), ""), false, nil},
+		{mockPayload(make([]byte, 33), types.Ecdsa), true, ErrSignUnsupportedPayloadSignatureType},
 		{
 			mockPayload(make([]byte, 34), types.EcdsaRecovery),
 			true,
-			"payload signature type is not ed25519",
+			ErrSignUnsupportedPayloadSignatureType,
 		},
 	}
 
@@ -64,7 +64,7 @@ func TestSignEdwards25519(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Len(t, signature.Bytes, 64)
 		} else {
-			assert.Contains(t, err.Error(), test.errMsg)
+			assert.Contains(t, err.Error(), test.errMsg.Error())
 		}
 	}
 }
@@ -92,7 +92,7 @@ func mockSignature(
 func TestVerifyEdwards25519(t *testing.T) {
 	type signatureTest struct {
 		signature *types.Signature
-		errMsg    string
+		errMsg    error
 	}
 
 	payload := &types.SigningPayload{
@@ -108,22 +108,22 @@ func TestVerifyEdwards25519(t *testing.T) {
 			types.Ecdsa,
 			signerEdwards25519.PublicKey(),
 			make([]byte, 32),
-			make([]byte, 32)), "payload signature type is not ed25519"},
+			make([]byte, 32)), ErrVerifyUnsupportedPayloadSignatureType},
 		{mockSignature(
 			types.EcdsaRecovery,
 			signerEdwards25519.PublicKey(),
 			make([]byte, 32),
-			make([]byte, 32)), "payload signature type is not ed25519"},
+			make([]byte, 32)), ErrVerifyUnsupportedPayloadSignatureType},
 		{mockSignature(
 			types.Ed25519,
 			signerEdwards25519.PublicKey(),
 			make([]byte, 40),
-			testSignature.Bytes), "verify returned false"},
+			testSignature.Bytes), ErrVerifyFailed},
 	}
 
 	for _, test := range signatureTests {
 		err := signerEdwards25519.Verify(test.signature)
-		assert.Contains(t, err.Error(), test.errMsg)
+		assert.Contains(t, err.Error(), test.errMsg.Error())
 	}
 
 	goodSignature := mockSignature(
