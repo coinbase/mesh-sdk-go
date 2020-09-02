@@ -18,9 +18,12 @@ package types
 
 // ConstructionPayloadsRequest ConstructionPayloadsRequest is the request to
 // `/construction/payloads`. It contains the network, a slice of operations, and arbitrary metadata
-// that was returned by the call to `/construction/metadata`.
+// that was returned by the call to `/construction/metadata`. Optionally, the request can also
+// include an array of PublicKeys associated with the AccountIdentifiers returned in
+// ConstructionPreprocessResponse.
 type ConstructionPayloadsRequest struct {
 	NetworkIdentifier *NetworkIdentifier     `json:"network_identifier"`
 	Operations        []*Operation           `json:"operations"`
 	Metadata          map[string]interface{} `json:"metadata,omitempty"`
+	PublicKeys        []*PublicKey           `json:"public_keys,omitempty"`
 }
