@@ -52,7 +52,7 @@ func TestSignSecp256k1(t *testing.T) {
 			types.Ed25519,
 			64,
 			true,
-			ErrSignUnsupportedSigType,
+			ErrSignUnsupportedSignatureType,
 		},
 	}
 

@@ -24,7 +24,7 @@ var (
 	ErrSignUnsupportedPayloadSignatureType = errors.New(
 		"sign: unexpected payload.SignatureType while signing",
 	)
-	ErrSignUnsupportedSigType = errors.New(
+	ErrSignUnsupportedSignatureType = errors.New(
 		"sign: unexpected Signature type while signing",
 	)
 	ErrSignFailed = errors.New("sign: unable to sign. %w")
@@ -37,3 +37,25 @@ var (
 	)
 	ErrVerifyFailed = errors.New("verify: verify returned false")
 )
+
+// ErrKeys takes an error as an argument and returns
+// whether or not the error is one thrown by the keys package
+func ErrKeys(err error) (bool) {
+	keyErrors := []error{
+		ErrPrivKeyUndecodable,
+		ErrPrivKeyLengthInvalid,
+		ErrSignUnsupportedPayloadSignatureType,
+		ErrSignUnsupportedSignatureType,
+		ErrSignFailed,
+		ErrVerifyUnsupportedPayloadSignatureType,
+		ErrVerifyUnsupportedSignatureType,
+		ErrVerifyFailed,
+	}
+
+	for _, k := range keyErrors {
+		if errors.Is(k, err) {
+			return true
+		}
+	}
+	return false
+}

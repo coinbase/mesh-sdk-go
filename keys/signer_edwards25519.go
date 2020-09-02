@@ -56,7 +56,7 @@ func (s *SignerEdwards25519) Sign(
 	if sigType != types.Ed25519 {
 		return nil, fmt.Errorf(
 			"%w: expected %v but got %v",
-			ErrSignUnsupportedSigType,
+			ErrSignUnsupportedSignatureType,
 			types.Ed25519,
 			sigType,
 		)
