@@ -21,33 +21,37 @@ import (
 	"log"
 	"time"
 
-	"github.com/coinbase/rosetta-sdk-go/constructor/executor"
+	"github.com/coinbase/rosetta-sdk-go/constructor/job"
+	"github.com/coinbase/rosetta-sdk-go/constructor/worker"
 	"github.com/coinbase/rosetta-sdk-go/parser"
 	"github.com/coinbase/rosetta-sdk-go/storage"
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/coinbase/rosetta-sdk-go/utils"
+
+	"github.com/fatih/color"
 )
 
-// NewCoordinator parses a slice of input Workflows
+// New parses a slice of input Workflows
 // and creates a new *Coordinator.
-func NewCoordinator(
+func New(
 	storage JobStorage,
 	helper Helper,
+	handler Handler,
 	parser *parser.Parser,
-	inputWorkflows []*executor.Workflow,
+	inputWorkflows []*job.Workflow,
 ) (*Coordinator, error) {
 	workflowNames := make([]string, len(inputWorkflows))
-	workflows := []*executor.Workflow{}
-	var createAccountWorkflow *executor.Workflow
-	var requestFundsWorkflow *executor.Workflow
+	workflows := []*job.Workflow{}
+	var createAccountWorkflow *job.Workflow
+	var requestFundsWorkflow *job.Workflow
 	for i, workflow := range inputWorkflows {
 		if utils.ContainsString(workflowNames, workflow.Name) {
 			return nil, ErrDuplicateWorkflows
 		}
 		workflowNames[i] = workflow.Name
 
-		if workflow.Name == string(executor.CreateAccount) {
-			if workflow.Concurrency != ReservedWorkflowConcurrency {
+		if workflow.Name == string(job.CreateAccount) {
+			if workflow.Concurrency != job.ReservedWorkflowConcurrency {
 				return nil, ErrIncorrectConcurrency
 			}
 
@@ -55,8 +59,8 @@ func NewCoordinator(
 			continue
 		}
 
-		if workflow.Name == string(executor.RequestFunds) {
-			if workflow.Concurrency != ReservedWorkflowConcurrency {
+		if workflow.Name == string(job.RequestFunds) {
+			if workflow.Concurrency != job.ReservedWorkflowConcurrency {
 				return nil, ErrIncorrectConcurrency
 			}
 
@@ -67,9 +71,19 @@ func NewCoordinator(
 		workflows = append(workflows, workflow)
 	}
 
+	if createAccountWorkflow == nil {
+		return nil, ErrCreateAccountWorkflowMissing
+	}
+
+	if requestFundsWorkflow == nil {
+		return nil, ErrRequestFundsWorkflowMissing
+	}
+
 	return &Coordinator{
 		storage:               storage,
 		helper:                helper,
+		handler:               handler,
+		worker:                worker.New(helper),
 		parser:                parser,
 		attemptedJobs:         []string{},
 		attemptedWorkflows:    []string{},
@@ -83,7 +97,7 @@ func NewCoordinator(
 func (c *Coordinator) findJob(
 	ctx context.Context,
 	dbTx storage.DatabaseTransaction,
-) (*executor.Job, error) {
+) (*job.Job, error) {
 	// Look for any jobs ready for processing. If one is found,
 	// we return that as the next job to process.
 	ready, err := c.storage.Ready(ctx, dbTx)
@@ -117,11 +131,11 @@ func (c *Coordinator) findJob(
 			)
 		}
 
-		if processing >= workflow.Concurrency {
+		if len(processing) >= workflow.Concurrency {
 			continue
 		}
 
-		return executor.NewJob(workflow), nil
+		return job.New(workflow), nil
 	}
 
 	// Check if broadcasts, then ErrNoAvailableJobs
@@ -138,9 +152,10 @@ func (c *Coordinator) findJob(
 		return nil, ErrNoAvailableJobs
 	}
 
-	// Check if ErrCreateAccount, then create account if exists
+	// Check if ErrCreateAccount, then create account if less
+	// processing CreateAccount jobs than ReservedWorkflowConcurrency.
 	if c.seenErrCreateAccount {
-		processing, err := c.storage.Processing(ctx, dbTx, string(executor.CreateAccount))
+		processing, err := c.storage.Processing(ctx, dbTx, string(job.CreateAccount))
 		if err != nil {
 			return nil, fmt.Errorf(
 				"%w: %s",
@@ -149,23 +164,14 @@ func (c *Coordinator) findJob(
 			)
 		}
 
-		if processing >= ReservedWorkflowConcurrency {
+		if len(processing) >= job.ReservedWorkflowConcurrency {
 			return nil, ErrNoAvailableJobs
 		}
 
-		if c.createAccountWorkflow != nil {
-			return executor.NewJob(c.createAccountWorkflow), nil
-		}
-
-		log.Println("Create account workflow is missing!")
+		return job.New(c.createAccountWorkflow), nil
 	}
 
-	// Return request funds (if defined, else error)
-	if c.requestFundsWorkflow == nil {
-		return nil, ErrRequestFundsWorkflowMissing
-	}
-
-	processing, err := c.storage.Processing(ctx, dbTx, string(executor.RequestFunds))
+	processing, err := c.storage.Processing(ctx, dbTx, string(job.RequestFunds))
 	if err != nil {
 		return nil, fmt.Errorf(
 			"%w: %s",
@@ -174,17 +180,17 @@ func (c *Coordinator) findJob(
 		)
 	}
 
-	if processing >= ReservedWorkflowConcurrency {
+	if len(processing) >= job.ReservedWorkflowConcurrency {
 		return nil, ErrNoAvailableJobs
 	}
 
-	return executor.NewJob(c.requestFundsWorkflow), nil
+	return job.New(c.requestFundsWorkflow), nil
 }
 
 // createTransaction constructs and signs a transaction with the provided intent.
 func (c *Coordinator) createTransaction(
 	ctx context.Context,
-	broadcast *executor.Broadcast,
+	broadcast *job.Broadcast,
 ) (*types.TransactionIdentifier, string, error) {
 	metadataRequest, err := c.helper.Preprocess(
 		ctx,
@@ -233,6 +239,11 @@ func (c *Coordinator) createTransaction(
 	}
 
 	if err := c.parser.ExpectedOperations(broadcast.Intent, parsedOps, false, false); err != nil {
+		log.Printf(
+			"expected %s, observed %s\n",
+			types.PrintStruct(broadcast.Intent),
+			types.PrintStruct(parsedOps),
+		)
 		return nil, "", fmt.Errorf("%w: unsigned parsed ops do not match intent", err)
 	}
 
@@ -262,6 +273,11 @@ func (c *Coordinator) createTransaction(
 	}
 
 	if err := c.parser.ExpectedOperations(broadcast.Intent, signedParsedOps, false, false); err != nil {
+		log.Printf(
+			"expected %s, observed %s\n",
+			types.PrintStruct(broadcast.Intent),
+			types.PrintStruct(signedParsedOps),
+		)
 		return nil, "", fmt.Errorf("%w: signed parsed ops do not match intent", err)
 	}
 
@@ -290,7 +306,7 @@ func (c *Coordinator) BroadcastComplete(
 	jobIdentifier string,
 	transaction *types.Transaction,
 ) error {
-	job, err := c.storage.Get(ctx, dbTx, jobIdentifier)
+	j, err := c.storage.Get(ctx, dbTx, jobIdentifier)
 	if err != nil {
 		return fmt.Errorf(
 			"%w: %s",
@@ -299,19 +315,66 @@ func (c *Coordinator) BroadcastComplete(
 		)
 	}
 
-	if err := job.BroadcastComplete(ctx, transaction); err != nil {
+	if err := j.BroadcastComplete(ctx, transaction); err != nil {
 		return fmt.Errorf("%w: unable to mark broadcast complete", err)
 	}
 
-	if _, err := c.storage.Update(ctx, dbTx, job); err != nil {
+	if _, err := c.storage.Update(ctx, dbTx, j); err != nil {
 		return fmt.Errorf("%w: unable to update job", err)
 	}
 
-	if err := dbTx.Commit(ctx); err != nil {
-		return fmt.Errorf("%w: unable to commit job update", err)
+	// We are optimistically resetting all vars here
+	// although the update could get rolled back. In the worst
+	// case, we will attempt to process a few extra jobs
+	// that are unsatisfiable.
+	c.resetVars()
+
+	// If the transaction is nil, the broadcast failed.
+	if transaction == nil {
+		color.Red(
+			"broadcast failed for job \"%s (%s)\"\n",
+			j.Workflow,
+			jobIdentifier,
+		)
+
+		return nil
 	}
 
-	log.Printf(`broadcast complete for "%s"`, jobIdentifier)
+	statusString := fmt.Sprintf(
+		"broadcast complete for job \"%s (%s)\" with transaction hash \"%s\"\n",
+		j.Workflow,
+		jobIdentifier,
+		transaction.TransactionIdentifier.Hash,
+	)
+
+	// To calculate balance changes, we must create a fake block that
+	// only contains the transaction we are completing.
+	//
+	// TODO: modify parser to calculate balance changes for a single
+	// transaction.
+	balanceChanges, err := c.parser.BalanceChanges(ctx, &types.Block{
+		Transactions: []*types.Transaction{
+			transaction,
+		},
+	}, false)
+	if err != nil {
+		return fmt.Errorf("%w: unable to calculate balance changes", err)
+	}
+
+	for _, balanceChange := range balanceChanges {
+		parsedDiff, err := types.BigInt(balanceChange.Difference)
+		if err != nil {
+			return fmt.Errorf("%w: unable to parse Difference", err)
+		}
+
+		statusString = fmt.Sprintf(
+			"%s%s -> %s\n",
+			statusString,
+			types.PrintStruct(balanceChange.Account),
+			utils.PrettyAmount(parsedDiff, balanceChange.Currency),
+		)
+	}
+	color.Magenta(statusString)
 
 	return nil
 }
@@ -322,12 +385,31 @@ func (c *Coordinator) resetVars() {
 	c.seenErrCreateAccount = false
 }
 
-func (c *Coordinator) addToUnprocessed(job *executor.Job) {
+func (c *Coordinator) addToUnprocessed(job *job.Job) {
 	if len(job.Identifier) == 0 {
 		c.attemptedWorkflows = append(c.attemptedWorkflows, job.Workflow)
 		return
 	}
 	c.attemptedJobs = append(c.attemptedJobs, job.Identifier)
+}
+
+func (c *Coordinator) invokeHandlersAndBroadcast(
+	ctx context.Context,
+	jobIdentifier string,
+	transactionCreated *types.TransactionIdentifier,
+) error {
+	if transactionCreated != nil {
+		if err := c.handler.TransactionCreated(ctx, jobIdentifier, transactionCreated); err != nil {
+			return fmt.Errorf("%w: unable to handle transaction created", err)
+		}
+	}
+
+	// Run Broadcast all after transaction committed.
+	if err := c.helper.BroadcastAll(ctx); err != nil {
+		return fmt.Errorf("%w: unable to broadcast all transactions", err)
+	}
+
+	return nil
 }
 
 // Process creates and executes jobs
@@ -351,35 +433,37 @@ func (c *Coordinator) Process(
 		// If job update fails, all associated state changes are rolled
 		// back.
 		dbTx := c.helper.DatabaseTransaction(ctx)
-		defer dbTx.Discard(ctx)
 
 		// Attempt to find a Job to process.
-		job, err := c.findJob(ctx, dbTx)
+		j, err := c.findJob(ctx, dbTx)
 		if errors.Is(err, ErrNoAvailableJobs) {
 			log.Println("waiting for available jobs...")
 
-			time.Sleep(NoJobsWaitTime)
 			c.resetVars()
+			dbTx.Discard(ctx)
+			time.Sleep(NoJobsWaitTime)
 			continue
 		}
 		if err != nil {
 			return fmt.Errorf("%w: unable to find job", err)
 		}
 
-		statusMessage := fmt.Sprintf(`processing workflow "%s"`, job.Workflow)
-		if len(job.Identifier) > 0 {
-			statusMessage = fmt.Sprintf(`%s with identifier "%s"`, statusMessage, job.Identifier)
+		statusMessage := fmt.Sprintf(`processing workflow "%s"`, j.Workflow)
+		if len(j.Identifier) > 0 {
+			statusMessage = fmt.Sprintf(`%s for job "%s"`, statusMessage, j.Identifier)
 		}
 		log.Println(statusMessage)
 
-		broadcast, err := job.Process(ctx, dbTx, executor.NewWorker(c.helper))
-		if errors.Is(err, executor.ErrCreateAccount) {
-			c.addToUnprocessed(job)
+		broadcast, err := c.worker.Process(ctx, dbTx, j)
+		if errors.Is(err, worker.ErrCreateAccount) {
+			c.addToUnprocessed(j)
 			c.seenErrCreateAccount = true
+			dbTx.Discard(ctx)
 			continue
 		}
-		if errors.Is(err, executor.ErrUnsatisfiable) {
-			c.addToUnprocessed(job)
+		if errors.Is(err, worker.ErrUnsatisfiable) {
+			c.addToUnprocessed(j)
+			dbTx.Discard(ctx)
 			continue
 		}
 		if err != nil {
@@ -391,11 +475,12 @@ func (c *Coordinator) Process(
 		// Note, we ALWAYS store jobs even if they are complete on
 		// their first run so that we can have a full view of everything
 		// we've done in JobStorage.
-		jobIdentifier, err := c.storage.Update(ctx, dbTx, job)
+		jobIdentifier, err := c.storage.Update(ctx, dbTx, j)
 		if err != nil {
 			return fmt.Errorf("%w: unable to update job", err)
 		}
 
+		var transactionCreated *types.TransactionIdentifier
 		if broadcast != nil {
 			// Construct Transaction
 			transactionIdentifier, networkTransaction, err := c.createTransaction(ctx, broadcast)
@@ -412,27 +497,32 @@ func (c *Coordinator) Process(
 				broadcast.Intent,
 				transactionIdentifier,
 				networkTransaction,
+				broadcast.ConfirmationDepth,
 			); err != nil {
-				return fmt.Errorf("%w: unable to enque broadcast", err)
+				return fmt.Errorf("%w: unable to enqueue broadcast", err)
 			}
 
-			log.Printf("created transaction for job %s\n", jobIdentifier)
+			transactionCreated = transactionIdentifier
+			log.Printf(
+				`created transaction "%s" for job "%s"`,
+				transactionIdentifier.Hash,
+				jobIdentifier,
+			)
 		}
+
+		// Reset all vars
+		c.resetVars()
+		log.Printf(`processed workflow "%s" for job "%s"`, j.Workflow, jobIdentifier)
 
 		// Commit db transaction
 		if err := dbTx.Commit(ctx); err != nil {
 			return fmt.Errorf("%w: unable to commit job update", err)
 		}
 
-		// Run Broadcast all after transaction committed.
-		if err := c.helper.BroadcastAll(ctx); err != nil {
-			return fmt.Errorf("%w: unable to broadcast all transactions", err)
+		// Invoke handlers and broadcast
+		if err := c.invokeHandlersAndBroadcast(ctx, jobIdentifier, transactionCreated); err != nil {
+			return fmt.Errorf("%w: unable to handle job success", err)
 		}
-
-		// Reset all vars
-		c.resetVars()
-
-		log.Printf(`processed workflow "%s" with identifier "%s"`, job.Workflow, jobIdentifier)
 	}
 
 	return ctx.Err()

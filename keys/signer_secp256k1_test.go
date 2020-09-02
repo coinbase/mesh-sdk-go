@@ -41,18 +41,18 @@ func TestSignSecp256k1(t *testing.T) {
 		sigType types.SignatureType
 		sigLen  int
 		err     bool
-		errMsg  string
+		errMsg  error
 	}
 
 	var payloadTests = []payloadTest{
-		{mockPayload(hash("hello123"), types.Ecdsa), types.Ecdsa, 64, false, ""},
-		{mockPayload(hash("hello1234"), types.EcdsaRecovery), types.EcdsaRecovery, 65, false, ""},
+		{mockPayload(hash("hello123"), types.Ecdsa), types.Ecdsa, 64, false, nil},
+		{mockPayload(hash("hello1234"), types.EcdsaRecovery), types.EcdsaRecovery, 65, false, nil},
 		{
 			mockPayload(hash("hello123"), types.Ed25519),
 			types.Ed25519,
 			64,
 			true,
-			"unsupported signature type",
+			ErrSignUnsupportedSigType,
 		},
 	}
 
@@ -63,7 +63,7 @@ func TestSignSecp256k1(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, len(signature.Bytes), test.sigLen)
 		} else {
-			assert.Contains(t, err.Error(), test.errMsg)
+			assert.Contains(t, err.Error(), test.errMsg.Error())
 		}
 	}
 }
@@ -91,7 +91,7 @@ func mockSecpSignature(
 func TestVerifySecp256k1(t *testing.T) {
 	type signatureTest struct {
 		signature *types.Signature
-		errMsg    string
+		errMsg    error
 	}
 
 	payloadEcdsa := &types.SigningPayload{
@@ -112,17 +112,17 @@ func TestVerifySecp256k1(t *testing.T) {
 			types.Ed25519,
 			signerSecp256k1.PublicKey(),
 			hash("hello"),
-			make([]byte, 33)), "ed25519 is not supported"},
+			make([]byte, 33)), ErrVerifyUnsupportedSignatureType},
 		{mockSecpSignature(
 			types.Ecdsa,
 			signerSecp256k1.PublicKey(),
 			hash("hello"),
-			make([]byte, 33)), "verify returned false"},
+			make([]byte, 33)), ErrVerifyFailed},
 	}
 
 	for _, test := range signatureTests {
 		err := signerSecp256k1.Verify(test.signature)
-		assert.Contains(t, err.Error(), test.errMsg)
+		assert.Contains(t, err.Error(), test.errMsg.Error())
 	}
 
 	goodEcdsaSignature := mockSecpSignature(

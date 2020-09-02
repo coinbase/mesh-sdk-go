@@ -18,7 +18,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/coinbase/rosetta-sdk-go/constructor/executor"
+	"github.com/coinbase/rosetta-sdk-go/constructor/job"
+	"github.com/coinbase/rosetta-sdk-go/constructor/worker"
 	"github.com/coinbase/rosetta-sdk-go/keys"
 	"github.com/coinbase/rosetta-sdk-go/parser"
 	"github.com/coinbase/rosetta-sdk-go/storage"
@@ -26,10 +27,6 @@ import (
 )
 
 const (
-	// ReservedWorkflowConcurrency is the expected concurrency
-	// of the create account and request funds scenario.
-	ReservedWorkflowConcurrency = 1
-
 	// NoHeadBlockWaitTime is the amount of
 	// time we wait when no blocks have been
 	// synced.
@@ -42,7 +39,7 @@ const (
 )
 
 // Helper is used by the coordinator to process Jobs.
-// It is a superset of functions required by the constructor/executor.Helper.
+// It is a superset of functions required by the constructor/worker.Helper.
 type Helper interface {
 	// HeadBlockExists returns a boolean indicating if a block
 	// has been synced by BlockStorage.
@@ -80,13 +77,15 @@ type Helper interface {
 		context.Context,
 		storage.DatabaseTransaction,
 		*types.AccountIdentifier,
-	) ([]*types.Amount, error)
+		*types.Currency,
+	) (*types.Amount, error)
 
 	// Coins returns all *types.Coin owned by an address.
 	Coins(
 		context.Context,
 		storage.DatabaseTransaction,
 		*types.AccountIdentifier,
+		*types.Currency,
 	) ([]*types.Coin, error)
 
 	// BroadcastAll broadcasts all transactions considered ready for
@@ -102,6 +101,7 @@ type Helper interface {
 		[]*types.Operation,
 		*types.TransactionIdentifier,
 		string, // network transaction
+		int64, // confirmation depth
 	) error
 
 	// Derive returns a new address for a provided publicKey.
@@ -172,20 +172,32 @@ type Helper interface {
 	) ([]*types.Signature, error)
 }
 
+// Handler is an interface called by the coordinator whenever
+// an address is created or a transaction is created.
+type Handler interface {
+	TransactionCreated(
+		context.Context,
+		string, // job identifier
+		*types.TransactionIdentifier,
+	) error
+}
+
 // Coordinator faciliates the creation and processing
 // of jobs.
 type Coordinator struct {
 	storage JobStorage
+	handler Handler
 	helper  Helper
 	parser  *parser.Parser
+	worker  *worker.Worker
 
 	attemptedJobs        []string
 	attemptedWorkflows   []string
 	seenErrCreateAccount bool
 
-	workflows             []*executor.Workflow
-	createAccountWorkflow *executor.Workflow
-	requestFundsWorkflow  *executor.Workflow
+	workflows             []*job.Workflow
+	createAccountWorkflow *job.Workflow
+	requestFundsWorkflow  *job.Workflow
 }
 
 // JobStorage allows for the persistent and transactional
@@ -195,13 +207,13 @@ type JobStorage interface {
 	Ready(
 		context.Context,
 		storage.DatabaseTransaction,
-	) ([]*executor.Job, error)
+	) ([]*job.Job, error)
 
 	// Broadcasting returns all jobs that are broadcasting.
 	Broadcasting(
 		context.Context,
 		storage.DatabaseTransaction,
-	) ([]*executor.Job, error)
+	) ([]*job.Job, error)
 
 	// Processing returns the number of jobs processing
 	// for a particular workflow.
@@ -209,14 +221,14 @@ type JobStorage interface {
 		context.Context,
 		storage.DatabaseTransaction,
 		string,
-	) (int, error)
+	) ([]*job.Job, error)
 
 	// Update stores an updated *Job in storage
 	// and returns its UUID (which won't exist
 	// on first update).
-	Update(context.Context, storage.DatabaseTransaction, *executor.Job) (string, error)
+	Update(context.Context, storage.DatabaseTransaction, *job.Job) (string, error)
 
 	// Get fetches a *Job by Identifier. It returns an error
 	// if the identifier doesn't exist.
-	Get(context.Context, storage.DatabaseTransaction, string) (*executor.Job, error)
+	Get(context.Context, storage.DatabaseTransaction, string) (*job.Job, error)
 }

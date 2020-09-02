@@ -262,6 +262,79 @@ var (
 					},
 				},
 			},
+			{
+				Operations: []*types.Operation{
+					{
+						Account: account3,
+						Status:  successStatus,
+						Amount: &types.Amount{
+							Value:    "12",
+							Currency: currency,
+						},
+						CoinChange: &types.CoinChange{
+							CoinAction: types.CoinCreated,
+							CoinIdentifier: &types.CoinIdentifier{
+								Identifier: "coin6",
+							},
+						},
+					},
+				},
+			},
+			{
+				Operations: []*types.Operation{
+					{
+						Account: account3,
+						Status:  successStatus,
+						Amount: &types.Amount{
+							Value:    "12",
+							Currency: currency,
+						},
+						CoinChange: &types.CoinChange{
+							CoinAction: types.CoinSpent,
+							CoinIdentifier: &types.CoinIdentifier{
+								Identifier: "coin6",
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	coinBlockRepeat = &types.Block{
+		Transactions: []*types.Transaction{
+			{
+				Operations: []*types.Operation{
+					{
+						Account: account,
+						Status:  successStatus,
+						Amount: &types.Amount{
+							Value:    "10",
+							Currency: currency,
+						},
+						CoinChange: &types.CoinChange{
+							CoinAction: types.CoinCreated,
+							CoinIdentifier: &types.CoinIdentifier{
+								Identifier: "coin_repeat",
+							},
+						},
+					},
+					{
+						Account: account,
+						Status:  successStatus,
+						Amount: &types.Amount{
+							Value:    "20",
+							Currency: currency,
+						},
+						CoinChange: &types.CoinChange{
+							CoinAction: types.CoinCreated,
+							CoinIdentifier: &types.CoinIdentifier{
+								Identifier: "coin_repeat",
+							},
+						},
+					},
+				},
+			},
 		},
 	}
 
@@ -270,14 +343,14 @@ var (
 			Address: "acc1",
 		},
 		Coins: []*types.Coin{
-			&types.Coin{
+			{
 				CoinIdentifier: &types.CoinIdentifier{Identifier: "accCoin1"},
 				Amount: &types.Amount{
 					Value:    "30",
 					Currency: currency,
 				},
 			},
-			&types.Coin{
+			{
 				CoinIdentifier: &types.CoinIdentifier{Identifier: "accCoin2"},
 				Amount: &types.Amount{
 					Value:    "40",
@@ -292,14 +365,14 @@ var (
 			Address: "acc2",
 		},
 		Coins: []*types.Coin{
-			&types.Coin{
+			{
 				CoinIdentifier: &types.CoinIdentifier{Identifier: "accCoin3"},
 				Amount: &types.Amount{
 					Value:    "10",
 					Currency: currency,
 				},
 			},
-			&types.Coin{
+			{
 				CoinIdentifier: &types.CoinIdentifier{Identifier: "accCoin4"},
 				Amount: &types.Amount{
 					Value:    "20",
@@ -429,6 +502,19 @@ func TestCoinStorage(t *testing.T) {
 		assert.Equal(t, blockIdentifier, block)
 	})
 
+	t.Run("add duplicate coin in same block", func(t *testing.T) {
+		tx := c.db.NewDatabaseTransaction(ctx, true)
+		commitFunc, err := c.AddingBlock(ctx, coinBlockRepeat, tx)
+		assert.Nil(t, commitFunc)
+		assert.Error(t, err)
+		tx.Discard(ctx)
+
+		coins, block, err := c.GetCoins(ctx, account)
+		assert.NoError(t, err)
+		assert.Equal(t, accountCoins, coins)
+		assert.Equal(t, blockIdentifier, block)
+	})
+
 	t.Run("remove block", func(t *testing.T) {
 		tx := c.db.NewDatabaseTransaction(ctx, true)
 		commitFunc, err := c.RemovingBlock(ctx, coinBlock, tx)
@@ -479,6 +565,42 @@ func TestCoinStorage(t *testing.T) {
 	t.Run("add block with multiple outputs for 1 account", func(t *testing.T) {
 		tx := c.db.NewDatabaseTransaction(ctx, true)
 		commitFunc, err := c.AddingBlock(ctx, coinBlock3, tx)
+		assert.Nil(t, commitFunc)
+		assert.NoError(t, err)
+		assert.NoError(t, tx.Commit(ctx))
+
+		coins, block, err := c.GetCoins(ctx, account)
+		assert.NoError(t, err)
+		assert.Equal(t, []*types.Coin{}, coins)
+		assert.Equal(t, blockIdentifier, block)
+
+		coins, block, err = c.GetCoins(ctx, account3)
+		assert.NoError(t, err)
+		assert.ElementsMatch(t, account3Coins, coins)
+		assert.Equal(t, blockIdentifier, block)
+
+		bal, coinIdentifier, block, err := c.GetLargestCoin(ctx, account3, currency)
+		assert.NoError(t, err)
+		assert.Equal(t, big.NewInt(4), bal)
+		assert.Equal(t, &types.CoinIdentifier{Identifier: "coin3"}, coinIdentifier)
+		assert.Equal(t, blockIdentifier, block)
+
+		bal, coinIdentifier, block, err = c.GetLargestCoin(ctx, account3, currency2)
+		assert.NoError(t, err)
+		assert.Equal(t, big.NewInt(6), bal)
+		assert.Equal(t, &types.CoinIdentifier{Identifier: "coin4"}, coinIdentifier)
+		assert.Equal(t, blockIdentifier, block)
+	})
+
+	t.Run("remove block that creates and spends single coin", func(t *testing.T) {
+		tx := c.db.NewDatabaseTransaction(ctx, true)
+		commitFunc, err := c.RemovingBlock(ctx, coinBlock3, tx)
+		assert.Nil(t, commitFunc)
+		assert.NoError(t, err)
+		assert.NoError(t, tx.Commit(ctx))
+
+		tx = c.db.NewDatabaseTransaction(ctx, true)
+		commitFunc, err = c.AddingBlock(ctx, coinBlock3, tx)
 		assert.Nil(t, commitFunc)
 		assert.NoError(t, err)
 		assert.NoError(t, tx.Commit(ctx))
