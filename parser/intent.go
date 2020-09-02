@@ -29,7 +29,8 @@ import (
 func ExpectedOperation(intent *types.Operation, observed *types.Operation) error {
 	if types.Hash(intent.Account) != types.Hash(observed.Account) {
 		return fmt.Errorf(
-			"intended account %s did not match observed account %s",
+			"%w: expected %s but got %s",
+			ErrIntentAccountMismatch,
 			types.PrettyPrintStruct(intent.Account),
 			types.PrettyPrintStruct(observed.Account),
 		)
@@ -37,7 +38,8 @@ func ExpectedOperation(intent *types.Operation, observed *types.Operation) error
 
 	if types.Hash(intent.Amount) != types.Hash(observed.Amount) {
 		return fmt.Errorf(
-			"intended amount %s did not match observed amount %s",
+			"%w: expected %s but got %s",
+			ErrIntentAmountMismatch,
 			types.PrettyPrintStruct(intent.Amount),
 			types.PrettyPrintStruct(observed.Amount),
 		)
@@ -45,7 +47,8 @@ func ExpectedOperation(intent *types.Operation, observed *types.Operation) error
 
 	if intent.Type != observed.Type {
 		return fmt.Errorf(
-			"intended type %s did not match observed type %s",
+			"%w: expected %s but got %s",
+			ErrIntentTypeMismatch,
 			intent.Type,
 			observed.Type,
 		)
@@ -103,7 +106,8 @@ func (p *Parser) ExpectedOperations(
 
 		if !foundMatch && errExtra {
 			return fmt.Errorf(
-				"found extra operation %s",
+				"%w: %s",
+				ErrUnexpectedOperation,
 				types.PrettyPrintStruct(obs),
 			)
 		}
