@@ -17,7 +17,10 @@ package keys
 import (
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"testing"
+
+	"github.com/coinbase/rosetta-sdk-go/asserter"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
 
@@ -85,25 +88,25 @@ func TestKeypairValidity(t *testing.T) {
 
 	keyPair.PublicKey.CurveType = "blah"
 	err = keyPair.IsValid()
-	assert.Contains(t, err.Error(), "not a supported CurveType: blah")
+	assert.True(t, errors.Is(err, asserter.ErrCurveTypeNotSupported))
 
 	type privKeyTest struct {
 		keypair *KeyPair
-		errMsg  string
+		err     error
 	}
 
 	var privKeyTests = []privKeyTest{
-		{mockKeyPair(make([]byte, 33), types.Secp256k1), "invalid privkey length"},
-		{mockKeyPair(make([]byte, 31), types.Secp256k1), "invalid privkey length"},
-		{mockKeyPair(make([]byte, 0), types.Secp256k1), "invalid privkey length"},
-		{mockKeyPair(make([]byte, 33), types.Edwards25519), "invalid privkey length"},
-		{mockKeyPair(make([]byte, 31), types.Edwards25519), "invalid privkey length"},
-		{mockKeyPair(make([]byte, 0), types.Edwards25519), "invalid privkey length"},
+		{mockKeyPair(make([]byte, 33), types.Secp256k1), ErrPrivKeyLengthInvalid},
+		{mockKeyPair(make([]byte, 31), types.Secp256k1), ErrPrivKeyLengthInvalid},
+		{mockKeyPair(make([]byte, 0), types.Secp256k1), ErrPrivKeyLengthInvalid},
+		{mockKeyPair(make([]byte, 33), types.Edwards25519), ErrPrivKeyLengthInvalid},
+		{mockKeyPair(make([]byte, 31), types.Edwards25519), ErrPrivKeyLengthInvalid},
+		{mockKeyPair(make([]byte, 0), types.Edwards25519), ErrPrivKeyLengthInvalid},
 	}
 
 	for _, test := range privKeyTests {
 		err = test.keypair.IsValid()
-		assert.Contains(t, err.Error(), test.errMsg)
+		assert.True(t, errors.Is(err, test.err))
 	}
 }
 
@@ -111,36 +114,36 @@ func TestImportPrivKey(t *testing.T) {
 	type importKeyTest struct {
 		privKey   string
 		curveType types.CurveType
-		errMsg    string
+		err       error
 	}
 
 	importPrivKeyTests := []importKeyTest{
 		{
 			"aeb121b4c545f0f850e1480492508c65a250e9965b0d90176fab4d7506398ebb",
 			types.Edwards25519,
-			"",
+			nil,
 		},
 		{
 			"01ea48249742650907004331e85536f868e2d3959434ba751d8aa230138a9707",
 			types.Edwards25519,
-			"",
+			nil,
 		},
 		{
 			"f1821e051843bce17c1f31023609e9412ae4525d27447fc93afa4a271ee60550",
 			types.Edwards25519,
-			"",
+			nil,
 		},
-		{"0b188af56b25d007fbc4bbf2176cd2a54d876ce4774bb5df38b7c83349405b7a", types.Secp256k1, ""},
-		{"0e842a16b2d39a4dff5c63688513cb2109e30c3c30bc4eb502cc54f4614493f6", types.Secp256k1, ""},
-		{"42efc44bdf7b2d4d45ddd6ddb727ed498c91e7070914c9ed0d80af680ff42b3e", types.Secp256k1, ""},
-		{"asd", types.Secp256k1, "could not decode privkey"},
-		{"asd", types.Edwards25519, "could not decode privkey"},
+		{"0b188af56b25d007fbc4bbf2176cd2a54d876ce4774bb5df38b7c83349405b7a", types.Secp256k1, nil},
+		{"0e842a16b2d39a4dff5c63688513cb2109e30c3c30bc4eb502cc54f4614493f6", types.Secp256k1, nil},
+		{"42efc44bdf7b2d4d45ddd6ddb727ed498c91e7070914c9ed0d80af680ff42b3e", types.Secp256k1, nil},
+		{"asd", types.Secp256k1, ErrPrivKeyUndecodable},
+		{"asd", types.Edwards25519, ErrPrivKeyUndecodable},
 	}
 
 	for _, test := range importPrivKeyTests {
 		_, err := ImportPrivKey(test.privKey, test.curveType)
 		if err != nil {
-			assert.Contains(t, err.Error(), test.errMsg)
+			assert.True(t, errors.Is(err, test.err))
 		}
 	}
 }

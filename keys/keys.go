@@ -32,7 +32,7 @@ const PrivKeyBytesLen = 32
 func ImportPrivKey(privKeyHex string, curve types.CurveType) (*KeyPair, error) {
 	privKey, err := hex.DecodeString(privKeyHex)
 	if err != nil {
-		return nil, fmt.Errorf("%s could not decode privkey", privKeyHex)
+		return nil, fmt.Errorf("%w: %s", ErrPrivKeyUndecodable, privKeyHex)
 	}
 
 	switch curve {
@@ -67,7 +67,7 @@ func ImportPrivKey(privKeyHex string, curve types.CurveType) (*KeyPair, error) {
 
 		return keyPair, nil
 	default:
-		return nil, fmt.Errorf("%s is not supported", curve)
+		return nil, fmt.Errorf("%w: %s", asserter.ErrCurveTypeNotSupported, curve)
 	}
 }
 
@@ -110,7 +110,7 @@ func GenerateKeypair(curve types.CurveType) (*KeyPair, error) {
 
 		return keyPair, nil
 	default:
-		return nil, fmt.Errorf("%s is not supported", curve)
+		return nil, fmt.Errorf("%w: %s", asserter.ErrCurveTypeNotSupported, curve)
 	}
 }
 
@@ -125,7 +125,8 @@ func (k *KeyPair) IsValid() error {
 	// Will change if we support more CurveTypes with different privkey sizes
 	if len(k.PrivateKey) != PrivKeyBytesLen {
 		return fmt.Errorf(
-			"invalid privkey length %v. Expected 32 bytes",
+			"%w: expected 32 bytes but go %v",
+			ErrPrivKeyLengthInvalid,
 			len(k.PrivateKey),
 		)
 	}
@@ -142,6 +143,6 @@ func (k *KeyPair) Signer() (Signer, error) {
 	case types.Edwards25519:
 		return &SignerEdwards25519{k}, nil
 	default:
-		return nil, fmt.Errorf("curve %s not supported", k.PublicKey.CurveType)
+		return nil, fmt.Errorf("%w: %s", asserter.ErrCurveTypeNotSupported, k.PublicKey.CurveType)
 	}
 }

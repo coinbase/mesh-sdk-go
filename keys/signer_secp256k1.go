@@ -15,7 +15,6 @@
 package keys
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
@@ -51,7 +50,11 @@ func (s *SignerSecp256k1) Sign(
 	privKeyBytes := s.KeyPair.PrivateKey
 
 	if !(payload.SignatureType == sigType || payload.SignatureType == "") {
-		return nil, fmt.Errorf("sign: invalid payload signaturetype %v", payload.SignatureType)
+		return nil, fmt.Errorf(
+			"%w: %v",
+			ErrSignUnsupportedPayloadSignatureType,
+			payload.SignatureType,
+		)
 	}
 
 	var sig []byte
@@ -59,16 +62,16 @@ func (s *SignerSecp256k1) Sign(
 	case types.EcdsaRecovery:
 		sig, err = secp256k1.Sign(payload.Bytes, privKeyBytes)
 		if err != nil {
-			return nil, fmt.Errorf("sign: unable to sign. %w", err)
+			return nil, fmt.Errorf(ErrSignFailed.Error(), err)
 		}
 	case types.Ecdsa:
 		sig, err = secp256k1.Sign(payload.Bytes, privKeyBytes)
 		if err != nil {
-			return nil, fmt.Errorf("sign: unable to sign. %w", err)
+			return nil, fmt.Errorf(ErrSignFailed.Error(), err)
 		}
 		sig = sig[:EcdsaSignatureLen]
 	default:
-		return nil, fmt.Errorf("sign: unsupported signature type. %w", err)
+		return nil, fmt.Errorf(ErrSignUnsupportedSigType.Error(), err)
 	}
 
 	return &types.Signature{
@@ -99,11 +102,11 @@ func (s *SignerSecp256k1) Verify(signature *types.Signature) error {
 		normalizedSig := sig[:EcdsaSignatureLen]
 		verify = secp256k1.VerifySignature(pubKey, message, normalizedSig)
 	default:
-		return fmt.Errorf("%s is not supported", signature.SignatureType)
+		return fmt.Errorf("%w: %s", ErrVerifyUnsupportedSignatureType, signature.SignatureType)
 	}
 
 	if !verify {
-		return errors.New("verify: verify returned false")
+		return ErrVerifyFailed
 	}
 	return nil
 }
