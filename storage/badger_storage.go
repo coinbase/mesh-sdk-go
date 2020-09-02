@@ -70,29 +70,40 @@ type BadgerStorage struct {
 	writer sync.Mutex
 }
 
-// lowMemoryOptions returns a set of BadgerDB configuration
-// options that significantly reduce memory usage.
-//
-// Inspired by: https://github.com/dgraph-io/badger/issues/1304
-func lowMemoryOptions(dir string) badger.Options {
+func defaultBadgerOptions(dir string) badger.Options {
 	opts := badger.DefaultOptions(dir)
 	opts.Logger = nil
 
-	// Don't load tables into memory.
-	opts.TableLoadingMode = options.FileIO
-	opts.ValueLogLoadingMode = options.FileIO
+	// LoadBloomsOnOpen=false will improve the db startup speed
+	opts.LoadBloomsOnOpen = false
 
 	// To allow writes at a faster speed, we create a new memtable as soon as
 	// an existing memtable is filled up. This option determines how many
 	// memtables should be kept in memory.
 	opts.NumMemtables = 1
 
+	// Don't keep multiple memtables in memory. With larger
+	// memtable size, this explodes memory usage.
+	opts.NumLevelZeroTables = 1
+	opts.NumLevelZeroTablesStall = 2
+
+	return opts
+}
+
+// lowMemoryOptions returns a set of BadgerDB configuration
+// options that significantly reduce memory usage.
+//
+// Inspired by: https://github.com/dgraph-io/badger/issues/1304
+func lowMemoryOptions(dir string) badger.Options {
+	opts := defaultBadgerOptions(dir)
+
+	// Don't load tables into memory.
+	opts.TableLoadingMode = options.FileIO
+	opts.ValueLogLoadingMode = options.FileIO
+
 	// This option will have a significant effect the memory. If the level is kept
 	// in-memory, read are faster but the tables will be kept in memory.
 	opts.KeepL0InMemory = false
-
-	// LoadBloomsOnOpen=false will improve the db startup speed
-	opts.LoadBloomsOnOpen = false
 
 	// Bloom filters will be kept in memory if the following option is not set. Each
 	// bloom filter takes up 5 MB of memory. A smaller bf cache would mean that
@@ -102,11 +113,6 @@ func lowMemoryOptions(dir string) badger.Options {
 
 	// Don't cache blocks in memory. All reads should go to disk.
 	opts.MaxCacheSize = DefaultCacheSize
-
-	// Don't keep multiple memtables in memory.
-	opts.NumLevelZeroTables = 1
-	opts.NumLevelZeroTablesStall = 2
-	opts.NumMemtables = 1
 
 	// Limit ValueLogFileSize as log files
 	// must be read into memory during compaction.
@@ -119,8 +125,7 @@ func lowMemoryOptions(dir string) badger.Options {
 // options that don't attempt to reduce memory usage (can
 // improve performance).
 func performanceOptions(dir string) badger.Options {
-	opts := badger.DefaultOptions(dir)
-	opts.Logger = nil
+	opts := defaultBadgerOptions(dir)
 	opts.MaxTableSize = PerformanceMaxTableSize
 
 	return opts
