@@ -163,6 +163,12 @@ func (a *Asserter) ConstructionMetadataRequest(request *types.ConstructionMetada
 		return ErrConstructionMetadataRequestOptionsIsNil
 	}
 
+	for _, publicKey := range request.PublicKeys {
+		if err := PublicKey(publicKey); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -313,6 +319,12 @@ func (a *Asserter) ConstructionPayloadsRequest(request *types.ConstructionPayloa
 
 	if err := a.Operations(request.Operations, true); err != nil {
 		return err
+	}
+
+	for _, publicKey := range request.PublicKeys {
+		if err := PublicKey(publicKey); err != nil {
+			return err
+		}
 	}
 
 	return nil
