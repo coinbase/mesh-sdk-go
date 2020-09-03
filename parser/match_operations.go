@@ -15,7 +15,6 @@
 package parser
 
 import (
-	"errors"
 	"fmt"
 	"math/big"
 	"reflect"
@@ -160,11 +159,16 @@ func metadataMatch(reqs []*MetadataDescription, metadata map[string]interface{})
 	for _, req := range reqs {
 		val, ok := metadata[req.Key]
 		if !ok {
-			return fmt.Errorf("%s is not present in metadata", req.Key)
+			return fmt.Errorf("%w: %s", ErrMetadataMatchKeyNotFound, req.Key)
 		}
 
 		if reflect.TypeOf(val).Kind() != req.ValueKind {
-			return fmt.Errorf("%s value is not %s", req.Key, req.ValueKind)
+			return fmt.Errorf(
+				"%w: value of %s is not of type %s",
+				ErrMetadataMatchValueTypeMismatch,
+				req.Key,
+				req.ValueKind,
+			)
 		}
 	}
 
@@ -180,7 +184,7 @@ func accountMatch(req *AccountDescription, account *types.AccountIdentifier) err
 
 	if account == nil {
 		if req.Exists {
-			return errors.New("account is missing")
+			return ErrAccountMatchAccountMissing
 		}
 
 		return nil
@@ -188,22 +192,23 @@ func accountMatch(req *AccountDescription, account *types.AccountIdentifier) err
 
 	if account.SubAccount == nil {
 		if req.SubAccountExists {
-			return errors.New("SubAccountIdentifier.Address is missing")
+			return ErrAccountMatchSubAccountMissing
 		}
 
 		return nil
 	}
 
 	if !req.SubAccountExists {
-		return errors.New("SubAccount is populated")
+		return ErrAccountMatchSubAccountPopulated
 	}
 
 	// Optionally can require a certain subaccount address
 	if len(req.SubAccountAddress) > 0 && account.SubAccount.Address != req.SubAccountAddress {
 		return fmt.Errorf(
-			"SubAccountIdentifier.Address is %s not %s",
-			account.SubAccount.Address,
+			"%w: expected %s but got %s",
+			ErrAccountMatchUnexpectedSubAccountAddr,
 			req.SubAccountAddress,
+			account.SubAccount.Address,
 		)
 	}
 
@@ -223,18 +228,18 @@ func amountMatch(req *AmountDescription, amount *types.Amount) error {
 
 	if amount == nil {
 		if req.Exists {
-			return errors.New("amount is missing")
+			return ErrAmountMatchAmountMissing
 		}
 
 		return nil
 	}
 
 	if !req.Exists {
-		return errors.New("amount is populated")
+		return ErrAmountMatchAmountPopulated
 	}
 
 	if !req.Sign.Match(amount) {
-		return fmt.Errorf("amount sign was not %s", req.Sign.String())
+		return fmt.Errorf("%w: expected %s", ErrAmountMatchUnexpectedSign, req.Sign.String())
 	}
 
 	// If no currency is provided, anything is ok.
@@ -243,7 +248,12 @@ func amountMatch(req *AmountDescription, amount *types.Amount) error {
 	}
 
 	if amount.Currency == nil || types.Hash(amount.Currency) != types.Hash(req.Currency) {
-		return fmt.Errorf("currency %+v is not %+v", amount.Currency, req.Currency)
+		return fmt.Errorf(
+			"%w: expected %+v but got %+v",
+			ErrAmountMatchUnexpectedCurrency,
+			req.Currency,
+			amount.Currency,
+		)
 	}
 
 	return nil
@@ -255,14 +265,15 @@ func coinActionMatch(requiredAction types.CoinAction, coinChange *types.CoinChan
 	}
 
 	if coinChange == nil {
-		return fmt.Errorf("coin change is nil but expected %s", requiredAction)
+		return fmt.Errorf("%w: expected %s", ErrCoinActionMatchCoinChangeIsNil, requiredAction)
 	}
 
 	if coinChange.CoinAction != requiredAction {
 		return fmt.Errorf(
-			"coin change action is %s but expected %s",
-			coinChange.CoinAction,
+			"%w: expected %s but got %s",
+			ErrCoinActionMatchUnexpectedCoinAction,
 			requiredAction,
+			coinChange.CoinAction,
 		)
 	}
 
@@ -331,7 +342,7 @@ func operationMatch(
 // equal amounts.
 func equalAmounts(ops []*types.Operation) error {
 	if len(ops) == 0 {
-		return errors.New("cannot check equality of 0 operations")
+		return ErrEqualAmountsNoOperations
 	}
 
 	val, err := types.AmountValue(ops[0].Amount)
@@ -346,7 +357,12 @@ func equalAmounts(ops []*types.Operation) error {
 		}
 
 		if val.Cmp(otherVal) != 0 {
-			return fmt.Errorf("%s is not equal to %s", val.String(), otherVal.String())
+			return fmt.Errorf(
+				"%w: %s is not equal to %s",
+				ErrEqualAmountsNotEqual,
+				val.String(),
+				otherVal.String(),
+			)
 		}
 	}
 
@@ -367,11 +383,16 @@ func oppositeAmounts(a *types.Operation, b *types.Operation) error {
 	}
 
 	if aVal.Sign() == bVal.Sign() {
-		return fmt.Errorf("%s and %s have the same sign", aVal.String(), bVal.String())
+		return fmt.Errorf("%w: %s and %s", ErrOppositeAmountsSameSign, aVal.String(), bVal.String())
 	}
 
 	if aVal.CmpAbs(bVal) != 0 {
-		return fmt.Errorf("|%s| and |%s| are not equal", aVal.String(), bVal.String())
+		return fmt.Errorf(
+			"%w: %s and %s",
+			ErrOppositeAmountsAbsValMismatch,
+			aVal.String(),
+			bVal.String(),
+		)
 	}
 
 	return nil
@@ -381,14 +402,14 @@ func oppositeAmounts(a *types.Operation, b *types.Operation) error {
 // equal addresses.
 func equalAddresses(ops []*types.Operation) error {
 	if len(ops) <= 1 {
-		return fmt.Errorf("cannot check equality of %d operations", len(ops))
+		return fmt.Errorf("%w: got %d operations", ErrEqualAddressesTooManyOperations, len(ops))
 	}
 
 	base := ""
 
 	for _, op := range ops {
 		if op.Account == nil {
-			return fmt.Errorf("account is nil")
+			return ErrEqualAddressesAccountIsNil
 		}
 
 		if len(base) == 0 {
@@ -397,7 +418,12 @@ func equalAddresses(ops []*types.Operation) error {
 		}
 
 		if base != op.Account.Address {
-			return fmt.Errorf("%s is not equal to %s", base, op.Account.Address)
+			return fmt.Errorf(
+				"%w: %s is not equal to %s",
+				ErrEqualAddressesAddrMismatch,
+				base,
+				op.Account.Address,
+			)
 		}
 	}
 
@@ -407,13 +433,15 @@ func equalAddresses(ops []*types.Operation) error {
 func matchIndexValid(matches []*Match, index int) error {
 	if index >= len(matches) {
 		return fmt.Errorf(
-			"match index %d out of range",
+			"%w: at index %d",
+			ErrMatchIndexValidIndexOutOfRange,
 			index,
 		)
 	}
 	if matches[index] == nil {
 		return fmt.Errorf(
-			"match index %d is nil",
+			"%w: at index %d",
+			ErrMatchIndexValidIndexIsNil,
 			index,
 		)
 	}
@@ -532,11 +560,11 @@ func MatchOperations(
 	operations []*types.Operation,
 ) ([]*Match, error) {
 	if len(operations) == 0 {
-		return nil, errors.New("unable to match anything to 0 operations")
+		return nil, ErrMatchOperationsNoOperations
 	}
 
 	if len(descriptions.OperationDescriptions) == 0 {
-		return nil, errors.New("no descriptions to match")
+		return nil, ErrMatchOperationsDescriptionsMissing
 	}
 
 	operationDescriptions := descriptions.OperationDescriptions
@@ -547,7 +575,8 @@ func MatchOperations(
 		matchFound := operationMatch(op, operationDescriptions, matches)
 		if !matchFound && descriptions.ErrUnmatched {
 			return nil, fmt.Errorf(
-				"unable to find match for operation at index %d",
+				"%w: at index %d",
+				ErrMatchOperationsMatchNotFound,
 				i,
 			)
 		}
@@ -556,7 +585,7 @@ func MatchOperations(
 	// Error if any *OperationDescription is not matched
 	for i := 0; i < len(matches); i++ {
 		if matches[i] == nil && !descriptions.OperationDescriptions[i].Optional {
-			return nil, fmt.Errorf("could not find match for description %d", i)
+			return nil, fmt.Errorf("%w: %d", ErrMatchOperationsDescriptionNotMatched, i)
 		}
 	}
 

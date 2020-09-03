@@ -12,34 +12,37 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package keys
+package parser
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func TestErrKeys(t *testing.T) {
+func TestErrParser(t *testing.T) {
 	var tests = map[string]struct {
-		err error
-		is  bool
+		err    error
+		is     bool
+		source string
 	}{
-		"is a keys error": {
-			err: ErrPrivKeyLengthInvalid,
-			is:  true,
+		"intent error": {
+			err:    ErrExpectedOperationAccountMismatch,
+			is:     true,
+			source: "intent error",
 		},
-		"not a keys error": {
-			err: errors.New("blah"),
-			is:  false,
+		"match operations error": {
+			err:    ErrAccountMatchAccountMissing,
+			is:     true,
+			source: "match operations error",
 		},
 	}
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			is := ErrKeys(test.err)
+			is, source := ErrParser(test.err)
 			assert.Equal(t, test.is, is)
+			assert.Equal(t, test.source, source)
 		})
 	}
 }
