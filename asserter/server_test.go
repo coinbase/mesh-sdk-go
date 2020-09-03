@@ -471,6 +471,19 @@ func TestConstructionMetadataRequest(t *testing.T) {
 			},
 			err: nil,
 		},
+		"valid request with public keys": {
+			request: &types.ConstructionMetadataRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+				Options:           map[string]interface{}{},
+				PublicKeys: []*types.PublicKey{
+					{
+						Bytes:     []byte("hello"),
+						CurveType: types.Secp256k1,
+					},
+				},
+			},
+			err: nil,
+		},
 		"invalid request wrong network": {
 			request: &types.ConstructionMetadataRequest{
 				NetworkIdentifier: wrongNetworkIdentifier,
@@ -497,6 +510,18 @@ func TestConstructionMetadataRequest(t *testing.T) {
 				NetworkIdentifier: validNetworkIdentifier,
 			},
 			err: ErrConstructionMetadataRequestOptionsIsNil,
+		},
+		"invalid request with public keys": {
+			request: &types.ConstructionMetadataRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+				Options:           map[string]interface{}{},
+				PublicKeys: []*types.PublicKey{
+					{
+						CurveType: types.Secp256k1,
+					},
+				},
+			},
+			err: ErrPublicKeyBytesEmpty,
 		},
 	}
 
@@ -852,6 +877,20 @@ func TestConstructionPayloadsRequest(t *testing.T) {
 			},
 			err: nil,
 		},
+		"valid request with public keys": {
+			request: &types.ConstructionPayloadsRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+				Operations:        validOps,
+				Metadata:          map[string]interface{}{"test": "hello"},
+				PublicKeys: []*types.PublicKey{
+					{
+						Bytes:     []byte("hello"),
+						CurveType: types.Secp256k1,
+					},
+				},
+			},
+			err: nil,
+		},
 		"invalid request wrong network": {
 			request: &types.ConstructionPayloadsRequest{
 				NetworkIdentifier: wrongNetworkIdentifier,
@@ -892,6 +931,19 @@ func TestConstructionPayloadsRequest(t *testing.T) {
 				Operations:        invalidOps,
 			},
 			err: ErrOperationStatusNotEmptyForConstruction,
+		},
+		"invalid request with public keys": {
+			request: &types.ConstructionPayloadsRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+				Operations:        validOps,
+				Metadata:          map[string]interface{}{"test": "hello"},
+				PublicKeys: []*types.PublicKey{
+					{
+						CurveType: types.Secp256k1,
+					},
+				},
+			},
+			err: ErrPublicKeyBytesEmpty,
 		},
 	}
 
