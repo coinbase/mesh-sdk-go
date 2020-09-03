@@ -207,7 +207,11 @@ func (c *Coordinator) createTransaction(
 	for i, accountIdentifier := range requiredPublicKeys {
 		keyPair, err := c.helper.GetKey(ctx, dbTx, accountIdentifier.Address)
 		if err != nil {
-			return nil, "", fmt.Errorf("%w: unable to find key for address %s", err, accountIdentifier.Address)
+			return nil, "", fmt.Errorf(
+				"%w: unable to find key for address %s",
+				err,
+				accountIdentifier.Address,
+			)
 		}
 
 		publicKeys[i] = keyPair.PublicKey
@@ -496,7 +500,11 @@ func (c *Coordinator) Process(
 		var transactionCreated *types.TransactionIdentifier
 		if broadcast != nil {
 			// Construct Transaction
-			transactionIdentifier, networkTransaction, err := c.createTransaction(ctx, dbTx, broadcast)
+			transactionIdentifier, networkTransaction, err := c.createTransaction(
+				ctx,
+				dbTx,
+				broadcast,
+			)
 			if err != nil {
 				return fmt.Errorf("%w: unable to create transaction", err)
 			}
