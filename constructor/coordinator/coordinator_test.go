@@ -546,7 +546,7 @@ func TestProcess(t *testing.T) {
 		map[string]interface{}{
 			"test": "works",
 		},
-	).Return(metadataOptions, nil).Once()
+	).Return(metadataOptions, nil, nil).Once()
 	fetchedMetadata := map[string]interface{}{
 		"tx_meta": "help",
 	}
@@ -555,6 +555,7 @@ func TestProcess(t *testing.T) {
 		ctx,
 		network,
 		metadataOptions,
+		[]*types.PublicKey{},
 	).Return(fetchedMetadata, nil).Once()
 
 	unsignedTx := "unsigned transaction"
@@ -571,6 +572,7 @@ func TestProcess(t *testing.T) {
 		network,
 		ops,
 		fetchedMetadata,
+		[]*types.PublicKey{},
 	).Return(unsignedTx, signingPayloads, nil).Once()
 	helper.On(
 		"Parse",
@@ -950,7 +952,7 @@ func TestProcess_Failed(t *testing.T) {
 		map[string]interface{}{
 			"test": "works",
 		},
-	).Return(metadataOptions, nil).Once()
+	).Return(metadataOptions, nil, nil).Once()
 	fetchedMetadata := map[string]interface{}{
 		"tx_meta": "help",
 	}
@@ -959,6 +961,7 @@ func TestProcess_Failed(t *testing.T) {
 		ctx,
 		network,
 		metadataOptions,
+		[]*types.PublicKey{},
 	).Return(fetchedMetadata, nil).Once()
 
 	unsignedTx := "unsigned transaction"
@@ -975,6 +978,7 @@ func TestProcess_Failed(t *testing.T) {
 		network,
 		ops,
 		fetchedMetadata,
+		[]*types.PublicKey{},
 	).Return(unsignedTx, signingPayloads, nil).Once()
 	helper.On(
 		"Parse",

@@ -153,12 +153,13 @@ func (k *KeyStorage) Store(
 	return nil
 }
 
-// Get returns a *keys.KeyPair for an address, if it exists.
-func (k *KeyStorage) Get(ctx context.Context, address string) (*keys.KeyPair, error) {
-	transaction := k.db.NewDatabaseTransaction(ctx, false)
-	defer transaction.Discard(ctx)
-
-	exists, rawKey, err := transaction.Get(ctx, getAddressKey(address))
+// GetTransactional returns a *keys.KeyPair for an address in a DatabaseTransaction, if it exists.
+func (k *KeyStorage) GetTransactional(
+	ctx context.Context,
+	dbTx DatabaseTransaction,
+	address string,
+) (*keys.KeyPair, error) {
+	exists, rawKey, err := dbTx.Get(ctx, getAddressKey(address))
 	if err != nil {
 		return nil, fmt.Errorf("%w: unable to get address %s", err, address)
 	}
@@ -173,6 +174,14 @@ func (k *KeyStorage) Get(ctx context.Context, address string) (*keys.KeyPair, er
 	}
 
 	return key.KeyPair, nil
+}
+
+// Get returns a *keys.KeyPair for an address, if it exists.
+func (k *KeyStorage) Get(ctx context.Context, address string) (*keys.KeyPair, error) {
+	transaction := k.db.NewDatabaseTransaction(ctx, false)
+	defer transaction.Discard(ctx)
+
+	return k.GetTransactional(ctx, transaction, address)
 }
 
 // GetAllAddressesTransactional returns all addresses in key storage.

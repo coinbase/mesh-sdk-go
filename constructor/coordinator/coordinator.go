@@ -190,9 +190,10 @@ func (c *Coordinator) findJob(
 // createTransaction constructs and signs a transaction with the provided intent.
 func (c *Coordinator) createTransaction(
 	ctx context.Context,
+	dbTx storage.DatabaseTransaction,
 	broadcast *job.Broadcast,
 ) (*types.TransactionIdentifier, string, error) {
-	metadataRequest, err := c.helper.Preprocess(
+	metadataRequest, requiredPublicKeys, err := c.helper.Preprocess(
 		ctx,
 		broadcast.Network,
 		broadcast.Intent,
@@ -202,10 +203,21 @@ func (c *Coordinator) createTransaction(
 		return nil, "", fmt.Errorf("%w: unable to preprocess", err)
 	}
 
+	publicKeys := make([]*types.PublicKey, len(requiredPublicKeys))
+	for i, accountIdentifier := range requiredPublicKeys {
+		keyPair, err := c.helper.GetKey(ctx, dbTx, accountIdentifier.Address)
+		if err != nil {
+			return nil, "", fmt.Errorf("%w: unable to find key for address %s", err, accountIdentifier.Address)
+		}
+
+		publicKeys[i] = keyPair.PublicKey
+	}
+
 	requiredMetadata, err := c.helper.Metadata(
 		ctx,
 		broadcast.Network,
 		metadataRequest,
+		publicKeys,
 	)
 	if err != nil {
 		return nil, "", fmt.Errorf("%w: unable to construct metadata", err)
@@ -216,6 +228,7 @@ func (c *Coordinator) createTransaction(
 		broadcast.Network,
 		broadcast.Intent,
 		requiredMetadata,
+		publicKeys,
 	)
 	if err != nil {
 		return nil, "", fmt.Errorf("%w: unable to construct payloads", err)
@@ -483,7 +496,7 @@ func (c *Coordinator) Process(
 		var transactionCreated *types.TransactionIdentifier
 		if broadcast != nil {
 			// Construct Transaction
-			transactionIdentifier, networkTransaction, err := c.createTransaction(ctx, broadcast)
+			transactionIdentifier, networkTransaction, err := c.createTransaction(ctx, dbTx, broadcast)
 			if err != nil {
 				return fmt.Errorf("%w: unable to create transaction", err)
 			}

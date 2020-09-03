@@ -183,6 +183,29 @@ func (_m *Helper) Derive(_a0 context.Context, _a1 *types.NetworkIdentifier, _a2 
 	return r0, r1, r2
 }
 
+// GetKey provides a mock function with given fields: _a0, _a1, _a2
+func (_m *Helper) GetKey(_a0 context.Context, _a1 storage.DatabaseTransaction, _a2 string) (*keys.KeyPair, error) {
+	ret := _m.Called(_a0, _a1, _a2)
+
+	var r0 *keys.KeyPair
+	if rf, ok := ret.Get(0).(func(context.Context, storage.DatabaseTransaction, string) *keys.KeyPair); ok {
+		r0 = rf(_a0, _a1, _a2)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*keys.KeyPair)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, storage.DatabaseTransaction, string) error); ok {
+		r1 = rf(_a0, _a1, _a2)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // Hash provides a mock function with given fields: _a0, _a1, _a2
 func (_m *Helper) Hash(_a0 context.Context, _a1 *types.NetworkIdentifier, _a2 string) (*types.TransactionIdentifier, error) {
 	ret := _m.Called(_a0, _a1, _a2)
@@ -243,13 +266,13 @@ func (_m *Helper) LockedAddresses(_a0 context.Context, _a1 storage.DatabaseTrans
 	return r0, r1
 }
 
-// Metadata provides a mock function with given fields: _a0, _a1, _a2
-func (_m *Helper) Metadata(_a0 context.Context, _a1 *types.NetworkIdentifier, _a2 map[string]interface{}) (map[string]interface{}, error) {
-	ret := _m.Called(_a0, _a1, _a2)
+// Metadata provides a mock function with given fields: _a0, _a1, _a2, _a3
+func (_m *Helper) Metadata(_a0 context.Context, _a1 *types.NetworkIdentifier, _a2 map[string]interface{}, _a3 []*types.PublicKey) (map[string]interface{}, error) {
+	ret := _m.Called(_a0, _a1, _a2, _a3)
 
 	var r0 map[string]interface{}
-	if rf, ok := ret.Get(0).(func(context.Context, *types.NetworkIdentifier, map[string]interface{}) map[string]interface{}); ok {
-		r0 = rf(_a0, _a1, _a2)
+	if rf, ok := ret.Get(0).(func(context.Context, *types.NetworkIdentifier, map[string]interface{}, []*types.PublicKey) map[string]interface{}); ok {
+		r0 = rf(_a0, _a1, _a2, _a3)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(map[string]interface{})
@@ -257,8 +280,8 @@ func (_m *Helper) Metadata(_a0 context.Context, _a1 *types.NetworkIdentifier, _a
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *types.NetworkIdentifier, map[string]interface{}) error); ok {
-		r1 = rf(_a0, _a1, _a2)
+	if rf, ok := ret.Get(1).(func(context.Context, *types.NetworkIdentifier, map[string]interface{}, []*types.PublicKey) error); ok {
+		r1 = rf(_a0, _a1, _a2, _a3)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -307,20 +330,20 @@ func (_m *Helper) Parse(_a0 context.Context, _a1 *types.NetworkIdentifier, _a2 b
 	return r0, r1, r2, r3
 }
 
-// Payloads provides a mock function with given fields: _a0, _a1, _a2, _a3
-func (_m *Helper) Payloads(_a0 context.Context, _a1 *types.NetworkIdentifier, _a2 []*types.Operation, _a3 map[string]interface{}) (string, []*types.SigningPayload, error) {
-	ret := _m.Called(_a0, _a1, _a2, _a3)
+// Payloads provides a mock function with given fields: _a0, _a1, _a2, _a3, _a4
+func (_m *Helper) Payloads(_a0 context.Context, _a1 *types.NetworkIdentifier, _a2 []*types.Operation, _a3 map[string]interface{}, _a4 []*types.PublicKey) (string, []*types.SigningPayload, error) {
+	ret := _m.Called(_a0, _a1, _a2, _a3, _a4)
 
 	var r0 string
-	if rf, ok := ret.Get(0).(func(context.Context, *types.NetworkIdentifier, []*types.Operation, map[string]interface{}) string); ok {
-		r0 = rf(_a0, _a1, _a2, _a3)
+	if rf, ok := ret.Get(0).(func(context.Context, *types.NetworkIdentifier, []*types.Operation, map[string]interface{}, []*types.PublicKey) string); ok {
+		r0 = rf(_a0, _a1, _a2, _a3, _a4)
 	} else {
 		r0 = ret.Get(0).(string)
 	}
 
 	var r1 []*types.SigningPayload
-	if rf, ok := ret.Get(1).(func(context.Context, *types.NetworkIdentifier, []*types.Operation, map[string]interface{}) []*types.SigningPayload); ok {
-		r1 = rf(_a0, _a1, _a2, _a3)
+	if rf, ok := ret.Get(1).(func(context.Context, *types.NetworkIdentifier, []*types.Operation, map[string]interface{}, []*types.PublicKey) []*types.SigningPayload); ok {
+		r1 = rf(_a0, _a1, _a2, _a3, _a4)
 	} else {
 		if ret.Get(1) != nil {
 			r1 = ret.Get(1).([]*types.SigningPayload)
@@ -328,8 +351,8 @@ func (_m *Helper) Payloads(_a0 context.Context, _a1 *types.NetworkIdentifier, _a
 	}
 
 	var r2 error
-	if rf, ok := ret.Get(2).(func(context.Context, *types.NetworkIdentifier, []*types.Operation, map[string]interface{}) error); ok {
-		r2 = rf(_a0, _a1, _a2, _a3)
+	if rf, ok := ret.Get(2).(func(context.Context, *types.NetworkIdentifier, []*types.Operation, map[string]interface{}, []*types.PublicKey) error); ok {
+		r2 = rf(_a0, _a1, _a2, _a3, _a4)
 	} else {
 		r2 = ret.Error(2)
 	}
@@ -338,7 +361,7 @@ func (_m *Helper) Payloads(_a0 context.Context, _a1 *types.NetworkIdentifier, _a
 }
 
 // Preprocess provides a mock function with given fields: _a0, _a1, _a2, _a3
-func (_m *Helper) Preprocess(_a0 context.Context, _a1 *types.NetworkIdentifier, _a2 []*types.Operation, _a3 map[string]interface{}) (map[string]interface{}, error) {
+func (_m *Helper) Preprocess(_a0 context.Context, _a1 *types.NetworkIdentifier, _a2 []*types.Operation, _a3 map[string]interface{}) (map[string]interface{}, []*types.AccountIdentifier, error) {
 	ret := _m.Called(_a0, _a1, _a2, _a3)
 
 	var r0 map[string]interface{}
@@ -350,14 +373,23 @@ func (_m *Helper) Preprocess(_a0 context.Context, _a1 *types.NetworkIdentifier, 
 		}
 	}
 
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *types.NetworkIdentifier, []*types.Operation, map[string]interface{}) error); ok {
+	var r1 []*types.AccountIdentifier
+	if rf, ok := ret.Get(1).(func(context.Context, *types.NetworkIdentifier, []*types.Operation, map[string]interface{}) []*types.AccountIdentifier); ok {
 		r1 = rf(_a0, _a1, _a2, _a3)
 	} else {
-		r1 = ret.Error(1)
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).([]*types.AccountIdentifier)
+		}
 	}
 
-	return r0, r1
+	var r2 error
+	if rf, ok := ret.Get(2).(func(context.Context, *types.NetworkIdentifier, []*types.Operation, map[string]interface{}) error); ok {
+		r2 = rf(_a0, _a1, _a2, _a3)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
 }
 
 // Sign provides a mock function with given fields: _a0, _a1
