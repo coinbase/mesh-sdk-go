@@ -345,6 +345,41 @@ func TestProcessBlock(t *testing.T) {
 		)
 	})
 
+	t.Run("Process nil block result", func(t *testing.T) {
+		err := syncer.processBlock(
+			ctx,
+			nil,
+		)
+		assert.True(t, errors.Is(err, ErrBlockResultNil))
+	})
+
+	t.Run("Process orphan head block result", func(t *testing.T) {
+		mockHandler.On(
+			"BlockRemoved",
+			ctx,
+			blockSequence[2].BlockIdentifier,
+		).Return(
+			nil,
+		).Run(func(args mock.Arguments) {
+			assertNotCanceled(t, args)
+		}).Once()
+		err := syncer.processBlock(
+			ctx,
+			&blockResult{orphanHead: true},
+		)
+		assert.NoError(t, err)
+		assert.Equal(t, int64(2), syncer.nextIndex)
+		assert.Equal(t, blockSequence[3].BlockIdentifier, lastBlockIdentifier(syncer))
+		assert.Equal(
+			t,
+			[]*types.BlockIdentifier{
+				blockSequence[0].BlockIdentifier,
+				blockSequence[3].BlockIdentifier,
+			},
+			syncer.pastBlocks,
+		)
+	})
+
 	mockHelper.AssertExpectations(t)
 	mockHandler.AssertExpectations(t)
 }
