@@ -209,7 +209,7 @@ func TestProcessBlock(t *testing.T) {
 		)
 		err := syncer.processBlock(
 			ctx,
-			blockSequence[0],
+			&blockResult{block: blockSequence[0]},
 		)
 		assert.NoError(t, err)
 		assert.Equal(t, int64(1), syncer.nextIndex)
@@ -224,7 +224,7 @@ func TestProcessBlock(t *testing.T) {
 	t.Run("Orphan genesis", func(t *testing.T) {
 		err := syncer.processBlock(
 			ctx,
-			orphanGenesis,
+			&blockResult{block: orphanGenesis},
 		)
 
 		assert.EqualError(t, err, "cannot remove genesis block")
@@ -241,7 +241,7 @@ func TestProcessBlock(t *testing.T) {
 		mockHandler.On("BlockAdded", ctx, blockSequence[1]).Return(nil).Once()
 		err := syncer.processBlock(
 			ctx,
-			blockSequence[1],
+			&blockResult{block: blockSequence[1]},
 		)
 		assert.NoError(t, err)
 		assert.Equal(t, int64(2), syncer.nextIndex)
@@ -260,7 +260,7 @@ func TestProcessBlock(t *testing.T) {
 		mockHandler.On("BlockRemoved", ctx, blockSequence[1].BlockIdentifier).Return(nil).Once()
 		err := syncer.processBlock(
 			ctx,
-			blockSequence[2],
+			&blockResult{block: blockSequence[2]},
 		)
 		assert.NoError(t, err)
 		assert.Equal(t, int64(1), syncer.nextIndex)
@@ -274,7 +274,7 @@ func TestProcessBlock(t *testing.T) {
 		mockHandler.On("BlockAdded", ctx, blockSequence[3]).Return(nil).Once()
 		err = syncer.processBlock(
 			ctx,
-			blockSequence[3],
+			&blockResult{block: blockSequence[3]},
 		)
 		assert.NoError(t, err)
 		assert.Equal(t, int64(2), syncer.nextIndex)
@@ -291,7 +291,7 @@ func TestProcessBlock(t *testing.T) {
 		mockHandler.On("BlockAdded", ctx, blockSequence[2]).Return(nil).Once()
 		err = syncer.processBlock(
 			ctx,
-			blockSequence[2],
+			&blockResult{block: blockSequence[2]},
 		)
 		assert.NoError(t, err)
 		assert.Equal(t, int64(3), syncer.nextIndex)
@@ -310,7 +310,7 @@ func TestProcessBlock(t *testing.T) {
 	t.Run("Out of order block", func(t *testing.T) {
 		err := syncer.processBlock(
 			ctx,
-			blockSequence[5],
+			&blockResult{block: blockSequence[5]},
 		)
 		assert.Contains(t, err.Error(), "got block 5 instead of 3")
 		assert.Equal(t, int64(3), syncer.nextIndex)
@@ -329,7 +329,7 @@ func TestProcessBlock(t *testing.T) {
 	t.Run("Process omitted block", func(t *testing.T) {
 		err := syncer.processBlock(
 			ctx,
-			nil,
+			&blockResult{},
 		)
 		assert.NoError(t, err)
 		assert.Equal(t, int64(4), syncer.nextIndex)
