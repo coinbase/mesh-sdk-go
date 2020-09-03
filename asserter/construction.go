@@ -20,6 +20,24 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
+// ConstructionPreprocessResponse returns an error if
+// the request public keys are not valid AccountIdentifiers.
+func ConstructionPreprocessResponse(
+	response *types.ConstructionPreprocessResponse,
+) error {
+	if response == nil {
+		return ErrConstructionPreprocessResponseIsNil
+	}
+
+	for _, accountIdentifier := range response.RequiredPublicKeys {
+		if err := AccountIdentifier(accountIdentifier); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // ConstructionMetadataResponse returns an error if
 // the metadata is not a JSON object.
 func ConstructionMetadataResponse(
@@ -187,7 +205,7 @@ func CurveType(
 	curve types.CurveType,
 ) error {
 	switch curve {
-	case types.Secp256k1, types.Edwards25519:
+	case types.Secp256k1, types.Secp256r1, types.Edwards25519, types.Tweedle:
 		return nil
 	default:
 		return fmt.Errorf("%w: %s", ErrCurveTypeNotSupported, curve)
@@ -268,7 +286,7 @@ func SignatureType(
 	signature types.SignatureType,
 ) error {
 	switch signature {
-	case types.Ecdsa, types.EcdsaRecovery, types.Ed25519:
+	case types.Ecdsa, types.EcdsaRecovery, types.Ed25519, types.Schnorr1, types.SchnorrPoseidon:
 		return nil
 	default:
 		return fmt.Errorf("%w: %s", ErrSignatureTypeNotSupported, signature)

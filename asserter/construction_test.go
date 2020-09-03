@@ -24,6 +24,56 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestConstructionPreprocessResponse(t *testing.T) {
+	var tests = map[string]struct {
+		response *types.ConstructionPreprocessResponse
+		err      error
+	}{
+		"valid response": {
+			response: &types.ConstructionPreprocessResponse{
+				Options: map[string]interface{}{},
+			},
+			err: nil,
+		},
+		"valid response with accounts": {
+			response: &types.ConstructionPreprocessResponse{
+				Options: map[string]interface{}{},
+				RequiredPublicKeys: []*types.AccountIdentifier{
+					{
+						Address: "hello",
+					},
+				},
+			},
+			err: nil,
+		},
+		"invalid response with accounts": {
+			response: &types.ConstructionPreprocessResponse{
+				Options: map[string]interface{}{},
+				RequiredPublicKeys: []*types.AccountIdentifier{
+					{
+						Address: "",
+					},
+				},
+			},
+			err: ErrAccountAddrMissing,
+		},
+		"nil response": {
+			err: ErrConstructionPreprocessResponseIsNil,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			err := ConstructionPreprocessResponse(test.response)
+			if test.err != nil {
+				assert.Contains(t, err.Error(), test.err.Error())
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
 func TestConstructionMetadataResponse(t *testing.T) {
 	var tests = map[string]struct {
 		response *types.ConstructionMetadataResponse

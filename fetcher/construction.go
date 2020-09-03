@@ -265,8 +265,12 @@ func (f *Fetcher) ConstructionPreprocess(
 		return nil, fetcherErr
 	}
 
-	// We do not assert the response here because the only object
-	// in the response is optional and unstructured.
+	if err := asserter.ConstructionPreprocessResponse(response); err != nil {
+		fetcherErr := &Error{
+			Err: fmt.Errorf("%w: /construction/preprocess %s", ErrAssertionFailed, err.Error()),
+		}
+		return nil, fetcherErr
+	}
 
 	return response.Options, nil
 }

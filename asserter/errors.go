@@ -146,6 +146,9 @@ var (
 	/* CONSTRUCTION ERRORS */
 	/////////////////////////
 
+	ErrConstructionPreprocessResponseIsNil = errors.New(
+		"ConstructionPreprocessResponse cannot be nil",
+	)
 	ErrConstructionMetadataResponseIsNil = errors.New(
 		"ConstructionMetadataResponse cannot be nil",
 	)
@@ -199,6 +202,7 @@ var (
 	ErrSignatureTypeNotSupported = errors.New("not a supported SignatureType")
 
 	ConstructionErrs = []error{
+		ErrConstructionPreprocessResponseIsNil,
 		ErrConstructionMetadataResponseIsNil,
 		ErrConstructionMetadataResponseMetadataMissing,
 		ErrTxIdentifierResponseIsNil,
