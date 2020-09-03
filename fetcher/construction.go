@@ -132,11 +132,13 @@ func (f *Fetcher) ConstructionMetadata(
 	ctx context.Context,
 	network *types.NetworkIdentifier,
 	options map[string]interface{},
+	publicKeys []*types.PublicKey,
 ) (map[string]interface{}, *Error) {
 	metadata, clientErr, err := f.rosettaClient.ConstructionAPI.ConstructionMetadata(ctx,
 		&types.ConstructionMetadataRequest{
 			NetworkIdentifier: network,
 			Options:           options,
+			PublicKeys:        publicKeys,
 		},
 	)
 	if err != nil {
@@ -209,12 +211,14 @@ func (f *Fetcher) ConstructionPayloads(
 	network *types.NetworkIdentifier,
 	operations []*types.Operation,
 	metadata map[string]interface{},
+	publicKeys []*types.PublicKey,
 ) (string, []*types.SigningPayload, *Error) {
 	response, clientErr, err := f.rosettaClient.ConstructionAPI.ConstructionPayloads(ctx,
 		&types.ConstructionPayloadsRequest{
 			NetworkIdentifier: network,
 			Operations:        operations,
 			Metadata:          metadata,
+			PublicKeys:        publicKeys,
 		},
 	)
 
@@ -248,7 +252,7 @@ func (f *Fetcher) ConstructionPreprocess(
 	network *types.NetworkIdentifier,
 	operations []*types.Operation,
 	metadata map[string]interface{},
-) (map[string]interface{}, *Error) {
+) (map[string]interface{}, []*types.AccountIdentifier, *Error) {
 	response, clientErr, err := f.rosettaClient.ConstructionAPI.ConstructionPreprocess(ctx,
 		&types.ConstructionPreprocessRequest{
 			NetworkIdentifier: network,
@@ -262,17 +266,17 @@ func (f *Fetcher) ConstructionPreprocess(
 			Err:       fmt.Errorf("%w: /construction/preprocess %s", ErrRequestFailed, err.Error()),
 			ClientErr: clientErr,
 		}
-		return nil, fetcherErr
+		return nil, nil, fetcherErr
 	}
 
 	if err := asserter.ConstructionPreprocessResponse(response); err != nil {
 		fetcherErr := &Error{
 			Err: fmt.Errorf("%w: /construction/preprocess %s", ErrAssertionFailed, err.Error()),
 		}
-		return nil, fetcherErr
+		return nil, nil, fetcherErr
 	}
 
-	return response.Options, nil
+	return response.Options, response.RequiredPublicKeys, nil
 }
 
 // ConstructionSubmit returns the validated response
