@@ -58,6 +58,14 @@ type Helper interface {
 		*keys.KeyPair,
 	) error
 
+	// GetKey is called to get the *types.KeyPair
+	// associated with an address.
+	GetKey(
+		context.Context,
+		storage.DatabaseTransaction,
+		string, // address
+	) (*keys.KeyPair, error)
+
 	// AllAddresses returns a slice of all known addresses.
 	AllAddresses(
 		context.Context,
@@ -119,7 +127,7 @@ type Helper interface {
 		*types.NetworkIdentifier,
 		[]*types.Operation,
 		map[string]interface{},
-	) (map[string]interface{}, error)
+	) (map[string]interface{}, []*types.AccountIdentifier, error)
 
 	// Metadata calls the /construction/metadata endpoint
 	// using the online node.
@@ -127,6 +135,7 @@ type Helper interface {
 		context.Context,
 		*types.NetworkIdentifier,
 		map[string]interface{},
+		[]*types.PublicKey,
 	) (map[string]interface{}, error)
 
 	// Payloads calls the /construction/payloads endpoint
@@ -136,6 +145,7 @@ type Helper interface {
 		*types.NetworkIdentifier,
 		[]*types.Operation,
 		map[string]interface{},
+		[]*types.PublicKey,
 	) (string, []*types.SigningPayload, error)
 
 	// Parse calls the /construction/parse endpoint
