@@ -197,7 +197,7 @@ func TestProcessBlock(t *testing.T) {
 
 	mockHelper := &mocks.Helper{}
 	mockHandler := &mocks.Handler{}
-	syncer := New(networkIdentifier, mockHelper, mockHandler, nil, WithConcurrency(1))
+	syncer := New(networkIdentifier, mockHelper, mockHandler, nil)
 	syncer.genesisBlock = blockSequence[0].BlockIdentifier
 
 	t.Run("No block exists", func(t *testing.T) {
@@ -417,7 +417,7 @@ func TestSync_NoReorg(t *testing.T) {
 
 	mockHelper := &mocks.Helper{}
 	mockHandler := &mocks.Handler{}
-	syncer := New(networkIdentifier, mockHelper, mockHandler, cancel, WithConcurrency(16))
+	syncer := New(networkIdentifier, mockHelper, mockHandler, cancel)
 
 	// Force syncer to only get part of the way through the full range
 	mockHelper.On("NetworkStatus", ctx, networkIdentifier).Return(&types.NetworkStatusResponse{
@@ -487,7 +487,7 @@ func TestSync_SpecificStart(t *testing.T) {
 
 	mockHelper := &mocks.Helper{}
 	mockHandler := &mocks.Handler{}
-	syncer := New(networkIdentifier, mockHelper, mockHandler, cancel, WithConcurrency(16))
+	syncer := New(networkIdentifier, mockHelper, mockHandler, cancel)
 
 	mockHelper.On("NetworkStatus", ctx, networkIdentifier).Return(&types.NetworkStatusResponse{
 		CurrentBlockIdentifier: &types.BlockIdentifier{
@@ -536,7 +536,7 @@ func TestSync_Cancel(t *testing.T) {
 
 	mockHelper := &mocks.Helper{}
 	mockHandler := &mocks.Handler{}
-	syncer := New(networkIdentifier, mockHelper, mockHandler, cancel, WithConcurrency(16))
+	syncer := New(networkIdentifier, mockHelper, mockHandler, cancel)
 
 	// Force syncer to only get part of the way through the full range
 	mockHelper.On("NetworkStatus", ctx, networkIdentifier).Return(&types.NetworkStatusResponse{
@@ -595,7 +595,7 @@ func TestSync_Reorg(t *testing.T) {
 
 	mockHelper := &mocks.Helper{}
 	mockHandler := &mocks.Handler{}
-	syncer := New(networkIdentifier, mockHelper, mockHandler, cancel, WithConcurrency(16))
+	syncer := New(networkIdentifier, mockHelper, mockHandler, cancel)
 
 	mockHelper.On("NetworkStatus", ctx, networkIdentifier).Return(&types.NetworkStatusResponse{
 		CurrentBlockIdentifier: &types.BlockIdentifier{
@@ -732,7 +732,7 @@ func TestSync_ManualReorg(t *testing.T) {
 
 	mockHelper := &mocks.Helper{}
 	mockHandler := &mocks.Handler{}
-	syncer := New(networkIdentifier, mockHelper, mockHandler, cancel, WithConcurrency(16))
+	syncer := New(networkIdentifier, mockHelper, mockHandler, cancel)
 
 	mockHelper.On("NetworkStatus", ctx, networkIdentifier).Return(&types.NetworkStatusResponse{
 		CurrentBlockIdentifier: &types.BlockIdentifier{

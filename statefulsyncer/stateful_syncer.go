@@ -41,8 +41,7 @@ type StatefulSyncer struct {
 	counterStorage *storage.CounterStorage
 	logger         Logger
 	workers        []storage.BlockWorker
-
-	concurrency uint64
+	cacheSize      int
 }
 
 // Logger is used by the statefulsyncer to
@@ -62,7 +61,7 @@ func New(
 	logger Logger,
 	cancel context.CancelFunc,
 	workers []storage.BlockWorker,
-	concurrency uint64,
+	cacheSize int,
 ) *StatefulSyncer {
 	return &StatefulSyncer{
 		network:        network,
@@ -72,7 +71,7 @@ func New(
 		counterStorage: counterStorage,
 		workers:        workers,
 		logger:         logger,
-		concurrency:    concurrency,
+		cacheSize:      cacheSize,
 	}
 }
 
@@ -103,8 +102,8 @@ func (s *StatefulSyncer) Sync(ctx context.Context, startIndex int64, endIndex in
 		s,
 		s,
 		s.cancel,
-		syncer.WithConcurrency(s.concurrency),
 		syncer.WithPastBlocks(pastBlocks),
+		syncer.WithCacheSize(s.cacheSize),
 	)
 
 	return syncer.Sync(ctx, startIndex, endIndex)

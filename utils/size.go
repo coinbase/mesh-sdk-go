@@ -24,6 +24,15 @@ import (
 	"reflect"
 )
 
+const (
+	bytesInKb = 1024
+)
+
+// BtoMb converts B to MB.
+func BtoMb(b int64) int64 {
+	return b / bytesInKb / bytesInKb
+}
+
 // SizeOf returns the size of 'v' in bytes.
 // If there is an error during calculation, Of returns -1.
 func SizeOf(v interface{}) int {
