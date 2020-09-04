@@ -39,14 +39,36 @@ const (
 
 	// DefaultConcurrency is the default number of
 	// blocks the syncer will try to get concurrently.
-	DefaultConcurrency = int64(8)
+	DefaultConcurrency = int64(8) // nolint:gomnd
 
 	// DefaultCacheSize is the default size of the preprocess
 	// cache for the syncer.
 	DefaultCacheSize = 2000 << 20 // 2 GB
-)
 
-var (
+	// LargeCacheSize will aim to use 5 GB of memory.
+	LargeCacheSize = 5000 << 20 // 5 GB
+
+	// SmallCacheSize will aim to use 500 MB of memory.
+	SmallCacheSize = 500 << 20 // 500 MB
+
+	// TinyCacheSize will aim to use 200 MB of memory.
+	TinyCacheSize = 200 << 20 // 200 MB
+
+	// MaxConcurrency is the maximum concurrency we will
+	// attempt to sync with.
+	MaxConcurrency = int64(256) // nolint:gomnd
+
+	// MinConcurrency is the minimum concurrency we will
+	// attempt to sync with.
+	MinConcurrency = int64(1) // nolint:gomnd
+
+	// defaultTrailingWindow is the size of the trailing window
+	// of block sizes to keep when adjusting concurrency.
+	defaultTrailingWindow = 100
+
+	// defaultSizeBuffer is used to pad our average size adjustment.
+	defaultSizeBuffer = float64(1.2) // nolint:gomnd
+
 	// defaultSyncSleep is the amount of time to sleep
 	// when we are at tip but want to keep syncing.
 	defaultSyncSleep = 2 * time.Second
@@ -55,7 +77,9 @@ var (
 	// when we are loading more blocks to fetch but we
 	// already have a backlog >= to concurrency.
 	defaultFetchSleep = 500 * time.Millisecond
+)
 
+var (
 	// ErrCannotRemoveGenesisBlock is returned when
 	// a Rosetta implementation indicates that the
 	// genesis block should be orphaned.
@@ -470,13 +494,18 @@ type blockResult struct {
 	orphanHead bool
 }
 
-func (s *Syncer) shouldCreateWorker(ctx context.Context) bool {
+func (s *Syncer) shouldCreateWorker() bool {
+	// If we have a small sample size, do nothing.
+	if len(s.recentBlockSizes) < defaultTrailingWindow {
+		return false
+	}
+
 	// calculate average block size
 	sum := 0
 	for _, b := range s.recentBlockSizes {
 		sum += b
 	}
-	avg := (float64(sum) / float64(len(s.recentBlockSizes))) * 1.2 // pad estimate
+	avg := (float64(sum) / float64(len(s.recentBlockSizes))) * defaultSizeBuffer
 	s.recentBlockSizes = []int{}
 
 	s.concurrencyLock.Lock()
@@ -485,19 +514,33 @@ func (s *Syncer) shouldCreateWorker(ctx context.Context) bool {
 
 	// if < cacheSize, increase concurrency by 1 up to MaxConcurrency
 	shouldCreate := false
-	if estimatedMaxCache+avg < float64(s.cacheSize) {
+	if estimatedMaxCache+avg < float64(s.cacheSize) && s.concurrency < MaxConcurrency {
 		s.goalConcurrency++
 		s.concurrency++
 		shouldCreate = true
-		log.Printf("increasing goal concurrency to %d\n", s.goalConcurrency)
+		log.Printf(
+			"increasing syncer concurrency to %d (avg block size: %d MB)\n",
+			s.goalConcurrency,
+			utils.BtoMb(int64(avg)),
+		)
 	}
 
 	// if >= cacheSize, decrease concurrency by 1 down to MinConcurrency
-	if estimatedMaxCache > float64(s.cacheSize) {
+	if estimatedMaxCache > float64(s.cacheSize) && s.concurrency > MinConcurrency {
 		s.goalConcurrency--
-		log.Printf("reducing goal concurrency to %d\n", s.goalConcurrency)
+		log.Printf(
+			"reducing syncer concurrency to %d (avg block size: %d MB)\n",
+			s.goalConcurrency,
+			utils.BtoMb(int64(avg)),
+		)
 	}
 	s.concurrencyLock.Unlock()
+
+	// Remove first element in array if
+	// we are over our trailing window.
+	if len(s.recentBlockSizes) > defaultTrailingWindow {
+		s.recentBlockSizes = s.recentBlockSizes[1:]
+	}
 
 	return shouldCreate
 }
@@ -561,11 +604,7 @@ func (s *Syncer) syncRange(
 
 		// Determine if concurrency should be adjusted.
 		s.recentBlockSizes = append(s.recentBlockSizes, utils.SizeOf(b))
-		if len(s.recentBlockSizes) < 50 {
-			continue
-		}
-
-		if !s.shouldCreateWorker(ctx) {
+		if !s.shouldCreateWorker() {
 			continue
 		}
 
