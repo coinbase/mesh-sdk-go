@@ -14,7 +14,11 @@
 
 package parser
 
-import "errors"
+import (
+	"errors"
+
+	"github.com/coinbase/rosetta-sdk-go/utils"
+)
 
 // Named error types for Parser errors
 var (
@@ -119,19 +123,9 @@ func ErrParser(err error) (bool, string) {
 	}
 
 	for key, val := range parserErrs {
-		if findError(val, err) {
+		if utils.FindError(val, err) {
 			return true, key
 		}
 	}
 	return false, ""
-}
-
-// findError
-func findError(errorList []error, err error) bool {
-	for _, k := range errorList {
-		if errors.Is(err, k) {
-			return true
-		}
-	}
-	return false
 }

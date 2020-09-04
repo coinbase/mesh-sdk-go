@@ -378,3 +378,14 @@ func GetAccountBalances(
 
 	return accountBalances, nil
 }
+
+// FindError is used by the Err functions in each package
+// to determine if a particular error was thrown by that component
+func FindError(errorList []error, err error) bool {
+	for _, k := range errorList {
+		if errors.Is(err, k) {
+			return true
+		}
+	}
+	return false
+}
