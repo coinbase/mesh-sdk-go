@@ -14,7 +14,11 @@
 
 package asserter
 
-import "errors"
+import (
+	"errors"
+
+	"github.com/coinbase/rosetta-sdk-go/utils"
+)
 
 // Named error types for Asserter errors
 var (
@@ -375,19 +379,9 @@ func ErrAsserter(err error) (bool, string) {
 	}
 
 	for key, val := range assertErrs {
-		if findError(val, err) {
+		if utils.FindError(val, err) {
 			return true, key
 		}
 	}
 	return false, ""
-}
-
-// findError
-func findError(errorList []error, err error) bool {
-	for _, k := range errorList {
-		if errors.Is(err, k) {
-			return true
-		}
-	}
-	return false
 }
