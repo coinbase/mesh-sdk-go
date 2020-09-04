@@ -39,7 +39,7 @@ const (
 
 	// DefaultConcurrency is the default number of
 	// blocks the syncer will try to get concurrently.
-	DefaultConcurrency = int64(8) // nolint:gomnd
+	DefaultConcurrency = int64(4) // nolint:gomnd
 
 	// DefaultCacheSize is the default size of the preprocess
 	// cache for the syncer.
@@ -64,10 +64,10 @@ const (
 
 	// defaultTrailingWindow is the size of the trailing window
 	// of block sizes to keep when adjusting concurrency.
-	defaultTrailingWindow = 100
+	defaultTrailingWindow = 50
 
-	// defaultSizeBuffer is used to pad our average size adjustment.
-	defaultSizeBuffer = float64(1.2) // nolint:gomnd
+	// sizeOverestimate is used to pad our average size adjustment.
+	sizeOverestimate = float64(1.2) // nolint:gomnd
 
 	// defaultSyncSleep is the amount of time to sleep
 	// when we are at tip but want to keep syncing.
@@ -505,33 +505,34 @@ func (s *Syncer) shouldCreateWorker() bool {
 	for _, b := range s.recentBlockSizes {
 		sum += b
 	}
-	avg := (float64(sum) / float64(len(s.recentBlockSizes))) * defaultSizeBuffer
+	avg := (float64(sum) / float64(len(s.recentBlockSizes))) * sizeOverestimate
 	s.recentBlockSizes = []int{}
 
 	s.concurrencyLock.Lock()
+
 	// multiply average block size by concurrency
 	estimatedMaxCache := avg * float64(s.concurrency)
 
-	// if < cacheSize, increase concurrency by 1 up to MaxConcurrency
+	// If < cacheSize, increase concurrency by 1 up to MaxConcurrency
 	shouldCreate := false
 	if estimatedMaxCache+avg < float64(s.cacheSize) && s.concurrency < MaxConcurrency {
 		s.goalConcurrency++
 		s.concurrency++
 		shouldCreate = true
 		log.Printf(
-			"increasing syncer concurrency to %d (avg block size: %d MB)\n",
+			"increasing syncer concurrency to %d (projected new cache size: %f MB)\n",
 			s.goalConcurrency,
-			utils.BtoMb(int64(avg)),
+			utils.BtoMb(avg*float64(s.goalConcurrency)),
 		)
 	}
 
-	// if >= cacheSize, decrease concurrency by 1 down to MinConcurrency
+	// If >= cacheSize, decrease concurrency however many necessary to fit max cache size
 	if estimatedMaxCache > float64(s.cacheSize) && s.concurrency > MinConcurrency {
-		s.goalConcurrency--
+		s.goalConcurrency = int64(float64(s.cacheSize) / avg)
 		log.Printf(
-			"reducing syncer concurrency to %d (avg block size: %d MB)\n",
+			"reducing syncer concurrency to %d (projected new cache size: %f MB)\n",
 			s.goalConcurrency,
-			utils.BtoMb(int64(avg)),
+			utils.BtoMb(avg*float64(s.goalConcurrency)),
 		)
 	}
 	s.concurrencyLock.Unlock()

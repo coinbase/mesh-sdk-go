@@ -25,11 +25,11 @@ import (
 )
 
 const (
-	bytesInKb = 1024
+	bytesInKb = float64(1024) // nolint:gomnd
 )
 
 // BtoMb converts B to MB.
-func BtoMb(b int64) int64 {
+func BtoMb(b float64) float64 {
 	return b / bytesInKb / bytesInKb
 }
 
