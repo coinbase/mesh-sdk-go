@@ -58,6 +58,17 @@ var (
 	// a block that is out of order. This typically
 	// means the Helper has a bug.
 	ErrOutOfOrder = errors.New("out of order")
+
+	// ErrOrphanHead is returned by the Helper when
+	// the current head should be orphaned. In some
+	// cases, it may not be possible to populate a block
+	// if the head of the canonical chain is not yet synced.
+	ErrOrphanHead = errors.New("orphan head")
+
+	// ErrBlockResultNil is returned by the syncer
+	// when attempting to process a block and the block
+	// result is nil.
+	ErrBlockResultNil = errors.New("block result is nil")
 )
 
 // Handler is called at various times during the sync cycle
@@ -196,14 +207,30 @@ func (s *Syncer) nextSyncableRange(
 	return endIndex, false, nil
 }
 
+func (s *Syncer) attemptOrphan(
+	lastBlock *types.BlockIdentifier,
+) (bool, *types.BlockIdentifier, error) {
+	if types.Hash(s.genesisBlock) == types.Hash(lastBlock) {
+		return false, nil, ErrCannotRemoveGenesisBlock
+	}
+
+	return true, lastBlock, nil
+}
+
 func (s *Syncer) checkRemove(
-	block *types.Block,
+	br *blockResult,
 ) (bool, *types.BlockIdentifier, error) {
 	if len(s.pastBlocks) == 0 {
 		return false, nil, nil
 	}
 
+	lastBlock := s.pastBlocks[len(s.pastBlocks)-1]
+	if br.orphanHead {
+		return s.attemptOrphan(lastBlock)
+	}
+
 	// Ensure processing correct index
+	block := br.block
 	if block.BlockIdentifier.Index != s.nextIndex {
 		return false, nil, fmt.Errorf(
 			"%w: got block %d instead of %d",
@@ -214,13 +241,8 @@ func (s *Syncer) checkRemove(
 	}
 
 	// Check if block parent is head
-	lastBlock := s.pastBlocks[len(s.pastBlocks)-1]
 	if types.Hash(block.ParentBlockIdentifier) != types.Hash(lastBlock) {
-		if types.Hash(s.genesisBlock) == types.Hash(lastBlock) {
-			return false, nil, ErrCannotRemoveGenesisBlock
-		}
-
-		return true, lastBlock, nil
+		return s.attemptOrphan(lastBlock)
 	}
 
 	return false, lastBlock, nil
@@ -228,16 +250,19 @@ func (s *Syncer) checkRemove(
 
 func (s *Syncer) processBlock(
 	ctx context.Context,
-	block *types.Block,
+	br *blockResult,
 ) error {
+	if br == nil {
+		return ErrBlockResultNil
+	}
 	// If the block is omitted, increase
 	// index and return.
-	if block == nil {
+	if br.block == nil && !br.orphanHead {
 		s.nextIndex++
 		return nil
 	}
 
-	shouldRemove, lastBlock, err := s.checkRemove(block)
+	shouldRemove, lastBlock, err := s.checkRemove(br)
 	if err != nil {
 		return err
 	}
@@ -252,6 +277,7 @@ func (s *Syncer) processBlock(
 		return nil
 	}
 
+	block := br.block
 	err = s.handler.BlockAdded(ctx, block)
 	if err != nil {
 		return err
@@ -294,6 +320,32 @@ func (s *Syncer) addBlockIndicies(
 	return nil
 }
 
+func (s *Syncer) fetchBlockResult(
+	ctx context.Context,
+	network *types.NetworkIdentifier,
+	index int64,
+) (*blockResult, error) {
+	block, err := s.helper.Block(
+		ctx,
+		network,
+		&types.PartialBlockIdentifier{
+			Index: &index,
+		},
+	)
+
+	br := &blockResult{index: index}
+	switch {
+	case errors.Is(err, ErrOrphanHead):
+		br.orphanHead = true
+	case err != nil:
+		return nil, err
+	default:
+		br.block = block
+	}
+
+	return br, nil
+}
+
 // fetchChannelBlocks fetches blocks from a
 // channel with retries until there are no
 // more blocks in the channel or there is an
@@ -305,19 +357,17 @@ func (s *Syncer) fetchChannelBlocks(
 	results chan *blockResult,
 ) error {
 	for b := range blockIndicies {
-		block, err := s.helper.Block(
+		br, err := s.fetchBlockResult(
 			ctx,
 			network,
-			&types.PartialBlockIdentifier{
-				Index: &b,
-			},
+			b,
 		)
 		if err != nil {
-			return err
+			return fmt.Errorf("%w: unable to fetch block %d", err, b)
 		}
 
 		select {
-		case results <- &blockResult{index: b, block: block}:
+		case results <- br:
 		case <-ctx.Done():
 			return ctx.Err()
 		}
@@ -330,7 +380,7 @@ func (s *Syncer) fetchChannelBlocks(
 // to process as many blocks as possible.
 func (s *Syncer) processBlocks(
 	ctx context.Context,
-	cache map[int64]*types.Block,
+	cache map[int64]*blockResult,
 	endIndex int64,
 ) error {
 	// We need to determine if we are in a reorg
@@ -339,7 +389,7 @@ func (s *Syncer) processBlocks(
 	reorgStart := int64(-1)
 
 	for s.nextIndex <= endIndex {
-		block, exists := cache[s.nextIndex]
+		br, exists := cache[s.nextIndex]
 		if !exists {
 			// Wait for more blocks if we aren't
 			// in a reorg.
@@ -349,18 +399,15 @@ func (s *Syncer) processBlocks(
 
 			// Fetch the nextIndex if we are
 			// in a re-org.
-			newBlock, err := s.helper.Block(
+			var err error
+			br, err = s.fetchBlockResult(
 				ctx,
 				s.network,
-				&types.PartialBlockIdentifier{
-					Index: &s.nextIndex,
-				},
+				s.nextIndex,
 			)
 			if err != nil {
-				return fmt.Errorf("%w: unable to fetch block %d", err, s.nextIndex)
+				return fmt.Errorf("%w: unable to fetch block during re-org", err)
 			}
-
-			block = newBlock
 		} else {
 			// Anytime we re-fetch an index, we
 			// will need to make another call to the node
@@ -369,7 +416,7 @@ func (s *Syncer) processBlocks(
 		}
 
 		lastProcessed := s.nextIndex
-		if err := s.processBlock(ctx, block); err != nil {
+		if err := s.processBlock(ctx, br); err != nil {
 			return fmt.Errorf("%w: unable to process block", err)
 		}
 
@@ -387,8 +434,9 @@ func (s *Syncer) processBlocks(
 // the block is omitted and we can't
 // determine the index of the request.
 type blockResult struct {
-	index int64
-	block *types.Block
+	index      int64
+	block      *types.Block
+	orphanHead bool
 }
 
 // syncRange fetches and processes a range of blocks
@@ -427,9 +475,9 @@ func (s *Syncer) syncRange(
 		close(results)
 	}()
 
-	cache := make(map[int64]*types.Block)
+	cache := make(map[int64]*blockResult)
 	for b := range results {
-		cache[b.index] = b.block
+		cache[b.index] = b
 
 		if err := s.processBlocks(ctx, cache, endIndex); err != nil {
 			return fmt.Errorf("%w: unable to process blocks", err)

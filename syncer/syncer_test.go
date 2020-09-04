@@ -209,7 +209,7 @@ func TestProcessBlock(t *testing.T) {
 		)
 		err := syncer.processBlock(
 			ctx,
-			blockSequence[0],
+			&blockResult{block: blockSequence[0]},
 		)
 		assert.NoError(t, err)
 		assert.Equal(t, int64(1), syncer.nextIndex)
@@ -224,7 +224,7 @@ func TestProcessBlock(t *testing.T) {
 	t.Run("Orphan genesis", func(t *testing.T) {
 		err := syncer.processBlock(
 			ctx,
-			orphanGenesis,
+			&blockResult{block: orphanGenesis},
 		)
 
 		assert.EqualError(t, err, "cannot remove genesis block")
@@ -241,7 +241,7 @@ func TestProcessBlock(t *testing.T) {
 		mockHandler.On("BlockAdded", ctx, blockSequence[1]).Return(nil).Once()
 		err := syncer.processBlock(
 			ctx,
-			blockSequence[1],
+			&blockResult{block: blockSequence[1]},
 		)
 		assert.NoError(t, err)
 		assert.Equal(t, int64(2), syncer.nextIndex)
@@ -260,7 +260,7 @@ func TestProcessBlock(t *testing.T) {
 		mockHandler.On("BlockRemoved", ctx, blockSequence[1].BlockIdentifier).Return(nil).Once()
 		err := syncer.processBlock(
 			ctx,
-			blockSequence[2],
+			&blockResult{block: blockSequence[2]},
 		)
 		assert.NoError(t, err)
 		assert.Equal(t, int64(1), syncer.nextIndex)
@@ -274,7 +274,7 @@ func TestProcessBlock(t *testing.T) {
 		mockHandler.On("BlockAdded", ctx, blockSequence[3]).Return(nil).Once()
 		err = syncer.processBlock(
 			ctx,
-			blockSequence[3],
+			&blockResult{block: blockSequence[3]},
 		)
 		assert.NoError(t, err)
 		assert.Equal(t, int64(2), syncer.nextIndex)
@@ -291,7 +291,7 @@ func TestProcessBlock(t *testing.T) {
 		mockHandler.On("BlockAdded", ctx, blockSequence[2]).Return(nil).Once()
 		err = syncer.processBlock(
 			ctx,
-			blockSequence[2],
+			&blockResult{block: blockSequence[2]},
 		)
 		assert.NoError(t, err)
 		assert.Equal(t, int64(3), syncer.nextIndex)
@@ -310,7 +310,7 @@ func TestProcessBlock(t *testing.T) {
 	t.Run("Out of order block", func(t *testing.T) {
 		err := syncer.processBlock(
 			ctx,
-			blockSequence[5],
+			&blockResult{block: blockSequence[5]},
 		)
 		assert.Contains(t, err.Error(), "got block 5 instead of 3")
 		assert.Equal(t, int64(3), syncer.nextIndex)
@@ -329,7 +329,7 @@ func TestProcessBlock(t *testing.T) {
 	t.Run("Process omitted block", func(t *testing.T) {
 		err := syncer.processBlock(
 			ctx,
-			nil,
+			&blockResult{},
 		)
 		assert.NoError(t, err)
 		assert.Equal(t, int64(4), syncer.nextIndex)
@@ -340,6 +340,41 @@ func TestProcessBlock(t *testing.T) {
 				blockSequence[0].BlockIdentifier,
 				blockSequence[3].BlockIdentifier,
 				blockSequence[2].BlockIdentifier,
+			},
+			syncer.pastBlocks,
+		)
+	})
+
+	t.Run("Process nil block result", func(t *testing.T) {
+		err := syncer.processBlock(
+			ctx,
+			nil,
+		)
+		assert.True(t, errors.Is(err, ErrBlockResultNil))
+	})
+
+	t.Run("Process orphan head block result", func(t *testing.T) {
+		mockHandler.On(
+			"BlockRemoved",
+			ctx,
+			blockSequence[2].BlockIdentifier,
+		).Return(
+			nil,
+		).Run(func(args mock.Arguments) {
+			assertNotCanceled(t, args)
+		}).Once()
+		err := syncer.processBlock(
+			ctx,
+			&blockResult{orphanHead: true},
+		)
+		assert.NoError(t, err)
+		assert.Equal(t, int64(2), syncer.nextIndex)
+		assert.Equal(t, blockSequence[3].BlockIdentifier, lastBlockIdentifier(syncer))
+		assert.Equal(
+			t,
+			[]*types.BlockIdentifier{
+				blockSequence[0].BlockIdentifier,
+				blockSequence[3].BlockIdentifier,
 			},
 			syncer.pastBlocks,
 		)
@@ -683,6 +718,111 @@ func TestSync_Reorg(t *testing.T) {
 	// [790] = 2
 	// [791, 800] = 3
 	// [801] = 2
+	// [802,1200] = 1
+
+	err := syncer.Sync(ctx, -1, 1200)
+	assert.NoError(t, err)
+	mockHelper.AssertNumberOfCalls(t, "NetworkStatus", 3)
+	mockHelper.AssertExpectations(t)
+	mockHandler.AssertExpectations(t)
+}
+
+func TestSync_ManualReorg(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+
+	mockHelper := &mocks.Helper{}
+	mockHandler := &mocks.Handler{}
+	syncer := New(networkIdentifier, mockHelper, mockHandler, cancel, WithConcurrency(16))
+
+	mockHelper.On("NetworkStatus", ctx, networkIdentifier).Return(&types.NetworkStatusResponse{
+		CurrentBlockIdentifier: &types.BlockIdentifier{
+			Hash:  "block 1300",
+			Index: 1300,
+		},
+		GenesisBlockIdentifier: &types.BlockIdentifier{
+			Hash:  "block 0",
+			Index: 0,
+		},
+	}, nil).Run(func(args mock.Arguments) {
+		err := args.Get(0).(context.Context)
+		assert.NoError(t, err.Err())
+	})
+
+	blocks := createBlocks(0, 800, "")
+	for _, b := range blocks { // [0, 800]
+		mockHelper.On(
+			"Block",
+			mock.AnythingOfType("*context.cancelCtx"),
+			networkIdentifier,
+			&types.PartialBlockIdentifier{Index: &b.BlockIdentifier.Index},
+		).Return(
+			b,
+			nil,
+		).Run(func(args mock.Arguments) {
+			assertNotCanceled(t, args)
+		}).Once()
+		mockHandler.On(
+			"BlockAdded",
+			mock.AnythingOfType("*context.cancelCtx"),
+			b,
+		).Run(func(args mock.Arguments) {
+			assertNotCanceled(t, args)
+		}).Return(
+			nil,
+		).Once()
+	}
+
+	// Create reorg
+	index801 := int64(801)
+	mockHelper.On(
+		"Block",
+		mock.AnythingOfType("*context.cancelCtx"),
+		networkIdentifier,
+		&types.PartialBlockIdentifier{Index: &index801},
+	).Return(
+		nil,
+		ErrOrphanHead,
+	).Run(func(args mock.Arguments) {
+		err := args.Get(0).(context.Context)
+		assert.NoError(t, err.Err())
+	}).Once() // [801]
+	mockHandler.On(
+		"BlockRemoved",
+		mock.AnythingOfType("*context.cancelCtx"),
+		blocks[len(blocks)-1].BlockIdentifier,
+	).Return(
+		nil,
+	).Run(func(args mock.Arguments) {
+		assertNotCanceled(t, args)
+	}).Once()
+
+	newBlocks := createBlocks(800, 1200, "")
+	for _, b := range newBlocks { // [800, 1200]
+		mockHelper.On(
+			"Block",
+			mock.AnythingOfType("*context.cancelCtx"),
+			networkIdentifier,
+			&types.PartialBlockIdentifier{Index: &b.BlockIdentifier.Index},
+		).Return(
+			b,
+			nil,
+		).Run(func(args mock.Arguments) {
+			assertNotCanceled(t, args)
+		}).Once()
+		mockHandler.On(
+			"BlockAdded",
+			mock.AnythingOfType("*context.cancelCtx"),
+			b,
+		).Run(func(args mock.Arguments) {
+			assertNotCanceled(t, args)
+		}).Return(
+			nil,
+		).Once()
+	}
+
+	// Expected Calls to Block
+	// [0, 799] = 1
+	// [800, 801] = 2
 	// [802,1200] = 1
 
 	err := syncer.Sync(ctx, -1, 1200)
