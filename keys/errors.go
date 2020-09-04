@@ -14,7 +14,10 @@
 
 package keys
 
-import "errors"
+import (
+	"errors"
+	utils "github.com/coinbase/rosetta-sdk-go/errors"
+)
 
 // Named error types for Keys errors
 var (
@@ -52,10 +55,5 @@ func ErrKeys(err error) bool {
 		ErrVerifyFailed,
 	}
 
-	for _, k := range keyErrors {
-		if errors.Is(k, err) {
-			return true
-		}
-	}
-	return false
+	return utils.FindError(keyErrors, err)
 }

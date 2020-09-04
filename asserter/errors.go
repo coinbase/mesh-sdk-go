@@ -17,7 +17,7 @@ package asserter
 import (
 	"errors"
 
-	"github.com/coinbase/rosetta-sdk-go/utils"
+	utils "github.com/coinbase/rosetta-sdk-go/errors"
 )
 
 // Named error types for Asserter errors
