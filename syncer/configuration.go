@@ -23,10 +23,10 @@ import (
 // falls back to the default value.
 type Option func(s *Syncer)
 
-// WithConcurrency overrides the default block concurrency.
-func WithConcurrency(concurrency uint64) Option {
+// WithCacheSize overrides the default cache size.
+func WithCacheSize(cacheSize int) Option {
 	return func(s *Syncer) {
-		s.concurrency = concurrency
+		s.cacheSize = cacheSize
 	}
 }
 

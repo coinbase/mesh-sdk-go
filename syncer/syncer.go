@@ -19,9 +19,12 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"sync"
 	"time"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
+	"github.com/coinbase/rosetta-sdk-go/utils"
+
 	"golang.org/x/sync/errgroup"
 )
 
@@ -36,7 +39,11 @@ const (
 
 	// DefaultConcurrency is the default number of
 	// blocks the syncer will try to get concurrently.
-	DefaultConcurrency = 8
+	DefaultConcurrency = int64(8)
+
+	// DefaultCacheSize is the default size of the preprocess
+	// cache for the syncer.
+	DefaultCacheSize = 2000 << 20 // 2 GB
 )
 
 var (
@@ -90,7 +97,10 @@ type Handler interface {
 // to get information about a blockchain network. It is
 // common to implement this helper using the Fetcher package.
 type Helper interface {
-	NetworkStatus(context.Context, *types.NetworkIdentifier) (*types.NetworkStatusResponse, error)
+	NetworkStatus(
+		context.Context,
+		*types.NetworkIdentifier,
+	) (*types.NetworkStatusResponse, error)
 
 	Block(
 		context.Context,
@@ -106,11 +116,10 @@ type Helper interface {
 // In the rosetta-cli, we handle reconciliation, state storage, and
 // logging in the handler.
 type Syncer struct {
-	network     *types.NetworkIdentifier
-	helper      Helper
-	handler     Handler
-	cancel      context.CancelFunc
-	concurrency uint64
+	network *types.NetworkIdentifier
+	helper  Helper
+	handler Handler
+	cancel  context.CancelFunc
 
 	// Used to keep track of sync state
 	genesisBlock *types.BlockIdentifier
@@ -124,6 +133,14 @@ type Syncer struct {
 	// If a blockchain does not have reorgs, it is not necessary to populate
 	// the blockCache on creation.
 	pastBlocks []*types.BlockIdentifier
+
+	// Automatically manage concurrency based on the
+	// provided max cache size.
+	cacheSize        int
+	concurrency      int64
+	goalConcurrency  int64
+	recentBlockSizes []int
+	concurrencyLock  sync.Mutex
 }
 
 // New creates a new Syncer. If pastBlocks is left nil, it will
@@ -140,6 +157,7 @@ func New(
 		helper:      helper,
 		handler:     handler,
 		concurrency: DefaultConcurrency,
+		cacheSize:   DefaultCacheSize,
 		cancel:      cancel,
 		pastBlocks:  []*types.BlockIdentifier{},
 	}
@@ -305,7 +323,7 @@ func (s *Syncer) addBlockIndicies(
 	i := startIndex
 	for i <= endIndex {
 		// Don't load if we already have a healthy backlog.
-		if uint64(len(blockIndicies)) > s.concurrency {
+		if int64(len(blockIndicies)) > s.concurrency {
 			time.Sleep(defaultFetchSleep)
 			continue
 		}
@@ -370,6 +388,19 @@ func (s *Syncer) fetchChannelBlocks(
 		case results <- br:
 		case <-ctx.Done():
 			return ctx.Err()
+		}
+
+		// Exit if concurrency is greater than
+		// goal concurrency.
+		s.concurrencyLock.Lock()
+		shouldExit := false
+		if s.concurrency > s.goalConcurrency {
+			shouldExit = true
+			s.concurrency--
+		}
+		s.concurrencyLock.Unlock()
+		if shouldExit {
+			return nil
 		}
 	}
 
@@ -439,6 +470,38 @@ type blockResult struct {
 	orphanHead bool
 }
 
+func (s *Syncer) shouldCreateWorker(ctx context.Context) bool {
+	// calculate average block size
+	sum := 0
+	for _, b := range s.recentBlockSizes {
+		sum += b
+	}
+	avg := (float64(sum) / float64(len(s.recentBlockSizes))) * 1.2 // pad estimate
+	s.recentBlockSizes = []int{}
+
+	s.concurrencyLock.Lock()
+	// multiply average block size by concurrency
+	estimatedMaxCache := avg * float64(s.concurrency)
+
+	// if < cacheSize, increase concurrency by 1 up to MaxConcurrency
+	shouldCreate := false
+	if estimatedMaxCache+avg < float64(s.cacheSize) {
+		s.goalConcurrency++
+		s.concurrency++
+		shouldCreate = true
+		log.Printf("increasing goal concurrency to %d\n", s.goalConcurrency)
+	}
+
+	// if >= cacheSize, decrease concurrency by 1 down to MinConcurrency
+	if estimatedMaxCache > float64(s.cacheSize) {
+		s.goalConcurrency--
+		log.Printf("reducing goal concurrency to %d\n", s.goalConcurrency)
+	}
+	s.concurrencyLock.Unlock()
+
+	return shouldCreate
+}
+
 // syncRange fetches and processes a range of blocks
 // (from syncer.nextIndex to endIndex, inclusive)
 // with syncer.concurrency.
@@ -462,7 +525,20 @@ func (s *Syncer) syncRange(
 		return s.addBlockIndicies(pipelineCtx, blockIndicies, s.nextIndex, endIndex)
 	})
 
-	for j := uint64(0); j < s.concurrency; j++ {
+	// Don't create more goroutines than there are blocks
+	// to sync.
+	startingConcurrency := DefaultConcurrency
+	blocksToSync := endIndex - s.nextIndex + 1
+	if blocksToSync < startingConcurrency {
+		startingConcurrency = blocksToSync
+	}
+	s.concurrency = startingConcurrency
+
+	// Reset sync variables
+	s.goalConcurrency = s.concurrency
+	s.recentBlockSizes = []int{}
+
+	for j := int64(0); j < s.concurrency; j++ {
 		g.Go(func() error {
 			return s.fetchChannelBlocks(pipelineCtx, s.network, blockIndicies, results)
 		})
@@ -482,6 +558,20 @@ func (s *Syncer) syncRange(
 		if err := s.processBlocks(ctx, cache, endIndex); err != nil {
 			return fmt.Errorf("%w: unable to process blocks", err)
 		}
+
+		// Determine if concurrency should be adjusted.
+		s.recentBlockSizes = append(s.recentBlockSizes, utils.SizeOf(b))
+		if len(s.recentBlockSizes) < 50 {
+			continue
+		}
+
+		if !s.shouldCreateWorker(ctx) {
+			continue
+		}
+
+		g.Go(func() error {
+			return s.fetchChannelBlocks(pipelineCtx, s.network, blockIndicies, results)
+		})
 	}
 
 	err := g.Wait()
