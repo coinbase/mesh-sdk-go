@@ -13,7 +13,7 @@ GOVERALLS_CMD=go run github.com/mattn/goveralls
 GOLINT_CMD=go run golang.org/x/lint/golint
 GO_PACKAGES=./asserter/... ./fetcher/... ./types/... ./client/... ./server/... \
 	./parser/... ./syncer/... ./reconciler/... ./keys/... \
-	./statefulsyncer/... ./storage/... ./utils/... ./constructor/...
+	./statefulsyncer/... ./storage/... ./utils/... ./constructor/... ./errors/...
 GO_FOLDERS=$(shell echo ${GO_PACKAGES} | sed -e "s/\.\///g" | sed -e "s/\/\.\.\.//g")
 TEST_SCRIPT=go test ${GO_PACKAGES}
 LINT_SETTINGS=golint,misspell,gocyclo,gocritic,whitespace,goconst,gocognit,bodyclose,unconvert,lll,unparam

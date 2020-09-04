@@ -14,7 +14,11 @@
 
 package keys
 
-import "errors"
+import (
+	"errors"
+
+	utils "github.com/coinbase/rosetta-sdk-go/errors"
+)
 
 // Named error types for Keys errors
 var (
@@ -24,10 +28,10 @@ var (
 	ErrSignUnsupportedPayloadSignatureType = errors.New(
 		"sign: unexpected payload.SignatureType while signing",
 	)
-	ErrSignUnsupportedSigType = errors.New(
+	ErrSignUnsupportedSignatureType = errors.New(
 		"sign: unexpected Signature type while signing",
 	)
-	ErrSignFailed = errors.New("sign: unable to sign. %w")
+	ErrSignFailed = errors.New("sign: unable to sign")
 
 	ErrVerifyUnsupportedPayloadSignatureType = errors.New(
 		"verify: unexpected payload.SignatureType while verifying",
@@ -37,3 +41,20 @@ var (
 	)
 	ErrVerifyFailed = errors.New("verify: verify returned false")
 )
+
+// ErrKeys takes an error as an argument and returns
+// whether or not the error is one thrown by the keys package
+func ErrKeys(err error) bool {
+	keyErrors := []error{
+		ErrPrivKeyUndecodable,
+		ErrPrivKeyLengthInvalid,
+		ErrSignUnsupportedPayloadSignatureType,
+		ErrSignUnsupportedSignatureType,
+		ErrSignFailed,
+		ErrVerifyUnsupportedPayloadSignatureType,
+		ErrVerifyUnsupportedSignatureType,
+		ErrVerifyFailed,
+	}
+
+	return utils.FindError(keyErrors, err)
+}

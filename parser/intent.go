@@ -29,7 +29,8 @@ import (
 func ExpectedOperation(intent *types.Operation, observed *types.Operation) error {
 	if types.Hash(intent.Account) != types.Hash(observed.Account) {
 		return fmt.Errorf(
-			"intended account %s did not match observed account %s",
+			"%w: expected %s but got %s",
+			ErrExpectedOperationAccountMismatch,
 			types.PrettyPrintStruct(intent.Account),
 			types.PrettyPrintStruct(observed.Account),
 		)
@@ -37,7 +38,8 @@ func ExpectedOperation(intent *types.Operation, observed *types.Operation) error
 
 	if types.Hash(intent.Amount) != types.Hash(observed.Amount) {
 		return fmt.Errorf(
-			"intended amount %s did not match observed amount %s",
+			"%w: expected %s but got %s",
+			ErrExpectedOperationAmountMismatch,
 			types.PrettyPrintStruct(intent.Amount),
 			types.PrettyPrintStruct(observed.Amount),
 		)
@@ -45,7 +47,8 @@ func ExpectedOperation(intent *types.Operation, observed *types.Operation) error
 
 	if intent.Type != observed.Type {
 		return fmt.Errorf(
-			"intended type %s did not match observed type %s",
+			"%w: expected %s but got %s",
+			ErrExpectedOperationTypeMismatch,
 			intent.Type,
 			observed.Type,
 		)
@@ -103,7 +106,8 @@ func (p *Parser) ExpectedOperations(
 
 		if !foundMatch && errExtra {
 			return fmt.Errorf(
-				"found extra operation %s",
+				"%w: %s",
+				ErrExpectedOperationsExtraOperation,
 				types.PrettyPrintStruct(obs),
 			)
 		}
@@ -118,7 +122,7 @@ func (p *Parser) ExpectedOperations(
 
 	if len(missingIntent) > 0 {
 		errString := fmt.Sprintf(
-			"could intent match for %v",
+			"could not intent match %v",
 			missingIntent,
 		)
 
@@ -147,7 +151,7 @@ func ExpectedSigners(intent []*types.SigningPayload, observed []string) error {
 	}
 
 	if err := asserter.StringArray("observed signers", observed); err != nil {
-		return fmt.Errorf("%w: found duplicate signer", err)
+		return fmt.Errorf("%w: %s", ErrExpectedSignerDuplicateSigner, err.Error())
 	}
 
 	// Could exist here if len(intent) != len(observed) but
@@ -166,7 +170,8 @@ func ExpectedSigners(intent []*types.SigningPayload, observed []string) error {
 	for k := range intendedSigners {
 		if _, exists := seenSigners[k]; !exists {
 			return fmt.Errorf(
-				"could not find match for intended signer %s",
+				"%w: %s",
+				ErrExpectedSignerDuplicateSigner,
 				k,
 			)
 		}
@@ -174,7 +179,8 @@ func ExpectedSigners(intent []*types.SigningPayload, observed []string) error {
 
 	if len(unmatched) != 0 {
 		return fmt.Errorf(
-			"found unexpected signers: %s",
+			"%w: %s",
+			ErrExpectedSignerUnexpectedSigner,
 			types.PrettyPrintStruct(unmatched),
 		)
 	}
