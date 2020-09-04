@@ -62,16 +62,16 @@ func (s *SignerSecp256k1) Sign(
 	case types.EcdsaRecovery:
 		sig, err = secp256k1.Sign(payload.Bytes, privKeyBytes)
 		if err != nil {
-			return nil, fmt.Errorf(ErrSignFailed.Error(), err)
+			return nil, fmt.Errorf("%w: %s", ErrSignFailed, err.Error())
 		}
 	case types.Ecdsa:
 		sig, err = secp256k1.Sign(payload.Bytes, privKeyBytes)
 		if err != nil {
-			return nil, fmt.Errorf(ErrSignFailed.Error(), err)
+			return nil, fmt.Errorf("%w: %s", ErrSignFailed, err.Error())
 		}
 		sig = sig[:EcdsaSignatureLen]
 	default:
-		return nil, fmt.Errorf(ErrSignUnsupportedSigType.Error(), err)
+		return nil, fmt.Errorf("%w: %v", ErrSignUnsupportedSignatureType, err)
 	}
 
 	return &types.Signature{
