@@ -22,6 +22,7 @@ import (
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
 	"github.com/coinbase/rosetta-sdk-go/constructor/job"
+	"github.com/coinbase/rosetta-sdk-go/keys"
 	mocks "github.com/coinbase/rosetta-sdk-go/mocks/constructor/coordinator"
 	"github.com/coinbase/rosetta-sdk-go/parser"
 	"github.com/coinbase/rosetta-sdk-go/storage"
@@ -546,7 +547,7 @@ func TestProcess(t *testing.T) {
 		map[string]interface{}{
 			"test": "works",
 		},
-	).Return(metadataOptions, nil).Once()
+	).Return(metadataOptions, nil, nil).Once()
 	fetchedMetadata := map[string]interface{}{
 		"tx_meta": "help",
 	}
@@ -555,6 +556,7 @@ func TestProcess(t *testing.T) {
 		ctx,
 		network,
 		metadataOptions,
+		[]*types.PublicKey{},
 	).Return(fetchedMetadata, nil).Once()
 
 	unsignedTx := "unsigned transaction"
@@ -571,6 +573,7 @@ func TestProcess(t *testing.T) {
 		network,
 		ops,
 		fetchedMetadata,
+		[]*types.PublicKey{},
 	).Return(unsignedTx, signingPayloads, nil).Once()
 	helper.On(
 		"Parse",
@@ -950,7 +953,43 @@ func TestProcess_Failed(t *testing.T) {
 		map[string]interface{}{
 			"test": "works",
 		},
-	).Return(metadataOptions, nil).Once()
+	).Return(metadataOptions, []*types.AccountIdentifier{
+		{
+			Address: "hello",
+		},
+		{
+			Address: "hello2",
+		},
+	}, nil).Once()
+	helper.On(
+		"GetKey",
+		ctx,
+		dbTx,
+		"hello",
+	).Return(
+		&keys.KeyPair{
+			PublicKey: &types.PublicKey{
+				Bytes:     []byte("hello"),
+				CurveType: types.Secp256k1,
+			},
+		},
+		nil,
+	).Once()
+	helper.On(
+		"GetKey",
+		ctx,
+		dbTx,
+		"hello2",
+	).Return(
+		&keys.KeyPair{
+			PublicKey: &types.PublicKey{
+				Bytes:     []byte("hello2"),
+				CurveType: types.Edwards25519,
+			},
+		},
+		nil,
+	).Once()
+
 	fetchedMetadata := map[string]interface{}{
 		"tx_meta": "help",
 	}
@@ -959,6 +998,16 @@ func TestProcess_Failed(t *testing.T) {
 		ctx,
 		network,
 		metadataOptions,
+		[]*types.PublicKey{
+			{
+				Bytes:     []byte("hello"),
+				CurveType: types.Secp256k1,
+			},
+			{
+				Bytes:     []byte("hello2"),
+				CurveType: types.Edwards25519,
+			},
+		},
 	).Return(fetchedMetadata, nil).Once()
 
 	unsignedTx := "unsigned transaction"
@@ -975,6 +1024,16 @@ func TestProcess_Failed(t *testing.T) {
 		network,
 		ops,
 		fetchedMetadata,
+		[]*types.PublicKey{
+			{
+				Bytes:     []byte("hello"),
+				CurveType: types.Secp256k1,
+			},
+			{
+				Bytes:     []byte("hello2"),
+				CurveType: types.Edwards25519,
+			},
+		},
 	).Return(unsignedTx, signingPayloads, nil).Once()
 	helper.On(
 		"Parse",
