@@ -34,15 +34,15 @@ var (
 	ErrExpectedOperationTypeMismatch = errors.New(
 		"intended type did not match observed type",
 	)
-	ErrExpectedOperationsUnexpectedOperation = errors.New("found extra operation")
-	ErrExpectedSignerDuplicateSigner         = errors.New("found duplicate signer")
-	ErrExpectedSignerUnexpectedSigner        = errors.New("found unexpected signers")
+	ErrExpectedOperationsExtraOperation = errors.New("found extra operation")
+	ErrExpectedSignerDuplicateSigner    = errors.New("found duplicate signer")
+	ErrExpectedSignerUnexpectedSigner   = errors.New("found unexpected signers")
 
 	IntentErrs = []error{
 		ErrExpectedOperationAccountMismatch,
 		ErrExpectedOperationAmountMismatch,
 		ErrExpectedOperationTypeMismatch,
-		ErrExpectedOperationsUnexpectedOperation,
+		ErrExpectedOperationsExtraOperation,
 		ErrExpectedSignerDuplicateSigner,
 		ErrExpectedSignerUnexpectedSigner,
 	}
@@ -55,8 +55,8 @@ var (
 	ErrAccountMatchSubAccountPopulated      = errors.New("SubAccount is populated")
 	ErrAccountMatchUnexpectedSubAccountAddr = errors.New("unexpected SubAccountIdentifier.Address")
 
-	ErrMetadataMatchKeyNotFound       = errors.New("key is not present in metadata")
-	ErrMetadataMatchValueTypeMismatch = errors.New("unexpected value associated with key")
+	ErrMetadataMatchKeyNotFound      = errors.New("key is not present in metadata")
+	ErrMetadataMatchKeyValueMismatch = errors.New("unexpected value associated with key")
 
 	ErrAmountMatchAmountMissing      = errors.New("amount is missing")
 	ErrAmountMatchAmountPopulated    = errors.New("amount is populated")
@@ -90,7 +90,7 @@ var (
 		ErrAccountMatchSubAccountPopulated,
 		ErrAccountMatchUnexpectedSubAccountAddr,
 		ErrMetadataMatchKeyNotFound,
-		ErrMetadataMatchValueTypeMismatch,
+		ErrMetadataMatchKeyValueMismatch,
 		ErrAmountMatchAmountMissing,
 		ErrAmountMatchAmountPopulated,
 		ErrAmountMatchUnexpectedSign,
