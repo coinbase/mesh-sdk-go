@@ -71,7 +71,7 @@ func (s *SignerSecp256k1) Sign(
 		}
 		sig = sig[:EcdsaSignatureLen]
 	default:
-		return nil, fmt.Errorf("%w: %s", ErrSignUnsupportedSignatureType, err.Error())
+		return nil, fmt.Errorf("%w: %v", ErrSignUnsupportedSignatureType, err)
 	}
 
 	return &types.Signature{
