@@ -165,7 +165,7 @@ func metadataMatch(reqs []*MetadataDescription, metadata map[string]interface{})
 		if reflect.TypeOf(val).Kind() != req.ValueKind {
 			return fmt.Errorf(
 				"%w: value of %s is not of type %s",
-				ErrMetadataMatchValueTypeMismatch,
+				ErrMetadataMatchKeyValueMismatch,
 				req.Key,
 				req.ValueKind,
 			)
