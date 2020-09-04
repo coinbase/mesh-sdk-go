@@ -402,7 +402,7 @@ func oppositeAmounts(a *types.Operation, b *types.Operation) error {
 // equal addresses.
 func equalAddresses(ops []*types.Operation) error {
 	if len(ops) <= 1 {
-		return fmt.Errorf("%w: got %d operations", ErrEqualAddressesTooManyOperations, len(ops))
+		return fmt.Errorf("%w: got %d operations", ErrEqualAddressesTooFewOperations, len(ops))
 	}
 
 	base := ""

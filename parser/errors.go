@@ -68,9 +68,9 @@ var (
 	ErrOppositeAmountsSameSign       = errors.New("operations have the same sign")
 	ErrOppositeAmountsAbsValMismatch = errors.New("operation absolute values are not equal")
 
-	ErrEqualAddressesTooManyOperations = errors.New("cannot check equality of <= 1 operations")
-	ErrEqualAddressesAccountIsNil      = errors.New("account is nil")
-	ErrEqualAddressesAddrMismatch      = errors.New("addresses do not match")
+	ErrEqualAddressesTooFewOperations = errors.New("cannot check equality of <= 1 operations")
+	ErrEqualAddressesAccountIsNil     = errors.New("account is nil")
+	ErrEqualAddressesAddrMismatch     = errors.New("addresses do not match")
 
 	ErrMatchIndexValidIndexOutOfRange = errors.New("match index out of range")
 	ErrMatchIndexValidIndexIsNil      = errors.New("match index is nil")
@@ -97,7 +97,7 @@ var (
 		ErrEqualAmountsNotEqual,
 		ErrOppositeAmountsSameSign,
 		ErrOppositeAmountsAbsValMismatch,
-		ErrEqualAddressesTooManyOperations,
+		ErrEqualAddressesTooFewOperations,
 		ErrEqualAddressesAccountIsNil,
 		ErrEqualAddressesAddrMismatch,
 		ErrMatchIndexValidIndexOutOfRange,
