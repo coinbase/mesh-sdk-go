@@ -13,6 +13,7 @@ require (
 	github.com/fatih/color v1.9.0
 	github.com/golang/protobuf v1.4.2 // indirect
 	github.com/google/addlicense v0.0.0-20200827091314-d1655b921368 // indirect
+	github.com/google/go-cmp v0.5.2 // indirect
 	github.com/gorilla/mux v1.8.0
 	github.com/kr/pretty v0.2.0 // indirect
 	github.com/lucasjones/reggen v0.0.0-20180717132126-cdb49ff09d77
@@ -25,9 +26,11 @@ require (
 	github.com/tidwall/sjson v1.1.1
 	github.com/vmihailenco/msgpack/v5 v5.0.0-beta.1
 	golang.org/x/crypto v0.0.0-20200728195943-123391ffb6de // indirect
-	golang.org/x/net v0.0.0-20200813134508-3edf25e44fcc // indirect
 	golang.org/x/sync v0.0.0-20200625203802-6e8e738ad208
 	golang.org/x/sys v0.0.0-20200817155316-9781c653f443 // indirect
-	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
+	golang.org/x/tools v0.0.0-20200904185747-39188db58858 // indirect
+	golang.org/x/tools/gopls v0.4.4 // indirect
 	google.golang.org/protobuf v1.25.0 // indirect
+	honnef.co/go/tools v0.0.1-2020.1.5 // indirect
+	mvdan.cc/gofumpt v0.0.0-20200802201014-ab5a8192947d // indirect
 )

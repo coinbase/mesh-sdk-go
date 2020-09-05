@@ -22,7 +22,6 @@ import (
 	"io/ioutil"
 	"log"
 	"path"
-	"sync"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
 
@@ -40,8 +39,8 @@ import (
 // to decode previously encoded data. For many users, providing
 // no dicts is sufficient!
 type Compressor struct {
-	dicts   map[string][]byte
-	bufPool sync.Pool
+	dicts map[string][]byte
+	pool  *BufferPool
 }
 
 // CompressorEntry is used to initialize a Compressor.
@@ -53,7 +52,7 @@ type CompressorEntry struct {
 
 // NewCompressor returns a new *Compressor. The dicts
 // provided should contain k:v of namespace:zstd dict.
-func NewCompressor(entries []*CompressorEntry) (*Compressor, error) {
+func NewCompressor(entries []*CompressorEntry, pool *BufferPool) (*Compressor, error) {
 	dicts := map[string][]byte{}
 	for _, entry := range entries {
 		b, err := ioutil.ReadFile(path.Clean(entry.DictionaryPath))
@@ -71,18 +70,46 @@ func NewCompressor(entries []*CompressorEntry) (*Compressor, error) {
 
 	return &Compressor{
 		dicts: dicts,
-		bufPool: sync.Pool{
-			New: func() interface{} {
-				return new(bytes.Buffer)
-			},
-		},
+		pool:  pool,
 	}, nil
+}
+
+func getEncoder(w io.Writer) *msgpack.Encoder {
+	enc := msgpack.NewEncoder(w)
+	enc.UseJSONTag(true)
+
+	return enc
 }
 
 // Encode attempts to compress the object and will use a dict if
 // one exists for the namespace.
 func (c *Compressor) Encode(namespace string, object interface{}) ([]byte, error) {
-	return c.encode(object, c.dicts[namespace])
+	buf := c.pool.Get()
+	err := getEncoder(buf).Encode(object)
+	if err != nil {
+		return nil, fmt.Errorf("%w: could not encode object", err)
+	}
+
+	output, err := c.EncodeRaw(namespace, buf.Bytes())
+	if err != nil {
+		return nil, fmt.Errorf("%w: could not compress raw bytes", err)
+	}
+
+	c.pool.Put(buf)
+	return output, nil
+}
+
+// EncodeRaw only compresses an input, leaving encoding to the caller.
+// This is particularly useful for training a compressor.
+func (c *Compressor) EncodeRaw(namespace string, input []byte) ([]byte, error) {
+	return c.encode(input, c.dicts[namespace])
+}
+
+func getDecoder(r io.Reader) *msgpack.Decoder {
+	dec := msgpack.NewDecoder(r)
+	dec.UseJSONTag(true)
+
+	return dec
 }
 
 // Decode attempts to decompress the object and will use a dict if
@@ -93,44 +120,30 @@ func (c *Compressor) Decode(namespace string, input []byte, object interface{}) 
 		return fmt.Errorf("%w: unable to decompress raw bytes", err)
 	}
 
-	if err := getDecoder(decompressed).Decode(&object); err != nil {
+	buf := bytes.NewBuffer(decompressed)
+	if err := getDecoder(buf).Decode(&object); err != nil {
 		return fmt.Errorf("%w: unable to decode bytes", err)
 	}
 
-	decompressed.Reset()
-	c.bufPool.Put(decompressed)
-
+	c.pool.Put(buf)
 	return nil
 }
 
 // DecodeRaw only decompresses an input, leaving decoding to the caller.
 // This is particularly useful for training a compressor.
-func (c *Compressor) DecodeRaw(namespace string, input []byte) (*bytes.Buffer, error) {
+func (c *Compressor) DecodeRaw(namespace string, input []byte) ([]byte, error) {
 	return c.decode(input, c.dicts[namespace])
 }
 
-func getEncoder(w io.Writer) *msgpack.Encoder {
-	enc := msgpack.NewEncoder(w)
-	enc.UseJSONTag(true)
-
-	return enc
-}
-
-func (c *Compressor) encode(object interface{}, zstdDict []byte) ([]byte, error) {
-	buf := c.bufPool.Get().(*bytes.Buffer)
-	err := getEncoder(buf).Encode(object)
-	if err != nil {
-		return nil, fmt.Errorf("%w: could not encode object", err)
-	}
-
-	compressBuf := c.bufPool.Get().(*bytes.Buffer)
+func (c *Compressor) encode(input []byte, zstdDict []byte) ([]byte, error) {
+	buf := c.pool.Get()
 	var writer io.WriteCloser
 	if len(zstdDict) > 0 {
-		writer = zstd.NewWriterLevelDict(compressBuf, zstd.DefaultCompression, zstdDict)
+		writer = zstd.NewWriterLevelDict(buf, zstd.DefaultCompression, zstdDict)
 	} else {
-		writer = zstd.NewWriter(compressBuf)
+		writer = zstd.NewWriter(buf)
 	}
-	if _, err := writer.Write(buf.Bytes()); err != nil {
+	if _, err := writer.Write(input); err != nil {
 		return nil, fmt.Errorf("%w: unable to write to buffer", err)
 	}
 
@@ -138,34 +151,27 @@ func (c *Compressor) encode(object interface{}, zstdDict []byte) ([]byte, error)
 		return nil, fmt.Errorf("%w: unable to close writer", err)
 	}
 
-	buf.Reset()
-	c.bufPool.Put(buf)
-
-	return compressBuf.Bytes(), nil
+	return buf.Bytes(), nil
 }
 
-func getDecoder(r io.Reader) *msgpack.Decoder {
-	dec := msgpack.NewDecoder(r)
-	dec.UseJSONTag(true)
-
-	return dec
-}
-
-func (c *Compressor) decode(b []byte, zstdDict []byte) (*bytes.Buffer, error) {
-	decompressed := c.bufPool.Get().(*bytes.Buffer)
+func (c *Compressor) decode(b []byte, zstdDict []byte) ([]byte, error) {
+	buf := c.pool.Get()
 	var reader io.ReadCloser
 	if len(zstdDict) > 0 {
 		reader = zstd.NewReaderDict(bytes.NewReader(b), zstdDict)
 	} else {
 		reader = zstd.NewReader(bytes.NewReader(b))
 	}
-	defer reader.Close()
 
-	if _, err := decompressed.ReadFrom(reader); err != nil {
+	if _, err := buf.ReadFrom(reader); err != nil {
 		return nil, fmt.Errorf("%w: unable to decompress object", err)
 	}
 
-	return decompressed, nil
+	if err := reader.Close(); err != nil {
+		return nil, fmt.Errorf("%w: unable to close reader", err)
+	}
+
+	return buf.Bytes(), nil
 }
 
 func copyStruct(input interface{}, output interface{}) error {

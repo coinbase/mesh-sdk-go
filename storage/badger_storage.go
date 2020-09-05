@@ -30,7 +30,6 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/coinbase/rosetta-sdk-go/utils"
 
-	"github.com/DataDog/zstd"
 	"github.com/dgraph-io/badger/v2"
 	"github.com/dgraph-io/badger/v2/options"
 )
@@ -64,6 +63,7 @@ type BadgerStorage struct {
 	limitMemory       bool
 	compressorEntries []*CompressorEntry
 
+	pool       *BufferPool
 	db         *badger.DB
 	compressor *Compressor
 
@@ -149,13 +149,16 @@ func NewBadgerStorage(ctx context.Context, dir string, options ...BadgerOption) 
 		return nil, fmt.Errorf("%w: could not open badger database", err)
 	}
 
-	compressor, err := NewCompressor(b.compressorEntries)
+	pool := NewBufferPool()
+
+	compressor, err := NewCompressor(b.compressorEntries, pool)
 	if err != nil {
 		return nil, fmt.Errorf("%w: could not load compressor", err)
 	}
 
 	return &BadgerStorage{
 		db:         db,
+		pool:       pool,
 		compressor: compressor,
 	}, nil
 }
@@ -218,8 +221,7 @@ func (b *BadgerTransaction) Commit(context.Context) error {
 
 	// Reclaim all allocated buffers for future work.
 	for _, buf := range b.bytesToReclaim {
-		buf.Reset()
-		b.db.compressor.bufPool.Put(buf)
+		b.db.pool.Put(buf)
 	}
 
 	// Ensure we don't attempt to reclaim twice.
@@ -246,8 +248,7 @@ func (b *BadgerTransaction) Discard(context.Context) {
 
 	// Reclaim all allocated buffers for future work.
 	for _, buf := range b.bytesToReclaim {
-		buf.Reset()
-		b.db.compressor.bufPool.Put(buf)
+		b.db.pool.Put(buf)
 	}
 
 	// Ensure we don't attempt to reclaim twice.
@@ -278,7 +279,7 @@ func (b *BadgerTransaction) Get(
 	ctx context.Context,
 	key []byte,
 ) (bool, []byte, error) {
-	value := b.db.compressor.bufPool.Get().(*bytes.Buffer)
+	value := b.db.pool.Get()
 	item, err := b.txn.Get(key)
 	if err == badger.ErrKeyNotFound {
 		return false, nil, nil
@@ -316,6 +317,7 @@ func (b *BadgerTransaction) Scan(
 	entries := 0
 	values := []*ScanItem{}
 	opts := badger.DefaultIteratorOptions
+	opts.PrefetchValues = false
 	it := b.txn.NewIterator(opts)
 	defer it.Close()
 	for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
@@ -355,6 +357,7 @@ func (b *BadgerTransaction) LimitedMemoryScan(
 ) (int, error) {
 	entries := 0
 	opts := badger.DefaultIteratorOptions
+	opts.PrefetchValues = false
 	it := b.txn.NewIterator(opts)
 	defer it.Close()
 	for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
@@ -396,14 +399,14 @@ func decompressAndSave(
 
 	err = ioutil.WriteFile(
 		path.Join(tmpDir, types.Hash(string(k))),
-		decompressed.Bytes(),
+		decompressed,
 		os.FileMode(utils.DefaultFilePermissions),
 	)
 	if err != nil {
 		return -1, -1, fmt.Errorf("%w: unable to store decompressed file", err)
 	}
 
-	return float64(len(decompressed.Bytes())), float64(len(v)), nil
+	return float64(len(decompressed)), float64(len(v)), nil
 }
 
 func decompressAndEncode(
@@ -416,23 +419,23 @@ func decompressAndEncode(
 		return -1, -1, -1, fmt.Errorf("%w: unable to load file %s", err, path)
 	}
 
-	normalCompress, err := zstd.Compress(nil, decompressed)
+	normalCompress, err := compressor.EncodeRaw("", decompressed)
 	if err != nil {
 		return -1, -1, -1, fmt.Errorf("%w: unable to compress nomral", err)
 	}
 
-	dictCompress, err := compressor.Encode(namespace, decompressed)
+	dictCompress, err := compressor.EncodeRaw(namespace, decompressed)
 	if err != nil {
 		return -1, -1, -1, fmt.Errorf("%w: unable to compress with dictionary", err)
 	}
 
 	// Ensure dict works
-	var dictDecode []byte
-	if err := compressor.Decode(namespace, dictCompress, &dictDecode); err != nil {
+	decompressedDict, err := compressor.DecodeRaw(namespace, dictCompress)
+	if err != nil {
 		return -1, -1, -1, fmt.Errorf("%w: unable to decompress with dictionary", err)
 	}
 
-	if types.Hash(decompressed) != types.Hash(dictDecode) {
+	if types.Hash(decompressed) != types.Hash(decompressedDict) {
 		return -1, -1, -1, errors.New("decompressed dictionary output does not match")
 	}
 
@@ -464,7 +467,7 @@ func recompress(
 				return fmt.Errorf("%w: unable to decompress %s", err, string(k))
 			}
 
-			newCompressed, err := newCompressor.Encode(namespace, decompressed)
+			newCompressed, err := newCompressor.EncodeRaw(namespace, decompressed)
 			if err != nil {
 				return fmt.Errorf("%w: unable to compress with dictionary", err)
 			}
@@ -598,7 +601,7 @@ func BadgerTrain(
 			Namespace:      namespace,
 			DictionaryPath: dictPath,
 		},
-	})
+	}, NewBufferPool())
 	if err != nil {
 		return -1, -1, fmt.Errorf("%w: unable to load compressor", err)
 	}
