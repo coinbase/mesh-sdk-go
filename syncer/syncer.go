@@ -39,7 +39,7 @@ const (
 
 	// DefaultConcurrency is the default number of
 	// blocks the syncer will try to get concurrently.
-	DefaultConcurrency = int64(4) // nolint:gomnd
+	DefaultConcurrency = int64(16) // nolint:gomnd
 
 	// DefaultCacheSize is the default size of the preprocess
 	// cache for the syncer.
@@ -64,10 +64,16 @@ const (
 
 	// defaultTrailingWindow is the size of the trailing window
 	// of block sizes to keep when adjusting concurrency.
-	defaultTrailingWindow = 50
+	defaultTrailingWindow = 100
 
-	// sizeOverestimate is used to pad our average size adjustment.
-	sizeOverestimate = float64(1.2) // nolint:gomnd
+	// defaultAdjustmentWindow is how frequently we will
+	// consider increasing our concurrency.
+	defaultAdjustmentWindow = 10
+
+	// DefaultSizeMultiplier is used to pad our average size adjustment.
+	// This can be used to account for the overhead associated with processing
+	// a particular block with increased concurrency.
+	DefaultSizeMultiplier = float64(1.2) // nolint:gomnd
 
 	// defaultSyncSleep is the amount of time to sleep
 	// when we are at tip but want to keep syncing.
@@ -163,6 +169,7 @@ type Syncer struct {
 	// is a slow rise (to increase concurrency) and fast
 	// fall (if we breach our max cache size).
 	cacheSize        int
+	sizeMultiplier   float64
 	concurrency      int64
 	goalConcurrency  int64
 	recentBlockSizes []int
@@ -180,13 +187,14 @@ func New(
 	options ...Option,
 ) *Syncer {
 	s := &Syncer{
-		network:     network,
-		helper:      helper,
-		handler:     handler,
-		concurrency: DefaultConcurrency,
-		cacheSize:   DefaultCacheSize,
-		cancel:      cancel,
-		pastBlocks:  []*types.BlockIdentifier{},
+		network:        network,
+		helper:         helper,
+		handler:        handler,
+		concurrency:    DefaultConcurrency,
+		cacheSize:      DefaultCacheSize,
+		sizeMultiplier: DefaultSizeMultiplier,
+		cancel:         cancel,
+		pastBlocks:     []*types.BlockIdentifier{},
 	}
 
 	// Override defaults with any provided options
@@ -505,7 +513,7 @@ func (s *Syncer) adjustWorkers() bool {
 			maxSize = b
 		}
 	}
-	max := float64(maxSize) * sizeOverestimate
+	max := float64(maxSize) * s.sizeMultiplier
 
 	s.concurrencyLock.Lock()
 
@@ -516,7 +524,7 @@ func (s *Syncer) adjustWorkers() bool {
 	shouldCreate := false
 	if estimatedMaxCache+max < float64(s.cacheSize) &&
 		s.concurrency < MaxConcurrency &&
-		s.lastAdjustment > defaultTrailingWindow {
+		s.lastAdjustment > defaultAdjustmentWindow {
 		s.goalConcurrency++
 		s.concurrency++
 		s.lastAdjustment = 0
