@@ -929,3 +929,84 @@ func TestSync_Dynamic(t *testing.T) {
 	mockHelper.AssertExpectations(t)
 	mockHandler.AssertExpectations(t)
 }
+
+func TestSync_DynamicOverhead(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+
+	mockHelper := &mocks.Helper{}
+	mockHandler := &mocks.Handler{}
+	syncer := New(
+		networkIdentifier,
+		mockHelper,
+		mockHandler,
+		cancel,
+		WithCacheSize(1<<20),       // 1 MB
+		WithSizeMultiplier(100000), // greatly increase synthetic size
+	)
+
+	// Force syncer to only get part of the way through the full range
+	mockHelper.On("NetworkStatus", ctx, networkIdentifier).Return(&types.NetworkStatusResponse{
+		CurrentBlockIdentifier: &types.BlockIdentifier{
+			Hash:  "block 1",
+			Index: 1,
+		},
+		GenesisBlockIdentifier: &types.BlockIdentifier{
+			Hash:  "block 0",
+			Index: 0,
+		},
+	}, nil).Twice()
+
+	mockHelper.On("NetworkStatus", ctx, networkIdentifier).Return(&types.NetworkStatusResponse{
+		CurrentBlockIdentifier: &types.BlockIdentifier{
+			Hash:  "block 1300",
+			Index: 1300,
+		},
+		GenesisBlockIdentifier: &types.BlockIdentifier{
+			Hash:  "block 0",
+			Index: 0,
+		},
+	}, nil).Twice()
+
+	blocks := createBlocks(0, 200, "")
+
+	// Create a block gap
+	blocks[100] = nil
+	blocks[101].ParentBlockIdentifier = blocks[99].BlockIdentifier
+	for i, b := range blocks {
+		index := int64(i)
+		mockHelper.On(
+			"Block",
+			mock.AnythingOfType("*context.cancelCtx"),
+			networkIdentifier,
+			&types.PartialBlockIdentifier{Index: &index},
+		).Return(
+			b,
+			nil,
+		).Run(func(args mock.Arguments) {
+			if index == 1 {
+				assert.Equal(t, syncer.concurrency, int64(2))
+			}
+			assertNotCanceled(t, args)
+		}).Once()
+
+		if b == nil {
+			continue
+		}
+
+		mockHandler.On(
+			"BlockAdded",
+			mock.AnythingOfType("*context.cancelCtx"),
+			b,
+		).Return(
+			nil,
+		).Run(func(args mock.Arguments) {
+			assertNotCanceled(t, args)
+		}).Once()
+	}
+
+	err := syncer.Sync(ctx, -1, 200)
+	assert.NoError(t, err)
+	assert.Equal(t, syncer.concurrency, int64(1))
+	mockHelper.AssertExpectations(t)
+	mockHandler.AssertExpectations(t)
+}

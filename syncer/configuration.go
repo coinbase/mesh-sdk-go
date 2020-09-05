@@ -30,6 +30,13 @@ func WithCacheSize(cacheSize int) Option {
 	}
 }
 
+// WithSizeMultiplier overrides the default size multiplier.
+func WithSizeMultiplier(sizeMultiplier float64) Option {
+	return func(s *Syncer) {
+		s.sizeMultiplier = sizeMultiplier
+	}
+}
+
 // WithPastBlocks provides the syncer with a cache
 // of previously processed blocks to handle reorgs.
 func WithPastBlocks(blocks []*types.BlockIdentifier) Option {
