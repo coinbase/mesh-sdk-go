@@ -494,7 +494,9 @@ func (b *BalanceStorage) BootstrapBalances(
 func (b *BalanceStorage) getAllBalanceEntries(ctx context.Context) ([]*balanceEntry, error) {
 	balances := []*balanceEntry{}
 	namespace := balanceNamespace
-	_, err := b.db.Scan(
+	txn := b.db.NewDatabaseTransaction(ctx, false)
+	defer txn.Discard(ctx)
+	_, err := txn.LimitedMemoryScan(
 		ctx,
 		[]byte(namespace),
 		func(k []byte, v []byte) error {
