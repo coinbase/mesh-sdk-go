@@ -200,7 +200,6 @@ func (c *CoinStorage) removeCoin(
 	}
 
 	if !exists { // this could occur if coin was created before we started syncing
-		fmt.Printf("%s does not exist\n", coinIdentifier)
 		return nil
 	}
 

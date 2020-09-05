@@ -22,6 +22,7 @@ import (
 	"io/ioutil"
 	"log"
 	"path"
+	"sync"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
 
@@ -39,7 +40,8 @@ import (
 // to decode previously encoded data. For many users, providing
 // no dicts is sufficient!
 type Compressor struct {
-	dicts map[string][]byte
+	dicts   map[string][]byte
+	bufPool sync.Pool
 }
 
 // CompressorEntry is used to initialize a Compressor.
@@ -69,13 +71,18 @@ func NewCompressor(entries []*CompressorEntry) (*Compressor, error) {
 
 	return &Compressor{
 		dicts: dicts,
+		bufPool: sync.Pool{
+			New: func() interface{} {
+				return new(bytes.Buffer)
+			},
+		},
 	}, nil
 }
 
 // Encode attempts to compress the object and will use a dict if
 // one exists for the namespace.
 func (c *Compressor) Encode(namespace string, object interface{}) ([]byte, error) {
-	return encode(object, c.dicts[namespace])
+	return c.encode(object, c.dicts[namespace])
 }
 
 // Decode attempts to decompress the object and will use a dict if
@@ -86,17 +93,20 @@ func (c *Compressor) Decode(namespace string, input []byte, object interface{}) 
 		return fmt.Errorf("%w: unable to decompress raw bytes", err)
 	}
 
-	if err := getDecoder(bytes.NewReader(decompressed)).Decode(&object); err != nil {
+	if err := getDecoder(decompressed).Decode(&object); err != nil {
 		return fmt.Errorf("%w: unable to decode bytes", err)
 	}
+
+	decompressed.Reset()
+	c.bufPool.Put(decompressed)
 
 	return nil
 }
 
 // DecodeRaw only decompresses an input, leaving decoding to the caller.
 // This is particularly useful for training a compressor.
-func (c *Compressor) DecodeRaw(namespace string, input []byte) ([]byte, error) {
-	return decode(input, c.dicts[namespace])
+func (c *Compressor) DecodeRaw(namespace string, input []byte) (*bytes.Buffer, error) {
+	return c.decode(input, c.dicts[namespace])
 }
 
 func getEncoder(w io.Writer) *msgpack.Encoder {
@@ -106,31 +116,32 @@ func getEncoder(w io.Writer) *msgpack.Encoder {
 	return enc
 }
 
-func encode(object interface{}, zstdDict []byte) ([]byte, error) {
-	buf := new(bytes.Buffer)
+func (c *Compressor) encode(object interface{}, zstdDict []byte) ([]byte, error) {
+	buf := c.bufPool.Get().(*bytes.Buffer)
 	err := getEncoder(buf).Encode(object)
 	if err != nil {
 		return nil, fmt.Errorf("%w: could not encode object", err)
 	}
 
-	var compressed []byte
+	compressBuf := c.bufPool.Get().(*bytes.Buffer)
+	var writer io.WriteCloser
 	if len(zstdDict) > 0 {
-		compressBuf := new(bytes.Buffer)
-		writer := zstd.NewWriterLevelDict(compressBuf, zstd.DefaultCompression, zstdDict)
-		_, err = writer.Write(buf.Bytes())
-		if err == nil {
-			err = writer.Close()
-		}
-
-		compressed = compressBuf.Bytes()
+		writer = zstd.NewWriterLevelDict(compressBuf, zstd.DefaultCompression, zstdDict)
 	} else {
-		compressed, err = zstd.Compress(nil, buf.Bytes())
+		writer = zstd.NewWriter(compressBuf)
 	}
-	if err != nil {
-		return nil, fmt.Errorf("%w: could not compress object", err)
+	if _, err := writer.Write(buf.Bytes()); err != nil {
+		return nil, fmt.Errorf("%w: unable to write to buffer", err)
 	}
 
-	return compressed, nil
+	if err := writer.Close(); err != nil {
+		return nil, fmt.Errorf("%w: unable to close writer", err)
+	}
+
+	buf.Reset()
+	c.bufPool.Put(buf)
+
+	return compressBuf.Bytes(), nil
 }
 
 func getDecoder(r io.Reader) *msgpack.Decoder {
@@ -140,18 +151,17 @@ func getDecoder(r io.Reader) *msgpack.Decoder {
 	return dec
 }
 
-func decode(b []byte, zstdDict []byte) ([]byte, error) {
-	var decompressed []byte
-	var err error
+func (c *Compressor) decode(b []byte, zstdDict []byte) (*bytes.Buffer, error) {
+	decompressed := c.bufPool.Get().(*bytes.Buffer)
+	var reader io.ReadCloser
 	if len(zstdDict) > 0 {
-		reader := zstd.NewReaderDict(bytes.NewReader(b), zstdDict)
-		defer reader.Close()
-
-		decompressed, err = ioutil.ReadAll(reader)
+		reader = zstd.NewReaderDict(bytes.NewReader(b), zstdDict)
 	} else {
-		decompressed, err = zstd.Decompress(nil, b)
+		reader = zstd.NewReader(bytes.NewReader(b))
 	}
-	if err != nil {
+	defer reader.Close()
+
+	if _, err := decompressed.ReadFrom(reader); err != nil {
 		return nil, fmt.Errorf("%w: unable to decompress object", err)
 	}
 
