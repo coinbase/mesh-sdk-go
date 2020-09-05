@@ -39,7 +39,7 @@ const (
 
 	// DefaultConcurrency is the default number of
 	// blocks the syncer will try to get concurrently.
-	DefaultConcurrency = int64(16) // nolint:gomnd
+	DefaultConcurrency = int64(4) // nolint:gomnd
 
 	// DefaultCacheSize is the default size of the preprocess
 	// cache for the syncer.
