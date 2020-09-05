@@ -313,10 +313,9 @@ func (b *BadgerTransaction) Scan(
 	ctx context.Context,
 	prefix []byte,
 ) ([]*ScanItem, error) {
+	entries := 0
 	values := []*ScanItem{}
 	opts := badger.DefaultIteratorOptions
-	opts.PrefetchValues = false
-
 	it := b.txn.NewIterator(opts)
 	defer it.Close()
 	for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
@@ -337,27 +336,26 @@ func (b *BadgerTransaction) Scan(
 			bytes.NewBuffer(k),
 			bytes.NewBuffer(v),
 		)
+
+		entries++
+		if entries%logModulo == 0 {
+			log.Printf("scanned %d entries for %s\n", entries, string(prefix))
+		}
 	}
 
 	return values, nil
 }
 
-// Scan calls a worker for each item in a scan instead
+// LimitedMemoryScan calls a worker for each item in a scan instead
 // of reading all items into memory.
-func (b *BadgerStorage) Scan(
+func (b *BadgerTransaction) LimitedMemoryScan(
 	ctx context.Context,
 	prefix []byte,
 	worker func([]byte, []byte) error,
 ) (int, error) {
-	txn := b.db.NewTransaction(false)
-	defer txn.Discard()
-
 	entries := 0
-
 	opts := badger.DefaultIteratorOptions
-	opts.PrefetchValues = false
-
-	it := txn.NewIterator(opts)
+	it := b.txn.NewIterator(opts)
 	defer it.Close()
 	for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
 		item := it.Item()
@@ -455,7 +453,9 @@ func recompress(
 	onDiskSize := float64(0)
 	newSize := float64(0)
 
-	_, err := badgerDb.Scan(
+	txn := badgerDb.NewDatabaseTransaction(ctx, false)
+	defer txn.Discard(ctx)
+	_, err := txn.LimitedMemoryScan(
 		ctx,
 		[]byte(restrictedNamespace),
 		func(k []byte, v []byte) error {
@@ -524,7 +524,9 @@ func BadgerTrain(
 	totalUncompressedSize := float64(0)
 	totalDiskSize := float64(0)
 	entriesSeen := 0
-	_, err = badgerDb.Scan(
+	txn := badgerDb.NewDatabaseTransaction(ctx, false)
+	defer txn.Discard(ctx)
+	_, err = txn.LimitedMemoryScan(
 		ctx,
 		[]byte(restrictedNamespace),
 		func(k []byte, v []byte) error {

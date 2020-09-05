@@ -77,9 +77,39 @@ func TestDatabase(t *testing.T) {
 			})
 		}
 
+		for i := 0; i < 100; i++ {
+			k := []byte(fmt.Sprintf("testing/%d", i))
+			v := []byte(fmt.Sprintf("%d", i))
+			err := txn.Set(ctx, k, v)
+			assert.NoError(t, err)
+		}
+
 		values, err := txn.Scan(ctx, []byte("test/"))
 		assert.NoError(t, err)
 		assert.ElementsMatch(t, storedValues, values)
+
+		retrievedStoredValues := []*ScanItem{}
+		numValues, err := txn.LimitedMemoryScan(
+			ctx,
+			[]byte("test/"),
+			func(k []byte, v []byte) error {
+				thisK := make([]byte, len(k))
+				thisV := make([]byte, len(v))
+
+				copy(thisK, k)
+				copy(thisV, v)
+
+				retrievedStoredValues = append(retrievedStoredValues, &ScanItem{
+					Key:   thisK,
+					Value: thisV,
+				})
+
+				return nil
+			},
+		)
+		assert.NoError(t, err)
+		assert.Equal(t, 100, numValues)
+		assert.ElementsMatch(t, storedValues, retrievedStoredValues)
 		assert.NoError(t, txn.Commit(ctx))
 	})
 }
@@ -156,7 +186,6 @@ func TestBadgerTrain_NoLimit(t *testing.T) {
 	defer utils.RemoveTempDir(newDir)
 
 	database, err := NewBadgerStorage(ctx, newDir)
-	fmt.Printf("initialization error %+v\n", err)
 	assert.NoError(t, err)
 
 	// Load storage with entries in namespace
@@ -189,7 +218,6 @@ func TestBadgerTrain_NoLimit(t *testing.T) {
 		[]*CompressorEntry{},
 	)
 	assert.NoError(t, err)
-	fmt.Printf("train error %+v\n", err)
 	assert.True(t, normalSize > dictSize)
 }
 
@@ -235,7 +263,6 @@ func TestBadgerTrain_Limit(t *testing.T) {
 		10,
 		[]*CompressorEntry{},
 	)
-	fmt.Printf("train error %+v\n", err)
 	assert.NoError(t, err)
 	assert.True(t, oldSize > newSize)
 
@@ -255,7 +282,6 @@ func TestBadgerTrain_Limit(t *testing.T) {
 		newDir2,
 		WithCompressorEntries(entries),
 	)
-	fmt.Printf("initialization error %+v\n", err)
 	assert.NoError(t, err)
 
 	txn2 := database2.NewDatabaseTransaction(ctx, true)

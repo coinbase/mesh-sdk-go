@@ -27,15 +27,9 @@ type ScanItem struct {
 // Database is an interface that provides transactional
 // access to a KV store.
 type Database interface {
-	Compressor() *Compressor
-
 	NewDatabaseTransaction(context.Context, bool) DatabaseTransaction
 	Close(context.Context) error
-	Scan(
-		context.Context,
-		[]byte,
-		func([]byte, []byte) error,
-	) (int, error)
+	Compressor() *Compressor
 }
 
 // DatabaseTransaction is an interface that provides
@@ -49,7 +43,13 @@ type DatabaseTransaction interface {
 	Set(context.Context, []byte, []byte) error
 	Get(context.Context, []byte) (bool, []byte, error)
 	Delete(context.Context, []byte) error
+
 	Scan(ctx context.Context, prefix []byte) ([]*ScanItem, error)
+	LimitedMemoryScan(
+		context.Context,
+		[]byte,
+		func([]byte, []byte) error,
+	) (int, error)
 
 	Commit(context.Context) error
 	Discard(context.Context)
