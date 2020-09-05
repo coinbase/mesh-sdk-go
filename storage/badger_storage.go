@@ -15,6 +15,7 @@
 package storage
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -50,7 +51,6 @@ const (
 	PerformanceMaxTableSize = 256 << 20
 
 	bytesInMb = 1000000
-
 	logModulo = 5000
 )
 
@@ -183,6 +183,8 @@ type BadgerTransaction struct {
 	txn *badger.Txn
 
 	holdsLock bool
+
+	bytesToReclaim []*bytes.Buffer
 }
 
 // NewDatabaseTransaction creates a new BadgerTransaction.
@@ -203,15 +205,25 @@ func (b *BadgerStorage) NewDatabaseTransaction(
 	}
 
 	return &BadgerTransaction{
-		db:        b,
-		txn:       b.db.NewTransaction(write),
-		holdsLock: write,
+		db:             b,
+		txn:            b.db.NewTransaction(write),
+		holdsLock:      write,
+		bytesToReclaim: []*bytes.Buffer{},
 	}
 }
 
 // Commit attempts to commit and discard the transaction.
 func (b *BadgerTransaction) Commit(context.Context) error {
 	err := b.txn.Commit()
+
+	// Reclaim all allocated buffers for future work.
+	for _, buf := range b.bytesToReclaim {
+		buf.Reset()
+		b.db.compressor.bufPool.Put(buf)
+	}
+
+	// Ensure we don't attempt to reclaim twice.
+	b.bytesToReclaim = nil
 
 	// It is possible that we may accidentally call commit twice.
 	// In this case, we only unlock if we hold the lock to avoid a panic.
@@ -231,6 +243,16 @@ func (b *BadgerTransaction) Commit(context.Context) error {
 // must be either discarded or committed.
 func (b *BadgerTransaction) Discard(context.Context) {
 	b.txn.Discard()
+
+	// Reclaim all allocated buffers for future work.
+	for _, buf := range b.bytesToReclaim {
+		buf.Reset()
+		b.db.compressor.bufPool.Put(buf)
+	}
+
+	// Ensure we don't attempt to reclaim twice.
+	b.bytesToReclaim = nil
+
 	if b.holdsLock {
 		b.db.writer.Unlock()
 	}
@@ -242,6 +264,12 @@ func (b *BadgerTransaction) Set(
 	key []byte,
 	value []byte,
 ) error {
+	b.bytesToReclaim = append(
+		b.bytesToReclaim,
+		bytes.NewBuffer(key),
+		bytes.NewBuffer(value),
+	)
+
 	return b.txn.Set(key, value)
 }
 
@@ -250,7 +278,7 @@ func (b *BadgerTransaction) Get(
 	ctx context.Context,
 	key []byte,
 ) (bool, []byte, error) {
-	var value []byte
+	value := b.db.compressor.bufPool.Get().(*bytes.Buffer)
 	item, err := b.txn.Get(key)
 	if err == badger.ErrKeyNotFound {
 		return false, nil, nil
@@ -259,15 +287,19 @@ func (b *BadgerTransaction) Get(
 	}
 
 	err = item.Value(func(v []byte) error {
-		value = make([]byte, len(v))
-		copy(value, v)
-		return nil
+		_, err := value.Write(v)
+		return err
 	})
 	if err != nil {
 		return false, nil, err
 	}
 
-	return true, value, nil
+	b.bytesToReclaim = append(
+		b.bytesToReclaim,
+		bytes.NewBuffer(key),
+		value,
+	)
+	return true, value.Bytes(), nil
 }
 
 // Delete removes the key and its value within the transaction.
@@ -299,69 +331,20 @@ func (b *BadgerTransaction) Scan(
 			Key:   k,
 			Value: v,
 		})
+
+		b.bytesToReclaim = append(
+			b.bytesToReclaim,
+			bytes.NewBuffer(k),
+			bytes.NewBuffer(v),
+		)
 	}
 
 	return values, nil
 }
 
-// Set changes the value of the key to the value in its own transaction.
-func (b *BadgerStorage) Set(
-	ctx context.Context,
-	key []byte,
-	value []byte,
-) error {
-	return b.db.Update(func(txn *badger.Txn) error {
-		return txn.Set(key, value)
-	})
-}
-
-// Get fetches the value of a key in its own transaction.
-func (b *BadgerStorage) Get(
-	ctx context.Context,
-	key []byte,
-) (bool, []byte, error) {
-	var value []byte
-	err := b.db.View(func(txn *badger.Txn) error {
-		item, err := txn.Get(key)
-		if err != nil {
-			return err
-		}
-
-		err = item.Value(func(v []byte) error {
-			value = make([]byte, len(v))
-			copy(value, v)
-			return nil
-		})
-		if err != nil {
-			return err
-		}
-
-		return nil
-	})
-	if err == badger.ErrKeyNotFound {
-		return false, nil, nil
-	} else if err != nil {
-		return false, nil, err
-	}
-
-	return true, value, nil
-}
-
-// Scan fetches all items at a given prefix. This is typically
-// used to get all items in a namespace.
-func (b *BadgerStorage) Scan(
-	ctx context.Context,
-	prefix []byte,
-) ([]*ScanItem, error) {
-	txn := b.NewDatabaseTransaction(ctx, false)
-	defer txn.Discard(ctx)
-
-	return txn.Scan(ctx, prefix)
-}
-
-// LimitedMemoryScan calls a worker for each item in a scan instead
+// Scan calls a worker for each item in a scan instead
 // of reading all items into memory.
-func (b *BadgerStorage) LimitedMemoryScan(
+func (b *BadgerStorage) Scan(
 	ctx context.Context,
 	prefix []byte,
 	worker func([]byte, []byte) error,
@@ -415,14 +398,14 @@ func decompressAndSave(
 
 	err = ioutil.WriteFile(
 		path.Join(tmpDir, types.Hash(string(k))),
-		decompressed,
+		decompressed.Bytes(),
 		os.FileMode(utils.DefaultFilePermissions),
 	)
 	if err != nil {
 		return -1, -1, fmt.Errorf("%w: unable to store decompressed file", err)
 	}
 
-	return float64(len(decompressed)), float64(len(v)), nil
+	return float64(len(decompressed.Bytes())), float64(len(v)), nil
 }
 
 func decompressAndEncode(
@@ -472,7 +455,7 @@ func recompress(
 	onDiskSize := float64(0)
 	newSize := float64(0)
 
-	_, err := badgerDb.LimitedMemoryScan(
+	_, err := badgerDb.Scan(
 		ctx,
 		[]byte(restrictedNamespace),
 		func(k []byte, v []byte) error {
@@ -541,7 +524,7 @@ func BadgerTrain(
 	totalUncompressedSize := float64(0)
 	totalDiskSize := float64(0)
 	entriesSeen := 0
-	_, err = badgerDb.LimitedMemoryScan(
+	_, err = badgerDb.Scan(
 		ctx,
 		[]byte(restrictedNamespace),
 		func(k []byte, v []byte) error {
