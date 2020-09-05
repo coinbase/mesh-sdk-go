@@ -351,13 +351,13 @@ func TestProcess(t *testing.T) {
 	helper.On("HeadBlockExists", ctx).Return(true).Once()
 	dbTxExtra := db.NewDatabaseTransaction(ctx, false)
 	helper.On("DatabaseTransaction", ctx).Return(dbTxExtra).Once()
-	jobStorage.On("Ready", ctx, dbTx2).Return([]*job.Job{&jobExtra}, nil).Once()
-	helper.On("AllAddresses", ctx, dbTx2).Return([]string{"address1"}, nil).Once()
-	helper.On("LockedAddresses", ctx, dbTx2).Return([]string{}, nil).Once()
+	jobStorage.On("Ready", ctx, dbTxExtra).Return([]*job.Job{&jobExtra}, nil).Once()
+	helper.On("AllAddresses", ctx, dbTxExtra).Return([]string{"address1"}, nil).Once()
+	helper.On("LockedAddresses", ctx, dbTxExtra).Return([]string{}, nil).Once()
 	helper.On(
 		"Balance",
 		ctx,
-		dbTx2,
+		dbTxExtra,
 		&types.AccountIdentifier{Address: "address1"},
 		&types.Currency{
 			Symbol:   "tBTC",
@@ -718,6 +718,7 @@ func TestProcess(t *testing.T) {
 		nil,
 	)
 	helper.On("BroadcastAll", ctx).Return(nil).Run(func(args mock.Arguments) {
+		fmt.Printf("canceling %+v\n", args)
 		cancel()
 	}).Once()
 

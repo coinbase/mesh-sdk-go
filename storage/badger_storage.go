@@ -187,7 +187,7 @@ type BadgerTransaction struct {
 
 	holdsLock bool
 
-	bytesToReclaim []*bytes.Buffer
+	buffersToReclaim []*bytes.Buffer
 }
 
 // NewDatabaseTransaction creates a new BadgerTransaction.
@@ -208,10 +208,10 @@ func (b *BadgerStorage) NewDatabaseTransaction(
 	}
 
 	return &BadgerTransaction{
-		db:             b,
-		txn:            b.db.NewTransaction(write),
-		holdsLock:      write,
-		bytesToReclaim: []*bytes.Buffer{},
+		db:               b,
+		txn:              b.db.NewTransaction(write),
+		holdsLock:        write,
+		buffersToReclaim: []*bytes.Buffer{},
 	}
 }
 
@@ -220,12 +220,12 @@ func (b *BadgerTransaction) Commit(context.Context) error {
 	err := b.txn.Commit()
 
 	// Reclaim all allocated buffers for future work.
-	for _, buf := range b.bytesToReclaim {
+	for _, buf := range b.buffersToReclaim {
 		b.db.pool.Put(buf)
 	}
 
 	// Ensure we don't attempt to reclaim twice.
-	b.bytesToReclaim = nil
+	b.buffersToReclaim = nil
 
 	// It is possible that we may accidentally call commit twice.
 	// In this case, we only unlock if we hold the lock to avoid a panic.
@@ -247,12 +247,12 @@ func (b *BadgerTransaction) Discard(context.Context) {
 	b.txn.Discard()
 
 	// Reclaim all allocated buffers for future work.
-	for _, buf := range b.bytesToReclaim {
+	for _, buf := range b.buffersToReclaim {
 		b.db.pool.Put(buf)
 	}
 
 	// Ensure we don't attempt to reclaim twice.
-	b.bytesToReclaim = nil
+	b.buffersToReclaim = nil
 
 	if b.holdsLock {
 		b.db.writer.Unlock()
@@ -265,8 +265,8 @@ func (b *BadgerTransaction) Set(
 	key []byte,
 	value []byte,
 ) error {
-	b.bytesToReclaim = append(
-		b.bytesToReclaim,
+	b.buffersToReclaim = append(
+		b.buffersToReclaim,
 		bytes.NewBuffer(key),
 		bytes.NewBuffer(value),
 	)
@@ -295,8 +295,8 @@ func (b *BadgerTransaction) Get(
 		return false, nil, err
 	}
 
-	b.bytesToReclaim = append(
-		b.bytesToReclaim,
+	b.buffersToReclaim = append(
+		b.buffersToReclaim,
 		bytes.NewBuffer(key),
 		value,
 	)
@@ -333,8 +333,8 @@ func (b *BadgerTransaction) Scan(
 			Value: v,
 		})
 
-		b.bytesToReclaim = append(
-			b.bytesToReclaim,
+		b.buffersToReclaim = append(
+			b.buffersToReclaim,
 			bytes.NewBuffer(k),
 			bytes.NewBuffer(v),
 		)
