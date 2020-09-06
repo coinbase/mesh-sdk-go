@@ -234,7 +234,7 @@ func TestBadgerTrain_Limit(t *testing.T) {
 	// Load storage with entries in namespace
 	namespace := "bogus"
 	txn := database.NewDatabaseTransaction(ctx, true)
-	for i := 0; i < 100000; i++ {
+	for i := 0; i < 10000; i++ {
 		output, err := reggen.Generate(`[a-z]+`, 50)
 		assert.NoError(t, err)
 		entry := &BogusEntry{
@@ -285,7 +285,7 @@ func TestBadgerTrain_Limit(t *testing.T) {
 	assert.NoError(t, err)
 
 	txn2 := database2.NewDatabaseTransaction(ctx, true)
-	for i := 0; i < 100000; i++ {
+	for i := 0; i < 10000; i++ {
 		output, err := reggen.Generate(`[a-z]+`, 50)
 		assert.NoError(t, err)
 		entry := &BogusEntry{
