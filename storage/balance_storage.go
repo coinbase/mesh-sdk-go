@@ -166,7 +166,7 @@ func (b *BalanceStorage) SetBalance(
 ) error {
 	namespace, key := GetBalanceKey(account, amount.Currency)
 
-	serialBal, err := b.db.Compressor().Encode(namespace, &balanceEntry{
+	serialBal, err := b.db.Compressor().Encode(namespace, balanceEntry{
 		Account: account,
 		Amount:  amount,
 		Block:   block,
@@ -332,7 +332,7 @@ func (b *BalanceStorage) UpdateBalance(
 		)
 	}
 
-	serialBal, err := b.db.Compressor().Encode(namespace, &balanceEntry{
+	serialBal, err := b.db.Compressor().Encode(namespace, balanceEntry{
 		Account: change.Account,
 		Amount: &types.Amount{
 			Value:    newVal,

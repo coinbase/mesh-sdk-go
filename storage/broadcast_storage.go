@@ -328,7 +328,7 @@ func (b *BroadcastStorage) Broadcast(
 		return fmt.Errorf("already broadcasting transaction %s", transactionIdentifier.Hash)
 	}
 
-	bytes, err := b.db.Compressor().Encode(namespace, &Broadcast{
+	bytes, err := b.db.Compressor().Encode(namespace, Broadcast{
 		Identifier:            identifier,
 		NetworkIdentifier:     network,
 		TransactionIdentifier: transactionIdentifier,
