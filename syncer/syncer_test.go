@@ -417,7 +417,7 @@ func TestSync_NoReorg(t *testing.T) {
 
 	mockHelper := &mocks.Helper{}
 	mockHandler := &mocks.Handler{}
-	syncer := New(networkIdentifier, mockHelper, mockHandler, cancel)
+	syncer := New(networkIdentifier, mockHelper, mockHandler, cancel, WithMaxConcurrency(3))
 
 	// Force syncer to only get part of the way through the full range
 	mockHelper.On("NetworkStatus", ctx, networkIdentifier).Return(&types.NetworkStatusResponse{
@@ -478,7 +478,7 @@ func TestSync_NoReorg(t *testing.T) {
 
 	err := syncer.Sync(ctx, -1, 1200)
 	assert.NoError(t, err)
-	assert.True(t, syncer.concurrency > DefaultConcurrency)
+	assert.Equal(t, syncer.concurrency, int64(3))
 	mockHelper.AssertExpectations(t)
 	mockHandler.AssertExpectations(t)
 }

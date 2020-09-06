@@ -54,9 +54,9 @@ const (
 	// TinyCacheSize will aim to use 200 MB of memory.
 	TinyCacheSize = 200 << 20 // 200 MB
 
-	// MaxConcurrency is the maximum concurrency we will
+	// DefaultMaxConcurrency is the maximum concurrency we will
 	// attempt to sync with.
-	MaxConcurrency = int64(256) // nolint:gomnd
+	DefaultMaxConcurrency = int64(256) // nolint:gomnd
 
 	// MinConcurrency is the minimum concurrency we will
 	// attempt to sync with.
@@ -170,6 +170,7 @@ type Syncer struct {
 	// fall (if we breach our max cache size).
 	cacheSize        int
 	sizeMultiplier   float64
+	maxConcurrency   int64
 	concurrency      int64
 	goalConcurrency  int64
 	recentBlockSizes []int
@@ -192,6 +193,7 @@ func New(
 		handler:        handler,
 		concurrency:    DefaultConcurrency,
 		cacheSize:      DefaultCacheSize,
+		maxConcurrency: DefaultMaxConcurrency,
 		sizeMultiplier: DefaultSizeMultiplier,
 		cancel:         cancel,
 		pastBlocks:     []*types.BlockIdentifier{},
@@ -523,7 +525,7 @@ func (s *Syncer) adjustWorkers() bool {
 	// If < cacheSize, increase concurrency by 1 up to MaxConcurrency
 	shouldCreate := false
 	if estimatedMaxCache+max < float64(s.cacheSize) &&
-		s.concurrency < MaxConcurrency &&
+		s.concurrency < s.maxConcurrency &&
 		s.lastAdjustment > defaultAdjustmentWindow {
 		s.goalConcurrency++
 		s.concurrency++
@@ -540,17 +542,21 @@ func (s *Syncer) adjustWorkers() bool {
 	//
 	// Note: We always will decrease size, regardless of last adjustment.
 	if estimatedMaxCache > float64(s.cacheSize) {
-		s.goalConcurrency = int64(float64(s.cacheSize) / max)
-		if s.goalConcurrency < MinConcurrency {
-			s.goalConcurrency = MinConcurrency
+		newGoalConcurrency := int64(float64(s.cacheSize) / max)
+		if newGoalConcurrency < MinConcurrency {
+			newGoalConcurrency = MinConcurrency
 		}
 
-		s.lastAdjustment = 0
-		log.Printf(
-			"reducing syncer concurrency to %d (projected new cache size: %f MB)\n",
-			s.goalConcurrency,
-			utils.BtoMb(max*float64(s.goalConcurrency)),
-		)
+		// Only log if s.goalConcurrency != newGoalConcurrency
+		if s.goalConcurrency != newGoalConcurrency {
+			s.goalConcurrency = newGoalConcurrency
+			s.lastAdjustment = 0
+			log.Printf(
+				"reducing syncer concurrency to %d (projected new cache size: %f MB)\n",
+				s.goalConcurrency,
+				utils.BtoMb(max*float64(s.goalConcurrency)),
+			)
+		}
 	}
 	s.concurrencyLock.Unlock()
 
@@ -586,9 +592,14 @@ func (s *Syncer) syncRange(
 		return s.addBlockIndicies(pipelineCtx, blockIndicies, s.nextIndex, endIndex)
 	})
 
+	// Ensure default concurrency is less than max concurrency.
+	startingConcurrency := DefaultConcurrency
+	if s.maxConcurrency < startingConcurrency {
+		startingConcurrency = s.maxConcurrency
+	}
+
 	// Don't create more goroutines than there are blocks
 	// to sync.
-	startingConcurrency := DefaultConcurrency
 	blocksToSync := endIndex - s.nextIndex + 1
 	if blocksToSync < startingConcurrency {
 		startingConcurrency = blocksToSync
