@@ -16,6 +16,7 @@ package storage
 
 import (
 	"context"
+	"errors"
 	"math/big"
 	"testing"
 
@@ -424,6 +425,12 @@ func TestCoinStorage(t *testing.T) {
 	c := NewCoinStorage(database, mockHelper, a)
 
 	t.Run("AddCoins before blocks", func(t *testing.T) {
+		// Ensure correct status is thrown when can't get coin
+		coin, owner, err := c.GetCoin(ctx, coins5.CoinIdentifier)
+		assert.True(t, errors.Is(err, ErrCoinNotFound))
+		assert.Nil(t, coin)
+		assert.Nil(t, owner)
+
 		accountCoins := []*AccountCoin{
 			{
 				Account: account4,
@@ -457,10 +464,20 @@ func TestCoinStorage(t *testing.T) {
 		assert.Equal(t, blockIdentifier, block)
 		assert.ElementsMatch(t, coinsGot, []*types.Coin{coins5})
 
+		coin, owner, err = c.GetCoin(ctx, coins5.CoinIdentifier)
+		assert.NoError(t, err)
+		assert.Equal(t, coins5, coin)
+		assert.Equal(t, account5, owner)
+
 		coinsGot, block, err = c.GetCoins(ctx, account4)
 		assert.NoError(t, err)
 		assert.Equal(t, blockIdentifier, block)
 		assert.ElementsMatch(t, coinsGot, []*types.Coin{coins4})
+
+		coin, owner, err = c.GetCoin(ctx, coins4.CoinIdentifier)
+		assert.NoError(t, err)
+		assert.Equal(t, coins4, coin)
+		assert.Equal(t, account4, owner)
 	})
 
 	t.Run("get coins of unset account", func(t *testing.T) {
