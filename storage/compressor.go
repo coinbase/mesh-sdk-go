@@ -120,12 +120,11 @@ func (c *Compressor) Decode(namespace string, input []byte, object interface{}) 
 		return fmt.Errorf("%w: unable to decompress raw bytes", err)
 	}
 
-	buf := bytes.NewBuffer(decompressed)
-	if err := getDecoder(buf).Decode(&object); err != nil {
+	if err := getDecoder(bytes.NewReader(decompressed)).Decode(&object); err != nil {
 		return fmt.Errorf("%w: unable to decode bytes", err)
 	}
 
-	c.pool.Put(buf)
+	c.pool.Put(bytes.NewBuffer(decompressed))
 	return nil
 }
 
