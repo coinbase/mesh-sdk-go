@@ -124,7 +124,7 @@ func (c *Compressor) Decode(namespace string, input []byte, object interface{}) 
 		return fmt.Errorf("%w: unable to decode bytes", err)
 	}
 
-	c.pool.Put(bytes.NewBuffer(decompressed))
+	c.pool.PutByteSlice(decompressed)
 	return nil
 }
 

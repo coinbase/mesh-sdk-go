@@ -166,11 +166,17 @@ func (c *CoinStorage) addCoin(
 		return fmt.Errorf("%w: unable to encode coin data", err)
 	}
 
-	if err := storeUniqueKey(ctx, transaction, key, encodedResult); err != nil {
+	if err := storeUniqueKey(ctx, transaction, key, encodedResult, true); err != nil {
 		return fmt.Errorf("%w: unable to store coin", err)
 	}
 
-	if err := storeUniqueKey(ctx, transaction, getCoinAccountCoin(account, coin.CoinIdentifier), []byte("")); err != nil {
+	if err := storeUniqueKey(
+		ctx,
+		transaction,
+		getCoinAccountCoin(account, coin.CoinIdentifier),
+		[]byte(""),
+		false,
+	); err != nil {
 		return fmt.Errorf("%w: unable to store account coin", err)
 	}
 

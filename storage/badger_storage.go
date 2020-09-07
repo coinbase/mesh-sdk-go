@@ -187,6 +187,7 @@ type BadgerTransaction struct {
 
 	holdsLock bool
 
+	reclaimLock      sync.Mutex
 	buffersToReclaim []*bytes.Buffer
 }
 
@@ -220,12 +221,14 @@ func (b *BadgerTransaction) Commit(context.Context) error {
 	err := b.txn.Commit()
 
 	// Reclaim all allocated buffers for future work.
+	b.reclaimLock.Lock()
 	for _, buf := range b.buffersToReclaim {
 		b.db.pool.Put(buf)
 	}
 
 	// Ensure we don't attempt to reclaim twice.
 	b.buffersToReclaim = nil
+	b.reclaimLock.Unlock()
 
 	// It is possible that we may accidentally call commit twice.
 	// In this case, we only unlock if we hold the lock to avoid a panic.
@@ -247,12 +250,14 @@ func (b *BadgerTransaction) Discard(context.Context) {
 	b.txn.Discard()
 
 	// Reclaim all allocated buffers for future work.
+	b.reclaimLock.Lock()
 	for _, buf := range b.buffersToReclaim {
 		b.db.pool.Put(buf)
 	}
 
 	// Ensure we don't attempt to reclaim twice.
 	b.buffersToReclaim = nil
+	b.reclaimLock.Unlock()
 
 	if b.holdsLock {
 		b.db.writer.Unlock()
@@ -264,12 +269,14 @@ func (b *BadgerTransaction) Set(
 	ctx context.Context,
 	key []byte,
 	value []byte,
+	reclaimValue bool,
 ) error {
-	b.buffersToReclaim = append(
-		b.buffersToReclaim,
-		bytes.NewBuffer(key),
-		bytes.NewBuffer(value),
-	)
+	if reclaimValue {
+		b.buffersToReclaim = append(
+			b.buffersToReclaim,
+			bytes.NewBuffer(value),
+		)
+	}
 
 	return b.txn.Set(key, value)
 }
@@ -297,7 +304,6 @@ func (b *BadgerTransaction) Get(
 
 	b.buffersToReclaim = append(
 		b.buffersToReclaim,
-		bytes.NewBuffer(key),
 		value,
 	)
 	return true, value.Bytes(), nil
