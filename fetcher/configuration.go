@@ -15,8 +15,6 @@
 package fetcher
 
 import (
-	"crypto/tls"
-	"net/http"
 	"time"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
@@ -76,12 +74,7 @@ func WithAsserter(asserter *asserter.Asserter) Option {
 // attack!!
 func WithInsecureTLS() Option {
 	return func(f *Fetcher) {
-		// See this conversation around why `.Clone()` is used here:
-		// https://github.com/golang/go/issues/26013
-		customTransport := http.DefaultTransport.(*http.Transport).Clone()
-		customTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true} // #nosec G402
-
-		f.rosettaClient.GetConfig().HTTPClient.Transport = customTransport
+		f.insecureTLS = true
 	}
 }
 

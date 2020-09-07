@@ -16,6 +16,7 @@ package fetcher
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"net/http"
 	"time"
@@ -48,6 +49,18 @@ const (
 	// DefaultUserAgent is the default userAgent
 	// to populate on requests to a Rosetta server.
 	DefaultUserAgent = "rosetta-sdk-go"
+
+	// DefaultIdleConnTimeout is the maximum amount of time an idle
+	// (keep-alive) connection will remain idle before closing
+	// itself.
+	DefaultIdleConnTimeout = 30 * time.Second
+
+	// DefaultMaxIdleConns controls the maximum idle
+	// (keep-alive) connections to keep. When performing
+	// concurrent reads (i.e. syncing blocks), it is important
+	// to reuse connections as much as possible (for both performance
+	// and to avoid reaching the OS connection limit).
+	DefaultMaxIdleConns = 500
 )
 
 var (
@@ -83,6 +96,7 @@ type Fetcher struct {
 	transactionConcurrency uint64
 	maxRetries             uint64
 	retryElapsedTime       time.Duration
+	insecureTLS            bool
 }
 
 // Error wraps the two possible types of error responses returned
@@ -117,6 +131,19 @@ func New(
 	for _, opt := range options {
 		opt(f)
 	}
+
+	// Override transport idle connection settings
+	//
+	// See this conversation around why `.Clone()` is used here:
+	// https://github.com/golang/go/issues/26013
+	customTransport := http.DefaultTransport.(*http.Transport).Clone()
+	customTransport.IdleConnTimeout = DefaultIdleConnTimeout
+	customTransport.MaxIdleConns = DefaultMaxIdleConns
+	customTransport.MaxIdleConnsPerHost = DefaultMaxIdleConns
+	if f.insecureTLS {
+		customTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true} // #nosec G402
+	}
+	f.rosettaClient.GetConfig().HTTPClient.Transport = customTransport
 
 	return f
 }
