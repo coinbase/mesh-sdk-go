@@ -190,7 +190,7 @@ func (j *JobStorage) getNextIdentifier(
 		return "", fmt.Errorf("%w: unable to encode job identifier", err)
 	}
 
-	if err := dbTx.Set(ctx, k, encoded); err != nil {
+	if err := dbTx.Set(ctx, k, encoded, true); err != nil {
 		return "", fmt.Errorf("%w: unable to update job identifier", err)
 	}
 
@@ -208,7 +208,7 @@ func (j *JobStorage) updateIdentifiers(
 		return fmt.Errorf("%w: unable to encode identifiers", err)
 	}
 
-	if err := dbTx.Set(ctx, k, encoded); err != nil {
+	if err := dbTx.Set(ctx, k, encoded, true); err != nil {
 		return fmt.Errorf("%w: unable to set identifiers", err)
 	}
 
@@ -355,7 +355,7 @@ func (j *JobStorage) Update(
 		return "", fmt.Errorf("%w: unable to encode job", err)
 	}
 
-	if err := dbTx.Set(ctx, k, encoded); err != nil {
+	if err := dbTx.Set(ctx, k, encoded, true); err != nil {
 		return "", fmt.Errorf("%w: unable to update job", err)
 	}
 

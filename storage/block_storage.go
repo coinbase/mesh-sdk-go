@@ -169,7 +169,11 @@ func (b *BlockStorage) StoreHeadBlockIdentifier(
 		return err
 	}
 
-	return transaction.Set(ctx, getHeadBlockKey(), buf)
+	if err := transaction.Set(ctx, getHeadBlockKey(), buf, true); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (b *BlockStorage) getBlockResponse(
@@ -294,7 +298,7 @@ func (b *BlockStorage) storeBlock(
 		return fmt.Errorf("%w: unable to encode block", err)
 	}
 
-	if err := storeUniqueKey(ctx, transaction, key, buf); err != nil {
+	if err := storeUniqueKey(ctx, transaction, key, buf, true); err != nil {
 		return fmt.Errorf("%w: unable to store block", err)
 	}
 
@@ -303,6 +307,7 @@ func (b *BlockStorage) storeBlock(
 		transaction,
 		getBlockIndexKey(blockIdentifier.Index),
 		key,
+		false,
 	); err != nil {
 		return fmt.Errorf("%w: unable to store block index", err)
 	}
@@ -530,6 +535,7 @@ func storeUniqueKey(
 	transaction DatabaseTransaction,
 	key []byte,
 	value []byte,
+	reclaimValue bool,
 ) error {
 	exists, _, err := transaction.Get(ctx, key)
 	if err != nil {
@@ -540,7 +546,7 @@ func storeUniqueKey(
 		return fmt.Errorf("%w: duplicate key %s found", ErrDuplicateKey, string(key))
 	}
 
-	return transaction.Set(ctx, key, value)
+	return transaction.Set(ctx, key, value, reclaimValue)
 }
 
 func (b *BlockStorage) storeTransaction(
@@ -583,7 +589,11 @@ func (b *BlockStorage) storeTransaction(
 		return fmt.Errorf("%w: unable to encode transaction data", err)
 	}
 
-	return transaction.Set(ctx, hashKey, encodedResult)
+	if err := transaction.Set(ctx, hashKey, encodedResult, true); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (b *BlockStorage) removeTransaction(
@@ -622,7 +632,11 @@ func (b *BlockStorage) removeTransaction(
 		return fmt.Errorf("%w: unable to encode transaction data", err)
 	}
 
-	return transaction.Set(ctx, hashKey, encodedResult)
+	if err := transaction.Set(ctx, hashKey, encodedResult, true); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // FindTransaction returns the most recent *types.BlockIdentifier containing the

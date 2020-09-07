@@ -43,6 +43,12 @@ func (p *BufferPool) Put(buffer *bytes.Buffer) {
 	p.pool.Put(buffer)
 }
 
+// PutByteSlice creates a *bytes.Buffer from the provided
+// []byte and stores it in the pool for reuse.
+func (p *BufferPool) PutByteSlice(buffer []byte) {
+	p.Put(bytes.NewBuffer(buffer))
+}
+
 // Get returns a new or reused *bytes.Buffer.
 func (p *BufferPool) Get() *bytes.Buffer {
 	return p.pool.Get().(*bytes.Buffer)
