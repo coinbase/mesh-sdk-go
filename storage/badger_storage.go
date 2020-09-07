@@ -187,6 +187,13 @@ type BadgerTransaction struct {
 
 	holdsLock bool
 
+	// We MUST wait to reclaim any memory until after
+	// the transaction is committed or discarded.
+	// Source: https://godoc.org/github.com/dgraph-io/badger#Txn.Set
+	//
+	// It is also CRITICALLY IMPORTANT that the same
+	// buffer is not added to the BufferPool multiple
+	// times. This will almost certainly lead to a panic.
 	reclaimLock      sync.Mutex
 	buffersToReclaim []*bytes.Buffer
 }
