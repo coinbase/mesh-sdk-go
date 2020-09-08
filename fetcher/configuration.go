@@ -35,6 +35,7 @@ func WithClient(client *client.APIClient) Option {
 
 // WithTransactionConcurrency overrides the default transaction
 // concurrency.
+// TODO: remove
 func WithTransactionConcurrency(concurrency uint64) Option {
 	return func(f *Fetcher) {
 		f.transactionConcurrency = concurrency
@@ -82,5 +83,13 @@ func WithInsecureTLS() Option {
 func WithTimeout(timeout time.Duration) Option {
 	return func(f *Fetcher) {
 		f.rosettaClient.GetConfig().HTTPClient.Timeout = timeout
+	}
+}
+
+// WithMaxConnections limits the number of concurrent
+// requests the fetcher will attempt at once.
+func WithMaxConnections(connections int) Option {
+	return func(f *Fetcher) {
+		f.maxConnections = connections
 	}
 }

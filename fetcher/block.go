@@ -57,6 +57,12 @@ func (f *Fetcher) fetchChannelTransactions(
 	fetchedTxs chan *types.Transaction,
 ) *Error {
 	for transactionIdentifier := range txsToFetch {
+		if err := f.connectionSemaphore.Acquire(ctx, semaphoreRequestWeight); err != nil {
+			return &Error{
+				Err: fmt.Errorf("%w: %s", ErrCouldNotAcquireSemaphore, err.Error()),
+			}
+		}
+
 		tx, clientErr, err := f.rosettaClient.BlockAPI.BlockTransaction(ctx,
 			&types.BlockTransactionRequest{
 				NetworkIdentifier:     network,
@@ -64,6 +70,9 @@ func (f *Fetcher) fetchChannelTransactions(
 				TransactionIdentifier: transactionIdentifier,
 			},
 		)
+
+		// We release the semaphore manually here because we are in a loop.
+		f.connectionSemaphore.Release(semaphoreRequestWeight)
 
 		if err != nil {
 			return &Error{
@@ -166,6 +175,13 @@ func (f *Fetcher) UnsafeBlock(
 	network *types.NetworkIdentifier,
 	blockIdentifier *types.PartialBlockIdentifier,
 ) (*types.Block, *Error) {
+	if err := f.connectionSemaphore.Acquire(ctx, semaphoreRequestWeight); err != nil {
+		return nil, &Error{
+			Err: fmt.Errorf("%w: %s", ErrCouldNotAcquireSemaphore, err.Error()),
+		}
+	}
+	defer f.connectionSemaphore.Release(semaphoreRequestWeight)
+
 	blockResponse, clientErr, err := f.rosettaClient.BlockAPI.Block(ctx, &types.BlockRequest{
 		NetworkIdentifier: network,
 		BlockIdentifier:   blockIdentifier,

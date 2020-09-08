@@ -29,6 +29,13 @@ func (f *Fetcher) Mempool(
 	ctx context.Context,
 	network *types.NetworkIdentifier,
 ) ([]*types.TransactionIdentifier, *Error) {
+	if err := f.connectionSemaphore.Acquire(ctx, semaphoreRequestWeight); err != nil {
+		return nil, &Error{
+			Err: fmt.Errorf("%w: %s", ErrCouldNotAcquireSemaphore, err.Error()),
+		}
+	}
+	defer f.connectionSemaphore.Release(semaphoreRequestWeight)
+
 	response, clientErr, err := f.rosettaClient.MempoolAPI.Mempool(
 		ctx,
 		&types.NetworkRequest{
@@ -61,6 +68,13 @@ func (f *Fetcher) MempoolTransaction(
 	network *types.NetworkIdentifier,
 	transaction *types.TransactionIdentifier,
 ) (*types.Transaction, map[string]interface{}, *Error) {
+	if err := f.connectionSemaphore.Acquire(ctx, semaphoreRequestWeight); err != nil {
+		return nil, nil, &Error{
+			Err: fmt.Errorf("%w: %s", ErrCouldNotAcquireSemaphore, err.Error()),
+		}
+	}
+	defer f.connectionSemaphore.Release(semaphoreRequestWeight)
+
 	response, clientErr, err := f.rosettaClient.MempoolAPI.MempoolTransaction(
 		ctx,
 		&types.MempoolTransactionRequest{
