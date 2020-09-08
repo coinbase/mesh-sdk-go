@@ -124,7 +124,7 @@ func (k *KeyStorage) StoreTransactional(
 		return fmt.Errorf("%w: unable to serialize key", err)
 	}
 
-	err = dbTx.Set(ctx, getAddressKey(address), val)
+	err = dbTx.Set(ctx, getAddressKey(address), val, true)
 	if err != nil {
 		return fmt.Errorf("%w: unable to store key", err)
 	}

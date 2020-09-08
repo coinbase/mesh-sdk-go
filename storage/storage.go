@@ -40,7 +40,7 @@ type Database interface {
 // all memory utilized is reclaimed. If you want to persist
 // any data retrieved, make sure to make a copy!
 type DatabaseTransaction interface {
-	Set(context.Context, []byte, []byte) error
+	Set(context.Context, []byte, []byte, bool) error
 	Get(context.Context, []byte) (bool, []byte, error)
 	Delete(context.Context, []byte) error
 

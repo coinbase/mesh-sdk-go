@@ -70,6 +70,7 @@ jobs:
       name: default
     steps:
       - *fast-checkout
+      - run: apt-get install -y zstd
       - run: make test-cover
   salus:
     machine: true

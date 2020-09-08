@@ -251,7 +251,7 @@ func (b *BroadcastStorage) AddingBlock(
 				return nil, fmt.Errorf("%w: unable to encode updated broadcast", err)
 			}
 
-			if err := transaction.Set(ctx, key, bytes); err != nil {
+			if err := transaction.Set(ctx, key, bytes, true); err != nil {
 				return nil, fmt.Errorf("%w: unable to update broadcast", err)
 			}
 
@@ -328,7 +328,7 @@ func (b *BroadcastStorage) Broadcast(
 		return fmt.Errorf("already broadcasting transaction %s", transactionIdentifier.Hash)
 	}
 
-	bytes, err := b.db.Compressor().Encode(namespace, &Broadcast{
+	bytes, err := b.db.Compressor().Encode(namespace, Broadcast{
 		Identifier:            identifier,
 		NetworkIdentifier:     network,
 		TransactionIdentifier: transactionIdentifier,
@@ -341,7 +341,7 @@ func (b *BroadcastStorage) Broadcast(
 		return fmt.Errorf("%w: unable to encode broadcast", err)
 	}
 
-	if err := dbTx.Set(ctx, broadcastKey, bytes); err != nil {
+	if err := dbTx.Set(ctx, broadcastKey, bytes, true); err != nil {
 		return fmt.Errorf("%w: unable to set broadcast", err)
 	}
 
@@ -393,7 +393,7 @@ func (b *BroadcastStorage) performBroadcast(
 	txn := b.db.NewDatabaseTransaction(ctx, true)
 	defer txn.Discard(ctx)
 
-	if err := txn.Set(ctx, key, bytes); err != nil {
+	if err := txn.Set(ctx, key, bytes, true); err != nil {
 		return fmt.Errorf("%w: unable to update broadcast", err)
 	}
 
