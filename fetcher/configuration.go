@@ -33,15 +33,6 @@ func WithClient(client *client.APIClient) Option {
 	}
 }
 
-// WithTransactionConcurrency overrides the default transaction
-// concurrency.
-// TODO: remove
-func WithTransactionConcurrency(concurrency uint64) Option {
-	return func(f *Fetcher) {
-		f.transactionConcurrency = concurrency
-	}
-}
-
 // WithMaxRetries overrides the default number of retries on
 // a request.
 func WithMaxRetries(maxRetries uint64) Option {

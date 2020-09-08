@@ -41,13 +41,6 @@ const (
 	// HTTP requests.
 	DefaultHTTPTimeout = 10 * time.Second
 
-	// DefaultTransactionConcurrency is the default
-	// number of transactions a Fetcher will try to
-	// get concurrently when populating a block (if
-	// transactions are not included in the original
-	// block fetch).
-	DefaultTransactionConcurrency = 8
-
 	// DefaultUserAgent is the default userAgent
 	// to populate on requests to a Rosetta server.
 	DefaultUserAgent = "rosetta-sdk-go"
@@ -67,56 +60,22 @@ const (
 	semaphoreRequestWeight = int64(1)
 )
 
-var (
-	// ErrNoNetworks is returned when there are no
-	// networks available for syncing.
-	ErrNoNetworks = errors.New("no networks available")
-
-	// ErrNetworkMissing is returned during asserter initialization
-	// when the provided *types.NetworkIdentifier is not in the
-	// *types.NetworkListResponse.
-	ErrNetworkMissing = errors.New("network missing")
-
-	// ErrRequestFailed is returned when a request fails.
-	ErrRequestFailed = errors.New("request failed")
-
-	// ErrExhaustedRetries is returned when a request with retries
-	// fails because it was attempted too many times.
-	ErrExhaustedRetries = errors.New("retries exhausted")
-
-	// ErrAssertionFailed is returned when a fetch succeeds
-	// but fails assertion.
-	ErrAssertionFailed = errors.New("assertion failed")
-
-	// ErrCouldNotAcquireSemaphore is returned when acquiring
-	// the connection semaphore returns an error.
-	ErrCouldNotAcquireSemaphore = errors.New("could not acquire semaphore")
-)
-
 // Fetcher contains all logic to communicate with a Rosetta Server.
 type Fetcher struct {
 	// Asserter is a public variable because
 	// it can be used to determine if a retrieved
 	// types.Operation is successful and should
 	// be applied.
-	Asserter               *asserter.Asserter
-	rosettaClient          *client.APIClient
-	maxConnections         int
-	transactionConcurrency uint64
-	maxRetries             uint64
-	retryElapsedTime       time.Duration
-	insecureTLS            bool
+	Asserter         *asserter.Asserter
+	rosettaClient    *client.APIClient
+	maxConnections   int
+	maxRetries       uint64
+	retryElapsedTime time.Duration
+	insecureTLS      bool
 
 	// connectionSemaphore is used to limit the
 	// number of concurrent requests we make.
 	connectionSemaphore *semaphore.Weighted
-}
-
-// Error wraps the two possible types of error responses returned
-// by the Rosetta Client
-type Error struct {
-	Err       error        `json:"err"`
-	ClientErr *types.Error `json:"client_err"`
 }
 
 // New constructs a new Fetcher with provided options.
@@ -134,11 +93,10 @@ func New(
 	client := client.NewAPIClient(clientCfg)
 
 	f := &Fetcher{
-		rosettaClient:          client,
-		maxConnections:         DefaultMaxConnections,
-		transactionConcurrency: DefaultTransactionConcurrency,
-		maxRetries:             DefaultRetries,
-		retryElapsedTime:       DefaultElapsedTime,
+		rosettaClient:    client,
+		maxConnections:   DefaultMaxConnections,
+		maxRetries:       DefaultRetries,
+		retryElapsedTime: DefaultElapsedTime,
 	}
 
 	// Override defaults with any provided options
