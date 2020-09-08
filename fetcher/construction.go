@@ -34,6 +34,13 @@ func (f *Fetcher) ConstructionCombine(
 	unsignedTransaction string,
 	signatures []*types.Signature,
 ) (string, *Error) {
+	if err := f.connectionSemaphore.Acquire(ctx, semaphoreRequestWeight); err != nil {
+		return "", &Error{
+			Err: fmt.Errorf("%w: %s", ErrCouldNotAcquireSemaphore, err.Error()),
+		}
+	}
+	defer f.connectionSemaphore.Release(semaphoreRequestWeight)
+
 	response, clientErr, err := f.rosettaClient.ConstructionAPI.ConstructionCombine(ctx,
 		&types.ConstructionCombineRequest{
 			NetworkIdentifier:   network,
@@ -70,6 +77,13 @@ func (f *Fetcher) ConstructionDerive(
 	publicKey *types.PublicKey,
 	metadata map[string]interface{},
 ) (string, map[string]interface{}, *Error) {
+	if err := f.connectionSemaphore.Acquire(ctx, semaphoreRequestWeight); err != nil {
+		return "", nil, &Error{
+			Err: fmt.Errorf("%w: %s", ErrCouldNotAcquireSemaphore, err.Error()),
+		}
+	}
+	defer f.connectionSemaphore.Release(semaphoreRequestWeight)
+
 	response, clientErr, err := f.rosettaClient.ConstructionAPI.ConstructionDerive(ctx,
 		&types.ConstructionDeriveRequest{
 			NetworkIdentifier: network,
@@ -102,6 +116,13 @@ func (f *Fetcher) ConstructionHash(
 	network *types.NetworkIdentifier,
 	signedTransaction string,
 ) (*types.TransactionIdentifier, *Error) {
+	if err := f.connectionSemaphore.Acquire(ctx, semaphoreRequestWeight); err != nil {
+		return nil, &Error{
+			Err: fmt.Errorf("%w: %s", ErrCouldNotAcquireSemaphore, err.Error()),
+		}
+	}
+	defer f.connectionSemaphore.Release(semaphoreRequestWeight)
+
 	response, clientErr, err := f.rosettaClient.ConstructionAPI.ConstructionHash(ctx,
 		&types.ConstructionHashRequest{
 			NetworkIdentifier: network,
@@ -134,6 +155,13 @@ func (f *Fetcher) ConstructionMetadata(
 	options map[string]interface{},
 	publicKeys []*types.PublicKey,
 ) (map[string]interface{}, *Error) {
+	if err := f.connectionSemaphore.Acquire(ctx, semaphoreRequestWeight); err != nil {
+		return nil, &Error{
+			Err: fmt.Errorf("%w: %s", ErrCouldNotAcquireSemaphore, err.Error()),
+		}
+	}
+	defer f.connectionSemaphore.Release(semaphoreRequestWeight)
+
 	metadata, clientErr, err := f.rosettaClient.ConstructionAPI.ConstructionMetadata(ctx,
 		&types.ConstructionMetadataRequest{
 			NetworkIdentifier: network,
@@ -170,6 +198,13 @@ func (f *Fetcher) ConstructionParse(
 	signed bool,
 	transaction string,
 ) ([]*types.Operation, []string, map[string]interface{}, *Error) {
+	if err := f.connectionSemaphore.Acquire(ctx, semaphoreRequestWeight); err != nil {
+		return nil, nil, nil, &Error{
+			Err: fmt.Errorf("%w: %s", ErrCouldNotAcquireSemaphore, err.Error()),
+		}
+	}
+	defer f.connectionSemaphore.Release(semaphoreRequestWeight)
+
 	response, clientErr, err := f.rosettaClient.ConstructionAPI.ConstructionParse(ctx,
 		&types.ConstructionParseRequest{
 			NetworkIdentifier: network,
@@ -213,6 +248,13 @@ func (f *Fetcher) ConstructionPayloads(
 	metadata map[string]interface{},
 	publicKeys []*types.PublicKey,
 ) (string, []*types.SigningPayload, *Error) {
+	if err := f.connectionSemaphore.Acquire(ctx, semaphoreRequestWeight); err != nil {
+		return "", nil, &Error{
+			Err: fmt.Errorf("%w: %s", ErrCouldNotAcquireSemaphore, err.Error()),
+		}
+	}
+	defer f.connectionSemaphore.Release(semaphoreRequestWeight)
+
 	response, clientErr, err := f.rosettaClient.ConstructionAPI.ConstructionPayloads(ctx,
 		&types.ConstructionPayloadsRequest{
 			NetworkIdentifier: network,
@@ -253,6 +295,13 @@ func (f *Fetcher) ConstructionPreprocess(
 	operations []*types.Operation,
 	metadata map[string]interface{},
 ) (map[string]interface{}, []*types.AccountIdentifier, *Error) {
+	if err := f.connectionSemaphore.Acquire(ctx, semaphoreRequestWeight); err != nil {
+		return nil, nil, &Error{
+			Err: fmt.Errorf("%w: %s", ErrCouldNotAcquireSemaphore, err.Error()),
+		}
+	}
+	defer f.connectionSemaphore.Release(semaphoreRequestWeight)
+
 	response, clientErr, err := f.rosettaClient.ConstructionAPI.ConstructionPreprocess(ctx,
 		&types.ConstructionPreprocessRequest{
 			NetworkIdentifier: network,
@@ -286,6 +335,13 @@ func (f *Fetcher) ConstructionSubmit(
 	network *types.NetworkIdentifier,
 	signedTransaction string,
 ) (*types.TransactionIdentifier, map[string]interface{}, *Error) {
+	if err := f.connectionSemaphore.Acquire(ctx, semaphoreRequestWeight); err != nil {
+		return nil, nil, &Error{
+			Err: fmt.Errorf("%w: %s", ErrCouldNotAcquireSemaphore, err.Error()),
+		}
+	}
+	defer f.connectionSemaphore.Release(semaphoreRequestWeight)
+
 	submitResponse, clientErr, err := f.rosettaClient.ConstructionAPI.ConstructionSubmit(
 		ctx,
 		&types.ConstructionSubmitRequest{

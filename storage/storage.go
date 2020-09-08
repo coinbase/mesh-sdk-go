@@ -44,11 +44,16 @@ type DatabaseTransaction interface {
 	Get(context.Context, []byte) (bool, []byte, error)
 	Delete(context.Context, []byte) error
 
-	Scan(ctx context.Context, prefix []byte) ([]*ScanItem, error)
+	Scan(
+		context.Context,
+		[]byte,
+		bool, // log entries
+	) ([]*ScanItem, error)
 	LimitedMemoryScan(
 		context.Context,
 		[]byte,
 		func([]byte, []byte) error,
+		bool, // log entries
 	) (int, error)
 
 	Commit(context.Context) error

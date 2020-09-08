@@ -16,6 +16,7 @@ package fetcher
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"net/http"
 	"time"
@@ -23,6 +24,8 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/asserter"
 	"github.com/coinbase/rosetta-sdk-go/client"
 	"github.com/coinbase/rosetta-sdk-go/types"
+
+	"golang.org/x/sync/semaphore"
 )
 
 const (
@@ -38,38 +41,23 @@ const (
 	// HTTP requests.
 	DefaultHTTPTimeout = 10 * time.Second
 
-	// DefaultTransactionConcurrency is the default
-	// number of transactions a Fetcher will try to
-	// get concurrently when populating a block (if
-	// transactions are not included in the original
-	// block fetch).
-	DefaultTransactionConcurrency = 8
-
 	// DefaultUserAgent is the default userAgent
 	// to populate on requests to a Rosetta server.
 	DefaultUserAgent = "rosetta-sdk-go"
-)
 
-var (
-	// ErrNoNetworks is returned when there are no
-	// networks available for syncing.
-	ErrNoNetworks = errors.New("no networks available")
+	// DefaultIdleConnTimeout is the maximum amount of time an idle
+	// (keep-alive) connection will remain idle before closing
+	// itself.
+	DefaultIdleConnTimeout = 30 * time.Second
 
-	// ErrNetworkMissing is returned during asserter initialization
-	// when the provided *types.NetworkIdentifier is not in the
-	// *types.NetworkListResponse.
-	ErrNetworkMissing = errors.New("network missing")
+	// DefaultMaxConnections limits the number of concurrent
+	// connections we will attempt to make. Most OS's have a
+	// default connection limit of 128, so we set the default
+	// below that.
+	DefaultMaxConnections = 120
 
-	// ErrRequestFailed is returned when a request fails.
-	ErrRequestFailed = errors.New("request failed")
-
-	// ErrExhaustedRetries is returned when a request with retries
-	// fails because it was attempted too many times.
-	ErrExhaustedRetries = errors.New("retries exhausted")
-
-	// ErrAssertionFailed is returned when a fetch succeeds
-	// but fails assertion.
-	ErrAssertionFailed = errors.New("assertion failed")
+	// semaphoreRequestWeight is the weight of each request.
+	semaphoreRequestWeight = int64(1)
 )
 
 // Fetcher contains all logic to communicate with a Rosetta Server.
@@ -78,18 +66,16 @@ type Fetcher struct {
 	// it can be used to determine if a retrieved
 	// types.Operation is successful and should
 	// be applied.
-	Asserter               *asserter.Asserter
-	rosettaClient          *client.APIClient
-	transactionConcurrency uint64
-	maxRetries             uint64
-	retryElapsedTime       time.Duration
-}
+	Asserter         *asserter.Asserter
+	rosettaClient    *client.APIClient
+	maxConnections   int
+	maxRetries       uint64
+	retryElapsedTime time.Duration
+	insecureTLS      bool
 
-// Error wraps the two possible types of error responses returned
-// by the Rosetta Client
-type Error struct {
-	Err       error        `json:"err"`
-	ClientErr *types.Error `json:"client_err"`
+	// connectionSemaphore is used to limit the
+	// number of concurrent requests we make.
+	connectionSemaphore *semaphore.Weighted
 }
 
 // New constructs a new Fetcher with provided options.
@@ -107,16 +93,32 @@ func New(
 	client := client.NewAPIClient(clientCfg)
 
 	f := &Fetcher{
-		rosettaClient:          client,
-		transactionConcurrency: DefaultTransactionConcurrency,
-		maxRetries:             DefaultRetries,
-		retryElapsedTime:       DefaultElapsedTime,
+		rosettaClient:    client,
+		maxConnections:   DefaultMaxConnections,
+		maxRetries:       DefaultRetries,
+		retryElapsedTime: DefaultElapsedTime,
 	}
 
 	// Override defaults with any provided options
 	for _, opt := range options {
 		opt(f)
 	}
+
+	// Override transport idle connection settings
+	//
+	// See this conversation around why `.Clone()` is used here:
+	// https://github.com/golang/go/issues/26013
+	customTransport := http.DefaultTransport.(*http.Transport).Clone()
+	customTransport.IdleConnTimeout = DefaultIdleConnTimeout
+	customTransport.MaxIdleConns = f.maxConnections
+	customTransport.MaxIdleConnsPerHost = f.maxConnections
+	if f.insecureTLS {
+		customTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true} // #nosec G402
+	}
+	f.rosettaClient.GetConfig().HTTPClient.Transport = customTransport
+
+	// Initialize the connection semaphore
+	f.connectionSemaphore = semaphore.NewWeighted(int64(f.maxConnections))
 
 	return f
 }

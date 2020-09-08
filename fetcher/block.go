@@ -25,6 +25,20 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+const (
+	// goalRoutineReuse is the minimum number of requests we want to make
+	// on each goroutine created to fetch block transactions.
+	goalRoutineReuse = 6
+
+	// maxRoutines is the maximum number of goroutines we should create
+	// to fetch block transactions.
+	maxRoutines = 32
+
+	// minRoutines is the minimum number of goroutines we should create
+	// to fetch block transactions.
+	minRoutines = 1
+)
+
 // addTransactionIdentifiers appends a slice of
 // types.TransactionIdentifiers to a channel.
 // When all types.TransactionIdentifiers are added,
@@ -57,6 +71,12 @@ func (f *Fetcher) fetchChannelTransactions(
 	fetchedTxs chan *types.Transaction,
 ) *Error {
 	for transactionIdentifier := range txsToFetch {
+		if err := f.connectionSemaphore.Acquire(ctx, semaphoreRequestWeight); err != nil {
+			return &Error{
+				Err: fmt.Errorf("%w: %s", ErrCouldNotAcquireSemaphore, err.Error()),
+			}
+		}
+
 		tx, clientErr, err := f.rosettaClient.BlockAPI.BlockTransaction(ctx,
 			&types.BlockTransactionRequest{
 				NetworkIdentifier:     network,
@@ -64,6 +84,9 @@ func (f *Fetcher) fetchChannelTransactions(
 				TransactionIdentifier: transactionIdentifier,
 			},
 		)
+
+		// We release the semaphore manually here because we are in a loop.
+		f.connectionSemaphore.Release(semaphoreRequestWeight)
 
 		if err != nil {
 			return &Error{
@@ -115,7 +138,17 @@ func (f *Fetcher) UnsafeTransactions(
 		return addTransactionIdentifiers(ctx, txsToFetch, transactionIdentifiers)
 	})
 
-	for i := uint64(0); i < f.transactionConcurrency; i++ {
+	// Calculate the concurrency we wish to use to fetch transactions. If we pick
+	// a high number, we will still be limited by the fetcher connection semaphore.
+	transactionConcurrency := int(float64(len(transactionIdentifiers)) / float64(goalRoutineReuse))
+	if transactionConcurrency > maxRoutines {
+		transactionConcurrency = maxRoutines
+	}
+	if transactionConcurrency < minRoutines {
+		transactionConcurrency = minRoutines
+	}
+
+	for i := 0; i < transactionConcurrency; i++ {
 		g.Go(func() error {
 			err := f.fetchChannelTransactions(ctx, network, block, txsToFetch, fetchedTxs)
 			if err != nil {
@@ -166,6 +199,13 @@ func (f *Fetcher) UnsafeBlock(
 	network *types.NetworkIdentifier,
 	blockIdentifier *types.PartialBlockIdentifier,
 ) (*types.Block, *Error) {
+	if err := f.connectionSemaphore.Acquire(ctx, semaphoreRequestWeight); err != nil {
+		return nil, &Error{
+			Err: fmt.Errorf("%w: %s", ErrCouldNotAcquireSemaphore, err.Error()),
+		}
+	}
+	defer f.connectionSemaphore.Release(semaphoreRequestWeight)
+
 	blockResponse, clientErr, err := f.rosettaClient.BlockAPI.Block(ctx, &types.BlockRequest{
 		NetworkIdentifier: network,
 		BlockIdentifier:   blockIdentifier,

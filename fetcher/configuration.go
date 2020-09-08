@@ -15,8 +15,6 @@
 package fetcher
 
 import (
-	"crypto/tls"
-	"net/http"
 	"time"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
@@ -32,14 +30,6 @@ type Option func(f *Fetcher)
 func WithClient(client *client.APIClient) Option {
 	return func(f *Fetcher) {
 		f.rosettaClient = client
-	}
-}
-
-// WithTransactionConcurrency overrides the default transaction
-// concurrency.
-func WithTransactionConcurrency(concurrency uint64) Option {
-	return func(f *Fetcher) {
-		f.transactionConcurrency = concurrency
 	}
 }
 
@@ -76,12 +66,7 @@ func WithAsserter(asserter *asserter.Asserter) Option {
 // attack!!
 func WithInsecureTLS() Option {
 	return func(f *Fetcher) {
-		// See this conversation around why `.Clone()` is used here:
-		// https://github.com/golang/go/issues/26013
-		customTransport := http.DefaultTransport.(*http.Transport).Clone()
-		customTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true} // #nosec G402
-
-		f.rosettaClient.GetConfig().HTTPClient.Transport = customTransport
+		f.insecureTLS = true
 	}
 }
 
@@ -89,5 +74,13 @@ func WithInsecureTLS() Option {
 func WithTimeout(timeout time.Duration) Option {
 	return func(f *Fetcher) {
 		f.rosettaClient.GetConfig().HTTPClient.Timeout = timeout
+	}
+}
+
+// WithMaxConnections limits the number of concurrent
+// requests the fetcher will attempt at once.
+func WithMaxConnections(connections int) Option {
+	return func(f *Fetcher) {
+		f.maxConnections = connections
 	}
 }

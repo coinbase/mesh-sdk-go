@@ -189,7 +189,7 @@ func (k *KeyStorage) GetAllAddressesTransactional(
 	ctx context.Context,
 	dbTx DatabaseTransaction,
 ) ([]string, error) {
-	rawKeys, err := dbTx.Scan(ctx, []byte(keyNamespace))
+	rawKeys, err := dbTx.Scan(ctx, []byte(keyNamespace), false)
 	if err != nil {
 		return nil, fmt.Errorf("%w database scan for keys failed", err)
 	}
