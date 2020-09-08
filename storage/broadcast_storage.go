@@ -353,7 +353,7 @@ func (b *BroadcastStorage) getAllBroadcasts(
 	dbTx DatabaseTransaction,
 ) ([]*Broadcast, error) {
 	namespace := transactionBroadcastNamespace
-	rawBroadcasts, err := dbTx.Scan(ctx, []byte(namespace))
+	rawBroadcasts, err := dbTx.Scan(ctx, []byte(namespace), false)
 	if err != nil {
 		return nil, fmt.Errorf("%w: unable to scan for all broadcasts", err)
 	}

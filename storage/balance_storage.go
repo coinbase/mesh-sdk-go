@@ -519,6 +519,7 @@ func (b *BalanceStorage) getAllBalanceEntries(
 			handler(deserialBal)
 			return nil
 		},
+		false,
 	)
 	if err != nil {
 		return fmt.Errorf("%w: database scan failed", err)
