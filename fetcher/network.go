@@ -31,6 +31,13 @@ func (f *Fetcher) NetworkStatus(
 	network *types.NetworkIdentifier,
 	metadata map[string]interface{},
 ) (*types.NetworkStatusResponse, *Error) {
+	if err := f.connectionSemaphore.Acquire(ctx, semaphoreRequestWeight); err != nil {
+		return nil, &Error{
+			Err: fmt.Errorf("%w: %s", ErrCouldNotAcquireSemaphore, err.Error()),
+		}
+	}
+	defer f.connectionSemaphore.Release(semaphoreRequestWeight)
+
 	networkStatus, clientErr, err := f.rosettaClient.NetworkAPI.NetworkStatus(
 		ctx,
 		&types.NetworkRequest{
@@ -108,6 +115,13 @@ func (f *Fetcher) NetworkList(
 	ctx context.Context,
 	metadata map[string]interface{},
 ) (*types.NetworkListResponse, *Error) {
+	if err := f.connectionSemaphore.Acquire(ctx, semaphoreRequestWeight); err != nil {
+		return nil, &Error{
+			Err: fmt.Errorf("%w: %s", ErrCouldNotAcquireSemaphore, err.Error()),
+		}
+	}
+	defer f.connectionSemaphore.Release(semaphoreRequestWeight)
+
 	networkList, clientErr, err := f.rosettaClient.NetworkAPI.NetworkList(
 		ctx,
 		&types.MetadataRequest{
@@ -180,6 +194,13 @@ func (f *Fetcher) NetworkOptions(
 	network *types.NetworkIdentifier,
 	metadata map[string]interface{},
 ) (*types.NetworkOptionsResponse, *Error) {
+	if err := f.connectionSemaphore.Acquire(ctx, semaphoreRequestWeight); err != nil {
+		return nil, &Error{
+			Err: fmt.Errorf("%w: %s", ErrCouldNotAcquireSemaphore, err.Error()),
+		}
+	}
+	defer f.connectionSemaphore.Release(semaphoreRequestWeight)
+
 	networkOptions, clientErr, err := f.rosettaClient.NetworkAPI.NetworkOptions(
 		ctx,
 		&types.NetworkRequest{

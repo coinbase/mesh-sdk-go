@@ -24,6 +24,8 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/asserter"
 	"github.com/coinbase/rosetta-sdk-go/client"
 	"github.com/coinbase/rosetta-sdk-go/types"
+
+	"golang.org/x/sync/semaphore"
 )
 
 const (
@@ -55,12 +57,14 @@ const (
 	// itself.
 	DefaultIdleConnTimeout = 30 * time.Second
 
-	// DefaultMaxIdleConns controls the maximum idle
-	// (keep-alive) connections to keep. When performing
-	// concurrent reads (i.e. syncing blocks), it is important
-	// to reuse connections as much as possible (for both performance
-	// and to avoid reaching the OS connection limit).
-	DefaultMaxIdleConns = 500
+	// DefaultMaxConnections limits the number of concurrent
+	// connections we will attempt to make. Most OS's have a
+	// default connection limit of 128, so we set the default
+	// below that.
+	DefaultMaxConnections = 120
+
+	// semaphoreRequestWeight is the weight of each request.
+	semaphoreRequestWeight = int64(1)
 )
 
 var (
@@ -83,6 +87,10 @@ var (
 	// ErrAssertionFailed is returned when a fetch succeeds
 	// but fails assertion.
 	ErrAssertionFailed = errors.New("assertion failed")
+
+	// ErrCouldNotAcquireSemaphore is returned when acquiring
+	// the connection semaphore returns an error.
+	ErrCouldNotAcquireSemaphore = errors.New("could not acquire semaphore")
 )
 
 // Fetcher contains all logic to communicate with a Rosetta Server.
@@ -93,10 +101,15 @@ type Fetcher struct {
 	// be applied.
 	Asserter               *asserter.Asserter
 	rosettaClient          *client.APIClient
+	maxConnections         int
 	transactionConcurrency uint64
 	maxRetries             uint64
 	retryElapsedTime       time.Duration
 	insecureTLS            bool
+
+	// connectionSemaphore is used to limit the
+	// number of concurrent requests we make.
+	connectionSemaphore *semaphore.Weighted
 }
 
 // Error wraps the two possible types of error responses returned
@@ -122,6 +135,7 @@ func New(
 
 	f := &Fetcher{
 		rosettaClient:          client,
+		maxConnections:         DefaultMaxConnections,
 		transactionConcurrency: DefaultTransactionConcurrency,
 		maxRetries:             DefaultRetries,
 		retryElapsedTime:       DefaultElapsedTime,
@@ -138,12 +152,15 @@ func New(
 	// https://github.com/golang/go/issues/26013
 	customTransport := http.DefaultTransport.(*http.Transport).Clone()
 	customTransport.IdleConnTimeout = DefaultIdleConnTimeout
-	customTransport.MaxIdleConns = DefaultMaxIdleConns
-	customTransport.MaxIdleConnsPerHost = DefaultMaxIdleConns
+	customTransport.MaxIdleConns = f.maxConnections
+	customTransport.MaxIdleConnsPerHost = f.maxConnections
 	if f.insecureTLS {
 		customTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true} // #nosec G402
 	}
 	f.rosettaClient.GetConfig().HTTPClient.Transport = customTransport
+
+	// Initialize the connection semaphore
+	f.connectionSemaphore = semaphore.NewWeighted(int64(f.maxConnections))
 
 	return f
 }
