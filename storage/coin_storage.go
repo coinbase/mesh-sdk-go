@@ -16,6 +16,7 @@ package storage
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/big"
 	"strings"
@@ -28,6 +29,12 @@ import (
 const (
 	coinNamespace        = "coin"
 	coinAccountNamespace = "coin-account"
+)
+
+var (
+	// ErrCoinNotFound is returned when a coin is not found
+	// in CoinStorage.
+	ErrCoinNotFound = errors.New("coin not found")
 )
 
 var _ BlockWorker = (*CoinStorage)(nil)
@@ -87,29 +94,29 @@ func (c *CoinStorage) getAndDecodeCoin(
 	ctx context.Context,
 	transaction DatabaseTransaction,
 	coinIdentifier *types.CoinIdentifier,
-) (bool, *types.Coin, error) {
+) (bool, *types.Coin, *types.AccountIdentifier, error) {
 	namespace, key := getCoinKey(coinIdentifier)
 	exists, val, err := transaction.Get(ctx, key)
 	if err != nil {
-		return false, nil, fmt.Errorf("%w: unable to query for coin", err)
+		return false, nil, nil, fmt.Errorf("%w: unable to query for coin", err)
 	}
 
 	if !exists { // this could occur if coin was created before we started syncing
-		return false, nil, nil
+		return false, nil, nil, nil
 	}
 
-	var coin types.Coin
-	if err := c.db.Compressor().Decode(namespace, val, &coin); err != nil {
-		return false, nil, fmt.Errorf("%w: unable to decode coin", err)
+	var accountCoin AccountCoin
+	if err := c.db.Compressor().Decode(namespace, val, &accountCoin); err != nil {
+		return false, nil, nil, fmt.Errorf("%w: unable to decode coin", err)
 	}
 
-	return true, &coin, nil
+	return true, accountCoin.Coin, accountCoin.Account, nil
 }
 
 // AccountCoin contains an AccountIdentifier and a Coin that it owns
 type AccountCoin struct {
-	Account *types.AccountIdentifier
-	Coin    *types.Coin
+	Account *types.AccountIdentifier `json:"account"`
+	Coin    *types.Coin              `json:"coin"`
 }
 
 // AddCoins takes an array of AccountCoins and saves them to the database.
@@ -122,7 +129,7 @@ func (c *CoinStorage) AddCoins(
 	defer dbTransaction.Discard(ctx)
 
 	for _, accountCoin := range accountCoins {
-		exists, _, err := c.getAndDecodeCoin(ctx, dbTransaction, accountCoin.Coin.CoinIdentifier)
+		exists, _, _, err := c.getAndDecodeCoin(ctx, dbTransaction, accountCoin.Coin.CoinIdentifier)
 		if err != nil {
 			return fmt.Errorf("%w: unable to get coin", err)
 		}
@@ -151,16 +158,25 @@ func (c *CoinStorage) addCoin(
 	transaction DatabaseTransaction,
 ) error {
 	namespace, key := getCoinKey(coin.CoinIdentifier)
-	encodedResult, err := c.db.Compressor().Encode(namespace, coin)
+	encodedResult, err := c.db.Compressor().Encode(namespace, AccountCoin{
+		Account: account,
+		Coin:    coin,
+	})
 	if err != nil {
 		return fmt.Errorf("%w: unable to encode coin data", err)
 	}
 
-	if err := storeUniqueKey(ctx, transaction, key, encodedResult); err != nil {
+	if err := storeUniqueKey(ctx, transaction, key, encodedResult, true); err != nil {
 		return fmt.Errorf("%w: unable to store coin", err)
 	}
 
-	if err := storeUniqueKey(ctx, transaction, getCoinAccountCoin(account, coin.CoinIdentifier), []byte("")); err != nil {
+	if err := storeUniqueKey(
+		ctx,
+		transaction,
+		getCoinAccountCoin(account, coin.CoinIdentifier),
+		[]byte(""),
+		false,
+	); err != nil {
 		return fmt.Errorf("%w: unable to store account coin", err)
 	}
 
@@ -354,7 +370,7 @@ func (c *CoinStorage) GetCoinsTransactional(
 
 	coinArr := []*types.Coin{}
 	for coinIdentifier := range coins {
-		exists, coin, err := c.getAndDecodeCoin(
+		exists, coin, _, err := c.getAndDecodeCoin(
 			ctx,
 			dbTx,
 			&types.CoinIdentifier{Identifier: coinIdentifier},
@@ -382,6 +398,36 @@ func (c *CoinStorage) GetCoins(
 	defer dbTx.Discard(ctx)
 
 	return c.GetCoinsTransactional(ctx, dbTx, accountIdentifier)
+}
+
+// GetCoinTransactional returns a *types.Coin by its identifier in a database
+// transaction.
+func (c *CoinStorage) GetCoinTransactional(
+	ctx context.Context,
+	dbTx DatabaseTransaction,
+	coinIdentifier *types.CoinIdentifier,
+) (*types.Coin, *types.AccountIdentifier, error) {
+	exists, coin, owner, err := c.getAndDecodeCoin(ctx, dbTx, coinIdentifier)
+	if err != nil {
+		return nil, nil, fmt.Errorf("%w: unable to lookup coin", err)
+	}
+
+	if !exists {
+		return nil, nil, ErrCoinNotFound
+	}
+
+	return coin, owner, nil
+}
+
+// GetCoin returns a *types.Coin by its identifier.
+func (c *CoinStorage) GetCoin(
+	ctx context.Context,
+	coinIdentifier *types.CoinIdentifier,
+) (*types.Coin, *types.AccountIdentifier, error) {
+	dbTx := c.db.NewDatabaseTransaction(ctx, false)
+	defer dbTx.Discard(ctx)
+
+	return c.GetCoinTransactional(ctx, dbTx, coinIdentifier)
 }
 
 // GetLargestCoin returns the largest Coin for a

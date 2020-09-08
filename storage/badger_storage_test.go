@@ -48,7 +48,7 @@ func TestDatabase(t *testing.T) {
 
 	t.Run("Set key", func(t *testing.T) {
 		txn := database.NewDatabaseTransaction(ctx, true)
-		err := txn.Set(ctx, []byte("hello"), []byte("hola"))
+		err := txn.Set(ctx, []byte("hello"), []byte("hola"), true)
 		assert.NoError(t, err)
 		assert.NoError(t, txn.Commit(ctx))
 	})
@@ -68,7 +68,7 @@ func TestDatabase(t *testing.T) {
 		for i := 0; i < 100; i++ {
 			k := []byte(fmt.Sprintf("test/%d", i))
 			v := []byte(fmt.Sprintf("%d", i))
-			err := txn.Set(ctx, k, v)
+			err := txn.Set(ctx, k, v, true)
 			assert.NoError(t, err)
 
 			storedValues = append(storedValues, &ScanItem{
@@ -80,7 +80,7 @@ func TestDatabase(t *testing.T) {
 		for i := 0; i < 100; i++ {
 			k := []byte(fmt.Sprintf("testing/%d", i))
 			v := []byte(fmt.Sprintf("%d", i))
-			err := txn.Set(ctx, k, v)
+			err := txn.Set(ctx, k, v, true)
 			assert.NoError(t, err)
 		}
 
@@ -127,7 +127,7 @@ func TestDatabaseTransaction(t *testing.T) {
 
 	t.Run("Set and get within a transaction", func(t *testing.T) {
 		txn := database.NewDatabaseTransaction(ctx, true)
-		assert.NoError(t, txn.Set(ctx, []byte("hello"), []byte("hola")))
+		assert.NoError(t, txn.Set(ctx, []byte("hello"), []byte("hola"), true))
 
 		// Ensure tx does not affect db
 		txn2 := database.NewDatabaseTransaction(ctx, false)
@@ -149,7 +149,7 @@ func TestDatabaseTransaction(t *testing.T) {
 
 	t.Run("Discard transaction", func(t *testing.T) {
 		txn := database.NewDatabaseTransaction(ctx, true)
-		assert.NoError(t, txn.Set(ctx, []byte("hello"), []byte("world")))
+		assert.NoError(t, txn.Set(ctx, []byte("hello"), []byte("world"), true))
 		txn.Discard(ctx)
 
 		txn2 := database.NewDatabaseTransaction(ctx, false)
@@ -200,7 +200,7 @@ func TestBadgerTrain_NoLimit(t *testing.T) {
 		assert.NoError(t, err)
 		assert.NoError(
 			t,
-			txn.Set(ctx, []byte(fmt.Sprintf("%s/%d", namespace, i)), compressedEntry),
+			txn.Set(ctx, []byte(fmt.Sprintf("%s/%d", namespace, i)), compressedEntry, true),
 		)
 	}
 	assert.NoError(t, txn.Commit(ctx))
@@ -234,7 +234,7 @@ func TestBadgerTrain_Limit(t *testing.T) {
 	// Load storage with entries in namespace
 	namespace := "bogus"
 	txn := database.NewDatabaseTransaction(ctx, true)
-	for i := 0; i < 100000; i++ {
+	for i := 0; i < 10000; i++ {
 		output, err := reggen.Generate(`[a-z]+`, 50)
 		assert.NoError(t, err)
 		entry := &BogusEntry{
@@ -245,7 +245,7 @@ func TestBadgerTrain_Limit(t *testing.T) {
 		assert.NoError(t, err)
 		assert.NoError(
 			t,
-			txn.Set(ctx, []byte(fmt.Sprintf("%s/%d", namespace, i)), compressedEntry),
+			txn.Set(ctx, []byte(fmt.Sprintf("%s/%d", namespace, i)), compressedEntry, true),
 		)
 	}
 	assert.NoError(t, txn.Commit(ctx))
@@ -285,7 +285,7 @@ func TestBadgerTrain_Limit(t *testing.T) {
 	assert.NoError(t, err)
 
 	txn2 := database2.NewDatabaseTransaction(ctx, true)
-	for i := 0; i < 100000; i++ {
+	for i := 0; i < 10000; i++ {
 		output, err := reggen.Generate(`[a-z]+`, 50)
 		assert.NoError(t, err)
 		entry := &BogusEntry{
@@ -296,7 +296,7 @@ func TestBadgerTrain_Limit(t *testing.T) {
 		assert.NoError(t, err)
 		assert.NoError(
 			t,
-			txn2.Set(ctx, []byte(fmt.Sprintf("%s/%d", namespace, i)), compressedEntry),
+			txn2.Set(ctx, []byte(fmt.Sprintf("%s/%d", namespace, i)), compressedEntry, true),
 		)
 	}
 	assert.NoError(t, txn2.Commit(ctx))

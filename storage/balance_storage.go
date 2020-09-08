@@ -166,7 +166,7 @@ func (b *BalanceStorage) SetBalance(
 ) error {
 	namespace, key := GetBalanceKey(account, amount.Currency)
 
-	serialBal, err := b.db.Compressor().Encode(namespace, &balanceEntry{
+	serialBal, err := b.db.Compressor().Encode(namespace, balanceEntry{
 		Account: account,
 		Amount:  amount,
 		Block:   block,
@@ -175,7 +175,7 @@ func (b *BalanceStorage) SetBalance(
 		return err
 	}
 
-	if err := dbTransaction.Set(ctx, key, serialBal); err != nil {
+	if err := dbTransaction.Set(ctx, key, serialBal, true); err != nil {
 		return err
 	}
 
@@ -225,7 +225,7 @@ func (b *BalanceStorage) Reconciled(
 		return fmt.Errorf("%w: unable to encod balance entry", err)
 	}
 
-	if err := dbTransaction.Set(ctx, key, serialBal); err != nil {
+	if err := dbTransaction.Set(ctx, key, serialBal, true); err != nil {
 		return fmt.Errorf("%w: unable to set balance entry", err)
 	}
 
@@ -332,7 +332,7 @@ func (b *BalanceStorage) UpdateBalance(
 		)
 	}
 
-	serialBal, err := b.db.Compressor().Encode(namespace, &balanceEntry{
+	serialBal, err := b.db.Compressor().Encode(namespace, balanceEntry{
 		Account: change.Account,
 		Amount: &types.Amount{
 			Value:    newVal,
@@ -344,7 +344,11 @@ func (b *BalanceStorage) UpdateBalance(
 		return err
 	}
 
-	return dbTransaction.Set(ctx, key, serialBal)
+	if err := dbTransaction.Set(ctx, key, serialBal, true); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // GetBalance returns all the balances of a types.AccountIdentifier

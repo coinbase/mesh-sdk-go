@@ -113,7 +113,7 @@ func (c *CounterStorage) UpdateTransactional(
 
 	newVal := new(big.Int).Add(val, amount)
 
-	if err := dbTx.Set(ctx, getCounterKey(counter), newVal.Bytes()); err != nil {
+	if err := dbTx.Set(ctx, getCounterKey(counter), newVal.Bytes(), false); err != nil {
 		return nil, err
 	}
 
