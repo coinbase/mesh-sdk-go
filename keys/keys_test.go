@@ -20,6 +20,8 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/coinbase/rosetta-sdk-go/asserter"
+
 	"github.com/coinbase/rosetta-sdk-go/types"
 
 	"github.com/stretchr/testify/assert"
@@ -86,7 +88,7 @@ func TestKeypairValidity(t *testing.T) {
 
 	keyPair.PublicKey.CurveType = "blah"
 	err = keyPair.IsValid()
-	assert.True(t, errors.Is(err, ErrCurveTypeNotSupported))
+	assert.True(t, errors.Is(err, asserter.ErrCurveTypeNotSupported))
 
 	type privKeyTest struct {
 		keypair *KeyPair
