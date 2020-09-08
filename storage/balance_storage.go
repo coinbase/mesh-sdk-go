@@ -242,27 +242,27 @@ func (b *BalanceStorage) ReconciliationCoverage(
 	ctx context.Context,
 	minimumIndex int64,
 ) (float64, error) {
-	balances, err := b.getAllBalanceEntries(ctx)
+	seen := 0
+	validCoverage := 0
+	err := b.getAllBalanceEntries(ctx, func(entry balanceEntry) {
+		seen++
+		if entry.LastReconciled == nil {
+			return
+		}
+
+		if entry.LastReconciled.Index >= minimumIndex {
+			validCoverage++
+		}
+	})
 	if err != nil {
 		return -1, fmt.Errorf("%w: unable to get all balance entries", err)
 	}
 
-	if len(balances) == 0 {
+	if seen == 0 {
 		return 0, nil
 	}
 
-	validCoverage := 0
-	for _, b := range balances {
-		if b.LastReconciled == nil {
-			continue
-		}
-
-		if b.LastReconciled.Index >= minimumIndex {
-			validCoverage++
-		}
-	}
-
-	return float64(validCoverage) / float64(len(balances)), nil
+	return float64(validCoverage) / float64(seen), nil
 }
 
 // UpdateBalance updates a types.AccountIdentifer
@@ -495,8 +495,10 @@ func (b *BalanceStorage) BootstrapBalances(
 	return nil
 }
 
-func (b *BalanceStorage) getAllBalanceEntries(ctx context.Context) ([]*balanceEntry, error) {
-	balances := []*balanceEntry{}
+func (b *BalanceStorage) getAllBalanceEntries(
+	ctx context.Context,
+	handler func(balanceEntry),
+) error {
 	namespace := balanceNamespace
 	txn := b.db.NewDatabaseTransaction(ctx, false)
 	defer txn.Discard(ctx)
@@ -514,16 +516,16 @@ func (b *BalanceStorage) getAllBalanceEntries(ctx context.Context) ([]*balanceEn
 				)
 			}
 
-			balances = append(balances, &deserialBal)
-
+			handler(deserialBal)
 			return nil
 		},
+		false,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("%w: database scan failed", err)
+		return fmt.Errorf("%w: database scan failed", err)
 	}
 
-	return balances, nil
+	return nil
 }
 
 // GetAllAccountCurrency scans the db for all balances and returns a slice
@@ -534,8 +536,10 @@ func (b *BalanceStorage) GetAllAccountCurrency(
 ) ([]*reconciler.AccountCurrency, error) {
 	log.Println("Loading previously seen accounts (this could take a while)...")
 
-	balances, err := b.getAllBalanceEntries(ctx)
-	if err != nil {
+	balances := []*balanceEntry{}
+	if err := b.getAllBalanceEntries(ctx, func(entry balanceEntry) {
+		balances = append(balances, &entry)
+	}); err != nil {
 		return nil, fmt.Errorf("%w: unable to get all balance entries", err)
 	}
 

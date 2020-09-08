@@ -84,7 +84,7 @@ func TestDatabase(t *testing.T) {
 			assert.NoError(t, err)
 		}
 
-		values, err := txn.Scan(ctx, []byte("test/"))
+		values, err := txn.Scan(ctx, []byte("test/"), false)
 		assert.NoError(t, err)
 		assert.ElementsMatch(t, storedValues, values)
 
@@ -106,6 +106,7 @@ func TestDatabase(t *testing.T) {
 
 				return nil
 			},
+			false,
 		)
 		assert.NoError(t, err)
 		assert.Equal(t, 100, numValues)
