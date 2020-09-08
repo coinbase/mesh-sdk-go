@@ -25,6 +25,10 @@ var (
 	ErrPrivKeyUndecodable   = errors.New("could not decode privkey")
 	ErrPrivKeyLengthInvalid = errors.New("invalid privkey length")
 
+	ErrKeyGenSecp256k1Failed = errors.New("keygen: new private key")
+	ErrKeyGenEdwards25519Failed = errors.New("keygen: new keypair")
+	ErrCurveTypeNotSupported = errors.New("not a supported CurveType")
+
 	ErrSignUnsupportedPayloadSignatureType = errors.New(
 		"sign: unexpected payload.SignatureType while signing",
 	)
@@ -48,6 +52,9 @@ func ErrKeys(err error) bool {
 	keyErrors := []error{
 		ErrPrivKeyUndecodable,
 		ErrPrivKeyLengthInvalid,
+		ErrKeyGenSecp256k1Failed,
+		ErrKeyGenEdwards25519Failed,
+		ErrCurveTypeNotSupported,
 		ErrSignUnsupportedPayloadSignatureType,
 		ErrSignUnsupportedSignatureType,
 		ErrSignFailed,
