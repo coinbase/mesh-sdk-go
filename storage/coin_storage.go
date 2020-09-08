@@ -188,7 +188,7 @@ func getAndDecodeCoins(
 	transaction DatabaseTransaction,
 	accountIdentifier *types.AccountIdentifier,
 ) (map[string]struct{}, error) {
-	items, err := transaction.Scan(ctx, getCoinAccountPrefix(accountIdentifier))
+	items, err := transaction.Scan(ctx, getCoinAccountPrefix(accountIdentifier), false)
 	if err != nil {
 		return nil, fmt.Errorf("%w: unable to query coins for account", err)
 	}

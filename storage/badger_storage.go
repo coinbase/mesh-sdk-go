@@ -326,6 +326,7 @@ func (b *BadgerTransaction) Delete(ctx context.Context, key []byte) error {
 func (b *BadgerTransaction) Scan(
 	ctx context.Context,
 	prefix []byte,
+	logEntries bool,
 ) ([]*ScanItem, error) {
 	entries := 0
 	values := []*ScanItem{}
@@ -353,7 +354,7 @@ func (b *BadgerTransaction) Scan(
 		)
 
 		entries++
-		if entries%logModulo == 0 {
+		if logEntries && entries%logModulo == 0 {
 			log.Printf("scanned %d entries for %s\n", entries, string(prefix))
 		}
 	}
@@ -367,6 +368,7 @@ func (b *BadgerTransaction) LimitedMemoryScan(
 	ctx context.Context,
 	prefix []byte,
 	worker func([]byte, []byte) error,
+	logEntries bool,
 ) (int, error) {
 	entries := 0
 	opts := badger.DefaultIteratorOptions
@@ -388,7 +390,7 @@ func (b *BadgerTransaction) LimitedMemoryScan(
 		}
 
 		entries++
-		if entries%logModulo == 0 {
+		if logEntries && entries%logModulo == 0 {
 			log.Printf("scanned %d entries for %s\n", entries, string(prefix))
 		}
 	}
@@ -489,6 +491,7 @@ func recompress(
 
 			return nil
 		},
+		true,
 	)
 	if err != nil {
 		return -1, -1, fmt.Errorf("%w: unable to recompress", err)
@@ -567,6 +570,7 @@ func BadgerTrain(
 
 			return nil
 		},
+		true,
 	)
 	if err != nil && !errors.Is(err, errMaxEntries) {
 		return -1, -1, fmt.Errorf("%w: unable to scan for %s", err, namespace)
