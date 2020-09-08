@@ -492,25 +492,31 @@ func (b *BalanceStorage) BootstrapBalances(
 }
 
 func (b *BalanceStorage) getAllBalanceEntries(ctx context.Context) ([]*balanceEntry, error) {
+	balances := []*balanceEntry{}
 	namespace := balanceNamespace
-	rawBalances, err := b.db.Scan(ctx, []byte(namespace))
+	txn := b.db.NewDatabaseTransaction(ctx, false)
+	defer txn.Discard(ctx)
+	_, err := txn.LimitedMemoryScan(
+		ctx,
+		[]byte(namespace),
+		func(k []byte, v []byte) error {
+			var deserialBal balanceEntry
+			err := b.db.Compressor().Decode(namespace, v, &deserialBal)
+			if err != nil {
+				return fmt.Errorf(
+					"%w: unable to parse balance entry for %s",
+					err,
+					string(v),
+				)
+			}
+
+			balances = append(balances, &deserialBal)
+
+			return nil
+		},
+	)
 	if err != nil {
 		return nil, fmt.Errorf("%w: database scan failed", err)
-	}
-
-	balances := make([]*balanceEntry, len(rawBalances))
-	for i, rawBalance := range rawBalances {
-		var deserialBal balanceEntry
-		err := b.db.Compressor().Decode(namespace, rawBalance.Value, &deserialBal)
-		if err != nil {
-			return nil, fmt.Errorf(
-				"%w: unable to parse balance entry for %s",
-				err,
-				string(rawBalance.Value),
-			)
-		}
-
-		balances[i] = &deserialBal
 	}
 
 	return balances, nil

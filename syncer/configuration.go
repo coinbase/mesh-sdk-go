@@ -23,10 +23,17 @@ import (
 // falls back to the default value.
 type Option func(s *Syncer)
 
-// WithConcurrency overrides the default block concurrency.
-func WithConcurrency(concurrency uint64) Option {
+// WithCacheSize overrides the default cache size.
+func WithCacheSize(cacheSize int) Option {
 	return func(s *Syncer) {
-		s.concurrency = concurrency
+		s.cacheSize = cacheSize
+	}
+}
+
+// WithSizeMultiplier overrides the default size multiplier.
+func WithSizeMultiplier(sizeMultiplier float64) Option {
+	return func(s *Syncer) {
+		s.sizeMultiplier = sizeMultiplier
 	}
 }
 
@@ -35,5 +42,12 @@ func WithConcurrency(concurrency uint64) Option {
 func WithPastBlocks(blocks []*types.BlockIdentifier) Option {
 	return func(s *Syncer) {
 		s.pastBlocks = blocks
+	}
+}
+
+// WithMaxConcurrency overrides the default max concurrency.
+func WithMaxConcurrency(concurrency int64) Option {
+	return func(s *Syncer) {
+		s.maxConcurrency = concurrency
 	}
 }

@@ -197,7 +197,7 @@ func TestProcessBlock(t *testing.T) {
 
 	mockHelper := &mocks.Helper{}
 	mockHandler := &mocks.Handler{}
-	syncer := New(networkIdentifier, mockHelper, mockHandler, nil, WithConcurrency(1))
+	syncer := New(networkIdentifier, mockHelper, mockHandler, nil)
 	syncer.genesisBlock = blockSequence[0].BlockIdentifier
 
 	t.Run("No block exists", func(t *testing.T) {
@@ -417,7 +417,7 @@ func TestSync_NoReorg(t *testing.T) {
 
 	mockHelper := &mocks.Helper{}
 	mockHandler := &mocks.Handler{}
-	syncer := New(networkIdentifier, mockHelper, mockHandler, cancel, WithConcurrency(16))
+	syncer := New(networkIdentifier, mockHelper, mockHandler, cancel, WithMaxConcurrency(3))
 
 	// Force syncer to only get part of the way through the full range
 	mockHelper.On("NetworkStatus", ctx, networkIdentifier).Return(&types.NetworkStatusResponse{
@@ -478,6 +478,7 @@ func TestSync_NoReorg(t *testing.T) {
 
 	err := syncer.Sync(ctx, -1, 1200)
 	assert.NoError(t, err)
+	assert.Equal(t, syncer.concurrency, int64(3))
 	mockHelper.AssertExpectations(t)
 	mockHandler.AssertExpectations(t)
 }
@@ -487,7 +488,7 @@ func TestSync_SpecificStart(t *testing.T) {
 
 	mockHelper := &mocks.Helper{}
 	mockHandler := &mocks.Handler{}
-	syncer := New(networkIdentifier, mockHelper, mockHandler, cancel, WithConcurrency(16))
+	syncer := New(networkIdentifier, mockHelper, mockHandler, cancel)
 
 	mockHelper.On("NetworkStatus", ctx, networkIdentifier).Return(&types.NetworkStatusResponse{
 		CurrentBlockIdentifier: &types.BlockIdentifier{
@@ -526,6 +527,7 @@ func TestSync_SpecificStart(t *testing.T) {
 
 	err := syncer.Sync(ctx, 100, 1200)
 	assert.NoError(t, err)
+	assert.True(t, syncer.concurrency > DefaultConcurrency)
 	mockHelper.AssertNumberOfCalls(t, "NetworkStatus", 3)
 	mockHelper.AssertExpectations(t)
 	mockHandler.AssertExpectations(t)
@@ -536,7 +538,7 @@ func TestSync_Cancel(t *testing.T) {
 
 	mockHelper := &mocks.Helper{}
 	mockHandler := &mocks.Handler{}
-	syncer := New(networkIdentifier, mockHelper, mockHandler, cancel, WithConcurrency(16))
+	syncer := New(networkIdentifier, mockHelper, mockHandler, cancel)
 
 	// Force syncer to only get part of the way through the full range
 	mockHelper.On("NetworkStatus", ctx, networkIdentifier).Return(&types.NetworkStatusResponse{
@@ -595,7 +597,7 @@ func TestSync_Reorg(t *testing.T) {
 
 	mockHelper := &mocks.Helper{}
 	mockHandler := &mocks.Handler{}
-	syncer := New(networkIdentifier, mockHelper, mockHandler, cancel, WithConcurrency(16))
+	syncer := New(networkIdentifier, mockHelper, mockHandler, cancel)
 
 	mockHelper.On("NetworkStatus", ctx, networkIdentifier).Return(&types.NetworkStatusResponse{
 		CurrentBlockIdentifier: &types.BlockIdentifier{
@@ -722,6 +724,7 @@ func TestSync_Reorg(t *testing.T) {
 
 	err := syncer.Sync(ctx, -1, 1200)
 	assert.NoError(t, err)
+	assert.True(t, syncer.concurrency > DefaultConcurrency)
 	mockHelper.AssertNumberOfCalls(t, "NetworkStatus", 3)
 	mockHelper.AssertExpectations(t)
 	mockHandler.AssertExpectations(t)
@@ -732,7 +735,7 @@ func TestSync_ManualReorg(t *testing.T) {
 
 	mockHelper := &mocks.Helper{}
 	mockHandler := &mocks.Handler{}
-	syncer := New(networkIdentifier, mockHelper, mockHandler, cancel, WithConcurrency(16))
+	syncer := New(networkIdentifier, mockHelper, mockHandler, cancel)
 
 	mockHelper.On("NetworkStatus", ctx, networkIdentifier).Return(&types.NetworkStatusResponse{
 		CurrentBlockIdentifier: &types.BlockIdentifier{
@@ -827,7 +830,183 @@ func TestSync_ManualReorg(t *testing.T) {
 
 	err := syncer.Sync(ctx, -1, 1200)
 	assert.NoError(t, err)
+	assert.True(t, syncer.concurrency > DefaultConcurrency)
 	mockHelper.AssertNumberOfCalls(t, "NetworkStatus", 3)
+	mockHelper.AssertExpectations(t)
+	mockHandler.AssertExpectations(t)
+}
+
+func TestSync_Dynamic(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+
+	mockHelper := &mocks.Helper{}
+	mockHandler := &mocks.Handler{}
+	syncer := New(
+		networkIdentifier,
+		mockHelper,
+		mockHandler,
+		cancel,
+		WithCacheSize(1<<20), // 1 MB
+	)
+
+	// Force syncer to only get part of the way through the full range
+	mockHelper.On("NetworkStatus", ctx, networkIdentifier).Return(&types.NetworkStatusResponse{
+		CurrentBlockIdentifier: &types.BlockIdentifier{
+			Hash:  "block 1",
+			Index: 1,
+		},
+		GenesisBlockIdentifier: &types.BlockIdentifier{
+			Hash:  "block 0",
+			Index: 0,
+		},
+	}, nil).Twice()
+
+	mockHelper.On("NetworkStatus", ctx, networkIdentifier).Return(&types.NetworkStatusResponse{
+		CurrentBlockIdentifier: &types.BlockIdentifier{
+			Hash:  "block 1300",
+			Index: 1300,
+		},
+		GenesisBlockIdentifier: &types.BlockIdentifier{
+			Hash:  "block 0",
+			Index: 0,
+		},
+	}, nil).Twice()
+
+	blocks := createBlocks(0, 200, "")
+
+	// Load blocks with a ton of transactions
+	for _, block := range blocks {
+		txs := []*types.Transaction{}
+		for i := 0; i < 10000; i++ {
+			txs = append(txs, &types.Transaction{
+				TransactionIdentifier: &types.TransactionIdentifier{
+					Hash: fmt.Sprintf("block %d tx %d", block.BlockIdentifier.Index, i),
+				},
+			})
+		}
+
+		block.Transactions = txs
+	}
+
+	// Create a block gap
+	blocks[100] = nil
+	blocks[101].ParentBlockIdentifier = blocks[99].BlockIdentifier
+	for i, b := range blocks {
+		index := int64(i)
+		mockHelper.On(
+			"Block",
+			mock.AnythingOfType("*context.cancelCtx"),
+			networkIdentifier,
+			&types.PartialBlockIdentifier{Index: &index},
+		).Return(
+			b,
+			nil,
+		).Run(func(args mock.Arguments) {
+			if index == 1 {
+				assert.Equal(t, syncer.concurrency, int64(2))
+			}
+			assertNotCanceled(t, args)
+		}).Once()
+
+		if b == nil {
+			continue
+		}
+
+		mockHandler.On(
+			"BlockAdded",
+			mock.AnythingOfType("*context.cancelCtx"),
+			b,
+		).Return(
+			nil,
+		).Run(func(args mock.Arguments) {
+			assertNotCanceled(t, args)
+		}).Once()
+	}
+
+	err := syncer.Sync(ctx, -1, 200)
+	assert.NoError(t, err)
+	assert.Equal(t, syncer.concurrency, int64(1))
+	mockHelper.AssertExpectations(t)
+	mockHandler.AssertExpectations(t)
+}
+
+func TestSync_DynamicOverhead(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+
+	mockHelper := &mocks.Helper{}
+	mockHandler := &mocks.Handler{}
+	syncer := New(
+		networkIdentifier,
+		mockHelper,
+		mockHandler,
+		cancel,
+		WithCacheSize(1<<20),       // 1 MB
+		WithSizeMultiplier(100000), // greatly increase synthetic size
+	)
+
+	// Force syncer to only get part of the way through the full range
+	mockHelper.On("NetworkStatus", ctx, networkIdentifier).Return(&types.NetworkStatusResponse{
+		CurrentBlockIdentifier: &types.BlockIdentifier{
+			Hash:  "block 1",
+			Index: 1,
+		},
+		GenesisBlockIdentifier: &types.BlockIdentifier{
+			Hash:  "block 0",
+			Index: 0,
+		},
+	}, nil).Twice()
+
+	mockHelper.On("NetworkStatus", ctx, networkIdentifier).Return(&types.NetworkStatusResponse{
+		CurrentBlockIdentifier: &types.BlockIdentifier{
+			Hash:  "block 1300",
+			Index: 1300,
+		},
+		GenesisBlockIdentifier: &types.BlockIdentifier{
+			Hash:  "block 0",
+			Index: 0,
+		},
+	}, nil).Twice()
+
+	blocks := createBlocks(0, 200, "")
+
+	// Create a block gap
+	blocks[100] = nil
+	blocks[101].ParentBlockIdentifier = blocks[99].BlockIdentifier
+	for i, b := range blocks {
+		index := int64(i)
+		mockHelper.On(
+			"Block",
+			mock.AnythingOfType("*context.cancelCtx"),
+			networkIdentifier,
+			&types.PartialBlockIdentifier{Index: &index},
+		).Return(
+			b,
+			nil,
+		).Run(func(args mock.Arguments) {
+			if index == 1 {
+				assert.Equal(t, syncer.concurrency, int64(2))
+			}
+			assertNotCanceled(t, args)
+		}).Once()
+
+		if b == nil {
+			continue
+		}
+
+		mockHandler.On(
+			"BlockAdded",
+			mock.AnythingOfType("*context.cancelCtx"),
+			b,
+		).Return(
+			nil,
+		).Run(func(args mock.Arguments) {
+			assertNotCanceled(t, args)
+		}).Once()
+	}
+
+	err := syncer.Sync(ctx, -1, 200)
+	assert.NoError(t, err)
+	assert.Equal(t, syncer.concurrency, int64(1))
 	mockHelper.AssertExpectations(t)
 	mockHandler.AssertExpectations(t)
 }

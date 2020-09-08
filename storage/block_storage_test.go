@@ -505,6 +505,45 @@ func TestBlock(t *testing.T) {
 	})
 }
 
+func TestManyBlocks(t *testing.T) {
+	ctx := context.Background()
+
+	newDir, err := utils.CreateTempDir()
+	assert.NoError(t, err)
+	defer utils.RemoveTempDir(newDir)
+
+	database, err := NewBadgerStorage(ctx, newDir)
+	assert.NoError(t, err)
+	defer database.Close(ctx)
+
+	storage := NewBlockStorage(database)
+
+	for i := int64(0); i < 10000; i++ {
+		blockIdentifier := &types.BlockIdentifier{
+			Index: i,
+			Hash:  fmt.Sprintf("block %d", i),
+		}
+		parentBlockIndex := blockIdentifier.Index - 1
+		if parentBlockIndex < 0 {
+			parentBlockIndex = 0
+		}
+		parentBlockIdentifier := &types.BlockIdentifier{
+			Index: parentBlockIndex,
+			Hash:  fmt.Sprintf("block %d", parentBlockIndex),
+		}
+
+		block := &types.Block{
+			BlockIdentifier:       blockIdentifier,
+			ParentBlockIdentifier: parentBlockIdentifier,
+		}
+
+		assert.NoError(t, storage.AddBlock(ctx, block))
+		head, err := storage.GetHeadBlockIdentifier(ctx)
+		assert.NoError(t, err)
+		assert.Equal(t, blockIdentifier, head)
+	}
+}
+
 func TestCreateBlockCache(t *testing.T) {
 	ctx := context.Background()
 
