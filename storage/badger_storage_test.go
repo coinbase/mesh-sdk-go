@@ -38,30 +38,37 @@ func TestDatabase(t *testing.T) {
 	defer database.Close(ctx)
 
 	t.Run("No key exists", func(t *testing.T) {
-		exists, value, err := database.Get(ctx, []byte("hello"))
+		txn := database.NewDatabaseTransaction(ctx, false)
+		exists, value, err := txn.Get(ctx, []byte("hello"))
 		assert.False(t, exists)
 		assert.Nil(t, value)
 		assert.NoError(t, err)
+		txn.Discard(ctx)
 	})
 
 	t.Run("Set key", func(t *testing.T) {
-		err := database.Set(ctx, []byte("hello"), []byte("hola"))
+		txn := database.NewDatabaseTransaction(ctx, true)
+		err := txn.Set(ctx, []byte("hello"), []byte("hola"))
 		assert.NoError(t, err)
+		assert.NoError(t, txn.Commit(ctx))
 	})
 
 	t.Run("Get key", func(t *testing.T) {
-		exists, value, err := database.Get(ctx, []byte("hello"))
+		txn := database.NewDatabaseTransaction(ctx, false)
+		exists, value, err := txn.Get(ctx, []byte("hello"))
 		assert.True(t, exists)
 		assert.Equal(t, []byte("hola"), value)
 		assert.NoError(t, err)
+		txn.Discard(ctx)
 	})
 
 	t.Run("Scan", func(t *testing.T) {
+		txn := database.NewDatabaseTransaction(ctx, true)
 		storedValues := []*ScanItem{}
 		for i := 0; i < 100; i++ {
 			k := []byte(fmt.Sprintf("test/%d", i))
 			v := []byte(fmt.Sprintf("%d", i))
-			err := database.Set(ctx, k, v)
+			err := txn.Set(ctx, k, v)
 			assert.NoError(t, err)
 
 			storedValues = append(storedValues, &ScanItem{
@@ -70,9 +77,40 @@ func TestDatabase(t *testing.T) {
 			})
 		}
 
-		values, err := database.Scan(ctx, []byte("test/"))
+		for i := 0; i < 100; i++ {
+			k := []byte(fmt.Sprintf("testing/%d", i))
+			v := []byte(fmt.Sprintf("%d", i))
+			err := txn.Set(ctx, k, v)
+			assert.NoError(t, err)
+		}
+
+		values, err := txn.Scan(ctx, []byte("test/"))
 		assert.NoError(t, err)
 		assert.ElementsMatch(t, storedValues, values)
+
+		retrievedStoredValues := []*ScanItem{}
+		numValues, err := txn.LimitedMemoryScan(
+			ctx,
+			[]byte("test/"),
+			func(k []byte, v []byte) error {
+				thisK := make([]byte, len(k))
+				thisV := make([]byte, len(v))
+
+				copy(thisK, k)
+				copy(thisV, v)
+
+				retrievedStoredValues = append(retrievedStoredValues, &ScanItem{
+					Key:   thisK,
+					Value: thisV,
+				})
+
+				return nil
+			},
+		)
+		assert.NoError(t, err)
+		assert.Equal(t, 100, numValues)
+		assert.ElementsMatch(t, storedValues, retrievedStoredValues)
+		assert.NoError(t, txn.Commit(ctx))
 	})
 }
 
@@ -92,26 +130,31 @@ func TestDatabaseTransaction(t *testing.T) {
 		assert.NoError(t, txn.Set(ctx, []byte("hello"), []byte("hola")))
 
 		// Ensure tx does not affect db
-		exists, value, err := database.Get(ctx, []byte("hello"))
+		txn2 := database.NewDatabaseTransaction(ctx, false)
+		exists, value, err := txn2.Get(ctx, []byte("hello"))
 		assert.False(t, exists)
 		assert.Nil(t, value)
 		assert.NoError(t, err)
+		txn2.Discard(ctx)
 
 		assert.NoError(t, txn.Commit(ctx))
 
-		exists, value, err = database.Get(ctx, []byte("hello"))
+		txn3 := database.NewDatabaseTransaction(ctx, false)
+		exists, value, err = txn3.Get(ctx, []byte("hello"))
 		assert.True(t, exists)
 		assert.Equal(t, []byte("hola"), value)
 		assert.NoError(t, err)
+		txn3.Discard(ctx)
 	})
 
 	t.Run("Discard transaction", func(t *testing.T) {
 		txn := database.NewDatabaseTransaction(ctx, true)
 		assert.NoError(t, txn.Set(ctx, []byte("hello"), []byte("world")))
-
 		txn.Discard(ctx)
 
-		exists, value, err := database.Get(ctx, []byte("hello"))
+		txn2 := database.NewDatabaseTransaction(ctx, false)
+		exists, value, err := txn2.Get(ctx, []byte("hello"))
+		txn2.Discard(ctx)
 		assert.True(t, exists)
 		assert.Equal(t, []byte("hola"), value)
 		assert.NoError(t, err)
@@ -122,7 +165,8 @@ func TestDatabaseTransaction(t *testing.T) {
 		assert.NoError(t, txn.Delete(ctx, []byte("hello")))
 		assert.NoError(t, txn.Commit(ctx))
 
-		exists, value, err := database.Get(ctx, []byte("hello"))
+		txn2 := database.NewDatabaseTransaction(ctx, false)
+		exists, value, err := txn2.Get(ctx, []byte("hello"))
 		assert.False(t, exists)
 		assert.Nil(t, value)
 		assert.NoError(t, err)
@@ -146,6 +190,7 @@ func TestBadgerTrain_NoLimit(t *testing.T) {
 
 	// Load storage with entries in namespace
 	namespace := "bogus"
+	txn := database.NewDatabaseTransaction(ctx, true)
 	for i := 0; i < 10000; i++ {
 		entry := &BogusEntry{
 			Index: i,
@@ -155,9 +200,10 @@ func TestBadgerTrain_NoLimit(t *testing.T) {
 		assert.NoError(t, err)
 		assert.NoError(
 			t,
-			database.Set(ctx, []byte(fmt.Sprintf("%s/%d", namespace, i)), compressedEntry),
+			txn.Set(ctx, []byte(fmt.Sprintf("%s/%d", namespace, i)), compressedEntry),
 		)
 	}
+	assert.NoError(t, txn.Commit(ctx))
 
 	// Close DB
 	database.Close(ctx)
@@ -187,6 +233,7 @@ func TestBadgerTrain_Limit(t *testing.T) {
 
 	// Load storage with entries in namespace
 	namespace := "bogus"
+	txn := database.NewDatabaseTransaction(ctx, true)
 	for i := 0; i < 100000; i++ {
 		output, err := reggen.Generate(`[a-z]+`, 50)
 		assert.NoError(t, err)
@@ -198,9 +245,10 @@ func TestBadgerTrain_Limit(t *testing.T) {
 		assert.NoError(t, err)
 		assert.NoError(
 			t,
-			database.Set(ctx, []byte(fmt.Sprintf("%s/%d", namespace, i)), compressedEntry),
+			txn.Set(ctx, []byte(fmt.Sprintf("%s/%d", namespace, i)), compressedEntry),
 		)
 	}
+	assert.NoError(t, txn.Commit(ctx))
 
 	// Close DB
 	database.Close(ctx)
@@ -236,6 +284,7 @@ func TestBadgerTrain_Limit(t *testing.T) {
 	)
 	assert.NoError(t, err)
 
+	txn2 := database2.NewDatabaseTransaction(ctx, true)
 	for i := 0; i < 100000; i++ {
 		output, err := reggen.Generate(`[a-z]+`, 50)
 		assert.NoError(t, err)
@@ -247,9 +296,10 @@ func TestBadgerTrain_Limit(t *testing.T) {
 		assert.NoError(t, err)
 		assert.NoError(
 			t,
-			database2.Set(ctx, []byte(fmt.Sprintf("%s/%d", namespace, i)), compressedEntry),
+			txn2.Set(ctx, []byte(fmt.Sprintf("%s/%d", namespace, i)), compressedEntry),
 		)
 	}
+	assert.NoError(t, txn2.Commit(ctx))
 
 	// Train from Dictionary
 	database2.Close(ctx)

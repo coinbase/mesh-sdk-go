@@ -19,9 +19,12 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"sync"
 	"time"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
+	"github.com/coinbase/rosetta-sdk-go/utils"
+
 	"golang.org/x/sync/errgroup"
 )
 
@@ -36,10 +39,42 @@ const (
 
 	// DefaultConcurrency is the default number of
 	// blocks the syncer will try to get concurrently.
-	DefaultConcurrency = 8
-)
+	DefaultConcurrency = int64(4) // nolint:gomnd
 
-var (
+	// DefaultCacheSize is the default size of the preprocess
+	// cache for the syncer.
+	DefaultCacheSize = 2000 << 20 // 2 GB
+
+	// LargeCacheSize will aim to use 5 GB of memory.
+	LargeCacheSize = 5000 << 20 // 5 GB
+
+	// SmallCacheSize will aim to use 500 MB of memory.
+	SmallCacheSize = 500 << 20 // 500 MB
+
+	// TinyCacheSize will aim to use 200 MB of memory.
+	TinyCacheSize = 200 << 20 // 200 MB
+
+	// DefaultMaxConcurrency is the maximum concurrency we will
+	// attempt to sync with.
+	DefaultMaxConcurrency = int64(256) // nolint:gomnd
+
+	// MinConcurrency is the minimum concurrency we will
+	// attempt to sync with.
+	MinConcurrency = int64(1) // nolint:gomnd
+
+	// defaultTrailingWindow is the size of the trailing window
+	// of block sizes to keep when adjusting concurrency.
+	defaultTrailingWindow = 100
+
+	// defaultAdjustmentWindow is how frequently we will
+	// consider increasing our concurrency.
+	defaultAdjustmentWindow = 10
+
+	// DefaultSizeMultiplier is used to pad our average size adjustment.
+	// This can be used to account for the overhead associated with processing
+	// a particular block with increased concurrency.
+	DefaultSizeMultiplier = float64(1.2) // nolint:gomnd
+
 	// defaultSyncSleep is the amount of time to sleep
 	// when we are at tip but want to keep syncing.
 	defaultSyncSleep = 2 * time.Second
@@ -48,7 +83,9 @@ var (
 	// when we are loading more blocks to fetch but we
 	// already have a backlog >= to concurrency.
 	defaultFetchSleep = 500 * time.Millisecond
+)
 
+var (
 	// ErrCannotRemoveGenesisBlock is returned when
 	// a Rosetta implementation indicates that the
 	// genesis block should be orphaned.
@@ -90,7 +127,10 @@ type Handler interface {
 // to get information about a blockchain network. It is
 // common to implement this helper using the Fetcher package.
 type Helper interface {
-	NetworkStatus(context.Context, *types.NetworkIdentifier) (*types.NetworkStatusResponse, error)
+	NetworkStatus(
+		context.Context,
+		*types.NetworkIdentifier,
+	) (*types.NetworkStatusResponse, error)
 
 	Block(
 		context.Context,
@@ -106,11 +146,10 @@ type Helper interface {
 // In the rosetta-cli, we handle reconciliation, state storage, and
 // logging in the handler.
 type Syncer struct {
-	network     *types.NetworkIdentifier
-	helper      Helper
-	handler     Handler
-	cancel      context.CancelFunc
-	concurrency uint64
+	network *types.NetworkIdentifier
+	helper  Helper
+	handler Handler
+	cancel  context.CancelFunc
 
 	// Used to keep track of sync state
 	genesisBlock *types.BlockIdentifier
@@ -124,6 +163,19 @@ type Syncer struct {
 	// If a blockchain does not have reorgs, it is not necessary to populate
 	// the blockCache on creation.
 	pastBlocks []*types.BlockIdentifier
+
+	// Automatically manage concurrency based on the
+	// provided max cache size. The algorithm used here
+	// is a slow rise (to increase concurrency) and fast
+	// fall (if we breach our max cache size).
+	cacheSize        int
+	sizeMultiplier   float64
+	maxConcurrency   int64
+	concurrency      int64
+	goalConcurrency  int64
+	recentBlockSizes []int
+	lastAdjustment   int64
+	concurrencyLock  sync.Mutex
 }
 
 // New creates a new Syncer. If pastBlocks is left nil, it will
@@ -136,12 +188,15 @@ func New(
 	options ...Option,
 ) *Syncer {
 	s := &Syncer{
-		network:     network,
-		helper:      helper,
-		handler:     handler,
-		concurrency: DefaultConcurrency,
-		cancel:      cancel,
-		pastBlocks:  []*types.BlockIdentifier{},
+		network:        network,
+		helper:         helper,
+		handler:        handler,
+		concurrency:    DefaultConcurrency,
+		cacheSize:      DefaultCacheSize,
+		maxConcurrency: DefaultMaxConcurrency,
+		sizeMultiplier: DefaultSizeMultiplier,
+		cancel:         cancel,
+		pastBlocks:     []*types.BlockIdentifier{},
 	}
 
 	// Override defaults with any provided options
@@ -305,7 +360,7 @@ func (s *Syncer) addBlockIndicies(
 	i := startIndex
 	for i <= endIndex {
 		// Don't load if we already have a healthy backlog.
-		if uint64(len(blockIndicies)) > s.concurrency {
+		if int64(len(blockIndicies)) > s.concurrency {
 			time.Sleep(defaultFetchSleep)
 			continue
 		}
@@ -370,6 +425,19 @@ func (s *Syncer) fetchChannelBlocks(
 		case results <- br:
 		case <-ctx.Done():
 			return ctx.Err()
+		}
+
+		// Exit if concurrency is greater than
+		// goal concurrency.
+		s.concurrencyLock.Lock()
+		shouldExit := false
+		if s.concurrency > s.goalConcurrency {
+			shouldExit = true
+			s.concurrency--
+		}
+		s.concurrencyLock.Unlock()
+		if shouldExit {
+			return nil
 		}
 	}
 
@@ -439,6 +507,68 @@ type blockResult struct {
 	orphanHead bool
 }
 
+func (s *Syncer) adjustWorkers() bool {
+	// find max block size
+	maxSize := 0
+	for _, b := range s.recentBlockSizes {
+		if b > maxSize {
+			maxSize = b
+		}
+	}
+	max := float64(maxSize) * s.sizeMultiplier
+
+	s.concurrencyLock.Lock()
+
+	// multiply average block size by concurrency
+	estimatedMaxCache := max * float64(s.concurrency)
+
+	// If < cacheSize, increase concurrency by 1 up to MaxConcurrency
+	shouldCreate := false
+	if estimatedMaxCache+max < float64(s.cacheSize) &&
+		s.concurrency < s.maxConcurrency &&
+		s.lastAdjustment > defaultAdjustmentWindow {
+		s.goalConcurrency++
+		s.concurrency++
+		s.lastAdjustment = 0
+		shouldCreate = true
+		log.Printf(
+			"increasing syncer concurrency to %d (projected new cache size: %f MB)\n",
+			s.goalConcurrency,
+			utils.BtoMb(max*float64(s.goalConcurrency)),
+		)
+	}
+
+	// If >= cacheSize, decrease concurrency however many necessary to fit max cache size.
+	//
+	// Note: We always will decrease size, regardless of last adjustment.
+	if estimatedMaxCache > float64(s.cacheSize) {
+		newGoalConcurrency := int64(float64(s.cacheSize) / max)
+		if newGoalConcurrency < MinConcurrency {
+			newGoalConcurrency = MinConcurrency
+		}
+
+		// Only log if s.goalConcurrency != newGoalConcurrency
+		if s.goalConcurrency != newGoalConcurrency {
+			s.goalConcurrency = newGoalConcurrency
+			s.lastAdjustment = 0
+			log.Printf(
+				"reducing syncer concurrency to %d (projected new cache size: %f MB)\n",
+				s.goalConcurrency,
+				utils.BtoMb(max*float64(s.goalConcurrency)),
+			)
+		}
+	}
+	s.concurrencyLock.Unlock()
+
+	// Remove first element in array if
+	// we are over our trailing window.
+	if len(s.recentBlockSizes) > defaultTrailingWindow {
+		s.recentBlockSizes = s.recentBlockSizes[1:]
+	}
+
+	return shouldCreate
+}
+
 // syncRange fetches and processes a range of blocks
 // (from syncer.nextIndex to endIndex, inclusive)
 // with syncer.concurrency.
@@ -462,7 +592,26 @@ func (s *Syncer) syncRange(
 		return s.addBlockIndicies(pipelineCtx, blockIndicies, s.nextIndex, endIndex)
 	})
 
-	for j := uint64(0); j < s.concurrency; j++ {
+	// Ensure default concurrency is less than max concurrency.
+	startingConcurrency := DefaultConcurrency
+	if s.maxConcurrency < startingConcurrency {
+		startingConcurrency = s.maxConcurrency
+	}
+
+	// Don't create more goroutines than there are blocks
+	// to sync.
+	blocksToSync := endIndex - s.nextIndex + 1
+	if blocksToSync < startingConcurrency {
+		startingConcurrency = blocksToSync
+	}
+	s.concurrency = startingConcurrency
+
+	// Reset sync variables
+	s.goalConcurrency = s.concurrency
+	s.recentBlockSizes = []int{}
+	s.lastAdjustment = 0
+
+	for j := int64(0); j < s.concurrency; j++ {
 		g.Go(func() error {
 			return s.fetchChannelBlocks(pipelineCtx, s.network, blockIndicies, results)
 		})
@@ -482,6 +631,18 @@ func (s *Syncer) syncRange(
 		if err := s.processBlocks(ctx, cache, endIndex); err != nil {
 			return fmt.Errorf("%w: unable to process blocks", err)
 		}
+
+		// Determine if concurrency should be adjusted.
+		s.recentBlockSizes = append(s.recentBlockSizes, utils.SizeOf(b))
+		s.lastAdjustment++
+		shouldCreate := s.adjustWorkers()
+		if !shouldCreate {
+			continue
+		}
+
+		g.Go(func() error {
+			return s.fetchChannelBlocks(pipelineCtx, s.network, blockIndicies, results)
+		})
 	}
 
 	err := g.Wait()
