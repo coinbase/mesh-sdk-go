@@ -589,6 +589,7 @@ func TestSync_Cancel(t *testing.T) {
 	}()
 
 	err := syncer.Sync(ctx, -1, 1200)
+	fmt.Println(err)
 	assert.True(t, errors.Is(err, context.Canceled))
 }
 
