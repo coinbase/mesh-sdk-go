@@ -85,29 +85,6 @@ const (
 	defaultFetchSleep = 500 * time.Millisecond
 )
 
-var (
-	// ErrCannotRemoveGenesisBlock is returned when
-	// a Rosetta implementation indicates that the
-	// genesis block should be orphaned.
-	ErrCannotRemoveGenesisBlock = errors.New("cannot remove genesis block")
-
-	// ErrOutOfOrder is returned when the syncer examines
-	// a block that is out of order. This typically
-	// means the Helper has a bug.
-	ErrOutOfOrder = errors.New("out of order")
-
-	// ErrOrphanHead is returned by the Helper when
-	// the current head should be orphaned. In some
-	// cases, it may not be possible to populate a block
-	// if the head of the canonical chain is not yet synced.
-	ErrOrphanHead = errors.New("orphan head")
-
-	// ErrBlockResultNil is returned by the syncer
-	// when attempting to process a block and the block
-	// result is nil.
-	ErrBlockResultNil = errors.New("block result is nil")
-)
-
 // Handler is called at various times during the sync cycle
 // to handle different events. It is common to write logs or
 // perform reconciliation in the sync processor.
@@ -238,7 +215,7 @@ func (s *Syncer) nextSyncableRange(
 	endIndex int64,
 ) (int64, bool, error) {
 	if s.nextIndex == -1 {
-		return -1, false, errors.New("unable to get current head")
+		return -1, false, ErrGetCurrentHeadBlockFailed
 	}
 
 	// Always fetch network status to ensure endIndex is not
@@ -248,7 +225,7 @@ func (s *Syncer) nextSyncableRange(
 		s.network,
 	)
 	if err != nil {
-		return -1, false, fmt.Errorf("%w: unable to get network status", err)
+		return -1, false, fmt.Errorf("%w: %v", ErrGetNetworkStatusFailed, err)
 	}
 
 	if endIndex == -1 || endIndex > networkStatus.CurrentBlockIdentifier.Index {
@@ -346,27 +323,27 @@ func (s *Syncer) processBlock(
 	return nil
 }
 
-// addBlockIndicies appends a range of indicies (from
+// addBlockIndices appends a range of indices (from
 // startIndex to endIndex, inclusive) to the
-// blockIndicies channel. When all indicies are added,
+// blockIndices channel. When all indices are added,
 // the channel is closed.
-func (s *Syncer) addBlockIndicies(
+func (s *Syncer) addBlockIndices(
 	ctx context.Context,
-	blockIndicies chan int64,
+	blockIndices chan int64,
 	startIndex int64,
 	endIndex int64,
 ) error {
-	defer close(blockIndicies)
+	defer close(blockIndices)
 	i := startIndex
 	for i <= endIndex {
 		// Don't load if we already have a healthy backlog.
-		if int64(len(blockIndicies)) > s.concurrency {
+		if int64(len(blockIndices)) > s.concurrency {
 			time.Sleep(defaultFetchSleep)
 			continue
 		}
 
 		select {
-		case blockIndicies <- i:
+		case blockIndices <- i:
 			i++
 		case <-ctx.Done():
 			return ctx.Err()
@@ -408,17 +385,17 @@ func (s *Syncer) fetchBlockResult(
 func (s *Syncer) fetchChannelBlocks(
 	ctx context.Context,
 	network *types.NetworkIdentifier,
-	blockIndicies chan int64,
+	blockIndices chan int64,
 	results chan *blockResult,
 ) error {
-	for b := range blockIndicies {
+	for b := range blockIndices {
 		br, err := s.fetchBlockResult(
 			ctx,
 			network,
 			b,
 		)
 		if err != nil {
-			return fmt.Errorf("%w: unable to fetch block %d", err, b)
+			return fmt.Errorf("%w %d: %v", ErrFetchBlockFailed, b, err)
 		}
 
 		select {
@@ -474,7 +451,7 @@ func (s *Syncer) processBlocks(
 				s.nextIndex,
 			)
 			if err != nil {
-				return fmt.Errorf("%w: unable to fetch block during re-org", err)
+				return fmt.Errorf("%w: %v", ErrFetchBlockReorgFailed, err)
 			}
 		} else {
 			// Anytime we re-fetch an index, we
@@ -485,7 +462,7 @@ func (s *Syncer) processBlocks(
 
 		lastProcessed := s.nextIndex
 		if err := s.processBlock(ctx, br); err != nil {
-			return fmt.Errorf("%w: unable to process block", err)
+			return fmt.Errorf("%w: %v", ErrBlockProcessFailed, err)
 		}
 
 		if s.nextIndex < lastProcessed && reorgStart == -1 {
@@ -576,7 +553,7 @@ func (s *Syncer) syncRange(
 	ctx context.Context,
 	endIndex int64,
 ) error {
-	blockIndicies := make(chan int64)
+	blockIndices := make(chan int64)
 	results := make(chan *blockResult)
 
 	// We create a separate derivative context here instead of
@@ -589,7 +566,7 @@ func (s *Syncer) syncRange(
 	// Source: https://godoc.org/golang.org/x/sync/errgroup
 	g, pipelineCtx := errgroup.WithContext(ctx)
 	g.Go(func() error {
-		return s.addBlockIndicies(pipelineCtx, blockIndicies, s.nextIndex, endIndex)
+		return s.addBlockIndices(pipelineCtx, blockIndices, s.nextIndex, endIndex)
 	})
 
 	// Ensure default concurrency is less than max concurrency.
@@ -613,7 +590,7 @@ func (s *Syncer) syncRange(
 
 	for j := int64(0); j < s.concurrency; j++ {
 		g.Go(func() error {
-			return s.fetchChannelBlocks(pipelineCtx, s.network, blockIndicies, results)
+			return s.fetchChannelBlocks(pipelineCtx, s.network, blockIndices, results)
 		})
 	}
 
@@ -629,7 +606,7 @@ func (s *Syncer) syncRange(
 		cache[b.index] = b
 
 		if err := s.processBlocks(ctx, cache, endIndex); err != nil {
-			return fmt.Errorf("%w: unable to process blocks", err)
+			return fmt.Errorf("%w: %v", ErrBlocksProcessMultipleFailed, err)
 		}
 
 		// Determine if concurrency should be adjusted.
@@ -641,7 +618,7 @@ func (s *Syncer) syncRange(
 		}
 
 		g.Go(func() error {
-			return s.fetchChannelBlocks(pipelineCtx, s.network, blockIndicies, results)
+			return s.fetchChannelBlocks(pipelineCtx, s.network, blockIndices, results)
 		})
 	}
 
@@ -663,7 +640,7 @@ func (s *Syncer) Sync(
 	defer s.cancel()
 
 	if err := s.setStart(ctx, startIndex); err != nil {
-		return fmt.Errorf("%w: unable to set start index", err)
+		return fmt.Errorf("%w: %v", ErrSetStartIndexFailed, err)
 	}
 
 	for {
@@ -672,7 +649,7 @@ func (s *Syncer) Sync(
 			endIndex,
 		)
 		if err != nil {
-			return fmt.Errorf("%w: unable to get next syncable range", err)
+			return fmt.Errorf("%w: %v", ErrNextSyncableRangeFailed, err)
 		}
 
 		if halt {

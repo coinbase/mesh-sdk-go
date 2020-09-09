@@ -16,6 +16,7 @@ package reconciler
 
 import (
 	"errors"
+
 	utils "github.com/coinbase/rosetta-sdk-go/errors"
 )
 
@@ -23,7 +24,7 @@ import (
 var (
 	// ErrHeadBlockBehindLive is returned when the processed
 	// head is behind the live head. Sometimes, it is
-	// preferrable to sleep and wait to catch up when
+	// preferable to sleep and wait to catch up when
 	// we are close to the live head (waitToCheckDiff).
 	ErrHeadBlockBehindLive = errors.New("head block behind")
 
@@ -38,16 +39,16 @@ var (
 	// that the block was orphaned.
 	ErrBlockGone = errors.New("block gone")
 
-	ErrGetCurrentBlockFailed = errors.New("unable to get current block for reconciliation")
-	ErrBlockExistsFailed = errors.New("unable to check if block exists")
+	ErrGetCurrentBlockFailed    = errors.New("unable to get current block for reconciliation")
+	ErrBlockExistsFailed        = errors.New("unable to check if block exists")
 	ErrGetComputedBalanceFailed = errors.New("unable to get computed balance")
-	ErrLiveBalanceLookupFailed = errors.New("unable to lookup live balance")
+	ErrLiveBalanceLookupFailed  = errors.New("unable to lookup live balance")
 )
 
 // ErrReconciler takes an error as an argument and returns
 // whether or not the error is one thrown by the keys package
 func ErrReconciler(err error) bool {
-	keyErrors := []error{
+	reconcilerErrors := []error{
 		ErrHeadBlockBehindLive,
 		ErrAccountUpdated,
 		ErrBlockGone,
@@ -57,5 +58,5 @@ func ErrReconciler(err error) bool {
 		ErrLiveBalanceLookupFailed,
 	}
 
-	return utils.FindError(keyErrors, err)
+	return utils.FindError(reconcilerErrors, err)
 }
