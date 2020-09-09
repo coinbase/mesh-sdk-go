@@ -389,11 +389,13 @@ func TestCoinStorage(t *testing.T) {
 
 	newDir, err := utils.CreateTempDir()
 	assert.NoError(t, err)
-	defer utils.RemoveTempDir(newDir)
 
 	database, err := NewBadgerStorage(ctx, newDir)
 	assert.NoError(t, err)
-	defer database.Close(ctx)
+	defer func() {
+		database.Close(ctx)
+		utils.RemoveTempDir(newDir)
+	}()
 
 	a, err := asserter.NewClientWithOptions(
 		&types.NetworkIdentifier{

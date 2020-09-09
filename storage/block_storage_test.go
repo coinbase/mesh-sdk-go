@@ -41,11 +41,13 @@ func TestHeadBlockIdentifier(t *testing.T) {
 
 	newDir, err := utils.CreateTempDir()
 	assert.NoError(t, err)
-	defer utils.RemoveTempDir(newDir)
 
 	database, err := NewBadgerStorage(ctx, newDir)
 	assert.NoError(t, err)
-	defer database.Close(ctx)
+	defer func() {
+		database.Close(ctx)
+		utils.RemoveTempDir(newDir)
+	}()
 
 	storage := NewBlockStorage(database)
 
@@ -298,11 +300,13 @@ func TestBlock(t *testing.T) {
 
 	newDir, err := utils.CreateTempDir()
 	assert.NoError(t, err)
-	defer utils.RemoveTempDir(newDir)
 
 	database, err := NewBadgerStorage(ctx, newDir)
 	assert.NoError(t, err)
-	defer database.Close(ctx)
+	defer func() {
+		database.Close(ctx)
+		utils.RemoveTempDir(newDir)
+	}()
 
 	storage := NewBlockStorage(database)
 
@@ -510,11 +514,13 @@ func TestManyBlocks(t *testing.T) {
 
 	newDir, err := utils.CreateTempDir()
 	assert.NoError(t, err)
-	defer utils.RemoveTempDir(newDir)
 
 	database, err := NewBadgerStorage(ctx, newDir)
 	assert.NoError(t, err)
-	defer database.Close(ctx)
+	defer func() {
+		database.Close(ctx)
+		utils.RemoveTempDir(newDir)
+	}()
 
 	storage := NewBlockStorage(database)
 
@@ -549,11 +555,13 @@ func TestCreateBlockCache(t *testing.T) {
 
 	newDir, err := utils.CreateTempDir()
 	assert.NoError(t, err)
-	defer utils.RemoveTempDir(newDir)
 
 	database, err := NewBadgerStorage(ctx, newDir)
 	assert.NoError(t, err)
-	defer database.Close(ctx)
+	defer func() {
+		database.Close(ctx)
+		utils.RemoveTempDir(newDir)
+	}()
 
 	storage := NewBlockStorage(database)
 
@@ -609,11 +617,13 @@ func TestAtTip(t *testing.T) {
 
 	newDir, err := utils.CreateTempDir()
 	assert.NoError(t, err)
-	defer utils.RemoveTempDir(newDir)
 
 	database, err := NewBadgerStorage(ctx, newDir)
 	assert.NoError(t, err)
-	defer database.Close(ctx)
+	defer func() {
+		database.Close(ctx)
+		utils.RemoveTempDir(newDir)
+	}()
 
 	storage := NewBlockStorage(database)
 	tipDelay := int64(100)

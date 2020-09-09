@@ -31,11 +31,13 @@ func TestDatabase(t *testing.T) {
 
 	newDir, err := utils.CreateTempDir()
 	assert.NoError(t, err)
-	defer utils.RemoveTempDir(newDir)
 
 	database, err := NewBadgerStorage(ctx, newDir)
 	assert.NoError(t, err)
-	defer database.Close(ctx)
+	defer func() {
+		database.Close(ctx)
+		utils.RemoveTempDir(newDir)
+	}()
 
 	t.Run("No key exists", func(t *testing.T) {
 		txn := database.NewDatabaseTransaction(ctx, false)
@@ -121,11 +123,13 @@ func TestDatabaseTransaction(t *testing.T) {
 
 	newDir, err := utils.CreateTempDir()
 	assert.NoError(t, err)
-	defer utils.RemoveTempDir(newDir)
 
 	database, err := NewBadgerStorage(ctx, newDir)
 	assert.NoError(t, err)
-	defer database.Close(ctx)
+	defer func() {
+		database.Close(ctx)
+		utils.RemoveTempDir(newDir)
+	}()
 
 	t.Run("Set and get within a transaction", func(t *testing.T) {
 		txn := database.NewDatabaseTransaction(ctx, true)

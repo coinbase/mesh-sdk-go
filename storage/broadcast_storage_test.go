@@ -81,11 +81,13 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 
 	newDir, err := utils.CreateTempDir()
 	assert.NoError(t, err)
-	defer utils.RemoveTempDir(newDir)
 
 	database, err := NewBadgerStorage(ctx, newDir)
 	assert.NoError(t, err)
-	defer database.Close(ctx)
+	defer func() {
+		database.Close(ctx)
+		utils.RemoveTempDir(newDir)
+	}()
 
 	storage := NewBroadcastStorage(
 		database,
@@ -111,7 +113,7 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 
 	t.Run("broadcast send 1 before block exists", func(t *testing.T) {
 		dbTx := database.NewDatabaseTransaction(ctx, true)
-		defer dbTx.Discard(ctx)
+		assert.NotNil(t, dbTx)
 
 		err := storage.Broadcast(
 			ctx,
@@ -224,7 +226,7 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 
 	t.Run("broadcast send 2 after adding a block", func(t *testing.T) {
 		dbTx := database.NewDatabaseTransaction(ctx, true)
-		defer dbTx.Discard(ctx)
+		assert.NotNil(t, dbTx)
 
 		err := storage.Broadcast(
 			ctx,
@@ -494,11 +496,13 @@ func TestBroadcastStorageBroadcastFailure(t *testing.T) {
 
 	newDir, err := utils.CreateTempDir()
 	assert.NoError(t, err)
-	defer utils.RemoveTempDir(newDir)
 
 	database, err := NewBadgerStorage(ctx, newDir)
 	assert.NoError(t, err)
-	defer database.Close(ctx)
+	defer func() {
+		database.Close(ctx)
+		utils.RemoveTempDir(newDir)
+	}()
 
 	storage := NewBroadcastStorage(
 		database,
@@ -514,12 +518,13 @@ func TestBroadcastStorageBroadcastFailure(t *testing.T) {
 
 	t.Run("locked addresses with no broadcasts", func(t *testing.T) {
 		dbTx := database.NewDatabaseTransaction(ctx, false)
-		defer dbTx.Discard(ctx)
+		assert.NotNil(t, dbTx)
 
 		addresses, err := storage.LockedAddresses(ctx, dbTx)
 		assert.NoError(t, err)
 		assert.Len(t, addresses, 0)
 		assert.ElementsMatch(t, []string{}, addresses)
+		dbTx.Discard(ctx)
 	})
 
 	send1 := opFiller("addr 1", 11)
@@ -536,7 +541,7 @@ func TestBroadcastStorageBroadcastFailure(t *testing.T) {
 	network := &types.NetworkIdentifier{Blockchain: "Bitcoin", Network: "Testnet3"}
 	t.Run("broadcast", func(t *testing.T) {
 		dbTx := database.NewDatabaseTransaction(ctx, true)
-		defer dbTx.Discard(ctx)
+		assert.NotNil(t, dbTx)
 
 		err := storage.Broadcast(
 			ctx,
@@ -613,7 +618,7 @@ func TestBroadcastStorageBroadcastFailure(t *testing.T) {
 		}
 
 		dbTx := database.NewDatabaseTransaction(ctx, false)
-		defer dbTx.Discard(ctx)
+		assert.NotNil(t, dbTx)
 
 		addresses, err := storage.LockedAddresses(ctx, dbTx)
 		assert.NoError(t, err)
@@ -645,6 +650,7 @@ func TestBroadcastStorageBroadcastFailure(t *testing.T) {
 		}, mockHandler.Failed)
 
 		assert.ElementsMatch(t, []*confirmedTx{}, mockHandler.Confirmed)
+		dbTx.Discard(ctx)
 	})
 }
 
@@ -653,11 +659,13 @@ func TestBroadcastStorageBehindTip(t *testing.T) {
 
 	newDir, err := utils.CreateTempDir()
 	assert.NoError(t, err)
-	defer utils.RemoveTempDir(newDir)
 
 	database, err := NewBadgerStorage(ctx, newDir)
 	assert.NoError(t, err)
-	defer database.Close(ctx)
+	defer func() {
+		database.Close(ctx)
+		utils.RemoveTempDir(newDir)
+	}()
 
 	storage := NewBroadcastStorage(
 		database,
@@ -676,7 +684,7 @@ func TestBroadcastStorageBehindTip(t *testing.T) {
 	network := &types.NetworkIdentifier{Blockchain: "Bitcoin", Network: "Testnet3"}
 	t.Run("broadcast", func(t *testing.T) {
 		dbTx := database.NewDatabaseTransaction(ctx, true)
-		defer dbTx.Discard(ctx)
+		assert.NotNil(t, dbTx)
 
 		err := storage.Broadcast(
 			ctx,
@@ -753,7 +761,7 @@ func TestBroadcastStorageBehindTip(t *testing.T) {
 		}
 
 		dbTx := database.NewDatabaseTransaction(ctx, false)
-		defer dbTx.Discard(ctx)
+		assert.NotNil(t, dbTx)
 
 		addresses, err := storage.LockedAddresses(ctx, dbTx)
 		assert.NoError(t, err)
@@ -783,6 +791,7 @@ func TestBroadcastStorageBehindTip(t *testing.T) {
 		assert.ElementsMatch(t, []*types.TransactionIdentifier{}, mockHandler.Stale)
 		assert.ElementsMatch(t, []*failedTx{}, mockHandler.Failed)
 		assert.ElementsMatch(t, []*confirmedTx{}, mockHandler.Confirmed)
+		dbTx.Discard(ctx)
 	})
 
 	mockHelper.AtSyncTip = true
@@ -800,7 +809,7 @@ func TestBroadcastStorageBehindTip(t *testing.T) {
 		}
 
 		dbTx := database.NewDatabaseTransaction(ctx, false)
-		defer dbTx.Discard(ctx)
+		assert.NotNil(t, dbTx)
 
 		addresses, err := storage.LockedAddresses(ctx, dbTx)
 		assert.NoError(t, err)
@@ -834,6 +843,7 @@ func TestBroadcastStorageBehindTip(t *testing.T) {
 		assert.ElementsMatch(t, []*types.TransactionIdentifier{}, mockHandler.Stale)
 		assert.ElementsMatch(t, []*failedTx{}, mockHandler.Failed)
 		assert.ElementsMatch(t, []*confirmedTx{}, mockHandler.Confirmed)
+		dbTx.Discard(ctx)
 	})
 }
 
@@ -842,11 +852,13 @@ func TestBroadcastStorageClearBroadcasts(t *testing.T) {
 
 	newDir, err := utils.CreateTempDir()
 	assert.NoError(t, err)
-	defer utils.RemoveTempDir(newDir)
 
 	database, err := NewBadgerStorage(ctx, newDir)
 	assert.NoError(t, err)
-	defer database.Close(ctx)
+	defer func() {
+		database.Close(ctx)
+		utils.RemoveTempDir(newDir)
+	}()
 
 	storage := NewBroadcastStorage(
 		database,
@@ -863,19 +875,20 @@ func TestBroadcastStorageClearBroadcasts(t *testing.T) {
 	network := &types.NetworkIdentifier{Blockchain: "Bitcoin", Network: "Testnet3"}
 	t.Run("locked addresses with no broadcasts", func(t *testing.T) {
 		dbTx := database.NewDatabaseTransaction(ctx, false)
-		defer dbTx.Discard(ctx)
+		assert.NotNil(t, dbTx)
 
 		addresses, err := storage.LockedAddresses(ctx, dbTx)
 		assert.NoError(t, err)
 		assert.Len(t, addresses, 0)
 		assert.ElementsMatch(t, []string{}, addresses)
+		dbTx.Discard(ctx)
 	})
 
 	send1 := opFiller("addr 1", 11)
 	send2 := opFiller("addr 2", 13)
 	t.Run("broadcast", func(t *testing.T) {
 		dbTx := database.NewDatabaseTransaction(ctx, true)
-		defer dbTx.Discard(ctx)
+		assert.NotNil(t, dbTx)
 
 		err := storage.Broadcast(
 			ctx,
@@ -954,12 +967,13 @@ func TestBroadcastStorageClearBroadcasts(t *testing.T) {
 		}, broadcasts)
 
 		dbTx := database.NewDatabaseTransaction(ctx, false)
-		defer dbTx.Discard(ctx)
+		assert.NotNil(t, dbTx)
 
 		addresses, err := storage.LockedAddresses(ctx, dbTx)
 		assert.NoError(t, err)
 		assert.Len(t, addresses, 0)
 		assert.ElementsMatch(t, []string{}, addresses)
+		dbTx.Discard(ctx)
 	})
 }
 
