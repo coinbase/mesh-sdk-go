@@ -15,7 +15,6 @@
 package storage
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -74,26 +73,6 @@ type Key struct {
 	KeyPair *keys.KeyPair `json:"keypair"`
 }
 
-func parseKey(buf []byte) (*Key, error) {
-	var k Key
-	err := getDecoder(bytes.NewReader(buf)).Decode(&k)
-	if err != nil {
-		return nil, err
-	}
-
-	return &k, nil
-}
-
-func serializeKey(k *Key) ([]byte, error) {
-	buf := new(bytes.Buffer)
-	err := getEncoder(buf).Encode(k)
-	if err != nil {
-		return nil, err
-	}
-
-	return buf.Bytes(), nil
-}
-
 // StoreTransactional stores a key in a database transaction.
 func (k *KeyStorage) StoreTransactional(
 	ctx context.Context,
@@ -110,7 +89,7 @@ func (k *KeyStorage) StoreTransactional(
 		return fmt.Errorf("%w: address %s already exists", ErrAddrExists, address)
 	}
 
-	val, err := serializeKey(&Key{
+	val, err := k.db.Compressor().Encode("", &Key{
 		Address: address,
 		KeyPair: keyPair,
 	})
@@ -162,12 +141,12 @@ func (k *KeyStorage) GetTransactional(
 		return nil, fmt.Errorf("%w: %s", ErrAddrNotFound, address)
 	}
 
-	key, err := parseKey(rawKey)
-	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrParseSavedKeyFailed, err)
+	var kp Key
+	if err := k.db.Compressor().Decode("", rawKey, &kp, true); err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrParseKeyPairFailed, err)
 	}
 
-	return key.KeyPair, nil
+	return kp.KeyPair, nil
 }
 
 // Get returns a *keys.KeyPair for an address, if it exists.
@@ -183,19 +162,23 @@ func (k *KeyStorage) GetAllAddressesTransactional(
 	ctx context.Context,
 	dbTx DatabaseTransaction,
 ) ([]string, error) {
-	rawKeys, err := dbTx.Scan(ctx, []byte(keyNamespace), false)
+	addresses := []string{}
+	_, err := dbTx.Scan(
+		ctx,
+		[]byte(keyNamespace),
+		func(key []byte, v []byte) error {
+			var kp Key
+			if err := k.db.Compressor().Decode("", v, &kp, false); err != nil {
+				return fmt.Errorf("%w: %v", ErrKeyScanFailed, err)
+			}
+
+			addresses = append(addresses, kp.Address)
+			return nil
+		},
+		false,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrKeyScanFailed, err)
-	}
-
-	addresses := make([]string, len(rawKeys))
-	for i, rawKey := range rawKeys {
-		kp, err := parseKey(rawKey.Value)
-		if err != nil {
-			return nil, fmt.Errorf("%w: %v", ErrParseKeyPairFailed, err)
-		}
-
-		addresses[i] = kp.Address
 	}
 
 	return addresses, nil
