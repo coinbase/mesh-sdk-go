@@ -102,8 +102,29 @@ func ConstructionDeriveResponse(
 		return ErrConstructionDeriveResponseIsNil
 	}
 
-	if err := AccountIdentifier(response.AccountIdentifier); err != nil {
-		return fmt.Errorf("%w: %s", ErrConstructionDeriveResponseAddrEmpty, err.Error())
+	if response.Address == nil && response.AccountIdentifier == nil {
+		return ErrConstructionDeriveResponseAddrEmpty
+	}
+
+	if response.Address != nil && len(*response.Address) == 0 {
+		return ErrConstructionDeriveResponseAddrEmpty
+	}
+
+	if response.AccountIdentifier != nil {
+		if err := AccountIdentifier(response.AccountIdentifier); err != nil {
+			return fmt.Errorf("%w: %s", ErrConstructionDeriveResponseAddrEmpty, err.Error())
+		}
+	}
+
+	if response.Address != nil && response.AccountIdentifier != nil {
+		if *response.Address != response.AccountIdentifier.Address {
+			return fmt.Errorf(
+				"%w: %s != %s",
+				ErrConstructionDeriveResponseAddrMismatch,
+				*response.Address,
+				response.AccountIdentifier.Address,
+			)
+		}
 	}
 
 	return nil
@@ -223,21 +244,31 @@ func SigningPayload(
 		return ErrSigningPayloadIsNil
 	}
 
-	if signingPayload.Address == nil || len(*signingPayload.Address) == 0 {
+	if signingPayload.Address == nil &&
+		signingPayload.AccountIdentifier == nil {
 		return ErrSigningPayloadAddrEmpty
 	}
 
-	if err := AccountIdentifier(signingPayload.AccountIdentifier); err != nil {
-		return fmt.Errorf("%w: %s", ErrSigningPayloadAddrEmpty, err)
+	if signingPayload.AccountIdentifier != nil {
+		if err := AccountIdentifier(signingPayload.AccountIdentifier); err != nil {
+			return fmt.Errorf("%w: %s", ErrSigningPayloadAddrEmpty, err)
+		}
 	}
 
-	if *signingPayload.Address != signingPayload.AccountIdentifier.Address {
-		return fmt.Errorf(
-			"%w: %s != %s",
-			ErrSigningPayloadAddrMismatch,
-			*signingPayload.Address,
-			signingPayload.AccountIdentifier.Address,
-		)
+	if signingPayload.Address != nil && len(*signingPayload.Address) == 0 {
+		return ErrSigningPayloadAddrEmpty
+	}
+
+	// If both fields are populated, they MUST be equal.
+	if signingPayload.Address != nil && signingPayload.AccountIdentifier != nil {
+		if *signingPayload.Address != signingPayload.AccountIdentifier.Address {
+			return fmt.Errorf(
+				"%w: %s != %s",
+				ErrSigningPayloadAddrMismatch,
+				*signingPayload.Address,
+				signingPayload.AccountIdentifier.Address,
+			)
+		}
 	}
 
 	if len(signingPayload.Bytes) == 0 {
