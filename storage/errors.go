@@ -339,7 +339,6 @@ var (
 	// hash cannot be stored because it is a duplicate.
 	ErrDuplicateTransactionHash = errors.New("duplicate transaction hash")
 
-	ErrHeadBlockIdentifierGetFailed = errors.New("cannot get head block identifier")
 	ErrBlockGetFailed = errors.New("unable to get block")
 	ErrTransactionGetFailed = errors.New("could not get transaction")
 	ErrBlockEncodeFailed = errors.New("unable to encode block")
@@ -367,6 +366,27 @@ var (
 		ErrBlockNotFound,
 		ErrDuplicateKey,
 		ErrDuplicateTransactionHash,
+		ErrBlockGetFailed,
+		ErrTransactionGetFailed,
+		ErrBlockEncodeFailed,
+		ErrBlockStoreFailed,
+		ErrBlockIndexStoreFailed,
+		ErrBlockIdentifierUpdateFailed,
+		ErrBlockCopyFailed,
+		ErrTransactionHashStoreFailed,
+		ErrBlockDeleteFailed,
+		ErrBlockIndexDeleteFailed,
+		ErrHeadBlockIdentifierUpdateFailed,
+		ErrLastProcessedBlockPrecedesStart,
+		ErrTransactionHashContentsDecodeFailed,
+		ErrTransactionDataEncodeFailed,
+		ErrTransactionDeleteFailed,
+		ErrTransactionHashNotFound,
+		ErrTransactionDBQueryFailed,
+		ErrBlockDataDecodeFailed,
+		ErrTransactionNotFound,
+		ErrTransactionDoesNotExistInBlock,
+		ErrHeadBlockGetFailed,
 	}
 )
 
