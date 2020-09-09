@@ -26,6 +26,7 @@ import (
 	"path"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/coinbase/rosetta-sdk-go/utils"
@@ -48,6 +49,12 @@ const (
 
 	bytesInMb = 1000000
 	logModulo = 5000
+
+	// Default GC settings for reclaiming
+	// space in value logs.
+	defaultGCInterval     = 1 * time.Minute
+	defualtGCDiscardRatio = 0.2
+	defaultGCSleep        = 10 * time.Second
 )
 
 // BadgerStorage is a wrapper around Badger DB
@@ -144,19 +151,59 @@ func NewBadgerStorage(ctx context.Context, dir string, options ...BadgerOption) 
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrDatabaseOpenFailed, err)
 	}
+	b.db = db
 
-	pool := NewBufferPool()
+	b.pool = NewBufferPool()
 
-	compressor, err := NewCompressor(b.compressorEntries, pool)
+	compressor, err := NewCompressor(b.compressorEntries, b.pool)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrCompressorLoadFailed, err)
 	}
+	b.compressor = compressor
 
-	return &BadgerStorage{
-		db:         db,
-		pool:       pool,
-		compressor: compressor,
-	}, nil
+	// Start periodic ValueGC goroutine (up to user of BadgerDB to call
+	// periodically to reclaim value logs on-disk).
+	go b.periodicGC(ctx)
+
+	return b, nil
+}
+
+// periodicGC attempts to reclaim storage every
+// defaultGCInterval.
+//
+// Inspired by:
+// https://github.com/ipfs/go-ds-badger/blob/a69f1020ba3954680900097e0c9d0181b88930ad/datastore.go#L173-L199
+func (b *BadgerStorage) periodicGC(ctx context.Context) {
+	// We start the timeout with the default sleep to aggressively check
+	// for space to reclaim on startup.
+	gcTimeout := time.NewTimer(defaultGCSleep)
+	defer gcTimeout.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-gcTimeout.C:
+			err := b.db.RunValueLogGC(defualtGCDiscardRatio)
+			switch err {
+			case badger.ErrNoRewrite, badger.ErrRejected:
+				// No rewrite means we've fully garbage collected.
+				// Rejected means someone else is running a GC
+				// or we're closing.
+				gcTimeout.Reset(defaultGCInterval)
+			case nil:
+				// Nil error means that we've successfully garbage
+				// collected. We should sleep instead of waiting
+				// the full GC collection interval to see if there
+				// is anything else to collect.
+				gcTimeout.Reset(defaultGCSleep)
+			default:
+				// Not much we can do on a random error but log it and continue.
+				log.Printf("error during a GC cycle: %s\n", err.Error())
+				gcTimeout.Reset(defaultGCInterval)
+			}
+		}
+	}
 }
 
 // Close closes the database to prevent corruption.
