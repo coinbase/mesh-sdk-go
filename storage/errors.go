@@ -339,6 +339,29 @@ var (
 	// hash cannot be stored because it is a duplicate.
 	ErrDuplicateTransactionHash = errors.New("duplicate transaction hash")
 
+	ErrHeadBlockIdentifierGetFailed = errors.New("cannot get head block identifier")
+	ErrBlockGetFailed = errors.New("unable to get block")
+	ErrTransactionGetFailed = errors.New("could not get transaction")
+	ErrBlockEncodeFailed = errors.New("unable to encode block")
+	ErrBlockStoreFailed = errors.New("unable to store block")
+	ErrBlockIndexStoreFailed = errors.New("unable to store block index")
+	ErrBlockIdentifierUpdateFailed = errors.New("unable to update head block identifier")
+	ErrBlockCopyFailed = errors.New("unable to copy block")
+	ErrTransactionHashStoreFailed = errors.New("unable to store transaction hash")
+	ErrBlockDeleteFailed = errors.New("unable to delete block")
+	ErrBlockIndexDeleteFailed = errors.New("unable to delete block index")
+	ErrHeadBlockIdentifierUpdateFailed = errors.New("unable to update head block identifier")
+	ErrLastProcessedBlockPrecedesStart = errors.New("last processed block is less than start index")
+	ErrTransactionHashContentsDecodeFailed = errors.New("could not decode transaction hash contents")
+	ErrTransactionDataEncodeFailed = errors.New("unable to encode transaction data")
+	ErrTransactionDeleteFailed = errors.New("could not remove transaction")
+	ErrTransactionHashNotFound = errors.New("saved blocks at transaction does not contain transaction hash")
+	ErrTransactionDBQueryFailed = errors.New("unable to query database for transaction")
+	ErrBlockDataDecodeFailed = errors.New("unable to decode block data for transaction")
+	ErrTransactionNotFound = errors.New("unable to find transaction")
+	ErrTransactionDoesNotExistInBlock = errors.New("transaction does not exist in block")
+	ErrHeadBlockGetFailed = errors.New("unable to get head block")
+
 	BlockStorageErrs = []error{
 		ErrHeadBlockNotFound,
 		ErrBlockNotFound,
