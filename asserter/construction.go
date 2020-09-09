@@ -154,17 +154,27 @@ func (a *Asserter) ConstructionParseResponse(
 		return fmt.Errorf("%w unable to parse operations", err)
 	}
 
-	if signed && len(response.Signers) == 0 {
+	if signed && len(response.Signers) == 0 && len(response.AccountIdentifierSigners) == 0 {
 		return ErrConstructionParseResponseSignersEmptyOnSignedTx
 	}
 
-	if !signed && len(response.Signers) > 0 {
+	if !signed && (len(response.Signers) > 0 || len(response.AccountIdentifierSigners) > 0) {
 		return ErrConstructionParseResponseSignersNonEmptyOnUnsignedTx
 	}
 
 	for i, signer := range response.Signers {
 		if len(signer) == 0 {
 			return fmt.Errorf("%w: at index %d", ErrConstructionParseResponseSignerEmpty, i)
+		}
+	}
+
+	for i, signer := range response.AccountIdentifierSigners {
+		if err := AccountIdentifier(signer); err != nil {
+			return fmt.Errorf("%w: at index %d", ErrConstructionParseResponseSignerEmpty, i)
+		}
+
+		if len(response.Signers) > 0 && (len(response.Signers) < i || response.Signers[i] != signer.Address) {
+			return fmt.Errorf("%w: at index %d", ErrConstructionParseResponseSignerMismatch, i)
 		}
 	}
 
