@@ -174,7 +174,7 @@ func (b *BlockStorage) getBlockResponse(
 		var head *types.BlockIdentifier
 		head, err = b.GetHeadBlockIdentifierTransactional(ctx, transaction)
 		if err != nil {
-			return nil, fmt.Errorf("%w: %v", ErrHeadBlockIdentifierGetFailed, err)
+			return nil, fmt.Errorf("%w: cannot get head block identifier", err)
 		}
 
 		namespace, key = getBlockHashKey(head.Hash)
