@@ -35,16 +35,6 @@ const (
 	balanceNamespace = "balance"
 )
 
-var (
-	// ErrAccountNotFound is returned when an account
-	// is not found in BalanceStorage.
-	ErrAccountNotFound = errors.New("account not found")
-
-	// ErrNegativeBalance is returned when an account
-	// balance goes negative as the result of an operation.
-	ErrNegativeBalance = errors.New("negative balance")
-)
-
 /*
   Key Construction
 */

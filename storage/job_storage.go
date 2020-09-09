@@ -75,7 +75,7 @@ func (j *JobStorage) getAllJobs(
 ) ([]*job.Job, error) {
 	exists, v, err := dbTx.Get(ctx, k)
 	if err != nil {
-		return nil, fmt.Errorf("%w: unable to get all jobs by %s", err, string(k))
+		return nil, fmt.Errorf("%w by %s: %v", ErrJobsGetAllFailed, string(k), err)
 	}
 
 	jobs := []*job.Job{}
@@ -86,13 +86,13 @@ func (j *JobStorage) getAllJobs(
 	var identifiers map[string]struct{}
 	err = j.db.Compressor().Decode("", v, &identifiers)
 	if err != nil {
-		return nil, fmt.Errorf("%w: unable to decode existing identifier", err)
+		return nil, fmt.Errorf("%w: %v", ErrJobIdentifierDecodeFailed, err)
 	}
 
 	for identifier := range identifiers {
 		v, err := j.Get(ctx, dbTx, identifier)
 		if err != nil {
-			return nil, fmt.Errorf("%w: unable to get job %s", err, identifier)
+			return nil, fmt.Errorf("%w %s: %v", ErrJobGetFailed, identifier, err)
 		}
 
 		jobs = append(jobs, v)
@@ -170,7 +170,7 @@ func (j *JobStorage) getNextIdentifier(
 	k := getJobMetadataKey("identifier")
 	exists, v, err := dbTx.Get(ctx, k)
 	if err != nil {
-		return "", fmt.Errorf("%w: unable to get job", err)
+		return "", fmt.Errorf("%w: %v", ErrJobGetFailed, err)
 	}
 
 	// Get existing identifier
@@ -178,7 +178,7 @@ func (j *JobStorage) getNextIdentifier(
 	if exists {
 		err = j.db.Compressor().Decode("", v, &nextIdentifier)
 		if err != nil {
-			return "", fmt.Errorf("%w: unable to decode existing identifier", err)
+			return "", fmt.Errorf("%w: %v", ErrJobIdentifierDecodeFailed, err)
 		}
 	} else {
 		nextIdentifier = 0
@@ -187,11 +187,11 @@ func (j *JobStorage) getNextIdentifier(
 	// Increment and save
 	encoded, err := j.db.Compressor().Encode("", nextIdentifier+1)
 	if err != nil {
-		return "", fmt.Errorf("%w: unable to encode job identifier", err)
+		return "", fmt.Errorf("%w: %v", ErrJobIdentifierEncodeFailed, err)
 	}
 
 	if err := dbTx.Set(ctx, k, encoded, true); err != nil {
-		return "", fmt.Errorf("%w: unable to update job identifier", err)
+		return "", fmt.Errorf("%w: %v", ErrJobIdentifierUpdateFailed, err)
 	}
 
 	return strconv.Itoa(nextIdentifier), nil
@@ -205,11 +205,11 @@ func (j *JobStorage) updateIdentifiers(
 ) error {
 	encoded, err := j.db.Compressor().Encode("", identifiers)
 	if err != nil {
-		return fmt.Errorf("%w: unable to encode identifiers", err)
+		return fmt.Errorf("%w: %v", ErrJobIdentifiersEncodeAllFailed, err)
 	}
 
 	if err := dbTx.Set(ctx, k, encoded, true); err != nil {
-		return fmt.Errorf("%w: unable to set identifiers", err)
+		return fmt.Errorf("%w: %v", ErrJobIdentifiersSetAllFailed, err)
 	}
 
 	return nil
@@ -223,14 +223,14 @@ func (j *JobStorage) addJob(
 ) error {
 	exists, v, err := dbTx.Get(ctx, k)
 	if err != nil {
-		return fmt.Errorf("%w: unable to get all jobs by %s", err, string(k))
+		return fmt.Errorf("%w by %s: %v", ErrJobsGetAllFailed, string(k), err)
 	}
 
 	var identifiers map[string]struct{}
 	if exists {
 		err = j.db.Compressor().Decode("", v, &identifiers)
 		if err != nil {
-			return fmt.Errorf("%w: unable to decode existing identifier", err)
+			return fmt.Errorf("%w: %v", ErrJobIdentifierDecodeFailed, err)
 		}
 	} else {
 		identifiers = map[string]struct{}{}
@@ -249,12 +249,12 @@ func (j *JobStorage) removeJob(
 ) error {
 	exists, v, err := dbTx.Get(ctx, k)
 	if err != nil {
-		return fmt.Errorf("%w: unable to get all jobs by %s", err, string(k))
+		return fmt.Errorf("%w by %s: %v", ErrJobsGetAllFailed, string(k), err)
 	}
 
 	var identifiers map[string]struct{}
 	if !exists {
-		return fmt.Errorf("unable to remove %s from %s", identifier, string(k))
+		return fmt.Errorf("%w %s from %s", ErrJobIdentifierRemoveFailed, identifier, string(k))
 	}
 
 	err = j.db.Compressor().Decode("", v, &identifiers)
@@ -263,7 +263,7 @@ func (j *JobStorage) removeJob(
 	}
 
 	if _, ok := identifiers[identifier]; !ok {
-		return fmt.Errorf("identifier %s is not in %s", identifier, string(k))
+		return fmt.Errorf("%w: %s is not in %s", ErrJobIdentifierNotFound, identifier, string(k))
 	}
 
 	delete(identifiers, identifier)
@@ -309,14 +309,14 @@ func (j *JobStorage) updateMetadata(
 	removedKeys := getAssociatedKeys(oldJob)
 	for _, key := range removedKeys {
 		if err := j.removeJob(ctx, dbTx, key, oldJob.Identifier); err != nil {
-			return fmt.Errorf("%w: unable to remove job %s", err, oldJob.Identifier)
+			return fmt.Errorf("%w %s: %v", ErrJobRemoveFailed, oldJob.Identifier, err)
 		}
 	}
 
 	addedKeys := getAssociatedKeys(newJob)
 	for _, key := range addedKeys {
 		if err := j.addJob(ctx, dbTx, key, newJob.Identifier); err != nil {
-			return fmt.Errorf("%w: unable to add job %s", err, newJob.Identifier)
+			return fmt.Errorf("%w %s: %v", ErrJobAddFailed, newJob.Identifier, err)
 		}
 	}
 
@@ -333,7 +333,7 @@ func (j *JobStorage) Update(
 	if len(v.Identifier) == 0 {
 		newIdentifier, err := j.getNextIdentifier(ctx, dbTx)
 		if err != nil {
-			return "", fmt.Errorf("%w: unable to get next identifier", err)
+			return "", fmt.Errorf("%w: %v", ErrJobIdentifierGetFailed, err)
 		}
 
 		v.Identifier = newIdentifier
@@ -341,26 +341,26 @@ func (j *JobStorage) Update(
 		var err error
 		oldJob, err = j.Get(ctx, dbTx, v.Identifier)
 		if err != nil {
-			return "", fmt.Errorf("%w: unable to get previously saved job %s", err, v.Identifier)
+			return "", fmt.Errorf("%w %s: %v", ErrJobGetFailed, v.Identifier, err)
 		}
 	}
 
 	if oldJob != nil && (oldJob.Status == job.Completed || oldJob.Status == job.Failed) {
-		return "", fmt.Errorf("unable to update terminal job %s", v.Identifier)
+		return "", fmt.Errorf("%w %s", ErrJobUpdateOldFailed, v.Identifier)
 	}
 
 	k := getJobKey(v.Identifier)
 	encoded, err := j.db.Compressor().Encode("", v)
 	if err != nil {
-		return "", fmt.Errorf("%w: unable to encode job", err)
+		return "", fmt.Errorf("%w: %v", ErrJobEncodeFailed, err)
 	}
 
 	if err := dbTx.Set(ctx, k, encoded, true); err != nil {
-		return "", fmt.Errorf("%w: unable to update job", err)
+		return "", fmt.Errorf("%w: %v", ErrJobUpdateFailed, err)
 	}
 
 	if err := j.updateMetadata(ctx, dbTx, oldJob, v); err != nil {
-		return "", fmt.Errorf("%w: unable to update metadata", err)
+		return "", fmt.Errorf("%w: %v", ErrJobMetadataUpdateFailed, err)
 	}
 
 	return v.Identifier, nil
@@ -376,16 +376,16 @@ func (j *JobStorage) Get(
 
 	exists, v, err := dbTx.Get(ctx, k)
 	if err != nil {
-		return nil, fmt.Errorf("%w: unable to get job", err)
+		return nil, fmt.Errorf("%w: %v", ErrJobGetFailed, err)
 	}
 	if !exists {
-		return nil, fmt.Errorf("%w: job does not exist", err)
+		return nil, fmt.Errorf("%w: %v", ErrJobDoesNotExist, err)
 	}
 
 	var output job.Job
 	err = j.db.Compressor().Decode("", v, &output)
 	if err != nil {
-		return nil, fmt.Errorf("%w: unable to decode job", err)
+		return nil, fmt.Errorf("%w: %v", ErrJobDecodeFailed, err)
 	}
 
 	return &output, nil

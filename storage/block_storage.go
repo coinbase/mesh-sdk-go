@@ -42,24 +42,6 @@ const (
 	transactionNamespace = "transaction"
 )
 
-var (
-	// ErrHeadBlockNotFound is returned when there is no
-	// head block found in BlockStorage.
-	ErrHeadBlockNotFound = errors.New("head block not found")
-
-	// ErrBlockNotFound is returned when a block is not
-	// found in BlockStorage.
-	ErrBlockNotFound = errors.New("block not found")
-
-	// ErrDuplicateKey is returned when a key
-	// cannot be stored because it is a duplicate.
-	ErrDuplicateKey = errors.New("duplicate key")
-
-	// ErrDuplicateTransactionHash is returned when a transaction
-	// hash cannot be stored because it is a duplicate.
-	ErrDuplicateTransactionHash = errors.New("duplicate transaction hash")
-)
-
 type blockTransaction struct {
 	Transaction *types.Transaction `json:"transaction"`
 	BlockIndex  int64              `json:"block_index"`
