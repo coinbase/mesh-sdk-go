@@ -53,7 +53,7 @@ done
 rm -rf tmp;
 
 # Download spec file from releases
-ROSETTA_SPEC_VERSION=v1.4.3
+ROSETTA_SPEC_VERSION=v1.4.4
 curl -L https://github.com/coinbase/rosetta-specifications/releases/download/${ROSETTA_SPEC_VERSION}/api.json -o api.json;
 
 # Generate client + types code
@@ -149,6 +149,10 @@ sed "${SED_IFLAG[@]}" 's/\*\[\]/\[\]\*/g' client/* server/*;
 
 # Fix map pointers
 sed "${SED_IFLAG[@]}" 's/\*map/map/g' client/* server/*;
+
+# Fix string array pointers
+sed "${SED_IFLAG[@]}" 's/\[\]\*string/\[\]string/g' client/* server/*;
+
 
 # Move model files to types/
 mv client/model_*.go types/;

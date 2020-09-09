@@ -21,8 +21,9 @@ package types
 // `/construction/preprocess` and `/construction/payloads`.
 type ConstructionParseResponse struct {
 	Operations []*Operation `json:"operations"`
-	// All signers (addresses) of a particular transaction. If the transaction is unsigned, it
-	// should be empty.
-	Signers  []string               `json:"signers"`
-	Metadata map[string]interface{} `json:"metadata,omitempty"`
+	// [DEPRECATED by `account_identifier_signers` in `v1.4.4`] All signers (addresses) of a
+	// particular transaction. If the transaction is unsigned, it should be empty.
+	Signers                  []string               `json:"signers,omitempty"`
+	AccountIdentifierSigners []*AccountIdentifier   `json:"account_identifier_signers,omitempty"`
+	Metadata                 map[string]interface{} `json:"metadata,omitempty"`
 }

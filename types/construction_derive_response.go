@@ -19,7 +19,8 @@ package types
 // ConstructionDeriveResponse ConstructionDeriveResponse is returned by the `/construction/derive`
 // endpoint.
 type ConstructionDeriveResponse struct {
-	// Address in network-specific format.
-	Address  string                 `json:"address"`
-	Metadata map[string]interface{} `json:"metadata,omitempty"`
+	// [DEPRECATED by `account_identifier` in `v1.4.4`] Address in network-specific format.
+	Address           *string                `json:"address,omitempty"`
+	AccountIdentifier *AccountIdentifier     `json:"account_identifier,omitempty"`
+	Metadata          map[string]interface{} `json:"metadata,omitempty"`
 }

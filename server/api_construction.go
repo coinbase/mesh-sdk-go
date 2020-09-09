@@ -127,7 +127,7 @@ func (c *ConstructionAPIController) ConstructionCombine(w http.ResponseWriter, r
 	EncodeJSONResponse(result, http.StatusOK, w)
 }
 
-// ConstructionDerive - Derive an Address from a PublicKey
+// ConstructionDerive - Derive an AccountIdentifier from a PublicKey
 func (c *ConstructionAPIController) ConstructionDerive(w http.ResponseWriter, r *http.Request) {
 	constructionDeriveRequest := &types.ConstructionDeriveRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&constructionDeriveRequest); err != nil {
