@@ -266,7 +266,7 @@ func (f *Fetcher) Block(
 
 	if err := f.Asserter.Block(block); err != nil {
 		fetcherErr := &Error{
-			Err: fmt.Errorf("%w: /block %s", ErrAssertionFailed, err.Error()),
+			Err: fmt.Errorf("%w: /block", err),
 		}
 		return nil, fetcherErr
 	}

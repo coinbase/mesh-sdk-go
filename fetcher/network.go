@@ -55,7 +55,7 @@ func (f *Fetcher) NetworkStatus(
 
 	if err := asserter.NetworkStatusResponse(networkStatus); err != nil {
 		fetcherErr := &Error{
-			Err: fmt.Errorf("%w: /network/status %s", ErrAssertionFailed, err.Error()),
+			Err: fmt.Errorf("%w: /network/status", err),
 		}
 		return nil, fetcherErr
 	}
@@ -139,7 +139,7 @@ func (f *Fetcher) NetworkList(
 
 	if err := asserter.NetworkListResponse(networkList); err != nil {
 		fetcherErr := &Error{
-			Err: fmt.Errorf("%w: /network/list %s", ErrAssertionFailed, err.Error()),
+			Err: fmt.Errorf("%w: /network/list", err),
 		}
 		return nil, fetcherErr
 	}
@@ -219,7 +219,7 @@ func (f *Fetcher) NetworkOptions(
 
 	if err := asserter.NetworkOptionsResponse(networkOptions); err != nil {
 		fetcherErr := &Error{
-			Err: fmt.Errorf("%w: /network/options %s", ErrAssertionFailed, err.Error()),
+			Err: fmt.Errorf("%w: /network/options", err),
 		}
 		return nil, fetcherErr
 	}

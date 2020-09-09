@@ -61,9 +61,8 @@ func (f *Fetcher) AccountBalance(
 	); err != nil {
 		fetcherErr := &Error{
 			Err: fmt.Errorf(
-				"%w: /account/balance %s",
-				ErrAssertionFailed,
-				err.Error(),
+				"%w: /account/balance",
+				err,
 			),
 		}
 		return nil, nil, nil, nil, fetcherErr
