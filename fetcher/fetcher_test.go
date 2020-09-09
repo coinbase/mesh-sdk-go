@@ -23,6 +23,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/coinbase/rosetta-sdk-go/asserter"
 	"github.com/coinbase/rosetta-sdk-go/types"
 
 	"github.com/stretchr/testify/assert"
@@ -148,7 +149,7 @@ func TestInitializeAsserter(t *testing.T) {
 					},
 				},
 			},
-			expectedError: ErrAssertionFailed,
+			expectedError: asserter.ErrVersionIsNil,
 		},
 	}
 
