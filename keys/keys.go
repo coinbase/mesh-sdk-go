@@ -67,7 +67,7 @@ func ImportPrivKey(privKeyHex string, curve types.CurveType) (*KeyPair, error) {
 
 		return keyPair, nil
 	default:
-		return nil, fmt.Errorf("%w: %s", asserter.ErrCurveTypeNotSupported, curve)
+		return nil, fmt.Errorf("%w: %s", ErrCurveTypeNotSupported, curve)
 	}
 }
 
@@ -77,7 +77,7 @@ func GenerateKeypair(curve types.CurveType) (*KeyPair, error) {
 	case types.Secp256k1:
 		rawPrivKey, err := btcec.NewPrivateKey(btcec.S256())
 		if err != nil {
-			return nil, fmt.Errorf("keygen: new private key. %w", err)
+			return nil, fmt.Errorf("%w: %v", ErrKeyGenSecp256k1Failed, err)
 		}
 		rawPubKey := rawPrivKey.PubKey()
 
@@ -95,7 +95,7 @@ func GenerateKeypair(curve types.CurveType) (*KeyPair, error) {
 	case types.Edwards25519:
 		rawPubKey, rawPrivKey, err := ed25519.GenerateKey(nil)
 		if err != nil {
-			return nil, fmt.Errorf("keygen: new keypair. %w", err)
+			return nil, fmt.Errorf("%w: %v", ErrKeyGenEdwards25519Failed, err)
 		}
 
 		pubKey := &types.PublicKey{
@@ -110,7 +110,7 @@ func GenerateKeypair(curve types.CurveType) (*KeyPair, error) {
 
 		return keyPair, nil
 	default:
-		return nil, fmt.Errorf("%w: %s", asserter.ErrCurveTypeNotSupported, curve)
+		return nil, fmt.Errorf("%w: %s", ErrCurveTypeNotSupported, curve)
 	}
 }
 
@@ -143,6 +143,6 @@ func (k *KeyPair) Signer() (Signer, error) {
 	case types.Edwards25519:
 		return &SignerEdwards25519{k}, nil
 	default:
-		return nil, fmt.Errorf("%w: %s", asserter.ErrCurveTypeNotSupported, k.PublicKey.CurveType)
+		return nil, fmt.Errorf("%w: %s", ErrCurveTypeNotSupported, k.PublicKey.CurveType)
 	}
 }

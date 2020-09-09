@@ -45,12 +45,6 @@ const (
 	keyNamespace = "key"
 )
 
-var (
-	// ErrAddrExists is returned when key storage already
-	// contains an address.
-	ErrAddrExists = errors.New("Address already exists")
-)
-
 func getAddressKey(address string) []byte {
 	return []byte(
 		fmt.Sprintf("%s/%s", keyNamespace, address),
@@ -109,7 +103,7 @@ func (k *KeyStorage) StoreTransactional(
 ) error {
 	exists, _, err := dbTx.Get(ctx, getAddressKey(address))
 	if err != nil {
-		return fmt.Errorf("%w: unable to check if address %s exists", err, address)
+		return fmt.Errorf("%w: %s. %v", ErrAddrCheckIfExistsFailed, address, err)
 	}
 
 	if exists {
@@ -121,12 +115,12 @@ func (k *KeyStorage) StoreTransactional(
 		KeyPair: keyPair,
 	})
 	if err != nil {
-		return fmt.Errorf("%w: unable to serialize key", err)
+		return fmt.Errorf("%w: %v", ErrSerializeKeyFailed, err)
 	}
 
 	err = dbTx.Set(ctx, getAddressKey(address), val, true)
 	if err != nil {
-		return fmt.Errorf("%w: unable to store key", err)
+		return fmt.Errorf("%w: %v", ErrStoreKeyFailed, err)
 	}
 
 	return nil
@@ -147,7 +141,7 @@ func (k *KeyStorage) Store(
 	}
 
 	if err := dbTx.Commit(ctx); err != nil {
-		return fmt.Errorf("%w: unable to commit new key to db", err)
+		return fmt.Errorf("%w: %v", ErrCommitKeyFailed, err)
 	}
 
 	return nil
@@ -161,16 +155,16 @@ func (k *KeyStorage) GetTransactional(
 ) (*keys.KeyPair, error) {
 	exists, rawKey, err := dbTx.Get(ctx, getAddressKey(address))
 	if err != nil {
-		return nil, fmt.Errorf("%w: unable to get address %s", err, address)
+		return nil, fmt.Errorf("%w: %s. %v", ErrAddrGetFailed, address, err)
 	}
 
 	if !exists {
-		return nil, fmt.Errorf("address not found %s", address)
+		return nil, fmt.Errorf("%w: %s", ErrAddrNotFound, address)
 	}
 
 	key, err := parseKey(rawKey)
 	if err != nil {
-		return nil, fmt.Errorf("%w: unable to parse saved key", err)
+		return nil, fmt.Errorf("%w: %v", ErrParseSavedKeyFailed, err)
 	}
 
 	return key.KeyPair, nil
@@ -191,14 +185,14 @@ func (k *KeyStorage) GetAllAddressesTransactional(
 ) ([]string, error) {
 	rawKeys, err := dbTx.Scan(ctx, []byte(keyNamespace), false)
 	if err != nil {
-		return nil, fmt.Errorf("%w database scan for keys failed", err)
+		return nil, fmt.Errorf("%w: %v", ErrKeyScanFailed, err)
 	}
 
 	addresses := make([]string, len(rawKeys))
 	for i, rawKey := range rawKeys {
 		kp, err := parseKey(rawKey.Value)
 		if err != nil {
-			return nil, fmt.Errorf("%w: unable to parse key pair", err)
+			return nil, fmt.Errorf("%w: %v", ErrParseKeyPairFailed, err)
 		}
 
 		addresses[i] = kp.Address
@@ -224,21 +218,21 @@ func (k *KeyStorage) Sign(
 	for i, payload := range payloads {
 		keyPair, err := k.Get(ctx, payload.Address)
 		if err != nil {
-			return nil, fmt.Errorf("%w: could not get key for %s", err, payload.Address)
+			return nil, fmt.Errorf("%w for %s: %v", ErrKeyGetFailed, payload.Address, err)
 		}
 
 		signer, err := keyPair.Signer()
 		if err != nil {
-			return nil, fmt.Errorf("%w: unable to create signer", err)
+			return nil, fmt.Errorf("%w: %v", ErrSignerCreateFailed, err)
 		}
 
 		if len(payload.SignatureType) == 0 {
-			return nil, fmt.Errorf("cannot determine signature type for payload %d", i)
+			return nil, fmt.Errorf("%w %d", ErrDetermineSigTypeFailed, i)
 		}
 
 		signature, err := signer.Sign(payload, payload.SignatureType)
 		if err != nil {
-			return nil, fmt.Errorf("%w: unable to to sign payload %d", err, i)
+			return nil, fmt.Errorf("%w for %d: %v", ErrSignPayloadFailed, i, err)
 		}
 
 		signatures[i] = signature
@@ -251,11 +245,11 @@ func (k *KeyStorage) Sign(
 func (k *KeyStorage) RandomAddress(ctx context.Context) (string, error) {
 	addresses, err := k.GetAllAddresses(ctx)
 	if err != nil {
-		return "", fmt.Errorf("%w: unable to get addresses", err)
+		return "", fmt.Errorf("%w: %v", ErrAddrsGetAllFailed, err)
 	}
 
 	if len(addresses) == 0 {
-		return "", errors.New("no addresses available")
+		return "", ErrNoAddrAvailable
 	}
 
 	return addresses[rand.Intn(len(addresses))], nil
@@ -267,7 +261,7 @@ func (k *KeyStorage) ImportAccounts(ctx context.Context, accounts []*PrefundedAc
 	for _, acc := range accounts {
 		keyPair, err := keys.ImportPrivKey(acc.PrivateKeyHex, acc.CurveType)
 		if err != nil {
-			return fmt.Errorf("%w: unable to import prefunded account", err)
+			return fmt.Errorf("%w: %v", ErrAddrImportFailed, err)
 		}
 
 		// Skip if key already exists
@@ -276,7 +270,7 @@ func (k *KeyStorage) ImportAccounts(ctx context.Context, accounts []*PrefundedAc
 			continue
 		}
 		if err != nil {
-			return fmt.Errorf("%w: unable to store prefunded account", err)
+			return fmt.Errorf("%w: %v", ErrPrefundedAcctStoreFailed, err)
 		}
 	}
 	return nil

@@ -58,9 +58,10 @@ func NewCompressor(entries []*CompressorEntry, pool *BufferPool) (*Compressor, e
 		b, err := ioutil.ReadFile(path.Clean(entry.DictionaryPath))
 		if err != nil {
 			return nil, fmt.Errorf(
-				"%w: unable to load dictionary from %s",
-				err,
+				"%w from %s: %v",
+				ErrLoadDictFailed,
 				entry.DictionaryPath,
+				err,
 			)
 		}
 
@@ -87,12 +88,12 @@ func (c *Compressor) Encode(namespace string, object interface{}) ([]byte, error
 	buf := c.pool.Get()
 	err := getEncoder(buf).Encode(object)
 	if err != nil {
-		return nil, fmt.Errorf("%w: could not encode object", err)
+		return nil, fmt.Errorf("%w: %v", ErrObjectEncodeFailed, err)
 	}
 
 	output, err := c.EncodeRaw(namespace, buf.Bytes())
 	if err != nil {
-		return nil, fmt.Errorf("%w: could not compress raw bytes", err)
+		return nil, fmt.Errorf("%w: %v", ErrRawCompressFailed, err)
 	}
 
 	c.pool.Put(buf)
@@ -117,11 +118,11 @@ func getDecoder(r io.Reader) *msgpack.Decoder {
 func (c *Compressor) Decode(namespace string, input []byte, object interface{}) error {
 	decompressed, err := c.DecodeRaw(namespace, input)
 	if err != nil {
-		return fmt.Errorf("%w: unable to decompress raw bytes", err)
+		return fmt.Errorf("%w: %v", ErrRawDecompressFailed, err)
 	}
 
 	if err := getDecoder(bytes.NewReader(decompressed)).Decode(&object); err != nil {
-		return fmt.Errorf("%w: unable to decode bytes", err)
+		return fmt.Errorf("%w: %v", ErrRawDecodeFailed, err)
 	}
 
 	c.pool.PutByteSlice(decompressed)
@@ -143,11 +144,11 @@ func (c *Compressor) encode(input []byte, zstdDict []byte) ([]byte, error) {
 		writer = zstd.NewWriter(buf)
 	}
 	if _, err := writer.Write(input); err != nil {
-		return nil, fmt.Errorf("%w: unable to write to buffer", err)
+		return nil, fmt.Errorf("%w: %v", ErrBufferWriteFailed, err)
 	}
 
 	if err := writer.Close(); err != nil {
-		return nil, fmt.Errorf("%w: unable to close writer", err)
+		return nil, fmt.Errorf("%w: %v", ErrWriterCloseFailed, err)
 	}
 
 	return buf.Bytes(), nil
@@ -163,11 +164,11 @@ func (c *Compressor) decode(b []byte, zstdDict []byte) ([]byte, error) {
 	}
 
 	if _, err := buf.ReadFrom(reader); err != nil {
-		return nil, fmt.Errorf("%w: unable to decompress object", err)
+		return nil, fmt.Errorf("%w: %v", ErrObjectDecodeFailed, err)
 	}
 
 	if err := reader.Close(); err != nil {
-		return nil, fmt.Errorf("%w: unable to close reader", err)
+		return nil, fmt.Errorf("%w: %v", ErrReaderCloseFailed, err)
 	}
 
 	return buf.Bytes(), nil
@@ -176,7 +177,7 @@ func (c *Compressor) decode(b []byte, zstdDict []byte) ([]byte, error) {
 func copyStruct(input interface{}, output interface{}) error {
 	inputString := types.PrintStruct(input)
 	if err := json.Unmarshal([]byte(inputString), &output); err != nil {
-		return fmt.Errorf("%w: unable to copy block", err)
+		return fmt.Errorf("%w: %v", ErrCopyBlockFailed, err)
 	}
 
 	return nil

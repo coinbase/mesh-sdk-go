@@ -178,9 +178,10 @@ func (b *BroadcastStorage) invokeAddBlockHandlers(
 	for _, stale := range staleBroadcasts {
 		if err := b.handler.TransactionStale(ctx, dbTx, stale.Identifier, stale.TransactionIdentifier); err != nil {
 			return fmt.Errorf(
-				"%w: unable to handle stale transaction %s",
-				err,
+				"%w %s: %v",
+				ErrBroadcastTxStale,
 				stale.TransactionIdentifier.Hash,
+				err,
 			)
 		}
 	}
@@ -196,9 +197,10 @@ func (b *BroadcastStorage) invokeAddBlockHandlers(
 		)
 		if err != nil {
 			return fmt.Errorf(
-				"%w: unable to handle confirmed transaction %s",
-				err,
+				"%w %s: %v",
+				ErrBroadcastTxConfirmed,
 				broadcast.TransactionIdentifier.Hash,
+				err,
 			)
 		}
 	}
@@ -238,7 +240,7 @@ func (b *BroadcastStorage) AddingBlock(
 			transaction,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("%w: unable to determine if transaction was seen", err)
+			return nil, fmt.Errorf("%w: %v", ErrBroadcastFindTxFailed, err)
 		}
 
 		// Check if we should mark the broadcast as stale
@@ -248,11 +250,11 @@ func (b *BroadcastStorage) AddingBlock(
 			broadcast.LastBroadcast = nil
 			bytes, err := b.db.Compressor().Encode(namespace, broadcast)
 			if err != nil {
-				return nil, fmt.Errorf("%w: unable to encode updated broadcast", err)
+				return nil, fmt.Errorf("%w: %v", ErrBroadcastEncodeUpdateFailed, err)
 			}
 
 			if err := transaction.Set(ctx, key, bytes, true); err != nil {
-				return nil, fmt.Errorf("%w: unable to update broadcast", err)
+				return nil, fmt.Errorf("%w: %v", ErrBroadcastUpdateFailed, err)
 			}
 
 			continue
@@ -270,7 +272,7 @@ func (b *BroadcastStorage) AddingBlock(
 			foundBlocks = append(foundBlocks, foundBlock)
 
 			if err := transaction.Delete(ctx, key); err != nil {
-				return nil, fmt.Errorf("%w: unable to delete confirmed broadcast", err)
+				return nil, fmt.Errorf("%w: %v", ErrBroadcastDeleteConfirmedTxFailed, err)
 			}
 		}
 	}
@@ -283,12 +285,12 @@ func (b *BroadcastStorage) AddingBlock(
 		foundBlocks,
 		foundTransactions,
 	); err != nil {
-		return nil, fmt.Errorf("%w: unable to handle block", err)
+		return nil, fmt.Errorf("%w: %v", ErrBroadcastInvokeBlockHandlersFailed, err)
 	}
 
 	return func(ctx context.Context) error {
 		if err := b.BroadcastAll(ctx, true); err != nil {
-			return fmt.Errorf("%w: unable to broadcast pending transactions", err)
+			return fmt.Errorf("%w: %v", ErrBroadcastFailed, err)
 		}
 
 		return nil
@@ -321,11 +323,11 @@ func (b *BroadcastStorage) Broadcast(
 
 	exists, _, err := dbTx.Get(ctx, broadcastKey)
 	if err != nil {
-		return fmt.Errorf("%w: unable to determine if already broadcasting transaction", err)
+		return fmt.Errorf("%w: %v", ErrBroadcastDBGetFailed, err)
 	}
 
 	if exists {
-		return fmt.Errorf("already broadcasting transaction %s", transactionIdentifier.Hash)
+		return fmt.Errorf("%w %s", ErrBroadcastAlreadyExists, transactionIdentifier.Hash)
 	}
 
 	bytes, err := b.db.Compressor().Encode(namespace, Broadcast{
@@ -338,11 +340,11 @@ func (b *BroadcastStorage) Broadcast(
 		ConfirmationDepth:     confirmationDepth,
 	})
 	if err != nil {
-		return fmt.Errorf("%w: unable to encode broadcast", err)
+		return fmt.Errorf("%w: %v", ErrBroadcastEncodeFailed, err)
 	}
 
 	if err := dbTx.Set(ctx, broadcastKey, bytes, true); err != nil {
-		return fmt.Errorf("%w: unable to set broadcast", err)
+		return fmt.Errorf("%w: %v", ErrBroadcastSetFailed, err)
 	}
 
 	return nil
@@ -355,14 +357,14 @@ func (b *BroadcastStorage) getAllBroadcasts(
 	namespace := transactionBroadcastNamespace
 	rawBroadcasts, err := dbTx.Scan(ctx, []byte(namespace), false)
 	if err != nil {
-		return nil, fmt.Errorf("%w: unable to scan for all broadcasts", err)
+		return nil, fmt.Errorf("%w: %v", ErrBroadcastScanFailed, err)
 	}
 
 	broadcasts := make([]*Broadcast, len(rawBroadcasts))
 	for i, rawBroadcast := range rawBroadcasts {
 		var broadcast Broadcast
 		if err := b.db.Compressor().Decode(namespace, rawBroadcast.Value, &broadcast); err != nil {
-			return nil, fmt.Errorf("%w: unable to decode broadcast", err)
+			return nil, fmt.Errorf("%w: %v", ErrBroadcastDecodeFailed, err)
 		}
 
 		broadcasts[i] = &broadcast
@@ -387,18 +389,18 @@ func (b *BroadcastStorage) performBroadcast(
 	namespace, key := getBroadcastKey(broadcast.TransactionIdentifier)
 	bytes, err := b.db.Compressor().Encode(namespace, broadcast)
 	if err != nil {
-		return fmt.Errorf("%w: unable to encode broadcast", err)
+		return fmt.Errorf("%w: %v", ErrBroadcastEncodeFailed, err)
 	}
 
 	txn := b.db.NewDatabaseTransaction(ctx, true)
 	defer txn.Discard(ctx)
 
 	if err := txn.Set(ctx, key, bytes, true); err != nil {
-		return fmt.Errorf("%w: unable to update broadcast", err)
+		return fmt.Errorf("%w: %v", ErrBroadcastUpdateFailed, err)
 	}
 
 	if err := txn.Commit(ctx); err != nil {
-		return fmt.Errorf("%w: unable to commit broadcast update", err)
+		return fmt.Errorf("%w: %v", ErrBroadcastCommitUpdateFailed, err)
 	}
 
 	if !onlyEligible {
@@ -423,9 +425,10 @@ func (b *BroadcastStorage) performBroadcast(
 
 	if types.Hash(broadcastIdentifier) != types.Hash(broadcast.TransactionIdentifier) {
 		return fmt.Errorf(
-			"transaction hash returned by broadcast %s does not match expected %s",
-			broadcastIdentifier.Hash,
+			"%w: expected %s but got %s",
+			ErrBroadcastIdentifierMismatch,
 			broadcast.TransactionIdentifier.Hash,
+			broadcastIdentifier.Hash,
 		)
 	}
 
@@ -442,7 +445,7 @@ func (b *BroadcastStorage) BroadcastAll(ctx context.Context, onlyEligible bool) 
 
 	currBlock, err := b.helper.CurrentBlockIdentifier(ctx)
 	if err != nil {
-		return fmt.Errorf("%w: unable to get current block identifier", err)
+		return fmt.Errorf("%w: %v", ErrBroadcastGetCurrentBlockIdentifierFailed, err)
 	}
 
 	// We have not yet synced a block and should wait to broadcast
@@ -454,7 +457,7 @@ func (b *BroadcastStorage) BroadcastAll(ctx context.Context, onlyEligible bool) 
 	// Wait to broadcast transaction until close to tip
 	atTip, err := b.helper.AtTip(ctx, b.tipDelay)
 	if err != nil {
-		return fmt.Errorf("%w: unable to determine if at tip", err)
+		return fmt.Errorf("%w: %v", ErrBroadcastAtTipFailed, err)
 	}
 
 	if (!atTip && !b.broadcastBehindTip) && onlyEligible {
@@ -463,7 +466,7 @@ func (b *BroadcastStorage) BroadcastAll(ctx context.Context, onlyEligible bool) 
 
 	broadcasts, err := b.GetAllBroadcasts(ctx)
 	if err != nil {
-		return fmt.Errorf("%w: unable to get all broadcasts", err)
+		return fmt.Errorf("%w: %v", ErrBroadcastGetAllFailed, err)
 	}
 
 	attemptedBroadcasts := 0
@@ -480,7 +483,7 @@ func (b *BroadcastStorage) BroadcastAll(ctx context.Context, onlyEligible bool) 
 
 			_, key := getBroadcastKey(broadcast.TransactionIdentifier)
 			if err := txn.Delete(ctx, key); err != nil {
-				return fmt.Errorf("%w: unable to delete broadcast", err)
+				return fmt.Errorf("%w: %v", ErrBroadcastDeleteFailed, err)
 			}
 
 			if err := b.handler.BroadcastFailed(
@@ -490,11 +493,11 @@ func (b *BroadcastStorage) BroadcastAll(ctx context.Context, onlyEligible bool) 
 				broadcast.TransactionIdentifier,
 				broadcast.Intent,
 			); err != nil {
-				return fmt.Errorf("%w: unable to handle broadcast failure", err)
+				return fmt.Errorf("%w: %v", ErrBroadcastHandleFailureUnsuccessful, err)
 			}
 
 			if err := txn.Commit(ctx); err != nil {
-				return fmt.Errorf("%w: unable to commit broadcast delete", err)
+				return fmt.Errorf("%w: %v", ErrBroadcastCommitDeleteFailed, err)
 			}
 
 			continue
@@ -515,7 +518,7 @@ func (b *BroadcastStorage) BroadcastAll(ctx context.Context, onlyEligible bool) 
 		broadcast.Broadcasts++
 
 		if err := b.performBroadcast(ctx, broadcast, onlyEligible); err != nil {
-			return fmt.Errorf("%w: unable to perform broadcast", err)
+			return fmt.Errorf("%w: %v", ErrBroadcastPerformFailed, err)
 		}
 	}
 
@@ -531,7 +534,7 @@ func (b *BroadcastStorage) LockedAddresses(
 ) ([]string, error) {
 	broadcasts, err := b.getAllBroadcasts(ctx, dbTx)
 	if err != nil {
-		return nil, fmt.Errorf("%w: unable to get all broadcasts", err)
+		return nil, fmt.Errorf("%w: %v", ErrBroadcastGetAllFailed, err)
 	}
 
 	addressMap := map[string]struct{}{}
@@ -559,7 +562,7 @@ func (b *BroadcastStorage) LockedAddresses(
 func (b *BroadcastStorage) ClearBroadcasts(ctx context.Context) ([]*Broadcast, error) {
 	broadcasts, err := b.GetAllBroadcasts(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("%w: unable to get all broadcasts", err)
+		return nil, fmt.Errorf("%w: %v", ErrBroadcastGetAllFailed, err)
 	}
 
 	txn := b.db.NewDatabaseTransaction(ctx, true)
@@ -567,9 +570,10 @@ func (b *BroadcastStorage) ClearBroadcasts(ctx context.Context) ([]*Broadcast, e
 		_, key := getBroadcastKey(broadcast.TransactionIdentifier)
 		if err := txn.Delete(ctx, key); err != nil {
 			return nil, fmt.Errorf(
-				"%w: unable to delete broadcast %s",
-				err,
+				"%w %s: %v",
+				ErrBroadcastDeleteFailed,
 				broadcast.Identifier,
+				err,
 			)
 		}
 
@@ -583,15 +587,16 @@ func (b *BroadcastStorage) ClearBroadcasts(ctx context.Context) ([]*Broadcast, e
 			broadcast.Intent,
 		); err != nil {
 			return nil, fmt.Errorf(
-				"%w: unable to handle broadcast failure %s",
-				err,
+				"%w %s: %v",
+				ErrBroadcastHandleFailureUnsuccessful,
 				broadcast.Identifier,
+				err,
 			)
 		}
 	}
 
 	if err := txn.Commit(ctx); err != nil {
-		return nil, fmt.Errorf("%w: unable to delete broadcasts", err)
+		return nil, fmt.Errorf("%w: %v", ErrBroadcastCommitDeleteFailed, err)
 	}
 
 	return broadcasts, nil
