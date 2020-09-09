@@ -21,14 +21,16 @@ import (
 	"encoding/json"
 )
 
-// SigningPayload SigningPayload is signed by the client with the keypair associated with an address
-// using the specified SignatureType. SignatureType can be optionally populated if there is a
-// restriction on the signature scheme that can be used to sign the payload.
+// SigningPayload SigningPayload is signed by the client with the keypair associated with an
+// AccountIdentifier using the specified SignatureType. SignatureType can be optionally populated if
+// there is a restriction on the signature scheme that can be used to sign the payload.
 type SigningPayload struct {
-	// The network-specific address of the account that should sign the payload.
-	Address       string        `json:"address"`
-	Bytes         []byte        `json:"hex_bytes"`
-	SignatureType SignatureType `json:"signature_type,omitempty"`
+	// [DEPRECATED by `account_identifier` in `v1.4.4`] The network-specific address of the account
+	// that should sign the payload.
+	Address           *string            `json:"address,omitempty"`
+	AccountIdentifier *AccountIdentifier `json:"account_identifier,omitempty"`
+	Bytes             []byte             `json:"hex_bytes"`
+	SignatureType     SignatureType      `json:"signature_type,omitempty"`
 }
 
 // MarshalJSON overrides the default JSON marshaler

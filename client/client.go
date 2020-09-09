@@ -36,7 +36,7 @@ var (
 	jsonCheck = regexp.MustCompile(`(?i:(?:application|text)/(?:vnd\.[^;]+\+)?json)`)
 )
 
-// APIClient manages communication with the Rosetta API v1.4.3
+// APIClient manages communication with the Rosetta API v1.4.4
 // In most cases there should be only one, shared, APIClient.
 type APIClient struct {
 	cfg    *Configuration

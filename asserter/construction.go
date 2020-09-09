@@ -102,8 +102,8 @@ func ConstructionDeriveResponse(
 		return ErrConstructionDeriveResponseIsNil
 	}
 
-	if len(response.Address) == 0 {
-		return ErrConstructionDeriveResponseAddrEmpty
+	if err := AccountIdentifier(response.AccountIdentifier); err != nil {
+		return fmt.Errorf("%w: %s", ErrConstructionDeriveResponseAddrEmpty, err.Error())
 	}
 
 	return nil
@@ -223,8 +223,21 @@ func SigningPayload(
 		return ErrSigningPayloadIsNil
 	}
 
-	if len(signingPayload.Address) == 0 {
+	if signingPayload.Address == nil || len(*signingPayload.Address) == 0 {
 		return ErrSigningPayloadAddrEmpty
+	}
+
+	if err := AccountIdentifier(signingPayload.AccountIdentifier); err != nil {
+		return fmt.Errorf("%w: %s", ErrSigningPayloadAddrEmpty, err)
+	}
+
+	if *signingPayload.Address != signingPayload.AccountIdentifier.Address {
+		return fmt.Errorf(
+			"%w: %s != %s",
+			ErrSigningPayloadAddrMismatch,
+			*signingPayload.Address,
+			signingPayload.AccountIdentifier.Address,
+		)
 	}
 
 	if len(signingPayload.Bytes) == 0 {

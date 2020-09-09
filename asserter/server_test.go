@@ -147,7 +147,7 @@ var (
 	validSignatures = []*types.Signature{
 		{
 			SigningPayload: &types.SigningPayload{
-				Address: validAccount.Address,
+				Address: pointerString(validAccount.Address),
 				Bytes:   []byte("blah"),
 			},
 			PublicKey:     validPublicKey,
@@ -159,7 +159,7 @@ var (
 	signatureTypeMismatch = []*types.Signature{
 		{
 			SigningPayload: &types.SigningPayload{
-				Address:       validAccount.Address,
+				Address:       pointerString(validAccount.Address),
 				Bytes:         []byte("blah"),
 				SignatureType: types.EcdsaRecovery,
 			},
@@ -172,7 +172,7 @@ var (
 	signatureTypeMatch = []*types.Signature{
 		{
 			SigningPayload: &types.SigningPayload{
-				Address:       validAccount.Address,
+				Address:       pointerString(validAccount.Address),
 				Bytes:         []byte("blah"),
 				SignatureType: types.Ed25519,
 			},
@@ -185,7 +185,7 @@ var (
 	emptySignature = []*types.Signature{
 		{
 			SigningPayload: &types.SigningPayload{
-				Address:       validAccount.Address,
+				Address:       pointerString(validAccount.Address),
 				Bytes:         []byte("blah"),
 				SignatureType: types.Ed25519,
 			},

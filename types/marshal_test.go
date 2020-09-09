@@ -97,9 +97,13 @@ func TestCustomMarshalSignature(t *testing.T) {
 }
 
 func TestCustomMarshalSigningPayload(t *testing.T) {
+	addr1 := "addr1"
 	s := &SigningPayload{
-		Address: "addr1",
-		Bytes:   []byte("hsdjkfhkasjfhkjasdhfkjasdnfkjabsdfkjhakjsfdhjksadhfjk23478923645yhsdfn"),
+		Address: &addr1,
+		AccountIdentifier: &AccountIdentifier{
+			Address: addr1,
+		},
+		Bytes: []byte("hsdjkfhkasjfhkjasdhfkjasdnfkjabsdfkjhakjsfdhjksadhfjk23478923645yhsdfn"),
 	}
 
 	j, err := json.Marshal(s)

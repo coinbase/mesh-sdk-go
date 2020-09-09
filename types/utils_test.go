@@ -645,3 +645,251 @@ func TestExtractAmount(t *testing.T) {
 		assert.NoError(t, err)
 	})
 }
+
+func pointerString(s string) *string {
+	return &s
+}
+
+func TestPopulateConstructionPayloadsResponse(t *testing.T) {
+	var (
+		addr1 = "addr1"
+		addr2 = "addr2"
+		addr3 = "addr3"
+	)
+	tests := map[string]struct {
+		input *ConstructionPayloadsResponse
+
+		expected *ConstructionPayloadsResponse
+	}{
+		"just address + override": {
+			input: &ConstructionPayloadsResponse{
+				Payloads: []*SigningPayload{
+					{
+						Address: &addr1,
+					},
+					{
+						Address: &addr2,
+						AccountIdentifier: &AccountIdentifier{
+							Address: addr3,
+						},
+					},
+				},
+			},
+			expected: &ConstructionPayloadsResponse{
+				Payloads: []*SigningPayload{
+					{
+						Address: &addr1,
+						AccountIdentifier: &AccountIdentifier{
+							Address: addr1,
+						},
+					},
+					{
+						Address: &addr3,
+						AccountIdentifier: &AccountIdentifier{
+							Address: addr3,
+						},
+					},
+				},
+			},
+		},
+		"nil address": {
+			input: &ConstructionPayloadsResponse{
+				Payloads: []*SigningPayload{
+					{},
+					{
+						AccountIdentifier: &AccountIdentifier{
+							Address: addr3,
+						},
+					},
+				},
+			},
+			expected: &ConstructionPayloadsResponse{
+				Payloads: []*SigningPayload{
+					{},
+					{
+						Address: &addr3,
+						AccountIdentifier: &AccountIdentifier{
+							Address: addr3,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(*testing.T) {
+			assert.Equal(t, test.expected, PopulateConstructionPayloadsResponse(test.input))
+		})
+	}
+}
+
+func TestPopulateConstructionParseResponse(t *testing.T) {
+	var (
+		addr1 = "addr1"
+		addr2 = "addr2"
+		addr3 = "addr3"
+	)
+	tests := map[string]struct {
+		input *ConstructionParseResponse
+
+		expected *ConstructionParseResponse
+	}{
+		"basic": {
+			input: &ConstructionParseResponse{
+				Signers: []string{
+					addr1,
+					addr2,
+				},
+			},
+			expected: &ConstructionParseResponse{
+				Signers: []string{
+					addr1,
+					addr2,
+				},
+				AccountIdentifierSigners: []*AccountIdentifier{
+					{
+						Address: addr1,
+					},
+					{
+						Address: addr2,
+					},
+				},
+			},
+		},
+		"override": {
+			input: &ConstructionParseResponse{
+				Signers: []string{
+					addr1,
+					addr2,
+					addr3,
+				},
+				AccountIdentifierSigners: []*AccountIdentifier{
+					{
+						Address: addr1,
+					},
+					{
+						Address: addr2,
+						SubAccount: &SubAccountIdentifier{
+							Address: addr3,
+						},
+					},
+				},
+			},
+			expected: &ConstructionParseResponse{
+				Signers: []string{
+					addr1,
+					addr2,
+				},
+				AccountIdentifierSigners: []*AccountIdentifier{
+					{
+						Address: addr1,
+					},
+					{
+						Address: addr2,
+						SubAccount: &SubAccountIdentifier{
+							Address: addr3,
+						},
+					},
+				},
+			},
+		},
+		"only identifiers": {
+			input: &ConstructionParseResponse{
+				AccountIdentifierSigners: []*AccountIdentifier{
+					{
+						Address: addr1,
+					},
+					{
+						Address: addr2,
+					},
+				},
+			},
+			expected: &ConstructionParseResponse{
+				Signers: []string{
+					addr1,
+					addr2,
+				},
+				AccountIdentifierSigners: []*AccountIdentifier{
+					{
+						Address: addr1,
+					},
+					{
+						Address: addr2,
+					},
+				},
+			},
+		},
+		"nil": {
+			input:    &ConstructionParseResponse{},
+			expected: &ConstructionParseResponse{},
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(*testing.T) {
+			assert.Equal(t, test.expected, PopulateConstructionParseResponse(test.input))
+		})
+	}
+}
+
+func TestPopulateConstructionDeriveResponse(t *testing.T) {
+	var (
+		addr1 = "addr1"
+		addr2 = "addr2"
+	)
+	tests := map[string]struct {
+		input *ConstructionDeriveResponse
+
+		expected *ConstructionDeriveResponse
+	}{
+		"basic": {
+			input: &ConstructionDeriveResponse{
+				Address: &addr1,
+			},
+			expected: &ConstructionDeriveResponse{
+				Address: &addr1,
+				AccountIdentifier: &AccountIdentifier{
+					Address: addr1,
+				},
+			},
+		},
+		"override": {
+			input: &ConstructionDeriveResponse{
+				Address: &addr1,
+				AccountIdentifier: &AccountIdentifier{
+					Address: addr2,
+				},
+			},
+			expected: &ConstructionDeriveResponse{
+				Address: &addr2,
+				AccountIdentifier: &AccountIdentifier{
+					Address: addr2,
+				},
+			},
+		},
+		"only identifiers": {
+			input: &ConstructionDeriveResponse{
+				AccountIdentifier: &AccountIdentifier{
+					Address: addr2,
+				},
+			},
+			expected: &ConstructionDeriveResponse{
+				Address: &addr2,
+				AccountIdentifier: &AccountIdentifier{
+					Address: addr2,
+				},
+			},
+		},
+		"nil": {
+			input:    &ConstructionDeriveResponse{},
+			expected: &ConstructionDeriveResponse{},
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(*testing.T) {
+			assert.Equal(t, test.expected, PopulateConstructionDeriveResponse(test.input))
+		})
+	}
+}
