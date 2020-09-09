@@ -985,12 +985,10 @@ func TestJob_ComplicatedTransfer(t *testing.T) {
 	// Setup DB
 	dir, err := utils.CreateTempDir()
 	assert.NoError(t, err)
-	defer utils.RemoveTempDir(dir)
 
 	db, err := storage.NewBadgerStorage(ctx, dir)
 	assert.NoError(t, err)
 	assert.NotNil(t, db)
-	defer db.Close(ctx)
 
 	dbTx := db.NewDatabaseTransaction(ctx, true)
 
@@ -1086,6 +1084,9 @@ func TestJob_ComplicatedTransfer(t *testing.T) {
 	assertVariableEquality(t, j.State, "network", network)
 	assertVariableEquality(t, j.State, "key.public_key.curve_type", types.Secp256k1)
 	assertVariableEquality(t, j.State, "address.address", address)
+
+	db.Close(ctx)
+	utils.RemoveTempDir(dir)
 
 	mockHelper.AssertExpectations(t)
 }
@@ -1280,9 +1281,17 @@ func TestJob_Failures(t *testing.T) {
 		},
 	}
 
+	// Setup DB
+	ctx := context.Background()
+	dir, err := utils.CreateTempDir()
+	assert.NoError(t, err)
+
+	db, err := storage.NewBadgerStorage(ctx, dir)
+	assert.NoError(t, err)
+	assert.NotNil(t, db)
+
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			ctx := context.Background()
 			workflow := &job.Workflow{
 				Name:      "random",
 				Scenarios: []*job.Scenario{test.scenario},
@@ -1290,18 +1299,8 @@ func TestJob_Failures(t *testing.T) {
 			j := job.New(workflow)
 			worker := New(test.helper)
 
-			// Setup DB
-			dir, err := utils.CreateTempDir()
-			assert.NoError(t, err)
-			defer utils.RemoveTempDir(dir)
-
-			db, err := storage.NewBadgerStorage(ctx, dir)
-			assert.NoError(t, err)
-			assert.NotNil(t, db)
-			defer db.Close(ctx)
-
 			dbTx := db.NewDatabaseTransaction(ctx, true)
-			defer dbTx.Discard(ctx)
+			assert.NotNil(t, dbTx)
 
 			assert.False(t, j.CheckComplete())
 
@@ -1312,7 +1311,11 @@ func TestJob_Failures(t *testing.T) {
 			assert.Equal(t, test.complete, j.CheckComplete())
 			assert.Equal(t, test.newIndex, j.Index)
 
+			dbTx.Discard(ctx)
 			test.helper.AssertExpectations(t)
 		})
 	}
+
+	db.Close(ctx)
+	utils.RemoveTempDir(dir)
 }
