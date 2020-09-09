@@ -81,25 +81,6 @@ const (
 	defaultReconcilerConcurrency = 8
 )
 
-var (
-	// ErrHeadBlockBehindLive is returned when the processed
-	// head is behind the live head. Sometimes, it is
-	// preferrable to sleep and wait to catch up when
-	// we are close to the live head (waitToCheckDiff).
-	ErrHeadBlockBehindLive = errors.New("head block behind")
-
-	// ErrAccountUpdated is returned when the
-	// account was updated at a height later than
-	// the live height (when the account balance was fetched).
-	ErrAccountUpdated = errors.New("account updated")
-
-	// ErrBlockGone is returned when the processed block
-	// head is greater than the live head but the block
-	// does not exist in the store. This likely means
-	// that the block was orphaned.
-	ErrBlockGone = errors.New("block gone")
-)
-
 // Helper functions are used by Reconciler to compare
 // computed balances from a block with the balance calculated
 // by the node. Defining an interface allows the client to determine
@@ -331,7 +312,8 @@ func (r *Reconciler) CompareBalance(
 	head, err := r.helper.CurrentBlock(ctx)
 	if err != nil {
 		return zeroString, "", 0, fmt.Errorf(
-			"%w: unable to get current block for reconciliation",
+			"%w: %v",
+			ErrGetCurrentBlockFailed,
 			err,
 		)
 	}
@@ -350,7 +332,8 @@ func (r *Reconciler) CompareBalance(
 	exists, err := r.helper.BlockExists(ctx, liveBlock)
 	if err != nil {
 		return zeroString, "", 0, fmt.Errorf(
-			"%w: unable to check if block exists: %+v",
+			"%w: %v: on live block %+v",
+			ErrBlockExistsFailed,
 			err,
 			liveBlock,
 		)
@@ -372,10 +355,11 @@ func (r *Reconciler) CompareBalance(
 	)
 	if err != nil {
 		return zeroString, "", head.Index, fmt.Errorf(
-			"%w: unable to get computed balance for %+v:%+v",
-			err,
+			"%w for %+v:%+v: %v",
+			ErrGetComputedBalanceFailed,
 			account,
 			currency,
+			err,
 		)
 	}
 
@@ -597,7 +581,7 @@ func (r *Reconciler) reconcileActiveAccounts(
 			}
 
 			if err != nil {
-				return fmt.Errorf("%w: unable to lookup live balance", err)
+				return fmt.Errorf("%w: %v", ErrLiveBalanceLookupFailed, err)
 			}
 
 			err = r.accountReconciliation(
@@ -705,7 +689,7 @@ func (r *Reconciler) reconcileInactiveAccounts(
 					return err
 				}
 			case !errors.Is(err, ErrBlockGone):
-				return fmt.Errorf("%w: unable to lookup live balance", err)
+				return fmt.Errorf("%w: %v", ErrLiveBalanceLookupFailed, err)
 			}
 
 			// Always re-enqueue accounts after they have been inactively
