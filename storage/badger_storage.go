@@ -61,6 +61,7 @@ const (
 // that implements the Database interface.
 type BadgerStorage struct {
 	limitMemory       bool
+	indexCacheSize    int64
 	compressorEntries []*CompressorEntry
 
 	pool       *BufferPool
@@ -142,7 +143,8 @@ func lowMemoryOptions(dir string) badger.Options {
 // NewBadgerStorage creates a new BadgerStorage.
 func NewBadgerStorage(ctx context.Context, dir string, options ...BadgerOption) (Database, error) {
 	b := &BadgerStorage{
-		closing: make(chan struct{}),
+		closing:        make(chan struct{}),
+		indexCacheSize: DefaultIndexCacheSize,
 	}
 	for _, opt := range options {
 		opt(b)
@@ -153,6 +155,11 @@ func NewBadgerStorage(ctx context.Context, dir string, options ...BadgerOption) 
 	if b.limitMemory {
 		dbOpts = lowMemoryOptions(dir)
 	}
+	dbOpts.IndexCacheSize = b.indexCacheSize
+	log.Printf(
+		"badger database index cache size: %f MB\n",
+		utils.BtoMb(float64(dbOpts.IndexCacheSize)),
+	)
 
 	db, err := badger.Open(dbOpts)
 	if err != nil {
