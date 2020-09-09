@@ -234,12 +234,12 @@ func (b *BadgerStorage) periodicGC(ctx context.Context) {
 // The caller should defer this in main.
 func (b *BadgerStorage) Close(ctx context.Context) error {
 	b.closer.Lock()
+	close(b.closing)
+	b.closer.Unlock()
+
 	if err := b.db.Close(); err != nil {
 		return fmt.Errorf("%w: %v", ErrDBCloseFailed, err)
 	}
-
-	close(b.closing)
-	b.closer.Unlock()
 
 	return nil
 }
