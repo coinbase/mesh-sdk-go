@@ -198,6 +198,7 @@ func (b *BadgerStorage) periodicGC(ctx context.Context) {
 			return
 		case <-gcTimeout.C:
 			b.closer.Lock()
+			start := time.Now()
 			err := b.db.RunValueLogGC(defualtGCDiscardRatio)
 			switch err {
 			case badger.ErrNoRewrite, badger.ErrRejected:
@@ -210,6 +211,7 @@ func (b *BadgerStorage) periodicGC(ctx context.Context) {
 				// collected. We should sleep instead of waiting
 				// the full GC collection interval to see if there
 				// is anything else to collect.
+				log.Printf("successful value log garbage collection (%s)", time.Since(start))
 				gcTimeout.Reset(defaultGCSleep)
 			default:
 				// Not much we can do on a random error but log it and continue.
