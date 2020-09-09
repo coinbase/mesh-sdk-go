@@ -73,7 +73,8 @@ type BadgerStorage struct {
 
 	// Track the closed status to ensure we exit garbage
 	// collection when the db closes.
-	closed chan struct{}
+	closed   chan struct{}
+	gcClosed chan struct{}
 }
 
 func defaultBadgerOptions(dir string) badger.Options {
@@ -144,6 +145,7 @@ func lowMemoryOptions(dir string) badger.Options {
 func NewBadgerStorage(ctx context.Context, dir string, options ...BadgerOption) (Database, error) {
 	b := &BadgerStorage{
 		closed:         make(chan struct{}),
+		gcClosed:       make(chan struct{}),
 		indexCacheSize: DefaultIndexCacheSize,
 	}
 	for _, opt := range options {
@@ -194,6 +196,7 @@ func (b *BadgerStorage) periodicGC(ctx context.Context) {
 	defer func() {
 		log.Println("exiting periodic garbage collector")
 		gcTimeout.Stop()
+		close(b.gcClosed)
 	}()
 
 	for {
@@ -235,6 +238,9 @@ func (b *BadgerStorage) Close(ctx context.Context) error {
 	if err := b.db.Close(); err != nil {
 		return fmt.Errorf("%w: %v", ErrDBCloseFailed, err)
 	}
+
+	// Wait for garbage collection to stop before returning.
+	<-b.gcClosed
 
 	return nil
 }
