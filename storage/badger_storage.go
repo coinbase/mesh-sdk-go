@@ -177,7 +177,7 @@ func NewBadgerStorage(ctx context.Context, dir string, options ...BadgerOption) 
 
 	// Start periodic ValueGC goroutine (up to user of BadgerDB to call
 	// periodically to reclaim value logs on-disk).
-	// go b.periodicGC(ctx)
+	go b.periodicGC(ctx)
 
 	return b, nil
 }

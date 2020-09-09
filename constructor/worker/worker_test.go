@@ -859,15 +859,13 @@ func TestFindBalanceWorker(t *testing.T) {
 			// Setup DB
 			dir, err := utils.CreateTempDir()
 			assert.NoError(t, err)
-			defer utils.RemoveTempDir(dir)
 
 			db, err := storage.NewBadgerStorage(ctx, dir)
 			assert.NoError(t, err)
 			assert.NotNil(t, db)
-			defer db.Close(ctx)
 
 			dbTx := db.NewDatabaseTransaction(ctx, true)
-			defer dbTx.Discard(ctx)
+			assert.NotNil(t, dbTx)
 
 			worker := New(test.mockHelper)
 			output, err := worker.FindBalanceWorker(ctx, dbTx, types.PrintStruct(test.input))
@@ -878,6 +876,10 @@ func TestFindBalanceWorker(t *testing.T) {
 				assert.NoError(t, err)
 				assert.Equal(t, types.PrintStruct(test.output), output)
 			}
+
+			dbTx.Discard(ctx)
+			db.Close(ctx)
+			utils.RemoveTempDir(dir)
 
 			test.mockHelper.AssertExpectations(t)
 		})
