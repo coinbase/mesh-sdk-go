@@ -26,8 +26,8 @@ var (
 	/* BADGER STORAGE */
 	////////////////////
 
-	ErrDatabaseOpenFailed         = errors.New("could not open database")
-	ErrCompressorLoadFailed       = errors.New("could not load compressor")
+	ErrDatabaseOpenFailed         = errors.New("unable to open database")
+	ErrCompressorLoadFailed       = errors.New("unable to load compressor")
 	ErrDBCloseFailed              = errors.New("unable to close database")
 	ErrCommitFailed               = errors.New("unable to commit transaction")
 	ErrScanGetValueFailed         = errors.New("unable to get value for key")
@@ -160,7 +160,7 @@ var (
 	ErrCurrentBlockGetFailed        = errors.New("unable to get current block identifier")
 	ErrCoinLookupFailed             = errors.New("unable to lookup coin")
 	ErrUTXOBalanceGetFailed         = errors.New("unable to get utxo balance")
-	ErrCoinParseFailed              = errors.New("could not parse amount for coin")
+	ErrCoinParseFailed              = errors.New("unable to parse amount for coin")
 	ErrCoinImportFailed             = errors.New("unable to import coins")
 
 	CoinStorageErrs = []error{
@@ -190,9 +190,9 @@ var (
 	/* COMPRESSOR */
 	////////////////
 
-	ErrLoadDictFailed      = errors.New(": unable to load dictionary")
-	ErrObjectEncodeFailed  = errors.New("could not encode object")
-	ErrRawCompressFailed   = errors.New("could not compress raw bytes")
+	ErrLoadDictFailed      = errors.New("unable to load dictionary")
+	ErrObjectEncodeFailed  = errors.New("unable to encode object")
+	ErrRawCompressFailed   = errors.New("unable to compress raw bytes")
 	ErrRawDecompressFailed = errors.New("unable to decompress raw bytes")
 	ErrRawDecodeFailed     = errors.New("unable to decode bytes")
 	ErrBufferWriteFailed   = errors.New("unable to write to buffer")
@@ -231,7 +231,7 @@ var (
 	ErrJobAddFailed                  = errors.New("unable to add job")
 	ErrJobIdentifierGetFailed        = errors.New("unable to get next identifier")
 	ErrJobUpdateOldFailed            = errors.New("unable to update terminal job")
-	ErrJobEncodeFailed               = errors.New(" unable to encode job")
+	ErrJobEncodeFailed               = errors.New("unable to encode job")
 	ErrJobUpdateFailed               = errors.New("unable to update job")
 	ErrJobMetadataUpdateFailed       = errors.New("unable to update metadata")
 	ErrJobDoesNotExist               = errors.New("job does not exist")
@@ -275,7 +275,7 @@ var (
 	ErrParseSavedKeyFailed      = errors.New("unable to parse saved key")
 	ErrKeyScanFailed            = errors.New("database scan for keys failed")
 	ErrParseKeyPairFailed       = errors.New("unable to parse key pair")
-	ErrKeyGetFailed             = errors.New("could not get key")
+	ErrKeyGetFailed             = errors.New("unable to get key")
 	ErrSignerCreateFailed       = errors.New("unable to create signer")
 	ErrDetermineSigTypeFailed   = errors.New("cannot determine signature type for payload")
 	ErrSignPayloadFailed        = errors.New("unable to to sign payload")
