@@ -564,72 +564,160 @@ func TestExpectedOperations(t *testing.T) {
 func TestExpectedSigners(t *testing.T) {
 	var tests = map[string]struct {
 		intent   []*types.SigningPayload
-		observed []string
+		observed []*types.AccountIdentifier
 
 		err bool
 	}{
 		"simple match": {
 			intent: []*types.SigningPayload{
 				{
+					AccountIdentifier: &types.AccountIdentifier{
+						Address: "addr1",
+					},
+				},
+				{
+					AccountIdentifier: &types.AccountIdentifier{
+						Address: "addr2",
+					},
+				},
+				{
+					AccountIdentifier: &types.AccountIdentifier{
+						Address: "addr2",
+					},
+				},
+			},
+			observed: []*types.AccountIdentifier{
+				{
 					Address: "addr1",
 				},
 				{
 					Address: "addr2",
 				},
+			},
+		},
+		"complex match": {
+			intent: []*types.SigningPayload{
+				{
+					AccountIdentifier: &types.AccountIdentifier{
+						Address: "addr1",
+						SubAccount: &types.SubAccountIdentifier{
+							Address: "test",
+						},
+					},
+				},
+				{
+					AccountIdentifier: &types.AccountIdentifier{
+						Address: "addr2",
+					},
+				},
+				{
+					AccountIdentifier: &types.AccountIdentifier{
+						Address: "addr2",
+					},
+				},
+			},
+			observed: []*types.AccountIdentifier{
+				{
+					Address: "addr1",
+					SubAccount: &types.SubAccountIdentifier{
+						Address: "test",
+					},
+				},
 				{
 					Address: "addr2",
 				},
-			},
-			observed: []string{
-				"addr1",
-				"addr2",
 			},
 		},
 		"duplicate observed signers": {
 			intent: []*types.SigningPayload{
 				{
-					Address: "addr1",
+					AccountIdentifier: &types.AccountIdentifier{
+						Address: "addr1",
+					},
 				},
 				{
-					Address: "addr2",
+					AccountIdentifier: &types.AccountIdentifier{
+						Address: "addr2",
+					},
 				},
 				{
-					Address: "addr2",
+					AccountIdentifier: &types.AccountIdentifier{
+						Address: "addr2",
+					},
 				},
 			},
-			observed: []string{
-				"addr1",
-				"addr2",
-				"addr2",
+			observed: []*types.AccountIdentifier{
+				{Address: "addr1"},
+				{Address: "addr2"},
+				{Address: "addr2"},
 			},
 			err: true,
 		},
 		"missing observed signer": {
 			intent: []*types.SigningPayload{
 				{
-					Address: "addr1",
+					AccountIdentifier: &types.AccountIdentifier{
+						Address: "addr1",
+					},
 				},
 				{
-					Address: "addr2",
+					AccountIdentifier: &types.AccountIdentifier{
+						Address: "addr2",
+					},
 				},
 				{
-					Address: "addr2",
+					AccountIdentifier: &types.AccountIdentifier{
+						Address: "addr2",
+					},
 				},
 			},
-			observed: []string{
-				"addr1",
+			observed: []*types.AccountIdentifier{
+				{Address: "addr1"},
+			},
+			err: true,
+		},
+		"complex mismatch": {
+			intent: []*types.SigningPayload{
+				{
+					AccountIdentifier: &types.AccountIdentifier{
+						Address: "addr1",
+					},
+				},
+				{
+					AccountIdentifier: &types.AccountIdentifier{
+						Address: "addr2",
+					},
+				},
+				{
+					AccountIdentifier: &types.AccountIdentifier{
+						Address: "addr2",
+					},
+				},
+			},
+			observed: []*types.AccountIdentifier{
+				{
+					Address: "addr1",
+					SubAccount: &types.SubAccountIdentifier{
+						Address: "test",
+					},
+				},
+				{
+					Address: "addr2",
+				},
 			},
 			err: true,
 		},
 		"extra observed signer": {
 			intent: []*types.SigningPayload{
 				{
-					Address: "addr1",
+					AccountIdentifier: &types.AccountIdentifier{
+						Address: "addr1",
+					},
 				},
 			},
-			observed: []string{
-				"addr1",
-				"addr2",
+			observed: []*types.AccountIdentifier{
+				{Address: "addr1"},
+				{Address: "addr2"},
 			},
 			err: true,
 		},

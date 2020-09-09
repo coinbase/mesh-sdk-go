@@ -143,27 +143,27 @@ func (p *Parser) ExpectedOperations(
 // ExpectedSigners returns an error if a slice of SigningPayload
 // has different signers than what was observed (typically populated
 // using the signers returned from parsing a transaction).
-func ExpectedSigners(intent []*types.SigningPayload, observed []string) error {
+func ExpectedSigners(intent []*types.SigningPayload, observed []*types.AccountIdentifier) error {
 	// De-duplicate required signers (ex: multiple UTXOs from same address)
 	intendedSigners := make(map[string]struct{})
 	for _, payload := range intent {
-		intendedSigners[payload.Address] = struct{}{}
+		intendedSigners[types.Hash(payload.AccountIdentifier)] = struct{}{}
 	}
 
-	if err := asserter.StringArray("observed signers", observed); err != nil {
+	if err := asserter.AccountArray("observed signers", observed); err != nil {
 		return fmt.Errorf("%w: %s", ErrExpectedSignerDuplicateSigner, err.Error())
 	}
 
 	// Could exist here if len(intent) != len(observed) but
 	// more useful to print out a detailed error message.
 	seenSigners := make(map[string]struct{})
-	unmatched := []string{} // observed
+	unmatched := []*types.AccountIdentifier{} // observed
 	for _, signer := range observed {
-		_, exists := intendedSigners[signer]
+		_, exists := intendedSigners[types.Hash(signer)]
 		if !exists {
 			unmatched = append(unmatched, signer)
 		} else {
-			seenSigners[signer] = struct{}{}
+			seenSigners[types.Hash(signer)] = struct{}{}
 		}
 	}
 

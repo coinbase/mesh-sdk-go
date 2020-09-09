@@ -15,8 +15,6 @@
 package asserter
 
 import (
-	"fmt"
-
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
@@ -73,29 +71,6 @@ func Version(version *types.Version) error {
 
 	if version.MiddlewareVersion != nil && *version.MiddlewareVersion == "" {
 		return ErrVersionMiddlewareVersionMissing
-	}
-
-	return nil
-}
-
-// StringArray ensures all strings in an array
-// are non-empty strings and not duplicates.
-func StringArray(arrName string, arr []string) error {
-	if len(arr) == 0 {
-		return fmt.Errorf("no %s found", arrName)
-	}
-
-	parsed := make([]string, len(arr))
-	for i, s := range arr {
-		if s == "" {
-			return fmt.Errorf("%s has an empty string", arrName)
-		}
-
-		if containsString(parsed, s) {
-			return fmt.Errorf("%s contains a duplicate %s", arrName, s)
-		}
-
-		parsed[i] = s
 	}
 
 	return nil
