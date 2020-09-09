@@ -47,7 +47,8 @@ const (
 	// storage can handle.
 	DefaultMaxTableSize = 256 << 20
 
-	bytesInMb = 1000000
+	// logModulo determines how often we should print
+	// logs while scanning data.
 	logModulo = 5000
 
 	// Default GC settings for reclaiming
@@ -72,8 +73,7 @@ type BadgerStorage struct {
 
 	// Track the closed status to ensure we exit garbage
 	// collection when the db closes.
-	closing chan struct{}
-	closer  sync.Mutex // don't close the db if performing a garbage collection
+	closed chan struct{}
 }
 
 func defaultBadgerOptions(dir string) badger.Options {
@@ -143,7 +143,7 @@ func lowMemoryOptions(dir string) badger.Options {
 // NewBadgerStorage creates a new BadgerStorage.
 func NewBadgerStorage(ctx context.Context, dir string, options ...BadgerOption) (Database, error) {
 	b := &BadgerStorage{
-		closing:        make(chan struct{}),
+		closed:         make(chan struct{}),
 		indexCacheSize: DefaultIndexCacheSize,
 	}
 	for _, opt := range options {
@@ -177,7 +177,7 @@ func NewBadgerStorage(ctx context.Context, dir string, options ...BadgerOption) 
 
 	// Start periodic ValueGC goroutine (up to user of BadgerDB to call
 	// periodically to reclaim value logs on-disk).
-	go b.periodicGC(ctx)
+	// go b.periodicGC(ctx)
 
 	return b, nil
 }
@@ -198,13 +198,12 @@ func (b *BadgerStorage) periodicGC(ctx context.Context) {
 
 	for {
 		select {
-		case <-b.closing:
+		case <-b.closed:
 			// Exit the periodic gc thread if the database is closed.
 			return
 		case <-ctx.Done():
 			return
 		case <-gcTimeout.C:
-			b.closer.Lock()
 			start := time.Now()
 			err := b.db.RunValueLogGC(defualtGCDiscardRatio)
 			switch err {
@@ -225,7 +224,6 @@ func (b *BadgerStorage) periodicGC(ctx context.Context) {
 				log.Printf("error during a GC cycle: %s\n", err.Error())
 				gcTimeout.Reset(defaultGCInterval)
 			}
-			b.closer.Unlock()
 		}
 	}
 }
@@ -233,10 +231,7 @@ func (b *BadgerStorage) periodicGC(ctx context.Context) {
 // Close closes the database to prevent corruption.
 // The caller should defer this in main.
 func (b *BadgerStorage) Close(ctx context.Context) error {
-	b.closer.Lock()
-	close(b.closing)
-	b.closer.Unlock()
-
+	close(b.closed)
 	if err := b.db.Close(); err != nil {
 		return fmt.Errorf("%w: %v", ErrDBCloseFailed, err)
 	}
@@ -681,11 +676,14 @@ func BadgerTrain(
 		return -1, -1, fmt.Errorf("%w: %v", ErrWalkFilesFailed, err)
 	}
 
-	log.Printf("[IN SAMPLE] Total Size Uncompressed: %fMB", sizeUncompressed/bytesInMb)
+	log.Printf(
+		"[IN SAMPLE] Total Size Uncompressed: %fMB",
+		utils.BtoMb(sizeUncompressed),
+	)
 	normalSize := sizeNormal / sizeUncompressed
 	log.Printf(
 		"[IN SAMPLE] Total Size Compressed: %fMB (%% of original size %f%%)",
-		sizeNormal/bytesInMb,
+		utils.BtoMb(sizeNormal),
 		normalSize*utils.OneHundred,
 	)
 
@@ -693,7 +691,7 @@ func BadgerTrain(
 		oldDictionarySize := totalDiskSize / sizeUncompressed
 		log.Printf(
 			"[IN SAMPLE] Total Size Compressed (with old dictionary): %fMB (%% of original size %f%%)",
-			totalDiskSize/bytesInMb,
+			utils.BtoMb(totalDiskSize),
 			oldDictionarySize*utils.OneHundred,
 		)
 	}
@@ -701,7 +699,7 @@ func BadgerTrain(
 	dictionarySize := sizeDictionary / sizeUncompressed
 	log.Printf(
 		"[IN SAMPLE] Total Size Compressed (with new dictionary): %fMB (%% of original size %f%%)",
-		sizeDictionary/bytesInMb,
+		utils.BtoMb(sizeDictionary),
 		dictionarySize*utils.OneHundred,
 	)
 

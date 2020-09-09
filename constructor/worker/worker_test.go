@@ -1299,6 +1299,7 @@ func TestJob_Failures(t *testing.T) {
 			defer db.Close(ctx)
 
 			dbTx := db.NewDatabaseTransaction(ctx, true)
+			defer dbTx.Discard(ctx)
 
 			assert.False(t, j.CheckComplete())
 

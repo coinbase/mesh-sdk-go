@@ -84,7 +84,7 @@ func (j *JobStorage) getAllJobs(
 	}
 
 	var identifiers map[string]struct{}
-	err = j.db.Compressor().Decode("", v, &identifiers, true)
+	err = j.db.Compressor().Decode("", v, &identifiers, false)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrJobIdentifierDecodeFailed, err)
 	}
@@ -176,7 +176,7 @@ func (j *JobStorage) getNextIdentifier(
 	// Get existing identifier
 	var nextIdentifier int
 	if exists {
-		err = j.db.Compressor().Decode("", v, &nextIdentifier, true)
+		err = j.db.Compressor().Decode("", v, &nextIdentifier, false)
 		if err != nil {
 			return "", fmt.Errorf("%w: %v", ErrJobIdentifierDecodeFailed, err)
 		}
@@ -228,7 +228,7 @@ func (j *JobStorage) addJob(
 
 	var identifiers map[string]struct{}
 	if exists {
-		err = j.db.Compressor().Decode("", v, &identifiers, true)
+		err = j.db.Compressor().Decode("", v, &identifiers, false)
 		if err != nil {
 			return fmt.Errorf("%w: %v", ErrJobIdentifierDecodeFailed, err)
 		}
@@ -257,7 +257,7 @@ func (j *JobStorage) removeJob(
 		return fmt.Errorf("%w %s from %s", ErrJobIdentifierRemoveFailed, identifier, string(k))
 	}
 
-	err = j.db.Compressor().Decode("", v, &identifiers, true)
+	err = j.db.Compressor().Decode("", v, &identifiers, false)
 	if err != nil {
 		return fmt.Errorf("%w: unable to decode existing identifier", err)
 	}
@@ -383,7 +383,7 @@ func (j *JobStorage) Get(
 	}
 
 	var output job.Job
-	err = j.db.Compressor().Decode("", v, &output, true)
+	err = j.db.Compressor().Decode("", v, &output, false)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrJobDecodeFailed, err)
 	}
