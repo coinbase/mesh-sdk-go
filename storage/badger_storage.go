@@ -335,7 +335,7 @@ func (b *BadgerTransaction) Scan(
 		k := item.KeyCopy(nil)
 		v, err := item.ValueCopy(nil)
 		if err != nil {
-			return nil, fmt.Errorf("%w, for key %s: %v", ErrScanGetValueFailed, string(k), err)
+			return nil, fmt.Errorf("%w for key %s: %v", ErrScanGetValueFailed, string(k), err)
 		}
 
 		values = append(values, &ScanItem{
@@ -376,13 +376,13 @@ func (b *BadgerTransaction) LimitedMemoryScan(
 		k := item.Key()
 		err := item.Value(func(v []byte) error {
 			if err := worker(k, v); err != nil {
-				return fmt.Errorf("%w for key %s: %v", ErrScanWorkerFailed, string(k), err)
+				return fmt.Errorf("%w: worker failed for key %s", err, string(k))
 			}
 
 			return nil
 		})
 		if err != nil {
-			return -1, fmt.Errorf("%w for key %s: %v", ErrScanGetValueFailed, string(k), err)
+			return -1, fmt.Errorf("%w: unable to get value for key %s", err, string(k))
 		}
 
 		entries++
@@ -525,7 +525,7 @@ func BadgerTrain(
 	}
 	defer badgerDb.Close(ctx)
 
-	// Create directory to sore uncompressed files for training
+	// Create directory to store uncompressed files for training
 	tmpDir, err := utils.CreateTempDir()
 	if err != nil {
 		return -1, -1, fmt.Errorf("%w: %v", ErrCreateTempDirectoryFailed, err)

@@ -266,23 +266,23 @@ var (
 	// contains an address.
 	ErrAddrExists = errors.New("address already exists")
 
-	ErrAddrCheckIfExistsFailed = errors.New("unable to check if address exists")
-	ErrSerializeKeyFailed      = errors.New("unable to serialize key")
-	ErrStoreKeyFailed          = errors.New("unable to store key")
-	ErrCommitKeyFailed         = errors.New("unable to commit new key to db")
-	ErrAddrGetFailed           = errors.New("unable to get address")
-	ErrAddrNotFound            = errors.New("address not found")
-	ErrParseSavedKeyFailed     = errors.New("unable to parse saved key")
-	ErrKeyScanFailed           = errors.New("database scan for keys failed")
-	ErrParseKeyPairFailed      = errors.New("unable to parse key pair")
-	ErrKeyGetFailed            = errors.New("could not get key")
-	ErrSignerCreateFailed      = errors.New("unable to create signer")
-	ErrDetermineSigTypeFailed  = errors.New("cannot determine signature type for payload")
-	ErrSignPayloadFailed       = errors.New("unable to to sign payload")
-	ErrAddrsGetAllFailed       = errors.New("unable to get addresses")
-	ErrNoAddrAvailable         = errors.New("no addresses available")
-	ErrAddrImportFailed        = errors.New("unable to import prefunded account")
-	ErrAddrStoreFailed         = errors.New("unable to store prefunded account")
+	ErrAddrCheckIfExistsFailed  = errors.New("unable to check if address exists")
+	ErrSerializeKeyFailed       = errors.New("unable to serialize key")
+	ErrStoreKeyFailed           = errors.New("unable to store key")
+	ErrCommitKeyFailed          = errors.New("unable to commit new key to db")
+	ErrAddrGetFailed            = errors.New("unable to get address")
+	ErrAddrNotFound             = errors.New("address not found")
+	ErrParseSavedKeyFailed      = errors.New("unable to parse saved key")
+	ErrKeyScanFailed            = errors.New("database scan for keys failed")
+	ErrParseKeyPairFailed       = errors.New("unable to parse key pair")
+	ErrKeyGetFailed             = errors.New("could not get key")
+	ErrSignerCreateFailed       = errors.New("unable to create signer")
+	ErrDetermineSigTypeFailed   = errors.New("cannot determine signature type for payload")
+	ErrSignPayloadFailed        = errors.New("unable to to sign payload")
+	ErrAddrsGetAllFailed        = errors.New("unable to get addresses")
+	ErrNoAddrAvailable          = errors.New("no addresses available")
+	ErrAddrImportFailed         = errors.New("unable to import prefunded account")
+	ErrPrefundedAcctStoreFailed = errors.New("unable to store prefunded account")
 
 	KeyStorageErrs = []error{
 		ErrAddrExists,
@@ -302,7 +302,7 @@ var (
 		ErrAddrsGetAllFailed,
 		ErrNoAddrAvailable,
 		ErrAddrImportFailed,
-		ErrAddrStoreFailed,
+		ErrPrefundedAcctStoreFailed,
 	}
 
 	/////////////////////

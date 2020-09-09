@@ -137,7 +137,7 @@ func (k *KeyStorage) Store(
 	defer dbTx.Discard(ctx)
 
 	if err := k.StoreTransactional(ctx, address, keyPair, dbTx); err != nil {
-		return fmt.Errorf("%w: %v", ErrStoreKeyFailed, err)
+		return fmt.Errorf("%w: unable to store key", err)
 	}
 
 	if err := dbTx.Commit(ctx); err != nil {
@@ -270,7 +270,7 @@ func (k *KeyStorage) ImportAccounts(ctx context.Context, accounts []*PrefundedAc
 			continue
 		}
 		if err != nil {
-			return fmt.Errorf("%w: %v", ErrAddrStoreFailed, err)
+			return fmt.Errorf("%w: %v", ErrPrefundedAcctStoreFailed, err)
 		}
 	}
 	return nil
