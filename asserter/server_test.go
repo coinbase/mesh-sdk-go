@@ -973,6 +973,62 @@ func TestConstructionCombineRequest(t *testing.T) {
 			},
 			err: nil,
 		},
+		"valid request 2": {
+			request: &types.ConstructionCombineRequest{
+				NetworkIdentifier:   validNetworkIdentifier,
+				UnsignedTransaction: "blah",
+				Signatures: []*types.Signature{
+					{
+						SigningPayload: &types.SigningPayload{
+							AccountIdentifier: validAccount,
+							Bytes:             []byte("blah"),
+						},
+						PublicKey:     validPublicKey,
+						SignatureType: types.Ed25519,
+						Bytes:         []byte("hello"),
+					},
+				},
+			},
+			err: nil,
+		},
+		"valid request 3": {
+			request: &types.ConstructionCombineRequest{
+				NetworkIdentifier:   validNetworkIdentifier,
+				UnsignedTransaction: "blah",
+				Signatures: []*types.Signature{
+					{
+						SigningPayload: &types.SigningPayload{
+							Address:           pointerString(validAccount.Address),
+							AccountIdentifier: validAccount,
+							Bytes:             []byte("blah"),
+						},
+						PublicKey:     validPublicKey,
+						SignatureType: types.Ed25519,
+						Bytes:         []byte("hello"),
+					},
+				},
+			},
+			err: nil,
+		},
+		"address mismatch": {
+			request: &types.ConstructionCombineRequest{
+				NetworkIdentifier:   validNetworkIdentifier,
+				UnsignedTransaction: "blah",
+				Signatures: []*types.Signature{
+					{
+						SigningPayload: &types.SigningPayload{
+							Address:           pointerString("not match"),
+							AccountIdentifier: validAccount,
+							Bytes:             []byte("blah"),
+						},
+						PublicKey:     validPublicKey,
+						SignatureType: types.Ed25519,
+						Bytes:         []byte("hello"),
+					},
+				},
+			},
+			err: ErrSigningPayloadAddrMismatch,
+		},
 		"invalid request wrong network": {
 			request: &types.ConstructionCombineRequest{
 				NetworkIdentifier: wrongNetworkIdentifier,
