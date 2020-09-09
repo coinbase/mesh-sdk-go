@@ -68,6 +68,11 @@ type BadgerStorage struct {
 	compressor *Compressor
 
 	writer sync.Mutex
+
+	// Track the closed status to ensure we exit garbage
+	// collection when the db closes.
+	closing chan struct{}
+	closer  sync.Mutex // don't close the db if performing a garbage collection
 }
 
 func defaultBadgerOptions(dir string) badger.Options {
@@ -136,7 +141,9 @@ func lowMemoryOptions(dir string) badger.Options {
 
 // NewBadgerStorage creates a new BadgerStorage.
 func NewBadgerStorage(ctx context.Context, dir string, options ...BadgerOption) (Database, error) {
-	b := &BadgerStorage{}
+	b := &BadgerStorage{
+		closing: make(chan struct{}),
+	}
 	for _, opt := range options {
 		opt(b)
 	}
@@ -177,13 +184,20 @@ func (b *BadgerStorage) periodicGC(ctx context.Context) {
 	// We start the timeout with the default sleep to aggressively check
 	// for space to reclaim on startup.
 	gcTimeout := time.NewTimer(defaultGCSleep)
-	defer gcTimeout.Stop()
+	defer func() {
+		log.Println("exiting periodic garbage collector")
+		gcTimeout.Stop()
+	}()
 
 	for {
 		select {
+		case <-b.closing:
+			// Exit the periodic gc thread if the database is closed.
+			return
 		case <-ctx.Done():
 			return
 		case <-gcTimeout.C:
+			b.closer.Lock()
 			err := b.db.RunValueLogGC(defualtGCDiscardRatio)
 			switch err {
 			case badger.ErrNoRewrite, badger.ErrRejected:
@@ -202,6 +216,7 @@ func (b *BadgerStorage) periodicGC(ctx context.Context) {
 				log.Printf("error during a GC cycle: %s\n", err.Error())
 				gcTimeout.Reset(defaultGCInterval)
 			}
+			b.closer.Unlock()
 		}
 	}
 }
@@ -209,9 +224,13 @@ func (b *BadgerStorage) periodicGC(ctx context.Context) {
 // Close closes the database to prevent corruption.
 // The caller should defer this in main.
 func (b *BadgerStorage) Close(ctx context.Context) error {
+	b.closer.Lock()
 	if err := b.db.Close(); err != nil {
 		return fmt.Errorf("%w: %v", ErrDBCloseFailed, err)
 	}
+
+	close(b.closing)
+	b.closer.Unlock()
 
 	return nil
 }
