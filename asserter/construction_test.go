@@ -201,11 +201,43 @@ func TestConstructionDeriveResponse(t *testing.T) {
 			},
 			err: nil,
 		},
+		"valid response 2": {
+			response: &types.ConstructionDeriveResponse{
+				AccountIdentifier: &types.AccountIdentifier{
+					Address: "addr",
+				},
+				Metadata: map[string]interface{}{
+					"name": "hello",
+				},
+			},
+			err: nil,
+		},
+		"mismatch": {
+			response: &types.ConstructionDeriveResponse{
+				Address: pointerString("addr2"),
+				AccountIdentifier: &types.AccountIdentifier{
+					Address: "addr",
+				},
+				Metadata: map[string]interface{}{
+					"name": "hello",
+				},
+			},
+			err: ErrConstructionDeriveResponseAddrMismatch,
+		},
 		"nil response": {
 			err: ErrConstructionDeriveResponseIsNil,
 		},
 		"empty address": {
 			response: &types.ConstructionDeriveResponse{
+				Metadata: map[string]interface{}{
+					"name": "hello",
+				},
+			},
+			err: ErrConstructionDeriveResponseAddrEmpty,
+		},
+		"empty address 2": {
+			response: &types.ConstructionDeriveResponse{
+				Address: pointerString(""),
 				Metadata: map[string]interface{}{
 					"name": "hello",
 				},
@@ -258,6 +290,77 @@ func TestConstructionParseResponse(t *testing.T) {
 			},
 			signed: true,
 			err:    nil,
+		},
+		"valid response 2": {
+			response: &types.ConstructionParseResponse{
+				Operations: []*types.Operation{
+					{
+						OperationIdentifier: &types.OperationIdentifier{
+							Index: int64(0),
+						},
+						Type:    "PAYMENT",
+						Account: validAccount,
+						Amount:  validAmount,
+					},
+					{
+						OperationIdentifier: &types.OperationIdentifier{
+							Index: int64(1),
+						},
+						RelatedOperations: []*types.OperationIdentifier{
+							{Index: int64(0)},
+						},
+						Type:    "PAYMENT",
+						Account: validAccount,
+						Amount:  validAmount,
+					},
+				},
+				AccountIdentifierSigners: []*types.AccountIdentifier{
+					{
+						Address: "account 1",
+					},
+				},
+				Metadata: map[string]interface{}{
+					"extra": "stuff",
+				},
+			},
+			signed: true,
+			err:    nil,
+		},
+		"signer mismatch": {
+			response: &types.ConstructionParseResponse{
+				Operations: []*types.Operation{
+					{
+						OperationIdentifier: &types.OperationIdentifier{
+							Index: int64(0),
+						},
+						Type:    "PAYMENT",
+						Account: validAccount,
+						Amount:  validAmount,
+					},
+					{
+						OperationIdentifier: &types.OperationIdentifier{
+							Index: int64(1),
+						},
+						RelatedOperations: []*types.OperationIdentifier{
+							{Index: int64(0)},
+						},
+						Type:    "PAYMENT",
+						Account: validAccount,
+						Amount:  validAmount,
+					},
+				},
+				AccountIdentifierSigners: []*types.AccountIdentifier{
+					{
+						Address: "account 1",
+					},
+				},
+				Signers: []string{"account 2"},
+				Metadata: map[string]interface{}{
+					"extra": "stuff",
+				},
+			},
+			signed: true,
+			err:    ErrConstructionParseResponseSignerMismatch,
 		},
 		"nil response": {
 			err: ErrConstructionParseResponseIsNil,
@@ -344,6 +447,37 @@ func TestConstructionParseResponse(t *testing.T) {
 					},
 				},
 				Signers: []string{""},
+				Metadata: map[string]interface{}{
+					"extra": "stuff",
+				},
+			},
+			signed: true,
+			err:    ErrConstructionParseResponseSignerEmpty,
+		},
+		"empty account identifier signer": {
+			response: &types.ConstructionParseResponse{
+				Operations: []*types.Operation{
+					{
+						OperationIdentifier: &types.OperationIdentifier{
+							Index: int64(0),
+						},
+						Type:    "PAYMENT",
+						Account: validAccount,
+						Amount:  validAmount,
+					},
+					{
+						OperationIdentifier: &types.OperationIdentifier{
+							Index: int64(1),
+						},
+						RelatedOperations: []*types.OperationIdentifier{
+							{Index: int64(0)},
+						},
+						Type:    "PAYMENT",
+						Account: validAccount,
+						Amount:  validAmount,
+					},
+				},
+				AccountIdentifierSigners: []*types.AccountIdentifier{{}},
 				Metadata: map[string]interface{}{
 					"extra": "stuff",
 				},

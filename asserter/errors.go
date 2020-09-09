@@ -183,8 +183,9 @@ var (
 	ErrConstructionParseResponseSignersNonEmptyOnUnsignedTx = errors.New(
 		"signers should be empty for unsigned txs",
 	)
-	ErrConstructionParseResponseSignerEmpty = errors.New("signer cannot be empty string")
-	ErrConstructionPayloadsResponseIsNil    = errors.New(
+	ErrConstructionParseResponseSignerEmpty    = errors.New("signer cannot be empty string")
+	ErrConstructionParseResponseSignerMismatch = errors.New("address signers do not match account identifier signers")
+	ErrConstructionPayloadsResponseIsNil       = errors.New(
 		"construction payloads response cannot be nil",
 	)
 	ErrConstructionPayloadsResponseUnsignedTxEmpty = errors.New(
@@ -226,6 +227,7 @@ var (
 		ErrConstructionParseResponseSignersEmptyOnSignedTx,
 		ErrConstructionParseResponseSignersNonEmptyOnUnsignedTx,
 		ErrConstructionParseResponseSignerEmpty,
+		ErrConstructionParseResponseSignerMismatch,
 		ErrConstructionPayloadsResponseIsNil,
 		ErrConstructionPayloadsResponseUnsignedTxEmpty,
 		ErrConstructionPayloadsResponsePayloadsEmpty,
