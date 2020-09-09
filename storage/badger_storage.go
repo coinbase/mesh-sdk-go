@@ -39,8 +39,8 @@ const (
 	// DefaultBlockCacheSize is 0 MB.
 	DefaultBlockCacheSize = 0
 
-	// DefaultIndexCacheSize is 500 MB.
-	DefaultIndexCacheSize = 500 << 20
+	// DefaultIndexCacheSize is 2 GB.
+	DefaultIndexCacheSize = 2000 << 20
 
 	// DefaultMaxTableSize is 256 MB. The larger
 	// this value is, the larger database transactions
@@ -53,7 +53,7 @@ const (
 	// Default GC settings for reclaiming
 	// space in value logs.
 	defaultGCInterval     = 1 * time.Minute
-	defualtGCDiscardRatio = 0.2
+	defualtGCDiscardRatio = 0.1
 	defaultGCSleep        = 10 * time.Second
 )
 
@@ -83,9 +83,6 @@ func defaultBadgerOptions(dir string) badger.Options {
 	// transactions (which are capped at 20% of MaxTableSize).
 	opts.MaxTableSize = DefaultMaxTableSize
 
-	// LoadBloomsOnOpen=false greatly improves the db startup speed.
-	opts.LoadBloomsOnOpen = false
-
 	// To allow writes at a faster speed, we create a new memtable as soon as
 	// an existing memtable is filled up. This option determines how many
 	// memtables should be kept in memory.
@@ -100,10 +97,6 @@ func defaultBadgerOptions(dir string) badger.Options {
 	// it uses much less memory than RAM but is much faster than
 	// FileIO.
 	opts.TableLoadingMode = options.MemoryMap
-
-	// ValueLogLoadingMode ensures we don't load large value logs into
-	// memory.
-	opts.ValueLogLoadingMode = options.FileIO
 
 	// This option will have a significant effect the memory. If the level is kept
 	// in-memory, read are faster but the tables will be kept in memory. By default,
@@ -132,6 +125,13 @@ func defaultBadgerOptions(dir string) badger.Options {
 // Inspired by: https://github.com/dgraph-io/badger/issues/1304
 func lowMemoryOptions(dir string) badger.Options {
 	opts := defaultBadgerOptions(dir)
+
+	// LoadBloomsOnOpen=false greatly improves the db startup speed.
+	opts.LoadBloomsOnOpen = false
+
+	// ValueLogLoadingMode ensures we don't load large value logs into
+	// memory.
+	opts.ValueLogLoadingMode = options.FileIO
 
 	// Don't load tables into memory.
 	opts.TableLoadingMode = options.FileIO
