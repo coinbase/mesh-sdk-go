@@ -569,7 +569,7 @@ func BadgerTrain(
 		true,
 	)
 	if err != nil && !errors.Is(err, ErrMaxEntries) {
-		return -1, -1, fmt.Errorf("%w: unable to scan for %s", err, namespace)
+		return -1, -1, fmt.Errorf("%w for %s: %v", ErrScanFailed, namespace, err)
 	}
 
 	if entriesSeen == 0 {

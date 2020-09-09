@@ -42,10 +42,11 @@ var (
 	ErrRecompressFailed           = errors.New("unable to recompress")
 	ErrCreateTempDirectoryFailed  = errors.New("unable to create temporary directory")
 	ErrMaxEntries                 = errors.New("max entries reached")
+	ErrScanFailed                 = errors.New("unable to scan")
 	ErrNoEntriesFoundInNamespace  = errors.New("found 0 entries for namespace")
 	ErrInvokeZSTDFailed           = errors.New("unable to start zstd")
 	ErrTrainZSTDFailed            = errors.New("unable to train zstd")
-	ErrWalkFilesFailed            = errors.New(": unable to walk files")
+	ErrWalkFilesFailed            = errors.New("unable to walk files")
 
 	BadgerStorageErrs = []error{
 		ErrDatabaseOpenFailed,
@@ -64,6 +65,7 @@ var (
 		ErrRecompressFailed,
 		ErrCreateTempDirectoryFailed,
 		ErrMaxEntries,
+		ErrScanFailed,
 		ErrNoEntriesFoundInNamespace,
 		ErrInvokeZSTDFailed,
 		ErrTrainZSTDFailed,
