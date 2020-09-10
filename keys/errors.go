@@ -50,9 +50,9 @@ var (
 	ErrVerifyFailed = errors.New("verify: verify returned false")
 )
 
-// ErrKeys takes an error as an argument and returns
+// Err takes an error as an argument and returns
 // whether or not the error is one thrown by the keys package
-func ErrKeys(err error) bool {
+func Err(err error) bool {
 	keyErrors := []error{
 		ErrPrivKeyUndecodable,
 		ErrPrivKeyLengthInvalid,
