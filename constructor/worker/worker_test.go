@@ -108,9 +108,9 @@ func TestBalanceMessage(t *testing.T) {
 					},
 				},
 			},
-			message: `looking for balance {"value":"100","currency":{"symbol":"BTC","decimals":8}} on address hello != to addresses [{"address":"good"},{"address":"bye"}]`, // nolint
+			message: `looking for balance {"value":"100","currency":{"symbol":"BTC","decimals":8}} != to accounts [{"address":"good"},{"address":"bye"}]`, // nolint
 		},
-		"message with address and not coins": {
+		"message with account and not coins": {
 			input: &job.FindBalanceInput{
 				AccountIdentifier: &types.AccountIdentifier{Address: "hello"},
 				NotCoins: []*types.CoinIdentifier{
@@ -126,7 +126,7 @@ func TestBalanceMessage(t *testing.T) {
 					},
 				},
 			},
-			message: `looking for balance {"value":"100","currency":{"symbol":"BTC","decimals":8}} on address {"address":"hello"} != to coins [{"identifier":"coin1"}]`, // nolint
+			message: `looking for balance {"value":"100","currency":{"symbol":"BTC","decimals":8}} on account {"address":"hello"} != to coins [{"identifier":"coin1"}]`, // nolint
 		},
 	}
 
@@ -488,7 +488,12 @@ func TestFindBalanceWorker(t *testing.T) {
 				).Return(
 					[]*types.AccountIdentifier{
 						{Address: "addr2"},
-						{Address: "addr1"},
+						{
+							Address: "addr1",
+							SubAccount: &types.SubAccountIdentifier{
+								Address: "sub1",
+							},
+						},
 						{Address: "addr3"},
 						{Address: "addr4"},
 					},
@@ -1014,7 +1019,7 @@ func TestJob_ComplicatedTransfer(t *testing.T) {
 			},
 			{
 				Type:       job.SetVariable,
-				Input:      `[{"operation_identifier":{"index":0},"type":"","status":"","account":{{account}},"amount":{"value":"-90","currency":{"symbol":"BTC","decimals":8}}},{"operation_identifier":{"index":1},"type":"","status":"","account":{"address":{{random_address}}},"amount":{"value":"100","currency":{"symbol":"BTC","decimals":8}}}]`, // nolint
+				Input:      `[{"operation_identifier":{"index":0},"type":"","status":"","account":{{account.account_identifier}},"amount":{"value":"-90","currency":{"symbol":"BTC","decimals":8}}},{"operation_identifier":{"index":1},"type":"","status":"","account":{"address":{{random_address}}},"amount":{"value":"100","currency":{"symbol":"BTC","decimals":8}}}]`, // nolint
 				OutputPath: "create_send.operations",
 			},
 			{

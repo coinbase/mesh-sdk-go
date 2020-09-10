@@ -165,7 +165,7 @@ func (w *Worker) DeriveWorker(
 		return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
 	}
 
-	return types.PrintStruct(types.ConstructionDeriveResponse{
+	return types.PrintStruct(&types.ConstructionDeriveResponse{
 		AccountIdentifier: accountIdentifier,
 		Metadata:          metadata,
 	}), nil
@@ -373,7 +373,7 @@ func (w *Worker) checkAccountCoins(
 			continue
 		}
 
-		return types.PrintStruct(job.FindBalanceOutput{
+		return types.PrintStruct(&job.FindBalanceOutput{
 			AccountIdentifier: account,
 			Balance:           coin.Amount,
 			Coin:              coin.CoinIdentifier,
@@ -409,7 +409,7 @@ func (w *Worker) checkAccountBalance(
 		return "", nil
 	}
 
-	return types.PrintStruct(job.FindBalanceOutput{
+	return types.PrintStruct(&job.FindBalanceOutput{
 		AccountIdentifier: account,
 		Balance:           amount,
 	}), nil
