@@ -24,10 +24,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func pointerString(s string) *string {
-	return &s
-}
-
 func TestConstructionPreprocessResponse(t *testing.T) {
 	var tests = map[string]struct {
 		response *types.ConstructionPreprocessResponse
