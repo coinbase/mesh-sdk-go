@@ -1033,6 +1033,10 @@ func TestJob_ComplicatedTransfer(t *testing.T) {
 				OutputPath: "rand_number",
 			},
 			{
+				Type:  job.Assert,
+				Input: `{{rand_number}}`,
+			},
+			{
 				Type:  job.PrintMessage,
 				Input: `{"random_number": {{rand_number}}}`,
 			},
@@ -1193,6 +1197,32 @@ func TestJob_Failures(t *testing.T) {
 				},
 			},
 			expectedErr: ErrInvalidActionType,
+			helper:      &mocks.Helper{},
+		},
+		"assertion invalid input": {
+			scenario: &job.Scenario{
+				Name: "create_address",
+				Actions: []*job.Action{
+					{
+						Type:  "assert",
+						Input: `"hello"`,
+					},
+				},
+			},
+			expectedErr: ErrInvalidInput,
+			helper:      &mocks.Helper{},
+		},
+		"failed assertion": {
+			scenario: &job.Scenario{
+				Name: "create_address",
+				Actions: []*job.Action{
+					{
+						Type:  "assert",
+						Input: `"-1"`,
+					},
+				},
+			},
+			expectedErr: ErrActionFailed,
 			helper:      &mocks.Helper{},
 		},
 		"invalid json": {
