@@ -80,6 +80,22 @@ func TestBalanceMessage(t *testing.T) {
 		},
 		"message with not address": {
 			input: &job.FindBalanceInput{
+				NotAddress: []string{
+					"good",
+					"bye",
+				},
+				MinimumBalance: &types.Amount{
+					Value: "100",
+					Currency: &types.Currency{
+						Symbol:   "BTC",
+						Decimals: 8,
+					},
+				},
+			},
+			message: `looking for balance {"value":"100","currency":{"symbol":"BTC","decimals":8}} != to addresses ["good","bye"]`, // nolint
+		},
+		"message with not account": {
+			input: &job.FindBalanceInput{
 				NotAccountIdentifier: []*types.AccountIdentifier{
 					{Address: "good"},
 					{Address: "bye"},
@@ -466,19 +482,26 @@ func TestFindBalanceWorker(t *testing.T) {
 			mockHelper: func() *mocks.Helper {
 				helper := &mocks.Helper{}
 				helper.On(
-					"AllAddresses",
+					"AllAccounts",
 					ctx,
 					mock.Anything,
 				).Return(
-					[]string{"addr2", "addr1", "addr3", "addr4"},
+					[]*types.AccountIdentifier{
+						{Address: "addr2"},
+						{Address: "addr1"},
+						{Address: "addr3"},
+						{Address: "addr4"},
+					},
 					nil,
 				).Once()
 				helper.On(
-					"LockedAddresses",
+					"LockedAccounts",
 					ctx,
 					mock.Anything,
 				).Return(
-					[]string{"addr2"},
+					[]*types.AccountIdentifier{
+						{Address: "addr2"},
+					},
 					nil,
 				).Once()
 				helper.On("Balance", ctx, mock.Anything, &types.AccountIdentifier{
@@ -500,7 +523,7 @@ func TestFindBalanceWorker(t *testing.T) {
 				return helper
 			}(),
 			output: &job.FindBalanceOutput{
-				Account: &types.AccountIdentifier{
+				AccountIdentifier: &types.AccountIdentifier{
 					Address: "addr1",
 					SubAccount: &types.SubAccountIdentifier{
 						Address: "sub1",
@@ -535,19 +558,26 @@ func TestFindBalanceWorker(t *testing.T) {
 			mockHelper: func() *mocks.Helper {
 				helper := &mocks.Helper{}
 				helper.On(
-					"AllAddresses",
+					"AllAccounts",
 					ctx,
 					mock.Anything,
 				).Return(
-					[]string{"addr2", "addr1", "addr3", "addr4"},
+					[]*types.AccountIdentifier{
+						{Address: "addr2"},
+						{Address: "addr1"},
+						{Address: "addr3"},
+						{Address: "addr4"},
+					},
 					nil,
 				).Once()
 				helper.On(
-					"LockedAddresses",
+					"LockedAccounts",
 					ctx,
 					mock.Anything,
 				).Return(
-					[]string{"addr2"},
+					[]*types.AccountIdentifier{
+						{Address: "addr2"},
+					},
 					nil,
 				).Once()
 				helper.On("Coins", ctx, mock.Anything, &types.AccountIdentifier{
@@ -586,7 +616,7 @@ func TestFindBalanceWorker(t *testing.T) {
 				return helper
 			}(),
 			output: &job.FindBalanceOutput{
-				Account: &types.AccountIdentifier{
+				AccountIdentifier: &types.AccountIdentifier{
 					Address: "addr1",
 				},
 				Balance: &types.Amount{
@@ -622,19 +652,26 @@ func TestFindBalanceWorker(t *testing.T) {
 			mockHelper: func() *mocks.Helper {
 				helper := &mocks.Helper{}
 				helper.On(
-					"AllAddresses",
+					"AllAccounts",
 					ctx,
 					mock.Anything,
 				).Return(
-					[]string{"addr2", "addr1", "addr3", "addr4"},
+					[]*types.AccountIdentifier{
+						{Address: "addr2"},
+						{Address: "addr1"},
+						{Address: "addr3"},
+						{Address: "addr4"},
+					},
 					nil,
 				).Once()
 				helper.On(
-					"LockedAddresses",
+					"LockedAccounts",
 					ctx,
 					mock.Anything,
 				).Return(
-					[]string{"addr2"},
+					[]*types.AccountIdentifier{
+						{Address: "addr2"},
+					},
 					nil,
 				).Once()
 				helper.On("Coins", ctx, mock.Anything, &types.AccountIdentifier{
@@ -702,19 +739,26 @@ func TestFindBalanceWorker(t *testing.T) {
 			mockHelper: func() *mocks.Helper {
 				helper := &mocks.Helper{}
 				helper.On(
-					"AllAddresses",
+					"AllAccounts",
 					ctx,
 					mock.Anything,
 				).Return(
-					[]string{"addr2", "addr1", "addr3", "addr4"},
+					[]*types.AccountIdentifier{
+						{Address: "addr2"},
+						{Address: "addr1"},
+						{Address: "addr3"},
+						{Address: "addr4"},
+					},
 					nil,
 				).Once()
 				helper.On(
-					"LockedAddresses",
+					"LockedAccounts",
 					ctx,
 					mock.Anything,
 				).Return(
-					[]string{"addr2"},
+					[]*types.AccountIdentifier{
+						{Address: "addr2"},
+					},
 					nil,
 				).Once()
 				helper.On("Coins", ctx, mock.Anything, &types.AccountIdentifier{
@@ -782,19 +826,26 @@ func TestFindBalanceWorker(t *testing.T) {
 			mockHelper: func() *mocks.Helper {
 				helper := &mocks.Helper{}
 				helper.On(
-					"AllAddresses",
+					"AllAccounts",
 					ctx,
 					mock.Anything,
 				).Return(
-					[]string{"addr2", "addr1", "addr3", "addr4"},
+					[]*types.AccountIdentifier{
+						{Address: "addr2"},
+						{Address: "addr1"},
+						{Address: "addr3"},
+						{Address: "addr4"},
+					},
 					nil,
 				).Once()
 				helper.On(
-					"LockedAddresses",
+					"LockedAccounts",
 					ctx,
 					mock.Anything,
 				).Return(
-					[]string{"addr2"},
+					[]*types.AccountIdentifier{
+						{Address: "addr2"},
+					},
 					nil,
 				).Once()
 				helper.On("Coins", ctx, mock.Anything, &types.AccountIdentifier{
