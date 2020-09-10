@@ -49,7 +49,6 @@ const (
 	// storage can handle.
 	PerformanceMaxTableSize = 256 << 20
 
-	bytesInMb = 1000000
 	logModulo = 5000
 )
 
@@ -285,6 +284,7 @@ func (b *BadgerTransaction) Set(
 }
 
 // Get accesses the value of the key within a transaction.
+// It is up to the caller to reclaim any memory returned.
 func (b *BadgerTransaction) Get(
 	ctx context.Context,
 	key []byte,
@@ -305,10 +305,6 @@ func (b *BadgerTransaction) Get(
 		return false, nil, err
 	}
 
-	b.buffersToReclaim = append(
-		b.buffersToReclaim,
-		value,
-	)
 	return true, value.Bytes(), nil
 }
 
@@ -317,50 +313,9 @@ func (b *BadgerTransaction) Delete(ctx context.Context, key []byte) error {
 	return b.txn.Delete(key)
 }
 
-// Scan retrieves all elements with a given prefix in a database
-// transaction.
-func (b *BadgerTransaction) Scan(
-	ctx context.Context,
-	prefix []byte,
-	logEntries bool,
-) ([]*ScanItem, error) {
-	entries := 0
-	values := []*ScanItem{}
-	opts := badger.DefaultIteratorOptions
-	opts.PrefetchValues = false
-	it := b.txn.NewIterator(opts)
-	defer it.Close()
-	for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
-		item := it.Item()
-		k := item.KeyCopy(nil)
-		v, err := item.ValueCopy(nil)
-		if err != nil {
-			return nil, fmt.Errorf("%w for key %s: %v", ErrScanGetValueFailed, string(k), err)
-		}
-
-		values = append(values, &ScanItem{
-			Key:   k,
-			Value: v,
-		})
-
-		b.buffersToReclaim = append(
-			b.buffersToReclaim,
-			bytes.NewBuffer(k),
-			bytes.NewBuffer(v),
-		)
-
-		entries++
-		if logEntries && entries%logModulo == 0 {
-			log.Printf("scanned %d entries for %s\n", entries, string(prefix))
-		}
-	}
-
-	return values, nil
-}
-
-// LimitedMemoryScan calls a worker for each item in a scan instead
+// Scan calls a worker for each item in a scan instead
 // of reading all items into memory.
-func (b *BadgerTransaction) LimitedMemoryScan(
+func (b *BadgerTransaction) Scan(
 	ctx context.Context,
 	prefix []byte,
 	worker func([]byte, []byte) error,
@@ -469,7 +424,7 @@ func recompress(
 
 	txn := badgerDb.NewDatabaseTransaction(ctx, false)
 	defer txn.Discard(ctx)
-	_, err := txn.LimitedMemoryScan(
+	_, err := txn.Scan(
 		ctx,
 		[]byte(restrictedNamespace),
 		func(k []byte, v []byte) error {
@@ -541,7 +496,7 @@ func BadgerTrain(
 	entriesSeen := 0
 	txn := badgerDb.NewDatabaseTransaction(ctx, false)
 	defer txn.Discard(ctx)
-	_, err = txn.LimitedMemoryScan(
+	_, err = txn.Scan(
 		ctx,
 		[]byte(restrictedNamespace),
 		func(k []byte, v []byte) error {
@@ -650,11 +605,14 @@ func BadgerTrain(
 		return -1, -1, fmt.Errorf("%w: %v", ErrWalkFilesFailed, err)
 	}
 
-	log.Printf("[IN SAMPLE] Total Size Uncompressed: %fMB", sizeUncompressed/bytesInMb)
+	log.Printf(
+		"[IN SAMPLE] Total Size Uncompressed: %fMB",
+		utils.BtoMb(sizeUncompressed),
+	)
 	normalSize := sizeNormal / sizeUncompressed
 	log.Printf(
 		"[IN SAMPLE] Total Size Compressed: %fMB (%% of original size %f%%)",
-		sizeNormal/bytesInMb,
+		utils.BtoMb(sizeNormal),
 		normalSize*utils.OneHundred,
 	)
 
@@ -662,7 +620,7 @@ func BadgerTrain(
 		oldDictionarySize := totalDiskSize / sizeUncompressed
 		log.Printf(
 			"[IN SAMPLE] Total Size Compressed (with old dictionary): %fMB (%% of original size %f%%)",
-			totalDiskSize/bytesInMb,
+			utils.BtoMb(totalDiskSize),
 			oldDictionarySize*utils.OneHundred,
 		)
 	}
@@ -670,7 +628,7 @@ func BadgerTrain(
 	dictionarySize := sizeDictionary / sizeUncompressed
 	log.Printf(
 		"[IN SAMPLE] Total Size Compressed (with new dictionary): %fMB (%% of original size %f%%)",
-		sizeDictionary/bytesInMb,
+		utils.BtoMb(sizeDictionary),
 		dictionarySize*utils.OneHundred,
 	)
 

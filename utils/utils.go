@@ -77,7 +77,7 @@ var (
 // CreateTempDir creates a directory in
 // /tmp for usage within testing.
 func CreateTempDir() (string, error) {
-	storageDir, err := ioutil.TempDir("", "rosetta-cli")
+	storageDir, err := ioutil.TempDir("", "")
 	if err != nil {
 		return "", err
 	}

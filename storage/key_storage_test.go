@@ -167,19 +167,19 @@ func TestKeyStorage(t *testing.T) {
 
 		prefundedAccs := []*PrefundedAccount{
 			{
-				PrivateKeyHex: "0e842a16b2d39a4dff5c63688513cb2109e30c3c30bc4eb502cc54f4614493f6",
-				Account:       &types.AccountIdentifier{Address: "add1"},
-				CurveType:     types.Edwards25519,
+				PrivateKeyHex:     "0e842a16b2d39a4dff5c63688513cb2109e30c3c30bc4eb502cc54f4614493f6",
+				AccountIdentifier: &types.AccountIdentifier{Address: "add1"},
+				CurveType:         types.Edwards25519,
 			},
 			{
-				PrivateKeyHex: "42efc44bdf7b2d4d45ddd6ddb727ed498c91e7070914c9ed0d80af680ff42b3e",
-				Account:       &types.AccountIdentifier{Address: "add2"},
-				CurveType:     types.Edwards25519,
+				PrivateKeyHex:     "42efc44bdf7b2d4d45ddd6ddb727ed498c91e7070914c9ed0d80af680ff42b3e",
+				AccountIdentifier: &types.AccountIdentifier{Address: "add2"},
+				CurveType:         types.Edwards25519,
 			},
 			{
-				PrivateKeyHex: "01ea48249742650907004331e85536f868e2d3959434ba751d8aa230138a9707",
-				Account:       &types.AccountIdentifier{Address: "add3"},
-				CurveType:     types.Edwards25519,
+				PrivateKeyHex:     "01ea48249742650907004331e85536f868e2d3959434ba751d8aa230138a9707",
+				AccountIdentifier: &types.AccountIdentifier{Address: "add3"},
+				CurveType:         types.Edwards25519,
 			},
 		}
 
@@ -194,9 +194,9 @@ func TestKeyStorage(t *testing.T) {
 	t.Run("does not import same key twice", func(t *testing.T) {
 		prefundedAccs := []*PrefundedAccount{
 			{
-				PrivateKeyHex: "17d08f5fe8c77af811caa0c9a187e668ce3b74a99acc3f6d976f075fa8e0be55",
-				Account:       &types.AccountIdentifier{Address: "badadd"},
-				CurveType:     types.Edwards25519,
+				PrivateKeyHex:     "17d08f5fe8c77af811caa0c9a187e668ce3b74a99acc3f6d976f075fa8e0be55",
+				AccountIdentifier: &types.AccountIdentifier{Address: "badadd"},
+				CurveType:         types.Edwards25519,
 			},
 		}
 
