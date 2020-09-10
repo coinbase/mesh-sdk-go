@@ -933,14 +933,6 @@ func TestProcess_Failed(t *testing.T) {
 		},
 	).Once()
 
-	// Start processor
-	go func() {
-		err := c.Process(ctx)
-		fmt.Println(err)
-		assert.True(t, errors.Is(err, context.Canceled))
-		close(processCanceled)
-	}()
-
 	// Construct Transaction
 	network := &types.NetworkIdentifier{
 		Blockchain: "Bitcoin",
@@ -1001,7 +993,7 @@ func TestProcess_Failed(t *testing.T) {
 		"GetKey",
 		ctx,
 		dbTx,
-		"hello",
+		&types.AccountIdentifier{Address: "hello"},
 	).Return(
 		&keys.KeyPair{
 			PublicKey: &types.PublicKey{
@@ -1015,7 +1007,7 @@ func TestProcess_Failed(t *testing.T) {
 		"GetKey",
 		ctx,
 		dbTx,
-		"hello2",
+		&types.AccountIdentifier{Address: "hello2"},
 	).Return(
 		&keys.KeyPair{
 			PublicKey: &types.PublicKey{
@@ -1131,6 +1123,14 @@ func TestProcess_Failed(t *testing.T) {
 	).Return(nil).Once()
 	handler.On("TransactionCreated", ctx, "job", txIdentifier).Return(nil).Once()
 	helper.On("BroadcastAll", ctx).Return(nil).Once()
+
+	// Start processor
+	go func() {
+		err := c.Process(ctx)
+		fmt.Println(err)
+		assert.True(t, errors.Is(err, context.Canceled))
+		close(processCanceled)
+	}()
 
 	// Wait for transfer to complete
 	helper.On("HeadBlockExists", ctx).Return(true).Once()
