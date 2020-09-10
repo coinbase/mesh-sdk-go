@@ -18,7 +18,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/coinbase/rosetta-sdk-go/asserter"
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
@@ -143,40 +142,41 @@ func (p *Parser) ExpectedOperations(
 // ExpectedSigners returns an error if a slice of SigningPayload
 // has different signers than what was observed (typically populated
 // using the signers returned from parsing a transaction).
-func ExpectedSigners(intent []*types.SigningPayload, observed []string) error {
+func ExpectedSigners(intent []*types.SigningPayload, observed []*types.AccountIdentifier) error {
 	// De-duplicate required signers (ex: multiple UTXOs from same address)
 	intendedSigners := make(map[string]struct{})
 	for _, payload := range intent {
-		intendedSigners[payload.Address] = struct{}{}
+		intendedSigners[types.Hash(payload.AccountIdentifier)] = struct{}{}
 	}
 
-	if err := asserter.StringArray("observed signers", observed); err != nil {
-		return fmt.Errorf("%w: %s", ErrExpectedSignerDuplicateSigner, err.Error())
-	}
-
-	// Could exist here if len(intent) != len(observed) but
+	// Could exit here if len(intent) != len(observed) but
 	// more useful to print out a detailed error message.
 	seenSigners := make(map[string]struct{})
-	unmatched := []string{} // observed
+	unmatched := []*types.AccountIdentifier{} // observed
 	for _, signer := range observed {
-		_, exists := intendedSigners[signer]
+		_, exists := intendedSigners[types.Hash(signer)]
 		if !exists {
 			unmatched = append(unmatched, signer)
 		} else {
-			seenSigners[signer] = struct{}{}
+			seenSigners[types.Hash(signer)] = struct{}{}
 		}
 	}
 
-	for k := range intendedSigners {
-		if _, exists := seenSigners[k]; !exists {
+	// Check to see if there are any expected
+	// signers that we could not find.
+	for _, payload := range intent {
+		hash := types.Hash(payload.AccountIdentifier)
+		if _, exists := seenSigners[hash]; !exists {
 			return fmt.Errorf(
 				"%w: %s",
-				ErrExpectedSignerDuplicateSigner,
-				k,
+				ErrExpectedSignerMissing,
+				types.PrintStruct(payload.AccountIdentifier),
 			)
 		}
 	}
 
+	// Return an error if any observed signatures
+	// were not expected.
 	if len(unmatched) != 0 {
 		return fmt.Errorf(
 			"%w: %s",

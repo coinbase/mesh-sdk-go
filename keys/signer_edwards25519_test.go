@@ -31,9 +31,9 @@ func init() {
 
 func mockPayload(msg []byte, signatureType types.SignatureType) *types.SigningPayload {
 	payload := &types.SigningPayload{
-		Address:       "test",
-		Bytes:         msg,
-		SignatureType: signatureType,
+		AccountIdentifier: &types.AccountIdentifier{Address: "test"},
+		Bytes:             msg,
+		SignatureType:     signatureType,
 	}
 
 	return payload
@@ -75,9 +75,9 @@ func mockSignature(
 	msg, sig []byte,
 ) *types.Signature {
 	payload := &types.SigningPayload{
-		Address:       "test",
-		Bytes:         msg,
-		SignatureType: types.Ed25519,
+		AccountIdentifier: &types.AccountIdentifier{Address: "test"},
+		Bytes:             msg,
+		SignatureType:     types.Ed25519,
 	}
 
 	mockSig := &types.Signature{
@@ -96,9 +96,9 @@ func TestVerifyEdwards25519(t *testing.T) {
 	}
 
 	payload := &types.SigningPayload{
-		Address:       "test",
-		Bytes:         make([]byte, 32),
-		SignatureType: types.Ed25519,
+		AccountIdentifier: &types.AccountIdentifier{Address: "test"},
+		Bytes:             make([]byte, 32),
+		SignatureType:     types.Ed25519,
 	}
 	testSignature, err := signerEdwards25519.Sign(payload, types.Ed25519)
 	assert.NoError(t, err)

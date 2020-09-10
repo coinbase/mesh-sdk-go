@@ -190,7 +190,9 @@ func TestConstructionDeriveResponse(t *testing.T) {
 	}{
 		"valid response": {
 			response: &types.ConstructionDeriveResponse{
-				Address: "addr",
+				AccountIdentifier: &types.AccountIdentifier{
+					Address: "addr",
+				},
 				Metadata: map[string]interface{}{
 					"name": "hello",
 				},
@@ -247,7 +249,9 @@ func TestConstructionParseResponse(t *testing.T) {
 						Amount:  validAmount,
 					},
 				},
-				Signers: []string{"account 1"},
+				AccountIdentifierSigners: []*types.AccountIdentifier{
+					validAccount,
+				},
 				Metadata: map[string]interface{}{
 					"extra": "stuff",
 				},
@@ -255,12 +259,48 @@ func TestConstructionParseResponse(t *testing.T) {
 			signed: true,
 			err:    nil,
 		},
+		"duplicate signer": {
+			response: &types.ConstructionParseResponse{
+				Operations: []*types.Operation{
+					{
+						OperationIdentifier: &types.OperationIdentifier{
+							Index: int64(0),
+						},
+						Type:    "PAYMENT",
+						Account: validAccount,
+						Amount:  validAmount,
+					},
+					{
+						OperationIdentifier: &types.OperationIdentifier{
+							Index: int64(1),
+						},
+						RelatedOperations: []*types.OperationIdentifier{
+							{Index: int64(0)},
+						},
+						Type:    "PAYMENT",
+						Account: &types.AccountIdentifier{Address: "addr 2"},
+						Amount:  validAmount,
+					},
+				},
+				AccountIdentifierSigners: []*types.AccountIdentifier{
+					validAccount,
+					validAccount,
+				},
+				Metadata: map[string]interface{}{
+					"extra": "stuff",
+				},
+			},
+			signed: true,
+			err:    ErrConstructionParseResponseDuplicateSigner,
+		},
 		"nil response": {
 			err: ErrConstructionParseResponseIsNil,
 		},
 		"no operations": {
 			response: &types.ConstructionParseResponse{
-				Signers: []string{"account 1"},
+				AccountIdentifierSigners: []*types.AccountIdentifier{
+					validAccount,
+				},
 				Metadata: map[string]interface{}{
 					"extra": "stuff",
 				},
@@ -279,7 +319,9 @@ func TestConstructionParseResponse(t *testing.T) {
 						Amount:  validAmount,
 					},
 				},
-				Signers: []string{"account 1"},
+				AccountIdentifierSigners: []*types.AccountIdentifier{
+					validAccount,
+				},
 				Metadata: map[string]interface{}{
 					"extra": "stuff",
 				},
@@ -316,7 +358,7 @@ func TestConstructionParseResponse(t *testing.T) {
 			signed: true,
 			err:    ErrConstructionParseResponseSignersEmptyOnSignedTx,
 		},
-		"empty string signer": {
+		"empty account identifier signer": {
 			response: &types.ConstructionParseResponse{
 				Operations: []*types.Operation{
 					{
@@ -339,7 +381,7 @@ func TestConstructionParseResponse(t *testing.T) {
 						Amount:  validAmount,
 					},
 				},
-				Signers: []string{""},
+				AccountIdentifierSigners: []*types.AccountIdentifier{{}},
 				Metadata: map[string]interface{}{
 					"extra": "stuff",
 				},
@@ -373,7 +415,9 @@ func TestConstructionParseResponse(t *testing.T) {
 				Metadata: map[string]interface{}{
 					"extra": "stuff",
 				},
-				Signers: []string{"account 1"},
+				AccountIdentifierSigners: []*types.AccountIdentifier{
+					validAccount,
+				},
 			},
 			signed: false,
 			err:    ErrConstructionParseResponseSignersNonEmptyOnUnsignedTx,
@@ -479,8 +523,10 @@ func TestConstructionPayloadsResponse(t *testing.T) {
 				UnsignedTransaction: "tx blob",
 				Payloads: []*types.SigningPayload{
 					{
-						Address: "hello",
-						Bytes:   []byte("48656c6c6f20476f7068657221"),
+						AccountIdentifier: &types.AccountIdentifier{
+							Address: "hello",
+						},
+						Bytes: []byte("48656c6c6f20476f7068657221"),
 					},
 				},
 			},
@@ -493,8 +539,10 @@ func TestConstructionPayloadsResponse(t *testing.T) {
 			response: &types.ConstructionPayloadsResponse{
 				Payloads: []*types.SigningPayload{
 					{
-						Address: "hello",
-						Bytes:   []byte("48656c6c6f20476f7068657221"),
+						AccountIdentifier: &types.AccountIdentifier{
+							Address: "hello",
+						},
+						Bytes: []byte("48656c6c6f20476f7068657221"),
 					},
 				},
 			},
@@ -581,13 +629,17 @@ func TestSigningPayload(t *testing.T) {
 	}{
 		"valid signing payload": {
 			signingPayload: &types.SigningPayload{
-				Address: "hello",
-				Bytes:   []byte("blah"),
+				AccountIdentifier: &types.AccountIdentifier{
+					Address: "hello",
+				},
+				Bytes: []byte("blah"),
 			},
 		},
 		"valid signing payload with signature type": {
 			signingPayload: &types.SigningPayload{
-				Address:       "hello",
+				AccountIdentifier: &types.AccountIdentifier{
+					Address: "hello",
+				},
 				Bytes:         []byte("blah"),
 				SignatureType: types.Ed25519,
 			},
@@ -603,13 +655,17 @@ func TestSigningPayload(t *testing.T) {
 		},
 		"empty bytes": {
 			signingPayload: &types.SigningPayload{
-				Address: "hello",
+				AccountIdentifier: &types.AccountIdentifier{
+					Address: "hello",
+				},
 			},
 			err: ErrSigningPayloadBytesEmpty,
 		},
 		"invalid signature": {
 			signingPayload: &types.SigningPayload{
-				Address:       "hello",
+				AccountIdentifier: &types.AccountIdentifier{
+					Address: "hello",
+				},
 				Bytes:         []byte("blah"),
 				SignatureType: "blah",
 			},
@@ -639,8 +695,8 @@ func TestSignatures(t *testing.T) {
 			signatures: []*types.Signature{
 				{
 					SigningPayload: &types.SigningPayload{
-						Address: validAccount.Address,
-						Bytes:   []byte("blah"),
+						AccountIdentifier: validAccount,
+						Bytes:             []byte("blah"),
 					},
 					PublicKey:     validPublicKey,
 					SignatureType: types.Ed25519,
@@ -648,8 +704,8 @@ func TestSignatures(t *testing.T) {
 				},
 				{
 					SigningPayload: &types.SigningPayload{
-						Address: validAccount.Address,
-						Bytes:   []byte("blah"),
+						AccountIdentifier: validAccount,
+						Bytes:             []byte("blah"),
 					},
 					PublicKey:     validPublicKey,
 					SignatureType: types.EcdsaRecovery,
@@ -661,9 +717,9 @@ func TestSignatures(t *testing.T) {
 			signatures: []*types.Signature{
 				{
 					SigningPayload: &types.SigningPayload{
-						Address:       validAccount.Address,
-						Bytes:         []byte("blah"),
-						SignatureType: types.Ed25519,
+						AccountIdentifier: validAccount,
+						Bytes:             []byte("blah"),
+						SignatureType:     types.Ed25519,
 					},
 					PublicKey:     validPublicKey,
 					SignatureType: types.Ed25519,
@@ -678,8 +734,8 @@ func TestSignatures(t *testing.T) {
 			signatures: []*types.Signature{
 				{
 					SigningPayload: &types.SigningPayload{
-						Address: validAccount.Address,
-						Bytes:   []byte("blah"),
+						AccountIdentifier: validAccount,
+						Bytes:             []byte("blah"),
 					},
 					PublicKey:     validPublicKey,
 					SignatureType: types.EcdsaRecovery,
@@ -687,9 +743,9 @@ func TestSignatures(t *testing.T) {
 				},
 				{
 					SigningPayload: &types.SigningPayload{
-						Address:       validAccount.Address,
-						Bytes:         []byte("blah"),
-						SignatureType: types.Ed25519,
+						AccountIdentifier: validAccount,
+						Bytes:             []byte("blah"),
+						SignatureType:     types.Ed25519,
 					},
 					PublicKey:     validPublicKey,
 					SignatureType: types.Ed25519,
@@ -701,9 +757,9 @@ func TestSignatures(t *testing.T) {
 			signatures: []*types.Signature{
 				{
 					SigningPayload: &types.SigningPayload{
-						Address:       validAccount.Address,
-						Bytes:         []byte("blah"),
-						SignatureType: types.EcdsaRecovery,
+						AccountIdentifier: validAccount,
+						Bytes:             []byte("blah"),
+						SignatureType:     types.EcdsaRecovery,
 					},
 					PublicKey:     validPublicKey,
 					SignatureType: types.Ed25519,

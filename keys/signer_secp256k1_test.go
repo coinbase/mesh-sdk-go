@@ -74,9 +74,9 @@ func mockSecpSignature(
 	msg, sig []byte,
 ) *types.Signature {
 	payload := &types.SigningPayload{
-		Address:       "test",
-		Bytes:         msg,
-		SignatureType: sigType,
+		AccountIdentifier: &types.AccountIdentifier{Address: "test"},
+		Bytes:             msg,
+		SignatureType:     sigType,
 	}
 
 	mockSig := &types.Signature{
@@ -95,14 +95,14 @@ func TestVerifySecp256k1(t *testing.T) {
 	}
 
 	payloadEcdsa := &types.SigningPayload{
-		Address:       "test",
-		Bytes:         hash("hello"),
-		SignatureType: types.Ecdsa,
+		AccountIdentifier: &types.AccountIdentifier{Address: "test"},
+		Bytes:             hash("hello"),
+		SignatureType:     types.Ecdsa,
 	}
 	payloadEcdsaRecovery := &types.SigningPayload{
-		Address:       "test",
-		Bytes:         hash("hello"),
-		SignatureType: types.EcdsaRecovery,
+		AccountIdentifier: &types.AccountIdentifier{Address: "test"},
+		Bytes:             hash("hello"),
+		SignatureType:     types.EcdsaRecovery,
 	}
 	testSignatureEcdsa, _ := signerSecp256k1.Sign(payloadEcdsa, types.Ecdsa)
 	testSignatureEcdsaRecovery, _ := signerSecp256k1.Sign(payloadEcdsaRecovery, types.EcdsaRecovery)

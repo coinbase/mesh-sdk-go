@@ -102,8 +102,8 @@ func ConstructionDeriveResponse(
 		return ErrConstructionDeriveResponseIsNil
 	}
 
-	if len(response.Address) == 0 {
-		return ErrConstructionDeriveResponseAddrEmpty
+	if err := AccountIdentifier(response.AccountIdentifier); err != nil {
+		return fmt.Errorf("%w: %s", ErrConstructionDeriveResponseAddrEmpty, err.Error())
 	}
 
 	return nil
@@ -133,17 +133,23 @@ func (a *Asserter) ConstructionParseResponse(
 		return fmt.Errorf("%w unable to parse operations", err)
 	}
 
-	if signed && len(response.Signers) == 0 {
+	if signed && len(response.AccountIdentifierSigners) == 0 {
 		return ErrConstructionParseResponseSignersEmptyOnSignedTx
 	}
 
-	if !signed && len(response.Signers) > 0 {
+	if !signed && len(response.AccountIdentifierSigners) > 0 {
 		return ErrConstructionParseResponseSignersNonEmptyOnUnsignedTx
 	}
 
-	for i, signer := range response.Signers {
-		if len(signer) == 0 {
+	for i, signer := range response.AccountIdentifierSigners {
+		if err := AccountIdentifier(signer); err != nil {
 			return fmt.Errorf("%w: at index %d", ErrConstructionParseResponseSignerEmpty, i)
+		}
+	}
+
+	if len(response.AccountIdentifierSigners) > 0 {
+		if err := AccountArray("signers", response.AccountIdentifierSigners); err != nil {
+			return fmt.Errorf("%w: %s", ErrConstructionParseResponseDuplicateSigner, err.Error())
 		}
 	}
 
@@ -223,8 +229,8 @@ func SigningPayload(
 		return ErrSigningPayloadIsNil
 	}
 
-	if len(signingPayload.Address) == 0 {
-		return ErrSigningPayloadAddrEmpty
+	if err := AccountIdentifier(signingPayload.AccountIdentifier); err != nil {
+		return fmt.Errorf("%w: %s", ErrSigningPayloadAddrEmpty, err)
 	}
 
 	if len(signingPayload.Bytes) == 0 {

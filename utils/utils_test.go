@@ -138,6 +138,57 @@ func TestContainsString(t *testing.T) {
 	}
 }
 
+func TestContainsAccountIdentifier(t *testing.T) {
+	var tests = map[string]struct {
+		arr []*types.AccountIdentifier
+		s   *types.AccountIdentifier
+
+		contains bool
+	}{
+		"empty arr": {
+			s: &types.AccountIdentifier{Address: "hello"},
+		},
+		"single arr": {
+			arr: []*types.AccountIdentifier{
+				{Address: "hello"},
+			},
+			s:        &types.AccountIdentifier{Address: "hello"},
+			contains: true,
+		},
+		"single arr sub account mismatch": {
+			arr: []*types.AccountIdentifier{
+				{
+					Address: "hello",
+					SubAccount: &types.SubAccountIdentifier{
+						Address: "sub",
+					},
+				},
+			},
+			s: &types.AccountIdentifier{Address: "hello"},
+		},
+		"single arr no elem": {
+			arr: []*types.AccountIdentifier{
+				{Address: "hello"},
+			},
+			s: &types.AccountIdentifier{Address: "test"},
+		},
+		"multiple arr with elem": {
+			arr: []*types.AccountIdentifier{
+				{Address: "hello"},
+				{Address: "test"},
+			},
+			s:        &types.AccountIdentifier{Address: "test"},
+			contains: true,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, test.contains, ContainsAccountIdentifier(test.arr, test.s))
+		})
+	}
+}
+
 func TestBigPow10(t *testing.T) {
 	e := int32(12)
 	v := big.NewFloat(10)

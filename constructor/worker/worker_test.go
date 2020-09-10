@@ -50,9 +50,9 @@ func TestBalanceMessage(t *testing.T) {
 			},
 			message: `looking for balance {"value":"100","currency":{"symbol":"BTC","decimals":8}}`,
 		},
-		"message with address": {
+		"message with account": {
 			input: &job.FindBalanceInput{
-				Address: "hello",
+				AccountIdentifier: &types.AccountIdentifier{Address: "hello"},
 				MinimumBalance: &types.Amount{
 					Value: "100",
 					Currency: &types.Currency{
@@ -61,27 +61,11 @@ func TestBalanceMessage(t *testing.T) {
 					},
 				},
 			},
-			message: `looking for balance {"value":"100","currency":{"symbol":"BTC","decimals":8}} on address hello`, // nolint
-		},
-		"message with address and subaccount": {
-			input: &job.FindBalanceInput{
-				Address: "hello",
-				SubAccount: &types.SubAccountIdentifier{
-					Address: "sub hello",
-				},
-				MinimumBalance: &types.Amount{
-					Value: "100",
-					Currency: &types.Currency{
-						Symbol:   "BTC",
-						Decimals: 8,
-					},
-				},
-			},
-			message: `looking for balance {"value":"100","currency":{"symbol":"BTC","decimals":8}} on address hello with sub_account {"address":"sub hello"}`, // nolint
+			message: `looking for balance {"value":"100","currency":{"symbol":"BTC","decimals":8}} on account {"address":"hello"}`, // nolint
 		},
 		"message with only subaccount": {
 			input: &job.FindBalanceInput{
-				SubAccount: &types.SubAccountIdentifier{
+				SubAccountIdentifier: &types.SubAccountIdentifier{
 					Address: "sub hello",
 				},
 				MinimumBalance: &types.Amount{
@@ -94,9 +78,8 @@ func TestBalanceMessage(t *testing.T) {
 			},
 			message: `looking for balance {"value":"100","currency":{"symbol":"BTC","decimals":8}} with sub_account {"address":"sub hello"}`, // nolint
 		},
-		"message with address and not address": {
+		"message with not address": {
 			input: &job.FindBalanceInput{
-				Address: "hello",
 				NotAddress: []string{
 					"good",
 					"bye",
@@ -109,11 +92,27 @@ func TestBalanceMessage(t *testing.T) {
 					},
 				},
 			},
-			message: `looking for balance {"value":"100","currency":{"symbol":"BTC","decimals":8}} on address hello != to addresses ["good","bye"]`, // nolint
+			message: `looking for balance {"value":"100","currency":{"symbol":"BTC","decimals":8}} != to addresses ["good","bye"]`, // nolint
 		},
-		"message with address and not coins": {
+		"message with not account": {
 			input: &job.FindBalanceInput{
-				Address: "hello",
+				NotAccountIdentifier: []*types.AccountIdentifier{
+					{Address: "good"},
+					{Address: "bye"},
+				},
+				MinimumBalance: &types.Amount{
+					Value: "100",
+					Currency: &types.Currency{
+						Symbol:   "BTC",
+						Decimals: 8,
+					},
+				},
+			},
+			message: `looking for balance {"value":"100","currency":{"symbol":"BTC","decimals":8}} != to accounts [{"address":"good"},{"address":"bye"}]`, // nolint
+		},
+		"message with account and not coins": {
+			input: &job.FindBalanceInput{
+				AccountIdentifier: &types.AccountIdentifier{Address: "hello"},
 				NotCoins: []*types.CoinIdentifier{
 					{
 						Identifier: "coin1",
@@ -127,7 +126,7 @@ func TestBalanceMessage(t *testing.T) {
 					},
 				},
 			},
-			message: `looking for balance {"value":"100","currency":{"symbol":"BTC","decimals":8}} on address hello != to coins [{"identifier":"coin1"}]`, // nolint
+			message: `looking for balance {"value":"100","currency":{"symbol":"BTC","decimals":8}} on account {"address":"hello"} != to coins [{"identifier":"coin1"}]`, // nolint
 		},
 	}
 
@@ -158,24 +157,33 @@ func TestFindBalanceWorker(t *testing.T) {
 						Decimals: 8,
 					},
 				},
-				NotAddress: []string{"addr4"},
+				NotAccountIdentifier: []*types.AccountIdentifier{
+					{Address: "addr4"},
+				},
 			},
 			mockHelper: func() *mocks.Helper {
 				helper := &mocks.Helper{}
 				helper.On(
-					"AllAddresses",
+					"AllAccounts",
 					ctx,
 					mock.Anything,
 				).Return(
-					[]string{"addr2", "addr1", "addr3", "addr4"},
+					[]*types.AccountIdentifier{
+						{Address: "addr2"},
+						{Address: "addr1"},
+						{Address: "addr3"},
+						{Address: "addr4"},
+					},
 					nil,
 				).Once()
 				helper.On(
-					"LockedAddresses",
+					"LockedAccounts",
 					ctx,
 					mock.Anything,
 				).Return(
-					[]string{"addr2"},
+					[]*types.AccountIdentifier{
+						{Address: "addr2"},
+					},
 					nil,
 				).Once()
 				helper.On(
@@ -201,7 +209,7 @@ func TestFindBalanceWorker(t *testing.T) {
 				return helper
 			}(),
 			output: &job.FindBalanceOutput{
-				Account: &types.AccountIdentifier{
+				AccountIdentifier: &types.AccountIdentifier{
 					Address: "addr1",
 				},
 				Balance: &types.Amount{
@@ -222,26 +230,35 @@ func TestFindBalanceWorker(t *testing.T) {
 						Decimals: 8,
 					},
 				},
-				NotAddress:        []string{"addr4"},
+				NotAccountIdentifier: []*types.AccountIdentifier{
+					{Address: "addr4"},
+				},
 				CreateLimit:       100,
 				CreateProbability: 100,
 			},
 			mockHelper: func() *mocks.Helper {
 				helper := &mocks.Helper{}
 				helper.On(
-					"AllAddresses",
+					"AllAccounts",
 					ctx,
 					mock.Anything,
 				).Return(
-					[]string{"addr2", "addr1", "addr3", "addr4"},
+					[]*types.AccountIdentifier{
+						{Address: "addr2"},
+						{Address: "addr1"},
+						{Address: "addr3"},
+						{Address: "addr4"},
+					},
 					nil,
 				).Once()
 				helper.On(
-					"LockedAddresses",
+					"LockedAccounts",
 					ctx,
 					mock.Anything,
 				).Return(
-					[]string{"addr2"},
+					[]*types.AccountIdentifier{
+						{Address: "addr2"},
+					},
 					nil,
 				).Once()
 
@@ -258,26 +275,35 @@ func TestFindBalanceWorker(t *testing.T) {
 						Decimals: 8,
 					},
 				},
-				NotAddress:        []string{"addr4"},
+				NotAccountIdentifier: []*types.AccountIdentifier{
+					{Address: "addr4"},
+				},
 				CreateLimit:       100,
 				CreateProbability: 100,
 			},
 			mockHelper: func() *mocks.Helper {
 				helper := &mocks.Helper{}
 				helper.On(
-					"AllAddresses",
+					"AllAccounts",
 					ctx,
 					mock.Anything,
 				).Return(
-					[]string{"addr2", "addr1", "addr3", "addr4"},
+					[]*types.AccountIdentifier{
+						{Address: "addr2"},
+						{Address: "addr1"},
+						{Address: "addr3"},
+						{Address: "addr4"},
+					},
 					nil,
 				).Once()
 				helper.On(
-					"LockedAddresses",
+					"LockedAccounts",
 					ctx,
 					mock.Anything,
 				).Return(
-					[]string{"addr2"},
+					[]*types.AccountIdentifier{
+						{Address: "addr2"},
+					},
 					nil,
 				).Once()
 				helper.On(
@@ -326,24 +352,33 @@ func TestFindBalanceWorker(t *testing.T) {
 						Decimals: 8,
 					},
 				},
-				NotAddress: []string{"addr4"},
+				NotAccountIdentifier: []*types.AccountIdentifier{
+					{Address: "addr4"},
+				},
 			},
 			mockHelper: func() *mocks.Helper {
 				helper := &mocks.Helper{}
 				helper.On(
-					"AllAddresses",
+					"AllAccounts",
 					ctx,
 					mock.Anything,
 				).Return(
-					[]string{"addr2", "addr1", "addr3", "addr4"},
+					[]*types.AccountIdentifier{
+						{Address: "addr2"},
+						{Address: "addr1"},
+						{Address: "addr3"},
+						{Address: "addr4"},
+					},
 					nil,
 				).Once()
 				helper.On(
-					"LockedAddresses",
+					"LockedAccounts",
 					ctx,
 					mock.Anything,
 				).Return(
-					[]string{"addr2"},
+					[]*types.AccountIdentifier{
+						{Address: "addr2"},
+					},
 					nil,
 				).Once()
 				helper.On(
@@ -392,25 +427,37 @@ func TestFindBalanceWorker(t *testing.T) {
 						Decimals: 8,
 					},
 				},
-				NotAddress:  []string{"addr4"},
+				NotAccountIdentifier: []*types.AccountIdentifier{
+					{Address: "addr4"},
+				},
 				CreateLimit: 100,
 			},
 			mockHelper: func() *mocks.Helper {
 				helper := &mocks.Helper{}
 				helper.On(
-					"AllAddresses",
+					"AllAccounts",
 					ctx,
 					mock.Anything,
 				).Return(
-					[]string{"addr2", "addr1", "addr3", "addr4"},
+					[]*types.AccountIdentifier{
+						{Address: "addr2"},
+						{Address: "addr1"},
+						{Address: "addr3"},
+						{Address: "addr4"},
+					},
 					nil,
 				).Once()
 				helper.On(
-					"LockedAddresses",
+					"LockedAccounts",
 					ctx,
 					mock.Anything,
 				).Return(
-					[]string{"addr1", "addr2", "addr3", "addr4"},
+					[]*types.AccountIdentifier{
+						{Address: "addr1"},
+						{Address: "addr2"},
+						{Address: "addr3"},
+						{Address: "addr4"},
+					},
 					nil,
 				).Once()
 
@@ -420,7 +467,7 @@ func TestFindBalanceWorker(t *testing.T) {
 		},
 		"simple find balance with subaccount": {
 			input: &job.FindBalanceInput{
-				SubAccount: &types.SubAccountIdentifier{
+				SubAccountIdentifier: &types.SubAccountIdentifier{
 					Address: "sub1",
 				},
 				MinimumBalance: &types.Amount{
@@ -435,19 +482,31 @@ func TestFindBalanceWorker(t *testing.T) {
 			mockHelper: func() *mocks.Helper {
 				helper := &mocks.Helper{}
 				helper.On(
-					"AllAddresses",
+					"AllAccounts",
 					ctx,
 					mock.Anything,
 				).Return(
-					[]string{"addr2", "addr1", "addr3", "addr4"},
+					[]*types.AccountIdentifier{
+						{Address: "addr2"},
+						{
+							Address: "addr1",
+							SubAccount: &types.SubAccountIdentifier{
+								Address: "sub1",
+							},
+						},
+						{Address: "addr3"},
+						{Address: "addr4"},
+					},
 					nil,
 				).Once()
 				helper.On(
-					"LockedAddresses",
+					"LockedAccounts",
 					ctx,
 					mock.Anything,
 				).Return(
-					[]string{"addr2"},
+					[]*types.AccountIdentifier{
+						{Address: "addr2"},
+					},
 					nil,
 				).Once()
 				helper.On("Balance", ctx, mock.Anything, &types.AccountIdentifier{
@@ -469,7 +528,7 @@ func TestFindBalanceWorker(t *testing.T) {
 				return helper
 			}(),
 			output: &job.FindBalanceOutput{
-				Account: &types.AccountIdentifier{
+				AccountIdentifier: &types.AccountIdentifier{
 					Address: "addr1",
 					SubAccount: &types.SubAccountIdentifier{
 						Address: "sub1",
@@ -504,19 +563,26 @@ func TestFindBalanceWorker(t *testing.T) {
 			mockHelper: func() *mocks.Helper {
 				helper := &mocks.Helper{}
 				helper.On(
-					"AllAddresses",
+					"AllAccounts",
 					ctx,
 					mock.Anything,
 				).Return(
-					[]string{"addr2", "addr1", "addr3", "addr4"},
+					[]*types.AccountIdentifier{
+						{Address: "addr2"},
+						{Address: "addr1"},
+						{Address: "addr3"},
+						{Address: "addr4"},
+					},
 					nil,
 				).Once()
 				helper.On(
-					"LockedAddresses",
+					"LockedAccounts",
 					ctx,
 					mock.Anything,
 				).Return(
-					[]string{"addr2"},
+					[]*types.AccountIdentifier{
+						{Address: "addr2"},
+					},
 					nil,
 				).Once()
 				helper.On("Coins", ctx, mock.Anything, &types.AccountIdentifier{
@@ -555,7 +621,7 @@ func TestFindBalanceWorker(t *testing.T) {
 				return helper
 			}(),
 			output: &job.FindBalanceOutput{
-				Account: &types.AccountIdentifier{
+				AccountIdentifier: &types.AccountIdentifier{
 					Address: "addr1",
 				},
 				Balance: &types.Amount{
@@ -591,19 +657,26 @@ func TestFindBalanceWorker(t *testing.T) {
 			mockHelper: func() *mocks.Helper {
 				helper := &mocks.Helper{}
 				helper.On(
-					"AllAddresses",
+					"AllAccounts",
 					ctx,
 					mock.Anything,
 				).Return(
-					[]string{"addr2", "addr1", "addr3", "addr4"},
+					[]*types.AccountIdentifier{
+						{Address: "addr2"},
+						{Address: "addr1"},
+						{Address: "addr3"},
+						{Address: "addr4"},
+					},
 					nil,
 				).Once()
 				helper.On(
-					"LockedAddresses",
+					"LockedAccounts",
 					ctx,
 					mock.Anything,
 				).Return(
-					[]string{"addr2"},
+					[]*types.AccountIdentifier{
+						{Address: "addr2"},
+					},
 					nil,
 				).Once()
 				helper.On("Coins", ctx, mock.Anything, &types.AccountIdentifier{
@@ -671,19 +744,26 @@ func TestFindBalanceWorker(t *testing.T) {
 			mockHelper: func() *mocks.Helper {
 				helper := &mocks.Helper{}
 				helper.On(
-					"AllAddresses",
+					"AllAccounts",
 					ctx,
 					mock.Anything,
 				).Return(
-					[]string{"addr2", "addr1", "addr3", "addr4"},
+					[]*types.AccountIdentifier{
+						{Address: "addr2"},
+						{Address: "addr1"},
+						{Address: "addr3"},
+						{Address: "addr4"},
+					},
 					nil,
 				).Once()
 				helper.On(
-					"LockedAddresses",
+					"LockedAccounts",
 					ctx,
 					mock.Anything,
 				).Return(
-					[]string{"addr2"},
+					[]*types.AccountIdentifier{
+						{Address: "addr2"},
+					},
 					nil,
 				).Once()
 				helper.On("Coins", ctx, mock.Anything, &types.AccountIdentifier{
@@ -751,19 +831,26 @@ func TestFindBalanceWorker(t *testing.T) {
 			mockHelper: func() *mocks.Helper {
 				helper := &mocks.Helper{}
 				helper.On(
-					"AllAddresses",
+					"AllAccounts",
 					ctx,
 					mock.Anything,
 				).Return(
-					[]string{"addr2", "addr1", "addr3", "addr4"},
+					[]*types.AccountIdentifier{
+						{Address: "addr2"},
+						{Address: "addr1"},
+						{Address: "addr3"},
+						{Address: "addr4"},
+					},
 					nil,
 				).Once()
 				helper.On(
-					"LockedAddresses",
+					"LockedAccounts",
 					ctx,
 					mock.Anything,
 				).Return(
-					[]string{"addr2"},
+					[]*types.AccountIdentifier{
+						{Address: "addr2"},
+					},
 					nil,
 				).Once()
 				helper.On("Coins", ctx, mock.Anything, &types.AccountIdentifier{
@@ -909,15 +996,15 @@ func TestJob_ComplicatedTransfer(t *testing.T) {
 			{
 				Type:       job.Derive,
 				Input:      `{"network_identifier": {{network}}, "public_key": {{key.public_key}}}`,
-				OutputPath: "address",
+				OutputPath: "account",
 			},
 			{
-				Type:  job.SaveAddress,
-				Input: `{"address": {{address.address}}, "keypair": {{key.public_key}}}`,
+				Type:  job.SaveAccount,
+				Input: `{"account_identifier": {{account.account_identifier}}, "keypair": {{key.public_key}}}`,
 			},
 			{
 				Type:  job.PrintMessage,
-				Input: `{{address.address}}`,
+				Input: `{{account.account_identifier}}`,
 			},
 		},
 	}
@@ -932,7 +1019,7 @@ func TestJob_ComplicatedTransfer(t *testing.T) {
 			},
 			{
 				Type:       job.SetVariable,
-				Input:      `[{"operation_identifier":{"index":0},"type":"","status":"","account":{"address":{{address.address}}},"amount":{"value":"-90","currency":{"symbol":"BTC","decimals":8}}},{"operation_identifier":{"index":1},"type":"","status":"","account":{"address":{{random_address}}},"amount":{"value":"100","currency":{"symbol":"BTC","decimals":8}}}]`, // nolint
+				Input:      `[{"operation_identifier":{"index":0},"type":"","status":"","account":{{account.account_identifier}},"amount":{"value":"-90","currency":{"symbol":"BTC","decimals":8}}},{"operation_identifier":{"index":1},"type":"","status":"","account":{"address":{{random_address}}},"amount":{"value":"100","currency":{"symbol":"BTC","decimals":8}}}]`, // nolint
 				OutputPath: "create_send.operations",
 			},
 			{
@@ -996,7 +1083,7 @@ func TestJob_ComplicatedTransfer(t *testing.T) {
 		Blockchain: "Bitcoin",
 		Network:    "Testnet3",
 	}
-	address := "test"
+	account := &types.AccountIdentifier{Address: "test"}
 	mockHelper.On(
 		"Derive",
 		ctx,
@@ -1004,7 +1091,7 @@ func TestJob_ComplicatedTransfer(t *testing.T) {
 		mock.Anything,
 		(map[string]interface{})(nil),
 	).Return(
-		address,
+		account,
 		nil,
 		nil,
 	).Once()
@@ -1012,7 +1099,7 @@ func TestJob_ComplicatedTransfer(t *testing.T) {
 		"StoreKey",
 		ctx,
 		dbTx,
-		address,
+		account,
 		mock.Anything,
 	).Return(
 		nil,
@@ -1030,7 +1117,7 @@ func TestJob_ComplicatedTransfer(t *testing.T) {
 
 	assertVariableEquality(t, j.State, "network", network)
 	assertVariableEquality(t, j.State, "key.public_key.curve_type", types.Secp256k1)
-	assertVariableEquality(t, j.State, "address.address", address)
+	assertVariableEquality(t, j.State, "account.account_identifier", account)
 
 	b, err = worker.Process(ctx, dbTx, j)
 	assert.NoError(t, err)
@@ -1048,9 +1135,7 @@ func TestJob_ComplicatedTransfer(t *testing.T) {
 				OperationIdentifier: &types.OperationIdentifier{
 					Index: 0,
 				},
-				Account: &types.AccountIdentifier{
-					Address: "test",
-				},
+				Account: account,
 				Amount: &types.Amount{
 					Value: "-90",
 					Currency: &types.Currency{
@@ -1083,7 +1168,7 @@ func TestJob_ComplicatedTransfer(t *testing.T) {
 
 	assertVariableEquality(t, j.State, "network", network)
 	assertVariableEquality(t, j.State, "key.public_key.curve_type", types.Secp256k1)
-	assertVariableEquality(t, j.State, "address.address", address)
+	assertVariableEquality(t, j.State, "account.account_identifier", account)
 
 	mockHelper.AssertExpectations(t)
 }
@@ -1171,7 +1256,7 @@ func TestJob_Failures(t *testing.T) {
 				Name: "create_address",
 				Actions: []*job.Action{
 					{
-						Type:  job.SaveAddress,
+						Type:  job.SaveAccount,
 						Input: `{}`,
 					},
 				},
