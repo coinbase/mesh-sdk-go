@@ -308,22 +308,3 @@ func PopulateConstructionParseResponse(
 	response.AccountIdentifierSigners = signers
 	return response
 }
-
-// PopulateConstructionDeriveResponse ensures both
-// the string-based Address field and AccountIdentifier-based
-// field are populated.
-func PopulateConstructionDeriveResponse(
-	response *ConstructionDeriveResponse,
-) *ConstructionDeriveResponse {
-	if response.Address == nil && response.AccountIdentifier == nil {
-		return response
-	}
-
-	if response.AccountIdentifier != nil {
-		response.Address = &response.AccountIdentifier.Address
-		return response
-	}
-
-	response.AccountIdentifier = &AccountIdentifier{Address: *response.Address}
-	return response
-}
