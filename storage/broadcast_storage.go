@@ -525,35 +525,36 @@ func (b *BroadcastStorage) BroadcastAll(ctx context.Context, onlyEligible bool) 
 	return nil
 }
 
-// LockedAddresses returns all addresses currently active in transaction broadcasts.
+// LockedAccounts returns all *types.AccountIdentifier currently active in transaction broadcasts.
 // The caller SHOULD NOT broadcast a transaction from an account if it is
 // considered locked!
-func (b *BroadcastStorage) LockedAddresses(
+func (b *BroadcastStorage) LockedAccounts(
 	ctx context.Context,
 	dbTx DatabaseTransaction,
-) ([]string, error) {
+) ([]*types.AccountIdentifier, error) {
 	broadcasts, err := b.getAllBroadcasts(ctx, dbTx)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrBroadcastGetAllFailed, err)
 	}
 
-	addressMap := map[string]struct{}{}
+	// De-duplicate accounts present in broadcast storage.
+	accountMap := map[string]*types.AccountIdentifier{}
 	for _, broadcast := range broadcasts {
 		for _, op := range broadcast.Intent {
 			if op.Account == nil {
 				continue
 			}
 
-			addressMap[op.Account.Address] = struct{}{}
+			accountMap[types.Hash(op.Account)] = op.Account
 		}
 	}
 
-	addresses := []string{}
-	for k := range addressMap {
-		addresses = append(addresses, k)
+	accounts := []*types.AccountIdentifier{}
+	for _, v := range accountMap {
+		accounts = append(accounts, v)
 	}
 
-	return addresses, nil
+	return accounts, nil
 }
 
 // ClearBroadcasts deletes all in-progress broadcasts from BroadcastStorage. This
