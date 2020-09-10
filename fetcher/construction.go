@@ -220,7 +220,6 @@ func (f *Fetcher) ConstructionParse(
 		return nil, nil, nil, fetcherErr
 	}
 
-	response = types.PopulateConstructionParseResponse(response)
 	if err := f.Asserter.ConstructionParseResponse(response, signed); err != nil {
 		fetcherErr := &Error{
 			Err: fmt.Errorf("%w: /construction/parse %s", ErrAssertionFailed, err.Error()),
