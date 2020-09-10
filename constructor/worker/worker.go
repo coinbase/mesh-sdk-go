@@ -68,6 +68,8 @@ func (w *Worker) invokeWorker(
 		return RandomNumberWorker(input)
 	case job.Assert:
 		return "", AssertWorker(input)
+	case job.FindCurrencyAmount:
+		return FindCurrencyAmountWorker(input)
 	default:
 		return "", fmt.Errorf("%w: %s", ErrInvalidActionType, action)
 	}
@@ -638,4 +640,36 @@ func AssertWorker(rawInput string) error {
 	}
 
 	return nil
+}
+
+// FindCurrencyAmountWorker finds a *types.Amount with a specific
+// *types.Currency in a []*types.Amount.
+func FindCurrencyAmountWorker(rawInput string) (string, error) {
+	var input job.FindCurrencyAmountInput
+	err := job.UnmarshalInput([]byte(rawInput), &input)
+	if err != nil {
+		return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
+	}
+
+	if err := asserter.Currency(input.Currency); err != nil {
+		return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
+	}
+
+	if err := asserter.AssertUniqueAmounts(input.Amounts); err != nil {
+		return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
+	}
+
+	for _, amount := range input.Amounts {
+		if types.Hash(amount.Currency) != types.Hash(input.Currency) {
+			continue
+		}
+
+		return types.PrintStruct(amount), nil
+	}
+
+	return "", fmt.Errorf(
+		"%w: unable to find currency %s",
+		ErrActionFailed,
+		types.PrintStruct(input.Currency),
+	)
 }
