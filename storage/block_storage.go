@@ -131,7 +131,7 @@ func (b *BlockStorage) GetHeadBlockIdentifierTransactional(
 	}
 
 	var blockIdentifier types.BlockIdentifier
-	err = b.db.Compressor().Decode("", block, &blockIdentifier)
+	err = b.db.Compressor().Decode("", block, &blockIdentifier, true)
 	if err != nil {
 		return nil, err
 	}
@@ -201,7 +201,7 @@ func (b *BlockStorage) getBlockResponse(
 	}
 
 	var rosettaBlockResponse types.BlockResponse
-	err = b.db.Compressor().Decode(namespace, blockResponse, &rosettaBlockResponse)
+	err = b.db.Compressor().Decode(namespace, blockResponse, &rosettaBlockResponse, true)
 	if err != nil {
 		return nil, err
 	}
@@ -547,7 +547,7 @@ func (b *BlockStorage) storeTransaction(
 	if !exists {
 		blocks = make(map[string]*blockTransaction)
 	} else {
-		if err := b.db.Compressor().Decode(namespace, val, &blocks); err != nil {
+		if err := b.db.Compressor().Decode(namespace, val, &blocks, true); err != nil {
 			return fmt.Errorf("%w: could not decode transaction hash contents", err)
 		}
 
@@ -595,7 +595,7 @@ func (b *BlockStorage) removeTransaction(
 	}
 
 	var blocks map[string]*blockTransaction
-	if err := b.db.Compressor().Decode(namespace, val, &blocks); err != nil {
+	if err := b.db.Compressor().Decode(namespace, val, &blocks, true); err != nil {
 		return fmt.Errorf("%w: could not decode transaction hash contents", err)
 	}
 
@@ -639,7 +639,7 @@ func (b *BlockStorage) FindTransaction(
 	}
 
 	var blocks map[string]*blockTransaction
-	if err := b.db.Compressor().Decode(namespace, tx, &blocks); err != nil {
+	if err := b.db.Compressor().Decode(namespace, tx, &blocks, true); err != nil {
 		return nil, nil, fmt.Errorf("%w: unable to decode block data for transaction", err)
 	}
 
@@ -673,7 +673,7 @@ func (b *BlockStorage) findBlockTransaction(
 	}
 
 	var blocks map[string]*blockTransaction
-	if err := b.db.Compressor().Decode(namespace, tx, &blocks); err != nil {
+	if err := b.db.Compressor().Decode(namespace, tx, &blocks, true); err != nil {
 		return nil, fmt.Errorf("%w: unable to decode block data for transaction", err)
 	}
 

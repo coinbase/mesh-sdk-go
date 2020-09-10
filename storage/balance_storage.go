@@ -204,7 +204,7 @@ func (b *BalanceStorage) Reconciled(
 	}
 
 	var bal balanceEntry
-	if err := b.db.Compressor().Decode(namespace, balance, &bal); err != nil {
+	if err := b.db.Compressor().Decode(namespace, balance, &bal, true); err != nil {
 		return fmt.Errorf("%w: unable to decode balance entry", err)
 	}
 
@@ -281,7 +281,7 @@ func (b *BalanceStorage) UpdateBalance(
 		// This could happen if balances are bootstrapped and should not be
 		// overridden.
 		var bal balanceEntry
-		err := b.db.Compressor().Decode(namespace, balance, &bal)
+		err := b.db.Compressor().Decode(namespace, balance, &bal, true)
 		if err != nil {
 			return err
 		}
@@ -407,7 +407,7 @@ func (b *BalanceStorage) GetBalanceTransactional(
 	}
 
 	var popBal balanceEntry
-	err = b.db.Compressor().Decode(namespace, bal, &popBal)
+	err = b.db.Compressor().Decode(namespace, bal, &popBal, true)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -492,12 +492,13 @@ func (b *BalanceStorage) getAllBalanceEntries(
 	namespace := balanceNamespace
 	txn := b.db.NewDatabaseTransaction(ctx, false)
 	defer txn.Discard(ctx)
-	_, err := txn.LimitedMemoryScan(
+	_, err := txn.Scan(
 		ctx,
 		[]byte(namespace),
 		func(k []byte, v []byte) error {
 			var deserialBal balanceEntry
-			err := b.db.Compressor().Decode(namespace, v, &deserialBal)
+			// We should not reclaim memory during a scan!!
+			err := b.db.Compressor().Decode(namespace, v, &deserialBal, false)
 			if err != nil {
 				return fmt.Errorf(
 					"%w: unable to parse balance entry for %s",
