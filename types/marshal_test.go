@@ -199,3 +199,56 @@ func TestCustomConstructionDeriveResponse(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, &AccountIdentifier{Address: "hello2"}, s5.AccountIdentifier)
 }
+
+func TestCustomConstructionParseResponse(t *testing.T) {
+	s := &ConstructionParseResponse{
+		AccountIdentifierSigners: []*AccountIdentifier{
+			{
+				Address: "addr1",
+				SubAccount: &SubAccountIdentifier{
+					Address: "sub",
+				},
+			},
+			{
+				Address: "addr2",
+			},
+		},
+	}
+
+	j, err := json.Marshal(s)
+	assert.NoError(t, err)
+
+	// Address Check
+	simpleType := struct {
+		Signers []string `json:"signers"`
+	}{}
+
+	err = json.Unmarshal(j, &simpleType)
+	assert.NoError(t, err)
+
+	assert.Equal(t, []string{"addr1", "addr2"}, simpleType.Signers)
+
+	// Full Unmarshal Check
+	s2 := &ConstructionParseResponse{}
+	err = json.Unmarshal(j, s2)
+	assert.NoError(t, err)
+	assert.Equal(t, s, s2)
+
+	// Unmarshal fields
+	var s3 ConstructionParseResponse
+	err = json.Unmarshal([]byte(`{"signers":["hello"], "hex_bytes":"74657374"}`), &s3)
+	assert.NoError(t, err)
+	assert.Equal(t, []*AccountIdentifier{{Address: "hello"}}, s3.AccountIdentifierSigners)
+
+	// Unmarshal fields (empty address)
+	var s4 ConstructionParseResponse
+	err = json.Unmarshal([]byte(`{"hex_bytes":"74657374"}`), &s4)
+	assert.NoError(t, err)
+	assert.Nil(t, s4.AccountIdentifierSigners)
+
+	// Unmarshal fields (override)
+	var s5 ConstructionParseResponse
+	err = json.Unmarshal([]byte(`{"signers":["hello"], "account_identifier_signers":[{"address":"hello2"}], "hex_bytes":"74657374"}`), &s5)
+	assert.NoError(t, err)
+	assert.Equal(t, []*AccountIdentifier{{Address: "hello2"}}, s5.AccountIdentifierSigners)
+}
