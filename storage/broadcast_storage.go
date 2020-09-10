@@ -355,19 +355,24 @@ func (b *BroadcastStorage) getAllBroadcasts(
 	dbTx DatabaseTransaction,
 ) ([]*Broadcast, error) {
 	namespace := transactionBroadcastNamespace
-	rawBroadcasts, err := dbTx.Scan(ctx, []byte(namespace), false)
+	broadcasts := []*Broadcast{}
+	_, err := dbTx.Scan(
+		ctx,
+		[]byte(namespace),
+		func(k []byte, v []byte) error {
+			var broadcast Broadcast
+			// We should not reclaim memory during a scan!!
+			if err := b.db.Compressor().Decode(namespace, v, &broadcast, false); err != nil {
+				return fmt.Errorf("%w: %v", ErrBroadcastDecodeFailed, err)
+			}
+
+			broadcasts = append(broadcasts, &broadcast)
+			return nil
+		},
+		false,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrBroadcastScanFailed, err)
-	}
-
-	broadcasts := make([]*Broadcast, len(rawBroadcasts))
-	for i, rawBroadcast := range rawBroadcasts {
-		var broadcast Broadcast
-		if err := b.db.Compressor().Decode(namespace, rawBroadcast.Value, &broadcast); err != nil {
-			return nil, fmt.Errorf("%w: %v", ErrBroadcastDecodeFailed, err)
-		}
-
-		broadcasts[i] = &broadcast
 	}
 
 	return broadcasts, nil

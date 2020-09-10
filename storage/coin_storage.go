@@ -106,7 +106,7 @@ func (c *CoinStorage) getAndDecodeCoin(
 	}
 
 	var accountCoin AccountCoin
-	if err := c.db.Compressor().Decode(namespace, val, &accountCoin); err != nil {
+	if err := c.db.Compressor().Decode(namespace, val, &accountCoin, true); err != nil {
 		return false, nil, nil, fmt.Errorf("%w: %v", ErrCoinDecodeFailed, err)
 	}
 
@@ -188,16 +188,20 @@ func getAndDecodeCoins(
 	transaction DatabaseTransaction,
 	accountIdentifier *types.AccountIdentifier,
 ) (map[string]struct{}, error) {
-	items, err := transaction.Scan(ctx, getCoinAccountPrefix(accountIdentifier), false)
+	coins := map[string]struct{}{}
+	_, err := transaction.Scan(
+		ctx,
+		getCoinAccountPrefix(accountIdentifier),
+		func(k []byte, v []byte) error {
+			vals := strings.Split(string(k), "/")
+			coinIdentifier := vals[len(vals)-1]
+			coins[coinIdentifier] = struct{}{}
+			return nil
+		},
+		false,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrAccountCoinQueryFailed, err)
-	}
-
-	coins := map[string]struct{}{}
-	for _, item := range items {
-		vals := strings.Split(string(item.Key), "/")
-		coinIdentifier := vals[len(vals)-1]
-		coins[coinIdentifier] = struct{}{}
 	}
 
 	return coins, nil

@@ -64,14 +64,19 @@ func TestDatabase(t *testing.T) {
 
 	t.Run("Scan", func(t *testing.T) {
 		txn := database.NewDatabaseTransaction(ctx, true)
-		storedValues := []*ScanItem{}
+		type scanItem struct {
+			Key   []byte
+			Value []byte
+		}
+
+		storedValues := []*scanItem{}
 		for i := 0; i < 100; i++ {
 			k := []byte(fmt.Sprintf("test/%d", i))
 			v := []byte(fmt.Sprintf("%d", i))
 			err := txn.Set(ctx, k, v, true)
 			assert.NoError(t, err)
 
-			storedValues = append(storedValues, &ScanItem{
+			storedValues = append(storedValues, &scanItem{
 				Key:   k,
 				Value: v,
 			})
@@ -84,12 +89,8 @@ func TestDatabase(t *testing.T) {
 			assert.NoError(t, err)
 		}
 
-		values, err := txn.Scan(ctx, []byte("test/"), false)
-		assert.NoError(t, err)
-		assert.ElementsMatch(t, storedValues, values)
-
-		retrievedStoredValues := []*ScanItem{}
-		numValues, err := txn.LimitedMemoryScan(
+		retrievedStoredValues := []*scanItem{}
+		numValues, err := txn.Scan(
 			ctx,
 			[]byte("test/"),
 			func(k []byte, v []byte) error {
@@ -99,7 +100,7 @@ func TestDatabase(t *testing.T) {
 				copy(thisK, k)
 				copy(thisV, v)
 
-				retrievedStoredValues = append(retrievedStoredValues, &ScanItem{
+				retrievedStoredValues = append(retrievedStoredValues, &scanItem{
 					Key:   thisK,
 					Value: thisV,
 				})

@@ -115,7 +115,12 @@ func getDecoder(r io.Reader) *msgpack.Decoder {
 
 // Decode attempts to decompress the object and will use a dict if
 // one exists for the namespace.
-func (c *Compressor) Decode(namespace string, input []byte, object interface{}) error {
+func (c *Compressor) Decode(
+	namespace string,
+	input []byte,
+	object interface{},
+	reclaimInput bool,
+) error {
 	decompressed, err := c.DecodeRaw(namespace, input)
 	if err != nil {
 		return fmt.Errorf("%w: %v", ErrRawDecompressFailed, err)
@@ -126,6 +131,9 @@ func (c *Compressor) Decode(namespace string, input []byte, object interface{}) 
 	}
 
 	c.pool.PutByteSlice(decompressed)
+	if reclaimInput {
+		c.pool.PutByteSlice(input)
+	}
 	return nil
 }
 
