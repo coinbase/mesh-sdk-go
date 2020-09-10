@@ -9,9 +9,8 @@ require (
 	github.com/dgraph-io/badger/v2 v2.2007.1
 	github.com/dgraph-io/ristretto v0.0.3 // indirect
 	github.com/dgryski/go-farm v0.0.0-20200201041132-a6ae2369ad13 // indirect
-	github.com/ethereum/go-ethereum v1.9.20
+	github.com/ethereum/go-ethereum v1.9.21
 	github.com/fatih/color v1.9.0
-	github.com/golang/protobuf v1.4.2 // indirect
 	github.com/google/addlicense v0.0.0-20200827091314-d1655b921368 // indirect
 	github.com/google/go-cmp v0.5.2 // indirect
 	github.com/gorilla/mux v1.8.0
@@ -27,7 +26,6 @@ require (
 	github.com/vmihailenco/msgpack/v5 v5.0.0-beta.1
 	golang.org/x/crypto v0.0.0-20200728195943-123391ffb6de // indirect
 	golang.org/x/sync v0.0.0-20200625203802-6e8e738ad208
-	golang.org/x/sys v0.0.0-20200817155316-9781c653f443 // indirect
 	golang.org/x/tools v0.0.0-20200904185747-39188db58858 // indirect
 	golang.org/x/tools/gopls v0.4.4 // indirect
 	google.golang.org/protobuf v1.25.0 // indirect
