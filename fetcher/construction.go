@@ -58,7 +58,7 @@ func (f *Fetcher) ConstructionCombine(
 
 	if err := asserter.ConstructionCombineResponse(response); err != nil {
 		fetcherErr := &Error{
-			Err: fmt.Errorf("%w: /construction/combine %s", ErrAssertionFailed, err.Error()),
+			Err: fmt.Errorf("%w: /construction/combine", err),
 		}
 		return "", fetcherErr
 	}
@@ -101,7 +101,7 @@ func (f *Fetcher) ConstructionDerive(
 
 	if err := asserter.ConstructionDeriveResponse(response); err != nil {
 		fetcherErr := &Error{
-			Err: fmt.Errorf("%w: /construction/derive %s", ErrAssertionFailed, err.Error()),
+			Err: fmt.Errorf("%w: /construction/derive", err),
 		}
 		return nil, nil, fetcherErr
 	}
@@ -139,7 +139,7 @@ func (f *Fetcher) ConstructionHash(
 
 	if err := asserter.TransactionIdentifierResponse(response); err != nil {
 		fetcherErr := &Error{
-			Err: fmt.Errorf("%w: /construction/hash %s", ErrAssertionFailed, err.Error()),
+			Err: fmt.Errorf("%w: /construction/hash", err),
 		}
 		return nil, fetcherErr
 	}
@@ -179,7 +179,7 @@ func (f *Fetcher) ConstructionMetadata(
 
 	if err := asserter.ConstructionMetadataResponse(metadata); err != nil {
 		fetcherErr := &Error{
-			Err: fmt.Errorf("%w: /construction/metadata %s", ErrAssertionFailed, err.Error()),
+			Err: fmt.Errorf("%w: /construction/metadata", err),
 		}
 		return nil, fetcherErr
 	}
@@ -222,7 +222,7 @@ func (f *Fetcher) ConstructionParse(
 
 	if err := f.Asserter.ConstructionParseResponse(response, signed); err != nil {
 		fetcherErr := &Error{
-			Err: fmt.Errorf("%w: /construction/parse %s", ErrAssertionFailed, err.Error()),
+			Err: fmt.Errorf("%w: /construction/parse", err),
 		}
 		return nil, nil, nil, fetcherErr
 	}
@@ -274,7 +274,7 @@ func (f *Fetcher) ConstructionPayloads(
 
 	if err := asserter.ConstructionPayloadsResponse(response); err != nil {
 		fetcherErr := &Error{
-			Err: fmt.Errorf("%w: /construction/payloads %s", ErrAssertionFailed, err.Error()),
+			Err: fmt.Errorf("%w: /construction/payloads", err),
 		}
 		return "", nil, fetcherErr
 	}
@@ -320,7 +320,7 @@ func (f *Fetcher) ConstructionPreprocess(
 
 	if err := asserter.ConstructionPreprocessResponse(response); err != nil {
 		fetcherErr := &Error{
-			Err: fmt.Errorf("%w: /construction/preprocess %s", ErrAssertionFailed, err.Error()),
+			Err: fmt.Errorf("%w: /construction/preprocess", err),
 		}
 		return nil, nil, fetcherErr
 	}
@@ -359,7 +359,7 @@ func (f *Fetcher) ConstructionSubmit(
 
 	if err := asserter.TransactionIdentifierResponse(submitResponse); err != nil {
 		fetcherErr := &Error{
-			Err: fmt.Errorf("%w: /construction/submit %s", ErrAssertionFailed, err.Error()),
+			Err: fmt.Errorf("%w: /construction/submit", err),
 		}
 		return nil, nil, fetcherErr
 	}

@@ -115,7 +115,7 @@ func TestVersion(t *testing.T) {
 		},
 		"nil version": {
 			version: nil,
-			err:     errors.New("version is nil"),
+			err:     ErrVersionIsNil,
 		},
 		"invalid NodeVersion": {
 			version: &types.Version{

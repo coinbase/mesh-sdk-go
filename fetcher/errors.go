@@ -44,10 +44,6 @@ var (
 	// fails because it was attempted too many times.
 	ErrExhaustedRetries = errors.New("retries exhausted")
 
-	// ErrAssertionFailed is returned when a fetch succeeds
-	// but fails assertion.
-	ErrAssertionFailed = errors.New("assertion failed")
-
 	// ErrCouldNotAcquireSemaphore is returned when acquiring
 	// the connection semaphore returns an error.
 	ErrCouldNotAcquireSemaphore = errors.New("could not acquire semaphore")
