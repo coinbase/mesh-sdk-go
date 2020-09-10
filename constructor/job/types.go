@@ -59,9 +59,9 @@ const (
 	// GenerateKey creates a new *keys.KeyPair.
 	GenerateKey ActionType = "generate_key"
 
-	// SaveAddress saves a generated *keys.KeyPair
-	// and address to key storage.
-	SaveAddress ActionType = "save_address"
+	// SaveAccount saves a generated *keys.KeyPair
+	// and *types.AccountIdentifier to key storage.
+	SaveAccount ActionType = "save_account"
 
 	// Derive calls `/construction/derive` with a *keys.PublicKey.
 	Derive ActionType = "derive"
@@ -115,10 +115,10 @@ type GenerateKeyInput struct {
 	CurveType types.CurveType `json:"curve_type"`
 }
 
-// SaveAddressInput is the input for SaveAddress.
-type SaveAddressInput struct {
-	Address string        `json:"address"`
-	KeyPair *keys.KeyPair `json:"keypair"`
+// SaveAccountInput is the input for SaveAccount.
+type SaveAccountInput struct {
+	AccountIdentifier *types.AccountIdentifier `json:"account_identifier"`
+	KeyPair           *keys.KeyPair            `json:"keypair"`
 }
 
 // RandomStringInput is the input to RandomString.
@@ -151,22 +151,22 @@ type MathInput struct {
 
 // FindBalanceInput is the input to FindBalance.
 type FindBalanceInput struct {
-	// Address can be optionally provided to ensure the balance returned
+	// AccountIdentifier can be optionally provided to ensure the balance returned
 	// is for a particular address (this is used when fetching the balance
 	// of the same account in multiple currencies, when requesting funds,
 	// or when constructing a multi-input UTXO transfer with the
 	// same address).
-	Address string `json:"address,omitempty"`
+	AccountIdentifier *types.AccountIdentifier `json:"account_identifier,omitempty"`
 
-	// NotAddress can be populated to ensure a different
-	// address is found. This is useful when avoiding a
-	// self-transfer.
-	NotAddress []string `json:"not_address,omitempty"`
-
-	// SubAccount can be used to find addresses with particular
+	// SubAccountIdentifier can be used to find addresses with particular
 	// SubAccount balances. This is particularly useful for
 	// orchestrating staking transactions.
-	SubAccount *types.SubAccountIdentifier `json:"sub_account,omitempty"`
+	SubAccountIdentifier *types.SubAccountIdentifier `json:"sub_account_identifier,omitempty"`
+
+	// NotAccountIdentifier can be populated to ensure a different
+	// address is found. This is useful when avoiding a
+	// self-transfer.
+	NotAccountIdentifier []*types.AccountIdentifier `json:"not_account_identifier,omitempty"`
 
 	// MinimumBalance is the minimum required balance that must be found.
 	MinimumBalance *types.Amount `json:"minimum_balance,omitempty"`
@@ -193,9 +193,9 @@ type FindBalanceInput struct {
 
 // FindBalanceOutput is returned by FindBalance.
 type FindBalanceOutput struct {
-	// Account is the account associated with the balance
+	// AccountIdentifier is the account associated with the balance
 	// (and coin).
-	Account *types.AccountIdentifier `json:"account"`
+	AccountIdentifier *types.AccountIdentifier `json:"account_identifier"`
 
 	// Balance found at a particular currency.
 	Balance *types.Amount `json:"balance"`
