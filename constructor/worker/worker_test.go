@@ -991,15 +991,15 @@ func TestJob_ComplicatedTransfer(t *testing.T) {
 			{
 				Type:       job.Derive,
 				Input:      `{"network_identifier": {{network}}, "public_key": {{key.public_key}}}`,
-				OutputPath: "address",
+				OutputPath: "account",
 			},
 			{
-				Type:  job.SaveAddress,
-				Input: `{"address": {{address.address}}, "keypair": {{key.public_key}}}`,
+				Type:  job.SaveAccount,
+				Input: `{"account_identifier": {{account.account_identifier}}, "keypair": {{key.public_key}}}`,
 			},
 			{
 				Type:  job.PrintMessage,
-				Input: `{{address.address}}`,
+				Input: `{{account.account_identifier}}`,
 			},
 		},
 	}
@@ -1014,7 +1014,7 @@ func TestJob_ComplicatedTransfer(t *testing.T) {
 			},
 			{
 				Type:       job.SetVariable,
-				Input:      `[{"operation_identifier":{"index":0},"type":"","status":"","account":{"address":{{address.address}}},"amount":{"value":"-90","currency":{"symbol":"BTC","decimals":8}}},{"operation_identifier":{"index":1},"type":"","status":"","account":{"address":{{random_address}}},"amount":{"value":"100","currency":{"symbol":"BTC","decimals":8}}}]`, // nolint
+				Input:      `[{"operation_identifier":{"index":0},"type":"","status":"","account":{{account}},"amount":{"value":"-90","currency":{"symbol":"BTC","decimals":8}}},{"operation_identifier":{"index":1},"type":"","status":"","account":{"address":{{random_address}}},"amount":{"value":"100","currency":{"symbol":"BTC","decimals":8}}}]`, // nolint
 				OutputPath: "create_send.operations",
 			},
 			{
@@ -1078,7 +1078,7 @@ func TestJob_ComplicatedTransfer(t *testing.T) {
 		Blockchain: "Bitcoin",
 		Network:    "Testnet3",
 	}
-	address := "test"
+	account := &types.AccountIdentifier{Address: "test"}
 	mockHelper.On(
 		"Derive",
 		ctx,
@@ -1086,7 +1086,7 @@ func TestJob_ComplicatedTransfer(t *testing.T) {
 		mock.Anything,
 		(map[string]interface{})(nil),
 	).Return(
-		address,
+		account,
 		nil,
 		nil,
 	).Once()
@@ -1094,7 +1094,7 @@ func TestJob_ComplicatedTransfer(t *testing.T) {
 		"StoreKey",
 		ctx,
 		dbTx,
-		address,
+		account,
 		mock.Anything,
 	).Return(
 		nil,
@@ -1112,7 +1112,7 @@ func TestJob_ComplicatedTransfer(t *testing.T) {
 
 	assertVariableEquality(t, j.State, "network", network)
 	assertVariableEquality(t, j.State, "key.public_key.curve_type", types.Secp256k1)
-	assertVariableEquality(t, j.State, "address.address", address)
+	assertVariableEquality(t, j.State, "account.account_identifier", account)
 
 	b, err = worker.Process(ctx, dbTx, j)
 	assert.NoError(t, err)
@@ -1130,9 +1130,7 @@ func TestJob_ComplicatedTransfer(t *testing.T) {
 				OperationIdentifier: &types.OperationIdentifier{
 					Index: 0,
 				},
-				Account: &types.AccountIdentifier{
-					Address: "test",
-				},
+				Account: account,
 				Amount: &types.Amount{
 					Value: "-90",
 					Currency: &types.Currency{
@@ -1165,7 +1163,7 @@ func TestJob_ComplicatedTransfer(t *testing.T) {
 
 	assertVariableEquality(t, j.State, "network", network)
 	assertVariableEquality(t, j.State, "key.public_key.curve_type", types.Secp256k1)
-	assertVariableEquality(t, j.State, "address.address", address)
+	assertVariableEquality(t, j.State, "account.account_identifier", account)
 
 	mockHelper.AssertExpectations(t)
 }
@@ -1253,7 +1251,7 @@ func TestJob_Failures(t *testing.T) {
 				Name: "create_address",
 				Actions: []*job.Action{
 					{
-						Type:  job.SaveAddress,
+						Type:  job.SaveAccount,
 						Input: `{}`,
 					},
 				},
