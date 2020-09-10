@@ -194,15 +194,6 @@ func TestConstructionDeriveResponse(t *testing.T) {
 	}{
 		"valid response": {
 			response: &types.ConstructionDeriveResponse{
-				Address: pointerString("addr"),
-				Metadata: map[string]interface{}{
-					"name": "hello",
-				},
-			},
-			err: nil,
-		},
-		"valid response 2": {
-			response: &types.ConstructionDeriveResponse{
 				AccountIdentifier: &types.AccountIdentifier{
 					Address: "addr",
 				},
@@ -211,33 +202,12 @@ func TestConstructionDeriveResponse(t *testing.T) {
 				},
 			},
 			err: nil,
-		},
-		"mismatch": {
-			response: &types.ConstructionDeriveResponse{
-				Address: pointerString("addr2"),
-				AccountIdentifier: &types.AccountIdentifier{
-					Address: "addr",
-				},
-				Metadata: map[string]interface{}{
-					"name": "hello",
-				},
-			},
-			err: ErrConstructionDeriveResponseAddrMismatch,
 		},
 		"nil response": {
 			err: ErrConstructionDeriveResponseIsNil,
 		},
 		"empty address": {
 			response: &types.ConstructionDeriveResponse{
-				Metadata: map[string]interface{}{
-					"name": "hello",
-				},
-			},
-			err: ErrConstructionDeriveResponseAddrEmpty,
-		},
-		"empty address 2": {
-			response: &types.ConstructionDeriveResponse{
-				Address: pointerString(""),
 				Metadata: map[string]interface{}{
 					"name": "hello",
 				},

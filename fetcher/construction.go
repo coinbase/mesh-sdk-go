@@ -99,7 +99,6 @@ func (f *Fetcher) ConstructionDerive(
 		return nil, nil, fetcherErr
 	}
 
-	response = types.PopulateConstructionDeriveResponse(response)
 	if err := asserter.ConstructionDeriveResponse(response); err != nil {
 		fetcherErr := &Error{
 			Err: fmt.Errorf("%w: /construction/derive %s", ErrAssertionFailed, err.Error()),

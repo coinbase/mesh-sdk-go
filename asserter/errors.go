@@ -169,11 +169,8 @@ var (
 	ErrConstructionDeriveResponseIsNil = errors.New(
 		"construction derive response cannot be nil",
 	)
-	ErrConstructionDeriveResponseAddrEmpty    = errors.New("address cannot be empty")
-	ErrConstructionDeriveResponseAddrMismatch = errors.New(
-		"construction derive address mismatch",
-	)
-	ErrConstructionParseResponseIsNil = errors.New(
+	ErrConstructionDeriveResponseAddrEmpty = errors.New("address cannot be empty")
+	ErrConstructionParseResponseIsNil      = errors.New(
 		"construction parse response cannot be nil",
 	)
 	ErrConstructionParseResponseOperationsEmpty        = errors.New("operations cannot be empty")
@@ -220,7 +217,6 @@ var (
 		ErrSignedTxEmpty,
 		ErrConstructionDeriveResponseIsNil,
 		ErrConstructionDeriveResponseAddrEmpty,
-		ErrConstructionDeriveResponseAddrMismatch,
 		ErrConstructionParseResponseIsNil,
 		ErrConstructionParseResponseOperationsEmpty,
 		ErrConstructionParseResponseSignersEmptyOnSignedTx,

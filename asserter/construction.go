@@ -102,29 +102,8 @@ func ConstructionDeriveResponse(
 		return ErrConstructionDeriveResponseIsNil
 	}
 
-	if response.Address == nil && response.AccountIdentifier == nil {
-		return ErrConstructionDeriveResponseAddrEmpty
-	}
-
-	if response.Address != nil && len(*response.Address) == 0 {
-		return ErrConstructionDeriveResponseAddrEmpty
-	}
-
-	if response.AccountIdentifier != nil {
-		if err := AccountIdentifier(response.AccountIdentifier); err != nil {
-			return fmt.Errorf("%w: %s", ErrConstructionDeriveResponseAddrEmpty, err.Error())
-		}
-	}
-
-	if response.Address != nil && response.AccountIdentifier != nil {
-		if *response.Address != response.AccountIdentifier.Address {
-			return fmt.Errorf(
-				"%w: %s != %s",
-				ErrConstructionDeriveResponseAddrMismatch,
-				*response.Address,
-				response.AccountIdentifier.Address,
-			)
-		}
+	if err := AccountIdentifier(response.AccountIdentifier); err != nil {
+		return fmt.Errorf("%w: %s", ErrConstructionDeriveResponseAddrEmpty, err.Error())
 	}
 
 	return nil
