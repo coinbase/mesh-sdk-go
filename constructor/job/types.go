@@ -111,6 +111,12 @@ const (
 	// in an array of []*types.Amount. This is typically used when parsing
 	// the suggested fee response from /construction/metadata.
 	FindCurrencyAmount ActionType = "find_currency_amount"
+
+	// Assert ensures that a provided number is >= 0 and causes
+	// execution to exit if this is not true. This is useful when
+	// ensuring that an account has sufficient balance to pay the
+	// suggested fee to broadcast a transaction.
+	Assert ActionType = "assert"
 )
 
 // Action is a step of computation that
