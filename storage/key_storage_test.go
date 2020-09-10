@@ -51,61 +51,78 @@ func TestKeyStorage(t *testing.T) {
 	assert.NoError(t, err)
 
 	t.Run("get non-existent key", func(t *testing.T) {
-		v, err := k.Get(ctx, "blah")
+		v, err := k.Get(ctx, &types.AccountIdentifier{Address: "blah"})
 		assert.Error(t, err)
 		assert.Nil(t, v)
 
-		addrs, err := k.GetAllAddresses(ctx)
+		accounts, err := k.GetAllAccounts(ctx)
 		assert.NoError(t, err)
-		assert.Len(t, addrs, 0)
+		assert.Len(t, accounts, 0)
 	})
 
 	t.Run("store and get key", func(t *testing.T) {
-		err = k.Store(ctx, "addr1", kp1)
+		err = k.Store(ctx, &types.AccountIdentifier{Address: "addr1"}, kp1)
 		assert.NoError(t, err)
 
-		v, err := k.Get(ctx, "addr1")
+		v, err := k.Get(ctx, &types.AccountIdentifier{Address: "addr1"})
 		assert.NoError(t, err)
 		assert.Equal(t, kp1, v)
 
-		addrs, err := k.GetAllAddresses(ctx)
+		// ensure account with subaccount is not accessible
+		v, err = k.Get(ctx, &types.AccountIdentifier{
+			Address: "addr1",
+			SubAccount: &types.SubAccountIdentifier{
+				Address: "blah",
+			},
+		})
+		assert.Error(t, err)
+		assert.Nil(t, v)
+
+		accounts, err := k.GetAllAccounts(ctx)
 		assert.NoError(t, err)
-		assert.Equal(t, []string{"addr1"}, addrs)
+		assert.Equal(t, []*types.AccountIdentifier{
+			{
+				Address: "addr1",
+			},
+		}, accounts)
 	})
 
 	t.Run("attempt overwrite", func(t *testing.T) {
-		err = k.Store(ctx, "addr1", kp2)
+		err = k.Store(ctx, &types.AccountIdentifier{Address: "addr1"}, kp2)
 		assert.Error(t, err)
 
-		v, err := k.Get(ctx, "addr1")
+		v, err := k.Get(ctx, &types.AccountIdentifier{Address: "addr1"})
 		assert.NoError(t, err)
 		assert.Equal(t, kp1, v)
 	})
 
 	t.Run("store and get another key", func(t *testing.T) {
-		err = k.Store(ctx, "addr2", kp2)
+		err = k.Store(ctx, &types.AccountIdentifier{Address: "addr2"}, kp2)
 		assert.NoError(t, err)
 
-		v, err := k.Get(ctx, "addr2")
+		v, err := k.Get(ctx, &types.AccountIdentifier{Address: "addr2"})
 		assert.NoError(t, err)
 		assert.Equal(t, kp2, v)
 
-		addrs, err := k.GetAllAddresses(ctx)
+		accounts, err := k.GetAllAccounts(ctx)
 		assert.NoError(t, err)
-		assert.Equal(t, []string{"addr1", "addr2"}, addrs)
+		assert.ElementsMatch(t, []*types.AccountIdentifier{
+			{Address: "addr1"},
+			{Address: "addr2"},
+		}, accounts)
 	})
 
 	t.Run("sign payloads", func(t *testing.T) {
 		payloads := []*types.SigningPayload{
 			{
-				Address:       "addr1",
-				Bytes:         hash("msg1"),
-				SignatureType: types.Ed25519,
+				AccountIdentifier: &types.AccountIdentifier{Address: "addr1"},
+				Bytes:             hash("msg1"),
+				SignatureType:     types.Ed25519,
 			},
 			{
-				Address:       "addr2",
-				Bytes:         hash("msg2"),
-				SignatureType: types.Ecdsa,
+				AccountIdentifier: &types.AccountIdentifier{Address: "addr2"},
+				Bytes:             hash("msg2"),
+				SignatureType:     types.Ecdsa,
 			},
 		}
 
@@ -119,9 +136,9 @@ func TestKeyStorage(t *testing.T) {
 	t.Run("missing address in sign", func(t *testing.T) {
 		payloads := []*types.SigningPayload{
 			{
-				Address:       "addr3",
-				Bytes:         hash("msg3"),
-				SignatureType: types.Ed25519,
+				AccountIdentifier: &types.AccountIdentifier{Address: "addr3"},
+				Bytes:             hash("msg3"),
+				SignatureType:     types.Ed25519,
 			},
 		}
 
@@ -133,8 +150,8 @@ func TestKeyStorage(t *testing.T) {
 	t.Run("missing signature type in sign", func(t *testing.T) {
 		payloads := []*types.SigningPayload{
 			{
-				Address: "addr1",
-				Bytes:   hash("msg1"),
+				AccountIdentifier: &types.AccountIdentifier{Address: "addr1"},
+				Bytes:             hash("msg1"),
 			},
 		}
 
@@ -144,32 +161,33 @@ func TestKeyStorage(t *testing.T) {
 	})
 
 	t.Run("imports accounts", func(t *testing.T) {
-		addresses, err := k.GetAllAddresses(ctx)
+		accounts, err := k.GetAllAccounts(ctx)
 		assert.NoError(t, err)
-		startingLen := len(addresses)
+		startingLen := len(accounts)
 
 		prefundedAccs := []*PrefundedAccount{
 			{
 				PrivateKeyHex: "0e842a16b2d39a4dff5c63688513cb2109e30c3c30bc4eb502cc54f4614493f6",
-				Address:       "add1",
+				Account:       &types.AccountIdentifier{Address: "add1"},
 				CurveType:     types.Edwards25519,
 			},
 			{
 				PrivateKeyHex: "42efc44bdf7b2d4d45ddd6ddb727ed498c91e7070914c9ed0d80af680ff42b3e",
-				Address:       "add2",
+				Account:       &types.AccountIdentifier{Address: "add2"},
 				CurveType:     types.Edwards25519,
 			},
 			{
 				PrivateKeyHex: "01ea48249742650907004331e85536f868e2d3959434ba751d8aa230138a9707",
-				Address:       "add3",
+				Account:       &types.AccountIdentifier{Address: "add3"},
 				CurveType:     types.Edwards25519,
 			},
 		}
 
 		err = k.ImportAccounts(ctx, prefundedAccs)
 		assert.NoError(t, err)
-		addresses, _ = k.GetAllAddresses(ctx)
-		endLen := len(addresses)
+		accounts, err = k.GetAllAccounts(ctx)
+		assert.NoError(t, err)
+		endLen := len(accounts)
 		assert.Equal(t, endLen, startingLen+len(prefundedAccs))
 	})
 
@@ -177,7 +195,7 @@ func TestKeyStorage(t *testing.T) {
 		prefundedAccs := []*PrefundedAccount{
 			{
 				PrivateKeyHex: "17d08f5fe8c77af811caa0c9a187e668ce3b74a99acc3f6d976f075fa8e0be55",
-				Address:       "badadd",
+				Account:       &types.AccountIdentifier{Address: "badadd"},
 				CurveType:     types.Edwards25519,
 			},
 		}
@@ -185,14 +203,16 @@ func TestKeyStorage(t *testing.T) {
 		// No error when importing key for the first time
 		err = k.ImportAccounts(ctx, prefundedAccs)
 		assert.NoError(t, err)
-		addresses, _ := k.GetAllAddresses(ctx)
-		startingLen := len(addresses)
+		accounts, err := k.GetAllAccounts(ctx)
+		assert.NoError(t, err)
+		startingLen := len(accounts)
 
 		// No error when trying to import the key again
 		err = k.ImportAccounts(ctx, prefundedAccs)
 		assert.NoError(t, err)
-		addresses, _ = k.GetAllAddresses(ctx)
-		endLen := len(addresses)
+		accounts, err = k.GetAllAccounts(ctx)
+		assert.NoError(t, err)
+		endLen := len(accounts)
 
 		assert.Equal(t, endLen, startingLen)
 	})
