@@ -365,8 +365,9 @@ func (s *Syncer) addBlockIndices(
 	// try to create a new goroutine after Wait has returned.
 	// This will cause a panic.
 	s.doneLoadingLock.Lock()
+	defer s.doneLoadingLock.Unlock()
 	s.doneLoading = true
-	s.doneLoadingLock.Unlock()
+
 	return nil
 }
 
