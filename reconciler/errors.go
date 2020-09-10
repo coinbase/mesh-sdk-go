@@ -1,0 +1,62 @@
+// Copyright 2020 Coinbase, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package reconciler
+
+import (
+	"errors"
+
+	utils "github.com/coinbase/rosetta-sdk-go/errors"
+)
+
+// Named error types for Reconciler errors
+var (
+	// ErrHeadBlockBehindLive is returned when the processed
+	// head is behind the live head. Sometimes, it is
+	// preferable to sleep and wait to catch up when
+	// we are close to the live head (waitToCheckDiff).
+	ErrHeadBlockBehindLive = errors.New("head block behind")
+
+	// ErrAccountUpdated is returned when the
+	// account was updated at a height later than
+	// the live height (when the account balance was fetched).
+	ErrAccountUpdated = errors.New("account updated")
+
+	// ErrBlockGone is returned when the processed block
+	// head is greater than the live head but the block
+	// does not exist in the store. This likely means
+	// that the block was orphaned.
+	ErrBlockGone = errors.New("block gone")
+
+	ErrGetCurrentBlockFailed    = errors.New("unable to get current block for reconciliation")
+	ErrBlockExistsFailed        = errors.New("unable to check if block exists")
+	ErrGetComputedBalanceFailed = errors.New("unable to get computed balance")
+	ErrLiveBalanceLookupFailed  = errors.New("unable to lookup live balance")
+)
+
+// ErrReconciler takes an error as an argument and returns
+// whether or not the error is one thrown by the keys package
+func ErrReconciler(err error) bool {
+	reconcilerErrors := []error{
+		ErrHeadBlockBehindLive,
+		ErrAccountUpdated,
+		ErrBlockGone,
+		ErrGetCurrentBlockFailed,
+		ErrBlockExistsFailed,
+		ErrGetComputedBalanceFailed,
+		ErrLiveBalanceLookupFailed,
+	}
+
+	return utils.FindError(reconcilerErrors, err)
+}
