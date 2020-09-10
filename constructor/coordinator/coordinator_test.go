@@ -98,7 +98,7 @@ func TestProcess(t *testing.T) {
 					Actions: []*job.Action{
 						{
 							Type:       job.FindBalance,
-							Input:      `{"address": {{random_address.account.address}}, "minimum_balance":{"value": "100", "currency": {{currency}}}}`, // nolint
+							Input:      `{"account_identifier": {{random_address.account_identifier}}, "minimum_balance":{"value": "100", "currency": {{currency}}}}`, // nolint
 							OutputPath: "loaded_address",
 						},
 					},
@@ -125,11 +125,11 @@ func TestProcess(t *testing.T) {
 						{
 							Type:       job.Derive,
 							Input:      `{"network_identifier": {{network}}, "public_key": {{key.public_key}}}`,
-							OutputPath: "address",
+							OutputPath: "account",
 						},
 						{
-							Type:  job.SaveAddress,
-							Input: `{"address": {{address.address}}, "keypair": {{key.public_key}}}`,
+							Type:  job.SaveAccount,
+							Input: `{"account_identifier": {{account.account_identifier}}, "keypair": {{key.public_key}}}`,
 						},
 					},
 				},
@@ -164,7 +164,7 @@ func TestProcess(t *testing.T) {
 						},
 						{
 							Type:       job.FindBalance,
-							Input:      `{"not_address":[{{sender.account.address}}], "minimum_balance":{"value": "0", "currency": {{currency}}}, "create_limit": 100}`, // nolint
+							Input:      `{"not_account_identifier":[{{sender.account_identifier}}], "minimum_balance":{"value": "0", "currency": {{currency}}}, "create_limit": 100}`, // nolint
 							OutputPath: "recipient",
 						},
 						{
@@ -184,7 +184,7 @@ func TestProcess(t *testing.T) {
 						},
 						{
 							Type:       job.SetVariable,
-							Input:      `[{"operation_identifier":{"index":0},"type":"Vin","status":"","account":{"address":{{sender.account.address}}},"amount":{"value":{{sender_amount}},"currency":{{currency}}}},{"operation_identifier":{"index":1},"type":"Vout","status":"","account":{"address":{{recipient.account.address}}},"amount":{"value":{{recipient_amount}},"currency":{{currency}}}}]`, // nolint
+							Input:      `[{"operation_identifier":{"index":0},"type":"Vin","status":"","account":{{sender.account_identifier}},"amount":{"value":{{sender_amount}},"currency":{{currency}}}},{"operation_identifier":{"index":1},"type":"Vout","status":"","account":{{recipient.account_identifier}},"amount":{"value":{{recipient_amount}},"currency":{{currency}}}}]`, // nolint
 							OutputPath: "transfer.operations",
 						},
 					},
@@ -235,7 +235,7 @@ func TestProcess(t *testing.T) {
 	helper.On("DatabaseTransaction", ctx).Return(dbTxFail).Once()
 	jobStorage.On("Ready", ctx, dbTxFail).Return([]*job.Job{}, nil).Once()
 	jobStorage.On("Processing", ctx, dbTxFail, "transfer").Return([]*job.Job{}, nil).Once()
-	helper.On("AllAddresses", ctx, dbTxFail).Return([]string{}, nil).Once()
+	helper.On("AllAccounts", ctx, dbTxFail).Return([]*types.AccountIdentifier{}, nil).Once()
 
 	// Start processor
 	go func() {
@@ -262,12 +262,16 @@ func TestProcess(t *testing.T) {
 		},
 		mock.Anything,
 		(map[string]interface{})(nil),
-	).Return("address1", nil, nil).Once()
+	).Return(
+		&types.AccountIdentifier{Address: "address1"},
+		nil,
+		nil,
+	).Once()
 	helper.On(
 		"StoreKey",
 		ctx,
 		dbTx,
-		"address1",
+		&types.AccountIdentifier{Address: "address1"},
 		mock.Anything,
 	).Return(nil).Once()
 	jobStorage.On("Update", ctx, dbTx, mock.Anything).Return("job1", nil).Once()
@@ -279,8 +283,10 @@ func TestProcess(t *testing.T) {
 	helper.On("DatabaseTransaction", ctx).Return(dbTxFail2).Once()
 	jobStorage.On("Ready", ctx, dbTxFail2).Return([]*job.Job{}, nil).Once()
 	jobStorage.On("Processing", ctx, dbTxFail2, "transfer").Return([]*job.Job{}, nil).Once()
-	helper.On("AllAddresses", ctx, dbTxFail2).Return([]string{"address1"}, nil).Once()
-	helper.On("LockedAddresses", ctx, dbTxFail2).Return([]string{}, nil).Once()
+	helper.On("AllAccounts", ctx, dbTxFail2).Return([]*types.AccountIdentifier{
+		{Address: "address1"},
+	}, nil).Once()
+	helper.On("LockedAccounts", ctx, dbTxFail2).Return([]*types.AccountIdentifier{}, nil).Once()
 	helper.On(
 		"Balance",
 		ctx,
@@ -309,8 +315,10 @@ func TestProcess(t *testing.T) {
 	jobStorage.On("Ready", ctx, dbTx2).Return([]*job.Job{}, nil).Once()
 	jobStorage.On("Broadcasting", ctx, dbTx2).Return([]*job.Job{}, nil).Once()
 	jobStorage.On("Processing", ctx, dbTx2, "request_funds").Return([]*job.Job{}, nil).Once()
-	helper.On("AllAddresses", ctx, dbTx2).Return([]string{"address1"}, nil).Once()
-	helper.On("LockedAddresses", ctx, dbTx2).Return([]string{}, nil).Once()
+	helper.On("AllAccounts", ctx, dbTx2).Return([]*types.AccountIdentifier{
+		{Address: "address1"},
+	}, nil).Once()
+	helper.On("LockedAccounts", ctx, dbTx2).Return([]*types.AccountIdentifier{}, nil).Once()
 	helper.On(
 		"Balance",
 		ctx,
@@ -352,8 +360,10 @@ func TestProcess(t *testing.T) {
 	dbTxExtra := db.NewDatabaseTransaction(ctx, false)
 	helper.On("DatabaseTransaction", ctx).Return(dbTxExtra).Once()
 	jobStorage.On("Ready", ctx, dbTxExtra).Return([]*job.Job{&jobExtra}, nil).Once()
-	helper.On("AllAddresses", ctx, dbTxExtra).Return([]string{"address1"}, nil).Once()
-	helper.On("LockedAddresses", ctx, dbTxExtra).Return([]string{}, nil).Once()
+	helper.On("AllAccounts", ctx, dbTxExtra).Return([]*types.AccountIdentifier{
+		{Address: "address1"},
+	}, nil).Once()
+	helper.On("LockedAccounts", ctx, dbTxExtra).Return([]*types.AccountIdentifier{}, nil).Once()
 	helper.On(
 		"Balance",
 		ctx,
@@ -384,8 +394,10 @@ func TestProcess(t *testing.T) {
 	helper.On("DatabaseTransaction", ctx).Return(dbTxFail3).Once()
 	jobStorage.On("Ready", ctx, dbTxFail3).Return([]*job.Job{}, nil).Once()
 	jobStorage.On("Processing", ctx, dbTxFail3, "transfer").Return([]*job.Job{}, nil).Once()
-	helper.On("AllAddresses", ctx, dbTxFail3).Return([]string{"address1"}, nil).Once()
-	helper.On("LockedAddresses", ctx, dbTxFail3).Return([]string{}, nil).Once()
+	helper.On("AllAccounts", ctx, dbTxFail3).Return([]*types.AccountIdentifier{
+		{Address: "address1"},
+	}, nil).Once()
+	helper.On("LockedAccounts", ctx, dbTxFail3).Return([]*types.AccountIdentifier{}, nil).Once()
 	helper.On(
 		"Balance",
 		ctx,
@@ -405,8 +417,10 @@ func TestProcess(t *testing.T) {
 		},
 		nil,
 	).Once()
-	helper.On("AllAddresses", ctx, dbTxFail3).Return([]string{"address1"}, nil).Once()
-	helper.On("LockedAddresses", ctx, dbTxFail3).Return([]string{}, nil).Once()
+	helper.On("AllAccounts", ctx, dbTxFail3).Return([]*types.AccountIdentifier{
+		{Address: "address1"},
+	}, nil).Once()
+	helper.On("LockedAccounts", ctx, dbTxFail3).Return([]*types.AccountIdentifier{}, nil).Once()
 
 	// Attempt to create recipient
 	helper.On("HeadBlockExists", ctx).Return(true).Once()
@@ -424,12 +438,16 @@ func TestProcess(t *testing.T) {
 		},
 		mock.Anything,
 		(map[string]interface{})(nil),
-	).Return("address2", nil, nil).Once()
+	).Return(
+		&types.AccountIdentifier{Address: "address2"},
+		nil,
+		nil,
+	).Once()
 	helper.On(
 		"StoreKey",
 		ctx,
 		dbTx3,
-		"address2",
+		&types.AccountIdentifier{Address: "address2"},
 		mock.Anything,
 	).Return(nil).Once()
 	jobStorage.On("Update", ctx, dbTx3, mock.Anything).Return("job3", nil).Once()
@@ -441,8 +459,11 @@ func TestProcess(t *testing.T) {
 	helper.On("DatabaseTransaction", ctx).Return(dbTx4).Once()
 	jobStorage.On("Ready", ctx, dbTx4).Return([]*job.Job{}, nil).Once()
 	jobStorage.On("Processing", ctx, dbTx4, "transfer").Return([]*job.Job{}, nil).Once()
-	helper.On("AllAddresses", ctx, dbTx4).Return([]string{"address1", "address2"}, nil).Once()
-	helper.On("LockedAddresses", ctx, dbTx4).Return([]string{}, nil).Once()
+	helper.On("AllAccounts", ctx, dbTx4).Return([]*types.AccountIdentifier{
+		{Address: "address1"},
+		{Address: "address2"},
+	}, nil).Once()
+	helper.On("LockedAccounts", ctx, dbTx4).Return([]*types.AccountIdentifier{}, nil).Once()
 	helper.On(
 		"Balance",
 		ctx,
@@ -462,8 +483,11 @@ func TestProcess(t *testing.T) {
 		},
 		nil,
 	).Once()
-	helper.On("AllAddresses", ctx, dbTx4).Return([]string{"address1", "address2"}, nil).Once()
-	helper.On("LockedAddresses", ctx, dbTx4).Return([]string{}, nil).Once()
+	helper.On("AllAccounts", ctx, dbTx4).Return([]*types.AccountIdentifier{
+		{Address: "address1"},
+		{Address: "address2"},
+	}, nil).Once()
+	helper.On("LockedAccounts", ctx, dbTx4).Return([]*types.AccountIdentifier{}, nil).Once()
 	helper.On(
 		"Balance",
 		ctx,
@@ -562,9 +586,9 @@ func TestProcess(t *testing.T) {
 	unsignedTx := "unsigned transaction"
 	signingPayloads := []*types.SigningPayload{
 		{
-			Address:       "address1",
-			Bytes:         []byte("blah"),
-			SignatureType: types.Ecdsa,
+			AccountIdentifier: &types.AccountIdentifier{Address: "address1"},
+			Bytes:             []byte("blah"),
+			SignatureType:     types.Ecdsa,
 		},
 	}
 	helper.On(
@@ -581,7 +605,7 @@ func TestProcess(t *testing.T) {
 		network,
 		false,
 		unsignedTx,
-	).Return(ops, []string{}, nil, nil).Once()
+	).Return(ops, []*types.AccountIdentifier{}, nil, nil).Once()
 	signatures := []*types.Signature{
 		{
 			SigningPayload: signingPayloads[0],
@@ -612,7 +636,12 @@ func TestProcess(t *testing.T) {
 		network,
 		true,
 		networkTx,
-	).Return(ops, []string{"address1"}, nil, nil).Once()
+	).Return(
+		ops,
+		[]*types.AccountIdentifier{{Address: "address1"}},
+		nil,
+		nil,
+	).Once()
 	txIdentifier := &types.TransactionIdentifier{Hash: "transaction hash"}
 	helper.On(
 		"Hash",
@@ -773,7 +802,7 @@ func TestProcess_Failed(t *testing.T) {
 						},
 						{
 							Type:       job.FindBalance,
-							Input:      `{"not_address":[{{sender.account.address}}], "minimum_balance":{"value": "0", "currency": {{currency}}}, "create_limit": 100}`, // nolint
+							Input:      `{"not_account_identifier":[{{sender.account_identifier}}], "minimum_balance":{"value": "0", "currency": {{currency}}}, "create_limit": 100}`, // nolint
 							OutputPath: "recipient",
 						},
 						{
@@ -793,7 +822,7 @@ func TestProcess_Failed(t *testing.T) {
 						},
 						{
 							Type:       job.SetVariable,
-							Input:      `[{"operation_identifier":{"index":0},"type":"Vin","status":"","account":{"address":{{sender.account.address}}},"amount":{"value":{{sender_amount}},"currency":{{currency}}}},{"operation_identifier":{"index":1},"type":"Vout","status":"","account":{"address":{{recipient.account.address}}},"amount":{"value":{{recipient_amount}},"currency":{{currency}}}}]`, // nolint
+							Input:      `[{"operation_identifier":{"index":0},"type":"Vin","status":"","account":{{sender.account_identifier}},"amount":{"value":{{sender_amount}},"currency":{{currency}}}},{"operation_identifier":{"index":1},"type":"Vout","status":"","account":{{recipient.account_identifier}},"amount":{"value":{{recipient_amount}},"currency":{{currency}}}}]`, // nolint
 							OutputPath: "transfer.operations",
 						},
 					},
@@ -840,8 +869,11 @@ func TestProcess_Failed(t *testing.T) {
 	helper.On("DatabaseTransaction", ctx).Return(dbTx).Once()
 	jobStorage.On("Ready", ctx, dbTx).Return([]*job.Job{}, nil).Once()
 	jobStorage.On("Processing", ctx, dbTx, "transfer").Return([]*job.Job{}, nil).Once()
-	helper.On("AllAddresses", ctx, dbTx).Return([]string{"address1", "address2"}, nil).Once()
-	helper.On("LockedAddresses", ctx, dbTx).Return([]string{}, nil).Once()
+	helper.On("AllAccounts", ctx, dbTx).Return([]*types.AccountIdentifier{
+		{Address: "address1"},
+		{Address: "address2"},
+	}, nil).Once()
+	helper.On("LockedAccounts", ctx, dbTx).Return([]*types.AccountIdentifier{}, nil).Once()
 	helper.On(
 		"Balance",
 		ctx,
@@ -861,8 +893,11 @@ func TestProcess_Failed(t *testing.T) {
 		},
 		nil,
 	).Once()
-	helper.On("AllAddresses", ctx, dbTx).Return([]string{"address1", "address2"}, nil).Once()
-	helper.On("LockedAddresses", ctx, dbTx).Return([]string{}, nil).Once()
+	helper.On("AllAccounts", ctx, dbTx).Return([]*types.AccountIdentifier{
+		{Address: "address1"},
+		{Address: "address2"},
+	}, nil).Once()
+	helper.On("LockedAccounts", ctx, dbTx).Return([]*types.AccountIdentifier{}, nil).Once()
 	helper.On(
 		"Balance",
 		ctx,
@@ -1014,9 +1049,9 @@ func TestProcess_Failed(t *testing.T) {
 	unsignedTx := "unsigned transaction"
 	signingPayloads := []*types.SigningPayload{
 		{
-			Address:       "address1",
-			Bytes:         []byte("blah"),
-			SignatureType: types.Ecdsa,
+			AccountIdentifier: &types.AccountIdentifier{Address: "address1"},
+			Bytes:             []byte("blah"),
+			SignatureType:     types.Ecdsa,
 		},
 	}
 	helper.On(
@@ -1042,7 +1077,7 @@ func TestProcess_Failed(t *testing.T) {
 		network,
 		false,
 		unsignedTx,
-	).Return(ops, []string{}, nil, nil).Once()
+	).Return(ops, []*types.AccountIdentifier{}, nil, nil).Once()
 	signatures := []*types.Signature{
 		{
 			SigningPayload: signingPayloads[0],
@@ -1073,7 +1108,9 @@ func TestProcess_Failed(t *testing.T) {
 		network,
 		true,
 		networkTx,
-	).Return(ops, []string{"address1"}, nil, nil).Once()
+	).Return(ops, []*types.AccountIdentifier{
+		{Address: "address1"},
+	}, nil, nil).Once()
 	txIdentifier := &types.TransactionIdentifier{Hash: "transaction hash"}
 	helper.On(
 		"Hash",
