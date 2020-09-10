@@ -31,6 +31,23 @@ const (
 	MaxUnixEpoch = 2209017600000
 )
 
+// Currency ensures a *types.Currency is valid.
+func Currency(currency *types.Currency) error {
+	if currency == nil {
+		return ErrAmountCurrencyIsNil
+	}
+
+	if currency.Symbol == "" {
+		return ErrAmountCurrencySymbolEmpty
+	}
+
+	if currency.Decimals < 0 {
+		return ErrAmountCurrencyHasNegDecimals
+	}
+
+	return nil
+}
+
 // Amount ensures a types.Amount has an
 // integer value, specified precision, and symbol.
 func Amount(amount *types.Amount) error {
@@ -43,19 +60,7 @@ func Amount(amount *types.Amount) error {
 		return fmt.Errorf("%w: %s", ErrAmountIsNotInt, amount.Value)
 	}
 
-	if amount.Currency == nil {
-		return ErrAmountCurrencyIsNil
-	}
-
-	if amount.Currency.Symbol == "" {
-		return ErrAmountCurrencySymbolEmpty
-	}
-
-	if amount.Currency.Decimals < 0 {
-		return ErrAmountCurrencyHasNegDecimals
-	}
-
-	return nil
+	return Currency(amount.Currency)
 }
 
 // OperationIdentifier returns an error if index of the

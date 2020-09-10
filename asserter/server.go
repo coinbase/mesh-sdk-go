@@ -287,7 +287,7 @@ func (a *Asserter) ConstructionPreprocessRequest(
 		return err
 	}
 
-	if err := assertUniqueAmounts(request.MaxFee); err != nil {
+	if err := AssertUniqueAmounts(request.MaxFee); err != nil {
 		return fmt.Errorf("%w: duplicate max fee currency found", err)
 	}
 

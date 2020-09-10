@@ -35,11 +35,11 @@ func ContainsCurrency(currencies []*types.Currency, currency *types.Currency) bo
 	return false
 }
 
-// assertUniqueAmounts returns an error if a slice
+// AssertUniqueAmounts returns an error if a slice
 // of types.Amount is invalid. It is considered invalid if the same
 // currency is returned multiple times (these shoould be
 // consolidated) or if a types.Amount is considered invalid.
-func assertUniqueAmounts(amounts []*types.Amount) error {
+func AssertUniqueAmounts(amounts []*types.Amount) error {
 	currencies := make([]*types.Currency, 0)
 	for _, amount := range amounts {
 		// Ensure a currency is used at most once
@@ -68,7 +68,7 @@ func AccountBalanceResponse(
 		return fmt.Errorf("%w: block identifier is invalid", err)
 	}
 
-	if err := assertUniqueAmounts(response.Balances); err != nil {
+	if err := AssertUniqueAmounts(response.Balances); err != nil {
 		return fmt.Errorf("%w: balance amounts are invalid", err)
 	}
 
