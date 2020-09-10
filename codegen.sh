@@ -32,7 +32,7 @@ esac
 # Remove existing client generated code
 mkdir -p tmp;
 DIRS=( types client server )
-IGNORED_FILES=( README.md utils.go utils_test.go marshal_test.go )
+IGNORED_FILES=( README.md utils.go utils_test.go marshal_test.go signing_payload_test.go )
 
 for dir in "${DIRS[@]}"
 do
@@ -153,7 +153,6 @@ sed "${SED_IFLAG[@]}" 's/\*map/map/g' client/* server/*;
 # Fix string array pointers
 sed "${SED_IFLAG[@]}" 's/\[\]\*string/\[\]string/g' client/* server/*;
 
-
 # Move model files to types/
 mv client/model_*.go types/;
 for file in types/model_*.go; do
@@ -183,6 +182,10 @@ do
     \"encoding\/json\"\
     \)/g' "${file}";
 done
+
+# Override certain manually crafted
+rm types/signing_payload.go;
+cp templates/signing_payload.txt types/signing_payload.go;
 
 # Format client generated code
 FORMAT_GEN="gofmt -w /local/types; gofmt -w /local/client; gofmt -w /local/server"
