@@ -28,7 +28,7 @@ type ConstructionParseResponse struct {
 }
 
 // MarshalJSON overrides the default JSON marshaler
-// and encodes bytes as hex instead of base64.
+// and adds the deprecated "signers" field to the response.
 func (c *ConstructionParseResponse) MarshalJSON() ([]byte, error) {
 	type Alias ConstructionParseResponse
 
@@ -58,13 +58,13 @@ func (c *ConstructionParseResponse) MarshalJSON() ([]byte, error) {
 }
 
 // UnmarshalJSON overrides the default JSON unmarshaler
-// and decodes bytes from hex instead of base64.
+// and reads the deprecated "signers" field from the response.
 func (c *ConstructionParseResponse) UnmarshalJSON(b []byte) error {
 	type Alias ConstructionParseResponse
 	r := struct {
 		// [DEPRECATED by `account_identifier_signers` in `v1.4.4`] All signers (addresses) of a
 		// particular transaction. If the transaction is unsigned, it should be empty.
-		Signers []string `json:"signers,omitempty"`
+		Signers []string `json:"address,omitempty"`
 		*Alias
 	}{
 		Alias: (*Alias)(c),

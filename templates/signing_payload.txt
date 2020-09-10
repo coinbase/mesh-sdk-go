@@ -29,7 +29,8 @@ type SigningPayload struct {
 }
 
 // MarshalJSON overrides the default JSON marshaler
-// and encodes bytes as hex instead of base64.
+// and encodes bytes as hex instead of base64. It also
+// writes the deprecated "address" field to the response.
 func (s *SigningPayload) MarshalJSON() ([]byte, error) {
 	type Alias SigningPayload
 	addressString := ""
@@ -55,7 +56,8 @@ func (s *SigningPayload) MarshalJSON() ([]byte, error) {
 }
 
 // UnmarshalJSON overrides the default JSON unmarshaler
-// and decodes bytes from hex instead of base64.
+// and decodes bytes from hex instead of base64. It also
+// reads the deprecated "address" field from the response.
 func (s *SigningPayload) UnmarshalJSON(b []byte) error {
 	type Alias SigningPayload
 	r := struct {
