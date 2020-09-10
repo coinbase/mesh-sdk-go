@@ -183,15 +183,13 @@ do
     \)/g' "${file}";
 done
 
-# Override certain manually crafted
-rm types/signing_payload.go;
-cp templates/signing_payload.txt types/signing_payload.go;
-
-rm types/construction_derive_response.go;
-cp templates/construction_derive_response.txt types/construction_derive_response.go;
-
-rm types/construction_parse_response.go;
-cp templates/construction_parse_response.txt types/construction_parse_response.go;
+# Override certain types with complex marshaling
+OVERRIDDEN_TYPES=( signing_payload construction_derive_response construction_parse_response )
+for type in "${OVERRIDDEN_TYPES[@]}"
+do
+  echo "Overriding ${type}";
+  rm "types/${type}.go" && cp "templates/${type}.txt" "types/${type}.go";
+done
 
 # Format client generated code
 FORMAT_GEN="gofmt -w /local/types; gofmt -w /local/client; gofmt -w /local/server"
