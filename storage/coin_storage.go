@@ -106,7 +106,7 @@ func (c *CoinStorage) getAndDecodeCoin(
 	}
 
 	var accountCoin AccountCoin
-	if err := c.db.Compressor().Decode(namespace, val, &accountCoin); err != nil {
+	if err := c.db.Compressor().Decode(namespace, val, &accountCoin, true); err != nil {
 		return false, nil, nil, fmt.Errorf("%w: %v", ErrCoinDecodeFailed, err)
 	}
 
