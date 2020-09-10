@@ -628,31 +628,6 @@ func TestExpectedSigners(t *testing.T) {
 				},
 			},
 		},
-		"duplicate observed signers": {
-			intent: []*types.SigningPayload{
-				{
-					AccountIdentifier: &types.AccountIdentifier{
-						Address: "addr1",
-					},
-				},
-				{
-					AccountIdentifier: &types.AccountIdentifier{
-						Address: "addr2",
-					},
-				},
-				{
-					AccountIdentifier: &types.AccountIdentifier{
-						Address: "addr2",
-					},
-				},
-			},
-			observed: []*types.AccountIdentifier{
-				{Address: "addr1"},
-				{Address: "addr2"},
-				{Address: "addr2"},
-			},
-			err: true,
-		},
 		"missing observed signer": {
 			intent: []*types.SigningPayload{
 				{

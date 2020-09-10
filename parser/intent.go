@@ -18,7 +18,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/coinbase/rosetta-sdk-go/asserter"
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
@@ -150,11 +149,7 @@ func ExpectedSigners(intent []*types.SigningPayload, observed []*types.AccountId
 		intendedSigners[types.Hash(payload.AccountIdentifier)] = struct{}{}
 	}
 
-	if err := asserter.AccountArray("observed signers", observed); err != nil {
-		return fmt.Errorf("%w: %s", ErrExpectedSignerDuplicateSigner, err.Error())
-	}
-
-	// Could exist here if len(intent) != len(observed) but
+	// Could exit here if len(intent) != len(observed) but
 	// more useful to print out a detailed error message.
 	seenSigners := make(map[string]struct{})
 	unmatched := []*types.AccountIdentifier{} // observed
@@ -167,16 +162,21 @@ func ExpectedSigners(intent []*types.SigningPayload, observed []*types.AccountId
 		}
 	}
 
-	for k := range intendedSigners {
-		if _, exists := seenSigners[k]; !exists {
+	// Check to see if there are any expected
+	// signers that we could not find.
+	for _, payload := range intent {
+		hash := types.Hash(payload.AccountIdentifier)
+		if _, exists := seenSigners[hash]; !exists {
 			return fmt.Errorf(
 				"%w: %s",
-				ErrExpectedSignerDuplicateSigner,
-				k,
+				ErrExpectedSignerMissing,
+				types.PrintStruct(payload.AccountIdentifier),
 			)
 		}
 	}
 
+	// Return an error if any observed signatures
+	// were not expected.
 	if len(unmatched) != 0 {
 		return fmt.Errorf(
 			"%w: %s",
