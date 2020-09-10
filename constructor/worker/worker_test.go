@@ -50,9 +50,9 @@ func TestBalanceMessage(t *testing.T) {
 			},
 			message: `looking for balance {"value":"100","currency":{"symbol":"BTC","decimals":8}}`,
 		},
-		"message with address": {
+		"message with account": {
 			input: &job.FindBalanceInput{
-				Address: "hello",
+				AccountIdentifier: &types.AccountIdentifier{Address: "hello"},
 				MinimumBalance: &types.Amount{
 					Value: "100",
 					Currency: &types.Currency{
@@ -61,27 +61,11 @@ func TestBalanceMessage(t *testing.T) {
 					},
 				},
 			},
-			message: `looking for balance {"value":"100","currency":{"symbol":"BTC","decimals":8}} on address hello`, // nolint
-		},
-		"message with address and subaccount": {
-			input: &job.FindBalanceInput{
-				Address: "hello",
-				SubAccount: &types.SubAccountIdentifier{
-					Address: "sub hello",
-				},
-				MinimumBalance: &types.Amount{
-					Value: "100",
-					Currency: &types.Currency{
-						Symbol:   "BTC",
-						Decimals: 8,
-					},
-				},
-			},
-			message: `looking for balance {"value":"100","currency":{"symbol":"BTC","decimals":8}} on address hello with sub_account {"address":"sub hello"}`, // nolint
+			message: `looking for balance {"value":"100","currency":{"symbol":"BTC","decimals":8}} on account {"address":"hello"}`, // nolint
 		},
 		"message with only subaccount": {
 			input: &job.FindBalanceInput{
-				SubAccount: &types.SubAccountIdentifier{
+				SubAccountIdentifier: &types.SubAccountIdentifier{
 					Address: "sub hello",
 				},
 				MinimumBalance: &types.Amount{
@@ -94,12 +78,11 @@ func TestBalanceMessage(t *testing.T) {
 			},
 			message: `looking for balance {"value":"100","currency":{"symbol":"BTC","decimals":8}} with sub_account {"address":"sub hello"}`, // nolint
 		},
-		"message with address and not address": {
+		"message with not address": {
 			input: &job.FindBalanceInput{
-				Address: "hello",
-				NotAddress: []string{
-					"good",
-					"bye",
+				NotAccountIdentifier: []*types.AccountIdentifier{
+					{Address: "good"},
+					{Address: "bye"},
 				},
 				MinimumBalance: &types.Amount{
 					Value: "100",
@@ -109,11 +92,11 @@ func TestBalanceMessage(t *testing.T) {
 					},
 				},
 			},
-			message: `looking for balance {"value":"100","currency":{"symbol":"BTC","decimals":8}} on address hello != to addresses ["good","bye"]`, // nolint
+			message: `looking for balance {"value":"100","currency":{"symbol":"BTC","decimals":8}} on address hello != to addresses [{"address":"good"},{"address":"bye"}]`, // nolint
 		},
 		"message with address and not coins": {
 			input: &job.FindBalanceInput{
-				Address: "hello",
+				AccountIdentifier: &types.AccountIdentifier{Address: "hello"},
 				NotCoins: []*types.CoinIdentifier{
 					{
 						Identifier: "coin1",
@@ -127,7 +110,7 @@ func TestBalanceMessage(t *testing.T) {
 					},
 				},
 			},
-			message: `looking for balance {"value":"100","currency":{"symbol":"BTC","decimals":8}} on address hello != to coins [{"identifier":"coin1"}]`, // nolint
+			message: `looking for balance {"value":"100","currency":{"symbol":"BTC","decimals":8}} on address {"address":"hello"} != to coins [{"identifier":"coin1"}]`, // nolint
 		},
 	}
 
