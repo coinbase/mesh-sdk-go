@@ -16,7 +16,6 @@ package fetcher
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
@@ -61,9 +60,8 @@ func (f *Fetcher) AccountBalance(
 	); err != nil {
 		fetcherErr := &Error{
 			Err: fmt.Errorf(
-				"%w: /account/balance %s",
-				ErrAssertionFailed,
-				err.Error(),
+				"%w: /account/balance",
+				err,
 			),
 		}
 		return nil, nil, nil, nil, fetcherErr
@@ -103,7 +101,7 @@ func (f *Fetcher) AccountBalanceRetry(
 			}
 		}
 
-		if errors.Is(err.Err, ErrAssertionFailed) {
+		if is, _ := asserter.ErrAsserter(err.Err); is {
 			fetcherErr := &Error{
 				Err:       fmt.Errorf("%w: /account/balance not attempting retry", err.Err),
 				ClientErr: err.ClientErr,
