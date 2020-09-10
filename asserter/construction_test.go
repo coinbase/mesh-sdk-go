@@ -253,7 +253,9 @@ func TestConstructionParseResponse(t *testing.T) {
 						Amount:  validAmount,
 					},
 				},
-				Signers: []string{"account 1"},
+				AccountIdentifierSigners: []*types.AccountIdentifier{
+					validAccount,
+				},
 				Metadata: map[string]interface{}{
 					"extra": "stuff",
 				},
@@ -261,7 +263,7 @@ func TestConstructionParseResponse(t *testing.T) {
 			signed: true,
 			err:    nil,
 		},
-		"valid response 2": {
+		"duplicate signer": {
 			response: &types.ConstructionParseResponse{
 				Operations: []*types.Operation{
 					{
@@ -280,64 +282,29 @@ func TestConstructionParseResponse(t *testing.T) {
 							{Index: int64(0)},
 						},
 						Type:    "PAYMENT",
-						Account: validAccount,
+						Account: &types.AccountIdentifier{Address: "addr 2"},
 						Amount:  validAmount,
 					},
 				},
 				AccountIdentifierSigners: []*types.AccountIdentifier{
-					{
-						Address: "account 1",
-					},
+					validAccount,
+					validAccount,
 				},
 				Metadata: map[string]interface{}{
 					"extra": "stuff",
 				},
 			},
 			signed: true,
-			err:    nil,
-		},
-		"signer mismatch": {
-			response: &types.ConstructionParseResponse{
-				Operations: []*types.Operation{
-					{
-						OperationIdentifier: &types.OperationIdentifier{
-							Index: int64(0),
-						},
-						Type:    "PAYMENT",
-						Account: validAccount,
-						Amount:  validAmount,
-					},
-					{
-						OperationIdentifier: &types.OperationIdentifier{
-							Index: int64(1),
-						},
-						RelatedOperations: []*types.OperationIdentifier{
-							{Index: int64(0)},
-						},
-						Type:    "PAYMENT",
-						Account: validAccount,
-						Amount:  validAmount,
-					},
-				},
-				AccountIdentifierSigners: []*types.AccountIdentifier{
-					{
-						Address: "account 1",
-					},
-				},
-				Signers: []string{"account 2"},
-				Metadata: map[string]interface{}{
-					"extra": "stuff",
-				},
-			},
-			signed: true,
-			err:    ErrConstructionParseResponseSignerMismatch,
+			err:    ErrConstructionParseResponseDuplicateSigner,
 		},
 		"nil response": {
 			err: ErrConstructionParseResponseIsNil,
 		},
 		"no operations": {
 			response: &types.ConstructionParseResponse{
-				Signers: []string{"account 1"},
+				AccountIdentifierSigners: []*types.AccountIdentifier{
+					validAccount,
+				},
 				Metadata: map[string]interface{}{
 					"extra": "stuff",
 				},
@@ -356,7 +323,9 @@ func TestConstructionParseResponse(t *testing.T) {
 						Amount:  validAmount,
 					},
 				},
-				Signers: []string{"account 1"},
+				AccountIdentifierSigners: []*types.AccountIdentifier{
+					validAccount,
+				},
 				Metadata: map[string]interface{}{
 					"extra": "stuff",
 				},
@@ -392,37 +361,6 @@ func TestConstructionParseResponse(t *testing.T) {
 			},
 			signed: true,
 			err:    ErrConstructionParseResponseSignersEmptyOnSignedTx,
-		},
-		"empty string signer": {
-			response: &types.ConstructionParseResponse{
-				Operations: []*types.Operation{
-					{
-						OperationIdentifier: &types.OperationIdentifier{
-							Index: int64(0),
-						},
-						Type:    "PAYMENT",
-						Account: validAccount,
-						Amount:  validAmount,
-					},
-					{
-						OperationIdentifier: &types.OperationIdentifier{
-							Index: int64(1),
-						},
-						RelatedOperations: []*types.OperationIdentifier{
-							{Index: int64(0)},
-						},
-						Type:    "PAYMENT",
-						Account: validAccount,
-						Amount:  validAmount,
-					},
-				},
-				Signers: []string{""},
-				Metadata: map[string]interface{}{
-					"extra": "stuff",
-				},
-			},
-			signed: true,
-			err:    ErrConstructionParseResponseSignerEmpty,
 		},
 		"empty account identifier signer": {
 			response: &types.ConstructionParseResponse{
@@ -481,7 +419,9 @@ func TestConstructionParseResponse(t *testing.T) {
 				Metadata: map[string]interface{}{
 					"extra": "stuff",
 				},
-				Signers: []string{"account 1"},
+				AccountIdentifierSigners: []*types.AccountIdentifier{
+					validAccount,
+				},
 			},
 			signed: false,
 			err:    ErrConstructionParseResponseSignersNonEmptyOnUnsignedTx,
