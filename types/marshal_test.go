@@ -195,7 +195,12 @@ func TestCustomConstructionDeriveResponse(t *testing.T) {
 
 	// Unmarshal fields (override)
 	var s5 ConstructionDeriveResponse
-	err = json.Unmarshal([]byte(`{"address":"hello", "account_identifier":{"address":"hello2"}, "hex_bytes":"74657374"}`), &s5)
+	err = json.Unmarshal(
+		[]byte(
+			`{"address":"hello", "account_identifier":{"address":"hello2"}, "hex_bytes":"74657374"}`, // nolint
+		),
+		&s5,
+	)
 	assert.NoError(t, err)
 	assert.Equal(t, &AccountIdentifier{Address: "hello2"}, s5.AccountIdentifier)
 }
@@ -248,7 +253,12 @@ func TestCustomConstructionParseResponse(t *testing.T) {
 
 	// Unmarshal fields (override)
 	var s5 ConstructionParseResponse
-	err = json.Unmarshal([]byte(`{"signers":["hello"], "account_identifier_signers":[{"address":"hello2"}], "hex_bytes":"74657374"}`), &s5)
+	err = json.Unmarshal(
+		[]byte(
+			`{"signers":["hello"], "account_identifier_signers":[{"address":"hello2"}], "hex_bytes":"74657374"}`, // nolint
+		),
+		&s5,
+	)
 	assert.NoError(t, err)
 	assert.Equal(t, []*AccountIdentifier{{Address: "hello2"}}, s5.AccountIdentifierSigners)
 }

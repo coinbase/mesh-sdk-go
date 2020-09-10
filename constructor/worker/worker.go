@@ -511,6 +511,39 @@ func findBalanceWorkerInputValidation(input *job.FindBalanceInput) error {
 	return nil
 }
 
+func skipAccount(input job.FindBalanceInput, account *types.AccountIdentifier) bool {
+	// If we require an account and that account
+	// is not equal to the account we are considering,
+	// we should continue.
+	if input.AccountIdentifier != nil &&
+		types.Hash(account) != types.Hash(input.AccountIdentifier) {
+		return true
+	}
+
+	// If we specify not to use certain addresses and we are considering
+	// one of them, we should continue.
+	if utils.ContainsString(input.NotAddress, account.Address) {
+		return true
+	}
+
+	// If we specify that we do not use certain accounts
+	// and the account we are considering is one of them,
+	// we should continue.
+	if utils.ContainsAccountIdentifier(input.NotAccountIdentifier, account) {
+		return true
+	}
+
+	// If we require a particular SubAccountIdentifier, we skip
+	// if the account we are examining does not have it.
+	if input.SubAccountIdentifier != nil &&
+		(account.SubAccount == nil ||
+			types.Hash(account.SubAccount) != types.Hash(input.SubAccountIdentifier)) {
+		return true
+	}
+
+	return false
+}
+
 // FindBalanceWorker attempts to find an account (and coin) with some minimum
 // balance in a particular currency.
 func (w *Worker) FindBalanceWorker(
@@ -544,32 +577,7 @@ func (w *Worker) FindBalanceWorker(
 
 	// Consider each available account as a potential account.
 	for _, account := range availableAccounts {
-		// If we require an account and that account
-		// is not equal to the account we are considering,
-		// we should continue.
-		if input.AccountIdentifier != nil &&
-			types.Hash(account) != types.Hash(input.AccountIdentifier) {
-			continue
-		}
-
-		// If we specify not to use certain addresses and we are considering
-		// one of them, we should continue.
-		if utils.ContainsString(input.NotAddress, account.Address) {
-			continue
-		}
-
-		// If we specify that we do not use certain accounts
-		// and the account we are considering is one of them,
-		// we should continue.
-		if utils.ContainsAccountIdentifier(input.NotAccountIdentifier, account) {
-			continue
-		}
-
-		// If we require a particular SubAccountIdentifier, we skip
-		// if the account we are examining does not have it.
-		if input.SubAccountIdentifier != nil &&
-			(account.SubAccount == nil ||
-				types.Hash(account.SubAccount) != types.Hash(input.SubAccountIdentifier)) {
+		if skipAccount(input, account) {
 			continue
 		}
 
