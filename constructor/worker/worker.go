@@ -52,8 +52,8 @@ func (w *Worker) invokeWorker(
 		return GenerateKeyWorker(input)
 	case job.Derive:
 		return w.DeriveWorker(ctx, input)
-	case job.SaveAddress:
-		return "", w.SaveAddressWorker(ctx, dbTx, input)
+	case job.SaveAccount:
+		return "", w.SaveAccountWorker(ctx, dbTx, input)
 	case job.PrintMessage:
 		PrintMessageWorker(input)
 		return "", nil
@@ -138,7 +138,7 @@ func (w *Worker) Process(
 	return j.CreateBroadcast()
 }
 
-// DeriveWorker attempts to derive an address given a
+// DeriveWorker attempts to derive an account given a
 // *types.ConstructionDeriveRequest input.
 func (w *Worker) DeriveWorker(
 	ctx context.Context,
@@ -154,7 +154,7 @@ func (w *Worker) DeriveWorker(
 		return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
 	}
 
-	address, metadata, err := w.helper.Derive(
+	accountIdentifier, metadata, err := w.helper.Derive(
 		ctx,
 		input.NetworkIdentifier,
 		input.PublicKey,
@@ -165,8 +165,8 @@ func (w *Worker) DeriveWorker(
 	}
 
 	return types.PrintStruct(types.ConstructionDeriveResponse{
-		Address:  address,
-		Metadata: metadata,
+		AccountIdentifier: accountIdentifier,
+		Metadata:          metadata,
 	}), nil
 }
 
@@ -187,24 +187,24 @@ func GenerateKeyWorker(rawInput string) (string, error) {
 	return types.PrintStruct(kp), nil
 }
 
-// SaveAddressWorker saves an address and associated KeyPair
+// SaveAccountWorker saves a *types.AccountIdentifier and associated KeyPair
 // in KeyStorage.
-func (w *Worker) SaveAddressWorker(
+func (w *Worker) SaveAccountWorker(
 	ctx context.Context,
 	dbTx storage.DatabaseTransaction,
 	rawInput string,
 ) error {
-	var input job.SaveAddressInput
+	var input job.SaveAccountInput
 	err := job.UnmarshalInput([]byte(rawInput), &input)
 	if err != nil {
 		return fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
 	}
 
-	if len(input.Address) == 0 {
-		return fmt.Errorf("%w: %s", ErrInvalidInput, "empty address")
+	if err := asserter.AccountIdentifier(input.AccountIdentifier); err != nil {
+		return fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
 	}
 
-	if err := w.helper.StoreKey(ctx, dbTx, input.Address, input.KeyPair); err != nil {
+	if err := w.helper.StoreKey(ctx, dbTx, input.AccountIdentifier, input.KeyPair); err != nil {
 		return fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
 	}
 
@@ -294,27 +294,27 @@ func balanceMessage(input *job.FindBalanceInput) string {
 		types.PrintStruct(input.MinimumBalance),
 	)
 
-	if len(input.Address) > 0 {
+	if input.AccountIdentifier != nil {
 		message = fmt.Sprintf(
-			"%s on address %s",
+			"%s on account %s",
 			message,
-			input.Address,
+			types.PrintStruct(input.AccountIdentifier),
 		)
 	}
 
-	if input.SubAccount != nil {
+	if input.SubAccountIdentifier != nil {
 		message = fmt.Sprintf(
 			"%s with sub_account %s",
 			message,
-			types.PrintStruct(input.SubAccount),
+			types.PrintStruct(input.SubAccountIdentifier),
 		)
 	}
 
-	if len(input.NotAddress) > 0 {
+	if len(input.NotAccountIdentifier) > 0 {
 		message = fmt.Sprintf(
-			"%s != to addresses %s",
+			"%s != to accounts %s",
 			message,
-			types.PrintStruct(input.NotAddress),
+			types.PrintStruct(input.NotAccountIdentifier),
 		)
 	}
 
@@ -365,9 +365,9 @@ func (w *Worker) checkAccountCoins(
 		}
 
 		return types.PrintStruct(job.FindBalanceOutput{
-			Account: account,
-			Balance: coin.Amount,
-			Coin:    coin.CoinIdentifier,
+			AccountIdentifier: account,
+			Balance:           coin.Amount,
+			Coin:              coin.CoinIdentifier,
 		}), nil
 	}
 
@@ -401,58 +401,58 @@ func (w *Worker) checkAccountBalance(
 	}
 
 	return types.PrintStruct(job.FindBalanceOutput{
-		Account: account,
-		Balance: amount,
+		AccountIdentifier: account,
+		Balance:           amount,
 	}), nil
 }
 
-func (w *Worker) availableAddresses(
+func (w *Worker) availableAccounts(
 	ctx context.Context,
 	dbTx storage.DatabaseTransaction,
-) ([]string, []string, error) {
-	addresses, err := w.helper.AllAddresses(ctx, dbTx)
+) ([]*types.AccountIdentifier, []*types.AccountIdentifier, error) {
+	accounts, err := w.helper.AllAccounts(ctx, dbTx)
 	if err != nil {
 		return nil, nil, fmt.Errorf(
-			"%w: unable to get all addresses %s",
+			"%w: unable to get all accounts %s",
 			ErrActionFailed,
 			err.Error(),
 		)
 	}
 
-	// If there are no addresses, we should create one.
-	if len(addresses) == 0 {
+	// If there are no accounts, we should create one.
+	if len(accounts) == 0 {
 		return nil, nil, ErrCreateAccount
 	}
 
-	// We fetch all locked addresses to subtract them from AllAddresses.
-	// We consider an address "locked" if it is actively involved in a broadcast.
-	unlockedAddresses := []string{}
-	lockedAddresses, err := w.helper.LockedAddresses(ctx, dbTx)
+	// We fetch all locked accounts to subtract them from AllAccounts.
+	// We consider an account "locked" if it is actively involved in a broadcast.
+	unlockedAccounts := []*types.AccountIdentifier{}
+	lockedAccounts, err := w.helper.LockedAccounts(ctx, dbTx)
 	if err != nil {
-		return nil, nil, fmt.Errorf("%w: unable to get locked addresses %s", ErrActionFailed, err)
+		return nil, nil, fmt.Errorf("%w: unable to get locked accounts %s", ErrActionFailed, err)
 	}
 
 	// Convert to a map so can do fast lookups
 	lockedSet := map[string]struct{}{}
-	for _, address := range lockedAddresses {
-		lockedSet[address] = struct{}{}
+	for _, account := range lockedAccounts {
+		lockedSet[types.Hash(account)] = struct{}{}
 	}
 
-	for _, address := range addresses {
-		if _, exists := lockedSet[address]; !exists {
-			unlockedAddresses = append(unlockedAddresses, address)
+	for _, account := range accounts {
+		if _, exists := lockedSet[types.Hash(account)]; !exists {
+			unlockedAccounts = append(unlockedAccounts, account)
 		}
 	}
 
-	return addresses, unlockedAddresses, nil
+	return accounts, unlockedAccounts, nil
 }
 
-func shouldCreateRandomAccount(input *job.FindBalanceInput, addressCount int) bool {
+func shouldCreateRandomAccount(input *job.FindBalanceInput, accountCount int) bool {
 	if input.MinimumBalance.Value != "0" {
 		return false
 	}
 
-	if input.CreateLimit <= 0 || addressCount >= input.CreateLimit {
+	if input.CreateLimit <= 0 || accountCount >= input.CreateLimit {
 		return false
 	}
 
@@ -485,38 +485,46 @@ func (w *Worker) FindBalanceWorker(
 		return "", fmt.Errorf("%w: minimum balance invalid %s", ErrInvalidInput, err.Error())
 	}
 
+	if input.AccountIdentifier != nil && input.SubAccountIdentifier != nil {
+		return "", fmt.Errorf("%w: cannot populate both account and sub account", ErrInvalidInput)
+	}
+
 	log.Println(balanceMessage(&input))
 
-	addresses, availableAddresses, err := w.availableAddresses(ctx, dbTx)
+	accounts, availableAccounts, err := w.availableAccounts(ctx, dbTx)
 	if err != nil {
-		return "", fmt.Errorf("%w: unable to get available addresses", err)
+		return "", fmt.Errorf("%w: unable to get available accounts", err)
 	}
 
 	// Randomly, we choose to generate a new account. If we didn't do this,
 	// we would never grow past 2 accounts for mocking transfers.
-	if shouldCreateRandomAccount(&input, len(addresses)) {
+	if shouldCreateRandomAccount(&input, len(accounts)) {
 		return "", ErrCreateAccount
 	}
 
-	// Consider each availableAddress as a potential account.
-	for _, address := range availableAddresses {
-		// If we require an address and that address
-		// is not equal to the address we are considering,
+	// Consider each available account as a potential account.
+	for _, account := range availableAccounts {
+		// If we require an account and that account
+		// is not equal to the account we are considering,
 		// we should continue.
-		if len(input.Address) != 0 && address != input.Address {
+		if input.AccountIdentifier != nil &&
+			types.Hash(account) != types.Hash(input.AccountIdentifier) {
 			continue
 		}
 
-		// If we specify that we do not use certain addresses
-		// and the address we are considering is one of them,
+		// If we specify that we do not use certain accounts
+		// and the account we are considering is one of them,
 		// we should continue.
-		if utils.ContainsString(input.NotAddress, address) {
+		if utils.ContainsAccountIdentifier(input.NotAccountIdentifier, account) {
 			continue
 		}
 
-		account := &types.AccountIdentifier{
-			Address:    address,
-			SubAccount: input.SubAccount,
+		// If we require a particular SubAccountIdentifier, we skip
+		// if the account we are examining does not have it.
+		if input.SubAccountIdentifier != nil &&
+			(account.SubAccount == nil ||
+				types.Hash(account.SubAccount) != types.Hash(input.SubAccountIdentifier)) {
+			continue
 		}
 
 		var output string
@@ -543,9 +551,9 @@ func (w *Worker) FindBalanceWorker(
 		return "", ErrUnsatisfiable
 	}
 
-	// If we should create an account and the number of addresses
+	// If we should create an account and the number of accounts
 	// we have is less than the limit, we return ErrCreateAccount.
-	if input.CreateLimit > 0 && len(addresses) < input.CreateLimit {
+	if input.CreateLimit > 0 && len(accounts) < input.CreateLimit {
 		return "", ErrCreateAccount
 	}
 

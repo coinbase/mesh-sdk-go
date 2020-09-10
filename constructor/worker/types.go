@@ -24,27 +24,27 @@ import (
 
 // Helper is used by the worker to process Jobs.
 type Helper interface {
-	// StoreKey is called to persist an
-	// address + KeyPair.
+	// StoreKey is called to persist a
+	// *types.AccountIdentifier + KeyPair.
 	StoreKey(
 		context.Context,
 		storage.DatabaseTransaction,
-		string,
+		*types.AccountIdentifier,
 		*keys.KeyPair,
 	) error
 
-	// AllAddresses returns a slice of all known addresses.
-	AllAddresses(
+	// AllAccounts returns a slice of all known *types.AccountIdentifier.
+	AllAccounts(
 		context.Context,
 		storage.DatabaseTransaction,
-	) ([]string, error)
+	) ([]*types.AccountIdentifier, error)
 
-	// LockedAccounts is a slice of all addresses currently sending or receiving
+	// LockedAccounts is a slice of all *types.AccountIdentifier currently sending or receiving
 	// funds.
-	LockedAddresses(
+	LockedAccounts(
 		context.Context,
 		storage.DatabaseTransaction,
-	) ([]string, error)
+	) ([]*types.AccountIdentifier, error)
 
 	// Balance returns the balance
 	// for a provided address and currency.
@@ -63,13 +63,13 @@ type Helper interface {
 		*types.Currency,
 	) ([]*types.Coin, error)
 
-	// Derive returns a new address for a provided publicKey.
+	// Derive returns a new *types.AccountIdentifier for a provided publicKey.
 	Derive(
 		context.Context,
 		*types.NetworkIdentifier,
 		*types.PublicKey,
 		map[string]interface{},
-	) (string, map[string]interface{}, error)
+	) (*types.AccountIdentifier, map[string]interface{}, error)
 }
 
 // Worker processes jobs.

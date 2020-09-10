@@ -262,6 +262,18 @@ func ContainsString(arr []string, s string) bool {
 	return false
 }
 
+// ContainsAccountIdentifier returns a boolean indicating
+// whether the struct s is in arr.
+func ContainsAccountIdentifier(arr []*types.AccountIdentifier, s *types.AccountIdentifier) bool {
+	for _, v := range arr {
+		if types.Hash(v) == types.Hash(s) {
+			return true
+		}
+	}
+
+	return false
+}
+
 // PrettyAmount returns a currency amount in native format with
 // its symbol.
 func PrettyAmount(amount *big.Int, currency *types.Currency) string {
