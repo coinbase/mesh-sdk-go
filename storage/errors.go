@@ -398,10 +398,10 @@ var (
 	}
 )
 
-// ErrStorage takes an error as an argument and returns
+// Err takes an error as an argument and returns
 // whether or not the error is one thrown by the asserter
 // along with the specific source of the error
-func ErrStorage(err error) (bool, string) {
+func Err(err error) (bool, string) {
 	storageErrs := map[string][]error{
 		"balance storage error":   BalanceStorageErrs,
 		"block storage error":     BlockStorageErrs,
