@@ -153,6 +153,11 @@ type Syncer struct {
 	recentBlockSizes []int
 	lastAdjustment   int64
 	concurrencyLock  sync.Mutex
+
+	// doneLoading is used to coordinate adding goroutines
+	// when close to the end of syncing a range.
+	doneLoading     bool
+	doneLoadingLock sync.Mutex
 }
 
 // New creates a new Syncer. If pastBlocks is left nil, it will
@@ -336,8 +341,12 @@ func (s *Syncer) addBlockIndices(
 	defer close(blockIndices)
 	i := startIndex
 	for i <= endIndex {
+		s.concurrencyLock.Lock()
+		currentConcurrency := s.concurrency
+		s.concurrencyLock.Unlock()
+
 		// Don't load if we already have a healthy backlog.
-		if int64(len(blockIndices)) > s.concurrency {
+		if int64(len(blockIndices)) > currentConcurrency {
 			time.Sleep(defaultFetchSleep)
 			continue
 		}
@@ -349,6 +358,16 @@ func (s *Syncer) addBlockIndices(
 			return ctx.Err()
 		}
 	}
+
+	// We populate doneLoading before exiting
+	// to make sure we don't create more goroutines
+	// when we are done. If we don't do this, we may accidentally
+	// try to create a new goroutine after Wait has returned.
+	// This will cause a panic.
+	s.doneLoadingLock.Lock()
+	defer s.doneLoadingLock.Unlock()
+	s.doneLoading = true
+
 	return nil
 }
 
@@ -556,19 +575,6 @@ func (s *Syncer) syncRange(
 	blockIndices := make(chan int64)
 	results := make(chan *blockResult)
 
-	// We create a separate derivative context here instead of
-	// replacing the provided ctx because the context returned
-	// by errgroup.WithContext is canceled as soon as Wait returns.
-	// If this canceled context is passed to a handler or helper,
-	// it can have unintended consequences (some functions
-	// return immediately if the context is canceled).
-	//
-	// Source: https://godoc.org/golang.org/x/sync/errgroup
-	g, pipelineCtx := errgroup.WithContext(ctx)
-	g.Go(func() error {
-		return s.addBlockIndices(pipelineCtx, blockIndices, s.nextIndex, endIndex)
-	})
-
 	// Ensure default concurrency is less than max concurrency.
 	startingConcurrency := DefaultConcurrency
 	if s.maxConcurrency < startingConcurrency {
@@ -581,12 +587,26 @@ func (s *Syncer) syncRange(
 	if blocksToSync < startingConcurrency {
 		startingConcurrency = blocksToSync
 	}
-	s.concurrency = startingConcurrency
 
 	// Reset sync variables
-	s.goalConcurrency = s.concurrency
 	s.recentBlockSizes = []int{}
 	s.lastAdjustment = 0
+	s.doneLoading = false
+	s.concurrency = startingConcurrency
+	s.goalConcurrency = s.concurrency
+
+	// We create a separate derivative context here instead of
+	// replacing the provided ctx because the context returned
+	// by errgroup.WithContext is canceled as soon as Wait returns.
+	// If this canceled context is passed to a handler or helper,
+	// it can have unintended consequences (some functions
+	// return immediately if the context is canceled).
+	//
+	// Source: https://godoc.org/golang.org/x/sync/errgroup
+	g, pipelineCtx := errgroup.WithContext(ctx)
+	g.Go(func() error {
+		return s.addBlockIndices(pipelineCtx, blockIndices, s.nextIndex, endIndex)
+	})
 
 	for j := int64(0); j < s.concurrency; j++ {
 		g.Go(func() error {
@@ -617,9 +637,17 @@ func (s *Syncer) syncRange(
 			continue
 		}
 
-		g.Go(func() error {
-			return s.fetchChannelBlocks(pipelineCtx, s.network, blockIndices, results)
-		})
+		// If we have finished loading blocks, we should avoid
+		// creating more goroutines (as there is a chance that
+		// Wait has returned). Attempting to create more goroutines
+		// after Wait has returned will cause a panic.
+		s.doneLoadingLock.Lock()
+		if !s.doneLoading {
+			g.Go(func() error {
+				return s.fetchChannelBlocks(pipelineCtx, s.network, blockIndices, results)
+			})
+		}
+		s.doneLoadingLock.Unlock()
 	}
 
 	err := g.Wait()
