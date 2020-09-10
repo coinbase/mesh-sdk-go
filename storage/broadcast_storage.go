@@ -361,7 +361,8 @@ func (b *BroadcastStorage) getAllBroadcasts(
 		[]byte(namespace),
 		func(k []byte, v []byte) error {
 			var broadcast Broadcast
-			if err := b.db.Compressor().Decode(namespace, v, &broadcast); err != nil {
+			// We should not reclaim memory during a scan!!
+			if err := b.db.Compressor().Decode(namespace, v, &broadcast, false); err != nil {
 				return fmt.Errorf("%w: %v", ErrBroadcastDecodeFailed, err)
 			}
 

@@ -147,7 +147,7 @@ func (k *KeyStorage) GetTransactional(
 	}
 
 	var kp Key
-	if err := k.db.Compressor().Decode("", rawKey, &kp); err != nil {
+	if err := k.db.Compressor().Decode("", rawKey, &kp, true); err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrParseSavedKeyFailed, err)
 	}
 
@@ -176,7 +176,8 @@ func (k *KeyStorage) GetAllAccountsTransactional(
 		[]byte(keyNamespace),
 		func(key []byte, v []byte) error {
 			var kp Key
-			if err := k.db.Compressor().Decode("", v, &kp); err != nil {
+			// We should not reclaim memory during a scan!!
+			if err := k.db.Compressor().Decode("", v, &kp, false); err != nil {
 				return fmt.Errorf("%w: %v", ErrKeyScanFailed, err)
 			}
 

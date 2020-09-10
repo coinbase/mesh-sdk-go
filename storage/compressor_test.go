@@ -15,7 +15,6 @@
 package storage
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"testing"
@@ -51,19 +50,16 @@ func runCompressions(c *Compressor, t *testing.T) {
 		assert.NoError(t, err)
 
 		var bDec types.BlockIdentifier
-		assert.NoError(t, c.Decode("", bEnc, &bDec))
+		assert.NoError(t, c.Decode("", bEnc, &bDec, true))
 		assert.Equal(t, types.Hash(b), types.Hash(bDec))
-		c.pool.Put(bytes.NewBuffer(bEnc))
 
 		var txDec types.Transaction
-		assert.NoError(t, c.Decode("", txEnc, &txDec))
+		assert.NoError(t, c.Decode("", txEnc, &txDec, true))
 		assert.Equal(t, types.Hash(tx), types.Hash(txDec))
-		c.pool.Put(bytes.NewBuffer(txEnc))
 
 		var blockDec types.Block
-		assert.NoError(t, c.Decode("", blockEnc, &blockDec))
+		assert.NoError(t, c.Decode("", blockEnc, &blockDec, true))
 		assert.Equal(t, types.Hash(block), types.Hash(blockDec))
-		c.pool.Put(bytes.NewBuffer(blockEnc))
 	}
 }
 
