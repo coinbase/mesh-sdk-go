@@ -50,6 +50,12 @@ const (
 	// certain transactions may only be considered complete
 	// after some time (ex: staking transaction).
 	ConfirmationDepth ReservedVariable = "confirmation_depth"
+
+	// DryRun is a boolean that indicates whether we should perform the
+	// entire transaction construction process or just /construction/preprocess
+	// and /construction/metadata to determine the suggested transaction
+	// fee.
+	DryRun ReservedVariable = "dry_run"
 )
 
 // ActionType is a type of Action that can be processed.
@@ -100,6 +106,11 @@ const (
 	// RandomNumber generates a random number in some range [min, max).
 	// It is used to generate random transaction amounts.
 	RandomNumber ActionType = "random_number"
+
+	// FindCurrencyAmount finds a *types.Amount for a certain currency
+	// in an array of []*types.Amount. This is typically used when parsing
+	// the suggested fee response from /construction/metadata.
+	FindCurrencyAmount ActionType = "find_currency_amount"
 )
 
 // Action is a step of computation that
@@ -217,6 +228,13 @@ type RandomNumberInput struct {
 	Maximum string `json:"maximum"`
 }
 
+// FindCurrencyAmountInput is the input
+// to FindCurrencyAmount.
+type FindCurrencyAmountInput struct {
+	Currency *types.Currency `json:"currency"`
+	Amounts  []*types.Amount `json:"amounts"`
+}
+
 // Scenario is a collection of Actions with a specific
 // confirmation depth.
 //
@@ -314,4 +332,5 @@ type Broadcast struct {
 	Intent            []*types.Operation
 	Metadata          map[string]interface{}
 	ConfirmationDepth int64
+	DryRun            bool
 }
