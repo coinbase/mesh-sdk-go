@@ -205,7 +205,7 @@ func (c *Coordinator) createTransaction(
 
 	publicKeys := make([]*types.PublicKey, len(requiredPublicKeys))
 	for i, accountIdentifier := range requiredPublicKeys {
-		keyPair, err := c.helper.GetKey(ctx, dbTx, accountIdentifier.Address)
+		keyPair, err := c.helper.GetKey(ctx, dbTx, accountIdentifier)
 		if err != nil {
 			return nil, "", fmt.Errorf(
 				"%w: unable to find key for address %s",
