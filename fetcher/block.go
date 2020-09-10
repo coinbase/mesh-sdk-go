@@ -303,7 +303,7 @@ func (f *Fetcher) BlockRetry(
 			return nil, &Error{Err: ctx.Err()}
 		}
 
-		if is, _ := asserter.ErrAsserter(err.Err); is {
+		if is, _ := asserter.Err(err.Err); is {
 			fetcherErr := &Error{
 				Err:       fmt.Errorf("%w: /block not attempting retry", err.Err),
 				ClientErr: err.ClientErr,
