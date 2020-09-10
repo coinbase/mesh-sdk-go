@@ -163,9 +163,15 @@ type FindBalanceInput struct {
 	// orchestrating staking transactions.
 	SubAccountIdentifier *types.SubAccountIdentifier `json:"sub_account_identifier,omitempty"`
 
-	// NotAccountIdentifier can be populated to ensure a different
+	// NotAddress can be populated to ensure a different
 	// address is found. This is useful when avoiding a
 	// self-transfer.
+	NotAddress []string `json:"not_address,omitempty"`
+
+	// NotAccountIdentifier can be used to avoid entire
+	// *types.AccountIdentifiers and is used when only
+	// certain SubAccountIdentifiers of an Address are
+	// desired.
 	NotAccountIdentifier []*types.AccountIdentifier `json:"not_account_identifier,omitempty"`
 
 	// MinimumBalance is the minimum required balance that must be found.

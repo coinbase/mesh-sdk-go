@@ -311,6 +311,14 @@ func balanceMessage(input *job.FindBalanceInput) string {
 		)
 	}
 
+	if len(input.NotAddress) > 0 {
+		message = fmt.Sprintf(
+			"%s != to addresses %s",
+			message,
+			types.PrintStruct(input.NotAddress),
+		)
+	}
+
 	if len(input.NotAccountIdentifier) > 0 {
 		message = fmt.Sprintf(
 			"%s != to accounts %s",
@@ -488,6 +496,10 @@ func findBalanceWorkerInputValidation(input *job.FindBalanceInput) error {
 		if len(input.NotAccountIdentifier) > 0 {
 			return errors.New("cannot populate both account and not accounts")
 		}
+
+		if len(input.NotAddress) > 0 {
+			return errors.New("cannot populate both account and not address")
+		}
 	}
 
 	if len(input.NotAccountIdentifier) > 0 {
@@ -537,6 +549,12 @@ func (w *Worker) FindBalanceWorker(
 		// we should continue.
 		if input.AccountIdentifier != nil &&
 			types.Hash(account) != types.Hash(input.AccountIdentifier) {
+			continue
+		}
+
+		// If we specify not to use certain addresses and we are considering
+		// one of them, we should continue.
+		if utils.ContainsString(input.NotAddress, account.Address) {
 			continue
 		}
 
