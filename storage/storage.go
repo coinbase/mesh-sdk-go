@@ -18,12 +18,6 @@ import (
 	"context"
 )
 
-// ScanItem is returned by a call to Scan.
-type ScanItem struct {
-	Key   []byte
-	Value []byte
-}
-
 // Database is an interface that provides transactional
 // access to a KV store.
 type Database interface {
@@ -45,11 +39,6 @@ type DatabaseTransaction interface {
 	Delete(context.Context, []byte) error
 
 	Scan(
-		context.Context,
-		[]byte,
-		bool, // log entries
-	) ([]*ScanItem, error)
-	LimitedMemoryScan(
 		context.Context,
 		[]byte,
 		func([]byte, []byte) error,

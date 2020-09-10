@@ -492,7 +492,7 @@ func (b *BalanceStorage) getAllBalanceEntries(
 	namespace := balanceNamespace
 	txn := b.db.NewDatabaseTransaction(ctx, false)
 	defer txn.Discard(ctx)
-	_, err := txn.LimitedMemoryScan(
+	_, err := txn.Scan(
 		ctx,
 		[]byte(namespace),
 		func(k []byte, v []byte) error {

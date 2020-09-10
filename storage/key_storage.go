@@ -15,7 +15,6 @@
 package storage
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -31,10 +30,10 @@ import (
 
 // PrefundedAccount is used to load prefunded addresses into key storage.
 type PrefundedAccount struct {
-	PrivateKeyHex string                   `json:"privkey"`
-	Account       *types.AccountIdentifier `json:"account"`
-	CurveType     types.CurveType          `json:"curve_type"`
-	Currency      *types.Currency          `json:"currency"`
+	PrivateKeyHex     string                   `json:"privkey"`
+	AccountIdentifier *types.AccountIdentifier `json:"account_identifier"`
+	CurveType         types.CurveType          `json:"curve_type"`
+	Currency          *types.Currency          `json:"currency"`
 }
 
 func init() {
@@ -74,26 +73,6 @@ type Key struct {
 	KeyPair *keys.KeyPair            `json:"keypair"`
 }
 
-func parseKey(buf []byte) (*Key, error) {
-	var k Key
-	err := getDecoder(bytes.NewReader(buf)).Decode(&k)
-	if err != nil {
-		return nil, err
-	}
-
-	return &k, nil
-}
-
-func serializeKey(k *Key) ([]byte, error) {
-	buf := new(bytes.Buffer)
-	err := getEncoder(buf).Encode(k)
-	if err != nil {
-		return nil, err
-	}
-
-	return buf.Bytes(), nil
-}
-
 // StoreTransactional stores a key in a database transaction.
 func (k *KeyStorage) StoreTransactional(
 	ctx context.Context,
@@ -114,7 +93,7 @@ func (k *KeyStorage) StoreTransactional(
 		)
 	}
 
-	val, err := serializeKey(&Key{
+	val, err := k.db.Compressor().Encode("", &Key{
 		Account: account,
 		KeyPair: keyPair,
 	})
@@ -167,12 +146,12 @@ func (k *KeyStorage) GetTransactional(
 		return nil, fmt.Errorf("%w: %s", ErrAddrNotFound, types.PrintStruct(account))
 	}
 
-	key, err := parseKey(rawKey)
-	if err != nil {
+	var kp Key
+	if err := k.db.Compressor().Decode("", rawKey, &kp); err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrParseSavedKeyFailed, err)
 	}
 
-	return key.KeyPair, nil
+	return kp.KeyPair, nil
 }
 
 // Get returns a *keys.KeyPair for an AccountIdentifier, if it exists.
@@ -191,19 +170,23 @@ func (k *KeyStorage) GetAllAccountsTransactional(
 	ctx context.Context,
 	dbTx DatabaseTransaction,
 ) ([]*types.AccountIdentifier, error) {
-	rawKeys, err := dbTx.Scan(ctx, []byte(keyNamespace), false)
+	accounts := []*types.AccountIdentifier{}
+	_, err := dbTx.Scan(
+		ctx,
+		[]byte(keyNamespace),
+		func(key []byte, v []byte) error {
+			var kp Key
+			if err := k.db.Compressor().Decode("", v, &kp); err != nil {
+				return fmt.Errorf("%w: %v", ErrKeyScanFailed, err)
+			}
+
+			accounts = append(accounts, kp.Account)
+			return nil
+		},
+		false,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrKeyScanFailed, err)
-	}
-
-	accounts := make([]*types.AccountIdentifier, len(rawKeys))
-	for i, rawKey := range rawKeys {
-		kp, err := parseKey(rawKey.Value)
-		if err != nil {
-			return nil, fmt.Errorf("%w: %v", ErrParseKeyPairFailed, err)
-		}
-
-		accounts[i] = kp.Account
 	}
 
 	return accounts, nil
@@ -278,7 +261,7 @@ func (k *KeyStorage) ImportAccounts(ctx context.Context, accounts []*PrefundedAc
 		}
 
 		// Skip if key already exists
-		err = k.Store(ctx, acc.Account, keyPair)
+		err = k.Store(ctx, acc.AccountIdentifier, keyPair)
 		if errors.Is(err, ErrAddrExists) {
 			continue
 		}
