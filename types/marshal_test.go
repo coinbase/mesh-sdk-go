@@ -97,11 +97,9 @@ func TestCustomMarshalSignature(t *testing.T) {
 }
 
 func TestCustomMarshalSigningPayload(t *testing.T) {
-	addr1 := "addr1"
 	s := &SigningPayload{
-		Address: &addr1,
 		AccountIdentifier: &AccountIdentifier{
-			Address: addr1,
+			Address: "addr1",
 		},
 		Bytes: []byte("hsdjkfhkasjfhkjasdhfkjasdnfkjabsdfkjhakjsfdhjksadhfjk23478923645yhsdfn"),
 	}
@@ -109,8 +107,9 @@ func TestCustomMarshalSigningPayload(t *testing.T) {
 	j, err := json.Marshal(s)
 	assert.NoError(t, err)
 
-	// Simple Hex Check
+	// Hex and address Check
 	simpleType := struct {
+		Address  string `json:"address"`
 		HexBytes string `json:"hex_bytes"`
 	}{}
 
@@ -119,14 +118,13 @@ func TestCustomMarshalSigningPayload(t *testing.T) {
 
 	b, err := hex.DecodeString(simpleType.HexBytes)
 	assert.NoError(t, err)
-
 	assert.Equal(t, s.Bytes, b)
+	assert.Equal(t, s.AccountIdentifier.Address, simpleType.Address)
 
 	// Full Unmarshal Check
 	s2 := &SigningPayload{}
 	err = json.Unmarshal(j, s2)
 	assert.NoError(t, err)
-
 	assert.Equal(t, s, s2)
 
 	// Invalid Hex Check
@@ -134,4 +132,18 @@ func TestCustomMarshalSigningPayload(t *testing.T) {
 	err = json.Unmarshal([]byte(`{"hex_bytes":"hello"}`), s3)
 	assert.Error(t, err)
 	assert.Len(t, s3.Bytes, 0)
+
+	// Unmarshal fields
+	var s4 SigningPayload
+	err = json.Unmarshal([]byte(`{"address":"hello", "hex_bytes":"74657374"}`), &s4)
+	assert.NoError(t, err)
+	assert.Equal(t, &AccountIdentifier{Address: "hello"}, s4.AccountIdentifier)
+	assert.Equal(t, []byte("test"), s4.Bytes)
+
+	// Unmarshal fields (empty address)
+	var s5 SigningPayload
+	err = json.Unmarshal([]byte(`{"hex_bytes":"74657374"}`), &s5)
+	assert.NoError(t, err)
+	assert.Nil(t, s5.AccountIdentifier)
+	assert.Equal(t, []byte("test"), s5.Bytes)
 }

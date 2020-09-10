@@ -147,8 +147,8 @@ var (
 	validSignatures = []*types.Signature{
 		{
 			SigningPayload: &types.SigningPayload{
-				Address: pointerString(validAccount.Address),
-				Bytes:   []byte("blah"),
+				AccountIdentifier: validAccount,
+				Bytes:             []byte("blah"),
 			},
 			PublicKey:     validPublicKey,
 			SignatureType: types.Ed25519,
@@ -159,9 +159,9 @@ var (
 	signatureTypeMismatch = []*types.Signature{
 		{
 			SigningPayload: &types.SigningPayload{
-				Address:       pointerString(validAccount.Address),
-				Bytes:         []byte("blah"),
-				SignatureType: types.EcdsaRecovery,
+				AccountIdentifier: validAccount,
+				Bytes:             []byte("blah"),
+				SignatureType:     types.EcdsaRecovery,
 			},
 			PublicKey:     validPublicKey,
 			SignatureType: types.Ed25519,
@@ -172,9 +172,9 @@ var (
 	signatureTypeMatch = []*types.Signature{
 		{
 			SigningPayload: &types.SigningPayload{
-				Address:       pointerString(validAccount.Address),
-				Bytes:         []byte("blah"),
-				SignatureType: types.Ed25519,
+				AccountIdentifier: validAccount,
+				Bytes:             []byte("blah"),
+				SignatureType:     types.Ed25519,
 			},
 			PublicKey:     validPublicKey,
 			SignatureType: types.Ed25519,
@@ -185,9 +185,9 @@ var (
 	emptySignature = []*types.Signature{
 		{
 			SigningPayload: &types.SigningPayload{
-				Address:       pointerString(validAccount.Address),
-				Bytes:         []byte("blah"),
-				SignatureType: types.Ed25519,
+				AccountIdentifier: validAccount,
+				Bytes:             []byte("blah"),
+				SignatureType:     types.Ed25519,
 			},
 			PublicKey:     validPublicKey,
 			SignatureType: types.Ed25519,
@@ -998,7 +998,6 @@ func TestConstructionCombineRequest(t *testing.T) {
 				Signatures: []*types.Signature{
 					{
 						SigningPayload: &types.SigningPayload{
-							Address:           pointerString(validAccount.Address),
 							AccountIdentifier: validAccount,
 							Bytes:             []byte("blah"),
 						},
@@ -1009,25 +1008,6 @@ func TestConstructionCombineRequest(t *testing.T) {
 				},
 			},
 			err: nil,
-		},
-		"address mismatch": {
-			request: &types.ConstructionCombineRequest{
-				NetworkIdentifier:   validNetworkIdentifier,
-				UnsignedTransaction: "blah",
-				Signatures: []*types.Signature{
-					{
-						SigningPayload: &types.SigningPayload{
-							Address:           pointerString("not match"),
-							AccountIdentifier: validAccount,
-							Bytes:             []byte("blah"),
-						},
-						PublicKey:     validPublicKey,
-						SignatureType: types.Ed25519,
-						Bytes:         []byte("hello"),
-					},
-				},
-			},
-			err: ErrSigningPayloadAddrMismatch,
 		},
 		"invalid request wrong network": {
 			request: &types.ConstructionCombineRequest{

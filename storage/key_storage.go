@@ -107,7 +107,11 @@ func (k *KeyStorage) StoreTransactional(
 	}
 
 	if exists {
-		return fmt.Errorf("%w: account %s already exists", ErrAddrExists, types.PrintStruct(account))
+		return fmt.Errorf(
+			"%w: account %s already exists",
+			ErrAddrExists,
+			types.PrintStruct(account),
+		)
 	}
 
 	val, err := serializeKey(&Key{
@@ -172,7 +176,10 @@ func (k *KeyStorage) GetTransactional(
 }
 
 // Get returns a *keys.KeyPair for an AccountIdentifier, if it exists.
-func (k *KeyStorage) Get(ctx context.Context, account *types.AccountIdentifier) (*keys.KeyPair, error) {
+func (k *KeyStorage) Get(
+	ctx context.Context,
+	account *types.AccountIdentifier,
+) (*keys.KeyPair, error) {
 	transaction := k.db.NewDatabaseTransaction(ctx, false)
 	defer transaction.Discard(ctx)
 

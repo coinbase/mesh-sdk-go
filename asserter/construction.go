@@ -173,7 +173,8 @@ func (a *Asserter) ConstructionParseResponse(
 			return fmt.Errorf("%w: at index %d", ErrConstructionParseResponseSignerEmpty, i)
 		}
 
-		if len(response.Signers) > 0 && (len(response.Signers) < i || response.Signers[i] != signer.Address) {
+		if len(response.Signers) > 0 &&
+			(len(response.Signers) < i || response.Signers[i] != signer.Address) {
 			return fmt.Errorf("%w: at index %d", ErrConstructionParseResponseSignerMismatch, i)
 		}
 	}
@@ -254,31 +255,8 @@ func SigningPayload(
 		return ErrSigningPayloadIsNil
 	}
 
-	if signingPayload.Address == nil &&
-		signingPayload.AccountIdentifier == nil {
-		return ErrSigningPayloadAddrEmpty
-	}
-
-	if signingPayload.AccountIdentifier != nil {
-		if err := AccountIdentifier(signingPayload.AccountIdentifier); err != nil {
-			return fmt.Errorf("%w: %s", ErrSigningPayloadAddrEmpty, err)
-		}
-	}
-
-	if signingPayload.Address != nil && len(*signingPayload.Address) == 0 {
-		return ErrSigningPayloadAddrEmpty
-	}
-
-	// If both fields are populated, they MUST be equal.
-	if signingPayload.Address != nil && signingPayload.AccountIdentifier != nil {
-		if *signingPayload.Address != signingPayload.AccountIdentifier.Address {
-			return fmt.Errorf(
-				"%w: %s != %s",
-				ErrSigningPayloadAddrMismatch,
-				*signingPayload.Address,
-				signingPayload.AccountIdentifier.Address,
-			)
-		}
+	if err := AccountIdentifier(signingPayload.AccountIdentifier); err != nil {
+		return fmt.Errorf("%w: %s", ErrSigningPayloadAddrEmpty, err)
 	}
 
 	if len(signingPayload.Bytes) == 0 {
