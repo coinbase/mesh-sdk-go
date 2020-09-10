@@ -16,6 +16,7 @@ package worker
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 
@@ -468,6 +469,36 @@ func shouldCreateRandomAccount(input *job.FindBalanceInput, accountCount int) bo
 	return true
 }
 
+// findBalanceWorkerInputValidation ensures the input to FindBalanceWorker
+// is valid.
+func findBalanceWorkerInputValidation(input *job.FindBalanceInput) error {
+	if err := asserter.Amount(input.MinimumBalance); err != nil {
+		return fmt.Errorf("%w: minimum balance invalid", err)
+	}
+
+	if input.AccountIdentifier != nil {
+		if err := asserter.AccountIdentifier(input.AccountIdentifier); err != nil {
+			return err
+		}
+
+		if input.SubAccountIdentifier != nil {
+			return errors.New("cannot populate both account and sub account")
+		}
+
+		if len(input.NotAccountIdentifier) > 0 {
+			return errors.New("cannot populate both account and not accounts")
+		}
+	}
+
+	if len(input.NotAccountIdentifier) > 0 {
+		if err := asserter.AccountArray("not account identifier", input.NotAccountIdentifier); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // FindBalanceWorker attempts to find an account (and coin) with some minimum
 // balance in a particular currency.
 func (w *Worker) FindBalanceWorker(
@@ -481,12 +512,9 @@ func (w *Worker) FindBalanceWorker(
 		return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
 	}
 
-	if err := asserter.Amount(input.MinimumBalance); err != nil {
-		return "", fmt.Errorf("%w: minimum balance invalid %s", ErrInvalidInput, err.Error())
-	}
-
-	if input.AccountIdentifier != nil && input.SubAccountIdentifier != nil {
-		return "", fmt.Errorf("%w: cannot populate both account and sub account", ErrInvalidInput)
+	// Validate that input is properly formatted
+	if err := findBalanceWorkerInputValidation(&input); err != nil {
+		return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
 	}
 
 	log.Println(balanceMessage(&input))
