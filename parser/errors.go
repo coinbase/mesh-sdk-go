@@ -35,16 +35,16 @@ var (
 		"intended type did not match observed type",
 	)
 	ErrExpectedOperationsExtraOperation = errors.New("found extra operation")
-	ErrExpectedSignerDuplicateSigner    = errors.New("found duplicate signer")
 	ErrExpectedSignerUnexpectedSigner   = errors.New("found unexpected signers")
+	ErrExpectedSignerMissing            = errors.New("missing expected signer")
 
 	IntentErrs = []error{
 		ErrExpectedOperationAccountMismatch,
 		ErrExpectedOperationAmountMismatch,
 		ErrExpectedOperationTypeMismatch,
 		ErrExpectedOperationsExtraOperation,
-		ErrExpectedSignerDuplicateSigner,
 		ErrExpectedSignerUnexpectedSigner,
+		ErrExpectedSignerMissing,
 	}
 
 	/////////////////////////////

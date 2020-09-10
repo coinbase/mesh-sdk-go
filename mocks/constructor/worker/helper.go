@@ -18,16 +18,16 @@ type Helper struct {
 	mock.Mock
 }
 
-// AllAddresses provides a mock function with given fields: _a0, _a1
-func (_m *Helper) AllAddresses(_a0 context.Context, _a1 storage.DatabaseTransaction) ([]string, error) {
+// AllAccounts provides a mock function with given fields: _a0, _a1
+func (_m *Helper) AllAccounts(_a0 context.Context, _a1 storage.DatabaseTransaction) ([]*types.AccountIdentifier, error) {
 	ret := _m.Called(_a0, _a1)
 
-	var r0 []string
-	if rf, ok := ret.Get(0).(func(context.Context, storage.DatabaseTransaction) []string); ok {
+	var r0 []*types.AccountIdentifier
+	if rf, ok := ret.Get(0).(func(context.Context, storage.DatabaseTransaction) []*types.AccountIdentifier); ok {
 		r0 = rf(_a0, _a1)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]string)
+			r0 = ret.Get(0).([]*types.AccountIdentifier)
 		}
 	}
 
@@ -88,14 +88,16 @@ func (_m *Helper) Coins(_a0 context.Context, _a1 storage.DatabaseTransaction, _a
 }
 
 // Derive provides a mock function with given fields: _a0, _a1, _a2, _a3
-func (_m *Helper) Derive(_a0 context.Context, _a1 *types.NetworkIdentifier, _a2 *types.PublicKey, _a3 map[string]interface{}) (string, map[string]interface{}, error) {
+func (_m *Helper) Derive(_a0 context.Context, _a1 *types.NetworkIdentifier, _a2 *types.PublicKey, _a3 map[string]interface{}) (*types.AccountIdentifier, map[string]interface{}, error) {
 	ret := _m.Called(_a0, _a1, _a2, _a3)
 
-	var r0 string
-	if rf, ok := ret.Get(0).(func(context.Context, *types.NetworkIdentifier, *types.PublicKey, map[string]interface{}) string); ok {
+	var r0 *types.AccountIdentifier
+	if rf, ok := ret.Get(0).(func(context.Context, *types.NetworkIdentifier, *types.PublicKey, map[string]interface{}) *types.AccountIdentifier); ok {
 		r0 = rf(_a0, _a1, _a2, _a3)
 	} else {
-		r0 = ret.Get(0).(string)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*types.AccountIdentifier)
+		}
 	}
 
 	var r1 map[string]interface{}
@@ -117,16 +119,16 @@ func (_m *Helper) Derive(_a0 context.Context, _a1 *types.NetworkIdentifier, _a2 
 	return r0, r1, r2
 }
 
-// LockedAddresses provides a mock function with given fields: _a0, _a1
-func (_m *Helper) LockedAddresses(_a0 context.Context, _a1 storage.DatabaseTransaction) ([]string, error) {
+// LockedAccounts provides a mock function with given fields: _a0, _a1
+func (_m *Helper) LockedAccounts(_a0 context.Context, _a1 storage.DatabaseTransaction) ([]*types.AccountIdentifier, error) {
 	ret := _m.Called(_a0, _a1)
 
-	var r0 []string
-	if rf, ok := ret.Get(0).(func(context.Context, storage.DatabaseTransaction) []string); ok {
+	var r0 []*types.AccountIdentifier
+	if rf, ok := ret.Get(0).(func(context.Context, storage.DatabaseTransaction) []*types.AccountIdentifier); ok {
 		r0 = rf(_a0, _a1)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]string)
+			r0 = ret.Get(0).([]*types.AccountIdentifier)
 		}
 	}
 
@@ -141,11 +143,11 @@ func (_m *Helper) LockedAddresses(_a0 context.Context, _a1 storage.DatabaseTrans
 }
 
 // StoreKey provides a mock function with given fields: _a0, _a1, _a2, _a3
-func (_m *Helper) StoreKey(_a0 context.Context, _a1 storage.DatabaseTransaction, _a2 string, _a3 *keys.KeyPair) error {
+func (_m *Helper) StoreKey(_a0 context.Context, _a1 storage.DatabaseTransaction, _a2 *types.AccountIdentifier, _a3 *keys.KeyPair) error {
 	ret := _m.Called(_a0, _a1, _a2, _a3)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, storage.DatabaseTransaction, string, *keys.KeyPair) error); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, storage.DatabaseTransaction, *types.AccountIdentifier, *keys.KeyPair) error); ok {
 		r0 = rf(_a0, _a1, _a2, _a3)
 	} else {
 		r0 = ret.Error(0)

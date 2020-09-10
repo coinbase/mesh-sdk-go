@@ -76,9 +76,9 @@ func (f *Fetcher) ConstructionDerive(
 	network *types.NetworkIdentifier,
 	publicKey *types.PublicKey,
 	metadata map[string]interface{},
-) (string, map[string]interface{}, *Error) {
+) (*types.AccountIdentifier, map[string]interface{}, *Error) {
 	if err := f.connectionSemaphore.Acquire(ctx, semaphoreRequestWeight); err != nil {
-		return "", nil, &Error{
+		return nil, nil, &Error{
 			Err: fmt.Errorf("%w: %s", ErrCouldNotAcquireSemaphore, err.Error()),
 		}
 	}
@@ -96,17 +96,17 @@ func (f *Fetcher) ConstructionDerive(
 			Err:       fmt.Errorf("%w: /construction/derive %s", ErrRequestFailed, err.Error()),
 			ClientErr: clientErr,
 		}
-		return "", nil, fetcherErr
+		return nil, nil, fetcherErr
 	}
 
 	if err := asserter.ConstructionDeriveResponse(response); err != nil {
 		fetcherErr := &Error{
 			Err: fmt.Errorf("%w: /construction/derive %s", ErrAssertionFailed, err.Error()),
 		}
-		return "", nil, fetcherErr
+		return nil, nil, fetcherErr
 	}
 
-	return response.Address, response.Metadata, nil
+	return response.AccountIdentifier, response.Metadata, nil
 }
 
 // ConstructionHash returns the network-specific transaction hash for
@@ -197,7 +197,7 @@ func (f *Fetcher) ConstructionParse(
 	network *types.NetworkIdentifier,
 	signed bool,
 	transaction string,
-) ([]*types.Operation, []string, map[string]interface{}, *Error) {
+) ([]*types.Operation, []*types.AccountIdentifier, map[string]interface{}, *Error) {
 	if err := f.connectionSemaphore.Acquire(ctx, semaphoreRequestWeight); err != nil {
 		return nil, nil, nil, &Error{
 			Err: fmt.Errorf("%w: %s", ErrCouldNotAcquireSemaphore, err.Error()),
@@ -227,7 +227,7 @@ func (f *Fetcher) ConstructionParse(
 		return nil, nil, nil, fetcherErr
 	}
 
-	return response.Operations, response.Signers, response.Metadata, nil
+	return response.Operations, response.AccountIdentifierSigners, response.Metadata, nil
 }
 
 // ConstructionPayloads is called with an array of operations

@@ -49,12 +49,12 @@ type Helper interface {
 	// This is used to update jobs and enque them for broadcast atomically.
 	DatabaseTransaction(context.Context) storage.DatabaseTransaction
 
-	// StoreKey is called to persist an
-	// address + KeyPair.
+	// StoreKey is called to persist a
+	// *types.AccountIdentifier + KeyPair.
 	StoreKey(
 		context.Context,
 		storage.DatabaseTransaction,
-		string,
+		*types.AccountIdentifier,
 		*keys.KeyPair,
 	) error
 
@@ -63,21 +63,21 @@ type Helper interface {
 	GetKey(
 		context.Context,
 		storage.DatabaseTransaction,
-		string, // address
+		*types.AccountIdentifier,
 	) (*keys.KeyPair, error)
 
-	// AllAddresses returns a slice of all known addresses.
-	AllAddresses(
+	// AllAccounts returns a slice of all known *types.AccountIdentifier.
+	AllAccounts(
 		context.Context,
 		storage.DatabaseTransaction,
-	) ([]string, error)
+	) ([]*types.AccountIdentifier, error)
 
-	// LockedAccounts is a slice of all addresses currently sending or receiving
+	// LockedAccounts is a slice of all *types.AccountIdentifier currently sending or receiving
 	// funds.
-	LockedAddresses(
+	LockedAccounts(
 		context.Context,
 		storage.DatabaseTransaction,
-	) ([]string, error)
+	) ([]*types.AccountIdentifier, error)
 
 	// Balance returns the balance
 	// for a provided address.
@@ -112,13 +112,13 @@ type Helper interface {
 		int64, // confirmation depth
 	) error
 
-	// Derive returns a new address for a provided publicKey.
+	// Derive returns a new *types.AccountIdentifier for a provided publicKey.
 	Derive(
 		context.Context,
 		*types.NetworkIdentifier,
 		*types.PublicKey,
 		map[string]interface{},
-	) (string, map[string]interface{}, error)
+	) (*types.AccountIdentifier, map[string]interface{}, error)
 
 	// Preprocess calls the /construction/preprocess endpoint
 	// on an offline node.
@@ -155,7 +155,7 @@ type Helper interface {
 		*types.NetworkIdentifier,
 		bool, // signed
 		string, // transaction
-	) ([]*types.Operation, []string, map[string]interface{}, error)
+	) ([]*types.Operation, []*types.AccountIdentifier, map[string]interface{}, error)
 
 	// Combine calls the /construction/combine endpoint
 	// using the offline node.

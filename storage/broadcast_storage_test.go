@@ -66,9 +66,6 @@ func opFiller(sender string, opNumber int) []*types.Operation {
 			},
 			Account: &types.AccountIdentifier{
 				Address: sender,
-				SubAccount: &types.SubAccountIdentifier{
-					Address: sender,
-				},
 			},
 		}
 	}
@@ -125,11 +122,13 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 		)
 		assert.NoError(t, err)
 
-		// Check to make sure duplicate instances of address aren't reported
-		addresses, err := storage.LockedAddresses(ctx, dbTx)
+		// Check to make sure duplicate instances of accounts aren't reported
+		accounts, err := storage.LockedAccounts(ctx, dbTx)
 		assert.NoError(t, err)
-		assert.Len(t, addresses, 1)
-		assert.ElementsMatch(t, []string{"addr 1"}, addresses)
+		assert.Len(t, accounts, 1)
+		assert.ElementsMatch(t, []*types.AccountIdentifier{
+			{Address: "addr 1"},
+		}, accounts)
 
 		assert.NoError(t, dbTx.Commit(ctx))
 
@@ -161,10 +160,12 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 		err = commitWorker(ctx)
 		assert.NoError(t, err)
 
-		addresses, err := storage.LockedAddresses(ctx, txn)
+		accounts, err := storage.LockedAccounts(ctx, txn)
 		assert.NoError(t, err)
-		assert.Len(t, addresses, 1)
-		assert.ElementsMatch(t, []string{"addr 1"}, addresses)
+		assert.Len(t, accounts, 1)
+		assert.ElementsMatch(t, []*types.AccountIdentifier{
+			{Address: "addr 1"},
+		}, accounts)
 
 		broadcasts, err := storage.GetAllBroadcasts(ctx)
 		assert.NoError(t, err)
@@ -198,10 +199,12 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 		err = commitWorker(ctx)
 		assert.NoError(t, err)
 
-		addresses, err := storage.LockedAddresses(ctx, txn)
+		accounts, err := storage.LockedAccounts(ctx, txn)
 		assert.NoError(t, err)
-		assert.Len(t, addresses, 1)
-		assert.ElementsMatch(t, []string{"addr 1"}, addresses)
+		assert.Len(t, accounts, 1)
+		assert.ElementsMatch(t, []*types.AccountIdentifier{
+			{Address: "addr 1"},
+		}, accounts)
 
 		broadcasts, err := storage.GetAllBroadcasts(ctx)
 		assert.NoError(t, err)
@@ -239,10 +242,13 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 		assert.NoError(t, err)
 
 		// Check to make sure duplicate instances of address aren't reported
-		addresses, err := storage.LockedAddresses(ctx, dbTx)
+		accounts, err := storage.LockedAccounts(ctx, dbTx)
 		assert.NoError(t, err)
-		assert.Len(t, addresses, 2)
-		assert.ElementsMatch(t, []string{"addr 1", "addr 2"}, addresses)
+		assert.Len(t, accounts, 2)
+		assert.ElementsMatch(t, []*types.AccountIdentifier{
+			{Address: "addr 1"},
+			{Address: "addr 2"},
+		}, accounts)
 
 		assert.NoError(t, dbTx.Commit(ctx))
 		assert.NoError(t, storage.BroadcastAll(ctx, true))
@@ -280,10 +286,13 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 		commitWorker, err := storage.AddingBlock(ctx, block, txn)
 		assert.NoError(t, err)
 
-		addresses, err := storage.LockedAddresses(ctx, txn)
+		accounts, err := storage.LockedAccounts(ctx, txn)
 		assert.NoError(t, err)
-		assert.Len(t, addresses, 2)
-		assert.ElementsMatch(t, []string{"addr 1", "addr 2"}, addresses)
+		assert.Len(t, accounts, 2)
+		assert.ElementsMatch(t, []*types.AccountIdentifier{
+			{Address: "addr 1"},
+			{Address: "addr 2"},
+		}, accounts)
 
 		err = txn.Commit(ctx)
 		assert.NoError(t, err)
@@ -357,10 +366,13 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 		err = commitWorker(ctx)
 		assert.NoError(t, err)
 
-		addresses, err := storage.LockedAddresses(ctx, txn)
+		accounts, err := storage.LockedAccounts(ctx, txn)
 		assert.NoError(t, err)
-		assert.Len(t, addresses, 2)
-		assert.ElementsMatch(t, []string{"addr 1", "addr 2"}, addresses)
+		assert.Len(t, accounts, 2)
+		assert.ElementsMatch(t, []*types.AccountIdentifier{
+			{Address: "addr 1"},
+			{Address: "addr 2"},
+		}, accounts)
 
 		broadcasts, err := storage.GetAllBroadcasts(ctx)
 		assert.NoError(t, err)
@@ -404,10 +416,12 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 		commitWorker, err := storage.AddingBlock(ctx, block, txn)
 		assert.NoError(t, err)
 
-		addresses, err := storage.LockedAddresses(ctx, txn)
+		accounts, err := storage.LockedAccounts(ctx, txn)
 		assert.NoError(t, err)
-		assert.Len(t, addresses, 1)
-		assert.ElementsMatch(t, []string{"addr 2"}, addresses)
+		assert.Len(t, accounts, 1)
+		assert.ElementsMatch(t, []*types.AccountIdentifier{
+			{Address: "addr 2"},
+		}, accounts)
 
 		err = txn.Commit(ctx)
 		assert.NoError(t, err)
@@ -452,10 +466,10 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 		commitWorker, err := storage.AddingBlock(ctx, block, txn)
 		assert.NoError(t, err)
 
-		addresses, err := storage.LockedAddresses(ctx, txn)
+		accounts, err := storage.LockedAccounts(ctx, txn)
 		assert.NoError(t, err)
-		assert.Len(t, addresses, 0)
-		assert.ElementsMatch(t, []string{}, addresses)
+		assert.Len(t, accounts, 0)
+		assert.ElementsMatch(t, []*types.AccountIdentifier{}, accounts)
 
 		err = txn.Commit(ctx)
 		assert.NoError(t, err)
@@ -516,10 +530,10 @@ func TestBroadcastStorageBroadcastFailure(t *testing.T) {
 		dbTx := database.NewDatabaseTransaction(ctx, false)
 		defer dbTx.Discard(ctx)
 
-		addresses, err := storage.LockedAddresses(ctx, dbTx)
+		accounts, err := storage.LockedAccounts(ctx, dbTx)
 		assert.NoError(t, err)
-		assert.Len(t, addresses, 0)
-		assert.ElementsMatch(t, []string{}, addresses)
+		assert.Len(t, accounts, 0)
+		assert.ElementsMatch(t, []*types.AccountIdentifier{}, accounts)
 	})
 
 	send1 := opFiller("addr 1", 11)
@@ -563,10 +577,14 @@ func TestBroadcastStorageBroadcastFailure(t *testing.T) {
 		assert.NoError(t, err)
 
 		// Check to make sure duplicate instances of address aren't reported
-		addresses, err := storage.LockedAddresses(ctx, dbTx)
+		accounts, err := storage.LockedAccounts(ctx, dbTx)
 		assert.NoError(t, err)
-		assert.Len(t, addresses, 3)
-		assert.ElementsMatch(t, []string{"addr 1", "addr 2", "addr 3"}, addresses)
+		assert.Len(t, accounts, 3)
+		assert.ElementsMatch(t, []*types.AccountIdentifier{
+			{Address: "addr 1"},
+			{Address: "addr 2"},
+			{Address: "addr 3"},
+		}, accounts)
 
 		assert.NoError(t, dbTx.Commit(ctx))
 		assert.NoError(t, storage.BroadcastAll(ctx, true))
@@ -615,10 +633,10 @@ func TestBroadcastStorageBroadcastFailure(t *testing.T) {
 		dbTx := database.NewDatabaseTransaction(ctx, false)
 		defer dbTx.Discard(ctx)
 
-		addresses, err := storage.LockedAddresses(ctx, dbTx)
+		accounts, err := storage.LockedAccounts(ctx, dbTx)
 		assert.NoError(t, err)
-		assert.Len(t, addresses, 0)
-		assert.ElementsMatch(t, []string{}, addresses)
+		assert.Len(t, accounts, 0)
+		assert.ElementsMatch(t, []*types.AccountIdentifier{}, accounts)
 
 		broadcasts, err := storage.GetAllBroadcasts(ctx)
 		assert.NoError(t, err)
@@ -703,10 +721,13 @@ func TestBroadcastStorageBehindTip(t *testing.T) {
 		assert.NoError(t, err)
 
 		// Check to make sure duplicate instances of address aren't reported
-		addresses, err := storage.LockedAddresses(ctx, dbTx)
+		accounts, err := storage.LockedAccounts(ctx, dbTx)
 		assert.NoError(t, err)
-		assert.Len(t, addresses, 2)
-		assert.ElementsMatch(t, []string{"addr 1", "addr 2"}, addresses)
+		assert.Len(t, accounts, 2)
+		assert.ElementsMatch(t, []*types.AccountIdentifier{
+			{Address: "addr 1"},
+			{Address: "addr 2"},
+		}, accounts)
 
 		assert.NoError(t, dbTx.Commit(ctx))
 
@@ -755,10 +776,13 @@ func TestBroadcastStorageBehindTip(t *testing.T) {
 		dbTx := database.NewDatabaseTransaction(ctx, false)
 		defer dbTx.Discard(ctx)
 
-		addresses, err := storage.LockedAddresses(ctx, dbTx)
+		accounts, err := storage.LockedAccounts(ctx, dbTx)
 		assert.NoError(t, err)
-		assert.Len(t, addresses, 2)
-		assert.ElementsMatch(t, []string{"addr 1", "addr 2"}, addresses)
+		assert.Len(t, accounts, 2)
+		assert.ElementsMatch(t, []*types.AccountIdentifier{
+			{Address: "addr 1"},
+			{Address: "addr 2"},
+		}, accounts)
 
 		broadcasts, err := storage.GetAllBroadcasts(ctx)
 		assert.NoError(t, err)
@@ -802,10 +826,13 @@ func TestBroadcastStorageBehindTip(t *testing.T) {
 		dbTx := database.NewDatabaseTransaction(ctx, false)
 		defer dbTx.Discard(ctx)
 
-		addresses, err := storage.LockedAddresses(ctx, dbTx)
+		accounts, err := storage.LockedAccounts(ctx, dbTx)
 		assert.NoError(t, err)
-		assert.Len(t, addresses, 2)
-		assert.ElementsMatch(t, []string{"addr 1", "addr 2"}, addresses)
+		assert.Len(t, accounts, 2)
+		assert.ElementsMatch(t, []*types.AccountIdentifier{
+			{Address: "addr 1"},
+			{Address: "addr 2"},
+		}, accounts)
 
 		broadcasts, err := storage.GetAllBroadcasts(ctx)
 		assert.NoError(t, err)
@@ -865,10 +892,10 @@ func TestBroadcastStorageClearBroadcasts(t *testing.T) {
 		dbTx := database.NewDatabaseTransaction(ctx, false)
 		defer dbTx.Discard(ctx)
 
-		addresses, err := storage.LockedAddresses(ctx, dbTx)
+		accounts, err := storage.LockedAccounts(ctx, dbTx)
 		assert.NoError(t, err)
-		assert.Len(t, addresses, 0)
-		assert.ElementsMatch(t, []string{}, addresses)
+		assert.Len(t, accounts, 0)
+		assert.ElementsMatch(t, []*types.AccountIdentifier{}, accounts)
 	})
 
 	send1 := opFiller("addr 1", 11)
@@ -902,10 +929,13 @@ func TestBroadcastStorageClearBroadcasts(t *testing.T) {
 		assert.NoError(t, err)
 
 		// Check to make sure duplicate instances of address aren't reported
-		addresses, err := storage.LockedAddresses(ctx, dbTx)
+		accounts, err := storage.LockedAccounts(ctx, dbTx)
 		assert.NoError(t, err)
-		assert.Len(t, addresses, 2)
-		assert.ElementsMatch(t, []string{"addr 1", "addr 2"}, addresses)
+		assert.Len(t, accounts, 2)
+		assert.ElementsMatch(t, []*types.AccountIdentifier{
+			{Address: "addr 1"},
+			{Address: "addr 2"},
+		}, accounts)
 
 		assert.NoError(t, dbTx.Commit(ctx))
 
@@ -956,10 +986,10 @@ func TestBroadcastStorageClearBroadcasts(t *testing.T) {
 		dbTx := database.NewDatabaseTransaction(ctx, false)
 		defer dbTx.Discard(ctx)
 
-		addresses, err := storage.LockedAddresses(ctx, dbTx)
+		accounts, err := storage.LockedAccounts(ctx, dbTx)
 		assert.NoError(t, err)
-		assert.Len(t, addresses, 0)
-		assert.ElementsMatch(t, []string{}, addresses)
+		assert.Len(t, accounts, 0)
+		assert.ElementsMatch(t, []*types.AccountIdentifier{}, accounts)
 	})
 }
 

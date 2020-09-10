@@ -39,8 +39,8 @@ func (s *SigningPayload) MarshalJSON() ([]byte, error) {
 	}
 
 	j, err := json.Marshal(struct {
-		// [DEPRECATED by `account_identifier` in `v1.4.4`] Address is the network-specific
-		// address of the account that should sign the payload.
+    // [DEPRECATED by `account_identifier` in `v1.4.4`] Address is the network-specific
+    // address of the account that should sign the payload.
 		Address string `json:"address,omitempty"`
 		Bytes   string `json:"hex_bytes"`
 		*Alias
@@ -61,10 +61,10 @@ func (s *SigningPayload) MarshalJSON() ([]byte, error) {
 func (s *SigningPayload) UnmarshalJSON(b []byte) error {
 	type Alias SigningPayload
 	r := struct {
-		// [DEPRECATED by `account_identifier` in `v1.4.4`] Address is the network-specific
-		// address of the account that should sign the payload.
-		Address string `json:"address,omitempty"`
-		Bytes   string `json:"hex_bytes"`
+    // [DEPRECATED by `account_identifier` in `v1.4.4`] Address is the network-specific
+    // address of the account that should sign the payload.
+    Address string `json:"address,omitempty"`
+		Bytes string `json:"hex_bytes"`
 		*Alias
 	}{
 		Alias: (*Alias)(s),
@@ -80,7 +80,7 @@ func (s *SigningPayload) UnmarshalJSON(b []byte) error {
 	}
 	s.Bytes = bytes
 
-	if s.AccountIdentifier == nil && len(r.Address) > 0 {
+  if s.AccountIdentifier == nil && len(r.Address) > 0 {
 		s.AccountIdentifier = &AccountIdentifier{
 			Address: r.Address,
 		}

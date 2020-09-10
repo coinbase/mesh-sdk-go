@@ -180,8 +180,9 @@ var (
 	ErrConstructionParseResponseSignersNonEmptyOnUnsignedTx = errors.New(
 		"signers should be empty for unsigned txs",
 	)
-	ErrConstructionParseResponseSignerEmpty = errors.New("signer cannot be empty string")
-	ErrConstructionPayloadsResponseIsNil    = errors.New(
+	ErrConstructionParseResponseSignerEmpty     = errors.New("signer cannot be empty string")
+	ErrConstructionParseResponseDuplicateSigner = errors.New("found duplicate signer")
+	ErrConstructionPayloadsResponseIsNil        = errors.New(
 		"construction payloads response cannot be nil",
 	)
 	ErrConstructionPayloadsResponseUnsignedTxEmpty = errors.New(

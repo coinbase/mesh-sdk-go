@@ -103,9 +103,8 @@ func (a *ConstructionAPIService) ConstructionCombine(
 	return &v, nil, nil
 }
 
-// ConstructionDerive Derive returns the network-specific address associated with a public key.
-// Blockchains that require an on-chain action to create an account should not implement this
-// method.
+// ConstructionDerive Derive returns the AccountIdentifier associated with a public key. Blockchains
+// that require an on-chain action to create an account should not implement this method.
 func (a *ConstructionAPIService) ConstructionDerive(
 	ctx _context.Context,
 	constructionDeriveRequest *types.ConstructionDeriveRequest,
@@ -390,12 +389,12 @@ func (a *ConstructionAPIService) ConstructionParse(
 
 // ConstructionPayloads Payloads is called with an array of operations and the response from
 // /construction/metadata. It returns an unsigned transaction blob and a collection of payloads that
-// must be signed by particular addresses using a certain SignatureType. The array of operations
-// provided in transaction construction often times can not specify all \effects\ of a transaction
-// (consider invoked transactions in Ethereum). However, they can deterministically specify the
-// \intent\ of the transaction, which is sufficient for construction. For this reason, parsing the
-// corresponding transaction in the Data API (when it lands on chain) will contain a superset of
-// whatever operations were provided during construction.
+// must be signed by particular AccountIdentifiers using a certain SignatureType. The array of
+// operations provided in transaction construction often times can not specify all \effects\ of a
+// transaction (consider invoked transactions in Ethereum). However, they can deterministically
+// specify the \intent\ of the transaction, which is sufficient for construction. For this reason,
+// parsing the corresponding transaction in the Data API (when it lands on chain) will contain a
+// superset of whatever operations were provided during construction.
 func (a *ConstructionAPIService) ConstructionPayloads(
 	ctx _context.Context,
 	constructionPayloadsRequest *types.ConstructionPayloadsRequest,

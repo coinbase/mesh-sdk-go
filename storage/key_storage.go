@@ -31,10 +31,10 @@ import (
 
 // PrefundedAccount is used to load prefunded addresses into key storage.
 type PrefundedAccount struct {
-	PrivateKeyHex string          `json:"privkey"`
-	Address       string          `json:"address"`
-	CurveType     types.CurveType `json:"curve_type"`
-	Currency      *types.Currency `json:"currency"`
+	PrivateKeyHex string                   `json:"privkey"`
+	Account       *types.AccountIdentifier `json:"account"`
+	CurveType     types.CurveType          `json:"curve_type"`
+	Currency      *types.Currency          `json:"currency"`
 }
 
 func init() {
@@ -45,9 +45,9 @@ const (
 	keyNamespace = "key"
 )
 
-func getAddressKey(address string) []byte {
+func getAccountKey(account *types.AccountIdentifier) []byte {
 	return []byte(
-		fmt.Sprintf("%s/%s", keyNamespace, address),
+		fmt.Sprintf("%s/%s", keyNamespace, types.Hash(account)),
 	)
 }
 
@@ -70,8 +70,8 @@ func NewKeyStorage(
 // is public so that accounts can be loaded from
 // a configuration file.
 type Key struct {
-	Address string        `json:"address"`
-	KeyPair *keys.KeyPair `json:"keypair"`
+	Account *types.AccountIdentifier `json:"account"`
+	KeyPair *keys.KeyPair            `json:"keypair"`
 }
 
 func parseKey(buf []byte) (*Key, error) {
@@ -97,28 +97,32 @@ func serializeKey(k *Key) ([]byte, error) {
 // StoreTransactional stores a key in a database transaction.
 func (k *KeyStorage) StoreTransactional(
 	ctx context.Context,
-	address string,
+	account *types.AccountIdentifier,
 	keyPair *keys.KeyPair,
 	dbTx DatabaseTransaction,
 ) error {
-	exists, _, err := dbTx.Get(ctx, getAddressKey(address))
+	exists, _, err := dbTx.Get(ctx, getAccountKey(account))
 	if err != nil {
-		return fmt.Errorf("%w: %s. %v", ErrAddrCheckIfExistsFailed, address, err)
+		return fmt.Errorf("%w: %s %v", ErrAddrCheckIfExistsFailed, types.PrintStruct(account), err)
 	}
 
 	if exists {
-		return fmt.Errorf("%w: address %s already exists", ErrAddrExists, address)
+		return fmt.Errorf(
+			"%w: account %s already exists",
+			ErrAddrExists,
+			types.PrintStruct(account),
+		)
 	}
 
 	val, err := serializeKey(&Key{
-		Address: address,
+		Account: account,
 		KeyPair: keyPair,
 	})
 	if err != nil {
 		return fmt.Errorf("%w: %v", ErrSerializeKeyFailed, err)
 	}
 
-	err = dbTx.Set(ctx, getAddressKey(address), val, true)
+	err = dbTx.Set(ctx, getAccountKey(account), val, true)
 	if err != nil {
 		return fmt.Errorf("%w: %v", ErrStoreKeyFailed, err)
 	}
@@ -130,13 +134,13 @@ func (k *KeyStorage) StoreTransactional(
 // exists, an error is returned.
 func (k *KeyStorage) Store(
 	ctx context.Context,
-	address string,
+	account *types.AccountIdentifier,
 	keyPair *keys.KeyPair,
 ) error {
 	dbTx := k.db.NewDatabaseTransaction(ctx, true)
 	defer dbTx.Discard(ctx)
 
-	if err := k.StoreTransactional(ctx, address, keyPair, dbTx); err != nil {
+	if err := k.StoreTransactional(ctx, account, keyPair, dbTx); err != nil {
 		return fmt.Errorf("%w: unable to store key", err)
 	}
 
@@ -147,19 +151,20 @@ func (k *KeyStorage) Store(
 	return nil
 }
 
-// GetTransactional returns a *keys.KeyPair for an address in a DatabaseTransaction, if it exists.
+// GetTransactional returns a *keys.KeyPair for an AccountIdentifier in a
+// DatabaseTransaction, if it exists.
 func (k *KeyStorage) GetTransactional(
 	ctx context.Context,
 	dbTx DatabaseTransaction,
-	address string,
+	account *types.AccountIdentifier,
 ) (*keys.KeyPair, error) {
-	exists, rawKey, err := dbTx.Get(ctx, getAddressKey(address))
+	exists, rawKey, err := dbTx.Get(ctx, getAccountKey(account))
 	if err != nil {
-		return nil, fmt.Errorf("%w: %s. %v", ErrAddrGetFailed, address, err)
+		return nil, fmt.Errorf("%w: %s %v", ErrAddrGetFailed, types.PrintStruct(account), err)
 	}
 
 	if !exists {
-		return nil, fmt.Errorf("%w: %s", ErrAddrNotFound, address)
+		return nil, fmt.Errorf("%w: %s", ErrAddrNotFound, types.PrintStruct(account))
 	}
 
 	key, err := parseKey(rawKey)
@@ -170,43 +175,46 @@ func (k *KeyStorage) GetTransactional(
 	return key.KeyPair, nil
 }
 
-// Get returns a *keys.KeyPair for an address, if it exists.
-func (k *KeyStorage) Get(ctx context.Context, address string) (*keys.KeyPair, error) {
+// Get returns a *keys.KeyPair for an AccountIdentifier, if it exists.
+func (k *KeyStorage) Get(
+	ctx context.Context,
+	account *types.AccountIdentifier,
+) (*keys.KeyPair, error) {
 	transaction := k.db.NewDatabaseTransaction(ctx, false)
 	defer transaction.Discard(ctx)
 
-	return k.GetTransactional(ctx, transaction, address)
+	return k.GetTransactional(ctx, transaction, account)
 }
 
-// GetAllAddressesTransactional returns all addresses in key storage.
-func (k *KeyStorage) GetAllAddressesTransactional(
+// GetAllAccountsTransactional returns all AccountIdentifiers in key storage.
+func (k *KeyStorage) GetAllAccountsTransactional(
 	ctx context.Context,
 	dbTx DatabaseTransaction,
-) ([]string, error) {
+) ([]*types.AccountIdentifier, error) {
 	rawKeys, err := dbTx.Scan(ctx, []byte(keyNamespace), false)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrKeyScanFailed, err)
 	}
 
-	addresses := make([]string, len(rawKeys))
+	accounts := make([]*types.AccountIdentifier, len(rawKeys))
 	for i, rawKey := range rawKeys {
 		kp, err := parseKey(rawKey.Value)
 		if err != nil {
 			return nil, fmt.Errorf("%w: %v", ErrParseKeyPairFailed, err)
 		}
 
-		addresses[i] = kp.Address
+		accounts[i] = kp.Account
 	}
 
-	return addresses, nil
+	return accounts, nil
 }
 
-// GetAllAddresses returns all addresses in key storage.
-func (k *KeyStorage) GetAllAddresses(ctx context.Context) ([]string, error) {
+// GetAllAccounts returns all AccountIdentifiers in key storage.
+func (k *KeyStorage) GetAllAccounts(ctx context.Context) ([]*types.AccountIdentifier, error) {
 	dbTx := k.db.NewDatabaseTransaction(ctx, false)
 	defer dbTx.Discard(ctx)
 
-	return k.GetAllAddressesTransactional(ctx, dbTx)
+	return k.GetAllAccountsTransactional(ctx, dbTx)
 }
 
 // Sign attempts to sign a slice of *types.SigningPayload with the keys in KeyStorage.
@@ -216,9 +224,14 @@ func (k *KeyStorage) Sign(
 ) ([]*types.Signature, error) {
 	signatures := make([]*types.Signature, len(payloads))
 	for i, payload := range payloads {
-		keyPair, err := k.Get(ctx, payload.Address)
+		keyPair, err := k.Get(ctx, payload.AccountIdentifier)
 		if err != nil {
-			return nil, fmt.Errorf("%w for %s: %v", ErrKeyGetFailed, payload.Address, err)
+			return nil, fmt.Errorf(
+				"%w for %s: %v",
+				ErrKeyGetFailed,
+				types.PrintStruct(payload.AccountIdentifier),
+				err,
+			)
 		}
 
 		signer, err := keyPair.Signer()
@@ -241,18 +254,18 @@ func (k *KeyStorage) Sign(
 	return signatures, nil
 }
 
-// RandomAddress returns a random address from all addresses.
-func (k *KeyStorage) RandomAddress(ctx context.Context) (string, error) {
-	addresses, err := k.GetAllAddresses(ctx)
+// RandomAccount returns a random account from all accounts.
+func (k *KeyStorage) RandomAccount(ctx context.Context) (*types.AccountIdentifier, error) {
+	accounts, err := k.GetAllAccounts(ctx)
 	if err != nil {
-		return "", fmt.Errorf("%w: %v", ErrAddrsGetAllFailed, err)
+		return nil, fmt.Errorf("%w: %v", ErrAddrsGetAllFailed, err)
 	}
 
-	if len(addresses) == 0 {
-		return "", ErrNoAddrAvailable
+	if len(accounts) == 0 {
+		return nil, ErrNoAddrAvailable
 	}
 
-	return addresses[rand.Intn(len(addresses))], nil
+	return accounts[rand.Intn(len(accounts))], nil
 }
 
 // ImportAccounts loads a set of prefunded accounts into key storage.
@@ -265,7 +278,7 @@ func (k *KeyStorage) ImportAccounts(ctx context.Context, accounts []*PrefundedAc
 		}
 
 		// Skip if key already exists
-		err = k.Store(ctx, acc.Address, keyPair)
+		err = k.Store(ctx, acc.Account, keyPair)
 		if errors.Is(err, ErrAddrExists) {
 			continue
 		}
