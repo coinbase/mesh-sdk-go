@@ -280,45 +280,6 @@ func ExtractAmount(
 	)
 }
 
-// PopulateSigningPayload ensures both the string-based
-// Address field and AccountIdentifier-based field are
-// populated.
-func PopulateSigningPayload(
-	payload *SigningPayload,
-) *SigningPayload {
-	if payload.AccountIdentifier == nil && payload.Address == nil {
-		return payload
-	}
-
-	if payload.AccountIdentifier != nil {
-		payload.Address = &payload.AccountIdentifier.Address
-		return payload
-	}
-
-	address := ""
-	if payload.Address != nil {
-		address = *payload.Address
-	}
-
-	payload.AccountIdentifier = &AccountIdentifier{Address: address}
-	return payload
-}
-
-// PopulateConstructionPayloadsResponse ensures both
-// the string-based Address field and AccountIdentifier-based
-// field are populated.
-func PopulateConstructionPayloadsResponse(
-	response *ConstructionPayloadsResponse,
-) *ConstructionPayloadsResponse {
-	newPayloads := make([]*SigningPayload, len(response.Payloads))
-	for i, payload := range response.Payloads {
-		newPayloads[i] = PopulateSigningPayload(payload)
-	}
-	response.Payloads = newPayloads
-
-	return response
-}
-
 // PopulateConstructionParseResponse ensures both
 // the string-based Address field and AccountIdentifier-based
 // field are populated.

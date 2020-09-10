@@ -79,7 +79,7 @@ func (s *SigningPayload) UnmarshalJSON(b []byte) error {
 	s.Bytes = bytes
 
   if s.AccountIdentifier == nil && len(r.Address) > 0 {
-		s.AccountIdentifier = &types.AccountIdentifier{
+		s.AccountIdentifier = &AccountIdentifier{
 			Address: r.Address,
 		}
 	}

@@ -41,13 +41,6 @@ func (f *Fetcher) ConstructionCombine(
 	}
 	defer f.connectionSemaphore.Release(semaphoreRequestWeight)
 
-	// Ensure both AccountIdentifier and Address field are populated
-	// in SigningPayloads. It is up to the server to determine which fields
-	// to use (it should always prefer AccountIdentifier).
-	for _, signature := range signatures {
-		signature.SigningPayload = types.PopulateSigningPayload(signature.SigningPayload)
-	}
-
 	response, clientErr, err := f.rosettaClient.ConstructionAPI.ConstructionCombine(ctx,
 		&types.ConstructionCombineRequest{
 			NetworkIdentifier:   network,
@@ -281,7 +274,6 @@ func (f *Fetcher) ConstructionPayloads(
 		return "", nil, fetcherErr
 	}
 
-	response = types.PopulateConstructionPayloadsResponse(response)
 	if err := asserter.ConstructionPayloadsResponse(response); err != nil {
 		fetcherErr := &Error{
 			Err: fmt.Errorf("%w: /construction/payloads %s", ErrAssertionFailed, err.Error()),

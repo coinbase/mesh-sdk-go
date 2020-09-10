@@ -617,8 +617,10 @@ func TestConstructionPayloadsResponse(t *testing.T) {
 				UnsignedTransaction: "tx blob",
 				Payloads: []*types.SigningPayload{
 					{
-						Address: pointerString("hello"),
-						Bytes:   []byte("48656c6c6f20476f7068657221"),
+						AccountIdentifier: &types.AccountIdentifier{
+							Address: "hello",
+						},
+						Bytes: []byte("48656c6c6f20476f7068657221"),
 					},
 				},
 			},
@@ -631,8 +633,10 @@ func TestConstructionPayloadsResponse(t *testing.T) {
 			response: &types.ConstructionPayloadsResponse{
 				Payloads: []*types.SigningPayload{
 					{
-						Address: pointerString("hello"),
-						Bytes:   []byte("48656c6c6f20476f7068657221"),
+						AccountIdentifier: &types.AccountIdentifier{
+							Address: "hello",
+						},
+						Bytes: []byte("48656c6c6f20476f7068657221"),
 					},
 				},
 			},
@@ -719,13 +723,17 @@ func TestSigningPayload(t *testing.T) {
 	}{
 		"valid signing payload": {
 			signingPayload: &types.SigningPayload{
-				Address: pointerString("hello"),
-				Bytes:   []byte("blah"),
+				AccountIdentifier: &types.AccountIdentifier{
+					Address: "hello",
+				},
+				Bytes: []byte("blah"),
 			},
 		},
 		"valid signing payload with signature type": {
 			signingPayload: &types.SigningPayload{
-				Address:       pointerString("hello"),
+				AccountIdentifier: &types.AccountIdentifier{
+					Address: "hello",
+				},
 				Bytes:         []byte("blah"),
 				SignatureType: types.Ed25519,
 			},
@@ -741,13 +749,17 @@ func TestSigningPayload(t *testing.T) {
 		},
 		"empty bytes": {
 			signingPayload: &types.SigningPayload{
-				Address: pointerString("hello"),
+				AccountIdentifier: &types.AccountIdentifier{
+					Address: "hello",
+				},
 			},
 			err: ErrSigningPayloadBytesEmpty,
 		},
 		"invalid signature": {
 			signingPayload: &types.SigningPayload{
-				Address:       pointerString("hello"),
+				AccountIdentifier: &types.AccountIdentifier{
+					Address: "hello",
+				},
 				Bytes:         []byte("blah"),
 				SignatureType: "blah",
 			},
@@ -777,8 +789,8 @@ func TestSignatures(t *testing.T) {
 			signatures: []*types.Signature{
 				{
 					SigningPayload: &types.SigningPayload{
-						Address: pointerString(validAccount.Address),
-						Bytes:   []byte("blah"),
+						AccountIdentifier: validAccount,
+						Bytes:             []byte("blah"),
 					},
 					PublicKey:     validPublicKey,
 					SignatureType: types.Ed25519,
@@ -786,8 +798,8 @@ func TestSignatures(t *testing.T) {
 				},
 				{
 					SigningPayload: &types.SigningPayload{
-						Address: pointerString(validAccount.Address),
-						Bytes:   []byte("blah"),
+						AccountIdentifier: validAccount,
+						Bytes:             []byte("blah"),
 					},
 					PublicKey:     validPublicKey,
 					SignatureType: types.EcdsaRecovery,
@@ -799,9 +811,9 @@ func TestSignatures(t *testing.T) {
 			signatures: []*types.Signature{
 				{
 					SigningPayload: &types.SigningPayload{
-						Address:       pointerString(validAccount.Address),
-						Bytes:         []byte("blah"),
-						SignatureType: types.Ed25519,
+						AccountIdentifier: validAccount,
+						Bytes:             []byte("blah"),
+						SignatureType:     types.Ed25519,
 					},
 					PublicKey:     validPublicKey,
 					SignatureType: types.Ed25519,
@@ -816,8 +828,8 @@ func TestSignatures(t *testing.T) {
 			signatures: []*types.Signature{
 				{
 					SigningPayload: &types.SigningPayload{
-						Address: pointerString(validAccount.Address),
-						Bytes:   []byte("blah"),
+						AccountIdentifier: validAccount,
+						Bytes:             []byte("blah"),
 					},
 					PublicKey:     validPublicKey,
 					SignatureType: types.EcdsaRecovery,
@@ -825,9 +837,9 @@ func TestSignatures(t *testing.T) {
 				},
 				{
 					SigningPayload: &types.SigningPayload{
-						Address:       pointerString(validAccount.Address),
-						Bytes:         []byte("blah"),
-						SignatureType: types.Ed25519,
+						AccountIdentifier: validAccount,
+						Bytes:             []byte("blah"),
+						SignatureType:     types.Ed25519,
 					},
 					PublicKey:     validPublicKey,
 					SignatureType: types.Ed25519,
@@ -839,9 +851,9 @@ func TestSignatures(t *testing.T) {
 			signatures: []*types.Signature{
 				{
 					SigningPayload: &types.SigningPayload{
-						Address:       pointerString(validAccount.Address),
-						Bytes:         []byte("blah"),
-						SignatureType: types.EcdsaRecovery,
+						AccountIdentifier: validAccount,
+						Bytes:             []byte("blah"),
+						SignatureType:     types.EcdsaRecovery,
 					},
 					PublicKey:     validPublicKey,
 					SignatureType: types.Ed25519,
