@@ -45,9 +45,9 @@ var (
 	ErrLiveBalanceLookupFailed  = errors.New("unable to lookup live balance")
 )
 
-// ErrReconciler takes an error as an argument and returns
+// Err takes an error as an argument and returns
 // whether or not the error is one thrown by the keys package
-func ErrReconciler(err error) bool {
+func Err(err error) bool {
 	reconcilerErrors := []error{
 		ErrHeadBlockBehindLive,
 		ErrAccountUpdated,

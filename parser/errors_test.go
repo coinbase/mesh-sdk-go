@@ -20,7 +20,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestErrParser(t *testing.T) {
+func TestErr(t *testing.T) {
 	var tests = map[string]struct {
 		err    error
 		is     bool
@@ -40,7 +40,7 @@ func TestErrParser(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			is, source := ErrParser(test.err)
+			is, source := Err(test.err)
 			assert.Equal(t, test.is, is)
 			assert.Equal(t, test.source, source)
 		})

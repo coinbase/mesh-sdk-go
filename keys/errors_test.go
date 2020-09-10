@@ -21,7 +21,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestErrKeys(t *testing.T) {
+func TestErr(t *testing.T) {
 	var tests = map[string]struct {
 		err error
 		is  bool
@@ -38,7 +38,7 @@ func TestErrKeys(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			is := ErrKeys(test.err)
+			is := Err(test.err)
 			assert.Equal(t, test.is, is)
 		})
 	}
