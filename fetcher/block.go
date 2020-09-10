@@ -16,7 +16,6 @@ package fetcher
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
@@ -304,7 +303,7 @@ func (f *Fetcher) BlockRetry(
 			return nil, &Error{Err: ctx.Err()}
 		}
 
-		if errors.Is(err.Err, ErrAssertionFailed) {
+		if is, _ := asserter.ErrAsserter(err.Err); is {
 			fetcherErr := &Error{
 				Err:       fmt.Errorf("%w: /block not attempting retry", err.Err),
 				ClientErr: err.ClientErr,

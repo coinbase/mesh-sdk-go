@@ -16,7 +16,6 @@ package fetcher
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
@@ -91,7 +90,7 @@ func (f *Fetcher) NetworkStatusRetry(
 			}
 		}
 
-		if errors.Is(err.Err, ErrAssertionFailed) {
+		if is, _ := asserter.ErrAsserter(err.Err); is {
 			fetcherErr := &Error{
 				Err:       fmt.Errorf("%w: /network/status not attempting retry", err.Err),
 				ClientErr: err.ClientErr,
@@ -173,7 +172,7 @@ func (f *Fetcher) NetworkListRetry(
 			}
 		}
 
-		if errors.Is(err.Err, ErrAssertionFailed) {
+		if is, _ := asserter.ErrAsserter(err.Err); is {
 			fetcherErr := &Error{
 				Err:       fmt.Errorf("%w: /network/list not attempting retry", err.Err),
 				ClientErr: err.ClientErr,
@@ -255,7 +254,7 @@ func (f *Fetcher) NetworkOptionsRetry(
 			}
 		}
 
-		if errors.Is(err.Err, ErrAssertionFailed) {
+		if is, _ := asserter.ErrAsserter(err.Err); is {
 			fetcherErr := &Error{
 				Err:       fmt.Errorf("%w: /network/options not attempting retry", err.Err),
 				ClientErr: err.ClientErr,
