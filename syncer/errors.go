@@ -53,9 +53,9 @@ var (
 	ErrNextSyncableRangeFailed     = errors.New("unable to get next syncable range")
 )
 
-// ErrSyncer takes an error as an argument and returns
+// Err takes an error as an argument and returns
 // whether or not the error is one thrown by the keys package
-func ErrSyncer(err error) bool {
+func Err(err error) bool {
 	syncerErrors := []error{
 		ErrCannotRemoveGenesisBlock,
 		ErrOutOfOrder,
