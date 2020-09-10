@@ -42,7 +42,8 @@ func (f *Fetcher) ConstructionCombine(
 	defer f.connectionSemaphore.Release(semaphoreRequestWeight)
 
 	// Ensure both AccountIdentifier and Address field are populated
-	// in SigningPayloads.
+	// in SigningPayloads. It is up to the server to determine which fields
+	// to use (it should always prefer AccountIdentifier).
 	for _, signature := range signatures {
 		signature.SigningPayload = types.PopulateSigningPayload(signature.SigningPayload)
 	}
