@@ -279,32 +279,3 @@ func ExtractAmount(
 		PrettyPrintStruct(currency),
 	)
 }
-
-// PopulateConstructionParseResponse ensures both
-// the string-based Address field and AccountIdentifier-based
-// field are populated.
-func PopulateConstructionParseResponse(
-	response *ConstructionParseResponse,
-) *ConstructionParseResponse {
-	if len(response.AccountIdentifierSigners) == 0 && len(response.Signers) == 0 {
-		return response
-	}
-
-	if len(response.AccountIdentifierSigners) > 0 {
-		signers := make([]string, len(response.AccountIdentifierSigners))
-		for i, signer := range response.AccountIdentifierSigners {
-			signers[i] = signer.Address
-		}
-
-		response.Signers = signers
-		return response
-	}
-
-	signers := make([]*AccountIdentifier, len(response.Signers))
-	for i, signer := range response.Signers {
-		signers[i] = &AccountIdentifier{Address: signer}
-	}
-
-	response.AccountIdentifierSigners = signers
-	return response
-}

@@ -64,7 +64,7 @@ func (c *ConstructionParseResponse) UnmarshalJSON(b []byte) error {
 	r := struct {
 		// [DEPRECATED by `account_identifier_signers` in `v1.4.4`] All signers (addresses) of a
 		// particular transaction. If the transaction is unsigned, it should be empty.
-		Signers []string `json:"signers,omitempty"`
+		Signers []string `json:"address,omitempty"`
 		*Alias
 	}{
 		Alias: (*Alias)(c),
