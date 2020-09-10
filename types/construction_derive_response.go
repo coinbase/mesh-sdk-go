@@ -26,7 +26,7 @@ type ConstructionDeriveResponse struct {
 }
 
 // MarshalJSON overrides the default JSON marshaler
-// and encodes bytes as hex instead of base64.
+// and adds the deprecated "address" field to the response.
 func (c *ConstructionDeriveResponse) MarshalJSON() ([]byte, error) {
 	type Alias ConstructionDeriveResponse
 	addressString := ""
@@ -50,7 +50,7 @@ func (c *ConstructionDeriveResponse) MarshalJSON() ([]byte, error) {
 }
 
 // UnmarshalJSON overrides the default JSON unmarshaler
-// and decodes bytes from hex instead of base64.
+// and reads the deprecated "address" field from the response.
 func (c *ConstructionDeriveResponse) UnmarshalJSON(b []byte) error {
 	type Alias ConstructionDeriveResponse
 	r := struct {
