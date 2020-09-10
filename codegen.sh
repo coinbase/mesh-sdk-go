@@ -187,6 +187,9 @@ done
 rm types/signing_payload.go;
 cp templates/signing_payload.txt types/signing_payload.go;
 
+rm types/construction_derive_response.go;
+cp templates/construction_derive_response.txt types/construction_derive_response.go;
+
 # Format client generated code
 FORMAT_GEN="gofmt -w /local/types; gofmt -w /local/client; gofmt -w /local/server"
 GOLANG_VERSION=1.13
