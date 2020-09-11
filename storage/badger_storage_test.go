@@ -27,7 +27,12 @@ import (
 )
 
 func newTestBadgerStorage(ctx context.Context, dir string) (Database, error) {
-	return NewBadgerStorage(ctx, dir, WithIndexCacheSize(TinyIndexCacheSize))
+	return NewBadgerStorage(
+		ctx,
+		dir,
+		WithIndexCacheSize(TinyIndexCacheSize),
+		WithFileIOValueLogLoading(),
+	)
 }
 
 func TestDatabase(t *testing.T) {
