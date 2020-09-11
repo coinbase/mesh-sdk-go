@@ -218,7 +218,11 @@ func TestProcess(t *testing.T) {
 	dir, err := utils.CreateTempDir()
 	assert.NoError(t, err)
 
-	db, err := storage.NewBadgerStorage(ctx, dir)
+	db, err := storage.NewBadgerStorage(
+		ctx,
+		dir,
+		storage.WithIndexCacheSize(storage.TinyIndexCacheSize),
+	)
 	assert.NoError(t, err)
 	assert.NotNil(t, db)
 
@@ -856,7 +860,11 @@ func TestProcess_Failed(t *testing.T) {
 	dir, err := utils.CreateTempDir()
 	assert.NoError(t, err)
 
-	db, err := storage.NewBadgerStorage(ctx, dir)
+	db, err := storage.NewBadgerStorage(
+		ctx,
+		dir,
+		storage.WithIndexCacheSize(storage.TinyIndexCacheSize),
+	)
 	assert.NoError(t, err)
 	assert.NotNil(t, db)
 
@@ -1341,7 +1349,11 @@ func TestProcess_DryRun(t *testing.T) {
 	dir, err := utils.CreateTempDir()
 	assert.NoError(t, err)
 
-	db, err := storage.NewBadgerStorage(ctx, dir)
+	db, err := storage.NewBadgerStorage(
+		ctx,
+		dir,
+		storage.WithIndexCacheSize(storage.TinyIndexCacheSize),
+	)
 	assert.NoError(t, err)
 	assert.NotNil(t, db)
 

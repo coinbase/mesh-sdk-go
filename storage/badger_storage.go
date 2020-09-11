@@ -40,7 +40,10 @@ const (
 	DefaultBlockCacheSize = 0
 
 	// DefaultIndexCacheSize is 2 GB.
-	DefaultIndexCacheSize = 50 << 20
+	DefaultIndexCacheSize = 2000 << 20
+
+	// TinyIndexCacheSize is 10 MB.
+	TinyIndexCacheSize = 10 << 20
 
 	// DefaultMaxTableSize is 256 MB. The larger
 	// this value is, the larger database transactions
@@ -94,10 +97,11 @@ func defaultBadgerOptions(dir string) badger.Options {
 	opts.NumLevelZeroTables = 1
 	opts.NumLevelZeroTablesStall = 2
 
-	// By default, we set TableLoadingMode to use MemoryMap because
-	// it uses much less memory than RAM but is much faster than
+	// By default, we set TableLoadingMode and ValueLogLoadingMode to use
+	// MemoryMap because it uses much less memory than RAM but is much faster than
 	// FileIO.
 	opts.TableLoadingMode = options.MemoryMap
+	opts.ValueLogLoadingMode = options.MemoryMap
 
 	// This option will have a significant effect the memory. If the level is kept
 	// in-memory, read are faster but the tables will be kept in memory. By default,
@@ -112,7 +116,6 @@ func defaultBadgerOptions(dir string) badger.Options {
 	// filters to speed up lookups. Each table has its own bloom
 	// filter and each bloom filter is approximately of 5 MB. This defaults
 	// to an unlimited size (and quickly balloons to GB with a large DB).
-	// TODO: figure out why enabling cache causes tests to fail?
 	opts.IndexCacheSize = DefaultIndexCacheSize
 
 	// Don't cache blocks in memory. All reads should go to disk.
@@ -154,6 +157,7 @@ func NewBadgerStorage(ctx context.Context, dir string, options ...BadgerOption) 
 	if b.limitMemory {
 		dbOpts = lowMemoryOptions(dir)
 	}
+	dbOpts.IndexCacheSize = b.indexCacheSize
 
 	db, err := badger.Open(dbOpts)
 	if err != nil {
