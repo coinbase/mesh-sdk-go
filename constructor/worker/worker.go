@@ -66,6 +66,10 @@ func (w *Worker) invokeWorker(
 		return w.FindBalanceWorker(ctx, dbTx, input)
 	case job.RandomNumber:
 		return RandomNumberWorker(input)
+	case job.Assert:
+		return "", AssertWorker(input)
+	case job.FindCurrencyAmount:
+		return FindCurrencyAmountWorker(input)
 	default:
 		return "", fmt.Errorf("%w: %s", ErrInvalidActionType, action)
 	}
@@ -614,4 +618,58 @@ func (w *Worker) FindBalanceWorker(
 	// If we reach here, it means we shouldn't create another account
 	// and should just return unsatisfiable.
 	return "", ErrUnsatisfiable
+}
+
+// AssertWorker checks if an input is < 0.
+func AssertWorker(rawInput string) error {
+	// We unmarshal the input here to handle string
+	// unwrapping automatically.
+	var input string
+	err := job.UnmarshalInput([]byte(rawInput), &input)
+	if err != nil {
+		return fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
+	}
+
+	val, err := types.BigInt(input)
+	if err != nil {
+		return fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
+	}
+
+	if val.Sign() < 0 {
+		return fmt.Errorf("%w: %s < 0", ErrActionFailed, val.String())
+	}
+
+	return nil
+}
+
+// FindCurrencyAmountWorker finds a *types.Amount with a specific
+// *types.Currency in a []*types.Amount.
+func FindCurrencyAmountWorker(rawInput string) (string, error) {
+	var input job.FindCurrencyAmountInput
+	err := job.UnmarshalInput([]byte(rawInput), &input)
+	if err != nil {
+		return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
+	}
+
+	if err := asserter.Currency(input.Currency); err != nil {
+		return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
+	}
+
+	if err := asserter.AssertUniqueAmounts(input.Amounts); err != nil {
+		return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
+	}
+
+	for _, amount := range input.Amounts {
+		if types.Hash(amount.Currency) != types.Hash(input.Currency) {
+			continue
+		}
+
+		return types.PrintStruct(amount), nil
+	}
+
+	return "", fmt.Errorf(
+		"%w: unable to find currency %s",
+		ErrActionFailed,
+		types.PrintStruct(input.Currency),
+	)
 }

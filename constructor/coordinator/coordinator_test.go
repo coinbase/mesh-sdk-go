@@ -581,7 +581,7 @@ func TestProcess(t *testing.T) {
 		network,
 		metadataOptions,
 		[]*types.PublicKey{},
-	).Return(fetchedMetadata, nil).Once()
+	).Return(fetchedMetadata, nil, nil).Once()
 
 	unsignedTx := "unsigned transaction"
 	signingPayloads := []*types.SigningPayload{
@@ -988,7 +988,7 @@ func TestProcess_Failed(t *testing.T) {
 		{
 			Address: "hello2",
 		},
-	}, nil).Once()
+	}, nil, nil).Once()
 	helper.On(
 		"GetKey",
 		ctx,
@@ -1036,7 +1036,7 @@ func TestProcess_Failed(t *testing.T) {
 				CurveType: types.Edwards25519,
 			},
 		},
-	).Return(fetchedMetadata, nil).Once()
+	).Return(fetchedMetadata, nil, nil).Once()
 
 	unsignedTx := "unsigned transaction"
 	signingPayloads := []*types.SigningPayload{
@@ -1244,4 +1244,236 @@ func TestInitialization_OnlyRequestFundsWorkflows(t *testing.T) {
 	assert.True(t, errors.Is(err, ErrCreateAccountWorkflowMissing))
 	helper.AssertExpectations(t)
 	handler.AssertExpectations(t)
+}
+
+func TestProcess_DryRun(t *testing.T) {
+	ctx := context.Background()
+
+	jobStorage := &mocks.JobStorage{}
+	helper := &mocks.Helper{}
+	handler := &mocks.Handler{}
+	p := defaultParser(t)
+	workflows := []*job.Workflow{
+		{
+			Name:        string(job.RequestFunds),
+			Concurrency: 1,
+		},
+		{
+			Name:        string(job.CreateAccount),
+			Concurrency: 1,
+		},
+		{
+			Name:        "transfer",
+			Concurrency: 1,
+			Scenarios: []*job.Scenario{
+				{
+					Name: "transfer_1",
+					Actions: []*job.Action{
+						{
+							Type:       job.SetVariable,
+							Input:      `{"symbol":"tBTC", "decimals":8}`,
+							OutputPath: "currency",
+						},
+						{
+							Type:       job.SetVariable,
+							Input:      `{"network":"Testnet3", "blockchain":"Bitcoin"}`,
+							OutputPath: "transfer_1.network",
+						},
+						{
+							Type:       job.SetVariable,
+							Input:      `"1"`,
+							OutputPath: "transfer_1.confirmation_depth",
+						},
+						{
+							Type:       job.SetVariable,
+							Input:      `[{"operation_identifier":{"index":0},"type":"Vin","status":"","account":{"address":"sender"},"amount":{"value":"-10","currency":{{currency}}}},{"operation_identifier":{"index":1},"type":"Vout","status":"","account":{"address":"recipient"},"amount":{"value":"5","currency":{{currency}}}}]`, // nolint
+							OutputPath: "transfer_1.operations",
+						},
+						{
+							Type:       job.SetVariable,
+							Input:      `"true"`,
+							OutputPath: "transfer_1.dry_run",
+						},
+					},
+				},
+				{
+					Name: "transfer_2",
+					Actions: []*job.Action{
+						{
+							Type:       job.SetVariable,
+							Input:      `{"network":"Testnet3", "blockchain":"Bitcoin"}`,
+							OutputPath: "transfer_2.network",
+						},
+						{
+							Type:       job.SetVariable,
+							Input:      `"1"`,
+							OutputPath: "transfer_2.confirmation_depth",
+						},
+						{
+							Type:       job.FindCurrencyAmount,
+							Input:      `{"currency":{{currency}},"amounts":{{transfer_1.suggested_fee}}}`,
+							OutputPath: "recipient_amount",
+						},
+						{
+							Type:       job.SetVariable,
+							Input:      `[{"operation_identifier":{"index":0},"type":"Vin","status":"","account":{"address":"sender"},"amount":{"value":"-10","currency":{{currency}}}},{"operation_identifier":{"index":1},"type":"Vout","status":"","account":{"address":"recipient"},"amount":{{recipient_amount}}}]`, // nolint
+							OutputPath: "transfer_2.operations",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	c, err := New(
+		jobStorage,
+		helper,
+		handler,
+		p,
+		workflows,
+	)
+	assert.NotNil(t, c)
+	assert.NoError(t, err)
+
+	// Create coordination channels
+	processCanceled := make(chan struct{})
+
+	dir, err := utils.CreateTempDir()
+	assert.NoError(t, err)
+
+	db, err := storage.NewBadgerStorage(ctx, dir)
+	assert.NoError(t, err)
+	assert.NotNil(t, db)
+
+	helper.On("HeadBlockExists", ctx).Return(true).Once()
+
+	// Attempt to transfer
+	dbTx := db.NewDatabaseTransaction(ctx, false)
+	helper.On("DatabaseTransaction", ctx).Return(dbTx).Once()
+	jobStorage.On("Ready", ctx, dbTx).Return([]*job.Job{}, nil).Once()
+	jobStorage.On("Processing", ctx, dbTx, "transfer").Return([]*job.Job{}, nil).Once()
+	network := &types.NetworkIdentifier{
+		Blockchain: "Bitcoin",
+		Network:    "Testnet3",
+	}
+	currency := &types.Currency{
+		Symbol:   "tBTC",
+		Decimals: 8,
+	}
+	dryRunOps := []*types.Operation{
+		{
+			OperationIdentifier: &types.OperationIdentifier{
+				Index: 0,
+			},
+			Type: "Vin",
+			Account: &types.AccountIdentifier{
+				Address: "sender",
+			},
+			Amount: &types.Amount{
+				Value:    "-10",
+				Currency: currency,
+			},
+		},
+		{
+			OperationIdentifier: &types.OperationIdentifier{
+				Index: 1,
+			},
+			Type: "Vout",
+			Account: &types.AccountIdentifier{
+				Address: "recipient",
+			},
+			Amount: &types.Amount{
+				Value:    "5",
+				Currency: currency,
+			},
+		},
+	}
+	broadcastOps := []*types.Operation{
+		{
+			OperationIdentifier: &types.OperationIdentifier{
+				Index: 0,
+			},
+			Type: "Vin",
+			Account: &types.AccountIdentifier{
+				Address: "sender",
+			},
+			Amount: &types.Amount{
+				Value:    "-10",
+				Currency: currency,
+			},
+		},
+		{
+			OperationIdentifier: &types.OperationIdentifier{
+				Index: 1,
+			},
+			Type: "Vout",
+			Account: &types.AccountIdentifier{
+				Address: "recipient",
+			},
+			Amount: &types.Amount{
+				Value:    "7",
+				Currency: currency,
+			},
+		},
+	}
+	metadataOptions := map[string]interface{}{
+		"metadata": "test",
+	}
+	helper.On(
+		"Preprocess",
+		ctx,
+		network,
+		dryRunOps,
+		(map[string]interface{})(nil),
+	).Return(metadataOptions, nil, nil).Once()
+	fetchedMetadata := map[string]interface{}{
+		"tx_meta": "help",
+	}
+	helper.On(
+		"Metadata",
+		ctx,
+		network,
+		metadataOptions,
+		[]*types.PublicKey{},
+	).Return(fetchedMetadata, []*types.Amount{
+		{
+			Value:    "7",
+			Currency: currency,
+		},
+	}, nil).Once()
+	var j job.Job
+	jobStorage.On("Update", ctx, dbTx, mock.Anything).Run(func(args mock.Arguments) {
+		j = *args.Get(2).(*job.Job)
+	}).Return("job1", nil).Once()
+	jobStorage.On("Update", ctx, dbTx, mock.Anything).Run(func(args mock.Arguments) {
+		j = *args.Get(2).(*job.Job)
+	}).Return("job1", nil).Once()
+	helper.On("BroadcastAll", ctx).Return(nil).Once()
+
+	// Start processor
+	go func() {
+		err := c.Process(ctx)
+		assert.Contains(t, err.Error(), "fake failure")
+		close(processCanceled)
+	}()
+
+	// Process second scenario
+	helper.On("HeadBlockExists", ctx).Return(true).Once()
+	dbTx2 := db.NewDatabaseTransaction(ctx, false)
+	helper.On("DatabaseTransaction", ctx).Return(dbTx2).Once()
+	jobStorage.On("Ready", ctx, dbTx2).Return([]*job.Job{&j}, nil).Once()
+	jobStorage.On("Update", ctx, dbTx2, mock.Anything).Run(func(args mock.Arguments) {
+		j = *args.Get(2).(*job.Job)
+	}).Return("job1", nil).Once()
+	helper.On(
+		"Preprocess",
+		ctx,
+		network,
+		broadcastOps,
+		(map[string]interface{})(nil),
+	).Return(nil, nil, errors.New("fake failure")).Once()
+
+	<-processCanceled
+	jobStorage.AssertExpectations(t)
+	helper.AssertExpectations(t)
 }

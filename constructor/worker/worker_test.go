@@ -1013,13 +1013,18 @@ func TestJob_ComplicatedTransfer(t *testing.T) {
 		Name: "create_send",
 		Actions: []*job.Action{
 			{
+				Type:       job.SetVariable,
+				Input:      `{"symbol":"BTC","decimals":8}`,
+				OutputPath: "default_curr",
+			},
+			{
 				Type:       job.RandomString,
 				Input:      `{"regex": "[a-z]+", "limit":10}`,
 				OutputPath: "random_address",
 			},
 			{
 				Type:       job.SetVariable,
-				Input:      `[{"operation_identifier":{"index":0},"type":"","status":"","account":{{account.account_identifier}},"amount":{"value":"-90","currency":{"symbol":"BTC","decimals":8}}},{"operation_identifier":{"index":1},"type":"","status":"","account":{"address":{{random_address}}},"amount":{"value":"100","currency":{"symbol":"BTC","decimals":8}}}]`, // nolint
+				Input:      `[{"operation_identifier":{"index":0},"type":"","status":"","account":{{account.account_identifier}},"amount":{"value":"-90","currency":{{default_curr}}}},{"operation_identifier":{"index":1},"type":"","status":"","account":{"address":{{random_address}}},"amount":{"value":"100","currency":{{default_curr}}}}]`, // nolint
 				OutputPath: "create_send.operations",
 			},
 			{
@@ -1031,6 +1036,34 @@ func TestJob_ComplicatedTransfer(t *testing.T) {
 				Type:       job.RandomNumber,
 				Input:      `{"minimum":"10", "maximum":"100"}`,
 				OutputPath: "rand_number",
+			},
+			{
+				Type:  job.Assert,
+				Input: `{{rand_number}}`,
+			},
+			{
+				Type:       job.SetVariable,
+				Input:      `{"symbol":"ETH","decimals":18}`,
+				OutputPath: "eth_curr",
+			},
+			{
+				Type:       job.SetVariable,
+				Input:      `[{"value":"100", "currency":{{default_curr}}},{"value":"200", "currency":{{eth_curr}}}]`,
+				OutputPath: "mock_suggested_fee_resp",
+			},
+			{
+				Type:       job.FindCurrencyAmount,
+				Input:      `{"currency":{{eth_curr}}, "amounts":{{mock_suggested_fee_resp}}}`,
+				OutputPath: "eth_amount",
+			},
+			{
+				Type:       job.Math,
+				Input:      `{"operation":"subtraction", "left_value":{{eth_amount.value}}, "right_value":"200"}`,
+				OutputPath: "eth_check",
+			},
+			{
+				Type:  job.Assert,
+				Input: `{{eth_check}}`,
 			},
 			{
 				Type:  job.PrintMessage,
@@ -1193,6 +1226,71 @@ func TestJob_Failures(t *testing.T) {
 				},
 			},
 			expectedErr: ErrInvalidActionType,
+			helper:      &mocks.Helper{},
+		},
+		"assertion invalid input": {
+			scenario: &job.Scenario{
+				Name: "create_address",
+				Actions: []*job.Action{
+					{
+						Type:  job.Assert,
+						Input: `"hello"`,
+					},
+				},
+			},
+			expectedErr: ErrInvalidInput,
+			helper:      &mocks.Helper{},
+		},
+		"failed assertion": {
+			scenario: &job.Scenario{
+				Name: "create_address",
+				Actions: []*job.Action{
+					{
+						Type:  job.Assert,
+						Input: `"-1"`,
+					},
+				},
+			},
+			expectedErr: ErrActionFailed,
+			helper:      &mocks.Helper{},
+		},
+		"invalid currency": {
+			scenario: &job.Scenario{
+				Name: "create_address",
+				Actions: []*job.Action{
+					{
+						Type:  job.FindCurrencyAmount,
+						Input: `{"currency":{"decimals":8}}`,
+					},
+				},
+			},
+			expectedErr: ErrInvalidInput,
+			helper:      &mocks.Helper{},
+		},
+		"repeat currency": {
+			scenario: &job.Scenario{
+				Name: "create_address",
+				Actions: []*job.Action{
+					{
+						Type:  job.FindCurrencyAmount,
+						Input: `{"currency":{"symbol":"BTC", "decimals":8},"amounts":[{"value":"100","currency":{"symbol":"BTC", "decimals":8}},{"value":"100","currency":{"symbol":"BTC", "decimals":8}}]}`, // nolint
+					},
+				},
+			},
+			expectedErr: ErrInvalidInput,
+			helper:      &mocks.Helper{},
+		},
+		"can't find currency": {
+			scenario: &job.Scenario{
+				Name: "create_address",
+				Actions: []*job.Action{
+					{
+						Type:  job.FindCurrencyAmount,
+						Input: `{"currency":{"symbol":"BTC", "decimals":8}}`,
+					},
+				},
+			},
+			expectedErr: ErrActionFailed,
 			helper:      &mocks.Helper{},
 		},
 		"invalid json": {
