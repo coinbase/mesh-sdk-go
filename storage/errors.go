@@ -399,7 +399,7 @@ var (
 )
 
 // Err takes an error as an argument and returns
-// whether or not the error is one thrown by the asserter
+// whether or not the error is one thrown by the storage
 // along with the specific source of the error
 func Err(err error) (bool, string) {
 	storageErrs := map[string][]error{

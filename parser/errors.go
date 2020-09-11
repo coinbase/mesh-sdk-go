@@ -114,7 +114,7 @@ var (
 )
 
 // Err takes an error as an argument and returns
-// whether or not the error is one thrown by the asserter
+// whether or not the error is one thrown by the parser
 // along with the specific source of the error
 func Err(err error) (bool, string) {
 	parserErrs := map[string][]error{
