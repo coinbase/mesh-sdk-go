@@ -269,7 +269,7 @@ func (_m *Helper) LockedAccounts(_a0 context.Context, _a1 storage.DatabaseTransa
 }
 
 // Metadata provides a mock function with given fields: _a0, _a1, _a2, _a3
-func (_m *Helper) Metadata(_a0 context.Context, _a1 *types.NetworkIdentifier, _a2 map[string]interface{}, _a3 []*types.PublicKey) (map[string]interface{}, error) {
+func (_m *Helper) Metadata(_a0 context.Context, _a1 *types.NetworkIdentifier, _a2 map[string]interface{}, _a3 []*types.PublicKey) (map[string]interface{}, []*types.Amount, error) {
 	ret := _m.Called(_a0, _a1, _a2, _a3)
 
 	var r0 map[string]interface{}
@@ -281,14 +281,23 @@ func (_m *Helper) Metadata(_a0 context.Context, _a1 *types.NetworkIdentifier, _a
 		}
 	}
 
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *types.NetworkIdentifier, map[string]interface{}, []*types.PublicKey) error); ok {
+	var r1 []*types.Amount
+	if rf, ok := ret.Get(1).(func(context.Context, *types.NetworkIdentifier, map[string]interface{}, []*types.PublicKey) []*types.Amount); ok {
 		r1 = rf(_a0, _a1, _a2, _a3)
 	} else {
-		r1 = ret.Error(1)
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).([]*types.Amount)
+		}
 	}
 
-	return r0, r1
+	var r2 error
+	if rf, ok := ret.Get(2).(func(context.Context, *types.NetworkIdentifier, map[string]interface{}, []*types.PublicKey) error); ok {
+		r2 = rf(_a0, _a1, _a2, _a3)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
 }
 
 // Parse provides a mock function with given fields: _a0, _a1, _a2, _a3
