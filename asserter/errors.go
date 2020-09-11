@@ -370,10 +370,10 @@ var (
 	}
 )
 
-// ErrAsserter takes an error as an argument and returns
+// Err takes an error as an argument and returns
 // whether or not the error is one thrown by the asserter
 // along with the specific source of the error
-func ErrAsserter(err error) (bool, string) {
+func Err(err error) (bool, string) {
 	assertErrs := map[string][]error{
 		"account balance error": AccountBalanceErrs,
 		"block error":           BlockErrs,
