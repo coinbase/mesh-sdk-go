@@ -136,7 +136,7 @@ type Helper interface {
 		*types.NetworkIdentifier,
 		map[string]interface{},
 		[]*types.PublicKey,
-	) (map[string]interface{}, error)
+	) (map[string]interface{}, []*types.Amount, error)
 
 	// Payloads calls the /construction/payloads endpoint
 	// using the offline node.

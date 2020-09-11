@@ -17,6 +17,10 @@ package job
 import "errors"
 
 var (
+	// ErrNoBroadcastToConfirm is returned when there is no broadcast
+	// to confirm in a job.
+	ErrNoBroadcastToConfirm = errors.New("no broadcast to confirm")
+
 	// ErrVariableNotFound is returned when a variable is not
 	// present in a Job's state.
 	ErrVariableNotFound = errors.New("variable not found")
@@ -29,6 +33,10 @@ var (
 	// ErrUnableToHandleBroadcast is returned if a Job cannot handle a
 	// broadcast completion (usually because there is no broadcast to confirm).
 	ErrUnableToHandleBroadcast = errors.New("unable to handle broadcast")
+
+	// ErrUnableToHandleDryRun is returned if a Job cannot handle a
+	// dry run completion.
+	ErrUnableToHandleDryRun = errors.New("unable to handle dry run")
 
 	// ErrUnableToCreateBroadcast is returned when it is not possible
 	// to create a broadcast or check if a broadcast should be created
