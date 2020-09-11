@@ -42,3 +42,15 @@ func WithIndexCacheSize(size int64) BadgerOption {
 		b.indexCacheSize = size
 	}
 }
+
+// WithFileIOValueLogLoading overrides the BadgerDB database
+// options to use options.FileIO for ValueLogLoading. This
+// incurs some performance penalty but massively reduces memory
+// usage. This is a separate setting because it is often used
+// in tandem with the default options (instead of using
+// WithMemoryLimit).
+func WithFileIOValueLogLoading() BadgerOption {
+	return func(b *BadgerStorage) {
+		b.fileIOValueLogLoading = true
+	}
+}

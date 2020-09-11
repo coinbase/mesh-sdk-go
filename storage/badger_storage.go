@@ -64,9 +64,10 @@ const (
 // BadgerStorage is a wrapper around Badger DB
 // that implements the Database interface.
 type BadgerStorage struct {
-	limitMemory       bool
-	indexCacheSize    int64
-	compressorEntries []*CompressorEntry
+	limitMemory           bool
+	indexCacheSize        int64
+	fileIOValueLogLoading bool
+	compressorEntries     []*CompressorEntry
 
 	pool       *BufferPool
 	db         *badger.DB
@@ -142,22 +143,27 @@ func lowMemoryOptions(dir string) badger.Options {
 }
 
 // NewBadgerStorage creates a new BadgerStorage.
-func NewBadgerStorage(ctx context.Context, dir string, options ...BadgerOption) (Database, error) {
+func NewBadgerStorage(ctx context.Context, dir string, storageOptions ...BadgerOption) (Database, error) {
 	b := &BadgerStorage{
 		indexCacheSize: DefaultIndexCacheSize,
 		closed:         make(chan struct{}),
 		pool:           NewBufferPool(),
 	}
-	for _, opt := range options {
+	for _, opt := range storageOptions {
 		opt(b)
 	}
 
 	dir = path.Clean(dir)
 	dbOpts := defaultBadgerOptions(dir)
+
+	// Override dbOpts with provided options
 	if b.limitMemory {
 		dbOpts = lowMemoryOptions(dir)
 	}
 	dbOpts.IndexCacheSize = b.indexCacheSize
+	if b.fileIOValueLogLoading {
+		dbOpts.ValueLogLoadingMode = options.FileIO
+	}
 
 	db, err := badger.Open(dbOpts)
 	if err != nil {
