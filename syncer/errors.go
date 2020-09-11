@@ -54,7 +54,7 @@ var (
 )
 
 // Err takes an error as an argument and returns
-// whether or not the error is one thrown by the keys package
+// whether or not the error is one thrown by the syncer package
 func Err(err error) bool {
 	syncerErrors := []error{
 		ErrCannotRemoveGenesisBlock,

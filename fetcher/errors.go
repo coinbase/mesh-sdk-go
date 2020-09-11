@@ -17,6 +17,8 @@ package fetcher
 import (
 	"errors"
 
+	utils "github.com/coinbase/rosetta-sdk-go/errors"
+
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
@@ -48,3 +50,17 @@ var (
 	// the connection semaphore returns an error.
 	ErrCouldNotAcquireSemaphore = errors.New("could not acquire semaphore")
 )
+
+// Err takes an error as an argument and returns
+// whether or not the error is one thrown by the fetcher package
+func Err(err error) bool {
+	fetcherErrors := []error{
+		ErrNoNetworks,
+		ErrNetworkMissing,
+		ErrRequestFailed,
+		ErrExhaustedRetries,
+		ErrCouldNotAcquireSemaphore,
+	}
+
+	return utils.FindError(fetcherErrors, err)
+}
