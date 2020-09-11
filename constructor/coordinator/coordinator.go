@@ -435,7 +435,7 @@ func (c *Coordinator) invokeHandlersAndBroadcast(
 
 // Process creates and executes jobs
 // until failure.
-func (c *Coordinator) Process(
+func (c *Coordinator) Process( // nolint:gocognit
 	ctx context.Context,
 ) error {
 	for ctx.Err() == nil {

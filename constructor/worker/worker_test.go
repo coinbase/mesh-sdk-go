@@ -1273,7 +1273,7 @@ func TestJob_Failures(t *testing.T) {
 				Actions: []*job.Action{
 					{
 						Type:  job.FindCurrencyAmount,
-						Input: `{"currency":{"symbol":"BTC", "decimals":8},"amounts":[{"value":"100","currency":{"symbol":"BTC", "decimals":8}},{"value":"100","currency":{"symbol":"BTC", "decimals":8}}]}`,
+						Input: `{"currency":{"symbol":"BTC", "decimals":8},"amounts":[{"value":"100","currency":{"symbol":"BTC", "decimals":8}},{"value":"100","currency":{"symbol":"BTC", "decimals":8}}]}`, // nolint
 					},
 				},
 			},
