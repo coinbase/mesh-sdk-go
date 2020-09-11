@@ -391,7 +391,7 @@ func TestCoinStorage(t *testing.T) {
 	assert.NoError(t, err)
 	defer utils.RemoveTempDir(newDir)
 
-	database, err := NewBadgerStorage(ctx, newDir)
+	database, err := newTestBadgerStorage(ctx, newDir)
 	assert.NoError(t, err)
 	defer database.Close(ctx)
 
