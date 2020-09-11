@@ -40,7 +40,7 @@ const (
 	DefaultBlockCacheSize = 0
 
 	// DefaultIndexCacheSize is 2 GB.
-	DefaultIndexCacheSize = 2000 << 20
+	DefaultIndexCacheSize = 50 << 20
 
 	// DefaultMaxTableSize is 256 MB. The larger
 	// this value is, the larger database transactions
@@ -113,7 +113,7 @@ func defaultBadgerOptions(dir string) badger.Options {
 	// filter and each bloom filter is approximately of 5 MB. This defaults
 	// to an unlimited size (and quickly balloons to GB with a large DB).
 	// TODO: figure out why enabling cache causes tests to fail?
-	// opts.IndexCacheSize = DefaultIndexCacheSize
+	opts.IndexCacheSize = DefaultIndexCacheSize
 
 	// Don't cache blocks in memory. All reads should go to disk.
 	opts.BlockCacheSize = DefaultBlockCacheSize
