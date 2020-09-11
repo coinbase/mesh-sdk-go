@@ -23,6 +23,7 @@ import (
 	"io/ioutil"
 	"log"
 	"path"
+	"strconv"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
 
@@ -212,7 +213,23 @@ func (c *Compressor) encodeAccountCoin(accountCoin *AccountCoin) []byte {
 	)
 	output = append(
 		output,
-		[]byte(types.PrintStruct(accountCoin.Coin.Amount))...,
+		[]byte(accountCoin.Coin.Amount.Value)...,
+	)
+	output = append(
+		output,
+		unicodeRecordSeparator,
+	)
+	output = append(
+		output,
+		[]byte(accountCoin.Coin.Amount.Currency.Symbol)...,
+	)
+	output = append(
+		output,
+		unicodeRecordSeparator,
+	)
+	output = append(
+		output,
+		[]byte(strconv.FormatInt(int64(accountCoin.Coin.Amount.Currency.Decimals), 10))...,
 	)
 	if accountCoin.Account.Metadata == nil &&
 		accountCoin.Account.SubAccount == nil &&
@@ -280,7 +297,9 @@ const (
 const (
 	accountAddress = iota
 	coinIdentifier
-	amount
+	amountValue
+	amountCurrencySymbol
+	amountCurrencyDecimals
 	accountMetadata // If none exist, we stop after amount.
 	subAccountAddress
 	subAccountMetadata
@@ -302,7 +321,7 @@ func (c *Compressor) decodeAccountCoin(
 	for {
 		nextRune := bytes.IndexRune(currentBytes, unicodeRecordSeparator)
 		if nextRune == -1 {
-			if count != amount && count != currencyMetadata {
+			if count != amountCurrencyDecimals && count != currencyMetadata {
 				fmt.Printf("%s\n", string(currentBytes))
 				return fmt.Errorf("%w: next rune is -1 at %d", errDecoding, count)
 			}
@@ -326,12 +345,21 @@ func (c *Compressor) decodeAccountCoin(
 					Identifier: string(val),
 				},
 			}
-		case amount:
-			var a types.Amount
-			if err := json.Unmarshal(val, &a); err != nil {
-				return fmt.Errorf("%w: amount %s", errDecoding, err.Error())
+		case amountValue:
+			accountCoin.Coin.Amount = &types.Amount{
+				Value: string(val),
 			}
-			accountCoin.Coin.Amount = &a
+		case amountCurrencySymbol:
+			accountCoin.Coin.Amount.Currency = &types.Currency{
+				Symbol: string(val),
+			}
+		case amountCurrencyDecimals:
+			i, err := strconv.ParseInt(string(val), 10, 32)
+			if err != nil {
+				return fmt.Errorf("%w: %s", errDecoding, err.Error())
+			}
+
+			accountCoin.Coin.Amount.Currency.Decimals = int32(i)
 		case accountMetadata:
 			var m map[string]interface{}
 			if err := json.Unmarshal(val, &m); err != nil {
@@ -369,7 +397,7 @@ func (c *Compressor) decodeAccountCoin(
 		}
 
 	handleNext:
-		if nextRune == len(currentBytes) && (count == amount || count == currencyMetadata) {
+		if nextRune == len(currentBytes) && (count == amountCurrencyDecimals || count == currencyMetadata) {
 			break
 		}
 
