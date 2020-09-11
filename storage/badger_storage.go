@@ -26,6 +26,7 @@ import (
 	"path"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/coinbase/rosetta-sdk-go/utils"
@@ -35,42 +36,57 @@ import (
 )
 
 const (
-	// DefaultCacheSize is 0 MB.
-	DefaultCacheSize = 0
+	// DefaultBlockCacheSize is 0 MB.
+	DefaultBlockCacheSize = 0
 
-	// DefaultBfCacheSize is 10 MB.
-	DefaultBfCacheSize = 10 << 20
+	// DefaultIndexCacheSize is 2 GB.
+	DefaultIndexCacheSize = 2000 << 20
 
-	// DefaultValueLogFileSize is 100 MB.
-	DefaultValueLogFileSize = 100 << 20
+	// TinyIndexCacheSize is 10 MB.
+	TinyIndexCacheSize = 10 << 20
 
-	// PerformanceMaxTableSize is 256 MB. The larger
+	// DefaultMaxTableSize is 256 MB. The larger
 	// this value is, the larger database transactions
 	// storage can handle.
-	PerformanceMaxTableSize = 256 << 20
+	DefaultMaxTableSize = 256 << 20
 
+	// logModulo determines how often we should print
+	// logs while scanning data.
 	logModulo = 5000
+
+	// Default GC settings for reclaiming
+	// space in value logs.
+	defaultGCInterval     = 1 * time.Minute
+	defualtGCDiscardRatio = 0.1
+	defaultGCSleep        = 10 * time.Second
 )
 
 // BadgerStorage is a wrapper around Badger DB
 // that implements the Database interface.
 type BadgerStorage struct {
-	limitMemory       bool
-	compressorEntries []*CompressorEntry
+	limitMemory           bool
+	indexCacheSize        int64
+	fileIOValueLogLoading bool
+	compressorEntries     []*CompressorEntry
 
 	pool       *BufferPool
 	db         *badger.DB
 	compressor *Compressor
 
 	writer sync.Mutex
+
+	// Track the closed status to ensure we exit garbage
+	// collection when the db closes.
+	closed chan struct{}
 }
 
 func defaultBadgerOptions(dir string) badger.Options {
 	opts := badger.DefaultOptions(dir)
 	opts.Logger = nil
 
-	// LoadBloomsOnOpen=false will improve the db startup speed
-	opts.LoadBloomsOnOpen = false
+	// We increase the MaxTableSize to support larger database
+	// transactions (which are capped at 20% of MaxTableSize).
+	opts.MaxTableSize = DefaultMaxTableSize
 
 	// To allow writes at a faster speed, we create a new memtable as soon as
 	// an existing memtable is filled up. This option determines how many
@@ -82,6 +98,30 @@ func defaultBadgerOptions(dir string) badger.Options {
 	opts.NumLevelZeroTables = 1
 	opts.NumLevelZeroTablesStall = 2
 
+	// By default, we set TableLoadingMode and ValueLogLoadingMode to use
+	// MemoryMap because it uses much less memory than RAM but is much faster than
+	// FileIO.
+	opts.TableLoadingMode = options.MemoryMap
+	opts.ValueLogLoadingMode = options.MemoryMap
+
+	// This option will have a significant effect the memory. If the level is kept
+	// in-memory, read are faster but the tables will be kept in memory. By default,
+	// this is set to false.
+	opts.KeepL0InMemory = false
+
+	// We don't compact L0 on close as this can greatly delay shutdown time.
+	opts.CompactL0OnClose = false
+
+	// This value specifies how much memory should be used by table indices. These
+	// indices include the block offsets and the bloomfilters. Badger uses bloom
+	// filters to speed up lookups. Each table has its own bloom
+	// filter and each bloom filter is approximately of 5 MB. This defaults
+	// to an unlimited size (and quickly balloons to GB with a large DB).
+	opts.IndexCacheSize = DefaultIndexCacheSize
+
+	// Don't cache blocks in memory. All reads should go to disk.
+	opts.BlockCacheSize = DefaultBlockCacheSize
+
 	return opts
 }
 
@@ -92,80 +132,118 @@ func defaultBadgerOptions(dir string) badger.Options {
 func lowMemoryOptions(dir string) badger.Options {
 	opts := defaultBadgerOptions(dir)
 
+	// LoadBloomsOnOpen=false will improve the db startup speed
+	opts.LoadBloomsOnOpen = false
+
 	// Don't load tables into memory.
 	opts.TableLoadingMode = options.FileIO
 	opts.ValueLogLoadingMode = options.FileIO
-
-	// This option will have a significant effect the memory. If the level is kept
-	// in-memory, read are faster but the tables will be kept in memory.
-	opts.KeepL0InMemory = false
-
-	// Bloom filters will be kept in memory if the following option is not set. Each
-	// bloom filter takes up 5 MB of memory. A smaller bf cache would mean that
-	// bloom filters will be evicted quickly from the cache and they will be read from
-	// the disk (which is slow) and inserted into the cache.
-	opts.MaxBfCacheSize = DefaultBfCacheSize
-
-	// Don't cache blocks in memory. All reads should go to disk.
-	opts.MaxCacheSize = DefaultCacheSize
-
-	// Limit ValueLogFileSize as log files
-	// must be read into memory during compaction.
-	opts.ValueLogFileSize = DefaultValueLogFileSize
-
-	return opts
-}
-
-// performanceOptions returns a set of BadgerDB configuration
-// options that don't attempt to reduce memory usage (can
-// improve performance).
-func performanceOptions(dir string) badger.Options {
-	opts := defaultBadgerOptions(dir)
-	opts.MaxTableSize = PerformanceMaxTableSize
 
 	return opts
 }
 
 // NewBadgerStorage creates a new BadgerStorage.
-func NewBadgerStorage(ctx context.Context, dir string, options ...BadgerOption) (Database, error) {
-	b := &BadgerStorage{}
-	for _, opt := range options {
+func NewBadgerStorage(
+	ctx context.Context,
+	dir string,
+	storageOptions ...BadgerOption,
+) (Database, error) {
+	b := &BadgerStorage{
+		indexCacheSize: DefaultIndexCacheSize,
+		closed:         make(chan struct{}),
+		pool:           NewBufferPool(),
+	}
+	for _, opt := range storageOptions {
 		opt(b)
 	}
 
 	dir = path.Clean(dir)
-	dbOpts := lowMemoryOptions(dir)
-	if !b.limitMemory {
-		dbOpts = performanceOptions(dir)
+	dbOpts := defaultBadgerOptions(dir)
+
+	// Override dbOpts with provided options
+	if b.limitMemory {
+		dbOpts = lowMemoryOptions(dir)
+	}
+	dbOpts.IndexCacheSize = b.indexCacheSize
+	if b.fileIOValueLogLoading {
+		dbOpts.ValueLogLoadingMode = options.FileIO
 	}
 
 	db, err := badger.Open(dbOpts)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrDatabaseOpenFailed, err)
 	}
+	b.db = db
 
-	pool := NewBufferPool()
-
-	compressor, err := NewCompressor(b.compressorEntries, pool)
+	compressor, err := NewCompressor(b.compressorEntries, b.pool)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrCompressorLoadFailed, err)
 	}
+	b.compressor = compressor
 
-	return &BadgerStorage{
-		db:         db,
-		pool:       pool,
-		compressor: compressor,
-	}, nil
+	// Start periodic ValueGC goroutine (up to user of BadgerDB to call
+	// periodically to reclaim value logs on-disk).
+	go b.periodicGC(ctx)
+
+	return b, nil
 }
 
 // Close closes the database to prevent corruption.
 // The caller should defer this in main.
 func (b *BadgerStorage) Close(ctx context.Context) error {
+	// Trigger shutdown for the garabage collector
+	close(b.closed)
+
 	if err := b.db.Close(); err != nil {
 		return fmt.Errorf("%w: %v", ErrDBCloseFailed, err)
 	}
 
 	return nil
+}
+
+// periodicGC attempts to reclaim storage every
+// defaultGCInterval.
+//
+// Inspired by:
+// https://github.com/ipfs/go-ds-badger/blob/a69f1020ba3954680900097e0c9d0181b88930ad/datastore.go#L173-L199
+func (b *BadgerStorage) periodicGC(ctx context.Context) {
+	// We start the timeout with the default sleep to aggressively check
+	// for space to reclaim on startup.
+	gcTimeout := time.NewTimer(defaultGCSleep)
+	defer func() {
+		gcTimeout.Stop()
+	}()
+
+	for {
+		select {
+		case <-b.closed:
+			// Exit the periodic gc thread if the database is closed.
+			return
+		case <-ctx.Done():
+			return
+		case <-gcTimeout.C:
+			start := time.Now()
+			err := b.db.RunValueLogGC(defualtGCDiscardRatio)
+			switch err {
+			case badger.ErrNoRewrite, badger.ErrRejected:
+				// No rewrite means we've fully garbage collected.
+				// Rejected means someone else is running a GC
+				// or we're closing.
+				gcTimeout.Reset(defaultGCInterval)
+			case nil:
+				// Nil error means that we've successfully garbage
+				// collected. We should sleep instead of waiting
+				// the full GC collection interval to see if there
+				// is anything else to collect.
+				log.Printf("successful value log garbage collection (%s)", time.Since(start))
+				gcTimeout.Reset(defaultGCSleep)
+			default:
+				// Not much we can do on a random error but log it and continue.
+				log.Printf("error during a GC cycle: %s\n", err.Error())
+				gcTimeout.Reset(defaultGCInterval)
+			}
+		}
+	}
 }
 
 // Compressor returns the BadgerStorage compressor.
