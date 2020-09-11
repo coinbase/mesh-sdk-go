@@ -86,25 +86,25 @@ func defaultBadgerOptions(dir string) badger.Options {
 	// By default, we set TableLoadingMode to use MemoryMap because
 	// it uses much less memory than RAM but is much faster than
 	// FileIO.
-	opts.TableLoadingMode = options.MemoryMap
+	// opts.TableLoadingMode = options.MemoryMap
 
 	// This option will have a significant effect the memory. If the level is kept
 	// in-memory, read are faster but the tables will be kept in memory. By default,
 	// this is set to false.
-	opts.KeepL0InMemory = false
+	// opts.KeepL0InMemory = false
 
 	// We don't compact L0 on close as this can greatly delay shutdown time.
-	opts.CompactL0OnClose = false
+	// opts.CompactL0OnClose = false
 
 	// This value specifies how much memory should be used by table indices. These
 	// indices include the block offsets and the bloomfilters. Badger uses bloom
 	// filters to speed up lookups. Each table has its own bloom
 	// filter and each bloom filter is approximately of 5 MB. This defaults
 	// to an unlimited size (and quickly balloons to GB with a large DB).
-	opts.IndexCacheSize = DefaultIndexCacheSize
+	// opts.IndexCacheSize = DefaultIndexCacheSize
 
 	// Don't cache blocks in memory. All reads should go to disk.
-	opts.BlockCacheSize = DefaultBlockCacheSize
+	// opts.BlockCacheSize = DefaultBlockCacheSize
 
 	return opts
 }
