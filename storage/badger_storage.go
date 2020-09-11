@@ -143,7 +143,11 @@ func lowMemoryOptions(dir string) badger.Options {
 }
 
 // NewBadgerStorage creates a new BadgerStorage.
-func NewBadgerStorage(ctx context.Context, dir string, storageOptions ...BadgerOption) (Database, error) {
+func NewBadgerStorage(
+	ctx context.Context,
+	dir string,
+	storageOptions ...BadgerOption,
+) (Database, error) {
 	b := &BadgerStorage{
 		indexCacheSize: DefaultIndexCacheSize,
 		closed:         make(chan struct{}),
