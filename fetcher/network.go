@@ -90,7 +90,7 @@ func (f *Fetcher) NetworkStatusRetry(
 			}
 		}
 
-		if is, _ := asserter.ErrAsserter(err.Err); is {
+		if is, _ := asserter.Err(err.Err); is {
 			fetcherErr := &Error{
 				Err:       fmt.Errorf("%w: /network/status not attempting retry", err.Err),
 				ClientErr: err.ClientErr,
@@ -172,7 +172,7 @@ func (f *Fetcher) NetworkListRetry(
 			}
 		}
 
-		if is, _ := asserter.ErrAsserter(err.Err); is {
+		if is, _ := asserter.Err(err.Err); is {
 			fetcherErr := &Error{
 				Err:       fmt.Errorf("%w: /network/list not attempting retry", err.Err),
 				ClientErr: err.ClientErr,
@@ -254,7 +254,7 @@ func (f *Fetcher) NetworkOptionsRetry(
 			}
 		}
 
-		if is, _ := asserter.ErrAsserter(err.Err); is {
+		if is, _ := asserter.Err(err.Err); is {
 			fetcherErr := &Error{
 				Err:       fmt.Errorf("%w: /network/options not attempting retry", err.Err),
 				ClientErr: err.ClientErr,

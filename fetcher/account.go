@@ -101,7 +101,7 @@ func (f *Fetcher) AccountBalanceRetry(
 			}
 		}
 
-		if is, _ := asserter.ErrAsserter(err.Err); is {
+		if is, _ := asserter.Err(err.Err); is {
 			fetcherErr := &Error{
 				Err:       fmt.Errorf("%w: /account/balance not attempting retry", err.Err),
 				ClientErr: err.ClientErr,
