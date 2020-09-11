@@ -95,7 +95,7 @@ func (c *CoinStorage) getAndDecodeCoin(
 	transaction DatabaseTransaction,
 	coinIdentifier *types.CoinIdentifier,
 ) (bool, *types.Coin, *types.AccountIdentifier, error) {
-	namespace, key := getCoinKey(coinIdentifier)
+	_, key := getCoinKey(coinIdentifier)
 	exists, val, err := transaction.Get(ctx, key)
 	if err != nil {
 		return false, nil, nil, fmt.Errorf("%w: %v", ErrCoinQueryFailed, err)
@@ -106,7 +106,7 @@ func (c *CoinStorage) getAndDecodeCoin(
 	}
 
 	var accountCoin AccountCoin
-	if err := c.db.Compressor().Decode(namespace, val, &accountCoin, true); err != nil {
+	if err := c.db.Compressor().decodeAccountCoin(val, &accountCoin, true); err != nil {
 		return false, nil, nil, fmt.Errorf("%w: %v", ErrCoinDecodeFailed, err)
 	}
 
@@ -157,14 +157,11 @@ func (c *CoinStorage) addCoin(
 	coin *types.Coin,
 	transaction DatabaseTransaction,
 ) error {
-	namespace, key := getCoinKey(coin.CoinIdentifier)
-	encodedResult, err := c.db.Compressor().Encode(namespace, AccountCoin{
+	_, key := getCoinKey(coin.CoinIdentifier)
+	encodedResult := c.db.Compressor().encodeAccountCoin(&AccountCoin{
 		Account: account,
 		Coin:    coin,
 	})
-	if err != nil {
-		return fmt.Errorf("%w: %v", ErrCoinDataEncodeFailed, err)
-	}
 
 	if err := storeUniqueKey(ctx, transaction, key, encodedResult, true); err != nil {
 		return fmt.Errorf("%w: %v", ErrCoinStoreFailed, err)
