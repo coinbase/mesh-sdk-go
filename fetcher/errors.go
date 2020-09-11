@@ -18,7 +18,6 @@ import (
 	"errors"
 
 	utils "github.com/coinbase/rosetta-sdk-go/errors"
-
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
