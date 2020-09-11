@@ -26,7 +26,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func newBadgerStorageTest(ctx context.Context, dir string) (Database, error) {
+func newTestBadgerStorage(ctx context.Context, dir string) (Database, error) {
 	return NewBadgerStorage(ctx, dir, WithIndexCacheSize(TinyIndexCacheSize))
 }
 
@@ -37,7 +37,7 @@ func TestDatabase(t *testing.T) {
 	assert.NoError(t, err)
 	defer utils.RemoveTempDir(newDir)
 
-	database, err := newBadgerStorageTest(ctx, newDir)
+	database, err := newTestBadgerStorage(ctx, newDir)
 	assert.NoError(t, err)
 	defer database.Close(ctx)
 
@@ -127,7 +127,7 @@ func TestDatabaseTransaction(t *testing.T) {
 	assert.NoError(t, err)
 	defer utils.RemoveTempDir(newDir)
 
-	database, err := newBadgerStorageTest(ctx, newDir)
+	database, err := newTestBadgerStorage(ctx, newDir)
 	assert.NoError(t, err)
 	defer database.Close(ctx)
 
@@ -191,7 +191,7 @@ func TestBadgerTrain_NoLimit(t *testing.T) {
 	assert.NoError(t, err)
 	defer utils.RemoveTempDir(newDir)
 
-	database, err := newBadgerStorageTest(ctx, newDir)
+	database, err := newTestBadgerStorage(ctx, newDir)
 	assert.NoError(t, err)
 
 	// Load storage with entries in namespace
@@ -234,7 +234,7 @@ func TestBadgerTrain_Limit(t *testing.T) {
 	assert.NoError(t, err)
 	defer utils.RemoveTempDir(newDir)
 
-	database, err := newBadgerStorageTest(ctx, newDir)
+	database, err := newTestBadgerStorage(ctx, newDir)
 	assert.NoError(t, err)
 
 	// Load storage with entries in namespace
