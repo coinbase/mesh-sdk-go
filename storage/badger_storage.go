@@ -35,20 +35,19 @@ import (
 )
 
 const (
-	// DefaultCacheSize is 0 MB.
-	DefaultCacheSize = 0
+	// DefaultBlockCacheSize is 0 MB.
+	DefaultBlockCacheSize = 0
 
-	// DefaultBfCacheSize is 10 MB.
-	DefaultBfCacheSize = 10 << 20
+	// DefaultIndexCacheSize is 2 GB.
+	DefaultIndexCacheSize = 2000 << 20
 
-	// DefaultValueLogFileSize is 100 MB.
-	DefaultValueLogFileSize = 100 << 20
-
-	// PerformanceMaxTableSize is 256 MB. The larger
+	// DefaultMaxTableSize is 256 MB. The larger
 	// this value is, the larger database transactions
 	// storage can handle.
-	PerformanceMaxTableSize = 256 << 20
+	DefaultMaxTableSize = 256 << 20
 
+	// logModulo determines how often we should print
+	// logs while scanning data.
 	logModulo = 5000
 )
 
@@ -56,6 +55,7 @@ const (
 // that implements the Database interface.
 type BadgerStorage struct {
 	limitMemory       bool
+	indexCacheSize    int64
 	compressorEntries []*CompressorEntry
 
 	pool       *BufferPool
@@ -69,8 +69,9 @@ func defaultBadgerOptions(dir string) badger.Options {
 	opts := badger.DefaultOptions(dir)
 	opts.Logger = nil
 
-	// LoadBloomsOnOpen=false will improve the db startup speed
-	opts.LoadBloomsOnOpen = false
+	// We increase the MaxTableSize to support larger database
+	// transactions (which are capped at 20% of MaxTableSize).
+	opts.MaxTableSize = DefaultMaxTableSize
 
 	// To allow writes at a faster speed, we create a new memtable as soon as
 	// an existing memtable is filled up. This option determines how many
@@ -82,6 +83,29 @@ func defaultBadgerOptions(dir string) badger.Options {
 	opts.NumLevelZeroTables = 1
 	opts.NumLevelZeroTablesStall = 2
 
+	// By default, we set TableLoadingMode to use MemoryMap because
+	// it uses much less memory than RAM but is much faster than
+	// FileIO.
+	opts.TableLoadingMode = options.MemoryMap
+
+	// This option will have a significant effect the memory. If the level is kept
+	// in-memory, read are faster but the tables will be kept in memory. By default,
+	// this is set to false.
+	opts.KeepL0InMemory = false
+
+	// We don't compact L0 on close as this can greatly delay shutdown time.
+	opts.CompactL0OnClose = false
+
+	// This value specifies how much memory should be used by table indices. These
+	// indices include the block offsets and the bloomfilters. Badger uses bloom
+	// filters to speed up lookups. Each table has its own bloom
+	// filter and each bloom filter is approximately of 5 MB. This defaults
+	// to an unlimited size (and quickly balloons to GB with a large DB).
+	opts.IndexCacheSize = DefaultIndexCacheSize
+
+	// Don't cache blocks in memory. All reads should go to disk.
+	opts.BlockCacheSize = DefaultBlockCacheSize
+
 	return opts
 }
 
@@ -92,51 +116,29 @@ func defaultBadgerOptions(dir string) badger.Options {
 func lowMemoryOptions(dir string) badger.Options {
 	opts := defaultBadgerOptions(dir)
 
+	// LoadBloomsOnOpen=false will improve the db startup speed
+	opts.LoadBloomsOnOpen = false
+
 	// Don't load tables into memory.
 	opts.TableLoadingMode = options.FileIO
 	opts.ValueLogLoadingMode = options.FileIO
-
-	// This option will have a significant effect the memory. If the level is kept
-	// in-memory, read are faster but the tables will be kept in memory.
-	opts.KeepL0InMemory = false
-
-	// Bloom filters will be kept in memory if the following option is not set. Each
-	// bloom filter takes up 5 MB of memory. A smaller bf cache would mean that
-	// bloom filters will be evicted quickly from the cache and they will be read from
-	// the disk (which is slow) and inserted into the cache.
-	opts.MaxBfCacheSize = DefaultBfCacheSize
-
-	// Don't cache blocks in memory. All reads should go to disk.
-	opts.MaxCacheSize = DefaultCacheSize
-
-	// Limit ValueLogFileSize as log files
-	// must be read into memory during compaction.
-	opts.ValueLogFileSize = DefaultValueLogFileSize
-
-	return opts
-}
-
-// performanceOptions returns a set of BadgerDB configuration
-// options that don't attempt to reduce memory usage (can
-// improve performance).
-func performanceOptions(dir string) badger.Options {
-	opts := defaultBadgerOptions(dir)
-	opts.MaxTableSize = PerformanceMaxTableSize
 
 	return opts
 }
 
 // NewBadgerStorage creates a new BadgerStorage.
 func NewBadgerStorage(ctx context.Context, dir string, options ...BadgerOption) (Database, error) {
-	b := &BadgerStorage{}
+	b := &BadgerStorage{
+		indexCacheSize: DefaultIndexCacheSize,
+	}
 	for _, opt := range options {
 		opt(b)
 	}
 
 	dir = path.Clean(dir)
-	dbOpts := lowMemoryOptions(dir)
-	if !b.limitMemory {
-		dbOpts = performanceOptions(dir)
+	dbOpts := defaultBadgerOptions(dir)
+	if b.limitMemory {
+		dbOpts = lowMemoryOptions(dir)
 	}
 
 	db, err := badger.Open(dbOpts)
