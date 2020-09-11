@@ -416,7 +416,13 @@ func (r *Reconciler) bestLiveBalance(
 		return nil, nil, ErrBlockGone
 	}
 
-	return nil, nil, err
+	return nil, nil, fmt.Errorf(
+		"%w: unable to get live balance for %s %s at %s",
+		err,
+		types.PrintStruct(account),
+		types.PrintStruct(currency),
+		types.PrintStruct(lookupBlock),
+	)
 }
 
 // accountReconciliation returns an error if the provided

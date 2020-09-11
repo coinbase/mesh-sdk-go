@@ -295,7 +295,13 @@ func (b *BalanceStorage) UpdateBalance(
 		// Use helper to fetch existing balance.
 		amount, err := b.helper.AccountBalance(ctx, change.Account, change.Currency, parentBlock)
 		if err != nil {
-			return fmt.Errorf("%w: unable to get previous account balance", err)
+			return fmt.Errorf(
+				"%w: unable to get previous account balance for %s %s at %s",
+				err,
+				types.PrintStruct(change.Account),
+				types.PrintStruct(change.Currency),
+				types.PrintStruct(parentBlock),
+			)
 		}
 
 		existingValue = amount.Value
