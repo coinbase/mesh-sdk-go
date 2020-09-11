@@ -17,6 +17,7 @@ package storage
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -186,6 +187,198 @@ func copyStruct(input interface{}, output interface{}) error {
 	inputString := types.PrintStruct(input)
 	if err := json.Unmarshal([]byte(inputString), &output); err != nil {
 		return fmt.Errorf("%w: %v", ErrCopyBlockFailed, err)
+	}
+
+	return nil
+}
+
+func (c *Compressor) encodeAccountCoin(accountCoin *AccountCoin) []byte {
+	output := c.pool.Get().Bytes()
+	output = append(
+		output,
+		[]byte(accountCoin.Account.Address)...,
+	)
+	output = append(
+		output,
+		unicodeRecordSeparator,
+	)
+	output = append(
+		output,
+		[]byte(accountCoin.Coin.CoinIdentifier.Identifier)...,
+	)
+	output = append(
+		output,
+		unicodeRecordSeparator,
+	)
+	output = append(
+		output,
+		[]byte(types.PrintStruct(accountCoin.Coin.Amount))...,
+	)
+	if accountCoin.Account.Metadata == nil &&
+		accountCoin.Account.SubAccount == nil &&
+		accountCoin.Coin.Amount.Metadata == nil &&
+		accountCoin.Coin.Amount.Currency.Metadata == nil {
+		return output
+	}
+
+	output = append(
+		output,
+		unicodeRecordSeparator,
+	)
+	if accountCoin.Account.Metadata != nil {
+		output = append(
+			output,
+			[]byte(types.PrintStruct(accountCoin.Account.Metadata))...,
+		)
+	}
+	output = append(
+		output,
+		unicodeRecordSeparator,
+	)
+
+	if accountCoin.Account.SubAccount != nil {
+		output = append(
+			output,
+			[]byte(accountCoin.Account.SubAccount.Address)...,
+		)
+	}
+	output = append(output, unicodeRecordSeparator)
+
+	if accountCoin.Account.SubAccount != nil && accountCoin.Account.SubAccount.Metadata != nil {
+		output = append(
+			output,
+			[]byte(types.PrintStruct(accountCoin.Account.SubAccount.Metadata))...,
+		)
+	}
+	output = append(output, unicodeRecordSeparator)
+
+	if accountCoin.Coin.Amount.Metadata != nil {
+		output = append(
+			output,
+			[]byte(types.PrintStruct(accountCoin.Coin.Amount.Metadata))...,
+		)
+	}
+	output = append(
+		output,
+		unicodeRecordSeparator,
+	)
+	if accountCoin.Coin.Amount.Currency.Metadata != nil {
+		output = append(
+			output,
+			[]byte(types.PrintStruct(accountCoin.Coin.Amount.Currency.Metadata))...,
+		)
+	}
+
+	return output
+}
+
+const (
+	unicodeRecordSeparator = '\u001E'
+)
+
+// AccountCoin Encoding
+const (
+	accountAddress = iota
+	coinIdentifier
+	amount
+	accountMetadata // If none exist, we stop after amount.
+	subAccountAddress
+	subAccountMetadata
+	amountMetadata
+	currencyMetadata
+)
+
+var (
+	errDecoding = errors.New("decoding")
+)
+
+func (c *Compressor) decodeAccountCoin(
+	b []byte,
+	accountCoin *AccountCoin,
+	reclaimInput bool,
+) error {
+	count := 0
+	currentBytes := b
+	for {
+		nextRune := bytes.IndexRune(currentBytes, unicodeRecordSeparator)
+		if nextRune == -1 {
+			if count != amount && count != currencyMetadata {
+				fmt.Printf("%s\n", string(currentBytes))
+				return fmt.Errorf("%w: next rune is -1 at %d", errDecoding, count)
+			}
+
+			nextRune = len(currentBytes)
+		}
+
+		val := currentBytes[:nextRune]
+		if len(val) == 0 {
+			goto handleNext
+		}
+
+		switch count {
+		case accountAddress:
+			accountCoin.Account = &types.AccountIdentifier{
+				Address: string(val),
+			}
+		case coinIdentifier:
+			accountCoin.Coin = &types.Coin{
+				CoinIdentifier: &types.CoinIdentifier{
+					Identifier: string(val),
+				},
+			}
+		case amount:
+			var a types.Amount
+			if err := json.Unmarshal(val, &a); err != nil {
+				return fmt.Errorf("%w: amount %s", errDecoding, err.Error())
+			}
+			accountCoin.Coin.Amount = &a
+		case accountMetadata:
+			var m map[string]interface{}
+			if err := json.Unmarshal(val, &m); err != nil {
+				return fmt.Errorf("%w: account metadata %s", errDecoding, err.Error())
+			}
+			accountCoin.Account.Metadata = m
+		case subAccountAddress:
+			accountCoin.Account.SubAccount = &types.SubAccountIdentifier{
+				Address: string(val),
+			}
+		case subAccountMetadata:
+			if accountCoin.Account.SubAccount == nil {
+				return errDecoding // must have address
+			}
+
+			var m map[string]interface{}
+			if err := json.Unmarshal(val, &m); err != nil {
+				return fmt.Errorf("%w: subaccount metadata %s", errDecoding, err.Error())
+			}
+			accountCoin.Account.SubAccount.Metadata = m
+		case amountMetadata:
+			var m map[string]interface{}
+			if err := json.Unmarshal(val, &m); err != nil {
+				return fmt.Errorf("%w: amount metadata %s", errDecoding, err.Error())
+			}
+			accountCoin.Coin.Amount.Metadata = m
+		case currencyMetadata:
+			var m map[string]interface{}
+			if err := json.Unmarshal(val, &m); err != nil {
+				return fmt.Errorf("%w: currency metadata %s", errDecoding, err.Error())
+			}
+			accountCoin.Coin.Amount.Currency.Metadata = m
+		default:
+			return fmt.Errorf("%w: count %d > end", errDecoding, count)
+		}
+
+	handleNext:
+		if nextRune == len(currentBytes) && (count == amount || count == currencyMetadata) {
+			break
+		}
+
+		currentBytes = currentBytes[nextRune+1:]
+		count++
+	}
+
+	if reclaimInput {
+		c.pool.PutByteSlice(b)
 	}
 
 	return nil
