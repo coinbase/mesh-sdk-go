@@ -154,9 +154,9 @@ func (f *Fetcher) ConstructionMetadata(
 	network *types.NetworkIdentifier,
 	options map[string]interface{},
 	publicKeys []*types.PublicKey,
-) (map[string]interface{}, *Error) {
+) (map[string]interface{}, []*types.Amount, *Error) {
 	if err := f.connectionSemaphore.Acquire(ctx, semaphoreRequestWeight); err != nil {
-		return nil, &Error{
+		return nil, nil, &Error{
 			Err: fmt.Errorf("%w: %s", ErrCouldNotAcquireSemaphore, err.Error()),
 		}
 	}
@@ -174,17 +174,17 @@ func (f *Fetcher) ConstructionMetadata(
 			Err:       fmt.Errorf("%w: /construction/metadata %s", ErrRequestFailed, err.Error()),
 			ClientErr: clientErr,
 		}
-		return nil, fetcherErr
+		return nil, nil, fetcherErr
 	}
 
 	if err := asserter.ConstructionMetadataResponse(metadata); err != nil {
 		fetcherErr := &Error{
 			Err: fmt.Errorf("%w: /construction/metadata %s", ErrAssertionFailed, err.Error()),
 		}
-		return nil, fetcherErr
+		return nil, nil, fetcherErr
 	}
 
-	return metadata.Metadata, nil
+	return metadata.Metadata, metadata.SuggestedFee, nil
 }
 
 // ConstructionParse is called on both unsigned and signed transactions to

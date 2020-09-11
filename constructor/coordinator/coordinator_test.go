@@ -581,7 +581,7 @@ func TestProcess(t *testing.T) {
 		network,
 		metadataOptions,
 		[]*types.PublicKey{},
-	).Return(fetchedMetadata, nil).Once()
+	).Return(fetchedMetadata, nil, nil).Once()
 
 	unsignedTx := "unsigned transaction"
 	signingPayloads := []*types.SigningPayload{
@@ -988,7 +988,7 @@ func TestProcess_Failed(t *testing.T) {
 		{
 			Address: "hello2",
 		},
-	}, nil).Once()
+	}, nil, nil).Once()
 	helper.On(
 		"GetKey",
 		ctx,
@@ -1036,7 +1036,7 @@ func TestProcess_Failed(t *testing.T) {
 				CurveType: types.Edwards25519,
 			},
 		},
-	).Return(fetchedMetadata, nil).Once()
+	).Return(fetchedMetadata, nil, nil).Once()
 
 	unsignedTx := "unsigned transaction"
 	signingPayloads := []*types.SigningPayload{

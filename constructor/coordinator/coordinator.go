@@ -192,7 +192,7 @@ func (c *Coordinator) createTransaction(
 	ctx context.Context,
 	dbTx storage.DatabaseTransaction,
 	broadcast *job.Broadcast,
-) (*types.TransactionIdentifier, string, error) {
+) (*types.TransactionIdentifier, string, []*types.Amount, error) {
 	metadataRequest, requiredPublicKeys, err := c.helper.Preprocess(
 		ctx,
 		broadcast.Network,
@@ -200,14 +200,14 @@ func (c *Coordinator) createTransaction(
 		broadcast.Metadata,
 	)
 	if err != nil {
-		return nil, "", fmt.Errorf("%w: unable to preprocess", err)
+		return nil, "", nil, fmt.Errorf("%w: unable to preprocess", err)
 	}
 
 	publicKeys := make([]*types.PublicKey, len(requiredPublicKeys))
 	for i, accountIdentifier := range requiredPublicKeys {
 		keyPair, err := c.helper.GetKey(ctx, dbTx, accountIdentifier)
 		if err != nil {
-			return nil, "", fmt.Errorf(
+			return nil, "", nil, fmt.Errorf(
 				"%w: unable to find key for address %s",
 				err,
 				accountIdentifier.Address,
@@ -217,14 +217,18 @@ func (c *Coordinator) createTransaction(
 		publicKeys[i] = keyPair.PublicKey
 	}
 
-	requiredMetadata, err := c.helper.Metadata(
+	requiredMetadata, suggestedFees, err := c.helper.Metadata(
 		ctx,
 		broadcast.Network,
 		metadataRequest,
 		publicKeys,
 	)
 	if err != nil {
-		return nil, "", fmt.Errorf("%w: unable to construct metadata", err)
+		return nil, "", nil, fmt.Errorf("%w: unable to construct metadata", err)
+	}
+
+	if broadcast.DryRun {
+		return nil, "", suggestedFees, nil
 	}
 
 	unsignedTransaction, payloads, err := c.helper.Payloads(
@@ -235,7 +239,7 @@ func (c *Coordinator) createTransaction(
 		publicKeys,
 	)
 	if err != nil {
-		return nil, "", fmt.Errorf("%w: unable to construct payloads", err)
+		return nil, "", nil, fmt.Errorf("%w: unable to construct payloads", err)
 	}
 
 	parsedOps, signers, _, err := c.helper.Parse(
@@ -245,11 +249,11 @@ func (c *Coordinator) createTransaction(
 		unsignedTransaction,
 	)
 	if err != nil {
-		return nil, "", fmt.Errorf("%w: unable to parse unsigned transaction", err)
+		return nil, "", nil, fmt.Errorf("%w: unable to parse unsigned transaction", err)
 	}
 
 	if len(signers) != 0 {
-		return nil, "", fmt.Errorf(
+		return nil, "", nil, fmt.Errorf(
 			"signers should be empty in unsigned transaction but found %d",
 			len(signers),
 		)
@@ -261,12 +265,12 @@ func (c *Coordinator) createTransaction(
 			types.PrintStruct(broadcast.Intent),
 			types.PrintStruct(parsedOps),
 		)
-		return nil, "", fmt.Errorf("%w: unsigned parsed ops do not match intent", err)
+		return nil, "", nil, fmt.Errorf("%w: unsigned parsed ops do not match intent", err)
 	}
 
 	signatures, err := c.helper.Sign(ctx, payloads)
 	if err != nil {
-		return nil, "", fmt.Errorf("%w: unable to sign payloads", err)
+		return nil, "", nil, fmt.Errorf("%w: unable to sign payloads", err)
 	}
 
 	networkTransaction, err := c.helper.Combine(
@@ -276,7 +280,7 @@ func (c *Coordinator) createTransaction(
 		signatures,
 	)
 	if err != nil {
-		return nil, "", fmt.Errorf("%w: unable to combine signatures", err)
+		return nil, "", nil, fmt.Errorf("%w: unable to combine signatures", err)
 	}
 
 	signedParsedOps, signers, _, err := c.helper.Parse(
@@ -286,7 +290,7 @@ func (c *Coordinator) createTransaction(
 		networkTransaction,
 	)
 	if err != nil {
-		return nil, "", fmt.Errorf("%w: unable to parse signed transaction", err)
+		return nil, "", nil, fmt.Errorf("%w: unable to parse signed transaction", err)
 	}
 
 	if err := c.parser.ExpectedOperations(broadcast.Intent, signedParsedOps, false, false); err != nil {
@@ -295,11 +299,11 @@ func (c *Coordinator) createTransaction(
 			types.PrintStruct(broadcast.Intent),
 			types.PrintStruct(signedParsedOps),
 		)
-		return nil, "", fmt.Errorf("%w: signed parsed ops do not match intent", err)
+		return nil, "", nil, fmt.Errorf("%w: signed parsed ops do not match intent", err)
 	}
 
 	if err := parser.ExpectedSigners(payloads, signers); err != nil {
-		return nil, "", fmt.Errorf("%w: signed transactions signers do not match intent", err)
+		return nil, "", nil, fmt.Errorf("%w: signed transactions signers do not match intent", err)
 	}
 
 	transactionIdentifier, err := c.helper.Hash(
@@ -308,10 +312,10 @@ func (c *Coordinator) createTransaction(
 		networkTransaction,
 	)
 	if err != nil {
-		return nil, "", fmt.Errorf("%w: unable to get transaction hash", err)
+		return nil, "", nil, fmt.Errorf("%w: unable to get transaction hash", err)
 	}
 
-	return transactionIdentifier, networkTransaction, nil
+	return transactionIdentifier, networkTransaction, nil, nil
 }
 
 // BroadcastComplete is called by the broadcast coordinator
@@ -496,11 +500,12 @@ func (c *Coordinator) Process(
 		if err != nil {
 			return fmt.Errorf("%w: unable to update job", err)
 		}
+		j.Identifier = jobIdentifier
 
 		var transactionCreated *types.TransactionIdentifier
 		if broadcast != nil {
-			// Construct Transaction
-			transactionIdentifier, networkTransaction, err := c.createTransaction(
+			// Construct Transaction (or dry run)
+			transactionIdentifier, networkTransaction, suggestedFees, err := c.createTransaction(
 				ctx,
 				dbTx,
 				broadcast,
@@ -509,26 +514,38 @@ func (c *Coordinator) Process(
 				return fmt.Errorf("%w: unable to create transaction", err)
 			}
 
-			// Invoke Broadcast storage (in same TX as update job)
-			if err := c.helper.Broadcast(
-				ctx,
-				dbTx,
-				jobIdentifier,
-				broadcast.Network,
-				broadcast.Intent,
-				transactionIdentifier,
-				networkTransaction,
-				broadcast.ConfirmationDepth,
-			); err != nil {
-				return fmt.Errorf("%w: unable to enqueue broadcast", err)
-			}
+			if broadcast.DryRun {
+				// Update the job with the result of the dry run. This will
+				// mark it as ready!
+				if err := j.DryRunComplete(ctx, suggestedFees); err != nil {
+					return fmt.Errorf("%w: unable to mark dry run complete", err)
+				}
 
-			transactionCreated = transactionIdentifier
-			log.Printf(
-				`created transaction "%s" for job "%s"`,
-				transactionIdentifier.Hash,
-				jobIdentifier,
-			)
+				if _, err := c.storage.Update(ctx, dbTx, j); err != nil {
+					return fmt.Errorf("%w: unable to update job after dry run", err)
+				}
+			} else {
+				// Invoke Broadcast storage (in same TX as update job)
+				if err := c.helper.Broadcast(
+					ctx,
+					dbTx,
+					jobIdentifier,
+					broadcast.Network,
+					broadcast.Intent,
+					transactionIdentifier,
+					networkTransaction,
+					broadcast.ConfirmationDepth,
+				); err != nil {
+					return fmt.Errorf("%w: unable to enqueue broadcast", err)
+				}
+
+				transactionCreated = transactionIdentifier
+				log.Printf(
+					`created transaction "%s" for job "%s"`,
+					transactionIdentifier.Hash,
+					jobIdentifier,
+				)
+			}
 		}
 
 		// Reset all vars

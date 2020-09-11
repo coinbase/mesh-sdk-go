@@ -54,8 +54,13 @@ const (
 	// DryRun is a boolean that indicates whether we should perform the
 	// entire transaction construction process or just /construction/preprocess
 	// and /construction/metadata to determine the suggested transaction
-	// fee.
+	// fee. If this variable is not populated, we assume that it is NOT
+	// a dry run.
 	DryRun ReservedVariable = "dry_run"
+
+	// SuggestedFee is the []*types.Amount returned from
+	// an implementation's /construction/metadata endpoint (if implemented).
+	SuggestedFee ReservedVariable = "suggested_fee"
 )
 
 // ActionType is a type of Action that can be processed.

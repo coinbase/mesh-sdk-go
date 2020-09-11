@@ -83,12 +83,18 @@ func (j *Job) CreateBroadcast() (*Broadcast, error) {
 		return nil, fmt.Errorf("%w: %s", ErrMetadataInvalid, err.Error())
 	}
 
+	dryRun, err := j.unmarshalBoolean(scenario.Name, DryRun)
+	if err != nil && !errors.Is(err, ErrVariableNotFound) {
+		return nil, fmt.Errorf("%w: %s", ErrMetadataInvalid, err.Error())
+	}
+
 	j.Status = Broadcasting
 	return &Broadcast{
 		Network:           &network,
 		Intent:            operations,
 		Metadata:          metadata,
 		ConfirmationDepth: confirmationDepth.Int64(),
+		DryRun:            dryRun,
 	}, nil
 }
 
@@ -109,6 +115,20 @@ func (j *Job) unmarshalNumber(
 	}
 
 	return i, nil
+}
+
+func (j *Job) unmarshalBoolean(
+	scenarioName string,
+	reservedVariable ReservedVariable,
+) (bool, error) {
+	variable := fmt.Sprintf("%s.%s", scenarioName, reservedVariable)
+
+	value := gjson.Get(j.State, variable)
+	if !value.Exists() {
+		return false, ErrVariableNotFound
+	}
+
+	return value.Bool(), nil
 }
 
 func (j *Job) unmarshalStruct(
@@ -132,42 +152,32 @@ func (j *Job) CheckComplete() bool {
 	return j.Index > len(j.Scenarios)-1
 }
 
-// BroadcastComplete is called either after a broadcast
-// has been confirmed at the provided confirmation depth or
-// if it has failed for some reason.
-func (j *Job) BroadcastComplete(
-	ctx context.Context,
-	transaction *types.Transaction,
-) error {
+func (j *Job) getBroadcastScenario() (*Scenario, error) {
 	if j.Status != Broadcasting {
-		return fmt.Errorf("%w: job is in %s state", ErrUnableToHandleBroadcast, j.State)
-	}
-
-	if transaction == nil {
-		j.Status = Failed
-		return nil
+		return nil, fmt.Errorf("job is in %s state, not %s", j.State, Broadcasting)
 	}
 
 	broadcastIndex := j.Index - 1
 	if broadcastIndex < 0 {
-		return fmt.Errorf("%w: no broadcast to confirm", ErrUnableToHandleBroadcast)
+		return nil, ErrNoBroadcastToConfirm
 	}
 
-	scenario := j.Scenarios[broadcastIndex]
+	return j.Scenarios[broadcastIndex], nil
+}
 
-	// Store transaction in state
-	transactionKey := fmt.Sprintf("%s.%s", scenario.Name, Transaction)
+func (j *Job) injectKeyAndMarkReady(
+	scenarioName string,
+	key ReservedVariable,
+	obj string,
+) error {
+	objKey := fmt.Sprintf("%s.%s", scenarioName, key)
 	newState, err := sjson.SetRaw(
 		j.State,
-		transactionKey,
-		types.PrintStruct(transaction),
+		objKey,
+		obj,
 	)
 	if err != nil {
-		return fmt.Errorf(
-			"%w: unable to store transaction result in state %s",
-			ErrUnableToHandleBroadcast,
-			err,
-		)
+		return err
 	}
 	j.State = newState
 
@@ -177,5 +187,63 @@ func (j *Job) BroadcastComplete(
 	}
 
 	j.Status = Ready
+	return nil
+}
+
+// BroadcastComplete is called either after a broadcast
+// has been confirmed at the provided confirmation depth or
+// if it has failed for some reason.
+func (j *Job) BroadcastComplete(
+	ctx context.Context,
+	transaction *types.Transaction,
+) error {
+	scenario, err := j.getBroadcastScenario()
+	if err != nil {
+		return fmt.Errorf("%w: %s", ErrUnableToHandleBroadcast, err.Error())
+	}
+
+	if transaction == nil {
+		j.Status = Failed
+		return nil
+	}
+
+	if err := j.injectKeyAndMarkReady(
+		scenario.Name,
+		Transaction,
+		types.PrintStruct(transaction),
+	); err != nil {
+		return fmt.Errorf(
+			"%w: unable to store transaction result in state %s",
+			ErrUnableToHandleBroadcast,
+			err,
+		)
+	}
+
+	return nil
+}
+
+// DryRunComplete is invoked after a transaction dry run
+// has been performed.
+func (j *Job) DryRunComplete(
+	ctx context.Context,
+	suggestedFee []*types.Amount,
+) error {
+	scenario, err := j.getBroadcastScenario()
+	if err != nil {
+		return fmt.Errorf("%w: %s", ErrUnableToHandleDryRun, err.Error())
+	}
+
+	if err := j.injectKeyAndMarkReady(
+		scenario.Name,
+		SuggestedFee,
+		types.PrintStruct(suggestedFee),
+	); err != nil {
+		return fmt.Errorf(
+			"%w: unable to store suggested fee result in state %s",
+			ErrUnableToHandleDryRun,
+			err,
+		)
+	}
+
 	return nil
 }
