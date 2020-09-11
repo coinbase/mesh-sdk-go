@@ -34,3 +34,11 @@ func WithCompressorEntries(entries []*CompressorEntry) BadgerOption {
 		b.compressorEntries = entries
 	}
 }
+
+// WithIndexCacheSize override the DefaultIndexCacheSize
+// setting for the BadgerDB. The size here is in bytes.
+func WithIndexCacheSize(size int64) BadgerOption {
+	return func(b *BadgerStorage) {
+		b.indexCacheSize = size
+	}
+}
