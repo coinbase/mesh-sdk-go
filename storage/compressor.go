@@ -245,7 +245,7 @@ func (c *Compressor) decodeMap(input []byte) (map[string]interface{}, error) {
 // amountCurrencyDecimals|accountMetadata|subAccountAddress|
 // subAccountMetadata|amountMetadata|currencyMetadata
 //
-// In both cases, the | character is represetned by the unicodeRecordSeparator rune.
+// In both cases, the | character is represented by the unicodeRecordSeparator rune.
 func (c *Compressor) EncodeAccountCoin(
 	accountCoin *AccountCoin,
 ) ([]byte, error) { // nolint:gocognit
