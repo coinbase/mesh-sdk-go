@@ -79,3 +79,181 @@ func TestCompressor(t *testing.T) {
 
 	assert.NoError(t, g.Wait())
 }
+
+var (
+	benchmarkCoin = &AccountCoin{
+		Account: &types.AccountIdentifier{
+			Address: "hello",
+		},
+		Coin: &types.Coin{
+			CoinIdentifier: &types.CoinIdentifier{
+				Identifier: "coin1",
+			},
+			Amount: &types.Amount{
+				Value: "100",
+				Currency: &types.Currency{
+					Symbol:   "BTC",
+					Decimals: 8,
+				},
+			},
+		},
+	}
+
+	complexCoin = &AccountCoin{
+		Account: &types.AccountIdentifier{
+			Address: "hello",
+			SubAccount: &types.SubAccountIdentifier{
+				Address: "sub",
+				Metadata: map[string]interface{}{
+					"test": "stuff",
+				},
+			},
+		},
+		Coin: &types.Coin{
+			CoinIdentifier: &types.CoinIdentifier{
+				Identifier: "coin1",
+			},
+			Amount: &types.Amount{
+				Value: "100",
+				Currency: &types.Currency{
+					Symbol:   "BTC",
+					Decimals: 8,
+					Metadata: map[string]interface{}{
+						"issuer": "satoshi",
+					},
+				},
+			},
+		},
+	}
+)
+
+func BenchmarkAccountCoinStandard(b *testing.B) {
+	c, _ := NewCompressor(nil, NewBufferPool())
+
+	for i := 0; i < b.N; i++ {
+		// encode
+		compressedResult, _ := c.Encode("", benchmarkCoin)
+
+		// decode
+		var decoded AccountCoin
+		_ = c.Decode("", compressedResult, &decoded, true)
+	}
+}
+
+func BenchmarkComplexAccountCoinStandard(b *testing.B) {
+	c, _ := NewCompressor(nil, NewBufferPool())
+
+	for i := 0; i < b.N; i++ {
+		// encode
+		compressedResult, _ := c.Encode("", complexCoin)
+
+		// decode
+		var decoded AccountCoin
+		_ = c.Decode("", compressedResult, &decoded, true)
+	}
+}
+
+func BenchmarkAccountCoinOptimized(b *testing.B) {
+	c, _ := NewCompressor(nil, NewBufferPool())
+
+	for i := 0; i < b.N; i++ {
+		// encode
+		manualResult, _ := c.EncodeAccountCoin(benchmarkCoin)
+
+		// decode
+		var decoded AccountCoin
+		_ = c.DecodeAccountCoin(manualResult, &decoded, true)
+	}
+}
+func BenchmarkComplexAccountCoinOptimized(b *testing.B) {
+	c, _ := NewCompressor(nil, NewBufferPool())
+
+	for i := 0; i < b.N; i++ {
+		// encode
+		manualResult, _ := c.EncodeAccountCoin(complexCoin)
+
+		// decode
+		var decoded AccountCoin
+		_ = c.DecodeAccountCoin(manualResult, &decoded, true)
+	}
+}
+
+func TestEncodeDecodeAccountCoin(t *testing.T) {
+	tests := map[string]struct {
+		accountCoin *AccountCoin
+	}{
+		"simple": {
+			accountCoin: benchmarkCoin,
+		},
+		"sub account info": {
+			accountCoin: &AccountCoin{
+				Account: &types.AccountIdentifier{
+					Address: "hello",
+					SubAccount: &types.SubAccountIdentifier{
+						Address: "sub",
+						Metadata: map[string]interface{}{
+							"test": "stuff",
+						},
+					},
+				},
+				Coin: &types.Coin{
+					CoinIdentifier: &types.CoinIdentifier{
+						Identifier: "coin1",
+					},
+					Amount: &types.Amount{
+						Value: "100",
+						Currency: &types.Currency{
+							Symbol:   "BTC",
+							Decimals: 8,
+						},
+					},
+				},
+			},
+		},
+		"currency metadata": {
+			accountCoin: &AccountCoin{
+				Account: &types.AccountIdentifier{
+					Address: "hello",
+				},
+				Coin: &types.Coin{
+					CoinIdentifier: &types.CoinIdentifier{
+						Identifier: "coin1",
+					},
+					Amount: &types.Amount{
+						Value: "100",
+						Currency: &types.Currency{
+							Symbol:   "BTC",
+							Decimals: 8,
+							Metadata: map[string]interface{}{
+								"issuer": "satoshi",
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for name, test := range tests {
+		c, err := NewCompressor(nil, NewBufferPool())
+		assert.NoError(t, err)
+
+		t.Run(name, func(t *testing.T) {
+			standardResult, err := c.Encode("", test.accountCoin)
+			assert.NoError(t, err)
+			optimizedResult, err := c.EncodeAccountCoin(test.accountCoin)
+			assert.NoError(t, err)
+			fmt.Printf(
+				"Uncompressed: %d, Standard Compressed: %d, Optimized: %d\n",
+				len(types.PrintStruct(test.accountCoin)),
+				len(standardResult),
+				len(optimizedResult),
+			)
+
+			var decoded AccountCoin
+			assert.NoError(t, c.DecodeAccountCoin(optimizedResult, &decoded, true))
+
+			assert.Equal(t, test.accountCoin, &decoded)
+		})
+	}
+}

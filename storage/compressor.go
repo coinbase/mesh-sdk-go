@@ -22,6 +22,7 @@ import (
 	"io/ioutil"
 	"log"
 	"path"
+	"strconv"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
 
@@ -186,6 +187,257 @@ func copyStruct(input interface{}, output interface{}) error {
 	inputString := types.PrintStruct(input)
 	if err := json.Unmarshal([]byte(inputString), &output); err != nil {
 		return fmt.Errorf("%w: %v", ErrCopyBlockFailed, err)
+	}
+
+	return nil
+}
+
+const (
+	unicodeRecordSeparator = '\u001E'
+)
+
+// Indexes of encoded AccountCoin struct
+const (
+	accountAddress = iota
+	coinIdentifier
+	amountValue
+	amountCurrencySymbol
+	amountCurrencyDecimals
+
+	// If none exist below, we stop after amount.
+	accountMetadata
+	subAccountAddress
+	subAccountMetadata
+	amountMetadata
+	currencyMetadata
+)
+
+func (c *Compressor) encodeAndWrite(output *bytes.Buffer, object interface{}) error {
+	buf := c.pool.Get()
+	err := getEncoder(buf).Encode(object)
+	if err != nil {
+		return fmt.Errorf("%w: %v", ErrObjectEncodeFailed, err)
+	}
+
+	if _, err := output.Write(buf.Bytes()); err != nil {
+		return fmt.Errorf("%w: %v", ErrObjectEncodeFailed, err)
+	}
+
+	c.pool.Put(buf)
+	return nil
+}
+
+func (c *Compressor) decodeMap(input []byte) (map[string]interface{}, error) {
+	var m map[string]interface{}
+	if err := getDecoder(bytes.NewReader(input)).Decode(&m); err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrRawDecodeFailed, err)
+	}
+
+	return m, nil
+}
+
+// EncodeAccountCoin is used to encode an *AccountCoin using the scheme (on the happy path):
+// accountAddress|coinIdentifier|amountValue|amountCurrencySymbol|
+// amountCurrencyDecimals
+//
+// And the following scheme on the unhappy path:
+// accountAddress|coinIdentifier|amountValue|amountCurrencySymbol|
+// amountCurrencyDecimals|accountMetadata|subAccountAddress|
+// subAccountMetadata|amountMetadata|currencyMetadata
+//
+// In both cases, the | character is represented by the unicodeRecordSeparator rune.
+func (c *Compressor) EncodeAccountCoin(
+	accountCoin *AccountCoin,
+) ([]byte, error) { // nolint:gocognit
+	output := c.pool.Get()
+	if _, err := output.WriteString(accountCoin.Account.Address); err != nil {
+		return nil, fmt.Errorf("%w: %s", ErrObjectEncodeFailed, err.Error())
+	}
+	if _, err := output.WriteRune(unicodeRecordSeparator); err != nil {
+		return nil, fmt.Errorf("%w: %s", ErrObjectEncodeFailed, err.Error())
+	}
+	if _, err := output.WriteString(accountCoin.Coin.CoinIdentifier.Identifier); err != nil {
+		return nil, fmt.Errorf("%w: %s", ErrObjectEncodeFailed, err.Error())
+	}
+	if _, err := output.WriteRune(unicodeRecordSeparator); err != nil {
+		return nil, fmt.Errorf("%w: %s", ErrObjectEncodeFailed, err.Error())
+	}
+	if _, err := output.WriteString(accountCoin.Coin.Amount.Value); err != nil {
+		return nil, fmt.Errorf("%w: %s", ErrObjectEncodeFailed, err.Error())
+	}
+	if _, err := output.WriteRune(unicodeRecordSeparator); err != nil {
+		return nil, fmt.Errorf("%w: %s", ErrObjectEncodeFailed, err.Error())
+	}
+	if _, err := output.WriteString(accountCoin.Coin.Amount.Currency.Symbol); err != nil {
+		return nil, fmt.Errorf("%w: %s", ErrObjectEncodeFailed, err.Error())
+	}
+	if _, err := output.WriteRune(unicodeRecordSeparator); err != nil {
+		return nil, fmt.Errorf("%w: %s", ErrObjectEncodeFailed, err.Error())
+	}
+	if _, err := output.WriteString(
+		strconv.FormatInt(int64(accountCoin.Coin.Amount.Currency.Decimals), 10),
+	); err != nil {
+		return nil, fmt.Errorf("%w: %s", ErrObjectEncodeFailed, err.Error())
+	}
+
+	// Exit early if we don't have any complex data to record (this helps
+	// us save a lot of space on the happy path).
+	if accountCoin.Account.Metadata == nil &&
+		accountCoin.Account.SubAccount == nil &&
+		accountCoin.Coin.Amount.Metadata == nil &&
+		accountCoin.Coin.Amount.Currency.Metadata == nil {
+		return output.Bytes(), nil
+	}
+
+	if _, err := output.WriteRune(unicodeRecordSeparator); err != nil {
+		return nil, fmt.Errorf("%w: %s", ErrObjectEncodeFailed, err.Error())
+	}
+	if accountCoin.Account.Metadata != nil {
+		if err := c.encodeAndWrite(output, accountCoin.Account.Metadata); err != nil {
+			return nil, fmt.Errorf("%w: %s", ErrObjectEncodeFailed, err.Error())
+		}
+	}
+	if _, err := output.WriteRune(unicodeRecordSeparator); err != nil {
+		return nil, fmt.Errorf("%w: %s", ErrObjectEncodeFailed, err.Error())
+	}
+
+	if accountCoin.Account.SubAccount != nil {
+		if _, err := output.WriteString(accountCoin.Account.SubAccount.Address); err != nil {
+			return nil, fmt.Errorf("%w: %s", ErrObjectEncodeFailed, err.Error())
+		}
+	}
+	if _, err := output.WriteRune(unicodeRecordSeparator); err != nil {
+		return nil, fmt.Errorf("%w: %s", ErrObjectEncodeFailed, err.Error())
+	}
+
+	if accountCoin.Account.SubAccount != nil && accountCoin.Account.SubAccount.Metadata != nil {
+		if err := c.encodeAndWrite(output, accountCoin.Account.SubAccount.Metadata); err != nil {
+			return nil, fmt.Errorf("%w: %s", ErrObjectEncodeFailed, err.Error())
+		}
+	}
+	if _, err := output.WriteRune(unicodeRecordSeparator); err != nil {
+		return nil, fmt.Errorf("%w: %s", ErrObjectEncodeFailed, err.Error())
+	}
+
+	if accountCoin.Coin.Amount.Metadata != nil {
+		if err := c.encodeAndWrite(output, accountCoin.Coin.Amount.Metadata); err != nil {
+			return nil, fmt.Errorf("%w: %s", ErrObjectEncodeFailed, err.Error())
+		}
+	}
+	if _, err := output.WriteRune(unicodeRecordSeparator); err != nil {
+		return nil, fmt.Errorf("%w: %s", ErrObjectEncodeFailed, err.Error())
+	}
+	if accountCoin.Coin.Amount.Currency.Metadata != nil {
+		if err := c.encodeAndWrite(output, accountCoin.Coin.Amount.Currency.Metadata); err != nil {
+			return nil, fmt.Errorf("%w: %s", ErrObjectEncodeFailed, err.Error())
+		}
+	}
+
+	return output.Bytes(), nil
+}
+
+// DecodeAccountCoin decodes an AccountCoin and optionally
+// reclaims the memory associated with the input.
+func (c *Compressor) DecodeAccountCoin( // nolint:gocognit
+	b []byte,
+	accountCoin *AccountCoin,
+	reclaimInput bool,
+) error {
+	count := 0
+	currentBytes := b
+	for {
+		nextRune := bytes.IndexRune(currentBytes, unicodeRecordSeparator)
+		if nextRune == -1 {
+			if count != amountCurrencyDecimals && count != currencyMetadata {
+				return fmt.Errorf("%w: next rune is -1 at %d", ErrRawDecodeFailed, count)
+			}
+
+			nextRune = len(currentBytes)
+		}
+
+		val := currentBytes[:nextRune]
+		if len(val) == 0 {
+			goto handleNext
+		}
+
+		switch count {
+		case accountAddress:
+			accountCoin.Account = &types.AccountIdentifier{
+				Address: string(val),
+			}
+		case coinIdentifier:
+			accountCoin.Coin = &types.Coin{
+				CoinIdentifier: &types.CoinIdentifier{
+					Identifier: string(val),
+				},
+			}
+		case amountValue:
+			accountCoin.Coin.Amount = &types.Amount{
+				Value: string(val),
+			}
+		case amountCurrencySymbol:
+			accountCoin.Coin.Amount.Currency = &types.Currency{
+				Symbol: string(val),
+			}
+		case amountCurrencyDecimals:
+			i, err := strconv.ParseInt(string(val), 10, 32)
+			if err != nil {
+				return fmt.Errorf("%w: %s", ErrRawDecodeFailed, err.Error())
+			}
+
+			accountCoin.Coin.Amount.Currency.Decimals = int32(i)
+		case accountMetadata:
+			m, err := c.decodeMap(val)
+			if err != nil {
+				return fmt.Errorf("%w: account metadata %s", ErrRawDecodeFailed, err.Error())
+			}
+
+			accountCoin.Account.Metadata = m
+		case subAccountAddress:
+			accountCoin.Account.SubAccount = &types.SubAccountIdentifier{
+				Address: string(val),
+			}
+		case subAccountMetadata:
+			if accountCoin.Account.SubAccount == nil {
+				return ErrRawDecodeFailed // must have address
+			}
+
+			m, err := c.decodeMap(val)
+			if err != nil {
+				return fmt.Errorf("%w: subaccount metadata %s", ErrRawDecodeFailed, err.Error())
+			}
+
+			accountCoin.Account.SubAccount.Metadata = m
+		case amountMetadata:
+			m, err := c.decodeMap(val)
+			if err != nil {
+				return fmt.Errorf("%w: amount metadata %s", ErrRawDecodeFailed, err.Error())
+			}
+
+			accountCoin.Coin.Amount.Metadata = m
+		case currencyMetadata:
+			m, err := c.decodeMap(val)
+			if err != nil {
+				return fmt.Errorf("%w: currency metadata %s", ErrRawDecodeFailed, err.Error())
+			}
+
+			accountCoin.Coin.Amount.Currency.Metadata = m
+		default:
+			return fmt.Errorf("%w: count %d > end", ErrRawDecodeFailed, count)
+		}
+
+	handleNext:
+		if nextRune == len(currentBytes) &&
+			(count == amountCurrencyDecimals || count == currencyMetadata) {
+			break
+		}
+
+		currentBytes = currentBytes[nextRune+1:]
+		count++
+	}
+
+	if reclaimInput {
+		c.pool.PutByteSlice(b)
 	}
 
 	return nil
