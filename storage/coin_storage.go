@@ -106,7 +106,7 @@ func (c *CoinStorage) getAndDecodeCoin(
 	}
 
 	var accountCoin AccountCoin
-	if err := c.db.Compressor().decodeAccountCoin(val, &accountCoin, true); err != nil {
+	if err := c.db.Compressor().DecodeAccountCoin(val, &accountCoin, true); err != nil {
 		return false, nil, nil, fmt.Errorf("%w: %v", ErrCoinDecodeFailed, err)
 	}
 
@@ -158,7 +158,7 @@ func (c *CoinStorage) addCoin(
 	transaction DatabaseTransaction,
 ) error {
 	_, key := getCoinKey(coin.CoinIdentifier)
-	encodedResult := c.db.Compressor().encodeAccountCoin(&AccountCoin{
+	encodedResult := c.db.Compressor().EncodeAccountCoin(&AccountCoin{
 		Account: account,
 		Coin:    coin,
 	})
