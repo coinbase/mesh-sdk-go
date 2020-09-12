@@ -158,10 +158,13 @@ func (c *CoinStorage) addCoin(
 	transaction DatabaseTransaction,
 ) error {
 	_, key := getCoinKey(coin.CoinIdentifier)
-	encodedResult := c.db.Compressor().EncodeAccountCoin(&AccountCoin{
+	encodedResult, err := c.db.Compressor().EncodeAccountCoin(&AccountCoin{
 		Account: account,
 		Coin:    coin,
 	})
+	if err != nil {
+		return fmt.Errorf("%w: %v", ErrCoinDataEncodeFailed, err)
+	}
 
 	if err := storeUniqueKey(ctx, transaction, key, encodedResult, true); err != nil {
 		return fmt.Errorf("%w: %v", ErrCoinStoreFailed, err)

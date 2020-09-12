@@ -158,7 +158,7 @@ func BenchmarkAccountCoinOptimized(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		// encode
-		manualResult := c.EncodeAccountCoin(benchmarkCoin)
+		manualResult, _ := c.EncodeAccountCoin(benchmarkCoin)
 
 		// decode
 		var decoded AccountCoin
@@ -170,7 +170,7 @@ func BenchmarkComplexAccountCoinOptimized(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		// encode
-		manualResult := c.EncodeAccountCoin(complexCoin)
+		manualResult, _ := c.EncodeAccountCoin(complexCoin)
 
 		// decode
 		var decoded AccountCoin
@@ -239,8 +239,10 @@ func TestEncodeDecodeAccountCoin(t *testing.T) {
 		assert.NoError(t, err)
 
 		t.Run(name, func(t *testing.T) {
-			standardResult, _ := c.Encode("", test.accountCoin)
-			optimizedResult := c.EncodeAccountCoin(test.accountCoin)
+			standardResult, err := c.Encode("", test.accountCoin)
+			assert.NoError(t, err)
+			optimizedResult, err := c.EncodeAccountCoin(test.accountCoin)
+			assert.NoError(t, err)
 			fmt.Printf(
 				"Uncompressed: %d, Standard Compressed: %d, Optimized: %d\n",
 				len(types.PrintStruct(test.accountCoin)),
