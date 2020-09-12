@@ -237,13 +237,18 @@ func (c *Compressor) decodeMap(input []byte) (map[string]interface{}, error) {
 }
 
 // EncodeAccountCoin is used to encode an *AccountCoin using the scheme (on the happy path):
-// accountAddress|coinIdentifier|amountValue|amountCurrencySymbol|amountCurrencyDecimals // nolint
+// accountAddress|coinIdentifier|amountValue|amountCurrencySymbol|
+// amountCurrencyDecimals
 //
 // And the following scheme on the unhappy path:
-// accountAddress|coinIdentifier|amountValue|amountCurrencySymbol|amountCurrencyDecimals|accountMetadata|subAccountAddress|subAccountMetadata|amountMetadata|currencyMetadata // nolint
+// accountAddress|coinIdentifier|amountValue|amountCurrencySymbol|
+// amountCurrencyDecimals|accountMetadata|subAccountAddress|
+// subAccountMetadata|amountMetadata|currencyMetadata
 //
 // In both cases, the | character is represetned by the unicodeRecordSeparator rune.
-func (c *Compressor) EncodeAccountCoin(accountCoin *AccountCoin) ([]byte, error) {
+func (c *Compressor) EncodeAccountCoin(
+	accountCoin *AccountCoin,
+) ([]byte, error) { // nolint:gocognit
 	output := c.pool.Get()
 	if _, err := output.WriteString(accountCoin.Account.Address); err != nil {
 		return nil, fmt.Errorf("%w: %s", ErrObjectEncodeFailed, err.Error())
@@ -333,7 +338,7 @@ func (c *Compressor) EncodeAccountCoin(accountCoin *AccountCoin) ([]byte, error)
 
 // DecodeAccountCoin decodes an AccountCoin and optionally
 // reclaims the memory associated with the input.
-func (c *Compressor) DecodeAccountCoin(
+func (c *Compressor) DecodeAccountCoin( // nolint:gocognit
 	b []byte,
 	accountCoin *AccountCoin,
 	reclaimInput bool,
