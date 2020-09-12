@@ -73,8 +73,8 @@ func NewCoinStorage(
 	}
 }
 
-func getCoinKey(identifier *types.CoinIdentifier) (string, []byte) {
-	return coinNamespace, []byte(fmt.Sprintf("%s/%s", coinNamespace, identifier.Identifier))
+func getCoinKey(identifier *types.CoinIdentifier) []byte {
+	return []byte(fmt.Sprintf("%s/%s", coinNamespace, identifier.Identifier))
 }
 
 func getCoinAccountPrefix(accountIdentifier *types.AccountIdentifier) []byte {
@@ -95,7 +95,7 @@ func (c *CoinStorage) getAndDecodeCoin(
 	transaction DatabaseTransaction,
 	coinIdentifier *types.CoinIdentifier,
 ) (bool, *types.Coin, *types.AccountIdentifier, error) {
-	namespace, key := getCoinKey(coinIdentifier)
+	key := getCoinKey(coinIdentifier)
 	exists, val, err := transaction.Get(ctx, key)
 	if err != nil {
 		return false, nil, nil, fmt.Errorf("%w: %v", ErrCoinQueryFailed, err)
@@ -106,7 +106,7 @@ func (c *CoinStorage) getAndDecodeCoin(
 	}
 
 	var accountCoin AccountCoin
-	if err := c.db.Compressor().Decode(namespace, val, &accountCoin, true); err != nil {
+	if err := c.db.Compressor().DecodeAccountCoin(val, &accountCoin, true); err != nil {
 		return false, nil, nil, fmt.Errorf("%w: %v", ErrCoinDecodeFailed, err)
 	}
 
@@ -157,8 +157,8 @@ func (c *CoinStorage) addCoin(
 	coin *types.Coin,
 	transaction DatabaseTransaction,
 ) error {
-	namespace, key := getCoinKey(coin.CoinIdentifier)
-	encodedResult, err := c.db.Compressor().Encode(namespace, AccountCoin{
+	key := getCoinKey(coin.CoinIdentifier)
+	encodedResult, err := c.db.Compressor().EncodeAccountCoin(&AccountCoin{
 		Account: account,
 		Coin:    coin,
 	})
@@ -213,7 +213,7 @@ func (c *CoinStorage) removeCoin(
 	coinIdentifier *types.CoinIdentifier,
 	transaction DatabaseTransaction,
 ) error {
-	_, key := getCoinKey(coinIdentifier)
+	key := getCoinKey(coinIdentifier)
 	exists, _, err := transaction.Get(ctx, key)
 	if err != nil {
 		return fmt.Errorf("%w: %v", ErrCoinQueryFailed, err)
