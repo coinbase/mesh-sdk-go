@@ -224,7 +224,7 @@ func (c *Compressor) encodeAndWrite(output *bytes.Buffer, object interface{}) er
 	}
 
 	c.pool.Put(buf)
-	return err
+	return nil
 }
 
 func (c *Compressor) decodeMap(input []byte) (map[string]interface{}, error) {
