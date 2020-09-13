@@ -31,7 +31,6 @@ func newTestBadgerStorage(ctx context.Context, dir string) (Database, error) {
 		ctx,
 		dir,
 		WithIndexCacheSize(TinyIndexCacheSize),
-		WithFileIOValueLogLoading(),
 	)
 }
 
