@@ -17,12 +17,21 @@ package fetcher
 import (
 	"errors"
 	"fmt"
+	"io"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
 
 	"github.com/cenkalti/backoff"
+)
+
+const (
+	// connectionResetByPeer is returned when the server resets a connection
+	// because of high memory usage or because a client has opened too many
+	// connections.
+	connectionResetByPeer = "connection reset by peer"
 )
 
 // backoffRetries creates the backoff.BackOff struct used by all
@@ -36,11 +45,25 @@ func backoffRetries(
 	return backoff.WithMaxRetries(exponentialBackoff, maxRetries)
 }
 
+// transientError returns a boolean indicating if a particular
+// error is considered transient (so the request should be
+// retried).
+func transientError(err error) bool {
+	if strings.Contains(err.Error(), io.EOF.Error()) ||
+		strings.Contains(err.Error(), connectionResetByPeer) {
+		return true
+	}
+
+	return false
+}
+
 // tryAgain handles a backoff and prints error messages depending
 // on the fetchMsg.
 func tryAgain(fetchMsg string, thisBackoff backoff.BackOff, err *Error) *Error {
-	// Only retry if an error is explicitly retriable.
-	if err.ClientErr == nil || !err.ClientErr.Retriable {
+	// Only retry if an error is explicitly retriable or the server
+	// returned a transient error.
+	if !transientError(err.Err) &&
+		(err.ClientErr == nil || !err.ClientErr.Retriable) {
 		return err
 	}
 
@@ -60,7 +83,12 @@ func tryAgain(fetchMsg string, thisBackoff backoff.BackOff, err *Error) *Error {
 		errMessage = types.PrintStruct(err.ClientErr)
 	}
 
-	log.Printf("%s: retrying fetch for %s after %fs\n", errMessage, fetchMsg, nextBackoff.Seconds())
+	log.Printf(
+		"%s: retrying fetch for %s after %fs\n",
+		errMessage,
+		fetchMsg,
+		nextBackoff.Seconds(),
+	)
 	time.Sleep(nextBackoff)
 
 	return nil
