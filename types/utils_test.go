@@ -627,7 +627,7 @@ func TestExtractAmount(t *testing.T) {
 			t,
 			err,
 			fmt.Errorf(
-				"account balance response does could not contain currency %s",
+				"account balance response does not contain currency %s",
 				PrettyPrintStruct(badCurr),
 			).Error(),
 		)
