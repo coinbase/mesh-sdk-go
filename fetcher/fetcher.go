@@ -18,6 +18,7 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -159,9 +160,16 @@ func (f *Fetcher) InitializeAsserter(
 
 	primaryNetwork := networkList.NetworkIdentifiers[0]
 	if networkIdentifier != nil {
-		exists, _ := CheckNetworkListForNetwork(networkList, networkIdentifier)
+		exists, supportedNetworks := CheckNetworkListForNetwork(networkList, networkIdentifier)
 		if !exists {
-			return nil, nil, &Error{Err: ErrNetworkMissing}
+			return nil, nil, &Error{
+				Err: fmt.Errorf(
+					"%w: %s not in %s",
+					ErrNetworkMissing,
+					types.PrintStruct(networkIdentifier),
+					types.PrintStruct(supportedNetworks),
+				),
+			}
 		}
 
 		primaryNetwork = networkIdentifier
