@@ -275,7 +275,7 @@ func ExtractAmount(
 	}
 
 	return nil, fmt.Errorf(
-		"account balance response does could not contain currency %s",
+		"account balance response does not contain currency %s",
 		PrettyPrintStruct(currency),
 	)
 }
