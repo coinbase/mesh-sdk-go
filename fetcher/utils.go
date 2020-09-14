@@ -32,6 +32,10 @@ const (
 	// because of high memory usage or because a client has opened too many
 	// connections.
 	connectionResetByPeer = "connection reset by peer"
+
+	// clientTimeout is returned when a request exceeds the set
+	// HTTP timeout setting.
+	clientTimeout = "Client.Timeout exceeded"
 )
 
 // backoffRetries creates the backoff.BackOff struct used by all
@@ -47,10 +51,12 @@ func backoffRetries(
 
 // transientError returns a boolean indicating if a particular
 // error is considered transient (so the request should be
-// retried).
+// retried). Currently, we consider EOF, connection reset by
+// peer, and timeout to be transient.
 func transientError(err error) bool {
 	if strings.Contains(err.Error(), io.EOF.Error()) ||
-		strings.Contains(err.Error(), connectionResetByPeer) {
+		strings.Contains(err.Error(), connectionResetByPeer) ||
+		strings.Contains(err.Error(), clientTimeout) {
 		return true
 	}
 
