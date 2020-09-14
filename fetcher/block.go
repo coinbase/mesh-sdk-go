@@ -27,7 +27,7 @@ import (
 const (
 	// goalRoutineReuse is the minimum number of requests we want to make
 	// on each goroutine created to fetch block transactions.
-	goalRoutineReuse = 6
+	goalRoutineReuse = 8
 
 	// maxRoutines is the maximum number of goroutines we should create
 	// to fetch block transactions.
@@ -61,7 +61,8 @@ func addTransactionIdentifiers(
 
 // fetchChannelTransactions fetches transactions from a
 // channel until there are no more transactions in the
-// channel or there is an error.
+// channel or there is an error. We always retry
+// transaction failures.
 func (f *Fetcher) fetchChannelTransactions(
 	ctx context.Context,
 	network *types.NetworkIdentifier,
@@ -69,26 +70,40 @@ func (f *Fetcher) fetchChannelTransactions(
 	txsToFetch chan *types.TransactionIdentifier,
 	fetchedTxs chan *types.Transaction,
 ) *Error {
-	for transactionIdentifier := range txsToFetch {
-		if err := f.connectionSemaphore.Acquire(ctx, semaphoreRequestWeight); err != nil {
-			return &Error{
-				Err: fmt.Errorf("%w: %s", ErrCouldNotAcquireSemaphore, err.Error()),
-			}
+	// We keep the lock for all transactions we fetch in this goroutine.
+	if err := f.connectionSemaphore.Acquire(ctx, semaphoreRequestWeight); err != nil {
+		return &Error{
+			Err: fmt.Errorf("%w: %s", ErrCouldNotAcquireSemaphore, err.Error()),
 		}
+	}
+	defer f.connectionSemaphore.Release(semaphoreRequestWeight)
 
-		tx, clientErr, err := f.rosettaClient.BlockAPI.BlockTransaction(ctx,
-			&types.BlockTransactionRequest{
-				NetworkIdentifier:     network,
-				BlockIdentifier:       block,
-				TransactionIdentifier: transactionIdentifier,
-			},
+	for transactionIdentifier := range txsToFetch {
+		backoffRetries := backoffRetries(
+			f.retryElapsedTime,
+			f.maxRetries,
 		)
 
-		// We release the semaphore manually here because we are in a loop.
-		f.connectionSemaphore.Release(semaphoreRequestWeight)
+		var tx *types.BlockTransactionResponse
+		for {
+			var clientErr *types.Error
+			var err error
+			tx, clientErr, err = f.rosettaClient.BlockAPI.BlockTransaction(ctx,
+				&types.BlockTransactionRequest{
+					NetworkIdentifier:     network,
+					BlockIdentifier:       block,
+					TransactionIdentifier: transactionIdentifier,
+				},
+			)
+			if err == nil {
+				break
+			}
 
-		if err != nil {
-			return &Error{
+			if ctx.Err() != nil {
+				return &Error{Err: ctx.Err()}
+			}
+
+			fetchErr := &Error{
 				Err: fmt.Errorf(
 					"%w: /block/transaction %s at block %d:%s %s",
 					ErrRequestFailed,
@@ -98,6 +113,11 @@ func (f *Fetcher) fetchChannelTransactions(
 					err.Error(),
 				),
 				ClientErr: clientErr,
+			}
+
+			txFetchErr := fmt.Sprintf("transaction %s", types.PrintStruct(transactionIdentifier))
+			if err := tryAgain(txFetchErr, backoffRetries, fetchErr); err != nil {
+				return err
 			}
 		}
 
