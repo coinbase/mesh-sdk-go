@@ -88,7 +88,7 @@ type BadgerStorage struct {
 
 // DefaultBadgerOptions are the default options used to initialized
 // a new BadgerDB. These settings override many of the default BadgerDB
-// settings to restrict memory usage to ~8 GB. If constraining memory
+// settings to restrict memory usage to ~6 GB. If constraining memory
 // usage is not desired for your use case, you can provide your own
 // BadgerDB settings with the configuration option WithCustomSettings.
 //
@@ -98,7 +98,7 @@ type BadgerStorage struct {
 // to a 10 MB increase in RAM usage (all other settings equal). Our primary
 // concern is large database transaction size, so we configure MaxTableSize
 // to be 4 times the size of ValueLogFileSize (if we skewed any further to
-// MaxTableSize, we would quickly hit the default open file limit on many OS's).
+// MaxTableSize, we would quickly hit the default open file limit on many OSes).
 func DefaultBadgerOptions(dir string) badger.Options {
 	opts := badger.DefaultOptions(dir)
 
@@ -131,7 +131,9 @@ func DefaultBadgerOptions(dir string) badger.Options {
 	// We don't compact L0 on close as this can greatly delay shutdown time.
 	opts.CompactL0OnClose = false
 
-	// LoadBloomsOnOpen=false will improve the db startup speed
+	// LoadBloomsOnOpen=false will improve the db startup speed. This is also
+	// a waste to enable with a limited index cache size (as many of the loaded bloom
+	// filters will be immediately discarded from the cache).
 	opts.LoadBloomsOnOpen = false
 
 	// This value specifies how much memory should be used by table indices. These
