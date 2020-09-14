@@ -64,7 +64,7 @@ const (
 
 	// defaultTrailingWindow is the size of the trailing window
 	// of block sizes to keep when adjusting concurrency.
-	defaultTrailingWindow = 100
+	defaultTrailingWindow = 1000
 
 	// defaultAdjustmentWindow is how frequently we will
 	// consider increasing our concurrency.
