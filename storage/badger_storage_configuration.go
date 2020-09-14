@@ -14,18 +14,14 @@
 
 package storage
 
+import (
+	"github.com/dgraph-io/badger/v2"
+)
+
 // BadgerOption is used to overwrite default values in
 // BadgerStorage construction. Any Option not provided
 // falls back to the default value.
 type BadgerOption func(b *BadgerStorage)
-
-// WithMemoryLimit sets BadgerDB to use
-// settings that limit memory.
-func WithMemoryLimit() BadgerOption {
-	return func(b *BadgerStorage) {
-		b.limitMemory = true
-	}
-}
 
 // WithCompressorEntries provides zstd dictionaries
 // for given namespaces.
@@ -37,20 +33,18 @@ func WithCompressorEntries(entries []*CompressorEntry) BadgerOption {
 
 // WithIndexCacheSize override the DefaultIndexCacheSize
 // setting for the BadgerDB. The size here is in bytes.
+// If you provide custom BadgerDB settings, do not use this
+// config as it will be overridden by your custom settings.
 func WithIndexCacheSize(size int64) BadgerOption {
 	return func(b *BadgerStorage) {
-		b.indexCacheSize = size
+		b.badgerOptions.IndexCacheSize = size
 	}
 }
 
-// WithFileIOValueLogLoading overrides the BadgerDB database
-// options to use options.FileIO for ValueLogLoading. This
-// incurs some performance penalty but massively reduces memory
-// usage. This is a separate setting because it is often used
-// in tandem with the default options (instead of using
-// WithMemoryLimit).
-func WithFileIOValueLogLoading() BadgerOption {
+// WithCustomSettings allows for overriding all default BadgerDB
+// options with custom settings.
+func WithCustomSettings(settings badger.Options) BadgerOption {
 	return func(b *BadgerStorage) {
-		b.fileIOValueLogLoading = true
+		b.badgerOptions = settings
 	}
 }

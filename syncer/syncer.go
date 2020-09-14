@@ -64,7 +64,7 @@ const (
 
 	// defaultTrailingWindow is the size of the trailing window
 	// of block sizes to keep when adjusting concurrency.
-	defaultTrailingWindow = 100
+	defaultTrailingWindow = 1000
 
 	// defaultAdjustmentWindow is how frequently we will
 	// consider increasing our concurrency.
@@ -72,8 +72,8 @@ const (
 
 	// DefaultSizeMultiplier is used to pad our average size adjustment.
 	// This can be used to account for the overhead associated with processing
-	// a particular block with increased concurrency.
-	DefaultSizeMultiplier = float64(1.2) // nolint:gomnd
+	// a particular block (i.e. balance adjustments, coins created, etc).
+	DefaultSizeMultiplier = float64(10) // nolint:gomnd
 
 	// defaultSyncSleep is the amount of time to sleep
 	// when we are at tip but want to keep syncing.

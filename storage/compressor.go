@@ -246,9 +246,9 @@ func (c *Compressor) decodeMap(input []byte) (map[string]interface{}, error) {
 // subAccountMetadata|amountMetadata|currencyMetadata
 //
 // In both cases, the | character is represented by the unicodeRecordSeparator rune.
-func (c *Compressor) EncodeAccountCoin(
+func (c *Compressor) EncodeAccountCoin( // nolint:gocognit
 	accountCoin *AccountCoin,
-) ([]byte, error) { // nolint:gocognit
+) ([]byte, error) {
 	output := c.pool.Get()
 	if _, err := output.WriteString(accountCoin.Account.Address); err != nil {
 		return nil, fmt.Errorf("%w: %s", ErrObjectEncodeFailed, err.Error())

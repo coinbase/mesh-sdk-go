@@ -47,8 +47,16 @@ const (
 
 	// DefaultMaxTableSize is 256 MB. The larger
 	// this value is, the larger database transactions
-	// storage can handle.
+	// storage can handle (~15% of the max table size
+	// == max commit size).
 	DefaultMaxTableSize = 256 << 20
+
+	// DefaultLogValueSize is 64 MB.
+	DefaultLogValueSize = 64 << 20
+
+	// DefaultCompressionMode is the default block
+	// compression setting.
+	DefaultCompressionMode = options.None
 
 	// logModulo determines how often we should print
 	// logs while scanning data.
@@ -64,10 +72,8 @@ const (
 // BadgerStorage is a wrapper around Badger DB
 // that implements the Database interface.
 type BadgerStorage struct {
-	limitMemory           bool
-	indexCacheSize        int64
-	fileIOValueLogLoading bool
-	compressorEntries     []*CompressorEntry
+	badgerOptions     badger.Options
+	compressorEntries []*CompressorEntry
 
 	pool       *BufferPool
 	db         *badger.DB
@@ -80,13 +86,32 @@ type BadgerStorage struct {
 	closed chan struct{}
 }
 
-func defaultBadgerOptions(dir string) badger.Options {
+// DefaultBadgerOptions are the default options used to initialized
+// a new BadgerDB. These settings override many of the default BadgerDB
+// settings to restrict memory usage to ~6 GB. If constraining memory
+// usage is not desired for your use case, you can provide your own
+// BadgerDB settings with the configuration option WithCustomSettings.
+//
+// There are many threads about optimizing memory usage in Badger (which
+// can grow to many GBs if left untuned). Our own research indicates
+// that each MB increase in MaxTableSize and/or ValueLogFileSize corresponds
+// to a 10 MB increase in RAM usage (all other settings equal). Our primary
+// concern is large database transaction size, so we configure MaxTableSize
+// to be 4 times the size of ValueLogFileSize (if we skewed any further to
+// MaxTableSize, we would quickly hit the default open file limit on many OSes).
+func DefaultBadgerOptions(dir string) badger.Options {
 	opts := badger.DefaultOptions(dir)
-	opts.Logger = nil
 
-	// We increase the MaxTableSize to support larger database
-	// transactions (which are capped at 20% of MaxTableSize).
+	// By default, we do not compress the table at all. Doing so can
+	// significantly increase memory usage.
+	opts.Compression = DefaultCompressionMode
+
 	opts.MaxTableSize = DefaultMaxTableSize
+	opts.ValueLogFileSize = DefaultLogValueSize
+
+	// Don't load tables into memory.
+	opts.TableLoadingMode = options.FileIO
+	opts.ValueLogLoadingMode = options.FileIO
 
 	// To allow writes at a faster speed, we create a new memtable as soon as
 	// an existing memtable is filled up. This option determines how many
@@ -98,12 +123,6 @@ func defaultBadgerOptions(dir string) badger.Options {
 	opts.NumLevelZeroTables = 1
 	opts.NumLevelZeroTablesStall = 2
 
-	// By default, we set TableLoadingMode and ValueLogLoadingMode to use
-	// MemoryMap because it uses much less memory than RAM but is much faster than
-	// FileIO.
-	opts.TableLoadingMode = options.MemoryMap
-	opts.ValueLogLoadingMode = options.MemoryMap
-
 	// This option will have a significant effect the memory. If the level is kept
 	// in-memory, read are faster but the tables will be kept in memory. By default,
 	// this is set to false.
@@ -111,6 +130,11 @@ func defaultBadgerOptions(dir string) badger.Options {
 
 	// We don't compact L0 on close as this can greatly delay shutdown time.
 	opts.CompactL0OnClose = false
+
+	// LoadBloomsOnOpen=false will improve the db startup speed. This is also
+	// a waste to enable with a limited index cache size (as many of the loaded bloom
+	// filters will be immediately discarded from the cache).
+	opts.LoadBloomsOnOpen = false
 
 	// This value specifies how much memory should be used by table indices. These
 	// indices include the block offsets and the bloomfilters. Badger uses bloom
@@ -125,51 +149,24 @@ func defaultBadgerOptions(dir string) badger.Options {
 	return opts
 }
 
-// lowMemoryOptions returns a set of BadgerDB configuration
-// options that significantly reduce memory usage.
-//
-// Inspired by: https://github.com/dgraph-io/badger/issues/1304
-func lowMemoryOptions(dir string) badger.Options {
-	opts := defaultBadgerOptions(dir)
-
-	// LoadBloomsOnOpen=false will improve the db startup speed
-	opts.LoadBloomsOnOpen = false
-
-	// Don't load tables into memory.
-	opts.TableLoadingMode = options.FileIO
-	opts.ValueLogLoadingMode = options.FileIO
-
-	return opts
-}
-
 // NewBadgerStorage creates a new BadgerStorage.
 func NewBadgerStorage(
 	ctx context.Context,
 	dir string,
 	storageOptions ...BadgerOption,
 ) (Database, error) {
+	dir = path.Clean(dir)
+
 	b := &BadgerStorage{
-		indexCacheSize: DefaultIndexCacheSize,
-		closed:         make(chan struct{}),
-		pool:           NewBufferPool(),
+		badgerOptions: DefaultBadgerOptions(dir),
+		closed:        make(chan struct{}),
+		pool:          NewBufferPool(),
 	}
 	for _, opt := range storageOptions {
 		opt(b)
 	}
 
-	dir = path.Clean(dir)
-	dbOpts := defaultBadgerOptions(dir)
-
-	// Override dbOpts with provided options
-	if b.limitMemory {
-		dbOpts = lowMemoryOptions(dir)
-	}
-	dbOpts.IndexCacheSize = b.indexCacheSize
-	if b.fileIOValueLogLoading {
-		dbOpts.ValueLogLoadingMode = options.FileIO
-	}
-
-	db, err := badger.Open(dbOpts)
+	db, err := badger.Open(b.badgerOptions)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrDatabaseOpenFailed, err)
 	}
