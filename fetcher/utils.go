@@ -28,7 +28,10 @@ import (
 )
 
 const (
-	errConnectionResetByPeer = "connection reset by peer"
+	// connectionResetByPeer is returned when the server resets a connection
+	// because of high memory usage or because a client has opened too many
+	// connections.
+	connectionResetByPeer = "connection reset by peer"
 )
 
 // backoffRetries creates the backoff.BackOff struct used by all
@@ -47,7 +50,7 @@ func backoffRetries(
 // retried).
 func transientError(err error) bool {
 	if strings.Contains(err.Error(), io.EOF.Error()) ||
-		strings.Contains(err.Error(), errConnectionResetByPeer) {
+		strings.Contains(err.Error(), connectionResetByPeer) {
 		return true
 	}
 
