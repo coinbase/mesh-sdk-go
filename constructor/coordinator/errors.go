@@ -32,6 +32,11 @@ var (
 	// and retry.
 	ErrNoAvailableJobs = errors.New("no jobs available")
 
+	// ErrReturnFundsComplete is returned when it is not possible
+	// to process any more ReturnFundsWorkflows or when there is no provided
+	// ReturnsFundsWorkflow.
+	ErrReturnFundsComplete = errors.New("return funds complete")
+
 	// ErrCreateAccountWorkflowMissing is returned when we want
 	// to create an account but the create account workflow is missing.
 	ErrCreateAccountWorkflowMissing = errors.New("create account workflow missing")
