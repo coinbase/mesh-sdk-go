@@ -1230,6 +1230,39 @@ func TestInitialization_OnlyCreateAccountWorkflows(t *testing.T) {
 	handler.AssertExpectations(t)
 }
 
+func TestInitialization_InvalidConcurrency(t *testing.T) {
+	jobStorage := &mocks.JobStorage{}
+	helper := &mocks.Helper{}
+	handler := &mocks.Handler{}
+	p := defaultParser(t)
+	workflows := []*job.Workflow{
+		{
+			Name:        string(job.CreateAccount),
+			Concurrency: 1,
+		},
+		{
+			Name:        string(job.RequestFunds),
+			Concurrency: 1,
+		},
+		{
+			Name:        "transfer",
+			Concurrency: 0,
+		},
+	}
+
+	c, err := New(
+		jobStorage,
+		helper,
+		handler,
+		p,
+		workflows,
+	)
+	assert.Nil(t, c)
+	assert.True(t, errors.Is(err, ErrInvalidConcurrency))
+	helper.AssertExpectations(t)
+	handler.AssertExpectations(t)
+}
+
 func TestInitialization_OnlyRequestFundsWorkflows(t *testing.T) {
 	jobStorage := &mocks.JobStorage{}
 	helper := &mocks.Helper{}

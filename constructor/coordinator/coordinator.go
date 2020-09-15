@@ -49,6 +49,11 @@ func New(
 		if utils.ContainsString(workflowNames, workflow.Name) {
 			return nil, ErrDuplicateWorkflows
 		}
+
+		if workflow.Concurrency <= 0 {
+			return nil, ErrInvalidConcurrency
+		}
+
 		workflowNames[i] = workflow.Name
 
 		if workflow.Name == string(job.CreateAccount) {
@@ -70,6 +75,8 @@ func New(
 		}
 
 		if workflow.Name == string(job.ReturnFunds) {
+			// We allow for unlimited concurrency here unlike
+			// other reserved workflows.
 			returnFundsWorkflow = workflow
 			continue
 		}
@@ -124,7 +131,10 @@ func (c *Coordinator) findJob(
 		return job, nil
 	}
 
-	// Attempt non-reserved workflows
+	// We should only attempt the ReturnFunds workflow
+	// if returnFunds is true. If the ReturnFunds workflow
+	// does not exist, we should exit as ReturnFunds is considered
+	// complete.
 	availableWorkflows := c.workflows
 	if returnFunds {
 		if c.returnFundsWorkflow == nil {
@@ -134,6 +144,7 @@ func (c *Coordinator) findJob(
 		availableWorkflows = append(availableWorkflows, c.returnFundsWorkflow)
 	}
 
+	// Attempt non-reserved workflows
 	for _, workflow := range availableWorkflows {
 		if utils.ContainsString(c.attemptedWorkflows, workflow.Name) {
 			continue
@@ -491,7 +502,10 @@ func (c *Coordinator) process( // nolint:gocognit
 			continue
 		}
 		if errors.Is(err, ErrReturnFundsComplete) {
-			log.Println("return funds complete...")
+			// Only log if we attempted to return funds!
+			if c.returnFundsWorkflow != nil {
+				log.Println("return funds complete...")
+			}
 
 			dbTx.Discard(ctx)
 			return nil

@@ -57,4 +57,8 @@ var (
 	// ErrIncorrectConcurrency is returned when CreateAccount or RequestFunds
 	// have a concurrency greater than 1.
 	ErrIncorrectConcurrency = errors.New("incorrect concurrency")
+
+	// ErrInvalidConcurrency is returned when the concurrency of a Workflow
+	// is <= 0.
+	ErrInvalidConcurrency = errors.New("invalid concurrency")
 )
