@@ -44,6 +44,7 @@ func New(
 	workflows := []*job.Workflow{}
 	var createAccountWorkflow *job.Workflow
 	var requestFundsWorkflow *job.Workflow
+	var returnFundsWorkflow *job.Workflow
 	for i, workflow := range inputWorkflows {
 		if utils.ContainsString(workflowNames, workflow.Name) {
 			return nil, ErrDuplicateWorkflows
@@ -51,6 +52,10 @@ func New(
 		workflowNames[i] = workflow.Name
 
 		if workflow.Name == string(job.CreateAccount) {
+			if createAccountWorkflow != nil {
+				return nil, ErrDuplicateWorkflows
+			}
+
 			if workflow.Concurrency != job.ReservedWorkflowConcurrency {
 				return nil, ErrIncorrectConcurrency
 			}
@@ -60,11 +65,24 @@ func New(
 		}
 
 		if workflow.Name == string(job.RequestFunds) {
+			if requestFundsWorkflow != nil {
+				return nil, ErrDuplicateWorkflows
+			}
+
 			if workflow.Concurrency != job.ReservedWorkflowConcurrency {
 				return nil, ErrIncorrectConcurrency
 			}
 
 			requestFundsWorkflow = workflow
+			continue
+		}
+
+		if workflow.Name == string(job.ReturnFunds) {
+			if returnFundsWorkflow != nil {
+				return nil, ErrDuplicateWorkflows
+			}
+
+			returnFundsWorkflow = workflow
 			continue
 		}
 
@@ -91,6 +109,7 @@ func New(
 		workflows:             workflows,
 		createAccountWorkflow: createAccountWorkflow,
 		requestFundsWorkflow:  requestFundsWorkflow,
+		returnFundsWorkflow:   returnFundsWorkflow,
 	}, nil
 }
 
@@ -118,6 +137,8 @@ func (c *Coordinator) findJob(
 
 	// Attempt non-reserved workflows
 	for _, workflow := range c.workflows {
+		// TODO: only attempt "return_funds" workflow...if doesn't exist,
+		// return ErrReturnComplete
 		if utils.ContainsString(c.attemptedWorkflows, workflow.Name) {
 			continue
 		}
@@ -151,6 +172,10 @@ func (c *Coordinator) findJob(
 	if len(allBroadcasts) > 0 {
 		return nil, ErrNoAvailableJobs
 	}
+
+	// TODO: if in "return mode" and reach here, we should exit as
+	// returns are complete.
+	// TODO: create new error type for this scenario
 
 	// Check if ErrCreateAccount, then create account if less
 	// processing CreateAccount jobs than ReservedWorkflowConcurrency.

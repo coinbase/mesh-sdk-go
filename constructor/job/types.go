@@ -270,17 +270,22 @@ type Scenario struct {
 type ReservedWorkflow string
 
 const (
-	// Note: required workflows will be executed with a concurrency of 1.
-
 	// CreateAccount is where another account (already with funds)
 	// creates a new account. It is possible to configure how many
-	// accounts should be created.
+	// accounts should be created. CreateAccount must be executed
+	// with a concurrency of 1.
 	CreateAccount ReservedWorkflow = "create_account"
 
 	// RequestFunds is where the user funds an account. This flow
 	// is invoked when there are no pending broadcasts and it is not possible
-	// to make progress on any Flows or start new ones.
+	// to make progress on any Flows or start new ones. RequestFunds
+	// must be executed with a concurrency of 1.
 	RequestFunds ReservedWorkflow = "request_funds"
+
+	// ReturnFunds is invoked on shutdown so funds can be
+	// returned to a single address (like a faucet). This
+	// is useful for CI testing.
+	ReturnFunds ReservedWorkflow = "return_funds"
 )
 
 // Workflow is a collection of scenarios to run (i.e.
