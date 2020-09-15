@@ -208,6 +208,7 @@ type Coordinator struct {
 	workflows             []*job.Workflow
 	createAccountWorkflow *job.Workflow
 	requestFundsWorkflow  *job.Workflow
+	returnFundsWorkflow   *job.Workflow
 }
 
 // JobStorage allows for the persistent and transactional

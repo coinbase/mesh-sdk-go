@@ -44,10 +44,16 @@ func New(
 	workflows := []*job.Workflow{}
 	var createAccountWorkflow *job.Workflow
 	var requestFundsWorkflow *job.Workflow
+	var returnFundsWorkflow *job.Workflow
 	for i, workflow := range inputWorkflows {
 		if utils.ContainsString(workflowNames, workflow.Name) {
 			return nil, ErrDuplicateWorkflows
 		}
+
+		if workflow.Concurrency <= 0 {
+			return nil, ErrInvalidConcurrency
+		}
+
 		workflowNames[i] = workflow.Name
 
 		if workflow.Name == string(job.CreateAccount) {
@@ -65,6 +71,13 @@ func New(
 			}
 
 			requestFundsWorkflow = workflow
+			continue
+		}
+
+		if workflow.Name == string(job.ReturnFunds) {
+			// We allow for unlimited concurrency here unlike
+			// other reserved workflows.
+			returnFundsWorkflow = workflow
 			continue
 		}
 
@@ -91,12 +104,14 @@ func New(
 		workflows:             workflows,
 		createAccountWorkflow: createAccountWorkflow,
 		requestFundsWorkflow:  requestFundsWorkflow,
+		returnFundsWorkflow:   returnFundsWorkflow,
 	}, nil
 }
 
 func (c *Coordinator) findJob(
 	ctx context.Context,
 	dbTx storage.DatabaseTransaction,
+	returnFunds bool,
 ) (*job.Job, error) {
 	// Look for any jobs ready for processing. If one is found,
 	// we return that as the next job to process.
@@ -116,8 +131,21 @@ func (c *Coordinator) findJob(
 		return job, nil
 	}
 
+	// We should only attempt the ReturnFunds workflow
+	// if returnFunds is true. If the ReturnFunds workflow
+	// does not exist, we should exit as ReturnFunds is considered
+	// complete.
+	availableWorkflows := c.workflows
+	if returnFunds {
+		if c.returnFundsWorkflow == nil {
+			return nil, ErrReturnFundsComplete
+		}
+
+		availableWorkflows = append(availableWorkflows, c.returnFundsWorkflow)
+	}
+
 	// Attempt non-reserved workflows
-	for _, workflow := range c.workflows {
+	for _, workflow := range availableWorkflows {
 		if utils.ContainsString(c.attemptedWorkflows, workflow.Name) {
 			continue
 		}
@@ -150,6 +178,13 @@ func (c *Coordinator) findJob(
 
 	if len(allBroadcasts) > 0 {
 		return nil, ErrNoAvailableJobs
+	}
+
+	// If we are returning funds, we should exit here
+	// because we don't want to create any new accounts
+	// or request funds while returning funds.
+	if returnFunds {
+		return nil, ErrReturnFundsComplete
 	}
 
 	// Check if ErrCreateAccount, then create account if less
@@ -433,10 +468,11 @@ func (c *Coordinator) invokeHandlersAndBroadcast(
 	return nil
 }
 
-// Process creates and executes jobs
-// until failure.
-func (c *Coordinator) Process( // nolint:gocognit
+// process orchestrates the execution of workflows
+// and the broadcast of transactions.
+func (c *Coordinator) process( // nolint:gocognit
 	ctx context.Context,
+	returnFunds bool,
 ) error {
 	for ctx.Err() == nil {
 		if !c.helper.HeadBlockExists(ctx) {
@@ -456,7 +492,7 @@ func (c *Coordinator) Process( // nolint:gocognit
 		dbTx := c.helper.DatabaseTransaction(ctx)
 
 		// Attempt to find a Job to process.
-		j, err := c.findJob(ctx, dbTx)
+		j, err := c.findJob(ctx, dbTx, returnFunds)
 		if errors.Is(err, ErrNoAvailableJobs) {
 			log.Println("waiting for available jobs...")
 
@@ -464,6 +500,15 @@ func (c *Coordinator) Process( // nolint:gocognit
 			dbTx.Discard(ctx)
 			time.Sleep(NoJobsWaitTime)
 			continue
+		}
+		if errors.Is(err, ErrReturnFundsComplete) {
+			// Only log if we attempted to return funds!
+			if c.returnFundsWorkflow != nil {
+				log.Println("return funds complete...")
+			}
+
+			dbTx.Discard(ctx)
+			return nil
 		}
 		if err != nil {
 			return fmt.Errorf("%w: unable to find job", err)
@@ -564,4 +609,23 @@ func (c *Coordinator) Process( // nolint:gocognit
 	}
 
 	return ctx.Err()
+}
+
+// Process creates and executes jobs
+// until failure.
+func (c *Coordinator) Process(
+	ctx context.Context,
+) error {
+	return c.process(ctx, false)
+}
+
+// ReturnFunds attempts to execute
+// the ReturnFunds workflow until
+// it is no longer satisfiable. This
+// is typically called on shutdown
+// to return funds to a faucet.
+func (c *Coordinator) ReturnFunds(
+	ctx context.Context,
+) error {
+	return c.process(ctx, true)
 }
