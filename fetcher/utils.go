@@ -38,15 +38,23 @@ const (
 	clientTimeout = "Client.Timeout exceeded"
 )
 
+// Backoff wraps backoff.BackOff so we can
+// access the retry count (which is private
+// on backoff.BackOff).
+type Backoff struct {
+	backoff  backoff.BackOff
+	attempts int
+}
+
 // backoffRetries creates the backoff.BackOff struct used by all
 // *Retry functions in the fetcher.
 func backoffRetries(
 	maxElapsedTime time.Duration,
 	maxRetries uint64,
-) backoff.BackOff {
+) *Backoff {
 	exponentialBackoff := backoff.NewExponentialBackOff()
 	exponentialBackoff.MaxElapsedTime = maxElapsedTime
-	return backoff.WithMaxRetries(exponentialBackoff, maxRetries)
+	return &Backoff{backoff: backoff.WithMaxRetries(exponentialBackoff, maxRetries)}
 }
 
 // transientError returns a boolean indicating if a particular
@@ -65,7 +73,7 @@ func transientError(err error) bool {
 
 // tryAgain handles a backoff and prints error messages depending
 // on the fetchMsg.
-func tryAgain(fetchMsg string, thisBackoff backoff.BackOff, err *Error) *Error {
+func tryAgain(fetchMsg string, thisBackoff *Backoff, err *Error) *Error {
 	// Only retry if an error is explicitly retriable or the server
 	// returned a transient error.
 	if !transientError(err.Err) &&
@@ -73,7 +81,7 @@ func tryAgain(fetchMsg string, thisBackoff backoff.BackOff, err *Error) *Error {
 		return err
 	}
 
-	nextBackoff := thisBackoff.NextBackOff()
+	nextBackoff := thisBackoff.backoff.NextBackOff()
 	if nextBackoff == backoff.Stop {
 		return &Error{
 			Err: fmt.Errorf(
@@ -89,11 +97,13 @@ func tryAgain(fetchMsg string, thisBackoff backoff.BackOff, err *Error) *Error {
 		errMessage = types.PrintStruct(err.ClientErr)
 	}
 
+	thisBackoff.attempts++
 	log.Printf(
-		"%s: retrying fetch for %s after %fs\n",
+		"%s: retrying fetch for %s after %fs (prior attempts: %d)\n",
 		errMessage,
 		fetchMsg,
 		nextBackoff.Seconds(),
+		thisBackoff.attempts,
 	)
 	time.Sleep(nextBackoff)
 
