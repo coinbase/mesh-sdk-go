@@ -33,6 +33,12 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
+const (
+	unsignedTx    = "unsigned transaction"
+	networkTx     = "network transaction"
+	jobIdentifier = "job"
+)
+
 func simpleAsserterConfiguration() (*asserter.Asserter, error) {
 	return asserter.NewClientWithOptions(
 		&types.NetworkIdentifier{
@@ -587,7 +593,6 @@ func TestProcess(t *testing.T) {
 		[]*types.PublicKey{},
 	).Return(fetchedMetadata, nil, nil).Once()
 
-	unsignedTx := "unsigned transaction"
 	signingPayloads := []*types.SigningPayload{
 		{
 			AccountIdentifier: &types.AccountIdentifier{Address: "address1"},
@@ -626,7 +631,6 @@ func TestProcess(t *testing.T) {
 		ctx,
 		signingPayloads,
 	).Return(signatures, nil).Once()
-	networkTx := "network transaction"
 	helper.On(
 		"Combine",
 		ctx,
@@ -932,12 +936,12 @@ func TestProcess_Failed(t *testing.T) {
 		dbTx,
 		mock.Anything,
 	).Return(
-		"job",
+		jobIdentifier,
 		nil,
 	).Run(
 		func(args mock.Arguments) {
 			j = *args.Get(2).(*job.Job)
-			j.Identifier = "job"
+			j.Identifier = jobIdentifier
 		},
 	).Once()
 
@@ -1046,7 +1050,6 @@ func TestProcess_Failed(t *testing.T) {
 		},
 	).Return(fetchedMetadata, nil, nil).Once()
 
-	unsignedTx := "unsigned transaction"
 	signingPayloads := []*types.SigningPayload{
 		{
 			AccountIdentifier: &types.AccountIdentifier{Address: "address1"},
@@ -1094,7 +1097,6 @@ func TestProcess_Failed(t *testing.T) {
 		ctx,
 		signingPayloads,
 	).Return(signatures, nil).Once()
-	networkTx := "network transaction"
 	helper.On(
 		"Combine",
 		ctx,
@@ -1122,14 +1124,14 @@ func TestProcess_Failed(t *testing.T) {
 		"Broadcast",
 		ctx,
 		dbTx,
-		"job",
+		jobIdentifier,
 		network,
 		ops,
 		txIdentifier,
 		networkTx,
 		int64(1),
 	).Return(nil).Once()
-	handler.On("TransactionCreated", ctx, "job", txIdentifier).Return(nil).Once()
+	handler.On("TransactionCreated", ctx, jobIdentifier, txIdentifier).Return(nil).Once()
 	helper.On("BroadcastAll", ctx).Return(nil).Once()
 
 	// Start processor
@@ -1157,7 +1159,7 @@ func TestProcess_Failed(t *testing.T) {
 	go func() {
 		<-markConfirmed
 		dbTx3 := db.NewDatabaseTransaction(ctx, false)
-		jobStorage.On("Get", ctx, dbTx3, "job").Return(&j, nil).Once()
+		jobStorage.On("Get", ctx, dbTx3, jobIdentifier).Return(&j, nil).Once()
 		jobStorage.On(
 			"Update",
 			ctx,
@@ -1165,15 +1167,15 @@ func TestProcess_Failed(t *testing.T) {
 			mock.Anything,
 		).Run(func(args mock.Arguments) {
 			j = *args.Get(2).(*job.Job)
-			j.Identifier = "job"
+			j.Identifier = jobIdentifier
 			cancel()
 		}).Return(
-			"job",
+			jobIdentifier,
 			nil,
 		)
 
 		// Process second step of job
-		err = c.BroadcastComplete(ctx, dbTx3, "job", nil)
+		err = c.BroadcastComplete(ctx, dbTx3, jobIdentifier, nil)
 		assert.NoError(t, err)
 	}()
 
@@ -1648,7 +1650,15 @@ func TestReturnFunds_NoBalance(t *testing.T) {
 	dbTxFail := db.NewDatabaseTransaction(ctx, false)
 	helper.On("DatabaseTransaction", ctx).Return(dbTxFail).Once()
 	jobStorage.On("Ready", ctx, dbTxFail).Return([]*job.Job{}, nil).Once()
-	jobStorage.On("Processing", ctx, dbTxFail, string(job.ReturnFunds)).Return([]*job.Job{}, nil).Once()
+	jobStorage.On(
+		"Processing",
+		ctx,
+		dbTxFail,
+		string(job.ReturnFunds),
+	).Return(
+		[]*job.Job{},
+		nil,
+	).Once()
 	helper.On("AllAccounts", ctx, dbTxFail).Return([]*types.AccountIdentifier{
 		{Address: "address1"},
 		{Address: "address2"},
@@ -1979,7 +1989,15 @@ func TestReturnFunds(t *testing.T) {
 	dbTxFail := db.NewDatabaseTransaction(ctx, false)
 	helper.On("DatabaseTransaction", ctx).Return(dbTxFail).Once()
 	jobStorage.On("Ready", ctx, dbTxFail).Return([]*job.Job{}, nil).Once()
-	jobStorage.On("Processing", ctx, dbTxFail, string(job.ReturnFunds)).Return([]*job.Job{}, nil).Once()
+	jobStorage.On(
+		"Processing",
+		ctx,
+		dbTxFail,
+		string(job.ReturnFunds),
+	).Return(
+		[]*job.Job{},
+		nil,
+	).Once()
 	helper.On("AllAccounts", ctx, dbTxFail).Return([]*types.AccountIdentifier{
 		{Address: "address1"},
 	}, nil).Once()
@@ -2011,12 +2029,12 @@ func TestReturnFunds(t *testing.T) {
 		dbTxFail,
 		mock.Anything,
 	).Return(
-		"job",
+		jobIdentifier,
 		nil,
 	).Run(
 		func(args mock.Arguments) {
 			j = *args.Get(2).(*job.Job)
-			j.Identifier = "job"
+			j.Identifier = jobIdentifier
 		},
 	).Once()
 
@@ -2080,7 +2098,6 @@ func TestReturnFunds(t *testing.T) {
 		[]*types.PublicKey{},
 	).Return(fetchedMetadata, nil, nil).Once()
 
-	unsignedTx := "unsigned transaction"
 	signingPayloads := []*types.SigningPayload{
 		{
 			AccountIdentifier: &types.AccountIdentifier{Address: "address1"},
@@ -2119,7 +2136,6 @@ func TestReturnFunds(t *testing.T) {
 		ctx,
 		signingPayloads,
 	).Return(signatures, nil).Once()
-	networkTx := "network transaction"
 	helper.On(
 		"Combine",
 		ctx,
@@ -2150,14 +2166,14 @@ func TestReturnFunds(t *testing.T) {
 		"Broadcast",
 		ctx,
 		dbTxFail,
-		"job",
+		jobIdentifier,
 		network,
 		ops,
 		txIdentifier,
 		networkTx,
 		int64(1),
 	).Return(nil).Once()
-	handler.On("TransactionCreated", ctx, "job", txIdentifier).Return(nil).Once()
+	handler.On("TransactionCreated", ctx, jobIdentifier, txIdentifier).Return(nil).Once()
 	helper.On("BroadcastAll", ctx).Return(nil).Once()
 
 	// Start processor
@@ -2172,7 +2188,15 @@ func TestReturnFunds(t *testing.T) {
 	dbTx := db.NewDatabaseTransaction(ctx, false)
 	helper.On("DatabaseTransaction", ctx).Return(dbTx).Once()
 	jobStorage.On("Ready", ctx, dbTx).Return([]*job.Job{}, nil).Once()
-	jobStorage.On("Processing", ctx, dbTx, string(job.ReturnFunds)).Return([]*job.Job{&j}, nil).Once()
+	jobStorage.On(
+		"Processing",
+		ctx,
+		dbTx,
+		string(job.ReturnFunds),
+	).Return(
+		[]*job.Job{&j},
+		nil,
+	).Once()
 
 	markConfirmed := make(chan struct{})
 	jobStorage.On("Broadcasting", ctx, dbTx).Return([]*job.Job{
@@ -2214,7 +2238,7 @@ func TestReturnFunds(t *testing.T) {
 	go func() {
 		<-markConfirmed
 		dbTx2 := db.NewDatabaseTransaction(ctx, false)
-		jobStorage.On("Get", ctx, dbTx2, "job").Return(&j, nil).Once()
+		jobStorage.On("Get", ctx, dbTx2, jobIdentifier).Return(&j, nil).Once()
 		jobStorage.On(
 			"Update",
 			ctx,
@@ -2222,9 +2246,9 @@ func TestReturnFunds(t *testing.T) {
 			mock.Anything,
 		).Run(func(args mock.Arguments) {
 			j = *args.Get(2).(*job.Job)
-			j.Identifier = "job"
+			j.Identifier = jobIdentifier
 		}).Return(
-			"job",
+			jobIdentifier,
 			nil,
 		)
 		tx := &types.Transaction{
@@ -2232,7 +2256,7 @@ func TestReturnFunds(t *testing.T) {
 			Operations:            onchainOps,
 		}
 
-		err = c.BroadcastComplete(ctx, dbTx2, "job", tx)
+		err = c.BroadcastComplete(ctx, dbTx2, jobIdentifier, tx)
 		assert.NoError(t, err)
 	}()
 
@@ -2241,7 +2265,15 @@ func TestReturnFunds(t *testing.T) {
 	dbTx3 := db.NewDatabaseTransaction(ctx, false)
 	helper.On("DatabaseTransaction", ctx).Return(dbTx3).Once()
 	jobStorage.On("Ready", ctx, dbTx3).Return([]*job.Job{}, nil).Once()
-	jobStorage.On("Processing", ctx, dbTx3, string(job.ReturnFunds)).Return([]*job.Job{}, nil).Once()
+	jobStorage.On(
+		"Processing",
+		ctx,
+		dbTx3,
+		string(job.ReturnFunds),
+	).Return(
+		[]*job.Job{},
+		nil,
+	).Once()
 	helper.On("AllAccounts", ctx, dbTx3).Return([]*types.AccountIdentifier{
 		{Address: "address1"},
 	}, nil).Once()
