@@ -171,17 +171,6 @@ func (c *Coordinator) findJob(
 		)
 	}
 
-	if len(allBroadcasts) > 0 {
-		return nil, ErrNoAvailableJobs
-	}
-
-	// If we are returning funds, we should exit here
-	// because we don't want to create any new accounts
-	// or request funds while returning funds.
-	if returnFunds {
-		return nil, ErrReturnFundsComplete
-	}
-
 	// Check if ErrCreateAccount, then create account if less
 	// processing CreateAccount jobs than ReservedWorkflowConcurrency.
 	if c.seenErrCreateAccount {
@@ -199,6 +188,17 @@ func (c *Coordinator) findJob(
 		}
 
 		return job.New(c.createAccountWorkflow), nil
+	}
+
+	if len(allBroadcasts) > 0 {
+		return nil, ErrNoAvailableJobs
+	}
+
+	// If we are returning funds, we should exit here
+	// because we don't want to create any new accounts
+	// or request funds while returning funds.
+	if returnFunds {
+		return nil, ErrReturnFundsComplete
 	}
 
 	processing, err := c.storage.Processing(ctx, dbTx, string(job.RequestFunds))
