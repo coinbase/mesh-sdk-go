@@ -468,135 +468,157 @@ func (c *Coordinator) invokeHandlersAndBroadcast(
 func (c *Coordinator) process( // nolint:gocognit
 	ctx context.Context,
 	returnFunds bool,
-) error {
-	for ctx.Err() == nil {
-		if !c.helper.HeadBlockExists(ctx) {
-			log.Println("waiting for first block synced...")
+) (bool, error) {
+	if !c.helper.HeadBlockExists(ctx) {
+		log.Println("waiting for first block synced...")
 
-			// We will sleep until at least one block has been synced.
-			// Many of the storage-based commands require a synced block
-			// to work correctly (i.e. when fetching a balance, a block
-			// must be returned).
-			time.Sleep(NoHeadBlockWaitTime)
-			continue
-		}
+		// We will sleep until at least one block has been synced.
+		// Many of the storage-based commands require a synced block
+		// to work correctly (i.e. when fetching a balance, a block
+		// must be returned).
+		time.Sleep(NoHeadBlockWaitTime)
+		return true, nil
+	}
 
-		// Update job and store broadcast in a single DB transaction.
-		// If job update fails, all associated state changes are rolled
-		// back.
-		dbTx := c.helper.DatabaseTransaction(ctx)
+	// Update job and store broadcast in a single DB transaction.
+	// If job update fails, all associated state changes are rolled
+	// back.
+	dbTx := c.helper.DatabaseTransaction(ctx)
+	defer dbTx.Discard(ctx)
 
-		// Attempt to find a Job to process.
-		j, err := c.findJob(ctx, dbTx, returnFunds)
-		if errors.Is(err, ErrNoAvailableJobs) {
-			log.Println("waiting for available jobs...")
+	// Attempt to find a Job to process.
+	j, err := c.findJob(ctx, dbTx, returnFunds)
+	if errors.Is(err, ErrNoAvailableJobs) {
+		log.Println("waiting for available jobs...")
 
-			c.resetVars()
-			dbTx.Discard(ctx)
-			time.Sleep(NoJobsWaitTime)
-			continue
-		}
-		if errors.Is(err, ErrReturnFundsComplete) {
-			color.Cyan("fund return complete!")
+		c.resetVars()
+		time.Sleep(NoJobsWaitTime)
+		return true, nil
+	}
+	if errors.Is(err, ErrReturnFundsComplete) {
+		color.Cyan("fund return complete!")
 
-			dbTx.Discard(ctx)
-			return nil
-		}
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("%w: unable to find job", err)
+	}
+
+	statusMessage := fmt.Sprintf(`processing workflow "%s"`, j.Workflow)
+	if len(j.Identifier) > 0 {
+		statusMessage = fmt.Sprintf(`%s for job "%s"`, statusMessage, j.Identifier)
+	}
+	log.Println(statusMessage)
+
+	broadcast, err := c.worker.Process(ctx, dbTx, j)
+	if errors.Is(err, worker.ErrCreateAccount) {
+		c.addToUnprocessed(j)
+		c.seenErrCreateAccount = true
+		return true, nil
+	}
+	if errors.Is(err, worker.ErrUnsatisfiable) {
+		c.addToUnprocessed(j)
+		return true, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("%w: unable to process job", err)
+	}
+
+	// Update job (or store for the first time)
+	//
+	// Note, we ALWAYS store jobs even if they are complete on
+	// their first run so that we can have a full view of everything
+	// we've done in JobStorage.
+	jobIdentifier, err := c.storage.Update(ctx, dbTx, j)
+	if err != nil {
+		return false, fmt.Errorf("%w: unable to update job", err)
+	}
+	j.Identifier = jobIdentifier
+
+	var transactionCreated *types.TransactionIdentifier
+	if broadcast != nil {
+		// Construct Transaction (or dry run)
+		transactionIdentifier, networkTransaction, suggestedFees, err := c.createTransaction(
+			ctx,
+			dbTx,
+			broadcast,
+		)
 		if err != nil {
-			return fmt.Errorf("%w: unable to find job", err)
+			return false, fmt.Errorf("%w: unable to create transaction", err)
 		}
 
-		statusMessage := fmt.Sprintf(`processing workflow "%s"`, j.Workflow)
-		if len(j.Identifier) > 0 {
-			statusMessage = fmt.Sprintf(`%s for job "%s"`, statusMessage, j.Identifier)
-		}
-		log.Println(statusMessage)
+		if broadcast.DryRun {
+			// Update the job with the result of the dry run. This will
+			// mark it as ready!
+			if err := j.DryRunComplete(ctx, suggestedFees); err != nil {
+				return false, fmt.Errorf("%w: unable to mark dry run complete", err)
+			}
 
-		broadcast, err := c.worker.Process(ctx, dbTx, j)
-		if errors.Is(err, worker.ErrCreateAccount) {
-			c.addToUnprocessed(j)
-			c.seenErrCreateAccount = true
-			dbTx.Discard(ctx)
-			continue
-		}
-		if errors.Is(err, worker.ErrUnsatisfiable) {
-			c.addToUnprocessed(j)
-			dbTx.Discard(ctx)
-			continue
-		}
-		if err != nil {
-			return fmt.Errorf("%w: unable to process job", err)
-		}
-
-		// Update job (or store for the first time)
-		//
-		// Note, we ALWAYS store jobs even if they are complete on
-		// their first run so that we can have a full view of everything
-		// we've done in JobStorage.
-		jobIdentifier, err := c.storage.Update(ctx, dbTx, j)
-		if err != nil {
-			return fmt.Errorf("%w: unable to update job", err)
-		}
-		j.Identifier = jobIdentifier
-
-		var transactionCreated *types.TransactionIdentifier
-		if broadcast != nil {
-			// Construct Transaction (or dry run)
-			transactionIdentifier, networkTransaction, suggestedFees, err := c.createTransaction(
+			if _, err := c.storage.Update(ctx, dbTx, j); err != nil {
+				return false, fmt.Errorf("%w: unable to update job after dry run", err)
+			}
+		} else {
+			// Invoke Broadcast storage (in same TX as update job)
+			if err := c.helper.Broadcast(
 				ctx,
 				dbTx,
-				broadcast,
+				jobIdentifier,
+				broadcast.Network,
+				broadcast.Intent,
+				transactionIdentifier,
+				networkTransaction,
+				broadcast.ConfirmationDepth,
+			); err != nil {
+				return false, fmt.Errorf("%w: unable to enqueue broadcast", err)
+			}
+
+			transactionCreated = transactionIdentifier
+			log.Printf(
+				`created transaction "%s" for job "%s"`,
+				transactionIdentifier.Hash,
+				jobIdentifier,
 			)
-			if err != nil {
-				return fmt.Errorf("%w: unable to create transaction", err)
-			}
+		}
+	}
 
-			if broadcast.DryRun {
-				// Update the job with the result of the dry run. This will
-				// mark it as ready!
-				if err := j.DryRunComplete(ctx, suggestedFees); err != nil {
-					return fmt.Errorf("%w: unable to mark dry run complete", err)
-				}
+	// Reset all vars
+	c.resetVars()
+	log.Printf(`processed workflow "%s" for job "%s"`, j.Workflow, jobIdentifier)
 
-				if _, err := c.storage.Update(ctx, dbTx, j); err != nil {
-					return fmt.Errorf("%w: unable to update job after dry run", err)
-				}
-			} else {
-				// Invoke Broadcast storage (in same TX as update job)
-				if err := c.helper.Broadcast(
-					ctx,
-					dbTx,
-					jobIdentifier,
-					broadcast.Network,
-					broadcast.Intent,
-					transactionIdentifier,
-					networkTransaction,
-					broadcast.ConfirmationDepth,
-				); err != nil {
-					return fmt.Errorf("%w: unable to enqueue broadcast", err)
-				}
+	// Commit db transaction
+	if err := dbTx.Commit(ctx); err != nil {
+		return false, fmt.Errorf("%w: unable to commit job update", err)
+	}
 
-				transactionCreated = transactionIdentifier
-				log.Printf(
-					`created transaction "%s" for job "%s"`,
-					transactionIdentifier.Hash,
-					jobIdentifier,
-				)
-			}
+	// Invoke handlers and broadcast
+	if err := c.invokeHandlersAndBroadcast(ctx, jobIdentifier, transactionCreated); err != nil {
+		return false, fmt.Errorf("%w: unable to handle job success", err)
+	}
+
+	return true, nil
+}
+
+// processLoop calls process until we should
+// not continue or an error is returned.
+func (c *Coordinator) processLoop(
+	ctx context.Context,
+	returnFunds bool,
+) error {
+	// Make sure to cleanup the state from the
+	// last execution.
+	c.resetVars()
+
+	// We don't include this loop inside process
+	// so that we can defer dbTx.Discard(ctx). Defer
+	// is only invoked when a function returns.
+	for ctx.Err() == nil {
+		cont, err := c.process(ctx, returnFunds)
+		if err != nil {
+			return err
 		}
 
-		// Reset all vars
-		c.resetVars()
-		log.Printf(`processed workflow "%s" for job "%s"`, j.Workflow, jobIdentifier)
-
-		// Commit db transaction
-		if err := dbTx.Commit(ctx); err != nil {
-			return fmt.Errorf("%w: unable to commit job update", err)
-		}
-
-		// Invoke handlers and broadcast
-		if err := c.invokeHandlersAndBroadcast(ctx, jobIdentifier, transactionCreated); err != nil {
-			return fmt.Errorf("%w: unable to handle job success", err)
+		if !cont {
+			return nil
 		}
 	}
 
@@ -608,7 +630,7 @@ func (c *Coordinator) process( // nolint:gocognit
 func (c *Coordinator) Process(
 	ctx context.Context,
 ) error {
-	return c.process(ctx, false)
+	return c.processLoop(ctx, false)
 }
 
 // ReturnFunds attempts to execute
@@ -626,5 +648,5 @@ func (c *Coordinator) ReturnFunds(
 	}
 
 	color.Cyan("attemping fund return...")
-	return c.process(ctx, true)
+	return c.processLoop(ctx, true)
 }
