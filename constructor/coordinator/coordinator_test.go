@@ -1849,15 +1849,8 @@ func TestReturnFunds_NoWorkflow(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, db)
 
-	// HeadBlockExists is false first
-	helper.On("HeadBlockExists", ctx).Return(false).Once()
-	helper.On("HeadBlockExists", ctx).Return(true).Once()
-
-	dbTxFail := db.NewDatabaseTransaction(ctx, false)
-	helper.On("DatabaseTransaction", ctx).Return(dbTxFail).Once()
-	jobStorage.On("Ready", ctx, dbTxFail).Return([]*job.Job{}, nil).Once()
-
-	// Start processor
+	// We should exit immediately, so we don't need to prepare
+	// our helper or handler.
 	go func() {
 		err := c.ReturnFunds(ctx)
 		assert.NoError(t, err)
