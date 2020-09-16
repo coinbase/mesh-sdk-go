@@ -132,16 +132,11 @@ func (c *Coordinator) findJob(
 	}
 
 	// We should only attempt the ReturnFunds workflow
-	// if returnFunds is true. If the ReturnFunds workflow
-	// does not exist, we should exit as ReturnFunds is considered
-	// complete.
+	// if returnFunds is true. If it is true, we know that
+	// c.returnFundsWorkflow must be defined.
 	availableWorkflows := c.workflows
 	if returnFunds {
-		if c.returnFundsWorkflow == nil {
-			return nil, ErrReturnFundsComplete
-		}
-
-		availableWorkflows = append(availableWorkflows, c.returnFundsWorkflow)
+		availableWorkflows = []*job.Workflow{c.returnFundsWorkflow}
 	}
 
 	// Attempt non-reserved workflows
@@ -502,10 +497,7 @@ func (c *Coordinator) process( // nolint:gocognit
 			continue
 		}
 		if errors.Is(err, ErrReturnFundsComplete) {
-			// Only log if we attempted to return funds!
-			if c.returnFundsWorkflow != nil {
-				log.Println("return funds complete...")
-			}
+			color.Cyan("fund return complete!")
 
 			dbTx.Discard(ctx)
 			return nil
@@ -627,5 +619,12 @@ func (c *Coordinator) Process(
 func (c *Coordinator) ReturnFunds(
 	ctx context.Context,
 ) error {
+	// We return immediately if there is no return
+	// funds workflow defined.
+	if c.returnFundsWorkflow == nil {
+		return nil
+	}
+
+	color.Cyan("attemping fund return...")
 	return c.process(ctx, true)
 }
