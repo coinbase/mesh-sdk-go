@@ -516,6 +516,19 @@ func (b *BlockStorage) deleteBlock(
 	block *types.Block,
 ) error {
 	blockIdentifier := block.BlockIdentifier
+
+	// We return an error if we attempt to remove the oldest index. If we did
+	// not error, it is possible that we could panic as any further block removals
+	// are undefined.
+	oldestIndex, err := b.GetOldestBlockIndex(ctx, transaction)
+	if err != nil {
+		return fmt.Errorf("%w: %v", ErrOldestIndexRead, err)
+	}
+
+	if blockIdentifier.Index <= oldestIndex {
+		return ErrCannotRemoveOldest
+	}
+
 	_, key := getBlockHashKey(blockIdentifier.Hash)
 	if err := transaction.Delete(ctx, key); err != nil {
 		return fmt.Errorf("%w: %v", ErrBlockDeleteFailed, err)
@@ -527,18 +540,6 @@ func (b *BlockStorage) deleteBlock(
 
 	if err := b.StoreHeadBlockIdentifier(ctx, transaction, block.ParentBlockIdentifier); err != nil {
 		return fmt.Errorf("%w: %v", ErrHeadBlockIdentifierUpdateFailed, err)
-	}
-
-	// We return an error if we attempt to remove the oldest index. If we did
-	// not error, it is possible that we could panic as any further block removals
-	// are undefined.
-	oldestIndex, err := b.GetOldestBlockIndex(ctx, transaction)
-	if err != nil {
-		return fmt.Errorf("%w: %v", ErrOldestIndexRead, err)
-	}
-
-	if oldestIndex <= block.BlockIdentifier.Index {
-		return ErrCannotRemoveOldest
 	}
 
 	return nil
@@ -720,7 +721,11 @@ func storeUniqueKey(
 	}
 
 	if exists {
-		return fmt.Errorf("%w: duplicate key %s found", ErrDuplicateKey, string(key))
+		return fmt.Errorf(
+			"%w: duplicate key %s found",
+			ErrDuplicateKey,
+			string(key),
+		)
 	}
 
 	return transaction.Set(ctx, key, value, reclaimValue)
