@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"os"
 	"regexp"
 	"testing"
 
@@ -1074,8 +1075,8 @@ func TestJob_ComplicatedTransfer(t *testing.T) {
 				Input: `{"random_number": {{rand_number}}}`,
 			},
 			{
-				Type:       job.SetVariable,
-				Input:      `"10"`,
+				Type:       job.LoadEnv,
+				Input:      `"valA"`,
 				OutputPath: "valA",
 			},
 			{
@@ -1096,6 +1097,7 @@ func TestJob_ComplicatedTransfer(t *testing.T) {
 		},
 	}
 
+	os.Setenv("valA", `"10"`)
 	workflow := &job.Workflow{
 		Name:      string(job.CreateAccount),
 		Scenarios: []*job.Scenario{s, s2},
