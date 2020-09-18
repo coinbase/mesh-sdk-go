@@ -317,6 +317,13 @@ func TestBlock(t *testing.T) {
 		assert.Nil(t, transaction)
 	})
 
+	t.Run("Attempt Block Pruning Before Syncing", func(t *testing.T) {
+		firstPruned, lastPruned, err := storage.Prune(ctx, 2)
+		assert.Equal(t, int64(-1), firstPruned)
+		assert.Equal(t, int64(-1), lastPruned)
+		assert.Error(t, ErrPruningFailed, err)
+	})
+
 	t.Run("Set and get block", func(t *testing.T) {
 		dbTx := storage.db.NewDatabaseTransaction(ctx, false)
 		oldestIndex, err := storage.GetOldestBlockIndex(ctx, dbTx)
@@ -535,6 +542,49 @@ func TestBlock(t *testing.T) {
 		head, err := storage.GetHeadBlockIdentifier(ctx)
 		assert.NoError(t, err)
 		assert.Equal(t, gapBlock.BlockIdentifier, head)
+	})
+
+	t.Run("Attempt Block Pruning", func(t *testing.T) {
+		firstPruned, lastPruned, err := storage.Prune(ctx, 2)
+		assert.Equal(t, int64(-1), firstPruned)
+		assert.Equal(t, int64(-1), lastPruned)
+		assert.Error(t, ErrPruningDepthInsufficient, err)
+
+		firstPruned, lastPruned, err = storage.Prune(ctx, 100)
+		assert.Equal(t, int64(-1), firstPruned)
+		assert.Equal(t, int64(-1), lastPruned)
+		assert.Error(t, ErrPruningDepthInsufficient, err)
+
+		// Attempt to sync sufficient blocks so we can test pruning
+		for i := int64(gapBlock.BlockIdentifier.Index + 1); i < 200; i++ {
+			blockIdentifier := &types.BlockIdentifier{
+				Index: i,
+				Hash:  fmt.Sprintf("block %d", i),
+			}
+			parentBlockIndex := blockIdentifier.Index - 1
+			if parentBlockIndex < 0 {
+				parentBlockIndex = 0
+			}
+			parentBlockIdentifier := &types.BlockIdentifier{
+				Index: parentBlockIndex,
+				Hash:  fmt.Sprintf("block %d", parentBlockIndex),
+			}
+
+			block := &types.Block{
+				BlockIdentifier:       blockIdentifier,
+				ParentBlockIdentifier: parentBlockIdentifier,
+			}
+
+			assert.NoError(t, storage.AddBlock(ctx, block))
+			head, err := storage.GetHeadBlockIdentifier(ctx)
+			assert.NoError(t, err)
+			assert.Equal(t, blockIdentifier, head)
+		}
+
+		firstPruned, lastPruned, err = storage.Prune(ctx, 100)
+		assert.Equal(t, int64(0), firstPruned)
+		assert.Equal(t, int64(100), lastPruned)
+		assert.NoError(t, err)
 	})
 }
 
