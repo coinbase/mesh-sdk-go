@@ -130,7 +130,7 @@ func (s *StatefulSyncer) Sync(ctx context.Context, startIndex int64, endIndex in
 // Prune will repeatedly attempt to prune BlockStorage until
 // the context is canceled or an error is encountered.
 func (s *StatefulSyncer) Prune(ctx context.Context, depth int64) error {
-	for ctx.Err() != nil {
+	for ctx.Err() == nil {
 		headBlock, err := s.blockStorage.GetHeadBlockIdentifier(ctx)
 		if headBlock == nil && errors.Is(err, storage.ErrHeadBlockNotFound) {
 			// this will occur when we are waiting for the first block to be synced
