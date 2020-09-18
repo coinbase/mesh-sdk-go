@@ -160,12 +160,16 @@ func (b *BlockStorage) GetOldestBlockIndex(
 	return index, nil
 }
 
+// pruneBlock attempts to prune a single block in a database transaction.
+// If a block is pruned, we return its index.
 func (b *BlockStorage) pruneBlock(
 	ctx context.Context,
 	index int64,
 ) (int64, error) {
 	// We create a separate transaction for each pruning attempt so that
-	// we don't hit the db tx size maximum.
+	// we don't hit the database tx size maximum. As a result, it is possible
+	// that we prune a collection of blocks, encounter an error, and cannot
+	// rollback the pruning operations.
 	dbTx := b.db.NewDatabaseTransaction(ctx, true)
 	defer dbTx.Discard(ctx)
 
@@ -187,22 +191,27 @@ func (b *BlockStorage) pruneBlock(
 		return -1, ErrPruningDepthInsufficient
 	}
 
-	blockResponse, err := b.getBlockResponse(ctx, &types.PartialBlockIdentifier{Index: &oldestIndex}, dbTx)
+	blockResponse, err := b.getBlockResponse(
+		ctx,
+		&types.PartialBlockIdentifier{Index: &oldestIndex},
+		dbTx,
+	)
 	if err != nil && !errors.Is(err, ErrBlockNotFound) {
 		return -1, err
 	}
 
-	// If there is an omitted block, we will have a non-nil error.
+	// If there is an omitted block, we will have a non-nil error. When
+	// a block is omitted, we should not attempt to remove it because
+	// it doesn't exist.
 	if err == nil {
 		blockIdentifier := blockResponse.Block.BlockIdentifier
-		// Set transactions to empty
+
 		for _, tx := range blockResponse.OtherTransactions {
 			if err := b.pruneTransaction(ctx, dbTx, blockIdentifier, tx); err != nil {
 				return -1, fmt.Errorf("%w: %v", ErrCannotPruneTransaction, err)
 			}
 		}
 
-		// Set block to empty
 		_, blockKey := getBlockHashKey(blockIdentifier.Hash)
 		if err := dbTx.Set(ctx, blockKey, []byte(""), true); err != nil {
 			return -1, err
@@ -225,7 +234,13 @@ func (b *BlockStorage) pruneBlock(
 // Prune removes block and transaction data
 // from all blocks with index <= index. Pruning
 // leaves all keys associated with pruned data
-// but overwrites their data to be empty.
+// but overwrites their data to be empty. If pruning
+// is successful, we return the range of pruned
+// blocks.
+//
+// Prune is not invoked automatically because
+// some applications prefer not to prune any
+// block data.
 func (b *BlockStorage) Prune(
 	ctx context.Context,
 	index int64,
@@ -527,8 +542,8 @@ func (b *BlockStorage) deleteBlock(
 	blockIdentifier := block.BlockIdentifier
 
 	// We return an error if we attempt to remove the oldest index. If we did
-	// not error, it is possible that we could panic as any further block removals
-	// are undefined.
+	// not error, it is possible that we could panic in the future as any
+	// further block removals would involve decoding pruned blocks.
 	oldestIndex, err := b.GetOldestBlockIndex(ctx, transaction)
 	if err != nil {
 		return fmt.Errorf("%w: %v", ErrOldestIndexRead, err)
@@ -717,27 +732,23 @@ func (b *BlockStorage) CreateBlockCache(ctx context.Context) []*types.BlockIdent
 	return cache
 }
 
-func storeUniqueKey(
+func (b *BlockStorage) updateTransaction(
 	ctx context.Context,
-	transaction DatabaseTransaction,
-	key []byte,
-	value []byte,
-	reclaimValue bool,
+	dbTx DatabaseTransaction,
+	hashKey []byte,
+	namespace string,
+	blocks map[string]*blockTransaction,
 ) error {
-	exists, _, err := transaction.Get(ctx, key)
+	encodedResult, err := b.db.Compressor().Encode(namespace, blocks)
 	if err != nil {
+		return fmt.Errorf("%w: %v", ErrTransactionDataEncodeFailed, err)
+	}
+
+	if err := dbTx.Set(ctx, hashKey, encodedResult, true); err != nil {
 		return err
 	}
 
-	if exists {
-		return fmt.Errorf(
-			"%w: duplicate key %s found",
-			ErrDuplicateKey,
-			string(key),
-		)
-	}
-
-	return transaction.Set(ctx, key, value, reclaimValue)
+	return nil
 }
 
 func (b *BlockStorage) storeTransaction(
@@ -775,16 +786,7 @@ func (b *BlockStorage) storeTransaction(
 		BlockIndex:  blockIdentifier.Index,
 	}
 
-	encodedResult, err := b.db.Compressor().Encode(namespace, blocks)
-	if err != nil {
-		return fmt.Errorf("%w: %v", ErrTransactionDataEncodeFailed, err)
-	}
-
-	if err := transaction.Set(ctx, hashKey, encodedResult, true); err != nil {
-		return err
-	}
-
-	return nil
+	return b.updateTransaction(ctx, transaction, hashKey, namespace, blocks)
 }
 
 func (b *BlockStorage) pruneTransaction(
@@ -811,16 +813,7 @@ func (b *BlockStorage) pruneTransaction(
 		BlockIndex: blockIdentifier.Index,
 	}
 
-	encodedResult, err := b.db.Compressor().Encode(namespace, blocks)
-	if err != nil {
-		return fmt.Errorf("%w: %v", ErrTransactionDataEncodeFailed, err)
-	}
-
-	if err := transaction.Set(ctx, hashKey, encodedResult, true); err != nil {
-		return err
-	}
-
-	return nil
+	return b.updateTransaction(ctx, transaction, hashKey, namespace, blocks)
 }
 
 func (b *BlockStorage) removeTransaction(
@@ -854,16 +847,7 @@ func (b *BlockStorage) removeTransaction(
 		return transaction.Delete(ctx, hashKey)
 	}
 
-	encodedResult, err := b.db.Compressor().Encode(namespace, blocks)
-	if err != nil {
-		return fmt.Errorf("%w: %v", ErrTransactionDataEncodeFailed, err)
-	}
-
-	if err := transaction.Set(ctx, hashKey, encodedResult, true); err != nil {
-		return err
-	}
-
-	return nil
+	return b.updateTransaction(ctx, transaction, hashKey, namespace, blocks)
 }
 
 // FindTransaction returns the most recent *types.BlockIdentifier containing the

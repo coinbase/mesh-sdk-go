@@ -375,7 +375,7 @@ var (
 	ErrCannotAccessPrunedData         = errors.New("cannot access pruned data")
 	ErrNothingToPrune                 = errors.New("nothing to prune")
 	ErrPruningFailed                  = errors.New("pruning failed")
-	ErrPruningDepthInsufficient       = errors.New("pruning depth insufficent")
+	ErrPruningDepthInsufficient       = errors.New("pruning depth insufficient")
 	ErrCannotPruneTransaction         = errors.New("cannot prune transaction")
 
 	BlockStorageErrs = []error{
