@@ -16,8 +16,11 @@ package statefulsyncer
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"log"
 	"math/big"
+	"time"
 
 	"github.com/coinbase/rosetta-sdk-go/fetcher"
 	"github.com/coinbase/rosetta-sdk-go/storage"
@@ -27,6 +30,17 @@ import (
 
 var _ syncer.Handler = (*StatefulSyncer)(nil)
 var _ syncer.Helper = (*StatefulSyncer)(nil)
+
+const (
+	// DefaultPruningDepth is the depth from tip
+	// we attempt to prune. A large pruning depth here
+	// protects us from re-orgs.
+	DefaultPruningDepth = int64(100)
+
+	// pruneSleepTime is how long we sleep between
+	// pruning attempts.
+	pruneSleepTime = 10 * time.Second
+)
 
 // StatefulSyncer is an abstraction layer over
 // the stateless syncer package. This layer
@@ -111,6 +125,56 @@ func (s *StatefulSyncer) Sync(ctx context.Context, startIndex int64, endIndex in
 	)
 
 	return syncer.Sync(ctx, startIndex, endIndex)
+}
+
+// Prune will repeatedly attempt to prune BlockStorage until
+// the context is canceled or an error is encountered.
+func (s *StatefulSyncer) Prune(ctx context.Context, depth int64) error {
+	for ctx.Err() != nil {
+		headBlock, err := s.blockStorage.GetHeadBlockIdentifier(ctx)
+		if headBlock == nil && errors.Is(err, storage.ErrHeadBlockNotFound) {
+			// this will occur when we are waiting for the first block to be synced
+			time.Sleep(pruneSleepTime)
+			continue
+		}
+		if err != nil {
+			return err
+		}
+
+		oldestIndex, err := s.blockStorage.GetOldestBlockIndex(ctx)
+		if oldestIndex == -1 && errors.Is(err, storage.ErrOldestIndexMissing) {
+			// this will occur when we have yet to store the oldest index
+			time.Sleep(pruneSleepTime)
+			continue
+		}
+		if err != nil {
+			return err
+		}
+
+		pruningIndex := headBlock.Index - depth
+		if pruningIndex < oldestIndex {
+			time.Sleep(pruneSleepTime)
+			continue
+		}
+
+		firstPruned, lastPruned, err := s.blockStorage.Prune(ctx, pruningIndex)
+		if err != nil {
+			return err
+		}
+
+		if firstPruned != -1 && lastPruned != -1 {
+			pruneMessage := fmt.Sprintf("pruned blocks %d-%d", firstPruned, lastPruned)
+			if firstPruned == lastPruned {
+				pruneMessage = fmt.Sprintf("pruned block %d", firstPruned)
+			}
+
+			log.Println(pruneMessage)
+		}
+
+		time.Sleep(pruneSleepTime)
+	}
+
+	return ctx.Err()
 }
 
 // BlockAdded is called by the syncer when a block is added.

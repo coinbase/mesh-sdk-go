@@ -137,9 +137,9 @@ func (b *BlockStorage) setOldestBlockIndex(
 	return err
 }
 
-// GetOldestBlockIndex returns the oldest block index
-// available in BlockStorage.
-func (b *BlockStorage) GetOldestBlockIndex(
+// GetOldestBlockIndexTransactional returns the oldest block index
+// available in BlockStorage in a single database transaction.
+func (b *BlockStorage) GetOldestBlockIndexTransactional(
 	ctx context.Context,
 	dbTx DatabaseTransaction,
 ) (int64, error) {
@@ -160,6 +160,17 @@ func (b *BlockStorage) GetOldestBlockIndex(
 	return index, nil
 }
 
+// GetOldestBlockIndex returns the oldest block index
+// available in BlockStorage.
+func (b *BlockStorage) GetOldestBlockIndex(
+	ctx context.Context,
+) (int64, error) {
+	dbTx := b.db.NewDatabaseTransaction(ctx, false)
+	defer dbTx.Discard(ctx)
+
+	return b.GetOldestBlockIndexTransactional(ctx, dbTx)
+}
+
 // pruneBlock attempts to prune a single block in a database transaction.
 // If a block is pruned, we return its index.
 func (b *BlockStorage) pruneBlock(
@@ -173,7 +184,7 @@ func (b *BlockStorage) pruneBlock(
 	dbTx := b.db.NewDatabaseTransaction(ctx, true)
 	defer dbTx.Discard(ctx)
 
-	oldestIndex, err := b.GetOldestBlockIndex(ctx, dbTx)
+	oldestIndex, err := b.GetOldestBlockIndexTransactional(ctx, dbTx)
 	if err != nil {
 		return -1, fmt.Errorf("%w: %v", ErrOldestIndexRead, err)
 	}
@@ -544,7 +555,7 @@ func (b *BlockStorage) deleteBlock(
 	// We return an error if we attempt to remove the oldest index. If we did
 	// not error, it is possible that we could panic in the future as any
 	// further block removals would involve decoding pruned blocks.
-	oldestIndex, err := b.GetOldestBlockIndex(ctx, transaction)
+	oldestIndex, err := b.GetOldestBlockIndexTransactional(ctx, transaction)
 	if err != nil {
 		return fmt.Errorf("%w: %v", ErrOldestIndexRead, err)
 	}
@@ -670,7 +681,7 @@ func (b *BlockStorage) SetNewStartIndex(
 	// Ensure we do not set a new start index less
 	// than the oldest block.
 	dbTx := b.db.NewDatabaseTransaction(ctx, false)
-	oldestIndex, err := b.GetOldestBlockIndex(ctx, dbTx)
+	oldestIndex, err := b.GetOldestBlockIndexTransactional(ctx, dbTx)
 	dbTx.Discard(ctx)
 	if err != nil {
 		return fmt.Errorf("%w: %v", ErrOldestIndexRead, err)
@@ -896,7 +907,7 @@ func (b *BlockStorage) findBlockTransaction(
 	transactionIdentifier *types.TransactionIdentifier,
 	txn DatabaseTransaction,
 ) (*types.Transaction, error) {
-	oldestIndex, err := b.GetOldestBlockIndex(ctx, txn)
+	oldestIndex, err := b.GetOldestBlockIndexTransactional(ctx, txn)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrOldestIndexRead, err)
 	}
