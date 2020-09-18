@@ -169,6 +169,8 @@ func (b *BlockStorage) pruneBlock(
 	ctx context.Context,
 	index int64,
 ) error {
+	// We create a separate transaction for each pruning attempt so that
+	// we don't hit the db tx size maximum.
 	dbTx := b.db.NewDatabaseTransaction(ctx, true)
 	defer dbTx.Discard(ctx)
 
@@ -190,9 +192,24 @@ func (b *BlockStorage) pruneBlock(
 		return ErrPruningDepthInsufficient
 	}
 
+	blockResponse, err := b.getBlockResponse(ctx, &types.PartialBlockIdentifier{Index: &oldestIndex}, dbTx)
+	if err != nil {
+		return err
+	}
+
+	blockIdentifier := blockResponse.Block.BlockIdentifier
 	// Set transactions to empty
+	for _, tx := range blockResponse.OtherTransactions {
+		if err := b.pruneTransaction(ctx, dbTx, blockIdentifier, tx); err != nil {
+			return fmt.Errorf("%w: %v", ErrCannotPruneTransaction, err)
+		}
+	}
 
 	// Set block to empty
+	_, blockKey := getBlockHashKey(blockIdentifier.Hash)
+	if err := dbTx.Set(ctx, blockKey, []byte(""), true); err != nil {
+		return err
+	}
 
 	// Update prune index
 	if err := b.setOldestBlockIndex(ctx, dbTx, true, oldestIndex+1); err != nil {
@@ -215,6 +232,7 @@ func (b *BlockStorage) Prune(
 	ctx context.Context,
 	index int64,
 ) error {
+	// TODO: print out range of block pruned
 	for ctx.Err() == nil {
 		err := b.pruneBlock(ctx, index)
 		if err == nil {
@@ -355,18 +373,14 @@ func (b *BlockStorage) GetBlockLazy(
 	return b.getBlockResponse(ctx, blockIdentifier, transaction)
 }
 
-// GetBlock returns a block, if it exists. GetBlock
-// will fetch all transactions contained in a block
-// automatically. If you don't wish to do this for
-// performance reasons, use GetBlockLazy.
-func (b *BlockStorage) GetBlock(
+// GetBlockTransactional gets a block in the context of a database
+// transaction.
+func (b *BlockStorage) GetBlockTransactional(
 	ctx context.Context,
+	dbTx DatabaseTransaction,
 	blockIdentifier *types.PartialBlockIdentifier,
 ) (*types.Block, error) {
-	transaction := b.db.NewDatabaseTransaction(ctx, false)
-	defer transaction.Discard(ctx)
-
-	blockResponse, err := b.getBlockResponse(ctx, blockIdentifier, transaction)
+	blockResponse, err := b.getBlockResponse(ctx, blockIdentifier, dbTx)
 	if err != nil {
 		return nil, err
 	}
@@ -383,7 +397,7 @@ func (b *BlockStorage) GetBlock(
 			ctx,
 			block.BlockIdentifier,
 			transactionIdentifier,
-			transaction,
+			dbTx,
 		)
 		if err != nil {
 			return nil, fmt.Errorf(
@@ -399,6 +413,20 @@ func (b *BlockStorage) GetBlock(
 	block.Transactions = txs
 
 	return block, nil
+}
+
+// GetBlock returns a block, if it exists. GetBlock
+// will fetch all transactions contained in a block
+// automatically. If you don't wish to do this for
+// performance reasons, use GetBlockLazy.
+func (b *BlockStorage) GetBlock(
+	ctx context.Context,
+	blockIdentifier *types.PartialBlockIdentifier,
+) (*types.Block, error) {
+	transaction := b.db.NewDatabaseTransaction(ctx, false)
+	defer transaction.Discard(ctx)
+
+	return b.GetBlockTransactional(ctx, transaction, blockIdentifier)
 }
 
 func (b *BlockStorage) storeBlock(
@@ -509,7 +537,7 @@ func (b *BlockStorage) deleteBlock(
 	// We return an error if we attempt to remove the oldest index. If we did
 	// not error, it is possible that we could panic as any further block removals
 	// are undefined.
-	oldestIndex, err := b.getOldestBlockIndex(ctx, transaction)
+	oldestIndex, err := b.GetOldestBlockIndex(ctx, transaction)
 	if err != nil {
 		return fmt.Errorf("%w: %v", ErrOldestIndexRead, err)
 	}
@@ -529,13 +557,17 @@ func (b *BlockStorage) RemoveBlock(
 	ctx context.Context,
 	blockIdentifier *types.BlockIdentifier,
 ) error {
-	block, err := b.GetBlock(ctx, types.ConstructPartialBlockIdentifier(blockIdentifier))
+	transaction := b.db.NewDatabaseTransaction(ctx, true)
+	defer transaction.Discard(ctx)
+
+	block, err := b.GetBlockTransactional(
+		ctx,
+		transaction,
+		types.ConstructPartialBlockIdentifier(blockIdentifier),
+	)
 	if err != nil {
 		return err
 	}
-
-	transaction := b.db.NewDatabaseTransaction(ctx, true)
-	defer transaction.Discard(ctx)
 
 	// Remove all transaction hashes
 	for _, txn := range block.Transactions {
@@ -728,6 +760,42 @@ func (b *BlockStorage) storeTransaction(
 	return nil
 }
 
+func (b *BlockStorage) pruneTransaction(
+	ctx context.Context,
+	transaction DatabaseTransaction,
+	blockIdentifier *types.BlockIdentifier,
+	txIdentifier *types.TransactionIdentifier,
+) error {
+	namespace, hashKey := getTransactionHashKey(txIdentifier)
+	exists, val, err := transaction.Get(ctx, hashKey)
+	if err != nil {
+		return err
+	}
+
+	var blocks map[string]*blockTransaction
+	if !exists {
+		blocks = make(map[string]*blockTransaction)
+	} else {
+		if err := b.db.Compressor().Decode(namespace, val, &blocks, true); err != nil {
+			return fmt.Errorf("%w: could not decode transaction hash contents", err)
+		}
+	}
+	blocks[blockIdentifier.Hash] = &blockTransaction{
+		BlockIndex: blockIdentifier.Index,
+	}
+
+	encodedResult, err := b.db.Compressor().Encode(namespace, blocks)
+	if err != nil {
+		return fmt.Errorf("%w: %v", ErrTransactionDataEncodeFailed, err)
+	}
+
+	if err := transaction.Set(ctx, hashKey, encodedResult, true); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (b *BlockStorage) removeTransaction(
 	ctx context.Context,
 	transaction DatabaseTransaction,
@@ -803,6 +871,10 @@ func (b *BlockStorage) FindTransaction(
 		}
 	}
 
+	if newestTransaction == nil {
+		return nil, nil, ErrCannotAccessPrunedData
+	}
+
 	return newestBlock, newestTransaction, nil
 }
 
@@ -851,7 +923,7 @@ func (b *BlockStorage) GetBlockTransaction(
 	transaction := b.db.NewDatabaseTransaction(ctx, false)
 	defer transaction.Discard(ctx)
 
-	oldestIndex, err := b.getOldestBlockIndex(ctx, transaction)
+	oldestIndex, err := b.GetOldestBlockIndex(ctx, transaction)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrOldestIndexRead, err)
 	}
