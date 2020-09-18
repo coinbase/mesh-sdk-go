@@ -163,7 +163,7 @@ func (b *BlockStorage) GetOldestBlockIndex(
 func (b *BlockStorage) pruneBlock(
 	ctx context.Context,
 	index int64,
-) error {
+) (int64, error) {
 	// We create a separate transaction for each pruning attempt so that
 	// we don't hit the db tx size maximum.
 	dbTx := b.db.NewDatabaseTransaction(ctx, true)
@@ -171,52 +171,52 @@ func (b *BlockStorage) pruneBlock(
 
 	oldestIndex, err := b.GetOldestBlockIndex(ctx, dbTx)
 	if err != nil {
-		return fmt.Errorf("%w: %v", ErrOldestIndexRead, err)
+		return -1, fmt.Errorf("%w: %v", ErrOldestIndexRead, err)
 	}
 
 	if index < oldestIndex {
-		return ErrNothingToPrune
+		return -1, ErrNothingToPrune
 	}
 
 	head, err := b.GetHeadBlockIdentifierTransactional(ctx, dbTx)
 	if err != nil {
-		return fmt.Errorf("%w: cannot get head block identifier", err)
+		return -1, fmt.Errorf("%w: cannot get head block identifier", err)
 	}
 
 	if oldestIndex >= head.Index-syncer.PastBlockSize*2 {
-		return ErrPruningDepthInsufficient
+		return -1, ErrPruningDepthInsufficient
 	}
 
 	blockResponse, err := b.getBlockResponse(ctx, &types.PartialBlockIdentifier{Index: &oldestIndex}, dbTx)
 	if err != nil {
-		return err
+		return -1, err
 	}
 
 	blockIdentifier := blockResponse.Block.BlockIdentifier
 	// Set transactions to empty
 	for _, tx := range blockResponse.OtherTransactions {
 		if err := b.pruneTransaction(ctx, dbTx, blockIdentifier, tx); err != nil {
-			return fmt.Errorf("%w: %v", ErrCannotPruneTransaction, err)
+			return -1, fmt.Errorf("%w: %v", ErrCannotPruneTransaction, err)
 		}
 	}
 
 	// Set block to empty
 	_, blockKey := getBlockHashKey(blockIdentifier.Hash)
 	if err := dbTx.Set(ctx, blockKey, []byte(""), true); err != nil {
-		return err
+		return -1, err
 	}
 
 	// Update prune index
 	if err := b.setOldestBlockIndex(ctx, dbTx, true, oldestIndex+1); err != nil {
-		return fmt.Errorf("%w: %v", ErrOldestIndexUpdateFailed, err)
+		return -1, fmt.Errorf("%w: %v", ErrOldestIndexUpdateFailed, err)
 	}
 
 	// Commit tx
 	if err := dbTx.Commit(ctx); err != nil {
-		return err
+		return -1, err
 	}
 
-	return nil
+	return oldestIndex, nil
 }
 
 // Prune removes block and transaction data
@@ -226,21 +226,29 @@ func (b *BlockStorage) pruneBlock(
 func (b *BlockStorage) Prune(
 	ctx context.Context,
 	index int64,
-) error {
-	// TODO: print out range of block pruned
+) (int64, int64, error) {
+	firstPruned := int64(-1)
+	lastPruned := int64(-1)
+
 	for ctx.Err() == nil {
-		err := b.pruneBlock(ctx, index)
-		if err == nil {
-			continue
-		}
+		prunedBlock, err := b.pruneBlock(ctx, index)
 		if errors.Is(err, ErrNothingToPrune) {
-			return nil
+			return firstPruned, lastPruned, nil
+		}
+		if err != nil {
+			return -1, -1, fmt.Errorf("%w: %v", ErrPruningFailed, err)
 		}
 
-		return fmt.Errorf("%w: %v", ErrPruningFailed, err)
+		if firstPruned == -1 {
+			firstPruned = prunedBlock
+		}
+
+		if lastPruned < prunedBlock {
+			lastPruned = prunedBlock
+		}
 	}
 
-	return ctx.Err()
+	return -1, -1, ctx.Err()
 }
 
 // GetHeadBlockIdentifier returns the head block identifier,
@@ -330,15 +338,13 @@ func (b *BlockStorage) getBlockResponse(
 			namespace = blockNamespace
 			exists, blockResponse, err = transaction.Get(ctx, key)
 		}
-	default:
-		return nil, ErrBlockNotFound
 	}
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrBlockGetFailed, err)
 	}
 
 	if !exists {
-		return nil, fmt.Errorf("%w: %+v", ErrBlockNotFound, blockIdentifier)
+		return nil, fmt.Errorf("%w: %s", ErrBlockNotFound, types.PrintStruct(blockIdentifier))
 	}
 
 	if len(blockResponse) == 0 {
