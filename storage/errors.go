@@ -376,6 +376,7 @@ var (
 	ErrNothingToPrune                 = errors.New("nothing to prune")
 	ErrPruningFailed                  = errors.New("pruning failed")
 	ErrPruningDepthInsufficent        = errors.New("pruning depth insufficent")
+	ErrCannotPruneTransaction         = errors.New("cannot prune transaction")
 
 	BlockStorageErrs = []error{
 		ErrHeadBlockNotFound,
@@ -411,6 +412,7 @@ var (
 		ErrNothingToPrune,
 		ErrPruningFailed,
 		ErrPruningDepthInsufficent,
+		ErrCannotPruneTransaction,
 	}
 )
 
