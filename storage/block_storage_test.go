@@ -677,6 +677,21 @@ func TestManyBlocks(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, blockIdentifier, head)
 	}
+
+	firstPruned, lastPruned, err := storage.Prune(ctx, 9959)
+	assert.Equal(t, int64(0), firstPruned)
+	assert.Equal(t, int64(9959), lastPruned)
+	assert.NoError(t, err)
+
+	dbTx := storage.db.NewDatabaseTransaction(ctx, false)
+	oldestIndex, err := storage.GetOldestBlockIndex(ctx, dbTx)
+	dbTx.Discard(ctx)
+	assert.Equal(t, int64(9960), oldestIndex)
+	assert.NoError(t, err)
+
+	// Attempt to set new start index in pruned territory
+	err = storage.SetNewStartIndex(ctx, 1000)
+	assert.True(t, errors.Is(err, ErrCannotAccessPrunedData))
 }
 
 func TestCreateBlockCache(t *testing.T) {

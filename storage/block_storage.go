@@ -183,7 +183,7 @@ func (b *BlockStorage) pruneBlock(
 		return -1, fmt.Errorf("%w: cannot get head block identifier", err)
 	}
 
-	if oldestIndex >= head.Index-syncer.PastBlockSize*2 {
+	if oldestIndex > head.Index-syncer.PastBlockSize*2 {
 		return -1, ErrPruningDepthInsufficient
 	}
 
