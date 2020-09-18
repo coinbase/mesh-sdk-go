@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strconv"
 
 	"github.com/coinbase/rosetta-sdk-go/syncer"
 	"github.com/coinbase/rosetta-sdk-go/types"
@@ -30,6 +31,10 @@ const (
 	// The head block is the block with the largest index that is
 	// not orphaned.
 	headBlockKey = "head-block"
+
+	// oldestBlockIndex is the last accessible block index. Anything
+	// prior to this block index has been pruned.
+	oldestBlockIndex = "oldest-block-index"
 
 	// blockNamespace is prepended to any stored block.
 	blockNamespace = "block"
@@ -49,6 +54,10 @@ type blockTransaction struct {
 
 func getHeadBlockKey() []byte {
 	return []byte(headBlockKey)
+}
+
+func getOldestBlockIndexKey() []byte {
+	return []byte(oldestBlockIndex)
 }
 
 func getBlockHashKey(hash string) (string, []byte) {
@@ -102,6 +111,51 @@ func NewBlockStorage(
 // This must be called prior to syncing!
 func (b *BlockStorage) Initialize(workers []BlockWorker) {
 	b.workers = workers
+}
+
+func (b *BlockStorage) setOldestBlockIndex(
+	ctx context.Context,
+	dbTx DatabaseTransaction,
+	update bool,
+	index int64,
+) error {
+	key := getOldestBlockIndexKey()
+	value := []byte(strconv.FormatInt(index, 10))
+	if update {
+		if err := dbTx.Set(ctx, key, value, true); err != nil {
+			return fmt.Errorf("%w: %v", ErrOldestIndexUpdateFailed, err)
+		}
+
+		return nil
+	}
+
+	err := storeUniqueKey(ctx, dbTx, key, value, true)
+	if err == nil || errors.Is(err, ErrDuplicateKey) {
+		return nil
+	}
+
+	return fmt.Errorf("%w: %v", ErrOldestIndexUpdateFailed, err)
+}
+
+func (b *BlockStorage) getOldestBlockIndex(
+	ctx context.Context,
+	dbTx DatabaseTransaction,
+) (int64, error) {
+	exists, rawIndex, err := dbTx.Get(ctx, getOldestBlockIndexKey())
+	if err != nil {
+		return -1, err
+	}
+
+	if !exists {
+		return -1, ErrOldestIndexMissing
+	}
+
+	index, err := strconv.ParseInt(string(rawIndex), 10, 64)
+	if err != nil {
+		return -1, fmt.Errorf("%w: %v", ErrOldestIndexRead, err)
+	}
+
+	return index, nil
 }
 
 // GetHeadBlockIdentifier returns the head block identifier,
