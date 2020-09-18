@@ -325,7 +325,7 @@ func TestBlock(t *testing.T) {
 		assert.True(t, errors.Is(err, ErrPruningFailed))
 	})
 
-	t.Run("Set and get block", func(t *testing.T) {
+	t.Run("Set genesis block", func(t *testing.T) {
 		dbTx := storage.db.NewDatabaseTransaction(ctx, false)
 		oldestIndex, err := storage.GetOldestBlockIndex(ctx, dbTx)
 		dbTx.Discard(ctx)
@@ -335,6 +335,19 @@ func TestBlock(t *testing.T) {
 		err = storage.AddBlock(ctx, genesisBlock)
 		assert.NoError(t, err)
 
+		dbTx = storage.db.NewDatabaseTransaction(ctx, false)
+		oldestIndex, err = storage.GetOldestBlockIndex(ctx, dbTx)
+		dbTx.Discard(ctx)
+		assert.Equal(t, int64(0), oldestIndex)
+		assert.NoError(t, err)
+
+		// Ensure we error if trying to remove genesis
+		err = storage.RemoveBlock(ctx, genesisBlock.BlockIdentifier)
+		assert.Contains(t, err.Error(), ErrCannotRemoveOldest.Error())
+		assert.True(t, errors.Is(err, ErrBlockDeleteFailed))
+	})
+
+	t.Run("Set and get block", func(t *testing.T) {
 		err = storage.AddBlock(ctx, newBlock)
 		assert.NoError(t, err)
 
@@ -369,8 +382,8 @@ func TestBlock(t *testing.T) {
 		assert.Equal(t, newBlock.BlockIdentifier, newestBlock)
 		assert.Equal(t, newBlock.Transactions[0], transaction)
 
-		dbTx = storage.db.NewDatabaseTransaction(ctx, false)
-		oldestIndex, err = storage.GetOldestBlockIndex(ctx, dbTx)
+		dbTx := storage.db.NewDatabaseTransaction(ctx, false)
+		oldestIndex, err := storage.GetOldestBlockIndex(ctx, dbTx)
 		dbTx.Discard(ctx)
 		assert.Equal(t, int64(0), oldestIndex)
 		assert.NoError(t, err)
