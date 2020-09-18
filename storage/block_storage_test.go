@@ -318,7 +318,16 @@ func TestBlock(t *testing.T) {
 	})
 
 	t.Run("Set and get block", func(t *testing.T) {
-		err := storage.AddBlock(ctx, newBlock)
+		dbTx := storage.db.NewDatabaseTransaction(ctx, false)
+		oldestIndex, err := storage.GetOldestBlockIndex(ctx, dbTx)
+		dbTx.Discard(ctx)
+		assert.Equal(t, int64(-1), oldestIndex)
+		assert.Error(t, ErrOldestIndexMissing, err)
+
+		err = storage.AddBlock(ctx, genesisBlock)
+		assert.NoError(t, err)
+
+		err = storage.AddBlock(ctx, newBlock)
 		assert.NoError(t, err)
 
 		block, err := storage.GetBlock(
@@ -351,6 +360,12 @@ func TestBlock(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, newBlock.BlockIdentifier, newestBlock)
 		assert.Equal(t, newBlock.Transactions[0], transaction)
+
+		dbTx = storage.db.NewDatabaseTransaction(ctx, false)
+		oldestIndex, err = storage.GetOldestBlockIndex(ctx, dbTx)
+		dbTx.Discard(ctx)
+		assert.Equal(t, int64(0), oldestIndex)
+		assert.NoError(t, err)
 	})
 
 	t.Run("Get non-existent block", func(t *testing.T) {
@@ -383,6 +398,12 @@ func TestBlock(t *testing.T) {
 
 	t.Run("Set duplicate transaction hash (from prior block)", func(t *testing.T) {
 		err = storage.AddBlock(ctx, newBlock2)
+		assert.NoError(t, err)
+
+		dbTx := storage.db.NewDatabaseTransaction(ctx, false)
+		oldestIndex, err := storage.GetOldestBlockIndex(ctx, dbTx)
+		dbTx.Discard(ctx)
+		assert.Equal(t, int64(0), oldestIndex)
 		assert.NoError(t, err)
 
 		block, err := storage.GetBlock(
@@ -433,6 +454,12 @@ func TestBlock(t *testing.T) {
 		err := storage.RemoveBlock(ctx, newBlock2.BlockIdentifier)
 		assert.NoError(t, err)
 
+		dbTx := storage.db.NewDatabaseTransaction(ctx, false)
+		oldestIndex, err := storage.GetOldestBlockIndex(ctx, dbTx)
+		dbTx.Discard(ctx)
+		assert.Equal(t, int64(0), oldestIndex)
+		assert.NoError(t, err)
+
 		head, err := storage.GetHeadBlockIdentifier(ctx)
 		assert.NoError(t, err)
 		assert.Equal(t, newBlock2.ParentBlockIdentifier, head)
@@ -456,6 +483,12 @@ func TestBlock(t *testing.T) {
 
 	t.Run("Add block with complex metadata", func(t *testing.T) {
 		err := storage.AddBlock(ctx, complexBlock)
+		assert.NoError(t, err)
+
+		dbTx := storage.db.NewDatabaseTransaction(ctx, false)
+		oldestIndex, err := storage.GetOldestBlockIndex(ctx, dbTx)
+		dbTx.Discard(ctx)
+		assert.Equal(t, int64(0), oldestIndex)
 		assert.NoError(t, err)
 
 		block, err := storage.GetBlock(
