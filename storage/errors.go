@@ -368,6 +368,9 @@ var (
 	ErrTransactionNotFound            = errors.New("unable to find transaction")
 	ErrTransactionDoesNotExistInBlock = errors.New("transaction does not exist in block")
 	ErrHeadBlockGetFailed             = errors.New("unable to get head block")
+	ErrOldestIndexUpdateFailed        = errors.New("oldest index update failed")
+	ErrOldestIndexMissing             = errors.New("oldest index missing")
+	ErrOldestIndexRead                = errors.New("cannot read oldest index")
 
 	BlockStorageErrs = []error{
 		ErrHeadBlockNotFound,
@@ -395,6 +398,9 @@ var (
 		ErrTransactionNotFound,
 		ErrTransactionDoesNotExistInBlock,
 		ErrHeadBlockGetFailed,
+		ErrOldestIndexUpdateFailed,
+		ErrOldestIndexMissing,
+		ErrOldestIndexRead,
 	}
 )
 
