@@ -27,11 +27,6 @@ import (
 )
 
 const (
-	// MinimumPruneDepth is the minimum depth we can prune from.
-	// This protects us from pruning to close to tip and causing
-	// a panic during a reorg.
-	MinimumPruneDepth = 40
-
 	// headBlockKey is used to lookup the head block identifier.
 	// The head block is the block with the largest index that is
 	// not orphaned.
@@ -188,7 +183,7 @@ func (b *BlockStorage) pruneBlock(
 		return fmt.Errorf("%w: cannot get head block identifier", err)
 	}
 
-	if oldestIndex >= head.Index-MinimumPruneDepth {
+	if oldestIndex >= head.Index-syncer.PastBlockSize*2 {
 		return ErrPruningDepthInsufficient
 	}
 
@@ -647,6 +642,24 @@ func (b *BlockStorage) SetNewStartIndex(
 		)
 	}
 
+	// Ensure we do not set a new start index less
+	// than the oldest block.
+	dbTx := b.db.NewDatabaseTransaction(ctx, false)
+	oldestIndex, err := b.GetOldestBlockIndex(ctx, dbTx)
+	dbTx.Discard(ctx)
+	if err != nil {
+		return fmt.Errorf("%w: %v", ErrOldestIndexRead, err)
+	}
+
+	if oldestIndex > startIndex {
+		return fmt.Errorf(
+			"%w: oldest block index is %d but start index is %d",
+			ErrCannotAccessPrunedData,
+			oldestIndex,
+			startIndex,
+		)
+	}
+
 	currBlock := head
 	for currBlock.Index >= startIndex {
 		log.Printf("Removing block %+v\n", currBlock)
@@ -771,15 +784,15 @@ func (b *BlockStorage) pruneTransaction(
 	if err != nil {
 		return err
 	}
+	if !exists {
+		return ErrTransactionNotFound
+	}
 
 	var blocks map[string]*blockTransaction
-	if !exists {
-		blocks = make(map[string]*blockTransaction)
-	} else {
-		if err := b.db.Compressor().Decode(namespace, val, &blocks, true); err != nil {
-			return fmt.Errorf("%w: could not decode transaction hash contents", err)
-		}
+	if err := b.db.Compressor().Decode(namespace, val, &blocks, true); err != nil {
+		return fmt.Errorf("%w: could not decode transaction hash contents", err)
 	}
+
 	blocks[blockIdentifier.Hash] = &blockTransaction{
 		BlockIndex: blockIdentifier.Index,
 	}
@@ -871,6 +884,7 @@ func (b *BlockStorage) FindTransaction(
 		}
 	}
 
+	// If the transaction has been pruned, it will be nil.
 	if newestTransaction == nil {
 		return nil, nil, ErrCannotAccessPrunedData
 	}
@@ -884,6 +898,15 @@ func (b *BlockStorage) findBlockTransaction(
 	transactionIdentifier *types.TransactionIdentifier,
 	txn DatabaseTransaction,
 ) (*types.Transaction, error) {
+	oldestIndex, err := b.GetOldestBlockIndex(ctx, txn)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrOldestIndexRead, err)
+	}
+
+	if blockIdentifier.Index < oldestIndex {
+		return nil, ErrCannotAccessPrunedData
+	}
+
 	namespace, key := getTransactionHashKey(transactionIdentifier)
 	txExists, tx, err := txn.Get(ctx, key)
 	if err != nil {
@@ -922,15 +945,6 @@ func (b *BlockStorage) GetBlockTransaction(
 ) (*types.Transaction, error) {
 	transaction := b.db.NewDatabaseTransaction(ctx, false)
 	defer transaction.Discard(ctx)
-
-	oldestIndex, err := b.GetOldestBlockIndex(ctx, transaction)
-	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrOldestIndexRead, err)
-	}
-
-	if blockIdentifier.Index < oldestIndex {
-		return nil, ErrCannotAccessPrunedData
-	}
 
 	return b.findBlockTransaction(ctx, blockIdentifier, transactionIdentifier, transaction)
 }
