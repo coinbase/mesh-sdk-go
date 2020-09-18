@@ -188,22 +188,25 @@ func (b *BlockStorage) pruneBlock(
 	}
 
 	blockResponse, err := b.getBlockResponse(ctx, &types.PartialBlockIdentifier{Index: &oldestIndex}, dbTx)
-	if err != nil {
+	if err != nil && !errors.Is(err, ErrBlockNotFound) {
 		return -1, err
 	}
 
-	blockIdentifier := blockResponse.Block.BlockIdentifier
-	// Set transactions to empty
-	for _, tx := range blockResponse.OtherTransactions {
-		if err := b.pruneTransaction(ctx, dbTx, blockIdentifier, tx); err != nil {
-			return -1, fmt.Errorf("%w: %v", ErrCannotPruneTransaction, err)
+	// If there is an omitted block, we will have a non-nil error.
+	if err == nil {
+		blockIdentifier := blockResponse.Block.BlockIdentifier
+		// Set transactions to empty
+		for _, tx := range blockResponse.OtherTransactions {
+			if err := b.pruneTransaction(ctx, dbTx, blockIdentifier, tx); err != nil {
+				return -1, fmt.Errorf("%w: %v", ErrCannotPruneTransaction, err)
+			}
 		}
-	}
 
-	// Set block to empty
-	_, blockKey := getBlockHashKey(blockIdentifier.Hash)
-	if err := dbTx.Set(ctx, blockKey, []byte(""), true); err != nil {
-		return -1, err
+		// Set block to empty
+		_, blockKey := getBlockHashKey(blockIdentifier.Hash)
+		if err := dbTx.Set(ctx, blockKey, []byte(""), true); err != nil {
+			return -1, err
+		}
 	}
 
 	// Update prune index

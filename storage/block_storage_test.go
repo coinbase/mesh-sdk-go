@@ -16,6 +16,7 @@ package storage
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 
@@ -321,7 +322,7 @@ func TestBlock(t *testing.T) {
 		firstPruned, lastPruned, err := storage.Prune(ctx, 2)
 		assert.Equal(t, int64(-1), firstPruned)
 		assert.Equal(t, int64(-1), lastPruned)
-		assert.Error(t, ErrPruningFailed, err)
+		assert.True(t, errors.Is(err, ErrPruningFailed))
 	})
 
 	t.Run("Set and get block", func(t *testing.T) {
@@ -378,10 +379,9 @@ func TestBlock(t *testing.T) {
 	t.Run("Get non-existent block", func(t *testing.T) {
 		identifier := types.ConstructPartialBlockIdentifier(badBlockIdentifier)
 		block, err := storage.GetBlock(ctx, identifier)
-		assert.EqualError(
+		assert.True(
 			t,
-			err,
-			fmt.Errorf("%w: %+v", ErrBlockNotFound, identifier).Error(),
+			errors.Is(err, ErrBlockNotFound),
 		)
 		assert.Nil(t, block)
 	})
@@ -390,10 +390,9 @@ func TestBlock(t *testing.T) {
 		badIndex := int64(100000)
 		identifier := &types.PartialBlockIdentifier{Index: &badIndex}
 		block, err := storage.GetBlock(ctx, identifier)
-		assert.EqualError(
+		assert.True(
 			t,
-			err,
-			fmt.Errorf("%w: %+v", ErrBlockNotFound, identifier).Error(),
+			errors.Is(err, ErrBlockNotFound),
 		)
 		assert.Nil(t, block)
 	})
@@ -544,16 +543,39 @@ func TestBlock(t *testing.T) {
 		assert.Equal(t, gapBlock.BlockIdentifier, head)
 	})
 
+	t.Run("Orphan gap block", func(t *testing.T) {
+		err := storage.RemoveBlock(ctx, gapBlock.BlockIdentifier)
+		assert.NoError(t, err)
+
+		head, err := storage.GetHeadBlockIdentifier(ctx)
+		assert.NoError(t, err)
+		assert.Equal(t, gapBlock.ParentBlockIdentifier, head)
+
+		err = storage.AddBlock(ctx, gapBlock)
+		assert.NoError(t, err)
+
+		block, err := storage.GetBlock(
+			ctx,
+			types.ConstructPartialBlockIdentifier(gapBlock.BlockIdentifier),
+		)
+		assert.NoError(t, err)
+		assert.Equal(t, gapBlock, block)
+
+		head, err = storage.GetHeadBlockIdentifier(ctx)
+		assert.NoError(t, err)
+		assert.Equal(t, gapBlock.BlockIdentifier, head)
+	})
+
 	t.Run("Attempt Block Pruning", func(t *testing.T) {
 		firstPruned, lastPruned, err := storage.Prune(ctx, 2)
 		assert.Equal(t, int64(-1), firstPruned)
 		assert.Equal(t, int64(-1), lastPruned)
-		assert.Error(t, ErrPruningDepthInsufficient, err)
+		assert.Contains(t, err.Error(), ErrPruningDepthInsufficient.Error())
 
 		firstPruned, lastPruned, err = storage.Prune(ctx, 100)
 		assert.Equal(t, int64(-1), firstPruned)
 		assert.Equal(t, int64(-1), lastPruned)
-		assert.Error(t, ErrPruningDepthInsufficient, err)
+		assert.Contains(t, err.Error(), ErrPruningDepthInsufficient.Error())
 
 		// Attempt to sync sufficient blocks so we can test pruning
 		for i := int64(gapBlock.BlockIdentifier.Index + 1); i < 200; i++ {
