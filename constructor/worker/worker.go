@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
 	"github.com/coinbase/rosetta-sdk-go/constructor/job"
@@ -70,6 +71,8 @@ func (w *Worker) invokeWorker(
 		return "", AssertWorker(input)
 	case job.FindCurrencyAmount:
 		return FindCurrencyAmountWorker(input)
+	case job.LoadEnv:
+		return LoadEnvWorker(input)
 	default:
 		return "", fmt.Errorf("%w: %s", ErrInvalidActionType, action)
 	}
@@ -672,4 +675,18 @@ func FindCurrencyAmountWorker(rawInput string) (string, error) {
 		ErrActionFailed,
 		types.PrintStruct(input.Currency),
 	)
+}
+
+// LoadEnvWorker loads an environment variable and stores
+// it in state. This is useful for algorithmic fauceting.
+func LoadEnvWorker(rawInput string) (string, error) {
+	// We unmarshal the input here to handle string
+	// unwrapping automatically.
+	var input string
+	err := job.UnmarshalInput([]byte(rawInput), &input)
+	if err != nil {
+		return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
+	}
+
+	return os.Getenv(input), nil
 }
