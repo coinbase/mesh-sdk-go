@@ -591,7 +591,7 @@ func TestBlock(t *testing.T) {
 		assert.Contains(t, err.Error(), ErrPruningDepthInsufficient.Error())
 
 		// Attempt to sync sufficient blocks so we can test pruning
-		for i := int64(gapBlock.BlockIdentifier.Index + 1); i < 200; i++ {
+		for i := gapBlock.BlockIdentifier.Index + 1; i < 200; i++ {
 			blockIdentifier := &types.BlockIdentifier{
 				Index: i,
 				Hash:  fmt.Sprintf("block %d", i),
