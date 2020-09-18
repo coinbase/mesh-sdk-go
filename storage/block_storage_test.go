@@ -607,6 +607,36 @@ func TestBlock(t *testing.T) {
 		assert.Equal(t, int64(0), firstPruned)
 		assert.Equal(t, int64(100), lastPruned)
 		assert.NoError(t, err)
+
+		dbTx := storage.db.NewDatabaseTransaction(ctx, false)
+		oldestIndex, err := storage.GetOldestBlockIndex(ctx, dbTx)
+		dbTx.Discard(ctx)
+		assert.Equal(t, int64(101), oldestIndex)
+		assert.NoError(t, err)
+
+		block, err := storage.GetBlock(
+			ctx,
+			types.ConstructPartialBlockIdentifier(newBlock.BlockIdentifier),
+		)
+		assert.True(t, errors.Is(err, ErrCannotAccessPrunedData))
+		assert.Nil(t, block)
+
+		blockTransaction, err := storage.GetBlockTransaction(
+			ctx,
+			newBlock2.BlockIdentifier,
+			newBlock2.Transactions[0].TransactionIdentifier,
+		)
+		assert.True(t, errors.Is(err, ErrCannotAccessPrunedData))
+		assert.Nil(t, blockTransaction)
+
+		newestBlock, transaction, err := findTransactionWithDbTransaction(
+			ctx,
+			storage,
+			newBlock.Transactions[0].TransactionIdentifier,
+		)
+		assert.True(t, errors.Is(err, ErrCannotAccessPrunedData))
+		assert.Nil(t, newestBlock)
+		assert.Nil(t, transaction)
 	})
 }
 
