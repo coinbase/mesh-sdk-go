@@ -371,6 +371,11 @@ var (
 	ErrOldestIndexUpdateFailed        = errors.New("oldest index update failed")
 	ErrOldestIndexMissing             = errors.New("oldest index missing")
 	ErrOldestIndexRead                = errors.New("cannot read oldest index")
+	ErrCannotRemoveOldest             = errors.New("cannot remove oldest index")
+	ErrCannotAccessPrunedData         = errors.New("cannot access pruned data")
+	ErrNothingToPrune                 = errors.New("nothing to prune")
+	ErrPruningFailed                  = errors.New("pruning failed")
+	ErrPruningDepthInsufficent        = errors.New("pruning depth insufficent")
 
 	BlockStorageErrs = []error{
 		ErrHeadBlockNotFound,
@@ -401,6 +406,11 @@ var (
 		ErrOldestIndexUpdateFailed,
 		ErrOldestIndexMissing,
 		ErrOldestIndexRead,
+		ErrCannotRemoveOldest,
+		ErrCannotAccessPrunedData,
+		ErrNothingToPrune,
+		ErrPruningFailed,
+		ErrPruningDepthInsufficent,
 	}
 )
 

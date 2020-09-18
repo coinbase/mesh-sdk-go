@@ -27,6 +27,11 @@ import (
 )
 
 const (
+	// MinimumPruneDepth is the minimum depth we can prune from.
+	// This protects us from pruning to close to tip and causing
+	// a panic during a reorg.
+	MinimumPruneDepth = 40
+
 	// headBlockKey is used to lookup the head block identifier.
 	// The head block is the block with the largest index that is
 	// not orphaned.
@@ -123,7 +128,7 @@ func (b *BlockStorage) setOldestBlockIndex(
 	value := []byte(strconv.FormatInt(index, 10))
 	if update {
 		if err := dbTx.Set(ctx, key, value, true); err != nil {
-			return fmt.Errorf("%w: %v", ErrOldestIndexUpdateFailed, err)
+			return err
 		}
 
 		return nil
@@ -134,10 +139,12 @@ func (b *BlockStorage) setOldestBlockIndex(
 		return nil
 	}
 
-	return fmt.Errorf("%w: %v", ErrOldestIndexUpdateFailed, err)
+	return err
 }
 
-func (b *BlockStorage) getOldestBlockIndex(
+// GetOldestBlockIndex returns the oldest block index
+// available in BlockStorage.
+func (b *BlockStorage) GetOldestBlockIndex(
 	ctx context.Context,
 	dbTx DatabaseTransaction,
 ) (int64, error) {
@@ -152,10 +159,75 @@ func (b *BlockStorage) getOldestBlockIndex(
 
 	index, err := strconv.ParseInt(string(rawIndex), 10, 64)
 	if err != nil {
-		return -1, fmt.Errorf("%w: %v", ErrOldestIndexRead, err)
+		return -1, err
 	}
 
 	return index, nil
+}
+
+func (b *BlockStorage) pruneBlock(
+	ctx context.Context,
+	index int64,
+) error {
+	dbTx := b.db.NewDatabaseTransaction(ctx, true)
+	defer dbTx.Discard(ctx)
+
+	oldestIndex, err := b.GetOldestBlockIndex(ctx, dbTx)
+	if err != nil {
+		return fmt.Errorf("%w: %v", ErrOldestIndexRead, err)
+	}
+
+	if index < oldestIndex {
+		return ErrNothingToPrune
+	}
+
+	head, err := b.GetHeadBlockIdentifierTransactional(ctx, dbTx)
+	if err != nil {
+		return fmt.Errorf("%w: cannot get head block identifier", err)
+	}
+
+	if oldestIndex >= head.Index-MinimumPruneDepth {
+		return ErrPruningDepthInsufficient
+	}
+
+	// Set transactions to empty
+
+	// Set block to empty
+
+	// Update prune index
+	if err := b.setOldestBlockIndex(ctx, dbTx, true, oldestIndex+1); err != nil {
+		return fmt.Errorf("%w: %v", ErrOldestIndexUpdateFailed, err)
+	}
+
+	// Commit tx
+	if err := dbTx.Commit(ctx); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Prune removes block and transaction data
+// from all blocks with index <= index. Pruning
+// leaves all keys associated with pruned data
+// but overwrites their data to be empty.
+func (b *BlockStorage) Prune(
+	ctx context.Context,
+	index int64,
+) error {
+	for ctx.Err() == nil {
+		err := b.pruneBlock(ctx, index)
+		if err == nil {
+			continue
+		}
+		if errors.Is(err, ErrNothingToPrune) {
+			return nil
+		}
+
+		return fmt.Errorf("%w: %v", ErrPruningFailed, err)
+	}
+
+	return ctx.Err()
 }
 
 // GetHeadBlockIdentifier returns the head block identifier,
@@ -237,7 +309,7 @@ func (b *BlockStorage) getBlockResponse(
 		// Get block by hash if provided
 		namespace, key = getBlockHashKey(*blockIdentifier.Hash)
 		exists, blockResponse, err = transaction.Get(ctx, key)
-	default:
+	case blockIdentifier.Index != nil:
 		// Get block by index if hash not provided
 		exists, key, err = transaction.Get(ctx, getBlockIndexKey(*blockIdentifier.Index))
 		namespace = blockIndexNamespace
@@ -245,6 +317,8 @@ func (b *BlockStorage) getBlockResponse(
 			namespace = blockNamespace
 			exists, blockResponse, err = transaction.Get(ctx, key)
 		}
+	default:
+		return nil, ErrBlockNotFound
 	}
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrBlockGetFailed, err)
@@ -252,6 +326,10 @@ func (b *BlockStorage) getBlockResponse(
 
 	if !exists {
 		return nil, fmt.Errorf("%w: %+v", ErrBlockNotFound, blockIdentifier)
+	}
+
+	if len(blockResponse) == 0 {
+		return nil, ErrCannotAccessPrunedData
 	}
 
 	var rosettaBlockResponse types.BlockResponse
@@ -353,6 +431,10 @@ func (b *BlockStorage) storeBlock(
 		return fmt.Errorf("%w: %v", ErrBlockIdentifierUpdateFailed, err)
 	}
 
+	if err := b.setOldestBlockIndex(ctx, transaction, false, blockIdentifier.Index); err != nil {
+		return fmt.Errorf("%w: %v", ErrOldestIndexUpdateFailed, err)
+	}
+
 	return nil
 }
 
@@ -422,6 +504,18 @@ func (b *BlockStorage) deleteBlock(
 
 	if err := b.StoreHeadBlockIdentifier(ctx, transaction, block.ParentBlockIdentifier); err != nil {
 		return fmt.Errorf("%w: %v", ErrHeadBlockIdentifierUpdateFailed, err)
+	}
+
+	// We return an error if we attempt to remove the oldest index. If we did
+	// not error, it is possible that we could panic as any further block removals
+	// are undefined.
+	oldestIndex, err := b.getOldestBlockIndex(ctx, transaction)
+	if err != nil {
+		return fmt.Errorf("%w: %v", ErrOldestIndexRead, err)
+	}
+
+	if oldestIndex <= block.BlockIdentifier.Index {
+		return ErrCannotRemoveOldest
 	}
 
 	return nil
@@ -756,6 +850,15 @@ func (b *BlockStorage) GetBlockTransaction(
 ) (*types.Transaction, error) {
 	transaction := b.db.NewDatabaseTransaction(ctx, false)
 	defer transaction.Discard(ctx)
+
+	oldestIndex, err := b.getOldestBlockIndex(ctx, transaction)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrOldestIndexRead, err)
+	}
+
+	if blockIdentifier.Index < oldestIndex {
+		return nil, ErrCannotAccessPrunedData
+	}
 
 	return b.findBlockTransaction(ctx, blockIdentifier, transactionIdentifier, transaction)
 }
