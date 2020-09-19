@@ -15,10 +15,16 @@
 package worker
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"log"
+	"net/http"
+	"net/url"
+	"os"
+	"time"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
 	"github.com/coinbase/rosetta-sdk-go/constructor/job"
@@ -70,6 +76,10 @@ func (w *Worker) invokeWorker(
 		return "", AssertWorker(input)
 	case job.FindCurrencyAmount:
 		return FindCurrencyAmountWorker(input)
+	case job.LoadEnv:
+		return LoadEnvWorker(input)
+	case job.HTTPRequest:
+		return HTTPRequestWorker(input)
 	default:
 		return "", fmt.Errorf("%w: %s", ErrInvalidActionType, action)
 	}
@@ -672,4 +682,86 @@ func FindCurrencyAmountWorker(rawInput string) (string, error) {
 		ErrActionFailed,
 		types.PrintStruct(input.Currency),
 	)
+}
+
+// LoadEnvWorker loads an environment variable and stores
+// it in state. This is useful for algorithmic fauceting.
+func LoadEnvWorker(rawInput string) (string, error) {
+	// We unmarshal the input here to handle string
+	// unwrapping automatically.
+	var input string
+	err := job.UnmarshalInput([]byte(rawInput), &input)
+	if err != nil {
+		return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
+	}
+
+	return os.Getenv(input), nil
+}
+
+// HTTPRequestWorker makes an HTTP request and returns the response to
+// store in a variable. This is useful for algorithmic fauceting.
+func HTTPRequestWorker(rawInput string) (string, error) {
+	var input job.HTTPRequestInput
+	err := job.UnmarshalInput([]byte(rawInput), &input)
+	if err != nil {
+		return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
+	}
+
+	if input.Timeout <= 0 {
+		return "", fmt.Errorf("%w: %d is not a valid timeout", ErrInvalidInput, input.Timeout)
+	}
+
+	if _, err := url.ParseRequestURI(input.URL); err != nil {
+		return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
+	}
+
+	client := &http.Client{Timeout: time.Duration(input.Timeout) * time.Second}
+	var request *http.Request
+	switch input.Method {
+	case job.MethodGet:
+		request, err = http.NewRequest(http.MethodGet, input.URL, nil)
+		if err != nil {
+			return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
+		}
+		request.Header.Set("Accept", "application/json")
+	case job.MethodPost:
+		request, err = http.NewRequest(
+			http.MethodPost,
+			input.URL,
+			bytes.NewBufferString(input.Body),
+		)
+		if err != nil {
+			return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
+		}
+		request.Header.Set("Content-Type", "application/json")
+		request.Header.Set("Accept", "application/json")
+	default:
+		return "", fmt.Errorf(
+			"%w: %s is not a supported HTTP method",
+			ErrInvalidInput,
+			input.Method,
+		)
+	}
+
+	resp, err := client.Do(request)
+	if err != nil {
+		return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf(
+			"%w: status code %d with body %s",
+			ErrActionFailed,
+			resp.StatusCode,
+			body,
+		)
+	}
+
+	return string(body), nil
 }
