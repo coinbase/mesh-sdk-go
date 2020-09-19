@@ -1592,6 +1592,16 @@ func TestHTTPRequestWorker(t *testing.T) {
 			dontPrependURL: true,
 			err:            ErrInvalidInput,
 		},
+		"invalid url": {
+			input: &job.HTTPRequestInput{
+				Method:  job.MethodPost,
+				URL:     "blah",
+				Timeout: 100,
+				Body:    `{"address":"123"}`,
+			},
+			dontPrependURL: true,
+			err:            ErrInvalidInput,
+		},
 		"timeout": {
 			input: &job.HTTPRequestInput{
 				Method:  job.MethodGet,
