@@ -18,8 +18,14 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
+	"os"
 	"regexp"
 	"testing"
+	"time"
 
 	"github.com/coinbase/rosetta-sdk-go/constructor/job"
 	mocks "github.com/coinbase/rosetta-sdk-go/mocks/constructor/worker"
@@ -1074,8 +1080,8 @@ func TestJob_ComplicatedTransfer(t *testing.T) {
 				Input: `{"random_number": {{rand_number}}}`,
 			},
 			{
-				Type:       job.SetVariable,
-				Input:      `"10"`,
+				Type:       job.LoadEnv,
+				Input:      `"valA"`,
 				OutputPath: "valA",
 			},
 			{
@@ -1096,6 +1102,7 @@ func TestJob_ComplicatedTransfer(t *testing.T) {
 		},
 	}
 
+	os.Setenv("valA", `"10"`)
 	workflow := &job.Workflow{
 		Name:      string(job.CreateAccount),
 		Scenarios: []*job.Scenario{s, s2},
@@ -1505,6 +1512,175 @@ func TestJob_Failures(t *testing.T) {
 			assert.Equal(t, test.newIndex, j.Index)
 
 			test.helper.AssertExpectations(t)
+		})
+	}
+}
+
+func TestHTTPRequestWorker(t *testing.T) {
+	var tests = map[string]struct {
+		input          *job.HTTPRequestInput
+		dontPrependURL bool
+
+		expectedPath    string
+		expectedLatency int
+		expectedMethod  string
+		expectedBody    string
+
+		response    string
+		contentType string
+		statusCode  int
+
+		output string
+		err    error
+	}{
+		"simple get": {
+			input: &job.HTTPRequestInput{
+				Method:  job.MethodGet,
+				URL:     "/faucet?test=123",
+				Timeout: 100,
+			},
+			expectedPath:    "/faucet?test=123",
+			expectedLatency: 1,
+			expectedMethod:  http.MethodGet,
+			expectedBody:    "",
+			contentType:     "application/json; charset=UTF-8",
+			response:        `{"money":100}`,
+			statusCode:      http.StatusOK,
+			output:          `{"money":100}`,
+		},
+		"simple post": {
+			input: &job.HTTPRequestInput{
+				Method:  job.MethodPost,
+				URL:     "/faucet",
+				Timeout: 100,
+				Body:    `{"address":"123"}`,
+			},
+			expectedPath:    "/faucet",
+			expectedLatency: 1,
+			expectedMethod:  http.MethodPost,
+			expectedBody:    `{"address":"123"}`,
+			contentType:     "application/json; charset=UTF-8",
+			response:        `{"money":100}`,
+			statusCode:      http.StatusOK,
+			output:          `{"money":100}`,
+		},
+		"invalid method": {
+			input: &job.HTTPRequestInput{
+				Method:  "hello",
+				URL:     "/faucet",
+				Timeout: 100,
+				Body:    `{"address":"123"}`,
+			},
+			err: ErrInvalidInput,
+		},
+		"invalid timeout": {
+			input: &job.HTTPRequestInput{
+				Method:  job.MethodPost,
+				URL:     "/faucet",
+				Timeout: -1,
+				Body:    `{"address":"123"}`,
+			},
+			err: ErrInvalidInput,
+		},
+		"no url": {
+			input: &job.HTTPRequestInput{
+				Method:  job.MethodPost,
+				URL:     "",
+				Timeout: 100,
+				Body:    `{"address":"123"}`,
+			},
+			dontPrependURL: true,
+			err:            ErrInvalidInput,
+		},
+		"invalid url": {
+			input: &job.HTTPRequestInput{
+				Method:  job.MethodPost,
+				URL:     "blah",
+				Timeout: 100,
+				Body:    `{"address":"123"}`,
+			},
+			dontPrependURL: true,
+			err:            ErrInvalidInput,
+		},
+		"timeout": {
+			input: &job.HTTPRequestInput{
+				Method:  job.MethodGet,
+				URL:     "/faucet?test=123",
+				Timeout: 1,
+			},
+			expectedPath:    "/faucet?test=123",
+			expectedLatency: 1200,
+			expectedMethod:  http.MethodGet,
+			expectedBody:    "",
+			contentType:     "application/json; charset=UTF-8",
+			response:        `{"money":100}`,
+			statusCode:      http.StatusOK,
+			err:             ErrActionFailed,
+		},
+		"error": {
+			input: &job.HTTPRequestInput{
+				Method:  job.MethodGet,
+				URL:     "/faucet?test=123",
+				Timeout: 10,
+			},
+			expectedPath:    "/faucet?test=123",
+			expectedLatency: 1,
+			expectedMethod:  http.MethodGet,
+			expectedBody:    "",
+			contentType:     "application/json; charset=UTF-8",
+			response:        `{"money":100}`,
+			statusCode:      http.StatusInternalServerError,
+			err:             ErrActionFailed,
+		},
+		"invalid content type": { // we don't throw an error
+			input: &job.HTTPRequestInput{
+				Method:  job.MethodGet,
+				URL:     "/faucet?test=123",
+				Timeout: 10,
+			},
+			expectedPath:    "/faucet?test=123",
+			expectedLatency: 1,
+			expectedMethod:  http.MethodGet,
+			expectedBody:    "",
+			contentType:     "text/plain",
+			response:        `{"money":100}`,
+			statusCode:      http.StatusOK,
+			output:          `{"money":100}`,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, test.expectedMethod, r.Method)
+				assert.Equal(t, test.expectedPath, r.URL.RequestURI())
+				defer r.Body.Close()
+
+				body, err := ioutil.ReadAll(r.Body)
+				assert.NoError(t, err)
+				assert.Equal(t, test.expectedBody, string(body))
+
+				time.Sleep(time.Duration(test.expectedLatency) * time.Millisecond)
+
+				w.Header().Set("Content-Type", test.contentType)
+				w.WriteHeader(test.statusCode)
+				fmt.Fprintf(w, test.response)
+			}))
+
+			defer ts.Close()
+
+			if !test.dontPrependURL {
+				test.input.URL = ts.URL + test.input.URL
+			}
+
+			output, err := HTTPRequestWorker(types.PrintStruct(test.input))
+			if test.err != nil {
+				assert.Equal(t, "", output)
+				assert.True(t, errors.Is(err, test.err))
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, test.output, output)
+			}
 		})
 	}
 }

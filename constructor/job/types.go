@@ -15,6 +15,8 @@
 package job
 
 import (
+	"net/http"
+
 	"github.com/coinbase/rosetta-sdk-go/keys"
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
@@ -122,6 +124,16 @@ const (
 	// ensuring that an account has sufficient balance to pay the
 	// suggested fee to broadcast a transaction.
 	Assert ActionType = "assert"
+
+	// LoadEnv loads some value from an environment variable. This
+	// is very useful injecting an API token for algorithmic fauceting
+	// when running CI.
+	LoadEnv ActionType = "load_env"
+
+	// HTTPRequest makes an HTTP request at some URL. This is useful
+	// for making a request to a faucet to automate Construction API
+	// testing.
+	HTTPRequest ActionType = "http_request"
 )
 
 // Action is a step of computation that
@@ -244,6 +256,28 @@ type RandomNumberInput struct {
 type FindCurrencyAmountInput struct {
 	Currency *types.Currency `json:"currency"`
 	Amounts  []*types.Amount `json:"amounts"`
+}
+
+// HTTPMethod is a type representing
+// allowed HTTP methods.
+type HTTPMethod string
+
+// Supported HTTP Methods
+const (
+	MethodGet  = http.MethodGet
+	MethodPost = http.MethodPost
+)
+
+// HTTPRequestInput is the input to
+// HTTP Request.
+type HTTPRequestInput struct {
+	Method  string `json:"method"`
+	URL     string `json:"url"`
+	Timeout int    `json:"timeout"`
+
+	// If the Method is POST, the Body
+	// can be populated with JSON.
+	Body string `json:"body"`
 }
 
 // Scenario is a collection of Actions with a specific
