@@ -725,7 +725,11 @@ func HTTPRequestWorker(rawInput string) (string, error) {
 		}
 		request.Header.Set("Accept", "application/json")
 	case job.MethodPost:
-		request, err = http.NewRequest(http.MethodPost, input.URL, bytes.NewBufferString(input.Body))
+		request, err = http.NewRequest(
+			http.MethodPost,
+			input.URL,
+			bytes.NewBufferString(input.Body),
+		)
 		if err != nil {
 			return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
 		}
@@ -751,7 +755,12 @@ func HTTPRequestWorker(rawInput string) (string, error) {
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("%w: status code %d with body %s", ErrActionFailed, resp.StatusCode, body)
+		return "", fmt.Errorf(
+			"%w: status code %d with body %s",
+			ErrActionFailed,
+			resp.StatusCode,
+			body,
+		)
 	}
 
 	return string(body), nil
