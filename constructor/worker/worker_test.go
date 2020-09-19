@@ -1518,8 +1518,8 @@ func TestJob_Failures(t *testing.T) {
 
 func TestHTTPRequestWorker(t *testing.T) {
 	var tests = map[string]struct {
-		input      *job.HTTPRequestInput
-		prependURL bool
+		input          *job.HTTPRequestInput
+		dontPrependURL bool
 
 		expectedPath    string
 		expectedLatency int
@@ -1546,6 +1546,77 @@ func TestHTTPRequestWorker(t *testing.T) {
 			statusCode:      http.StatusOK,
 			output:          `{"money":100}`,
 		},
+		"simple post": {
+			input: &job.HTTPRequestInput{
+				Method:  job.MethodPost,
+				URL:     "/faucet",
+				Timeout: 100,
+				Body:    `{"address":"123"}`,
+			},
+			expectedPath:    "/faucet",
+			expectedLatency: 1,
+			expectedMethod:  http.MethodPost,
+			expectedBody:    `{"address":"123"}`,
+			response:        `{"money":100}`,
+			statusCode:      http.StatusOK,
+			output:          `{"money":100}`,
+		},
+		"invalid method": {
+			input: &job.HTTPRequestInput{
+				Method:  "hello",
+				URL:     "/faucet",
+				Timeout: 100,
+				Body:    `{"address":"123"}`,
+			},
+			err: ErrInvalidInput,
+		},
+		"invalid timeout": {
+			input: &job.HTTPRequestInput{
+				Method:  job.MethodPost,
+				URL:     "/faucet",
+				Timeout: -1,
+				Body:    `{"address":"123"}`,
+			},
+			err: ErrInvalidInput,
+		},
+		"no url": {
+			input: &job.HTTPRequestInput{
+				Method:  job.MethodPost,
+				URL:     "",
+				Timeout: 100,
+				Body:    `{"address":"123"}`,
+			},
+			dontPrependURL: true,
+			err:            ErrInvalidInput,
+		},
+		"timeout": {
+			input: &job.HTTPRequestInput{
+				Method:  job.MethodGet,
+				URL:     "/faucet?test=123",
+				Timeout: 1,
+			},
+			expectedPath:    "/faucet?test=123",
+			expectedLatency: 1200,
+			expectedMethod:  http.MethodGet,
+			expectedBody:    "",
+			response:        `{"money":100}`,
+			statusCode:      http.StatusOK,
+			err:             ErrActionFailed,
+		},
+		"error": {
+			input: &job.HTTPRequestInput{
+				Method:  job.MethodGet,
+				URL:     "/faucet?test=123",
+				Timeout: 10,
+			},
+			expectedPath:    "/faucet?test=123",
+			expectedLatency: 1,
+			expectedMethod:  http.MethodGet,
+			expectedBody:    "",
+			response:        `{"money":100}`,
+			statusCode:      http.StatusInternalServerError,
+			err:             ErrActionFailed,
+		},
 	}
 
 	for name, test := range tests {
@@ -1559,7 +1630,7 @@ func TestHTTPRequestWorker(t *testing.T) {
 				assert.NoError(t, err)
 				assert.Equal(t, test.expectedBody, string(body))
 
-				time.Sleep(time.Duration(test.expectedLatency) * time.Second)
+				time.Sleep(time.Duration(test.expectedLatency) * time.Millisecond)
 
 				w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 				w.WriteHeader(test.statusCode)
@@ -1568,7 +1639,10 @@ func TestHTTPRequestWorker(t *testing.T) {
 
 			defer ts.Close()
 
-			test.input.URL = ts.URL + test.input.URL
+			if !test.dontPrependURL {
+				test.input.URL = ts.URL + test.input.URL
+			}
+
 			output, err := HTTPRequestWorker(types.PrintStruct(test.input))
 			if test.err != nil {
 				assert.Equal(t, "", output)
