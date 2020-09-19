@@ -18,9 +18,14 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"regexp"
 	"testing"
+	"time"
 
 	"github.com/coinbase/rosetta-sdk-go/constructor/job"
 	mocks "github.com/coinbase/rosetta-sdk-go/mocks/constructor/worker"
@@ -1507,6 +1512,71 @@ func TestJob_Failures(t *testing.T) {
 			assert.Equal(t, test.newIndex, j.Index)
 
 			test.helper.AssertExpectations(t)
+		})
+	}
+}
+
+func TestHTTPRequestWorker(t *testing.T) {
+	var tests = map[string]struct {
+		input      *job.HTTPRequestInput
+		prependURL bool
+
+		expectedPath    string
+		expectedLatency int
+		expectedMethod  string
+		expectedBody    string
+
+		response   string
+		statusCode int
+
+		output string
+		err    error
+	}{
+		"simple get": {
+			input: &job.HTTPRequestInput{
+				Method:  job.MethodGet,
+				URL:     "/faucet?test=123",
+				Timeout: 100,
+			},
+			expectedPath:    "/faucet?test=123",
+			expectedLatency: 1,
+			expectedMethod:  http.MethodGet,
+			expectedBody:    "",
+			response:        `{"money":100}`,
+			statusCode:      http.StatusOK,
+			output:          `{"money":100}`,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, test.expectedMethod, r.Method)
+				assert.Equal(t, test.expectedPath, r.URL.RequestURI())
+				defer r.Body.Close()
+
+				body, err := ioutil.ReadAll(r.Body)
+				assert.NoError(t, err)
+				assert.Equal(t, test.expectedBody, string(body))
+
+				time.Sleep(time.Duration(test.expectedLatency) * time.Second)
+
+				w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+				w.WriteHeader(test.statusCode)
+				fmt.Fprintf(w, test.response)
+			}))
+
+			defer ts.Close()
+
+			test.input.URL = ts.URL + test.input.URL
+			output, err := HTTPRequestWorker(types.PrintStruct(test.input))
+			if test.err != nil {
+				assert.Equal(t, "", output)
+				assert.True(t, errors.Is(err, test.err))
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, test.output, output)
+			}
 		})
 	}
 }

@@ -271,8 +271,9 @@ const (
 // HTTPRequestInput is the input to
 // HTTP Request.
 type HTTPRequestInput struct {
-	Method string `json:"method"`
-	URL    string `json:"url"`
+	Method  string `json:"method"`
+	URL     string `json:"url"`
+	Timeout int    `json:"timeout"`
 
 	// If the Method is POST, the Body
 	// can be populated with JSON.
