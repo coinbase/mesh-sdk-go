@@ -1526,8 +1526,9 @@ func TestHTTPRequestWorker(t *testing.T) {
 		expectedMethod  string
 		expectedBody    string
 
-		response   string
-		statusCode int
+		response    string
+		contentType string
+		statusCode  int
 
 		output string
 		err    error
@@ -1542,6 +1543,7 @@ func TestHTTPRequestWorker(t *testing.T) {
 			expectedLatency: 1,
 			expectedMethod:  http.MethodGet,
 			expectedBody:    "",
+			contentType:     "application/json; charset=UTF-8",
 			response:        `{"money":100}`,
 			statusCode:      http.StatusOK,
 			output:          `{"money":100}`,
@@ -1557,6 +1559,7 @@ func TestHTTPRequestWorker(t *testing.T) {
 			expectedLatency: 1,
 			expectedMethod:  http.MethodPost,
 			expectedBody:    `{"address":"123"}`,
+			contentType:     "application/json; charset=UTF-8",
 			response:        `{"money":100}`,
 			statusCode:      http.StatusOK,
 			output:          `{"money":100}`,
@@ -1599,6 +1602,7 @@ func TestHTTPRequestWorker(t *testing.T) {
 			expectedLatency: 1200,
 			expectedMethod:  http.MethodGet,
 			expectedBody:    "",
+			contentType:     "application/json; charset=UTF-8",
 			response:        `{"money":100}`,
 			statusCode:      http.StatusOK,
 			err:             ErrActionFailed,
@@ -1613,9 +1617,25 @@ func TestHTTPRequestWorker(t *testing.T) {
 			expectedLatency: 1,
 			expectedMethod:  http.MethodGet,
 			expectedBody:    "",
+			contentType:     "application/json; charset=UTF-8",
 			response:        `{"money":100}`,
 			statusCode:      http.StatusInternalServerError,
 			err:             ErrActionFailed,
+		},
+		"invalid content type": { // we don't throw an error
+			input: &job.HTTPRequestInput{
+				Method:  job.MethodGet,
+				URL:     "/faucet?test=123",
+				Timeout: 10,
+			},
+			expectedPath:    "/faucet?test=123",
+			expectedLatency: 1,
+			expectedMethod:  http.MethodGet,
+			expectedBody:    "",
+			contentType:     "text/plain",
+			response:        `{"money":100}`,
+			statusCode:      http.StatusOK,
+			output:          `{"money":100}`,
 		},
 	}
 
@@ -1632,7 +1652,7 @@ func TestHTTPRequestWorker(t *testing.T) {
 
 				time.Sleep(time.Duration(test.expectedLatency) * time.Millisecond)
 
-				w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+				w.Header().Set("Content-Type", test.contentType)
 				w.WriteHeader(test.statusCode)
 				fmt.Fprintf(w, test.response)
 			}))
