@@ -22,6 +22,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"time"
 
@@ -710,8 +711,8 @@ func HTTPRequestWorker(rawInput string) (string, error) {
 		return "", fmt.Errorf("%w: %d is not a valid timeout", ErrInvalidInput, input.Timeout)
 	}
 
-	if len(input.URL) == 0 {
-		return "", fmt.Errorf("%w: URL is empty", ErrInvalidInput)
+	if _, err := url.ParseRequestURI(input.URL); err != nil {
+		return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
 	}
 
 	client := &http.Client{Timeout: time.Duration(input.Timeout) * time.Second}
@@ -724,11 +725,7 @@ func HTTPRequestWorker(rawInput string) (string, error) {
 		}
 		request.Header.Set("Accept", "application/json")
 	case job.MethodPost:
-		request, err = http.NewRequest(
-			http.MethodPost,
-			input.URL,
-			bytes.NewBufferString(input.Body),
-		)
+		request, err = http.NewRequest(http.MethodPost, input.URL, bytes.NewBufferString(input.Body))
 		if err != nil {
 			return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
 		}
@@ -754,12 +751,7 @@ func HTTPRequestWorker(rawInput string) (string, error) {
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf(
-			"%w: status code %d with body %s",
-			ErrActionFailed,
-			resp.StatusCode,
-			body,
-		)
+		return "", fmt.Errorf("%w: status code %d with body %s", ErrActionFailed, resp.StatusCode, body)
 	}
 
 	return string(body), nil
