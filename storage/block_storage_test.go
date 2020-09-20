@@ -16,6 +16,7 @@ package storage
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 
@@ -317,8 +318,33 @@ func TestBlock(t *testing.T) {
 		assert.Nil(t, transaction)
 	})
 
+	t.Run("Attempt Block Pruning Before Syncing", func(t *testing.T) {
+		firstPruned, lastPruned, err := storage.Prune(ctx, 2)
+		assert.Equal(t, int64(-1), firstPruned)
+		assert.Equal(t, int64(-1), lastPruned)
+		assert.True(t, errors.Is(err, ErrPruningFailed))
+	})
+
+	t.Run("Set genesis block", func(t *testing.T) {
+		oldestIndex, err := storage.GetOldestBlockIndex(ctx)
+		assert.Equal(t, int64(-1), oldestIndex)
+		assert.Error(t, ErrOldestIndexMissing, err)
+
+		err = storage.AddBlock(ctx, genesisBlock)
+		assert.NoError(t, err)
+
+		oldestIndex, err = storage.GetOldestBlockIndex(ctx)
+		assert.Equal(t, int64(0), oldestIndex)
+		assert.NoError(t, err)
+
+		// Ensure we error if trying to remove genesis
+		err = storage.RemoveBlock(ctx, genesisBlock.BlockIdentifier)
+		assert.Contains(t, err.Error(), ErrCannotRemoveOldest.Error())
+		assert.True(t, errors.Is(err, ErrBlockDeleteFailed))
+	})
+
 	t.Run("Set and get block", func(t *testing.T) {
-		err := storage.AddBlock(ctx, newBlock)
+		err = storage.AddBlock(ctx, newBlock)
 		assert.NoError(t, err)
 
 		block, err := storage.GetBlock(
@@ -351,15 +377,18 @@ func TestBlock(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, newBlock.BlockIdentifier, newestBlock)
 		assert.Equal(t, newBlock.Transactions[0], transaction)
+
+		oldestIndex, err := storage.GetOldestBlockIndex(ctx)
+		assert.Equal(t, int64(0), oldestIndex)
+		assert.NoError(t, err)
 	})
 
 	t.Run("Get non-existent block", func(t *testing.T) {
 		identifier := types.ConstructPartialBlockIdentifier(badBlockIdentifier)
 		block, err := storage.GetBlock(ctx, identifier)
-		assert.EqualError(
+		assert.True(
 			t,
-			err,
-			fmt.Errorf("%w: %+v", ErrBlockNotFound, identifier).Error(),
+			errors.Is(err, ErrBlockNotFound),
 		)
 		assert.Nil(t, block)
 	})
@@ -368,10 +397,9 @@ func TestBlock(t *testing.T) {
 		badIndex := int64(100000)
 		identifier := &types.PartialBlockIdentifier{Index: &badIndex}
 		block, err := storage.GetBlock(ctx, identifier)
-		assert.EqualError(
+		assert.True(
 			t,
-			err,
-			fmt.Errorf("%w: %+v", ErrBlockNotFound, identifier).Error(),
+			errors.Is(err, ErrBlockNotFound),
 		)
 		assert.Nil(t, block)
 	})
@@ -383,6 +411,10 @@ func TestBlock(t *testing.T) {
 
 	t.Run("Set duplicate transaction hash (from prior block)", func(t *testing.T) {
 		err = storage.AddBlock(ctx, newBlock2)
+		assert.NoError(t, err)
+
+		oldestIndex, err := storage.GetOldestBlockIndex(ctx)
+		assert.Equal(t, int64(0), oldestIndex)
 		assert.NoError(t, err)
 
 		block, err := storage.GetBlock(
@@ -433,6 +465,10 @@ func TestBlock(t *testing.T) {
 		err := storage.RemoveBlock(ctx, newBlock2.BlockIdentifier)
 		assert.NoError(t, err)
 
+		oldestIndex, err := storage.GetOldestBlockIndex(ctx)
+		assert.Equal(t, int64(0), oldestIndex)
+		assert.NoError(t, err)
+
 		head, err := storage.GetHeadBlockIdentifier(ctx)
 		assert.NoError(t, err)
 		assert.Equal(t, newBlock2.ParentBlockIdentifier, head)
@@ -456,6 +492,10 @@ func TestBlock(t *testing.T) {
 
 	t.Run("Add block with complex metadata", func(t *testing.T) {
 		err := storage.AddBlock(ctx, complexBlock)
+		assert.NoError(t, err)
+
+		oldestIndex, err := storage.GetOldestBlockIndex(ctx)
+		assert.Equal(t, int64(0), oldestIndex)
 		assert.NoError(t, err)
 
 		block, err := storage.GetBlock(
@@ -503,6 +543,100 @@ func TestBlock(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, gapBlock.BlockIdentifier, head)
 	})
+
+	t.Run("Orphan gap block", func(t *testing.T) {
+		err := storage.RemoveBlock(ctx, gapBlock.BlockIdentifier)
+		assert.NoError(t, err)
+
+		head, err := storage.GetHeadBlockIdentifier(ctx)
+		assert.NoError(t, err)
+		assert.Equal(t, gapBlock.ParentBlockIdentifier, head)
+
+		err = storage.AddBlock(ctx, gapBlock)
+		assert.NoError(t, err)
+
+		block, err := storage.GetBlock(
+			ctx,
+			types.ConstructPartialBlockIdentifier(gapBlock.BlockIdentifier),
+		)
+		assert.NoError(t, err)
+		assert.Equal(t, gapBlock, block)
+
+		head, err = storage.GetHeadBlockIdentifier(ctx)
+		assert.NoError(t, err)
+		assert.Equal(t, gapBlock.BlockIdentifier, head)
+	})
+
+	t.Run("Attempt Block Pruning", func(t *testing.T) {
+		firstPruned, lastPruned, err := storage.Prune(ctx, 2)
+		assert.Equal(t, int64(-1), firstPruned)
+		assert.Equal(t, int64(-1), lastPruned)
+		assert.Contains(t, err.Error(), ErrPruningDepthInsufficient.Error())
+
+		firstPruned, lastPruned, err = storage.Prune(ctx, 100)
+		assert.Equal(t, int64(-1), firstPruned)
+		assert.Equal(t, int64(-1), lastPruned)
+		assert.Contains(t, err.Error(), ErrPruningDepthInsufficient.Error())
+
+		// Attempt to sync sufficient blocks so we can test pruning
+		for i := gapBlock.BlockIdentifier.Index + 1; i < 200; i++ {
+			blockIdentifier := &types.BlockIdentifier{
+				Index: i,
+				Hash:  fmt.Sprintf("block %d", i),
+			}
+			parentBlockIndex := blockIdentifier.Index - 1
+			if parentBlockIndex < 0 {
+				parentBlockIndex = 0
+			}
+			parentBlockIdentifier := &types.BlockIdentifier{
+				Index: parentBlockIndex,
+				Hash:  fmt.Sprintf("block %d", parentBlockIndex),
+			}
+
+			block := &types.Block{
+				BlockIdentifier:       blockIdentifier,
+				ParentBlockIdentifier: parentBlockIdentifier,
+			}
+
+			assert.NoError(t, storage.AddBlock(ctx, block))
+			head, err := storage.GetHeadBlockIdentifier(ctx)
+			assert.NoError(t, err)
+			assert.Equal(t, blockIdentifier, head)
+		}
+
+		firstPruned, lastPruned, err = storage.Prune(ctx, 100)
+		assert.Equal(t, int64(0), firstPruned)
+		assert.Equal(t, int64(100), lastPruned)
+		assert.NoError(t, err)
+
+		oldestIndex, err := storage.GetOldestBlockIndex(ctx)
+		assert.Equal(t, int64(101), oldestIndex)
+		assert.NoError(t, err)
+
+		block, err := storage.GetBlock(
+			ctx,
+			types.ConstructPartialBlockIdentifier(newBlock.BlockIdentifier),
+		)
+		assert.True(t, errors.Is(err, ErrCannotAccessPrunedData))
+		assert.Nil(t, block)
+
+		blockTransaction, err := storage.GetBlockTransaction(
+			ctx,
+			newBlock2.BlockIdentifier,
+			newBlock2.Transactions[0].TransactionIdentifier,
+		)
+		assert.True(t, errors.Is(err, ErrCannotAccessPrunedData))
+		assert.Nil(t, blockTransaction)
+
+		newestBlock, transaction, err := findTransactionWithDbTransaction(
+			ctx,
+			storage,
+			newBlock.Transactions[0].TransactionIdentifier,
+		)
+		assert.True(t, errors.Is(err, ErrCannotAccessPrunedData))
+		assert.Nil(t, newestBlock)
+		assert.Nil(t, transaction)
+	})
 }
 
 func TestManyBlocks(t *testing.T) {
@@ -542,6 +676,19 @@ func TestManyBlocks(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, blockIdentifier, head)
 	}
+
+	firstPruned, lastPruned, err := storage.Prune(ctx, 9959)
+	assert.Equal(t, int64(0), firstPruned)
+	assert.Equal(t, int64(9959), lastPruned)
+	assert.NoError(t, err)
+
+	oldestIndex, err := storage.GetOldestBlockIndex(ctx)
+	assert.Equal(t, int64(9960), oldestIndex)
+	assert.NoError(t, err)
+
+	// Attempt to set new start index in pruned territory
+	err = storage.SetNewStartIndex(ctx, 1000)
+	assert.True(t, errors.Is(err, ErrCannotAccessPrunedData))
 }
 
 func TestCreateBlockCache(t *testing.T) {
