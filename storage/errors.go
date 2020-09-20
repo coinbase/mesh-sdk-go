@@ -368,6 +368,15 @@ var (
 	ErrTransactionNotFound            = errors.New("unable to find transaction")
 	ErrTransactionDoesNotExistInBlock = errors.New("transaction does not exist in block")
 	ErrHeadBlockGetFailed             = errors.New("unable to get head block")
+	ErrOldestIndexUpdateFailed        = errors.New("oldest index update failed")
+	ErrOldestIndexMissing             = errors.New("oldest index missing")
+	ErrOldestIndexRead                = errors.New("cannot read oldest index")
+	ErrCannotRemoveOldest             = errors.New("cannot remove oldest index")
+	ErrCannotAccessPrunedData         = errors.New("cannot access pruned data")
+	ErrNothingToPrune                 = errors.New("nothing to prune")
+	ErrPruningFailed                  = errors.New("pruning failed")
+	ErrPruningDepthInsufficient       = errors.New("pruning depth insufficient")
+	ErrCannotPruneTransaction         = errors.New("cannot prune transaction")
 
 	BlockStorageErrs = []error{
 		ErrHeadBlockNotFound,
@@ -395,6 +404,15 @@ var (
 		ErrTransactionNotFound,
 		ErrTransactionDoesNotExistInBlock,
 		ErrHeadBlockGetFailed,
+		ErrOldestIndexUpdateFailed,
+		ErrOldestIndexMissing,
+		ErrOldestIndexRead,
+		ErrCannotRemoveOldest,
+		ErrCannotAccessPrunedData,
+		ErrNothingToPrune,
+		ErrPruningFailed,
+		ErrPruningDepthInsufficient,
+		ErrCannotPruneTransaction,
 	}
 )
 
