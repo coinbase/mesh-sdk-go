@@ -110,7 +110,7 @@ func TestKeypairValidity(t *testing.T) {
 	}
 }
 
-func TestImportPrivKey(t *testing.T) {
+func TestImportPrivateKey(t *testing.T) {
 	importPrivKeyTests := map[string]struct {
 		privKey   string
 		curveType types.CurveType
@@ -121,16 +121,28 @@ func TestImportPrivKey(t *testing.T) {
 			types.Edwards25519,
 			nil,
 		},
-		"simple Secp256k1": {"0b188af56b25d007fbc4bbf2176cd2a54d876ce4774bb5df38b7c83349405b7a", types.Secp256k1, nil},
-		"short ed25519":    {"asd", types.Secp256k1, ErrPrivKeyUndecodable},
-		"short Secp256k1":  {"asd", types.Edwards25519, ErrPrivKeyUndecodable},
-		"long ed25519":     {"aeb121b4c545f0f850e1480492508c65a250e9965b0d90176fab4d7506398ebbaeb121b4c545f0f850e1480492508c65a250e9965b0d90176fab4d7506398ebb", types.Secp256k1, ErrPrivKeyLengthInvalid},
-		"long Secp256k1":   {"0b188af56b25d007fbc4bbf2176cd2a54d876ce4774bb5df38b7c83349405b7a0b188af56b25d007fbc4bbf2176cd2a54d876ce4774bb5df38b7c83349405b7a", types.Edwards25519, ErrPrivKeyLengthInvalid},
+		"simple Secp256k1": {
+			"0b188af56b25d007fbc4bbf2176cd2a54d876ce4774bb5df38b7c83349405b7a",
+			types.Secp256k1,
+			nil,
+		},
+		"short ed25519":   {"asd", types.Secp256k1, ErrPrivKeyUndecodable},
+		"short Secp256k1": {"asd", types.Edwards25519, ErrPrivKeyUndecodable},
+		"long ed25519": {
+			"aeb121b4c545f0f850e1480492508c65a250e9965b0d90176fab4d7506398ebbaeb121b4c545f0f850e1480492508c65a250e9965b0d90176fab4d7506398ebb", // nolint:lll
+			types.Secp256k1,
+			ErrPrivKeyLengthInvalid,
+		},
+		"long Secp256k1": {
+			"0b188af56b25d007fbc4bbf2176cd2a54d876ce4774bb5df38b7c83349405b7a0b188af56b25d007fbc4bbf2176cd2a54d876ce4774bb5df38b7c83349405b7a", // nolint:lll
+			types.Edwards25519,
+			ErrPrivKeyLengthInvalid,
+		},
 	}
 
 	for name, test := range importPrivKeyTests {
 		t.Run(name, func(t *testing.T) {
-			kp, err := ImportPrivKey(test.privKey, test.curveType)
+			kp, err := ImportPrivateKey(test.privKey, test.curveType)
 			if test.err != nil {
 				assert.Nil(t, kp)
 				assert.True(t, errors.Is(err, test.err))
