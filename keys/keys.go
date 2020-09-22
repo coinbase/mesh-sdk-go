@@ -35,6 +35,17 @@ func ImportPrivKey(privKeyHex string, curve types.CurveType) (*KeyPair, error) {
 		return nil, fmt.Errorf("%w: %s", ErrPrivKeyUndecodable, privKeyHex)
 	}
 
+	// We check the parsed private key length to ensure we don't panic (most
+	// crypto libraries panic with incorrect private key lengths instead of
+	// throwing an error).
+	if len(privKey) != PrivKeyBytesLen {
+		return nil, fmt.Errorf(
+			"%w: expected 32 bytes but got %v",
+			ErrPrivKeyLengthInvalid,
+			len(privKey),
+		)
+	}
+
 	switch curve {
 	case types.Secp256k1:
 		rawPrivKey, rawPubKey := btcec.PrivKeyFromBytes(btcec.S256(), privKey)
@@ -125,7 +136,7 @@ func (k *KeyPair) IsValid() error {
 	// Will change if we support more CurveTypes with different privkey sizes
 	if len(k.PrivateKey) != PrivKeyBytesLen {
 		return fmt.Errorf(
-			"%w: expected 32 bytes but go %v",
+			"%w: expected 32 bytes but got %v",
 			ErrPrivKeyLengthInvalid,
 			len(k.PrivateKey),
 		)
