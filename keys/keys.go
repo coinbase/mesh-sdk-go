@@ -40,8 +40,9 @@ func ImportPrivKey(privKeyHex string, curve types.CurveType) (*KeyPair, error) {
 	// throwing an error).
 	if len(privKey) != PrivKeyBytesLen {
 		return nil, fmt.Errorf(
-			"%w: expected 32 bytes but got %v",
+			"%w: expected %d bytes but got %v",
 			ErrPrivKeyLengthInvalid,
+			PrivKeyBytesLen,
 			len(privKey),
 		)
 	}
@@ -73,7 +74,7 @@ func ImportPrivKey(privKeyHex string, curve types.CurveType) (*KeyPair, error) {
 
 		keyPair := &KeyPair{
 			PublicKey:  pubKey,
-			PrivateKey: privKeyBytes,
+			PrivateKey: privKeyBytes.Seed(),
 		}
 
 		return keyPair, nil
@@ -136,8 +137,9 @@ func (k *KeyPair) IsValid() error {
 	// Will change if we support more CurveTypes with different privkey sizes
 	if len(k.PrivateKey) != PrivKeyBytesLen {
 		return fmt.Errorf(
-			"%w: expected 32 bytes but got %v",
+			"%w: expected %d bytes but got %v",
 			ErrPrivKeyLengthInvalid,
+			PrivKeyBytesLen,
 			len(k.PrivateKey),
 		)
 	}
