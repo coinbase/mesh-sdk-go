@@ -28,8 +28,8 @@ import (
 // PrivKeyBytesLen are 32-bytes for all supported curvetypes
 const PrivKeyBytesLen = 32
 
-// ImportPrivKey returns a Keypair from a hex-encoded privkey string
-func ImportPrivKey(privKeyHex string, curve types.CurveType) (*KeyPair, error) {
+// ImportPrivateKey returns a Keypair from a hex-encoded privkey string
+func ImportPrivateKey(privKeyHex string, curve types.CurveType) (*KeyPair, error) {
 	privKey, err := hex.DecodeString(privKeyHex)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %s", ErrPrivKeyUndecodable, privKeyHex)
@@ -134,7 +134,9 @@ func (k *KeyPair) IsValid() error {
 		return err
 	}
 
-	// Will change if we support more CurveTypes with different privkey sizes
+	// We will need to add a switch statement here if we add support
+	// for CurveTypes that have a different private key length than
+	// PrivKeyBytesLen.
 	if len(k.PrivateKey) != PrivKeyBytesLen {
 		return fmt.Errorf(
 			"%w: expected %d bytes but got %v",

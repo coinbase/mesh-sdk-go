@@ -254,9 +254,8 @@ func (k *KeyStorage) RandomAccount(ctx context.Context) (*types.AccountIdentifie
 
 // ImportAccounts loads a set of prefunded accounts into key storage.
 func (k *KeyStorage) ImportAccounts(ctx context.Context, accounts []*PrefundedAccount) error {
-	// Import prefunded account and save to database
 	for _, acc := range accounts {
-		keyPair, err := keys.ImportPrivKey(acc.PrivateKeyHex, acc.CurveType)
+		keyPair, err := keys.ImportPrivateKey(acc.PrivateKeyHex, acc.CurveType)
 		if err != nil {
 			return fmt.Errorf("%w: %v", ErrAddrImportFailed, err)
 		}

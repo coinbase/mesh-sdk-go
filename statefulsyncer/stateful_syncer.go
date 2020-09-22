@@ -35,7 +35,7 @@ const (
 	// DefaultPruningDepth is the depth from tip
 	// we attempt to prune. A large pruning depth here
 	// protects us from re-orgs.
-	DefaultPruningDepth = int64(100)
+	DefaultPruningDepth = int64(100) // nolint:gomnd
 
 	// pruneSleepTime is how long we sleep between
 	// pruning attempts.
