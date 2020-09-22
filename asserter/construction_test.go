@@ -60,6 +60,10 @@ func TestConstructionPreprocessResponse(t *testing.T) {
 		"nil response": {
 			err: ErrConstructionPreprocessResponseIsNil,
 		},
+		"nil options": {
+			response: &types.ConstructionPreprocessResponse{},
+			err:      ErrConstructionPreprocessOptionsIsNil,
+		},
 	}
 
 	for name, test := range tests {

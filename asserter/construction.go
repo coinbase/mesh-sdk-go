@@ -29,6 +29,10 @@ func ConstructionPreprocessResponse(
 		return ErrConstructionPreprocessResponseIsNil
 	}
 
+	if response.Options == nil {
+		return ErrConstructionPreprocessOptionsIsNil
+	}
+
 	for _, accountIdentifier := range response.RequiredPublicKeys {
 		if err := AccountIdentifier(accountIdentifier); err != nil {
 			return err

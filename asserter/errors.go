@@ -153,6 +153,9 @@ var (
 	ErrConstructionPreprocessResponseIsNil = errors.New(
 		"ConstructionPreprocessResponse cannot be nil",
 	)
+	ErrConstructionPreprocessOptionsIsNil = errors.New(
+		"ConstructionPreprocessResponse.Options cannot be nil",
+	)
 	ErrConstructionMetadataResponseIsNil = errors.New(
 		"ConstructionMetadataResponse cannot be nil",
 	)
