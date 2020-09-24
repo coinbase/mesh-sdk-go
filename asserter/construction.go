@@ -15,6 +15,7 @@
 package asserter
 
 import (
+	"bytes"
 	"fmt"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
@@ -196,6 +197,10 @@ func PublicKey(
 
 	if len(publicKey.Bytes) == 0 {
 		return ErrPublicKeyBytesEmpty
+	}
+
+	if bytes.Compare(publicKey.Bytes, make([]byte, len(publicKey.Bytes))) == 0 {
+		return ErrPublicKeyBytesZero
 	}
 
 	if err := CurveType(publicKey.CurveType); err != nil {
