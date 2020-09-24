@@ -64,8 +64,7 @@ func ImportPrivateKey(privKeyHex string, curve types.CurveType) (*KeyPair, error
 		return keyPair, nil
 	case types.Edwards25519:
 		privKeyBytes := ed25519.NewKeyFromSeed(privKey)
-		pubKeyBytes := make([]byte, ed25519.PublicKeySize)
-		copy(pubKeyBytes, privKey[32:])
+		pubKeyBytes := privKeyBytes.Public().(ed25519.PublicKey)
 
 		pubKey := &types.PublicKey{
 			Bytes:     pubKeyBytes,
