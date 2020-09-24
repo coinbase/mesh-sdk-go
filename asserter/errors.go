@@ -200,11 +200,15 @@ var (
 	ErrSigningPayloadBytesEmpty = errors.New(
 		"signing payload bytes cannot be empty",
 	)
+	ErrSigningPayloadBytesZero = errors.New(
+		"signing payload bytes cannot be 0",
+	)
 	ErrSignaturesEmpty               = errors.New("signatures cannot be empty")
 	ErrSignaturesReturnedSigMismatch = errors.New(
 		"requested signature type does not match returned signature type",
 	)
 	ErrSignatureBytesEmpty       = errors.New("signature bytes cannot be empty")
+	ErrSignatureBytesZero        = errors.New("signature bytes cannot be 0")
 	ErrSignatureTypeNotSupported = errors.New("not a supported SignatureType")
 
 	ConstructionErrs = []error{
@@ -226,13 +230,16 @@ var (
 		ErrConstructionPayloadsResponsePayloadsEmpty,
 		ErrPublicKeyIsNil,
 		ErrPublicKeyBytesEmpty,
+		ErrPublicKeyBytesZero,
 		ErrCurveTypeNotSupported,
 		ErrSigningPayloadIsNil,
 		ErrSigningPayloadAddrEmpty,
 		ErrSigningPayloadBytesEmpty,
+		ErrSigningPayloadBytesZero,
 		ErrSignaturesEmpty,
 		ErrSignaturesReturnedSigMismatch,
 		ErrSignatureBytesEmpty,
+		ErrSignatureBytesZero,
 		ErrSignatureTypeNotSupported,
 	}
 

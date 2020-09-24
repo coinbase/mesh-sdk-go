@@ -15,7 +15,6 @@
 package asserter
 
 import (
-	"bytes"
 	"fmt"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
@@ -199,7 +198,7 @@ func PublicKey(
 		return ErrPublicKeyBytesEmpty
 	}
 
-	if bytes.Equal(publicKey.Bytes, make([]byte, len(publicKey.Bytes))) {
+	if BytesArrayZero(publicKey.Bytes) {
 		return ErrPublicKeyBytesZero
 	}
 
@@ -240,6 +239,10 @@ func SigningPayload(
 
 	if len(signingPayload.Bytes) == 0 {
 		return ErrSigningPayloadBytesEmpty
+	}
+
+	if BytesArrayZero(signingPayload.Bytes) {
+		return ErrSigningPayloadBytesZero
 	}
 
 	// SignatureType can be optionally populated
@@ -285,6 +288,10 @@ func Signatures(
 
 		if len(signature.Bytes) == 0 {
 			return fmt.Errorf("%w: signature %d has 0 bytes", ErrSignatureBytesEmpty, i)
+		}
+
+		if BytesArrayZero(signature.Bytes) {
+			return ErrSignatureBytesZero
 		}
 	}
 
