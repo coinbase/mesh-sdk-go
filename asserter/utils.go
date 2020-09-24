@@ -15,6 +15,7 @@
 package asserter
 
 import (
+	"bytes"
 	"fmt"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
@@ -64,4 +65,10 @@ func AccountArray(arrName string, arr []*types.AccountIdentifier) error {
 	}
 
 	return nil
+}
+
+// BytesArrayZero returns a boolean indicating if
+// all elements in an array are 0.
+func BytesArrayZero(arr []byte) bool {
+	return bytes.Equal(arr, make([]byte, len(arr)))
 }
