@@ -199,7 +199,7 @@ func PublicKey(
 		return ErrPublicKeyBytesEmpty
 	}
 
-	if bytes.Compare(publicKey.Bytes, make([]byte, len(publicKey.Bytes))) == 0 {
+	if bytes.Equal(publicKey.Bytes, make([]byte, len(publicKey.Bytes))) {
 		return ErrPublicKeyBytesZero
 	}
 
