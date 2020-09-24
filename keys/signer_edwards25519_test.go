@@ -63,6 +63,7 @@ func TestSignEdwards25519(t *testing.T) {
 		if !test.err {
 			assert.NoError(t, err)
 			assert.Len(t, signature.Bytes, 64)
+			assert.Equal(t, signerEdwards25519.PublicKey(), signature.PublicKey)
 		} else {
 			assert.Contains(t, err.Error(), test.errMsg.Error())
 		}

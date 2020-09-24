@@ -62,6 +62,7 @@ func TestSignSecp256k1(t *testing.T) {
 		if !test.err {
 			assert.NoError(t, err)
 			assert.Equal(t, len(signature.Bytes), test.sigLen)
+			assert.Equal(t, signerSecp256k1.PublicKey(), signature.PublicKey)
 		} else {
 			assert.Contains(t, err.Error(), test.errMsg.Error())
 		}
