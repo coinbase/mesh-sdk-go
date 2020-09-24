@@ -191,6 +191,7 @@ var (
 	ErrConstructionPayloadsResponsePayloadsEmpty = errors.New("signing payloads cannot be empty")
 	ErrPublicKeyIsNil                            = errors.New("PublicKey cannot be nil")
 	ErrPublicKeyBytesEmpty                       = errors.New("public key bytes cannot be empty")
+	ErrPublicKeyBytesZero                        = errors.New("public key bytes 0")
 	ErrCurveTypeNotSupported                     = errors.New("not a supported CurveType")
 	ErrSigningPayloadIsNil                       = errors.New("signing payload cannot be nil")
 	ErrSigningPayloadAddrEmpty                   = errors.New(
