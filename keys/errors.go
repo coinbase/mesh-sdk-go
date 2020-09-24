@@ -24,6 +24,7 @@ import (
 var (
 	ErrPrivKeyUndecodable   = errors.New("could not decode privkey")
 	ErrPrivKeyLengthInvalid = errors.New("invalid privkey length")
+	ErrPrivKeyZero          = errors.New("privkey cannot be 0")
 
 	ErrKeyGenSecp256k1Failed = errors.New(
 		"keygen: error generating key pair for secp256k1 curve type",
@@ -56,6 +57,7 @@ func Err(err error) bool {
 	keyErrors := []error{
 		ErrPrivKeyUndecodable,
 		ErrPrivKeyLengthInvalid,
+		ErrPrivKeyZero,
 		ErrKeyGenSecp256k1Failed,
 		ErrKeyGenEdwards25519Failed,
 		ErrCurveTypeNotSupported,

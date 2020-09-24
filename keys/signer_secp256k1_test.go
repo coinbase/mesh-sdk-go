@@ -108,17 +108,20 @@ func TestVerifySecp256k1(t *testing.T) {
 	testSignatureEcdsa, _ := signerSecp256k1.Sign(payloadEcdsa, types.Ecdsa)
 	testSignatureEcdsaRecovery, _ := signerSecp256k1.Sign(payloadEcdsaRecovery, types.EcdsaRecovery)
 
+	simpleBytes := make([]byte, 33)
+	copy(simpleBytes, "hello")
+
 	var signatureTests = []signatureTest{
 		{mockSecpSignature(
 			types.Ed25519,
 			signerSecp256k1.PublicKey(),
 			hash("hello"),
-			make([]byte, 33)), ErrVerifyUnsupportedSignatureType},
+			simpleBytes), ErrVerifyUnsupportedSignatureType},
 		{mockSecpSignature(
 			types.Ecdsa,
 			signerSecp256k1.PublicKey(),
 			hash("hello"),
-			make([]byte, 33)), ErrVerifyFailed},
+			simpleBytes), ErrVerifyFailed},
 	}
 
 	for _, test := range signatureTests {

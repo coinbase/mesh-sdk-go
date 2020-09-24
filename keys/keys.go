@@ -28,6 +28,26 @@ import (
 // PrivKeyBytesLen are 32-bytes for all supported curvetypes
 const PrivKeyBytesLen = 32
 
+func privateKeyValid(privateKey []byte) error {
+	// We will need to add a switch statement here if we add support
+	// for CurveTypes that have a different private key length than
+	// PrivKeyBytesLen.
+	if len(privateKey) != PrivKeyBytesLen {
+		return fmt.Errorf(
+			"%w: expected %d bytes but got %v",
+			ErrPrivKeyLengthInvalid,
+			PrivKeyBytesLen,
+			len(privateKey),
+		)
+	}
+
+	if asserter.BytesArrayZero(privateKey) {
+		return ErrPrivKeyZero
+	}
+
+	return nil
+}
+
 // ImportPrivateKey returns a Keypair from a hex-encoded privkey string
 func ImportPrivateKey(privKeyHex string, curve types.CurveType) (*KeyPair, error) {
 	privKey, err := hex.DecodeString(privKeyHex)
@@ -38,15 +58,11 @@ func ImportPrivateKey(privKeyHex string, curve types.CurveType) (*KeyPair, error
 	// We check the parsed private key length to ensure we don't panic (most
 	// crypto libraries panic with incorrect private key lengths instead of
 	// throwing an error).
-	if len(privKey) != PrivKeyBytesLen {
-		return nil, fmt.Errorf(
-			"%w: expected %d bytes but got %v",
-			ErrPrivKeyLengthInvalid,
-			PrivKeyBytesLen,
-			len(privKey),
-		)
+	if err := privateKeyValid(privKey); err != nil {
+		return nil, err
 	}
 
+	var keyPair *KeyPair
 	switch curve {
 	case types.Secp256k1:
 		rawPrivKey, rawPubKey := btcec.PrivKeyFromBytes(btcec.S256(), privKey)
@@ -56,12 +72,10 @@ func ImportPrivateKey(privKeyHex string, curve types.CurveType) (*KeyPair, error
 			CurveType: curve,
 		}
 
-		keyPair := &KeyPair{
+		keyPair = &KeyPair{
 			PublicKey:  pubKey,
 			PrivateKey: rawPrivKey.Serialize(),
 		}
-
-		return keyPair, nil
 	case types.Edwards25519:
 		rawPrivKey := ed25519.NewKeyFromSeed(privKey)
 
@@ -70,19 +84,27 @@ func ImportPrivateKey(privKeyHex string, curve types.CurveType) (*KeyPair, error
 			CurveType: curve,
 		}
 
-		keyPair := &KeyPair{
+		keyPair = &KeyPair{
 			PublicKey:  pubKey,
 			PrivateKey: rawPrivKey.Seed(),
 		}
-
-		return keyPair, nil
 	default:
 		return nil, fmt.Errorf("%w: %s", ErrCurveTypeNotSupported, curve)
 	}
+
+	// We test for validity before returning
+	// the new KeyPair.
+	if err := keyPair.IsValid(); err != nil {
+		return nil, err
+	}
+
+	return keyPair, nil
 }
 
 // GenerateKeypair returns a Keypair of a specified CurveType
 func GenerateKeypair(curve types.CurveType) (*KeyPair, error) {
+	var keyPair *KeyPair
+
 	switch curve {
 	case types.Secp256k1:
 		rawPrivKey, err := btcec.NewPrivateKey(btcec.S256())
@@ -96,12 +118,10 @@ func GenerateKeypair(curve types.CurveType) (*KeyPair, error) {
 			CurveType: curve,
 		}
 
-		keyPair := &KeyPair{
+		keyPair = &KeyPair{
 			PublicKey:  pubKey,
 			PrivateKey: rawPrivKey.Serialize(),
 		}
-
-		return keyPair, nil
 	case types.Edwards25519:
 		rawPubKey, rawPrivKey, err := ed25519.GenerateKey(nil)
 		if err != nil {
@@ -113,35 +133,31 @@ func GenerateKeypair(curve types.CurveType) (*KeyPair, error) {
 			CurveType: curve,
 		}
 
-		keyPair := &KeyPair{
+		keyPair = &KeyPair{
 			PublicKey:  pubKey,
 			PrivateKey: rawPrivKey.Seed(),
 		}
-
-		return keyPair, nil
 	default:
 		return nil, fmt.Errorf("%w: %s", ErrCurveTypeNotSupported, curve)
 	}
+
+	// We test for validity before returning
+	// the new KeyPair.
+	if err := keyPair.IsValid(); err != nil {
+		return nil, err
+	}
+
+	return keyPair, nil
 }
 
-// IsValid checks the validity of a keypair
+// IsValid checks the validity of a KeyPair.
 func (k *KeyPair) IsValid() error {
-	// Checks if valid PublicKey and CurveType
-	err := asserter.PublicKey(k.PublicKey)
-	if err != nil {
+	if err := asserter.PublicKey(k.PublicKey); err != nil {
 		return err
 	}
 
-	// We will need to add a switch statement here if we add support
-	// for CurveTypes that have a different private key length than
-	// PrivKeyBytesLen.
-	if len(k.PrivateKey) != PrivKeyBytesLen {
-		return fmt.Errorf(
-			"%w: expected %d bytes but got %v",
-			ErrPrivKeyLengthInvalid,
-			PrivKeyBytesLen,
-			len(k.PrivateKey),
-		)
+	if err := privateKeyValid(k.PrivateKey); err != nil {
+		return err
 	}
 
 	return nil
