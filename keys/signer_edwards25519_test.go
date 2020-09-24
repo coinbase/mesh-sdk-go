@@ -63,6 +63,7 @@ func TestSignEdwards25519(t *testing.T) {
 		if !test.err {
 			assert.NoError(t, err)
 			assert.Len(t, signature.Bytes, 64)
+			assert.Equal(t, signerEdwards25519.PublicKey(), signature.PublicKey)
 		} else {
 			assert.Contains(t, err.Error(), test.errMsg.Error())
 		}
@@ -95,9 +96,12 @@ func TestVerifyEdwards25519(t *testing.T) {
 		errMsg    error
 	}
 
+	simpleBytes := make([]byte, 32)
+	copy(simpleBytes, "hello")
+
 	payload := &types.SigningPayload{
 		AccountIdentifier: &types.AccountIdentifier{Address: "test"},
-		Bytes:             make([]byte, 32),
+		Bytes:             simpleBytes,
 		SignatureType:     types.Ed25519,
 	}
 	testSignature, err := signerEdwards25519.Sign(payload, types.Ed25519)
@@ -107,17 +111,22 @@ func TestVerifyEdwards25519(t *testing.T) {
 		{mockSignature(
 			types.Ecdsa,
 			signerEdwards25519.PublicKey(),
-			make([]byte, 32),
-			make([]byte, 32)), ErrVerifyUnsupportedPayloadSignatureType},
+			simpleBytes,
+			simpleBytes), ErrVerifyUnsupportedPayloadSignatureType},
 		{mockSignature(
 			types.EcdsaRecovery,
 			signerEdwards25519.PublicKey(),
-			make([]byte, 32),
-			make([]byte, 32)), ErrVerifyUnsupportedPayloadSignatureType},
+			simpleBytes,
+			simpleBytes), ErrVerifyUnsupportedPayloadSignatureType},
 		{mockSignature(
 			types.Ed25519,
 			signerEdwards25519.PublicKey(),
-			make([]byte, 40),
+			func() []byte {
+				b := make([]byte, 40)
+				copy(b, "hello")
+
+				return b
+			}(),
 			testSignature.Bytes), ErrVerifyFailed},
 	}
 
@@ -129,7 +138,7 @@ func TestVerifyEdwards25519(t *testing.T) {
 	goodSignature := mockSignature(
 		types.Ed25519,
 		signerEdwards25519.PublicKey(),
-		make([]byte, 32),
+		simpleBytes,
 		testSignature.Bytes,
 	)
 	assert.Equal(t, nil, signerEdwards25519.Verify(goodSignature))

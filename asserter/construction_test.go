@@ -591,6 +591,13 @@ func TestPublicKey(t *testing.T) {
 				CurveType: types.Secp256k1,
 			},
 		},
+		"zero public key": {
+			publicKey: &types.PublicKey{
+				Bytes:     []byte{0, 0, 0, 0},
+				CurveType: types.Secp256k1,
+			},
+			err: ErrPublicKeyBytesZero,
+		},
 		"nil public key": {
 			err: ErrPublicKeyIsNil,
 		},

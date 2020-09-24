@@ -198,6 +198,10 @@ func PublicKey(
 		return ErrPublicKeyBytesEmpty
 	}
 
+	if BytesArrayZero(publicKey.Bytes) {
+		return ErrPublicKeyBytesZero
+	}
+
 	if err := CurveType(publicKey.CurveType); err != nil {
 		return fmt.Errorf("%w public key curve type is not supported", err)
 	}
@@ -235,6 +239,10 @@ func SigningPayload(
 
 	if len(signingPayload.Bytes) == 0 {
 		return ErrSigningPayloadBytesEmpty
+	}
+
+	if BytesArrayZero(signingPayload.Bytes) {
+		return ErrSigningPayloadBytesZero
 	}
 
 	// SignatureType can be optionally populated
@@ -280,6 +288,10 @@ func Signatures(
 
 		if len(signature.Bytes) == 0 {
 			return fmt.Errorf("%w: signature %d has 0 bytes", ErrSignatureBytesEmpty, i)
+		}
+
+		if BytesArrayZero(signature.Bytes) {
+			return ErrSignatureBytesZero
 		}
 	}
 

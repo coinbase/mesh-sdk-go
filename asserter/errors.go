@@ -191,6 +191,7 @@ var (
 	ErrConstructionPayloadsResponsePayloadsEmpty = errors.New("signing payloads cannot be empty")
 	ErrPublicKeyIsNil                            = errors.New("PublicKey cannot be nil")
 	ErrPublicKeyBytesEmpty                       = errors.New("public key bytes cannot be empty")
+	ErrPublicKeyBytesZero                        = errors.New("public key bytes 0")
 	ErrCurveTypeNotSupported                     = errors.New("not a supported CurveType")
 	ErrSigningPayloadIsNil                       = errors.New("signing payload cannot be nil")
 	ErrSigningPayloadAddrEmpty                   = errors.New(
@@ -199,11 +200,15 @@ var (
 	ErrSigningPayloadBytesEmpty = errors.New(
 		"signing payload bytes cannot be empty",
 	)
+	ErrSigningPayloadBytesZero = errors.New(
+		"signing payload bytes cannot be 0",
+	)
 	ErrSignaturesEmpty               = errors.New("signatures cannot be empty")
 	ErrSignaturesReturnedSigMismatch = errors.New(
 		"requested signature type does not match returned signature type",
 	)
 	ErrSignatureBytesEmpty       = errors.New("signature bytes cannot be empty")
+	ErrSignatureBytesZero        = errors.New("signature bytes cannot be 0")
 	ErrSignatureTypeNotSupported = errors.New("not a supported SignatureType")
 
 	ConstructionErrs = []error{
@@ -225,13 +230,16 @@ var (
 		ErrConstructionPayloadsResponsePayloadsEmpty,
 		ErrPublicKeyIsNil,
 		ErrPublicKeyBytesEmpty,
+		ErrPublicKeyBytesZero,
 		ErrCurveTypeNotSupported,
 		ErrSigningPayloadIsNil,
 		ErrSigningPayloadAddrEmpty,
 		ErrSigningPayloadBytesEmpty,
+		ErrSigningPayloadBytesZero,
 		ErrSignaturesEmpty,
 		ErrSignaturesReturnedSigMismatch,
 		ErrSignatureBytesEmpty,
+		ErrSignatureBytesZero,
 		ErrSignatureTypeNotSupported,
 	}
 
