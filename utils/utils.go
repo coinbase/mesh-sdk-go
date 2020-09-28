@@ -17,13 +17,13 @@ package utils
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"math/big"
-	"math/rand"
 	"os"
 	"path"
 	"time"
@@ -33,10 +33,6 @@ import (
 
 	"github.com/fatih/color"
 )
-
-func init() {
-	rand.Seed(time.Now().UTC().UnixNano())
-}
 
 const (
 	// DefaultFilePermissions specifies that the user can
@@ -241,11 +237,13 @@ func Zero() *big.Float {
 }
 
 // RandomNumber returns some number in the range [minimum, maximum).
-// Source: https://golang.org/pkg/math/big/#Int.Rand
+// Source: https://golang.org/pkg/crypto/rand/#Int
 func RandomNumber(minimum *big.Int, maximum *big.Int) *big.Int {
-	source := rand.New(rand.NewSource(time.Now().UnixNano()))
 	transformed := new(big.Int).Sub(maximum, minimum)
-	addition := new(big.Int).Rand(source, transformed)
+	addition, err := rand.Int(rand.Reader, transformed)
+	if err != nil {
+		log.Fatalf("cannot get random number: %v", err)
+	}
 
 	return new(big.Int).Add(minimum, addition)
 }

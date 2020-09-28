@@ -18,11 +18,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math/rand"
-	"time"
+	"math/big"
 
 	"github.com/coinbase/rosetta-sdk-go/keys"
 	"github.com/coinbase/rosetta-sdk-go/types"
+	"github.com/coinbase/rosetta-sdk-go/utils"
 )
 
 // WARNING: KEY STORAGE USING THIS PACKAGE IS NOT SECURE!!!! ONLY USE
@@ -34,10 +34,6 @@ type PrefundedAccount struct {
 	AccountIdentifier *types.AccountIdentifier `json:"account_identifier"`
 	CurveType         types.CurveType          `json:"curve_type"`
 	Currency          *types.Currency          `json:"currency"`
-}
-
-func init() {
-	rand.Seed(time.Now().UTC().UnixNano())
 }
 
 const (
@@ -249,7 +245,8 @@ func (k *KeyStorage) RandomAccount(ctx context.Context) (*types.AccountIdentifie
 		return nil, ErrNoAddrAvailable
 	}
 
-	return accounts[rand.Intn(len(accounts))], nil
+	randomNumber := utils.RandomNumber(big.NewInt(0), big.NewInt(int64(len(accounts))))
+	return accounts[randomNumber.Int64()], nil
 }
 
 // ImportAccounts loads a set of prefunded accounts into key storage.
