@@ -974,9 +974,8 @@ func (b *BlockStorage) AtTip(
 		return false, nil, fmt.Errorf("%w: %v", ErrHeadBlockGetFailed, err)
 	}
 
-	currentTime := utils.Milliseconds()
-	tipCutoff := currentTime - (tipDelay * utils.MillisecondsInSecond)
-	if block.Timestamp < tipCutoff {
+	atTip := utils.AtTip(tipDelay, block.Timestamp)
+	if !atTip {
 		return false, nil, nil
 	}
 

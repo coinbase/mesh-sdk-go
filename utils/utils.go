@@ -388,3 +388,38 @@ func GetAccountBalances(
 
 	return accountBalances, nil
 }
+
+// AtTip returns a boolean indicating if a block timestamp
+// is within tipDelay from the current time.
+func AtTip(
+	tipDelay int64,
+	blockTimestamp int64,
+) bool {
+	currentTime := Milliseconds()
+	tipCutoff := currentTime - (tipDelay * MillisecondsInSecond)
+	if blockTimestamp < tipCutoff {
+		return false
+	}
+
+	return true
+}
+
+// CheckAtTip returns a boolean indicating if a
+// Rosetta implementation is at tip.
+func CheckAtTip(
+	ctx context.Context,
+	networkIdentifier *types.NetworkIdentifier,
+	helper FetcherHelper,
+	tipDelay int64,
+) (bool, error) {
+	status, fetchErr := helper.NetworkStatusRetry(
+		ctx,
+		networkIdentifier,
+		nil,
+	)
+	if fetchErr != nil {
+		return false, fmt.Errorf("%w: unable to get network status", fetchErr.Err)
+	}
+
+	return AtTip(tipDelay, status.CurrentBlockTimestamp), nil
+}
