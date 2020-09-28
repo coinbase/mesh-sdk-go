@@ -16,6 +16,7 @@ package utils
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/big"
 	"os"
@@ -388,4 +389,96 @@ func TestGetAccountBalances(t *testing.T) {
 	)
 	assert.Nil(t, accBalances)
 	assert.Error(t, err)
+}
+
+func TestCheckAtTip(t *testing.T) {
+	ctx := context.Background()
+
+	tests := map[string]struct {
+		helper   *mocks.FetcherHelper
+		tipDelay int64
+
+		expectedResult bool
+		expectedError  error
+	}{
+		"at tip": {
+			helper: func() *mocks.FetcherHelper {
+				mockHelper := &mocks.FetcherHelper{}
+
+				mockHelper.On(
+					"NetworkStatusRetry",
+					ctx,
+					network,
+					map[string]interface{}(nil),
+				).Return(
+					&types.NetworkStatusResponse{
+						CurrentBlockTimestamp: Milliseconds(),
+					},
+					nil,
+				).Once()
+
+				return mockHelper
+			}(),
+			tipDelay:       100,
+			expectedResult: true,
+			expectedError:  nil,
+		},
+		"not at tip": {
+			helper: func() *mocks.FetcherHelper {
+				mockHelper := &mocks.FetcherHelper{}
+
+				mockHelper.On(
+					"NetworkStatusRetry",
+					ctx,
+					network,
+					map[string]interface{}(nil),
+				).Return(
+					&types.NetworkStatusResponse{
+						CurrentBlockTimestamp: Milliseconds() - 300*MillisecondsInSecond,
+					},
+					nil,
+				).Once()
+
+				return mockHelper
+			}(),
+			tipDelay:       100,
+			expectedResult: false,
+			expectedError:  nil,
+		},
+		"error": {
+			helper: func() *mocks.FetcherHelper {
+				mockHelper := &mocks.FetcherHelper{}
+
+				mockHelper.On(
+					"NetworkStatusRetry",
+					ctx,
+					network,
+					map[string]interface{}(nil),
+				).Return(
+					nil,
+					&fetcher.Error{
+						Err: fetcher.ErrRequestFailed,
+					},
+				).Once()
+
+				return mockHelper
+			}(),
+			tipDelay:      100,
+			expectedError: fetcher.ErrRequestFailed,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			atTip, err := CheckAtTip(ctx, network, test.helper, test.tipDelay)
+			if test.expectedError != nil {
+				assert.False(t, atTip)
+				assert.True(t, errors.Is(err, test.expectedError))
+			} else {
+				assert.Equal(t, test.expectedResult, atTip)
+				assert.NoError(t, err)
+			}
+			test.helper.AssertExpectations(t)
+		})
+	}
 }
