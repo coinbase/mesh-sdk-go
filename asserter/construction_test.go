@@ -660,6 +660,15 @@ func TestSigningPayload(t *testing.T) {
 			},
 			err: ErrSigningPayloadAddrEmpty,
 		},
+		"zero signing payload": {
+			signingPayload: &types.SigningPayload{
+				AccountIdentifier: &types.AccountIdentifier{
+					Address: "hello",
+				},
+				Bytes: []byte{0, 0, 0, 0},
+			},
+			err: ErrSigningPayloadBytesZero,
+		},
 		"empty bytes": {
 			signingPayload: &types.SigningPayload{
 				AccountIdentifier: &types.AccountIdentifier{
@@ -759,6 +768,21 @@ func TestSignatures(t *testing.T) {
 				},
 			},
 			err: ErrSignatureBytesEmpty,
+		},
+		"signature zero bytes": {
+			signatures: []*types.Signature{
+				{
+					SigningPayload: &types.SigningPayload{
+						AccountIdentifier: validAccount,
+						Bytes:             []byte("blah"),
+						SignatureType:     types.Ed25519,
+					},
+					PublicKey:     validPublicKey,
+					SignatureType: types.Ed25519,
+					Bytes:         []byte{0},
+				},
+			},
+			err: ErrSignatureBytesZero,
 		},
 		"signature type mismatch": {
 			signatures: []*types.Signature{
