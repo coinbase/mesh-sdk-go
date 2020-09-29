@@ -26,6 +26,7 @@ import (
 	"math/big"
 	"os"
 	"path"
+	"runtime"
 	"time"
 
 	"github.com/coinbase/rosetta-sdk-go/fetcher"
@@ -419,4 +420,56 @@ func CheckAtTip(
 	}
 
 	return AtTip(tipDelay, status.CurrentBlockTimestamp), nil
+}
+
+// ContextSleep sleeps for the provided duration and returns
+// an error if context is canceled.
+func ContextSleep(ctx context.Context, duration time.Duration) error {
+	timer := time.NewTimer(duration)
+	defer timer.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+
+		case <-timer.C:
+			return nil
+		}
+	}
+}
+
+// MemoryUsage contains memory usage stats converted
+// to MBs.
+type MemoryUsage struct {
+	Heap               float64 `json:"heap"`
+	Stack              float64 `json:"stack"`
+	OtherSystem        float64 `json:"other_system"`
+	System             float64 `json:"system"`
+	GarbageCollections uint32  `json:"garbage_collections"`
+}
+
+// MonitorMemoryUsage returns a collection of memory usage
+// stats in MB. It will also run garbage collection if the heap
+// is greater than maxHeapUsage in MB.
+func MonitorMemoryUsage(
+	ctx context.Context,
+	maxHeapUsage int,
+) *MemoryUsage {
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+
+	usage := &MemoryUsage{
+		Heap:               BtoMb(float64(m.HeapAlloc)),
+		Stack:              BtoMb(float64(m.StackInuse)),
+		OtherSystem:        BtoMb(float64(m.OtherSys)),
+		System:             BtoMb(float64(m.Sys)),
+		GarbageCollections: m.NumGC,
+	}
+
+	if maxHeapUsage != -1 && usage.Heap > float64(maxHeapUsage) {
+		runtime.GC()
+	}
+
+	return usage
 }
