@@ -464,11 +464,12 @@ func (c *Coordinator) invokeHandlersAndBroadcast(
 }
 
 // process orchestrates the execution of workflows
-// and the broadcast of transactions.
+// and the broadcast of transactions. It returns the amount
+// of time to sleep before calling again.
 func (c *Coordinator) process( // nolint:gocognit
 	ctx context.Context,
 	returnFunds bool,
-) (bool, error) {
+) (time.Duration, error) {
 	if !c.helper.HeadBlockExists(ctx) {
 		log.Println("waiting for first block synced...")
 
@@ -476,8 +477,7 @@ func (c *Coordinator) process( // nolint:gocognit
 		// Many of the storage-based commands require a synced block
 		// to work correctly (i.e. when fetching a balance, a block
 		// must be returned).
-		time.Sleep(NoHeadBlockWaitTime)
-		return true, nil
+		return NoHeadBlockWaitTime, nil
 	}
 
 	// Update job and store broadcast in a single DB transaction.
@@ -492,16 +492,15 @@ func (c *Coordinator) process( // nolint:gocognit
 		log.Println("waiting for available jobs...")
 
 		c.resetVars()
-		time.Sleep(NoJobsWaitTime)
-		return true, nil
+		return NoJobsWaitTime, nil
 	}
 	if errors.Is(err, ErrReturnFundsComplete) {
 		color.Cyan("fund return complete!")
 
-		return false, nil
+		return -1, nil
 	}
 	if err != nil {
-		return false, fmt.Errorf("%w: unable to find job", err)
+		return -1, fmt.Errorf("%w: unable to find job", err)
 	}
 
 	statusMessage := fmt.Sprintf(`processing workflow "%s"`, j.Workflow)
@@ -514,14 +513,14 @@ func (c *Coordinator) process( // nolint:gocognit
 	if errors.Is(err, worker.ErrCreateAccount) {
 		c.addToUnprocessed(j)
 		c.seenErrCreateAccount = true
-		return true, nil
+		return 0, nil
 	}
 	if errors.Is(err, worker.ErrUnsatisfiable) {
 		c.addToUnprocessed(j)
-		return true, nil
+		return 0, nil
 	}
 	if err != nil {
-		return false, fmt.Errorf("%w: unable to process job", err)
+		return -1, fmt.Errorf("%w: unable to process job", err)
 	}
 
 	// Update job (or store for the first time)
@@ -531,7 +530,7 @@ func (c *Coordinator) process( // nolint:gocognit
 	// we've done in JobStorage.
 	jobIdentifier, err := c.storage.Update(ctx, dbTx, j)
 	if err != nil {
-		return false, fmt.Errorf("%w: unable to update job", err)
+		return -1, fmt.Errorf("%w: unable to update job", err)
 	}
 	j.Identifier = jobIdentifier
 
@@ -544,18 +543,18 @@ func (c *Coordinator) process( // nolint:gocognit
 			broadcast,
 		)
 		if err != nil {
-			return false, fmt.Errorf("%w: unable to create transaction", err)
+			return -1, fmt.Errorf("%w: unable to create transaction", err)
 		}
 
 		if broadcast.DryRun {
 			// Update the job with the result of the dry run. This will
 			// mark it as ready!
 			if err := j.DryRunComplete(ctx, suggestedFees); err != nil {
-				return false, fmt.Errorf("%w: unable to mark dry run complete", err)
+				return -1, fmt.Errorf("%w: unable to mark dry run complete", err)
 			}
 
 			if _, err := c.storage.Update(ctx, dbTx, j); err != nil {
-				return false, fmt.Errorf("%w: unable to update job after dry run", err)
+				return -1, fmt.Errorf("%w: unable to update job after dry run", err)
 			}
 		} else {
 			// Invoke Broadcast storage (in same TX as update job)
@@ -569,7 +568,7 @@ func (c *Coordinator) process( // nolint:gocognit
 				networkTransaction,
 				broadcast.ConfirmationDepth,
 			); err != nil {
-				return false, fmt.Errorf("%w: unable to enqueue broadcast", err)
+				return -1, fmt.Errorf("%w: unable to enqueue broadcast", err)
 			}
 
 			transactionCreated = transactionIdentifier
@@ -587,15 +586,15 @@ func (c *Coordinator) process( // nolint:gocognit
 
 	// Commit db transaction
 	if err := dbTx.Commit(ctx); err != nil {
-		return false, fmt.Errorf("%w: unable to commit job update", err)
+		return -1, fmt.Errorf("%w: unable to commit job update", err)
 	}
 
 	// Invoke handlers and broadcast
 	if err := c.invokeHandlersAndBroadcast(ctx, jobIdentifier, transactionCreated); err != nil {
-		return false, fmt.Errorf("%w: unable to handle job success", err)
+		return -1, fmt.Errorf("%w: unable to handle job success", err)
 	}
 
-	return true, nil
+	return 0, nil
 }
 
 // processLoop calls process until we should
@@ -612,13 +611,18 @@ func (c *Coordinator) processLoop(
 	// so that we can defer dbTx.Discard(ctx). Defer
 	// is only invoked when a function returns.
 	for ctx.Err() == nil {
-		cont, err := c.process(ctx, returnFunds)
+		sleepTime, err := c.process(ctx, returnFunds)
 		if err != nil {
 			return err
 		}
 
-		if !cont {
+		switch sleepTime {
+		case 0:
+			continue
+		case -1:
 			return nil
+		default:
+			time.Sleep(sleepTime)
 		}
 	}
 
