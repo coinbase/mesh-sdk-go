@@ -482,3 +482,40 @@ func TestCheckAtTip(t *testing.T) {
 		})
 	}
 }
+
+func TestTimeToTip(t *testing.T) {
+	tests := map[string]struct {
+		blocksPerSecond float64
+		lastSyncedIndex int64
+		tipIndex        int64
+
+		expectedTime string
+	}{
+		"far from tip": {
+			blocksPerSecond: 6,
+			lastSyncedIndex: 10,
+			tipIndex:        10000,
+
+			expectedTime: "27m45s",
+		},
+		"0 blocks per second": {
+			blocksPerSecond: 0,
+			lastSyncedIndex: 10,
+			tipIndex:        1000,
+			expectedTime:    "2750h0m0s",
+		},
+		"negative blocks remaining": {
+			blocksPerSecond: 10,
+			lastSyncedIndex: 100,
+			tipIndex:        10,
+			expectedTime:    "0s",
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			timeToTip := TimeToTip(test.blocksPerSecond, test.lastSyncedIndex, test.tipIndex)
+			assert.Equal(t, test.expectedTime, timeToTip.String())
+		})
+	}
+}
