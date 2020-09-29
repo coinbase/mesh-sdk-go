@@ -471,8 +471,6 @@ func (c *Coordinator) process( // nolint:gocognit
 	returnFunds bool,
 ) (time.Duration, error) {
 	if !c.helper.HeadBlockExists(ctx) {
-		log.Println("waiting for first block synced...")
-
 		// We will sleep until at least one block has been synced.
 		// Many of the storage-based commands require a synced block
 		// to work correctly (i.e. when fetching a balance, a block
