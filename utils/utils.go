@@ -57,6 +57,11 @@ const (
 
 	// OneHundred is the number 100.
 	OneHundred = 100
+
+	// minBlocksPerSecond is the minimum blocks per second
+	// to consider when estimating time to tip if the provided
+	// estimate is 0.
+	minBlocksPerSecond = 0.0001
 )
 
 var (
@@ -472,4 +477,25 @@ func MonitorMemoryUsage(
 	}
 
 	return usage
+}
+
+// TimeToTip returns the estimate time to tip given
+// the current sync speed.
+func TimeToTip(
+	blocksPerSecond float64,
+	lastSyncedIndex int64,
+	tipIndex int64,
+) time.Duration {
+	if blocksPerSecond <= 0 { // ensure we don't divide by 0
+		blocksPerSecond = minBlocksPerSecond
+	}
+
+	remainingBlocks := tipIndex - lastSyncedIndex
+	if remainingBlocks < 0 { // ensure we don't get negative time
+		remainingBlocks = 0
+	}
+
+	secondsRemaining := int64(float64(remainingBlocks) / blocksPerSecond)
+
+	return time.Duration(secondsRemaining) * time.Second
 }
