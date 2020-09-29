@@ -397,11 +397,8 @@ func AtTip(
 ) bool {
 	currentTime := Milliseconds()
 	tipCutoff := currentTime - (tipDelay * MillisecondsInSecond)
-	if blockTimestamp < tipCutoff {
-		return false
-	}
 
-	return true
+	return blockTimestamp >= tipCutoff
 }
 
 // CheckAtTip returns a boolean indicating if a
