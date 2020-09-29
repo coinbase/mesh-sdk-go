@@ -611,18 +611,18 @@ func (c *Coordinator) processLoop(
 	// so that we can defer dbTx.Discard(ctx). Defer
 	// is only invoked when a function returns.
 	for ctx.Err() == nil {
-		cont, err := c.process(ctx, returnFunds)
+		sleepTime, err := c.process(ctx, returnFunds)
 		if err != nil {
 			return err
 		}
 
-		switch cont {
+		switch sleepTime {
 		case 0:
 			continue
 		case -1:
 			return nil
 		default:
-			time.Sleep(cont)
+			time.Sleep(sleepTime)
 		}
 	}
 
