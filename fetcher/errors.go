@@ -16,6 +16,8 @@ package fetcher
 
 import (
 	"errors"
+	"fmt"
+	"log"
 
 	utils "github.com/coinbase/rosetta-sdk-go/errors"
 	"github.com/coinbase/rosetta-sdk-go/types"
@@ -26,6 +28,27 @@ import (
 type Error struct {
 	Err       error        `json:"err"`
 	ClientErr *types.Error `json:"client_err"`
+}
+
+// CreateError creates a new *Error and asserts the provided
+// rosettaErr
+func (f *Fetcher) RequestFailedError(
+	rosettaErr *types.Error,
+	err error,
+	message string,
+) *Error {
+	// If there is a *types.Error assertion error, we log it instead
+	// of exiting. Exiting abruptly here may cause unintended consequences.
+	if rosettaErr != nil {
+		if assertionErr := f.Asserter.Error(rosettaErr); err != nil {
+			log.Printf("error %s assertion failed: %s", types.PrintStruct(rosettaErr), assertionErr)
+		}
+	}
+
+	return &Error{
+		Err:       fmt.Errorf("%w: %s %s", ErrRequestFailed, message, err.Error()),
+		ClientErr: rosettaErr,
+	}
 }
 
 var (
