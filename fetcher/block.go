@@ -103,17 +103,12 @@ func (f *Fetcher) fetchChannelTransactions(
 				return &Error{Err: ctx.Err()}
 			}
 
-			fetchErr := &Error{
-				Err: fmt.Errorf(
-					"%w: /block/transaction %s at block %d:%s %s",
-					ErrRequestFailed,
-					transactionIdentifier.Hash,
-					block.Index,
-					block.Hash,
-					err.Error(),
-				),
-				ClientErr: clientErr,
-			}
+			fetchErr := f.RequestFailedError(clientErr, err, fmt.Sprintf(
+				"/block/transaction %s at block %d:%s",
+				transactionIdentifier.Hash,
+				block.Index,
+				block.Hash,
+			))
 
 			txFetchErr := fmt.Sprintf("transaction %s", types.PrintStruct(transactionIdentifier))
 			if err := tryAgain(txFetchErr, backoffRetries, fetchErr); err != nil {
@@ -230,16 +225,10 @@ func (f *Fetcher) UnsafeBlock(
 		BlockIdentifier:   blockIdentifier,
 	})
 	if err != nil {
-		fetcherErr := &Error{
-			Err: fmt.Errorf(
-				"%w: /block %s %s",
-				ErrRequestFailed,
-				types.PrintStruct(blockIdentifier),
-				err.Error(),
-			),
-			ClientErr: clientErr,
-		}
-		return nil, fetcherErr
+		return nil, f.RequestFailedError(clientErr, err, fmt.Sprintf(
+			"/block %s",
+			types.PrintStruct(blockIdentifier),
+		))
 	}
 
 	// Exit early if no need to fetch txs
