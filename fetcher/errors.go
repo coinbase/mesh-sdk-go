@@ -39,10 +39,8 @@ func (f *Fetcher) RequestFailedError(
 ) *Error {
 	// If there is a *types.Error assertion error, we log it instead
 	// of exiting. Exiting abruptly here may cause unintended consequences.
-	if rosettaErr != nil {
-		if assertionErr := f.Asserter.Error(rosettaErr); err != nil {
-			log.Printf("error %s assertion failed: %s", types.PrintStruct(rosettaErr), assertionErr)
-		}
+	if assertionErr := f.Asserter.Error(rosettaErr); err != nil {
+		log.Printf("error %s assertion failed: %s", types.PrintStruct(rosettaErr), assertionErr)
 	}
 
 	return &Error{
