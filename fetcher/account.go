@@ -47,7 +47,7 @@ func (f *Fetcher) AccountBalance(
 		},
 	)
 	if err != nil {
-		return nil, nil, nil, nil, f.CreateError(clientErr, err, "/account/balance")
+		return nil, nil, nil, nil, f.RequestFailedError(clientErr, err, "/account/balance")
 	}
 
 	if err := asserter.AccountBalanceResponse(

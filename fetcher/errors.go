@@ -30,8 +30,8 @@ type Error struct {
 	ClientErr *types.Error `json:"client_err"`
 }
 
-// CreateError creates a new *Error and asserts the provided
-// rosettaErr
+// RequestFailedError creates a new *Error and asserts the provided
+// rosettaErr was provided in /network/options.
 func (f *Fetcher) RequestFailedError(
 	rosettaErr *types.Error,
 	err error,

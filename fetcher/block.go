@@ -103,7 +103,7 @@ func (f *Fetcher) fetchChannelTransactions(
 				return &Error{Err: ctx.Err()}
 			}
 
-			fetchErr := f.CreateError(clientErr, err, fmt.Sprintf(
+			fetchErr := f.RequestFailedError(clientErr, err, fmt.Sprintf(
 				"/block/transaction %s at block %d:%s",
 				transactionIdentifier.Hash,
 				block.Index,
@@ -225,7 +225,7 @@ func (f *Fetcher) UnsafeBlock(
 		BlockIdentifier:   blockIdentifier,
 	})
 	if err != nil {
-		return nil, f.CreateError(clientErr, err, fmt.Sprintf(
+		return nil, f.RequestFailedError(clientErr, err, fmt.Sprintf(
 			"/block %s",
 			types.PrintStruct(blockIdentifier),
 		))

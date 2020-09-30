@@ -43,7 +43,7 @@ func (f *Fetcher) Mempool(
 		},
 	)
 	if err != nil {
-		return nil, f.CreateError(clientErr, err, "/mempool")
+		return nil, f.RequestFailedError(clientErr, err, "/mempool")
 	}
 
 	mempool := response.TransactionIdentifiers
@@ -79,7 +79,7 @@ func (f *Fetcher) MempoolTransaction(
 		},
 	)
 	if err != nil {
-		return nil, nil, f.CreateError(clientErr, err, "/mempool/transaction")
+		return nil, nil, f.RequestFailedError(clientErr, err, "/mempool/transaction")
 	}
 
 	mempoolTransaction := response.Transaction
