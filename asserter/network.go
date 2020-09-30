@@ -165,6 +165,12 @@ func Errors(rosettaErrors []*types.Error) error {
 			return err
 		}
 
+		// Error.Details should not be populated
+		// in the /network/options response.
+		if len(rosettaError.Details) > 0 {
+			return ErrErrorDetailsPopulated
+		}
+
 		_, exists := statusCodes[rosettaError.Code]
 		if exists {
 			return ErrErrorCodeUsedMultipleTimes

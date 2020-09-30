@@ -262,10 +262,8 @@ var (
 	ErrNoSuccessfulAllowedOperationStatuses = errors.New(
 		"no successful Allow.OperationStatuses found",
 	)
-	ErrErrorIsNil                                   = errors.New("Error is nil")
-	ErrErrorCodeIsNeg                               = errors.New("Error.Code is negative")
-	ErrErrorMessageMissing                          = errors.New("Error.Message is missing")
 	ErrErrorCodeUsedMultipleTimes                   = errors.New("error code used multiple times")
+	ErrErrorDetailsPopulated                        = errors.New("error details populated in /network/options")
 	ErrAllowIsNil                                   = errors.New("Allow is nil")
 	ErrNetworkOptionsResponseIsNil                  = errors.New("options is nil")
 	ErrNetworkListResponseIsNil                     = errors.New("NetworkListResponse is nil")
@@ -285,10 +283,8 @@ var (
 		ErrNetworkStatusResponseIsNil,
 		ErrNoAllowedOperationStatuses,
 		ErrNoSuccessfulAllowedOperationStatuses,
-		ErrErrorIsNil,
-		ErrErrorCodeIsNeg,
-		ErrErrorMessageMissing,
 		ErrErrorCodeUsedMultipleTimes,
+		ErrErrorDetailsPopulated,
 		ErrAllowIsNil,
 		ErrNetworkOptionsResponseIsNil,
 		ErrNetworkListResponseIsNil,
@@ -376,6 +372,25 @@ var (
 		ErrConstructionParseRequestIsNil,
 		ErrConstructionParseRequestEmpty,
 	}
+
+	///////////////////
+	/* ERROR ERRORS */
+	///////////////////
+	ErrErrorIsNil             = errors.New("Error is nil")
+	ErrErrorCodeIsNeg         = errors.New("Error.Code is negative")
+	ErrErrorMessageMissing    = errors.New("Error.Message is missing")
+	ErrErrorUnexpectedCode    = errors.New("Error.Code unexpected")
+	ErrErrorMessageMismatch   = errors.New("Error.Message does not match message from /network/options")
+	ErrErrorRetriableMismatch = errors.New("Error.Retriable mismatch")
+
+	ErrorErrs = []error{
+		ErrErrorIsNil,
+		ErrErrorCodeIsNeg,
+		ErrErrorMessageMissing,
+		ErrErrorUnexpectedCode,
+		ErrErrorMessageMismatch,
+		ErrErrorRetriableMismatch,
+	}
 )
 
 // Err takes an error as an argument and returns
@@ -389,6 +404,7 @@ func Err(err error) (bool, string) {
 		"construction error":    ConstructionErrs,
 		"network error":         NetworkErrs,
 		"server error":          ServerErrs,
+		"error error":           ErrorErrs,
 	}
 
 	for key, val := range assertErrs {
