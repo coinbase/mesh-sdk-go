@@ -1,6 +1,7 @@
 package asserter
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
@@ -22,6 +23,48 @@ func TestErrorMap(t *testing.T) {
 					"hello": "goodbye",
 				},
 			},
+		},
+		"negative error": {
+			err: &types.Error{
+				Code:      -1,
+				Message:   "error 10",
+				Retriable: true,
+				Details: map[string]interface{}{
+					"hello": "goodbye",
+				},
+			},
+			expectedErr: ErrErrorCodeIsNeg,
+		},
+		"retriable error": {
+			err: &types.Error{
+				Code:    10,
+				Message: "error 10",
+				Details: map[string]interface{}{
+					"hello": "goodbye",
+				},
+			},
+			expectedErr: ErrErrorRetriableMismatch,
+		},
+		"code mismatch": {
+			err: &types.Error{
+				Code:    20,
+				Message: "error 20",
+				Details: map[string]interface{}{
+					"hello": "goodbye",
+				},
+			},
+			expectedErr: ErrErrorUnexpectedCode,
+		},
+		"message mismatch": {
+			err: &types.Error{
+				Code:      10,
+				Retriable: true,
+				Message:   "error 11",
+				Details: map[string]interface{}{
+					"hello": "goodbye",
+				},
+			},
+			expectedErr: ErrErrorMessageMismatch,
 		},
 	}
 
@@ -86,8 +129,7 @@ func TestErrorMap(t *testing.T) {
 
 			err = asserter.Error(test.err)
 			if test.expectedErr != nil {
-				assert.Error(t, err)
-				assert.Contains(t, err.Error(), test.expectedErr.Error())
+				assert.True(t, errors.Is(err, test.expectedErr))
 			} else {
 				assert.NoError(t, err)
 			}

@@ -23,15 +23,32 @@ func (a *Asserter) Error(
 
 	val, ok := a.errorTypeMap[err.Code]
 	if !ok {
-		return fmt.Errorf("%w: code %d error: %s", ErrErrorUnexpectedCode, err.Code, types.PrintStruct(err))
+		return fmt.Errorf(
+			"%w: code %d error: %s",
+			ErrErrorUnexpectedCode,
+			err.Code,
+			types.PrintStruct(err),
+		)
 	}
 
 	if val.Message != err.Message {
-		return fmt.Errorf("%w: expected %s actual %s error: %s", ErrErrorMessageMismatch, val.Message, err.Message, types.PrintStruct(err))
+		return fmt.Errorf(
+			"%w: expected %s actual %s error: %s",
+			ErrErrorMessageMismatch,
+			val.Message,
+			err.Message,
+			types.PrintStruct(err),
+		)
 	}
 
 	if val.Retriable != err.Retriable {
-		return fmt.Errorf("%w: expected %s actual %s error: %s", ErrErrorRetriableMismatch, val.Message, err.Message, types.PrintStruct(err))
+		return fmt.Errorf(
+			"%w: expected %s actual %s error: %s",
+			ErrErrorRetriableMismatch,
+			val.Message,
+			err.Message,
+			types.PrintStruct(err),
+		)
 	}
 
 	return nil

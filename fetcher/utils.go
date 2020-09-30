@@ -22,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/coinbase/rosetta-sdk-go/asserter"
 	"github.com/coinbase/rosetta-sdk-go/types"
 
 	"github.com/cenkalti/backoff"
@@ -75,9 +76,11 @@ func transientError(err error) bool {
 // on the fetchMsg.
 func tryAgain(fetchMsg string, thisBackoff *Backoff, err *Error) *Error {
 	// Only retry if an error is explicitly retriable or the server
-	// returned a transient error.
+	// returned a transient error. If the error fails assertion, we should
+	// not retry!
+	asserterErr, _ := asserter.Err(err.Err)
 	if !transientError(err.Err) &&
-		(err.ClientErr == nil || !err.ClientErr.Retriable) {
+		(err.ClientErr == nil || !err.ClientErr.Retriable || asserterErr) {
 		return err
 	}
 
