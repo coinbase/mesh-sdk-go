@@ -262,8 +262,10 @@ var (
 	ErrNoSuccessfulAllowedOperationStatuses = errors.New(
 		"no successful Allow.OperationStatuses found",
 	)
-	ErrErrorCodeUsedMultipleTimes                   = errors.New("error code used multiple times")
-	ErrErrorDetailsPopulated                        = errors.New("error details populated in /network/options")
+	ErrErrorCodeUsedMultipleTimes = errors.New("error code used multiple times")
+	ErrErrorDetailsPopulated      = errors.New(
+		"error details populated in /network/options",
+	)
 	ErrAllowIsNil                                   = errors.New("Allow is nil")
 	ErrNetworkOptionsResponseIsNil                  = errors.New("options is nil")
 	ErrNetworkListResponseIsNil                     = errors.New("NetworkListResponse is nil")
@@ -376,11 +378,13 @@ var (
 	///////////////////
 	/* ERROR ERRORS */
 	///////////////////
-	ErrErrorIsNil             = errors.New("Error is nil")
-	ErrErrorCodeIsNeg         = errors.New("Error.Code is negative")
-	ErrErrorMessageMissing    = errors.New("Error.Message is missing")
-	ErrErrorUnexpectedCode    = errors.New("Error.Code unexpected")
-	ErrErrorMessageMismatch   = errors.New("Error.Message does not match message from /network/options")
+	ErrErrorIsNil           = errors.New("Error is nil")
+	ErrErrorCodeIsNeg       = errors.New("Error.Code is negative")
+	ErrErrorMessageMissing  = errors.New("Error.Message is missing")
+	ErrErrorUnexpectedCode  = errors.New("Error.Code unexpected")
+	ErrErrorMessageMismatch = errors.New(
+		"Error.Message does not match message from /network/options",
+	)
 	ErrErrorRetriableMismatch = errors.New("Error.Retriable mismatch")
 
 	ErrorErrs = []error{
