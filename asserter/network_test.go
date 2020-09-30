@@ -259,6 +259,22 @@ func TestErrors(t *testing.T) {
 			},
 			err: nil,
 		},
+		"details populated": {
+			rosettaErrors: []*types.Error{
+				{
+					Code:    0,
+					Message: "error 1",
+					Details: map[string]interface{}{
+						"hello": "goodbye",
+					},
+				},
+				{
+					Code:    1,
+					Message: "error 2",
+				},
+			},
+			err: ErrErrorDetailsPopulated,
+		},
 		"duplicate error codes": {
 			rosettaErrors: []*types.Error{
 				{
