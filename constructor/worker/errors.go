@@ -14,7 +14,15 @@
 
 package worker
 
-import "errors"
+import (
+	"encoding/json"
+	"errors"
+	"fmt"
+
+	"github.com/coinbase/rosetta-sdk-go/types"
+
+	"github.com/fatih/color"
+)
 
 var (
 	// ErrInvalidJSON is returned when a populated value is not valid JSON.
@@ -69,5 +77,59 @@ type Error struct {
 
 	State string `json:"state"`
 
-	Err error `json:"err"`
+	CreateBroadcastFailure bool  `json:"create_broadcast_failure"`
+	Err                    error `json:"err"`
+}
+
+// Log prints the error to the console in a human readable format.
+func (e *Error) Log() {
+	message := fmt.Sprintf("EXECUTION FAILED!\nError: %s\n", e.Err.Error())
+	message = fmt.Sprintf("%sWorkflow: %s\n", message, e.Workflow)
+
+	if len(e.Job) > 0 { // job identifier is only assigned if persisted once
+		message = fmt.Sprintf("%sJob: %s\n", message, e.Job)
+	}
+
+	message = fmt.Sprintf(
+		"%sScenario: %s\nScenario Index: %d\n",
+		message,
+		e.Scenario,
+		e.ScenarioIndex,
+	)
+
+	if !e.CreateBroadcastFailure {
+		message = fmt.Sprintf(
+			"%sAction Type: %s\nAction Index: %d\n",
+			message,
+			e.ActionType,
+			e.ActionIndex,
+		)
+
+		message = fmt.Sprintf(
+			"%sInput: %s\nProcessed Input: %s\n",
+			message,
+			e.Input,
+			e.ProcessedInput,
+		)
+
+		message = fmt.Sprintf(
+			"%sOutput: %s\nOutput Path: %s\n",
+			message,
+			e.Output,
+			e.OutputPath,
+		)
+	}
+
+	// We must convert state to a map so we can
+	// pretty print it!
+	var state map[string]interface{}
+	if err := json.Unmarshal([]byte(e.State), &state); err == nil {
+		message = fmt.Sprintf(
+			"%sState: %s\n",
+			message,
+			types.PrettyPrintStruct(state),
+		)
+	}
+
+	color.Red(message)
 }

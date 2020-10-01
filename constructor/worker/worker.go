@@ -185,12 +185,13 @@ func (w *Worker) Process(
 	if err != nil {
 		scenarioIndex := j.Index - 1 // ProcessNextScenario increments by 1
 		return nil, &Error{
-			Workflow:      j.Workflow,
-			Job:           j.Identifier,
-			ScenarioIndex: scenarioIndex,
-			Scenario:      j.Scenarios[scenarioIndex].Name,
-			State:         j.State,
-			Err:           fmt.Errorf("%w: unable to create broadcast", err),
+			Workflow:               j.Workflow,
+			Job:                    j.Identifier,
+			ScenarioIndex:          scenarioIndex,
+			Scenario:               j.Scenarios[scenarioIndex].Name,
+			State:                  j.State,
+			CreateBroadcastFailure: true,
+			Err:                    fmt.Errorf("%w: unable to create broadcast", err),
 		}
 	}
 

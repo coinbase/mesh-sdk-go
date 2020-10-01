@@ -1503,10 +1503,11 @@ func TestJob_Failures(t *testing.T) {
 			newIndex: 1,
 			complete: true,
 			executionErr: &Error{
-				Workflow: "random",
-				Scenario: "create_send",
-				State:    "{\"create_send\":{\"operations\":[{\"operation_identifier\":{\"index\":0},\"type\":\"\",\"statsbf\":\"\"}]}}", // nolint
-				Err:      job.ErrOperationFormat,
+				Workflow:               "random",
+				Scenario:               "create_send",
+				State:                  "{\"create_send\":{\"operations\":[{\"operation_identifier\":{\"index\":0},\"type\":\"\",\"statsbf\":\"\"}]}}", // nolint
+				Err:                    job.ErrOperationFormat,
+				CreateBroadcastFailure: true,
 			},
 			helper: &mocks.Helper{},
 		},
@@ -1524,10 +1525,11 @@ func TestJob_Failures(t *testing.T) {
 			newIndex: 1,
 			complete: true,
 			executionErr: &Error{
-				Workflow: "random",
-				Scenario: "create_send",
-				State:    "{\"create_send\":{\"operations\":[{\"operation_identifier\":{\"index\":0},\"type\":\"\",\"status\":\"\"}]}}", // nolint
-				Err:      job.ErrConfirmationDepthInvalid,
+				Workflow:               "random",
+				Scenario:               "create_send",
+				State:                  "{\"create_send\":{\"operations\":[{\"operation_identifier\":{\"index\":0},\"type\":\"\",\"status\":\"\"}]}}", // nolint
+				Err:                    job.ErrConfirmationDepthInvalid,
+				CreateBroadcastFailure: true,
 			},
 			helper: &mocks.Helper{},
 		},
@@ -1550,10 +1552,11 @@ func TestJob_Failures(t *testing.T) {
 			newIndex: 1,
 			complete: true,
 			executionErr: &Error{
-				Workflow: "random",
-				Scenario: "create_send",
-				State:    "{\"create_send\":{\"operations\":[{\"operation_identifier\":{\"index\":0},\"type\":\"\",\"status\":\"\"}],\"confirmation_depth\":\"10\"}}", // nolint
-				Err:      job.ErrNetworkInvalid,
+				Workflow:               "random",
+				Scenario:               "create_send",
+				State:                  "{\"create_send\":{\"operations\":[{\"operation_identifier\":{\"index\":0},\"type\":\"\",\"status\":\"\"}],\"confirmation_depth\":\"10\"}}", // nolint
+				Err:                    job.ErrNetworkInvalid,
+				CreateBroadcastFailure: true,
 			},
 			helper: &mocks.Helper{},
 		},
@@ -1586,10 +1589,11 @@ func TestJob_Failures(t *testing.T) {
 			newIndex: 1,
 			complete: true,
 			executionErr: &Error{
-				Workflow: "random",
-				Scenario: "create_send",
-				State:    "{\"create_send\":{\"operations\":[{\"operation_identifier\":{\"index\":0},\"type\":\"\",\"status\":\"\"}],\"confirmation_depth\":\"10\",\"network\":{\"network\":\"Testnet3\", \"blockchain\":\"Bitcoin\"},\"preprocess_metadata\":\"hello\"}}", // nolint
-				Err:      job.ErrMetadataInvalid,
+				Workflow:               "random",
+				Scenario:               "create_send",
+				State:                  "{\"create_send\":{\"operations\":[{\"operation_identifier\":{\"index\":0},\"type\":\"\",\"status\":\"\"}],\"confirmation_depth\":\"10\",\"network\":{\"network\":\"Testnet3\", \"blockchain\":\"Bitcoin\"},\"preprocess_metadata\":\"hello\"}}", // nolint
+				Err:                    job.ErrMetadataInvalid,
+				CreateBroadcastFailure: true,
 			},
 			helper: &mocks.Helper{},
 		},
