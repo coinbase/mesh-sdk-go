@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/coinbase/rosetta-sdk-go/constructor/job"
 	"github.com/coinbase/rosetta-sdk-go/types"
 
 	"github.com/fatih/color"
@@ -63,22 +64,18 @@ type Error struct {
 	Workflow string `json:"workflow"`
 	Job      string `json:"job"`
 
-	ScenarioIndex int    `json:"scenario_index"`
 	Scenario      string `json:"scenario"`
+	ScenarioIndex int    `json:"scenario_index"`
+	ActionIndex   int    `json:"action_index"`
 
-	ActionIndex int    `json:"action_index"`
-	ActionType  string `json:"action_type"`
+	Action *job.Action `json:"action,omitempty"`
 
-	Input          string `json:"input"`
 	ProcessedInput string `json:"processed_input,omitempty"`
-
-	Output     string `json:"output,omitempty"`
-	OutputPath string `json:"output_path,omitempty"`
+	Output         string `json:"output,omitempty"`
 
 	State string `json:"state"`
 
-	CreateBroadcastFailure bool  `json:"create_broadcast_failure"`
-	Err                    error `json:"err"`
+	Err error `json:"err"`
 }
 
 // Log prints the error to the console in a human readable format.
@@ -97,26 +94,19 @@ func (e *Error) Log() {
 		e.ScenarioIndex,
 	)
 
-	if !e.CreateBroadcastFailure {
+	if e.Action != nil {
 		message = fmt.Sprintf(
-			"%sAction Type: %s\nAction Index: %d\n",
+			"%sAction Index: %d\nAction %s\n",
 			message,
-			e.ActionType,
 			e.ActionIndex,
+			types.PrettyPrintStruct(e.Action),
 		)
 
 		message = fmt.Sprintf(
-			"%sInput: %s\nProcessed Input: %s\n",
+			"%sProcessed Input: %s\nOutput: %s\n",
 			message,
-			e.Input,
 			e.ProcessedInput,
-		)
-
-		message = fmt.Sprintf(
-			"%sOutput: %s\nOutput Path: %s\n\n",
-			message,
 			e.Output,
-			e.OutputPath,
 		)
 	}
 
