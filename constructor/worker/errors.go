@@ -14,7 +14,16 @@
 
 package worker
 
-import "errors"
+import (
+	"encoding/json"
+	"errors"
+	"fmt"
+
+	"github.com/coinbase/rosetta-sdk-go/constructor/job"
+	"github.com/coinbase/rosetta-sdk-go/types"
+
+	"github.com/fatih/color"
+)
 
 var (
 	// ErrInvalidJSON is returned when a populated value is not valid JSON.
@@ -49,3 +58,68 @@ var (
 	// to request funds.
 	ErrUnsatisfiable = errors.New("unsatisfiable balance")
 )
+
+// Error is returned by worker execution.
+type Error struct {
+	Workflow string `json:"workflow"`
+	Job      string `json:"job"`
+
+	Scenario      string `json:"scenario"`
+	ScenarioIndex int    `json:"scenario_index"`
+	ActionIndex   int    `json:"action_index"`
+
+	Action *job.Action `json:"action,omitempty"`
+
+	ProcessedInput string `json:"processed_input,omitempty"`
+	Output         string `json:"output,omitempty"`
+
+	State string `json:"state"`
+
+	Err error `json:"err"`
+}
+
+// Log prints the error to the console in a human readable format.
+func (e *Error) Log() {
+	message := fmt.Sprintf("EXECUTION FAILED!\nMessage: %s\n\n", e.Err.Error())
+
+	if len(e.Job) > 0 { // job identifier is only assigned if persisted once
+		message = fmt.Sprintf("%sJob: %s\n", message, e.Job)
+	}
+
+	message = fmt.Sprintf(
+		"%sWorkflow: %s\nScenario: %s\nScenario Index: %d\n\n",
+		message,
+		e.Workflow,
+		e.Scenario,
+		e.ScenarioIndex,
+	)
+
+	if e.Action != nil {
+		message = fmt.Sprintf(
+			"%sAction Index: %d\nAction: %s\n",
+			message,
+			e.ActionIndex,
+			types.PrettyPrintStruct(e.Action),
+		)
+
+		message = fmt.Sprintf(
+			"%sProcessed Input: %s\nOutput: %s\n\n",
+			message,
+			e.ProcessedInput,
+			e.Output,
+		)
+	}
+
+	// We must convert state to a map so we can
+	// pretty print it!
+	var state map[string]interface{}
+	if err := json.Unmarshal([]byte(e.State), &state); err == nil {
+		message = fmt.Sprintf(
+			"%sState: %s\n",
+			message,
+			types.PrettyPrintStruct(state),
+		)
+	}
+
+	color.Red(message)
+}
