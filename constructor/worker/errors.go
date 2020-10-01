@@ -96,14 +96,14 @@ func (e *Error) Log() {
 
 	if e.Action != nil {
 		message = fmt.Sprintf(
-			"%sAction Index: %d\nAction %s\n",
+			"%sAction Index: %d\nAction: %s\n",
 			message,
 			e.ActionIndex,
 			types.PrettyPrintStruct(e.Action),
 		)
 
 		message = fmt.Sprintf(
-			"%sProcessed Input: %s\nOutput: %s\n",
+			"%sProcessed Input: %s\nOutput: %s\n\n",
 			message,
 			e.ProcessedInput,
 			e.Output,
