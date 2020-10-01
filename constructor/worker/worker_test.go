@@ -1505,7 +1505,7 @@ func TestJob_Failures(t *testing.T) {
 			executionErr: &Error{
 				Workflow: "random",
 				Scenario: "create_send",
-				State:    "{\"create_send\":{\"operations\":[{\"operation_identifier\":{\"index\":0},\"type\":\"\",\"statsbf\":\"\"}]}}",
+				State:    "{\"create_send\":{\"operations\":[{\"operation_identifier\":{\"index\":0},\"type\":\"\",\"statsbf\":\"\"}]}}", // nolint
 				Err:      job.ErrOperationFormat,
 			},
 			helper: &mocks.Helper{},
@@ -1526,7 +1526,7 @@ func TestJob_Failures(t *testing.T) {
 			executionErr: &Error{
 				Workflow: "random",
 				Scenario: "create_send",
-				State:    "{\"create_send\":{\"operations\":[{\"operation_identifier\":{\"index\":0},\"type\":\"\",\"status\":\"\"}]}}",
+				State:    "{\"create_send\":{\"operations\":[{\"operation_identifier\":{\"index\":0},\"type\":\"\",\"status\":\"\"}]}}", // nolint
 				Err:      job.ErrConfirmationDepthInvalid,
 			},
 			helper: &mocks.Helper{},
@@ -1552,7 +1552,7 @@ func TestJob_Failures(t *testing.T) {
 			executionErr: &Error{
 				Workflow: "random",
 				Scenario: "create_send",
-				State:    "{\"create_send\":{\"operations\":[{\"operation_identifier\":{\"index\":0},\"type\":\"\",\"status\":\"\"}],\"confirmation_depth\":\"10\"}}",
+				State:    "{\"create_send\":{\"operations\":[{\"operation_identifier\":{\"index\":0},\"type\":\"\",\"status\":\"\"}],\"confirmation_depth\":\"10\"}}", // nolint
 				Err:      job.ErrNetworkInvalid,
 			},
 			helper: &mocks.Helper{},
@@ -1588,7 +1588,7 @@ func TestJob_Failures(t *testing.T) {
 			executionErr: &Error{
 				Workflow: "random",
 				Scenario: "create_send",
-				State:    "{\"create_send\":{\"operations\":[{\"operation_identifier\":{\"index\":0},\"type\":\"\",\"status\":\"\"}],\"confirmation_depth\":\"10\",\"network\":{\"network\":\"Testnet3\", \"blockchain\":\"Bitcoin\"},\"preprocess_metadata\":\"hello\"}}",
+				State:    "{\"create_send\":{\"operations\":[{\"operation_identifier\":{\"index\":0},\"type\":\"\",\"status\":\"\"}],\"confirmation_depth\":\"10\",\"network\":{\"network\":\"Testnet3\", \"blockchain\":\"Bitcoin\"},\"preprocess_metadata\":\"hello\"}}", // nolint
 				Err:      job.ErrMetadataInvalid,
 			},
 			helper: &mocks.Helper{},
