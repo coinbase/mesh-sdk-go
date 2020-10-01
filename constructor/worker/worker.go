@@ -90,16 +90,29 @@ func (w *Worker) actions(
 	dbTx storage.DatabaseTransaction,
 	state string,
 	actions []*job.Action,
-) (string, error) {
-	for _, action := range actions {
+) (string, *Error) {
+	for i, action := range actions {
 		processedInput, err := PopulateInput(state, action.Input)
 		if err != nil {
-			return "", fmt.Errorf("%w: unable to populate variables", err)
+			return "", &Error{
+				ActionIndex: i,
+				ActionType:  string(action.Type),
+				Input:       action.Input,
+				State:       state,
+				Err:         fmt.Errorf("%w: unable to populate variables", err),
+			}
 		}
 
 		output, err := w.invokeWorker(ctx, dbTx, action.Type, processedInput)
 		if err != nil {
-			return "", fmt.Errorf("%w: unable to process action", err)
+			return "", &Error{
+				ActionIndex:    i,
+				ActionType:     string(action.Type),
+				Input:          action.Input,
+				ProcessedInput: processedInput,
+				State:          state,
+				Err:            fmt.Errorf("%w: unable to process action", err),
+			}
 		}
 
 		if len(output) == 0 {
@@ -107,9 +120,19 @@ func (w *Worker) actions(
 		}
 
 		// Update state at the specified output path if there is an output.
+		oldState := state
 		state, err = sjson.SetRaw(state, action.OutputPath, output)
 		if err != nil {
-			return "", fmt.Errorf("%w: unable to update state", err)
+			return "", &Error{
+				ActionIndex:    i,
+				ActionType:     string(action.Type),
+				Input:          action.Input,
+				ProcessedInput: processedInput,
+				Output:         output,
+				OutputPath:     action.OutputPath,
+				State:          oldState,
+				Err:            fmt.Errorf("%w: unable to update state", err),
+			}
 		}
 	}
 
@@ -122,11 +145,17 @@ func (w *Worker) ProcessNextScenario(
 	ctx context.Context,
 	dbTx storage.DatabaseTransaction,
 	j *job.Job,
-) error {
+) *Error {
 	scenario := j.Scenarios[j.Index]
 	newState, err := w.actions(ctx, dbTx, j.State, scenario.Actions)
 	if err != nil {
-		return fmt.Errorf("%w: unable to process %s actions", err, scenario.Name)
+		// Set additional context not available within actions.
+		err.Workflow = j.Workflow
+		err.Job = j.Identifier
+		err.Scenario = scenario.Name
+		err.ScenarioIndex = j.Index
+
+		return err
 	}
 
 	j.State = newState
@@ -141,16 +170,21 @@ func (w *Worker) Process(
 	ctx context.Context,
 	dbTx storage.DatabaseTransaction,
 	j *job.Job,
-) (*job.Broadcast, error) {
+) (*job.Broadcast, *Error) {
 	if j.CheckComplete() {
-		return nil, ErrJobComplete
+		return nil, &Error{Err: ErrJobComplete}
 	}
 
 	if err := w.ProcessNextScenario(ctx, dbTx, j); err != nil {
-		return nil, fmt.Errorf("%w: could not process next scenario", err)
+		return nil, err
 	}
 
-	return j.CreateBroadcast()
+	broadcast, err := j.CreateBroadcast()
+	if err != nil {
+		return nil, &Error{Err: fmt.Errorf("%w: unable to create broadcast", err)}
+	}
+
+	return broadcast, nil
 }
 
 // DeriveWorker attempts to derive an account given a

@@ -49,3 +49,25 @@ var (
 	// to request funds.
 	ErrUnsatisfiable = errors.New("unsatisfiable balance")
 )
+
+// Error is returned by worker execution.
+type Error struct {
+	Workflow string `json:"workflow"`
+	Job      string `json:"job"`
+
+	ScenarioIndex int    `json:"scenario_index"`
+	Scenario      string `json:"scenario"`
+
+	ActionIndex int    `json:"action_index"`
+	ActionType  string `json:"action_type"`
+
+	Input          string `json:"input"`
+	ProcessedInput string `json:"processed_input"`
+
+	Output     string `json:"output"`
+	OutputPath string `json:"output_path"`
+
+	State string `json:"state"`
+
+	Err error `json:"err"`
+}

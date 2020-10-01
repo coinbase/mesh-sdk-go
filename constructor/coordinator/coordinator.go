@@ -507,18 +507,19 @@ func (c *Coordinator) process( // nolint:gocognit
 	}
 	log.Println(statusMessage)
 
-	broadcast, err := c.worker.Process(ctx, dbTx, j)
-	if errors.Is(err, worker.ErrCreateAccount) {
+	broadcast, executionErr := c.worker.Process(ctx, dbTx, j)
+	if errors.Is(executionErr.Err, worker.ErrCreateAccount) {
 		c.addToUnprocessed(j)
 		c.seenErrCreateAccount = true
 		return 0, nil
 	}
-	if errors.Is(err, worker.ErrUnsatisfiable) {
+	if errors.Is(executionErr.Err, worker.ErrUnsatisfiable) {
 		c.addToUnprocessed(j)
 		return 0, nil
 	}
 	if err != nil {
-		return -1, fmt.Errorf("%w: unable to process job", err)
+		color.Red("execution error context:\n%s", types.PrettyPrintStruct(executionErr))
+		return -1, fmt.Errorf("%w: unable to process job", executionErr.Err)
 	}
 
 	// Update job (or store for the first time)
