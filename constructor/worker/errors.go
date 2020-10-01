@@ -62,10 +62,10 @@ type Error struct {
 	ActionType  string `json:"action_type"`
 
 	Input          string `json:"input"`
-	ProcessedInput string `json:"processed_input"`
+	ProcessedInput string `json:"processed_input,omitempty"`
 
-	Output     string `json:"output"`
-	OutputPath string `json:"output_path"`
+	Output     string `json:"output,omitempty"`
+	OutputPath string `json:"output_path,omitempty"`
 
 	State string `json:"state"`
 

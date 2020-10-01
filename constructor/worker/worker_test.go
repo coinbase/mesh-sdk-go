@@ -1156,9 +1156,9 @@ func TestJob_ComplicatedTransfer(t *testing.T) {
 
 	assert.False(t, j.CheckComplete())
 
-	b, err := worker.Process(ctx, dbTx, j)
+	b, executionErr := worker.Process(ctx, dbTx, j)
 	assert.Nil(t, b)
-	assert.NoError(t, err)
+	assert.Nil(t, executionErr)
 
 	assert.False(t, j.CheckComplete())
 	assert.Equal(t, 1, j.Index)
@@ -1167,8 +1167,8 @@ func TestJob_ComplicatedTransfer(t *testing.T) {
 	assertVariableEquality(t, j.State, "key.public_key.curve_type", types.Secp256k1)
 	assertVariableEquality(t, j.State, "account.account_identifier", account)
 
-	b, err = worker.Process(ctx, dbTx, j)
-	assert.NoError(t, err)
+	b, executionErr = worker.Process(ctx, dbTx, j)
+	assert.Nil(t, executionErr)
 
 	randomAddress := gjson.Get(j.State, "random_address")
 	assert.True(t, randomAddress.Exists())
@@ -1223,11 +1223,12 @@ func TestJob_ComplicatedTransfer(t *testing.T) {
 
 func TestJob_Failures(t *testing.T) {
 	tests := map[string]struct {
-		scenario    *job.Scenario
-		helper      *mocks.Helper
-		newIndex    int
-		complete    bool
-		expectedErr error
+		scenario *job.Scenario
+		helper   *mocks.Helper
+		newIndex int
+		complete bool
+
+		executionErr *Error
 	}{
 		"invalid action": {
 			scenario: &job.Scenario{
@@ -1240,8 +1241,16 @@ func TestJob_Failures(t *testing.T) {
 					},
 				},
 			},
-			expectedErr: ErrInvalidActionType,
-			helper:      &mocks.Helper{},
+			executionErr: &Error{
+				Workflow:       "random",
+				Scenario:       "create_address",
+				ActionType:     "stuff",
+				Input:          `{"network":"Testnet3", "blockchain":"Bitcoin"}`,
+				ProcessedInput: `{"network":"Testnet3", "blockchain":"Bitcoin"}`,
+				OutputPath:     "network",
+				Err:            ErrInvalidActionType,
+			},
+			helper: &mocks.Helper{},
 		},
 		"assertion invalid input": {
 			scenario: &job.Scenario{
@@ -1253,8 +1262,15 @@ func TestJob_Failures(t *testing.T) {
 					},
 				},
 			},
-			expectedErr: ErrInvalidInput,
-			helper:      &mocks.Helper{},
+			executionErr: &Error{
+				Workflow:       "random",
+				Scenario:       "create_address",
+				ActionType:     string(job.Assert),
+				Input:          `"hello"`,
+				ProcessedInput: `"hello"`,
+				Err:            ErrInvalidInput,
+			},
+			helper: &mocks.Helper{},
 		},
 		"failed assertion": {
 			scenario: &job.Scenario{
@@ -1266,8 +1282,15 @@ func TestJob_Failures(t *testing.T) {
 					},
 				},
 			},
-			expectedErr: ErrActionFailed,
-			helper:      &mocks.Helper{},
+			executionErr: &Error{
+				Workflow:       "random",
+				Scenario:       "create_address",
+				ActionType:     string(job.Assert),
+				Input:          `"-1"`,
+				ProcessedInput: `"-1"`,
+				Err:            ErrActionFailed,
+			},
+			helper: &mocks.Helper{},
 		},
 		"invalid currency": {
 			scenario: &job.Scenario{
@@ -1279,8 +1302,15 @@ func TestJob_Failures(t *testing.T) {
 					},
 				},
 			},
-			expectedErr: ErrInvalidInput,
-			helper:      &mocks.Helper{},
+			executionErr: &Error{
+				Workflow:       "random",
+				Scenario:       "create_address",
+				ActionType:     string(job.FindCurrencyAmount),
+				Input:          `{"currency":{"decimals":8}}`,
+				ProcessedInput: `{"currency":{"decimals":8}}`,
+				Err:            ErrInvalidInput,
+			},
+			helper: &mocks.Helper{},
 		},
 		"repeat currency": {
 			scenario: &job.Scenario{
@@ -1292,21 +1322,46 @@ func TestJob_Failures(t *testing.T) {
 					},
 				},
 			},
-			expectedErr: ErrInvalidInput,
-			helper:      &mocks.Helper{},
+			executionErr: &Error{
+				Workflow:       "random",
+				Scenario:       "create_address",
+				ActionType:     string(job.FindCurrencyAmount),
+				Input:          `{"currency":{"symbol":"BTC", "decimals":8},"amounts":[{"value":"100","currency":{"symbol":"BTC", "decimals":8}},{"value":"100","currency":{"symbol":"BTC", "decimals":8}}]}`, // nolint
+				ProcessedInput: `{"currency":{"symbol":"BTC", "decimals":8},"amounts":[{"value":"100","currency":{"symbol":"BTC", "decimals":8}},{"value":"100","currency":{"symbol":"BTC", "decimals":8}}]}`, // nolint
+				Err:            ErrInvalidInput,
+			},
+			helper: &mocks.Helper{},
 		},
 		"can't find currency": {
 			scenario: &job.Scenario{
 				Name: "create_address",
 				Actions: []*job.Action{
 					{
+						Type:  job.Assert,
+						Input: `"1"`,
+					},
+					{
+						Type:       job.SetVariable,
+						Input:      `"BTC"`,
+						OutputPath: "symbol",
+					},
+					{
 						Type:  job.FindCurrencyAmount,
-						Input: `{"currency":{"symbol":"BTC", "decimals":8}}`,
+						Input: `{"currency":{"symbol":{{symbol}}, "decimals":8}}`,
 					},
 				},
 			},
-			expectedErr: ErrActionFailed,
-			helper:      &mocks.Helper{},
+			executionErr: &Error{
+				Workflow:       "random",
+				Scenario:       "create_address",
+				ActionType:     string(job.FindCurrencyAmount),
+				ActionIndex:    2,
+				Input:          `{"currency":{"symbol":{{symbol}}, "decimals":8}}`,
+				ProcessedInput: `{"currency":{"symbol":"BTC", "decimals":8}}`,
+				State:          "{\"symbol\":\"BTC\"}",
+				Err:            ErrActionFailed,
+			},
+			helper: &mocks.Helper{},
 		},
 		"invalid json": {
 			scenario: &job.Scenario{
@@ -1319,8 +1374,15 @@ func TestJob_Failures(t *testing.T) {
 					},
 				},
 			},
-			expectedErr: ErrInvalidJSON,
-			helper:      &mocks.Helper{},
+			executionErr: &Error{
+				Workflow:   "random",
+				Scenario:   "create_address",
+				ActionType: string(job.SetVariable),
+				OutputPath: "network",
+				Input:      `"network":"Testnet3", "blockchain":"Bitcoin"}`,
+				Err:        ErrInvalidJSON,
+			},
+			helper: &mocks.Helper{},
 		},
 		"missing variable": {
 			scenario: &job.Scenario{
@@ -1333,8 +1395,15 @@ func TestJob_Failures(t *testing.T) {
 					},
 				},
 			},
-			expectedErr: ErrVariableNotFound,
-			helper:      &mocks.Helper{},
+			executionErr: &Error{
+				Workflow:   "random",
+				Scenario:   "create_address",
+				ActionType: string(job.SetVariable),
+				OutputPath: "network",
+				Input:      `{"network":{{var}}, "blockchain":"Bitcoin"}`,
+				Err:        ErrVariableNotFound,
+			},
+			helper: &mocks.Helper{},
 		},
 		"invalid input: generate key": {
 			scenario: &job.Scenario{
@@ -1347,8 +1416,16 @@ func TestJob_Failures(t *testing.T) {
 					},
 				},
 			},
-			expectedErr: ErrInvalidInput,
-			helper:      &mocks.Helper{},
+			executionErr: &Error{
+				Workflow:       "random",
+				Scenario:       "create_address",
+				ActionType:     string(job.GenerateKey),
+				OutputPath:     "key",
+				Input:          `{"curve_typ": "secp256k1"}`,
+				ProcessedInput: `{"curve_typ": "secp256k1"}`,
+				Err:            ErrInvalidInput,
+			},
+			helper: &mocks.Helper{},
 		},
 		"invalid input: derive": {
 			scenario: &job.Scenario{
@@ -1361,8 +1438,16 @@ func TestJob_Failures(t *testing.T) {
 					},
 				},
 			},
-			expectedErr: ErrInvalidInput,
-			helper:      &mocks.Helper{},
+			executionErr: &Error{
+				Workflow:       "random",
+				Scenario:       "create_address",
+				ActionType:     string(job.Derive),
+				OutputPath:     "address",
+				Input:          `{"public_key": {}}`,
+				ProcessedInput: `{"public_key": {}}`,
+				Err:            ErrInvalidInput,
+			},
+			helper: &mocks.Helper{},
 		},
 		"invalid input: save address input": {
 			scenario: &job.Scenario{
@@ -1374,8 +1459,15 @@ func TestJob_Failures(t *testing.T) {
 					},
 				},
 			},
-			expectedErr: ErrInvalidInput,
-			helper:      &mocks.Helper{},
+			executionErr: &Error{
+				Workflow:       "random",
+				Scenario:       "create_address",
+				ActionType:     string(job.SaveAccount),
+				Input:          `{}`,
+				ProcessedInput: `{}`,
+				Err:            ErrInvalidInput,
+			},
+			helper: &mocks.Helper{},
 		},
 		"invalid action: job.Math": {
 			scenario: &job.Scenario{
@@ -1387,8 +1479,15 @@ func TestJob_Failures(t *testing.T) {
 					},
 				},
 			},
-			expectedErr: ErrActionFailed,
-			helper:      &mocks.Helper{},
+			executionErr: &Error{
+				Workflow:       "random",
+				Scenario:       "create_address",
+				ActionType:     string(job.Math),
+				Input:          `{"operation":"addition", "left_value":"1", "right_value":"B"}`,
+				ProcessedInput: `{"operation":"addition", "left_value":"1", "right_value":"B"}`,
+				Err:            ErrActionFailed,
+			},
+			helper: &mocks.Helper{},
 		},
 		"invalid broadcast: invalid operations": {
 			scenario: &job.Scenario{
@@ -1401,10 +1500,15 @@ func TestJob_Failures(t *testing.T) {
 					},
 				},
 			},
-			newIndex:    1,
-			complete:    true,
-			expectedErr: job.ErrOperationFormat,
-			helper:      &mocks.Helper{},
+			newIndex: 1,
+			complete: true,
+			executionErr: &Error{
+				Workflow: "random",
+				Scenario: "create_send",
+				State:    "{\"create_send\":{\"operations\":[{\"operation_identifier\":{\"index\":0},\"type\":\"\",\"statsbf\":\"\"}]}}",
+				Err:      job.ErrOperationFormat,
+			},
+			helper: &mocks.Helper{},
 		},
 		"invalid broadcast: missing confirmation depth": {
 			scenario: &job.Scenario{
@@ -1417,10 +1521,15 @@ func TestJob_Failures(t *testing.T) {
 					},
 				},
 			},
-			newIndex:    1,
-			complete:    true,
-			expectedErr: job.ErrConfirmationDepthInvalid,
-			helper:      &mocks.Helper{},
+			newIndex: 1,
+			complete: true,
+			executionErr: &Error{
+				Workflow: "random",
+				Scenario: "create_send",
+				State:    "{\"create_send\":{\"operations\":[{\"operation_identifier\":{\"index\":0},\"type\":\"\",\"status\":\"\"}]}}",
+				Err:      job.ErrConfirmationDepthInvalid,
+			},
+			helper: &mocks.Helper{},
 		},
 		"invalid broadcast: missing network identifier": {
 			scenario: &job.Scenario{
@@ -1438,10 +1547,15 @@ func TestJob_Failures(t *testing.T) {
 					},
 				},
 			},
-			newIndex:    1,
-			complete:    true,
-			expectedErr: job.ErrNetworkInvalid,
-			helper:      &mocks.Helper{},
+			newIndex: 1,
+			complete: true,
+			executionErr: &Error{
+				Workflow: "random",
+				Scenario: "create_send",
+				State:    "{\"create_send\":{\"operations\":[{\"operation_identifier\":{\"index\":0},\"type\":\"\",\"status\":\"\"}],\"confirmation_depth\":\"10\"}}",
+				Err:      job.ErrNetworkInvalid,
+			},
+			helper: &mocks.Helper{},
 		},
 		"invalid broadcast: metadata incorrect": {
 			scenario: &job.Scenario{
@@ -1469,10 +1583,15 @@ func TestJob_Failures(t *testing.T) {
 					},
 				},
 			},
-			newIndex:    1,
-			complete:    true,
-			expectedErr: job.ErrMetadataInvalid,
-			helper:      &mocks.Helper{},
+			newIndex: 1,
+			complete: true,
+			executionErr: &Error{
+				Workflow: "random",
+				Scenario: "create_send",
+				State:    "{\"create_send\":{\"operations\":[{\"operation_identifier\":{\"index\":0},\"type\":\"\",\"status\":\"\"}],\"confirmation_depth\":\"10\",\"network\":{\"network\":\"Testnet3\", \"blockchain\":\"Bitcoin\"},\"preprocess_metadata\":\"hello\"}}",
+				Err:      job.ErrMetadataInvalid,
+			},
+			helper: &mocks.Helper{},
 		},
 	}
 
@@ -1504,9 +1623,11 @@ func TestJob_Failures(t *testing.T) {
 
 			assert.False(t, j.CheckComplete())
 
-			b, err := worker.Process(ctx, dbTx, j)
+			b, executionErr := worker.Process(ctx, dbTx, j)
 			assert.Nil(t, b)
-			assert.True(t, errors.Is(err, test.expectedErr))
+			assert.True(t, errors.Is(executionErr.Err, test.executionErr.Err))
+			executionErr.Err = test.executionErr.Err // makes equality check easier
+			assert.Equal(t, test.executionErr, executionErr)
 
 			assert.Equal(t, test.complete, j.CheckComplete())
 			assert.Equal(t, test.newIndex, j.Index)

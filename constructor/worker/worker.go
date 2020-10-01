@@ -98,6 +98,7 @@ func (w *Worker) actions(
 				ActionIndex: i,
 				ActionType:  string(action.Type),
 				Input:       action.Input,
+				OutputPath:  action.OutputPath,
 				State:       state,
 				Err:         fmt.Errorf("%w: unable to populate variables", err),
 			}
@@ -109,6 +110,7 @@ func (w *Worker) actions(
 				ActionIndex:    i,
 				ActionType:     string(action.Type),
 				Input:          action.Input,
+				OutputPath:     action.OutputPath,
 				ProcessedInput: processedInput,
 				State:          state,
 				Err:            fmt.Errorf("%w: unable to process action", err),
@@ -127,9 +129,9 @@ func (w *Worker) actions(
 				ActionIndex:    i,
 				ActionType:     string(action.Type),
 				Input:          action.Input,
+				OutputPath:     action.OutputPath,
 				ProcessedInput: processedInput,
 				Output:         output,
-				OutputPath:     action.OutputPath,
 				State:          oldState,
 				Err:            fmt.Errorf("%w: unable to update state", err),
 			}
@@ -181,7 +183,15 @@ func (w *Worker) Process(
 
 	broadcast, err := j.CreateBroadcast()
 	if err != nil {
-		return nil, &Error{Err: fmt.Errorf("%w: unable to create broadcast", err)}
+		scenarioIndex := j.Index - 1 // ProcessNextScenario increments by 1
+		return nil, &Error{
+			Workflow:      j.Workflow,
+			Job:           j.Identifier,
+			ScenarioIndex: scenarioIndex,
+			Scenario:      j.Scenarios[scenarioIndex].Name,
+			State:         j.State,
+			Err:           fmt.Errorf("%w: unable to create broadcast", err),
+		}
 	}
 
 	return broadcast, nil

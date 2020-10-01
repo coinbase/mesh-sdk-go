@@ -518,6 +518,7 @@ func (c *Coordinator) process( // nolint:gocognit
 		return 0, nil
 	}
 	if err != nil {
+		// TODO: Special print that doesn't escape JSON quotes
 		color.Red("execution error context:\n%s", types.PrettyPrintStruct(executionErr))
 		return -1, fmt.Errorf("%w: unable to process job", executionErr.Err)
 	}
