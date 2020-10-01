@@ -83,16 +83,16 @@ type Error struct {
 
 // Log prints the error to the console in a human readable format.
 func (e *Error) Log() {
-	message := fmt.Sprintf("EXECUTION FAILED!\nError: %s\n", e.Err.Error())
-	message = fmt.Sprintf("%sWorkflow: %s\n", message, e.Workflow)
+	message := fmt.Sprintf("EXECUTION FAILED!\nMessage: %s\n\n", e.Err.Error())
 
 	if len(e.Job) > 0 { // job identifier is only assigned if persisted once
 		message = fmt.Sprintf("%sJob: %s\n", message, e.Job)
 	}
 
 	message = fmt.Sprintf(
-		"%sScenario: %s\nScenario Index: %d\n",
+		"%sWorkflow: %s\nScenario: %s\nScenario Index: %d\n\n",
 		message,
+		e.Workflow,
 		e.Scenario,
 		e.ScenarioIndex,
 	)
@@ -113,7 +113,7 @@ func (e *Error) Log() {
 		)
 
 		message = fmt.Sprintf(
-			"%sOutput: %s\nOutput Path: %s\n",
+			"%sOutput: %s\nOutput Path: %s\n\n",
 			message,
 			e.Output,
 			e.OutputPath,
