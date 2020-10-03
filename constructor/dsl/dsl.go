@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"os"
 	"regexp"
+	"strings"
 
 	"github.com/coinbase/rosetta-sdk-go/constructor/job"
 )
@@ -16,14 +17,42 @@ type parser struct {
 	currentScenario *job.Scenario
 }
 
-func (p *parser) matchAction() *job.Action {
-	var actionType, input, outputPath string
-	var checkedActionType, checkedInput, checkedOutputPath bool
+// TODO: if //, skip line
+
+func extractOutputPathAndType(line string) (job.ActionType, string, string, error) {
+
+}
+
+func (p *parser) matchAction() (*job.Action, error) {
+	var actionType job.ActionType
+	var input, outputPath string
 	for {
 		line := p.readLine()
-		if len(outputPath) == 0 && !checkedOutputPath {
+
+		// if no action type, at first line
+		if len(actionType) == 0 {
+			var err error
+			actionType, outputPath, line, err = extractOutputPathAndType(line)
+		}
+
+		if actionType == job.SetVariable {
+			input += strings.TrimSuffix(line, ";")
+			if strings.HasSuffix(line, ";") {
+				break
+			}
+		} else {
+			input += strings.TrimSuffix(line, ");")
+			if strings.HasSuffix(line, ");") {
+				break
+			}
 		}
 	}
+
+	return &job.Action{
+		Type:       actionType,
+		Input:      input,
+		OutputPath: outputPath,
+	}, nil
 }
 
 func parseName(line string) string {
@@ -54,7 +83,7 @@ func (p *parser) matchWorkflow() *job.Workflow {
 func (p *parser) readLine() string {
 	p.scanner.Scan()
 	p.lineNumber++
-	return p.scanner.Text()
+	return strings.TrimSpace(p.scanner.Text())
 }
 
 func LoadFile(file string) ([]*job.Workflow, error) {
