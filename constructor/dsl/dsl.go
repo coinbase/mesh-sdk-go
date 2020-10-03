@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/coinbase/rosetta-sdk-go/constructor/job"
@@ -55,17 +56,26 @@ func extractOutputPathAndType(line string) (job.ActionType, string, string, erro
 	return "", "", "", errors.New("parsing error")
 }
 
-func (p *parser) matchAction() (*job.Action, error) {
+func (p *parser) matchAction(previousLine string) (*job.Action, error) {
 	var actionType job.ActionType
 	var input, outputPath string
+
+	argLineRead := false
 	for {
-		line, err := p.readLine()
-		if err != nil {
-			return nil, fmt.Errorf("%w: action parsing failed")
+		var line string
+		if len(previousLine) > 0 && !argLineRead {
+			line = previousLine
+		} else {
+			var err error
+			line, err = p.readLine()
+			if err != nil {
+				return nil, fmt.Errorf("%w: action parsing failed")
+			}
 		}
 
 		// if no action type, at first line
 		if len(actionType) == 0 {
+			var err error
 			actionType, outputPath, line, err = extractOutputPathAndType(line)
 			if err != nil {
 				return nil, errors.New("unable to extract path and type")
@@ -129,7 +139,7 @@ func (p *parser) matchScenario() (*job.Scenario, bool, error) {
 				Actions: actions,
 			}, true, nil
 		}
-		action, err := p.matchAction()
+		action, err := p.matchAction(line)
 		if err != nil {
 			return nil, false, errors.New("unable to parse action")
 		}
@@ -138,6 +148,32 @@ func (p *parser) matchScenario() (*job.Scenario, bool, error) {
 }
 
 func parseNameConcurrency(line string) (string, int, error) {
+	var workflowName string
+	var workflowConcurrency int
+	var err error
+
+	tokens := strings.SplitN(line, "(", 1)
+	if len(tokens) != 2 {
+		return "", -1, errors.New("unable to read workflow name")
+	}
+
+	workflowName = strings.TrimSpace(tokens[0])
+
+	tokens = strings.SplitN(tokens[1], ")", 1)
+	if len(tokens) != 2 {
+		return "", -1, errors.New("unable to read workflow concurrency")
+	}
+
+	workflowConcurrency, err = strconv.Atoi(tokens[0])
+	if err != nil {
+		return "", -1, fmt.Errorf("%w: workflow concurrency is not an integer", err)
+	}
+
+	if tokens[1] != "{" {
+		return "", -1, fmt.Errorf("workflow entrypoint ends with %s, not {"), tokens[1])
+	}
+
+	return workflowName, workflowConcurrency, nil
 }
 
 func (p *parser) matchWorkflow() (*job.Workflow, error) {
