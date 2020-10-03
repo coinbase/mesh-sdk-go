@@ -3,8 +3,8 @@ package dsl
 import (
 	"bufio"
 	"errors"
+	"fmt"
 	"os"
-	"regexp"
 	"strings"
 
 	"github.com/coinbase/rosetta-sdk-go/constructor/job"
@@ -17,8 +17,6 @@ type parser struct {
 	currentWorkflow *job.Workflow
 	currentScenario *job.Scenario
 }
-
-// TODO: if //, skip line
 
 func extractOutputPathAndType(line string) (job.ActionType, string, string, error) {
 	var outputPath string
@@ -60,9 +58,11 @@ func extractOutputPathAndType(line string) (job.ActionType, string, string, erro
 func (p *parser) matchAction() (*job.Action, error) {
 	var actionType job.ActionType
 	var input, outputPath string
-	var err error
 	for {
-		line := p.readLine()
+		line, err := p.readLine()
+		if err != nil {
+			return nil, fmt.Errorf("%w: action parsing failed")
+		}
 
 		// if no action type, at first line
 		if len(actionType) == 0 {
@@ -92,43 +92,130 @@ func (p *parser) matchAction() (*job.Action, error) {
 	}, nil
 }
 
-func parseName(line string) string {
-}
-
-func (p *parser) matchScenario() *job.Scenario {
-	line := p.readLine()
-	name := parseName(line)
-
-	for {
-		action := p.matchAction()
+func parseName(line string) (string, error) {
+	tokens := strings.SplitN(line, "{", 1)
+	if len(tokens) != 1 {
+		return "", errors.New("parsing error")
 	}
 
+	return tokens[0], nil
 }
 
-func parseNameConcurrency(line string) (string, int) {
-}
+func (p *parser) matchScenario() (*job.Scenario, bool, error) {
+	line, err := p.readLine()
+	if err != nil {
+		return nil, false, errors.New("unexpected end of input")
+	}
+	name, err := parseName(line)
+	if err != nil {
+		return nil, false, errors.New("unable to parse scenario name")
+	}
 
-func (p *parser) matchWorkflow() *job.Workflow {
-	line := p.readLine()
-	name, concurrency := parseNameConcurrency(line)
-
+	actions := []*job.Action{}
 	for {
-		scenario := p.matchScenario()
+		line, err := p.readLine()
+		if err != nil {
+			return nil, false, fmt.Errorf("%w: scenario parsing failed", err)
+		}
+		if line == "}" {
+			return &job.Scenario{
+				Name:    name,
+				Actions: actions,
+			}, false, nil
+		}
+		if line == "}," {
+			return &job.Scenario{
+				Name:    name,
+				Actions: actions,
+			}, true, nil
+		}
+		action, err := p.matchAction()
+		if err != nil {
+			return nil, false, errors.New("unable to parse action")
+		}
+		actions = append(actions, action)
 	}
 }
 
-func (p *parser) readLine() string {
-	p.scanner.Scan()
-	p.lineNumber++
-	return strings.TrimSpace(p.scanner.Text())
+func parseNameConcurrency(line string) (string, int, error) {
+}
+
+func (p *parser) matchWorkflow() (*job.Workflow, error) {
+	line, err := p.readLine()
+	if err != nil {
+		return nil, err
+	}
+
+	name, concurrency, err := parseNameConcurrency(line)
+	if err != nil {
+		return nil, errors.New("could not parse name concurrency")
+	}
+
+	scenarios := []*job.Scenario{}
+	for {
+		scenario, cont, err := p.matchScenario()
+		if err != nil {
+			return nil, err
+		}
+
+		scenarios = append(scenarios, scenario)
+		if !cont {
+			return &job.Workflow{
+				Name:        name,
+				Concurrency: concurrency,
+				Scenarios:   scenarios,
+			}, nil
+		}
+	}
+}
+
+func (p *parser) readLine() (string, error) {
+	for {
+		success := p.scanner.Scan()
+		if success {
+			p.lineNumber++
+			trimmedLine := strings.TrimSpace(p.scanner.Text())
+
+			// Skip comments
+			if strings.HasPrefix(trimmedLine, "//") {
+				continue
+			}
+
+			// Skip empty lines
+			if len(trimmedLine) == 0 {
+				continue
+			}
+
+			return trimmedLine, nil
+		}
+
+		if p.scanner.Err() != nil {
+			return "", fmt.Errorf("%w: %s", ErrScanner, p.scanner.Err().Error())
+		}
+
+		return "", ErrEOF
+	}
 }
 
 func LoadFile(file string) ([]*job.Workflow, error) {
 	f, err := os.Open(file)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
 
-	p := &parser{bufio.NewScanner(f), 1}
+	p := &parser{scanner: bufio.NewScanner(f), lineNumber: 1}
 
+	workflows := []*job.Workflow{}
 	for {
-		workflow := p.matchWorkflow()
+		workflow, err := p.matchWorkflow()
+		if errors.Is(err, ErrEOF) {
+			return workflows, nil
+		}
+		if err != nil {
+			return nil, err
+		}
+
+		workflows = append(workflows, workflow)
 	}
 }
