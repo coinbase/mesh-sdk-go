@@ -134,11 +134,15 @@ func (p *parser) parseAction(previousLine string) (*job.Action, error) {
 func parseScenarioName(line string) (string, error) {
 	tokens := strings.SplitN(line, "{", 2)
 	if len(tokens) != 2 {
-		return "", errors.New("parsing error")
+		return "", fmt.Errorf("%w: scenario entrypoint does not contain {", ErrSyntax)
+	}
+
+	if len(tokens[0]) == 0 {
+		return "", ErrParsingScenarioName
 	}
 
 	if len(tokens[1]) != 0 {
-		return "", errors.New("parsing error")
+		return "", fmt.Errorf("%w: scenario entrypoint ends with %s, not {", ErrSyntax, tokens[1])
 	}
 
 	return tokens[0], nil

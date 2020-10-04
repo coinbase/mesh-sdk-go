@@ -164,6 +164,24 @@ func TestParse(t *testing.T) {
 			expectedErrLine:     1,
 			expectedErrContents: "request_funds(1)",
 		},
+		"scenario error: missing name": {
+			file:                "missing_scenario_name.ros",
+			expectedErr:         ErrParsingScenarioName,
+			expectedErrLine:     2,
+			expectedErrContents: "{",
+		},
+		"scenario error: missing bracket": {
+			file:                "missing_scenario_bracket.ros",
+			expectedErr:         ErrSyntax,
+			expectedErrLine:     2,
+			expectedErrContents: "find_account",
+		},
+		"scenario error: syntax error": {
+			file:                "trailing_text_scenario.ros",
+			expectedErr:         ErrSyntax,
+			expectedErrLine:     2,
+			expectedErrContents: "find_account{hello",
+		},
 	}
 
 	for name, test := range tests {
