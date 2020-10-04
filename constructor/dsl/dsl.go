@@ -19,13 +19,24 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path"
 
 	"github.com/coinbase/rosetta-sdk-go/constructor/job"
+)
+
+const (
+	// RosettaFileExtension is the file extension for all constructor files.
+	RosettaFileExtension = ".ros"
 )
 
 // Parse loads a Rosetta constructor file and attempts
 // to parse it into []*job.Workflow.
 func Parse(ctx context.Context, file string) ([]*job.Workflow, *Error) {
+	fileExtension := path.Ext(file)
+	if fileExtension != RosettaFileExtension {
+		return nil, &Error{Err: fmt.Errorf("%w: expected %s, got %s", ErrIncorrectExtension, RosettaFileExtension, fileExtension)}
+	}
+
 	f, err := os.Open(file) // #nosec G304
 	if err != nil {
 		return nil, &Error{Err: fmt.Errorf("%w: %s", ErrCannotOpenFile, err)}

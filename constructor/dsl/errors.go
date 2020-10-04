@@ -21,11 +21,13 @@ import (
 	"github.com/fatih/color"
 )
 
-// Parsing Errors
+// DSL Errors
 var (
-	ErrCannotOpenFile = errors.New("file cannot be opened")
-	ErrEOF            = errors.New("reached end of file")
-	ErrScanner        = errors.New("scanner error")
+	ErrCannotOpenFile     = errors.New("file cannot be opened")
+	ErrIncorrectExtension = errors.New("expected .ros file extension")
+
+	ErrEOF     = errors.New("reached end of file")
+	ErrScanner = errors.New("scanner error")
 
 	ErrUnexpectedEOF = errors.New("unexpected EOF")
 
