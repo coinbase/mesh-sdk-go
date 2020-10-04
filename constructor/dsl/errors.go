@@ -14,7 +14,7 @@ type Error struct {
 }
 
 func (e *Error) Log() {
-	message := fmt.Sprintf("PARSING FAILED!\nMessage: %s\n\n", e.Err.Error())
+	message := fmt.Sprintf("CONSTRUCTION FILE PARSING FAILED!\nMessage: %s\n\n", e.Err.Error())
 
 	if e.Line > 0 {
 		message = fmt.Sprintf("%sLine: %d\nLine Contents:%s\n\n", message, e.Line, e.LineContents)
@@ -27,6 +27,8 @@ var (
 	ErrCannotOpenFile = errors.New("file cannot be opened")
 	ErrEOF            = errors.New("reached end of file")
 	ErrScanner        = errors.New("scanner error")
+
+	ErrUnexpectedEOF = errors.New("unexpected EOF")
 
 	ErrSyntax = errors.New("incorrect syntax")
 
