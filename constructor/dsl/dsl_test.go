@@ -67,6 +67,11 @@ func TestLoadFile(t *testing.T) {
 									Input:      `{"symbol":"ETH", "decimals":18}`,
 									OutputPath: "currency",
 								},
+								{
+									Type:       job.SetVariable,
+									Input:      `{"symbol":"ETH", "decimals":18}`,
+									OutputPath: "currency_2",
+								},
 								{ // ensure we have some balance that exists
 									Type:       job.FindBalance,
 									Input:      `{"minimum_balance":{"value": "0","currency": {{currency}}},"create_limit":1}`, // nolint

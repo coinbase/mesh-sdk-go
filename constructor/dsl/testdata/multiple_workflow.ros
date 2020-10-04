@@ -1,6 +1,7 @@
 request_funds(1){ 
   find_account{
     currency = {"symbol":"ETH", "decimals":18};
+    currency_2 = set_variable({"symbol":"ETH", "decimals":18});
     random_account = find_balance({
       "minimum_balance":{
         "value": "0",
