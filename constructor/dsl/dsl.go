@@ -34,7 +34,7 @@ func extractOutputPathAndType(line string) (job.ActionType, string, string, erro
 	if len(tokens) == 2 {
 		thisAction := job.ActionType(tokens[0])
 		switch thisAction {
-		case job.GenerateKey, job.Derive, job.SaveAccount, job.PrintMessage,
+		case job.SetVariable, job.GenerateKey, job.Derive, job.SaveAccount, job.PrintMessage,
 			job.RandomString, job.Math, job.FindBalance, job.RandomNumber, job.Assert,
 			job.FindCurrencyAmount, job.LoadEnv, job.HTTPRequest:
 			return thisAction, outputPath, tokens[1], nil
@@ -81,16 +81,11 @@ func (p *parser) matchAction(previousLine string) (*job.Action, error) {
 			}
 		}
 
-		if actionType == job.SetVariable {
-			input += strings.TrimSuffix(line, ";")
-			if strings.HasSuffix(line, ";") {
-				break
-			}
-		} else {
-			input += strings.TrimSuffix(line, ");")
-			if strings.HasSuffix(line, ");") {
-				break
-			}
+		// Clean input if in a function or if using native syntax
+		// (i.e. set_variable or math).
+		input += strings.TrimSuffix(strings.TrimSuffix(line, ");"), ";")
+		if strings.HasSuffix(line, ";") {
+			break
 		}
 	}
 
