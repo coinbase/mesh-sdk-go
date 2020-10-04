@@ -314,7 +314,7 @@ func (p *parser) readLine() (string, error) {
 func Parse(file string) ([]*job.Workflow, *Error) {
 	f, err := os.Open(file)
 	if err != nil {
-		return nil, &Error{Err: err}
+		return nil, &Error{Err: fmt.Errorf("%w: %s", ErrCannotOpenFile, err)}
 	}
 	defer f.Close()
 

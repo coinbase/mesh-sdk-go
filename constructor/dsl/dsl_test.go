@@ -206,6 +206,16 @@ func TestParse(t *testing.T) {
 			expectedErrLine:     3,
 			expectedErrContents: "{",
 		},
+		"action error: invalid math symbol": {
+			file:                "action_invalid_math.ros",
+			expectedErr:         ErrSyntax,
+			expectedErrLine:     8,
+			expectedErrContents: "math = 1 * 10;",
+		},
+		"file error: file does not exist": {
+			file:        "blah_blah.ros",
+			expectedErr: ErrCannotOpenFile,
+		},
 	}
 
 	for name, test := range tests {
