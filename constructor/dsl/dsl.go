@@ -226,6 +226,7 @@ func (p *parser) readLine() (string, error) {
 		if success {
 			p.lineNumber++
 			trimmedLine := strings.TrimSpace(p.scanner.Text())
+			p.lastLineRead = trimmedLine
 
 			// Remove comments
 			tokens := strings.Split(trimmedLine, "//")

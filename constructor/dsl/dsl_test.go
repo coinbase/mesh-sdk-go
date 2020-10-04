@@ -28,12 +28,12 @@ func TestLoadFile(t *testing.T) {
 							Actions: []*job.Action{
 								{
 									Type:       job.SetVariable,
-									Input:      `{"symbol":"ETH", "decimals":18}`,
+									Input:      `{"symbol":"ETH","decimals":18}`,
 									OutputPath: "currency",
 								},
 								{
 									Type:       job.FindBalance,
-									Input:      `{"minimum_balance":{"value": "0", "currency": {{currency}}}, "create_limit":1}`, // nolint
+									Input:      `{"minimum_balance":{"value": "0","currency": {{currency}}},"create_limit":1}`, // nolint
 									OutputPath: "random_account",
 								},
 							},
@@ -43,7 +43,7 @@ func TestLoadFile(t *testing.T) {
 							Actions: []*job.Action{
 								{
 									Type:       job.FindBalance,
-									Input:      `{"account_identifier": {{random_account.account_identifier}}, "minimum_balance":{"value": "10000000000000000", "currency": {{currency}}}}`, // nolint
+									Input:      `{"account_identifier": {{random_account.account_identifier}},"minimum_balance":{"value": "10000000000000000","currency": {{currency}}}}`, // nolint
 									OutputPath: "loaded_account",
 								},
 							},
@@ -58,7 +58,7 @@ func TestLoadFile(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			fullPath := path.Join("testdata", test.file)
 			workflows, err := LoadFile(fullPath)
-			assert.Equal(t, workflows, test.expectedWorkflows)
+			assert.Equal(t, test.expectedWorkflows, workflows)
 			if test.expectedErr != nil {
 				assert.True(t, errors.Is(err, test.expectedErr))
 			} else {
