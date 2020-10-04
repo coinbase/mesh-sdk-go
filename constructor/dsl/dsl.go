@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"path"
 
@@ -32,7 +33,8 @@ const (
 // Parse loads a Rosetta constructor file and attempts
 // to parse it into []*job.Workflow.
 func Parse(ctx context.Context, file string) ([]*job.Workflow, *Error) {
-	fileExtension := path.Ext(file)
+	cleanedPath := path.Clean(file)
+	fileExtension := path.Ext(cleanedPath)
 	if fileExtension != RosettaFileExtension {
 		return nil, &Error{
 			Err: fmt.Errorf(
@@ -44,11 +46,15 @@ func Parse(ctx context.Context, file string) ([]*job.Workflow, *Error) {
 		}
 	}
 
-	f, err := os.Open(file) // #nosec G304
+	f, err := os.Open(cleanedPath) // #nosec G304
 	if err != nil {
-		return nil, &Error{Err: fmt.Errorf("%w: %s", ErrCannotOpenFile, err)}
+		return nil, &Error{Err: fmt.Errorf("%w (%s): %s", ErrCannotOpenFile, cleanedPath, err)}
 	}
-	defer f.Close()
+	defer func() {
+		if err := f.Close(); err != nil {
+			log.Printf("%s: could not close %s\n", err.Error(), cleanedPath)
+		}
+	}()
 
 	p := newParser(f)
 	workflows := []*job.Workflow{}
