@@ -263,7 +263,11 @@ func parseWorkflowName(line string) (string, int, error) {
 	}
 
 	if tokens[1] != openBrakcet {
-		return "", -1, fmt.Errorf("%w: workflow entrypoint ends with %s, not {", ErrSyntax, tokens[1])
+		return "", -1, fmt.Errorf(
+			"%w: workflow entrypoint ends with %s, not {",
+			ErrSyntax,
+			tokens[1],
+		)
 	}
 
 	return workflowName, workflowConcurrency, nil
@@ -301,7 +305,11 @@ func (p *parser) parseWorkflow(ctx context.Context) (*job.Workflow, error) {
 		}
 
 		if line != closeBracket {
-			return nil, fmt.Errorf("%w: expected workflow to end with }, but got %s", ErrSyntax, line)
+			return nil, fmt.Errorf(
+				"%w: expected workflow to end with }, but got %s",
+				ErrSyntax,
+				line,
+			)
 		}
 
 		return &job.Workflow{

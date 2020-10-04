@@ -34,7 +34,14 @@ const (
 func Parse(ctx context.Context, file string) ([]*job.Workflow, *Error) {
 	fileExtension := path.Ext(file)
 	if fileExtension != RosettaFileExtension {
-		return nil, &Error{Err: fmt.Errorf("%w: expected %s, got %s", ErrIncorrectExtension, RosettaFileExtension, fileExtension)}
+		return nil, &Error{
+			Err: fmt.Errorf(
+				"%w: expected %s, got %s",
+				ErrIncorrectExtension,
+				RosettaFileExtension,
+				fileExtension,
+			),
+		}
 	}
 
 	f, err := os.Open(file) // #nosec G304
