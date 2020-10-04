@@ -11,6 +11,23 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/constructor/job"
 )
 
+const (
+	split2              = 2
+	openBrakcet         = "{"
+	openDoubleBracket   = "{{"
+	closeBracket        = "}"
+	endScenarioContinue = "},"
+	quote               = "\""
+	equal               = "="
+	add                 = "+"
+	subtract            = "-"
+	openParens          = "("
+	closeParens         = ")"
+	endLine             = ";"
+	functionEndLine     = ");"
+	commentMarker       = "//"
+)
+
 type parser struct {
 	scanner      *bufio.Scanner
 	lineNumber   int
@@ -22,11 +39,11 @@ func (p *parser) scannerError() error {
 }
 
 func wrapValue(input string) string {
-	if strings.HasPrefix(input, "{{") {
+	if strings.HasPrefix(input, openDoubleBracket) {
 		return input
 	}
 
-	if strings.HasPrefix(input, "\"") {
+	if strings.HasPrefix(input, quote) {
 		return input
 	}
 
@@ -36,9 +53,9 @@ func wrapValue(input string) string {
 func parseActionType(line string) (job.ActionType, string, string, error) {
 	var outputPath string
 
-	tokens := strings.SplitN(line, "=", 2)
+	tokens := strings.SplitN(line, equal, split2)
 	var remaining string
-	if len(tokens) == 2 {
+	if len(tokens) == split2 {
 		outputPath = strings.TrimSpace(tokens[0])
 		remaining = tokens[1]
 	} else {
@@ -46,47 +63,53 @@ func parseActionType(line string) (job.ActionType, string, string, error) {
 	}
 
 	remaining = strings.TrimSpace(remaining)
-	tokens = strings.SplitN(remaining, "(", 2)
-	if len(tokens) == 2 {
+	tokens = strings.SplitN(remaining, openParens, split2)
+	if len(tokens) == split2 {
 		thisAction := job.ActionType(tokens[0])
 		switch thisAction {
-		case job.SetVariable, job.GenerateKey, job.Derive, job.SaveAccount, job.PrintMessage,
+		case job.SetVariable:
+			if len(outputPath) == 0 {
+				return "", "", "", ErrCannotSetVariableWithoutOutput
+			}
+
+			return job.SetVariable, outputPath, tokens[1], nil
+		case job.GenerateKey, job.Derive, job.SaveAccount, job.PrintMessage,
 			job.RandomString, job.Math, job.FindBalance, job.RandomNumber, job.Assert,
 			job.FindCurrencyAmount, job.LoadEnv, job.HTTPRequest:
 			return thisAction, outputPath, tokens[1], nil
 		default:
-			return "", "", "", errors.New("invalid action type")
+			return "", "", "", ErrInvalidAction
 		}
 	}
 
-	// Attempt to parse Math
+	// Attempt to parse native Math
 	for symbol, mathOperation := range map[string]job.MathOperation{
-		"+": job.Addition,
-		"-": job.Subtraction,
+		add:      job.Addition,
+		subtract: job.Subtraction,
 	} {
-		tokens = strings.SplitN(remaining, symbol, 2)
-		if len(tokens) == 2 {
+		tokens = strings.SplitN(remaining, symbol, split2)
+		if len(tokens) == split2 {
 			syntheticOutput := fmt.Sprintf(
 				`{"operation": "%s","left_value": %s,"right_value": %s};`,
 				mathOperation,
 				wrapValue(strings.TrimSpace(tokens[0])),
-				wrapValue(strings.TrimSuffix(strings.TrimSpace(tokens[1]), ";")),
+				wrapValue(strings.TrimSuffix(strings.TrimSpace(tokens[1]), endLine)),
 			)
 
 			return job.Math, outputPath, syntheticOutput, nil
 		}
 	}
 
-	// Attempt to parse SetVariable
-	if strings.HasPrefix(tokens[0], "{") {
+	// Attempt to parse native SetVariable
+	if strings.HasPrefix(tokens[0], openBrakcet) {
 		if len(outputPath) > 0 {
 			return job.SetVariable, outputPath, tokens[0], nil
 		}
 
-		return "", "", "", errors.New("unable to set variable with no output path")
+		return "", "", "", ErrCannotSetVariableWithoutOutput
 	}
 
-	return "", "", "", errors.New("parsing error")
+	return "", "", "", ErrSyntax
 }
 
 func (p *parser) parseAction(previousLine string) (*job.Action, error) {
@@ -112,14 +135,14 @@ func (p *parser) parseAction(previousLine string) (*job.Action, error) {
 			var err error
 			actionType, outputPath, line, err = parseActionType(line)
 			if err != nil {
-				return nil, fmt.Errorf("%w: unable to extract path and type", err)
+				return nil, fmt.Errorf("%w: action type parsing failed", err)
 			}
 		}
 
 		// Clean input if in a function or if using native syntax
 		// (i.e. set_variable or math).
-		input += strings.TrimSuffix(strings.TrimSuffix(line, ");"), ";")
-		if strings.HasSuffix(line, ";") {
+		input += strings.TrimSuffix(strings.TrimSuffix(line, functionEndLine), endLine)
+		if strings.HasSuffix(line, endLine) {
 			break
 		}
 	}
@@ -132,8 +155,8 @@ func (p *parser) parseAction(previousLine string) (*job.Action, error) {
 }
 
 func parseScenarioName(line string) (string, error) {
-	tokens := strings.SplitN(line, "{", 2)
-	if len(tokens) != 2 {
+	tokens := strings.SplitN(line, openBrakcet, split2)
+	if len(tokens) != split2 {
 		return "", fmt.Errorf("%w: scenario entrypoint does not contain {", ErrSyntax)
 	}
 
@@ -164,13 +187,13 @@ func (p *parser) parseScenario() (*job.Scenario, bool, error) {
 		if err != nil {
 			return nil, false, fmt.Errorf("%w: scenario parsing failed", err)
 		}
-		if line == "}" {
+		if line == closeBracket {
 			return &job.Scenario{
 				Name:    name,
 				Actions: actions,
 			}, false, nil
 		}
-		if line == "}," {
+		if line == endScenarioContinue {
 			return &job.Scenario{
 				Name:    name,
 				Actions: actions,
@@ -191,8 +214,8 @@ func parseWorkflowName(line string) (string, int, error) {
 	var workflowConcurrency int
 	var err error
 
-	tokens := strings.SplitN(line, "(", 2)
-	if len(tokens) != 2 {
+	tokens := strings.SplitN(line, openParens, split2)
+	if len(tokens) != split2 {
 		return "", -1, ErrParsingWorkflowConcurrency
 	}
 
@@ -201,8 +224,8 @@ func parseWorkflowName(line string) (string, int, error) {
 		return "", -1, ErrParsingWorkflowName
 	}
 
-	tokens = strings.SplitN(tokens[1], ")", 2)
-	if len(tokens) != 2 {
+	tokens = strings.SplitN(tokens[1], closeParens, split2)
+	if len(tokens) != split2 {
 		return "", -1, ErrParsingWorkflowConcurrency
 	}
 
@@ -211,7 +234,7 @@ func parseWorkflowName(line string) (string, int, error) {
 		return "", -1, fmt.Errorf("%w: %s", ErrParsingWorkflowConcurrency, err.Error())
 	}
 
-	if tokens[1] != "{" {
+	if tokens[1] != openBrakcet {
 		return "", -1, fmt.Errorf("%w: workflow entrypoint ends with %s, not {", ErrSyntax, tokens[1])
 	}
 
@@ -246,7 +269,7 @@ func (p *parser) parseWorkflow() (*job.Workflow, error) {
 			return nil, err
 		}
 
-		if line != "}" {
+		if line != closeBracket {
 			return nil, fmt.Errorf("expected workflow to end with }, but got %s", line)
 		}
 
@@ -267,7 +290,7 @@ func (p *parser) readLine() (string, error) {
 			p.lastLineRead = trimmedLine
 
 			// Remove comments
-			tokens := strings.Split(trimmedLine, "//")
+			tokens := strings.Split(trimmedLine, commentMarker)
 			trimmedLine = tokens[0]
 
 			// Skip empty lines

@@ -33,4 +33,7 @@ var (
 	ErrParsingWorkflowConcurrency = errors.New("cannot parse workflow concurrency")
 
 	ErrParsingScenarioName = errors.New("cannot parse scenario name")
+
+	ErrInvalidAction                  = errors.New("invalid actions")
+	ErrCannotSetVariableWithoutOutput = errors.New("cannot set variable without output path")
 )
