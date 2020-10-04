@@ -12,9 +12,11 @@ import (
 
 func TestParse(t *testing.T) {
 	tests := map[string]struct {
-		file              string
-		expectedWorkflows []*job.Workflow
-		expectedErr       error
+		file                string
+		expectedWorkflows   []*job.Workflow
+		expectedErr         error
+		expectedErrLine     int
+		expectedErrContents string
 	}{
 		"simple example": {
 			file: "simple.ros",
@@ -138,6 +140,30 @@ func TestParse(t *testing.T) {
 				},
 			},
 		},
+		"workflow error: missing concurrency": {
+			file:                "missing_concurrency.ros",
+			expectedErr:         ErrParsingWorkflowConcurrency,
+			expectedErrLine:     1,
+			expectedErrContents: "request_funds{",
+		},
+		"workflow error: non-integer concurrency": {
+			file:                "invalid_concurrency.ros",
+			expectedErr:         ErrParsingWorkflowConcurrency,
+			expectedErrLine:     1,
+			expectedErrContents: "request_funds(hello){",
+		},
+		"workflow error: missing name": {
+			file:                "missing_workflow_name.ros",
+			expectedErr:         ErrParsingWorkflowName,
+			expectedErrLine:     1,
+			expectedErrContents: "(1){",
+		},
+		"workflow error: syntax error": {
+			file:                "missing_workflow_bracket.ros",
+			expectedErr:         ErrSyntax,
+			expectedErrLine:     1,
+			expectedErrContents: "request_funds(1)",
+		},
 	}
 
 	for name, test := range tests {
@@ -146,9 +172,13 @@ func TestParse(t *testing.T) {
 			workflows, err := Parse(fullPath)
 			assert.Equal(t, test.expectedWorkflows, workflows)
 			if test.expectedErr != nil {
-				assert.True(t, errors.Is(err, test.expectedErr))
+				assert.NotNil(t, err)
+				err.Log()
+				assert.True(t, errors.Is(err.Err, test.expectedErr))
+				assert.Equal(t, test.expectedErrLine, err.Line)
+				assert.Equal(t, test.expectedErrContents, err.LineContents)
 			} else {
-				assert.NoError(t, err)
+				assert.Nil(t, err)
 			}
 		})
 	}

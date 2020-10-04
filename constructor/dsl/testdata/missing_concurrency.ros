@@ -1,0 +1,15 @@
+request_funds{ 
+  find_account{
+    currency = {
+      "symbol":"ETH",
+      "decimals":18
+    };
+    random_account = find_balance({
+      "minimum_balance":{
+        "value": "0",
+        "currency": {{currency}}
+      }, 
+      "create_limit":1
+    });
+  }
+}
