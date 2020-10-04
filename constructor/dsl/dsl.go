@@ -12,17 +12,15 @@ import (
 )
 
 type parser struct {
-	scanner    *bufio.Scanner
-	lineNumber int
-
-	currentWorkflow *job.Workflow
-	currentScenario *job.Scenario
+	scanner      *bufio.Scanner
+	lineNumber   int
+	lastLineRead string // used for error response
 }
 
 func extractOutputPathAndType(line string) (job.ActionType, string, string, error) {
 	var outputPath string
 
-	tokens := strings.SplitN(line, "=", 1)
+	tokens := strings.SplitN(line, "=", 2)
 	var remaining string
 	if len(tokens) == 2 {
 		outputPath = strings.TrimSpace(tokens[0])
@@ -32,7 +30,7 @@ func extractOutputPathAndType(line string) (job.ActionType, string, string, erro
 	}
 
 	remaining = strings.TrimSpace(remaining)
-	tokens = strings.SplitN(line, "(", 1)
+	tokens = strings.SplitN(remaining, "(", 2)
 	if len(tokens) == 2 {
 		thisAction := job.ActionType(tokens[0])
 		switch thisAction {
@@ -65,11 +63,12 @@ func (p *parser) matchAction(previousLine string) (*job.Action, error) {
 		var line string
 		if len(previousLine) > 0 && !argLineRead {
 			line = previousLine
+			argLineRead = true
 		} else {
 			var err error
 			line, err = p.readLine()
 			if err != nil {
-				return nil, fmt.Errorf("%w: action parsing failed")
+				return nil, fmt.Errorf("%w: action parsing failed", err)
 			}
 		}
 
@@ -78,7 +77,7 @@ func (p *parser) matchAction(previousLine string) (*job.Action, error) {
 			var err error
 			actionType, outputPath, line, err = extractOutputPathAndType(line)
 			if err != nil {
-				return nil, errors.New("unable to extract path and type")
+				return nil, fmt.Errorf("%w: unable to extract path and type", err)
 			}
 		}
 
@@ -103,8 +102,12 @@ func (p *parser) matchAction(previousLine string) (*job.Action, error) {
 }
 
 func parseName(line string) (string, error) {
-	tokens := strings.SplitN(line, "{", 1)
-	if len(tokens) != 1 {
+	tokens := strings.SplitN(line, "{", 2)
+	if len(tokens) != 2 {
+		return "", errors.New("parsing error")
+	}
+
+	if len(tokens[1]) != 0 {
 		return "", errors.New("parsing error")
 	}
 
@@ -118,7 +121,7 @@ func (p *parser) matchScenario() (*job.Scenario, bool, error) {
 	}
 	name, err := parseName(line)
 	if err != nil {
-		return nil, false, errors.New("unable to parse scenario name")
+		return nil, false, fmt.Errorf("%w: unable to parse scenario name", err)
 	}
 
 	actions := []*job.Action{}
@@ -139,9 +142,10 @@ func (p *parser) matchScenario() (*job.Scenario, bool, error) {
 				Actions: actions,
 			}, true, nil
 		}
+
 		action, err := p.matchAction(line)
 		if err != nil {
-			return nil, false, errors.New("unable to parse action")
+			return nil, false, fmt.Errorf("%w: unable to parse action", err)
 		}
 		actions = append(actions, action)
 	}
@@ -152,14 +156,14 @@ func parseNameConcurrency(line string) (string, int, error) {
 	var workflowConcurrency int
 	var err error
 
-	tokens := strings.SplitN(line, "(", 1)
+	tokens := strings.SplitN(line, "(", 2)
 	if len(tokens) != 2 {
 		return "", -1, errors.New("unable to read workflow name")
 	}
 
 	workflowName = strings.TrimSpace(tokens[0])
 
-	tokens = strings.SplitN(tokens[1], ")", 1)
+	tokens = strings.SplitN(tokens[1], ")", 2)
 	if len(tokens) != 2 {
 		return "", -1, errors.New("unable to read workflow concurrency")
 	}
@@ -170,7 +174,7 @@ func parseNameConcurrency(line string) (string, int, error) {
 	}
 
 	if tokens[1] != "{" {
-		return "", -1, fmt.Errorf("workflow entrypoint ends with %s, not {"), tokens[1])
+		return "", -1, fmt.Errorf("workflow entrypoint ends with %s, not {", tokens[1])
 	}
 
 	return workflowName, workflowConcurrency, nil
@@ -184,7 +188,7 @@ func (p *parser) matchWorkflow() (*job.Workflow, error) {
 
 	name, concurrency, err := parseNameConcurrency(line)
 	if err != nil {
-		return nil, errors.New("could not parse name concurrency")
+		return nil, fmt.Errorf("%w: could not parse name concurrency", err)
 	}
 
 	scenarios := []*job.Scenario{}
@@ -195,13 +199,24 @@ func (p *parser) matchWorkflow() (*job.Workflow, error) {
 		}
 
 		scenarios = append(scenarios, scenario)
-		if !cont {
-			return &job.Workflow{
-				Name:        name,
-				Concurrency: concurrency,
-				Scenarios:   scenarios,
-			}, nil
+		if cont {
+			continue
 		}
+
+		line, err := p.readLine()
+		if err != nil {
+			return nil, err
+		}
+
+		if line != "}" {
+			return nil, fmt.Errorf("expected workflow to end with }, but got %s", line)
+		}
+
+		return &job.Workflow{
+			Name:        name,
+			Concurrency: concurrency,
+			Scenarios:   scenarios,
+		}, nil
 	}
 }
 
@@ -212,16 +227,16 @@ func (p *parser) readLine() (string, error) {
 			p.lineNumber++
 			trimmedLine := strings.TrimSpace(p.scanner.Text())
 
-			// Skip comments
-			if strings.HasPrefix(trimmedLine, "//") {
-				continue
-			}
+			// Remove comments
+			tokens := strings.Split(trimmedLine, "//")
+			trimmedLine = tokens[0]
 
 			// Skip empty lines
 			if len(trimmedLine) == 0 {
 				continue
 			}
 
+			fmt.Println(trimmedLine)
 			return trimmedLine, nil
 		}
 
@@ -233,6 +248,7 @@ func (p *parser) readLine() (string, error) {
 	}
 }
 
+// LoadFile loads a file written in X.
 func LoadFile(file string) ([]*job.Workflow, error) {
 	f, err := os.Open(file)
 	if err != nil {
@@ -240,7 +256,7 @@ func LoadFile(file string) ([]*job.Workflow, error) {
 	}
 	defer f.Close()
 
-	p := &parser{scanner: bufio.NewScanner(f), lineNumber: 1}
+	p := &parser{bufio.NewScanner(f), 1, ""}
 
 	workflows := []*job.Workflow{}
 	for {
