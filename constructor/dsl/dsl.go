@@ -270,7 +270,7 @@ func (p *parser) parseWorkflow() (*job.Workflow, error) {
 		}
 
 		if line != closeBracket {
-			return nil, fmt.Errorf("expected workflow to end with }, but got %s", line)
+			return nil, fmt.Errorf("%w: expected workflow to end with }, but got %s", ErrSyntax, line)
 		}
 
 		return &job.Workflow{

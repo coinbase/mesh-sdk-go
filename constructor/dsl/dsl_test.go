@@ -182,6 +182,12 @@ func TestParse(t *testing.T) {
 			expectedErrLine:     2,
 			expectedErrContents: "find_account{hello",
 		},
+		"scenario error: improper continue": {
+			file:                "scenario_improper_continue.ros",
+			expectedErr:         ErrSyntax,
+			expectedErrLine:     17,
+			expectedErrContents: "request{",
+		},
 	}
 
 	for name, test := range tests {
