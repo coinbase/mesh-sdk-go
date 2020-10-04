@@ -52,6 +52,72 @@ func TestLoadFile(t *testing.T) {
 				},
 			},
 		},
+		"multiple workflows": {
+			file: "multiple_workflow.ros",
+			expectedWorkflows: []*job.Workflow{
+				{
+					Name:        string(job.RequestFunds),
+					Concurrency: job.ReservedWorkflowConcurrency,
+					Scenarios: []*job.Scenario{
+						{
+							Name: "find_account",
+							Actions: []*job.Action{
+								{
+									Type:       job.SetVariable,
+									Input:      `{"symbol":"ETH", "decimals":18}`,
+									OutputPath: "currency",
+								},
+								{ // ensure we have some balance that exists
+									Type:       job.FindBalance,
+									Input:      `{"minimum_balance":{"value": "0","currency": {{currency}}},"create_limit":1}`, // nolint
+									OutputPath: "random_account",
+								},
+							},
+						},
+						{
+							Name: "request",
+							Actions: []*job.Action{
+								{
+									Type:       job.FindBalance,
+									Input:      `{"account_identifier": {{random_account.account_identifier}},"minimum_balance":{"value": "10000000000000000","currency": {{currency}}}}`, // nolint
+									OutputPath: "loaded_account",
+								},
+							},
+						},
+					},
+				},
+				{
+					Name:        string(job.CreateAccount),
+					Concurrency: job.ReservedWorkflowConcurrency,
+					Scenarios: []*job.Scenario{
+						{
+							Name: "create_account",
+							Actions: []*job.Action{
+								{
+									Type:       job.SetVariable,
+									Input:      `{"network":"Ropsten", "blockchain":"Ethereum"}`,
+									OutputPath: "network",
+								},
+								{
+									Type:       job.GenerateKey,
+									Input:      `{"curve_type": "secp256k1"}`,
+									OutputPath: "key",
+								},
+								{
+									Type:       job.Derive,
+									Input:      `{"network_identifier": {{network}},"public_key": {{key.public_key}}}`,
+									OutputPath: "account",
+								},
+								{
+									Type:  job.SaveAccount,
+									Input: `{"account_identifier": {{account.account_identifier}},"keypair": {{key}}}`,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for name, test := range tests {
