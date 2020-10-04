@@ -17,6 +17,10 @@ type parser struct {
 	lastLineRead string
 }
 
+func (p *parser) scannerError() error {
+	return p.scanner.Err()
+}
+
 func wrapValue(input string) string {
 	if strings.HasPrefix(input, "{{") {
 		return input
@@ -29,7 +33,7 @@ func wrapValue(input string) string {
 	return fmt.Sprintf(`"%s"`, input)
 }
 
-func extractOutputPathAndType(line string) (job.ActionType, string, string, error) {
+func parseActionType(line string) (job.ActionType, string, string, error) {
 	var outputPath string
 
 	tokens := strings.SplitN(line, "=", 2)
@@ -85,7 +89,7 @@ func extractOutputPathAndType(line string) (job.ActionType, string, string, erro
 	return "", "", "", errors.New("parsing error")
 }
 
-func (p *parser) matchAction(previousLine string) (*job.Action, error) {
+func (p *parser) parseAction(previousLine string) (*job.Action, error) {
 	var actionType job.ActionType
 	var input, outputPath string
 
@@ -106,7 +110,7 @@ func (p *parser) matchAction(previousLine string) (*job.Action, error) {
 		// if no action type, at first line
 		if len(actionType) == 0 {
 			var err error
-			actionType, outputPath, line, err = extractOutputPathAndType(line)
+			actionType, outputPath, line, err = parseActionType(line)
 			if err != nil {
 				return nil, fmt.Errorf("%w: unable to extract path and type", err)
 			}
@@ -127,7 +131,7 @@ func (p *parser) matchAction(previousLine string) (*job.Action, error) {
 	}, nil
 }
 
-func parseName(line string) (string, error) {
+func parseScenarioName(line string) (string, error) {
 	tokens := strings.SplitN(line, "{", 2)
 	if len(tokens) != 2 {
 		return "", errors.New("parsing error")
@@ -140,12 +144,12 @@ func parseName(line string) (string, error) {
 	return tokens[0], nil
 }
 
-func (p *parser) matchScenario() (*job.Scenario, bool, error) {
+func (p *parser) parseScenario() (*job.Scenario, bool, error) {
 	line, err := p.readLine()
 	if err != nil {
 		return nil, false, errors.New("unexpected end of input")
 	}
-	name, err := parseName(line)
+	name, err := parseScenarioName(line)
 	if err != nil {
 		return nil, false, fmt.Errorf("%w: unable to parse scenario name", err)
 	}
@@ -169,15 +173,16 @@ func (p *parser) matchScenario() (*job.Scenario, bool, error) {
 			}, true, nil
 		}
 
-		action, err := p.matchAction(line)
+		action, err := p.parseAction(line)
 		if err != nil {
 			return nil, false, fmt.Errorf("%w: unable to parse action", err)
 		}
+
 		actions = append(actions, action)
 	}
 }
 
-func parseNameConcurrency(line string) (string, int, error) {
+func parseWorkflowName(line string) (string, int, error) {
 	var workflowName string
 	var workflowConcurrency int
 	var err error
@@ -209,20 +214,20 @@ func parseNameConcurrency(line string) (string, int, error) {
 	return workflowName, workflowConcurrency, nil
 }
 
-func (p *parser) matchWorkflow() (*job.Workflow, error) {
+func (p *parser) parseWorkflow() (*job.Workflow, error) {
 	line, err := p.readLine()
 	if err != nil {
 		return nil, err
 	}
 
-	name, concurrency, err := parseNameConcurrency(line)
+	name, concurrency, err := parseWorkflowName(line)
 	if err != nil {
-		return nil, fmt.Errorf("%w: could not parse name concurrency", err)
+		return nil, fmt.Errorf("%w: could not parse workflow name", err)
 	}
 
 	scenarios := []*job.Scenario{}
 	for {
-		scenario, cont, err := p.matchScenario()
+		scenario, cont, err := p.parseScenario()
 		if err != nil {
 			return nil, err
 		}
@@ -269,8 +274,8 @@ func (p *parser) readLine() (string, error) {
 			return trimmedLine, nil
 		}
 
-		if p.scanner.Err() != nil {
-			return "", fmt.Errorf("%w: %s", ErrScanner, p.scanner.Err().Error())
+		if p.scannerError() != nil {
+			return "", fmt.Errorf("%w: %s", ErrScanner, p.scannerError().Error())
 		}
 
 		return "", ErrEOF
@@ -290,12 +295,16 @@ func Parse(file string) ([]*job.Workflow, *Error) {
 
 	workflows := []*job.Workflow{}
 	for {
-		workflow, err := p.matchWorkflow()
+		workflow, err := p.parseWorkflow()
 		if errors.Is(err, ErrEOF) {
 			return workflows, nil
 		}
 		if err != nil {
-			return nil, &Error{Err: err, Line: p.lineNumber, LineContents: p.lastLineRead}
+			return nil, &Error{
+				Err:          err,
+				Line:         p.lineNumber,
+				LineContents: p.lastLineRead,
+			}
 		}
 
 		workflows = append(workflows, workflow)
