@@ -24,8 +24,9 @@ func (e *Error) Log() {
 }
 
 var (
-	ErrEOF     = errors.New("reached end of file")
-	ErrScanner = errors.New("scanner error")
+	ErrCannotOpenFile = errors.New("file cannot be opened")
+	ErrEOF            = errors.New("reached end of file")
+	ErrScanner        = errors.New("scanner error")
 
 	ErrSyntax = errors.New("incorrect syntax")
 
