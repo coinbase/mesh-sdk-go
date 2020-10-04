@@ -89,12 +89,12 @@ func TestLoadFile(t *testing.T) {
 								},
 								{
 									Type:       job.Math,
-									Input:      `{"operation":"addition","left_value":"10", "right_value":{{math_1}}}`,
+									Input:      `{"operation": "addition","left_value": "10","right_value": {{math_1}}}`,
 									OutputPath: "math_2",
 								},
 								{
 									Type:       job.Math,
-									Input:      `{"operation":"addition","left_value": {{math_3}},"right_value":"20"}`,
+									Input:      `{"operation": "subtraction","left_value": {{math_3}},"right_value": "20"}`,
 									OutputPath: "math_3",
 								},
 								{

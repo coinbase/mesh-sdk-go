@@ -9,13 +9,24 @@ import (
 	"strings"
 
 	"github.com/coinbase/rosetta-sdk-go/constructor/job"
-	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
 type parser struct {
 	scanner      *bufio.Scanner
 	lineNumber   int
 	lastLineRead string // used for error response
+}
+
+func wrapValue(input string) string {
+	if strings.HasPrefix(input, "{{") {
+		return input
+	}
+
+	if strings.HasPrefix(input, "\"") {
+		return input
+	}
+
+	return fmt.Sprintf(`"%s"`, input)
 }
 
 func extractOutputPathAndType(line string) (job.ActionType, string, string, error) {
@@ -47,20 +58,26 @@ func extractOutputPathAndType(line string) (job.ActionType, string, string, erro
 	// Attempt to parse Math
 	tokens = strings.SplitN(remaining, "+", 2)
 	if len(tokens) == 2 {
-		return job.Math, outputPath, types.PrintStruct(&job.MathInput{
-			Operation:  job.Addition,
-			LeftValue:  strings.TrimSpace(tokens[0]),
-			RightValue: strings.TrimSuffix(strings.TrimSpace(tokens[1]), ";"),
-		}) + ";", nil
+		syntheticOutput := fmt.Sprintf(
+			`{"operation": "%s","left_value": %s,"right_value": %s};`,
+			job.Addition,
+			wrapValue(strings.TrimSpace(tokens[0])),
+			wrapValue(strings.TrimSuffix(strings.TrimSpace(tokens[1]), ";")),
+		)
+
+		return job.Math, outputPath, syntheticOutput, nil
 	}
 
 	tokens = strings.SplitN(remaining, "-", 2)
 	if len(tokens) == 2 {
-		return job.Math, outputPath, types.PrintStruct(&job.MathInput{
-			Operation:  job.Subtraction,
-			LeftValue:  strings.TrimSpace(tokens[0]),
-			RightValue: strings.TrimSuffix(strings.TrimSpace(tokens[1]), ";"),
-		}) + ";", nil
+		syntheticOutput := fmt.Sprintf(
+			`{"operation": "%s","left_value": %s,"right_value": %s};`,
+			job.Subtraction,
+			wrapValue(strings.TrimSpace(tokens[0])),
+			wrapValue(strings.TrimSuffix(strings.TrimSpace(tokens[1]), ";")),
+		)
+
+		return job.Math, outputPath, syntheticOutput, nil
 	}
 
 	// Attempt to parse SetVariable
