@@ -49,6 +49,11 @@ func TestParse(t *testing.T) {
 									OutputPath: "currency",
 								},
 								{
+									Type:       job.LoadEnv,
+									Input:      `"MIN_BALANCE"`,
+									OutputPath: "env",
+								},
+								{
 									Type:       job.FindBalance,
 									Input:      `{"minimum_balance":{"value": "0","currency": {{currency}}},"create_limit":1}`, // nolint
 									OutputPath: "random_account",
