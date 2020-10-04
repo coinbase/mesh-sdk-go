@@ -6,6 +6,7 @@ request_funds(1){
       "symbol":"ETH",
       "decimals":18
     };
+    env = load_env("MIN_BALANCE");
     random_account = find_balance({
       "minimum_balance":{
         "value": "0",
