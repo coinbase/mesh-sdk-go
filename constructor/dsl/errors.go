@@ -27,7 +27,10 @@ var (
 	ErrEOF     = errors.New("reached end of file")
 	ErrScanner = errors.New("scanner error")
 
-	ErrSyntax                     = errors.New("incorrect syntax")
+	ErrSyntax = errors.New("incorrect syntax")
+
 	ErrParsingWorkflowName        = errors.New("cannot parse workflow name")
 	ErrParsingWorkflowConcurrency = errors.New("cannot parse workflow concurrency")
+
+	ErrParsingScenarioName = errors.New("cannot parse scenario name")
 )
