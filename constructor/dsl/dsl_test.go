@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestLoadFile(t *testing.T) {
+func TestParse(t *testing.T) {
 	tests := map[string]struct {
 		file              string
 		expectedWorkflows []*job.Workflow
@@ -143,7 +143,7 @@ func TestLoadFile(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			fullPath := path.Join("testdata", test.file)
-			workflows, err := LoadFile(fullPath)
+			workflows, err := Parse(fullPath)
 			assert.Equal(t, test.expectedWorkflows, workflows)
 			if test.expectedErr != nil {
 				assert.True(t, errors.Is(err, test.expectedErr))

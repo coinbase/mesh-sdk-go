@@ -56,28 +56,21 @@ func extractOutputPathAndType(line string) (job.ActionType, string, string, erro
 	}
 
 	// Attempt to parse Math
-	tokens = strings.SplitN(remaining, "+", 2)
-	if len(tokens) == 2 {
-		syntheticOutput := fmt.Sprintf(
-			`{"operation": "%s","left_value": %s,"right_value": %s};`,
-			job.Addition,
-			wrapValue(strings.TrimSpace(tokens[0])),
-			wrapValue(strings.TrimSuffix(strings.TrimSpace(tokens[1]), ";")),
-		)
+	for symbol, mathOperation := range map[string]job.MathOperation{
+		"+": job.Addition,
+		"-": job.Subtraction,
+	} {
+		tokens = strings.SplitN(remaining, symbol, 2)
+		if len(tokens) == 2 {
+			syntheticOutput := fmt.Sprintf(
+				`{"operation": "%s","left_value": %s,"right_value": %s};`,
+				mathOperation,
+				wrapValue(strings.TrimSpace(tokens[0])),
+				wrapValue(strings.TrimSuffix(strings.TrimSpace(tokens[1]), ";")),
+			)
 
-		return job.Math, outputPath, syntheticOutput, nil
-	}
-
-	tokens = strings.SplitN(remaining, "-", 2)
-	if len(tokens) == 2 {
-		syntheticOutput := fmt.Sprintf(
-			`{"operation": "%s","left_value": %s,"right_value": %s};`,
-			job.Subtraction,
-			wrapValue(strings.TrimSpace(tokens[0])),
-			wrapValue(strings.TrimSuffix(strings.TrimSpace(tokens[1]), ";")),
-		)
-
-		return job.Math, outputPath, syntheticOutput, nil
+			return job.Math, outputPath, syntheticOutput, nil
+		}
 	}
 
 	// Attempt to parse SetVariable
@@ -270,7 +263,6 @@ func (p *parser) readLine() (string, error) {
 				continue
 			}
 
-			fmt.Println(trimmedLine)
 			return trimmedLine, nil
 		}
 
@@ -282,8 +274,9 @@ func (p *parser) readLine() (string, error) {
 	}
 }
 
-// LoadFile loads a file written in X.
-func LoadFile(file string) ([]*job.Workflow, error) {
+// Parse loads a Rosetta constructor file and attempts
+// to parse it into []*job.Workflow.
+func Parse(file string) ([]*job.Workflow, error) {
 	f, err := os.Open(file)
 	if err != nil {
 		return nil, err
