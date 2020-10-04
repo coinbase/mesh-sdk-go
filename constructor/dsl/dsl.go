@@ -2,6 +2,7 @@ package dsl
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -112,19 +113,19 @@ func parseActionType(line string) (job.ActionType, string, string, error) {
 	return "", "", "", ErrSyntax
 }
 
-func (p *parser) parseAction(previousLine string) (*job.Action, error) {
+func (p *parser) parseAction(ctx context.Context, previousLine string) (*job.Action, error) {
 	var actionType job.ActionType
 	var input, outputPath string
 
 	argLineRead := false
-	for {
+	for ctx.Err() == nil {
 		var line string
 		if len(previousLine) > 0 && !argLineRead {
 			line = previousLine
 			argLineRead = true
 		} else {
 			var err error
-			line, err = p.readLine()
+			line, err = p.readLine(ctx)
 			if errors.Is(err, ErrEOF) {
 				return nil, fmt.Errorf("%w (action parsing): %s", ErrUnexpectedEOF, err.Error())
 			}
@@ -146,15 +147,15 @@ func (p *parser) parseAction(previousLine string) (*job.Action, error) {
 		// (i.e. set_variable or math).
 		input += strings.TrimSuffix(strings.TrimSuffix(line, functionEndLine), endLine)
 		if strings.HasSuffix(line, endLine) {
-			break
+			return &job.Action{
+				Type:       actionType,
+				Input:      input,
+				OutputPath: outputPath,
+			}, nil
 		}
 	}
 
-	return &job.Action{
-		Type:       actionType,
-		Input:      input,
-		OutputPath: outputPath,
-	}, nil
+	return nil, ctx.Err()
 }
 
 func parseScenarioName(line string) (string, error) {
@@ -174,8 +175,8 @@ func parseScenarioName(line string) (string, error) {
 	return tokens[0], nil
 }
 
-func (p *parser) parseScenario() (*job.Scenario, bool, error) {
-	line, err := p.readLine()
+func (p *parser) parseScenario(ctx context.Context) (*job.Scenario, bool, error) {
+	line, err := p.readLine(ctx)
 	if errors.Is(err, ErrEOF) {
 		return nil, false, fmt.Errorf("%w (scenario parsing): %s", ErrUnexpectedEOF, err.Error())
 	}
@@ -189,8 +190,8 @@ func (p *parser) parseScenario() (*job.Scenario, bool, error) {
 	}
 
 	actions := []*job.Action{}
-	for {
-		line, err := p.readLine()
+	for ctx.Err() == nil {
+		line, err := p.readLine(ctx)
 		if err != nil {
 			return nil, false, fmt.Errorf("%w: scenario parsing failed", err)
 		}
@@ -207,13 +208,15 @@ func (p *parser) parseScenario() (*job.Scenario, bool, error) {
 			}, true, nil
 		}
 
-		action, err := p.parseAction(line)
+		action, err := p.parseAction(ctx, line)
 		if err != nil {
 			return nil, false, fmt.Errorf("%w: unable to parse action", err)
 		}
 
 		actions = append(actions, action)
 	}
+
+	return nil, false, ctx.Err()
 }
 
 func parseWorkflowName(line string) (string, int, error) {
@@ -248,8 +251,8 @@ func parseWorkflowName(line string) (string, int, error) {
 	return workflowName, workflowConcurrency, nil
 }
 
-func (p *parser) parseWorkflow() (*job.Workflow, error) {
-	line, err := p.readLine()
+func (p *parser) parseWorkflow(ctx context.Context) (*job.Workflow, error) {
+	line, err := p.readLine(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -260,8 +263,8 @@ func (p *parser) parseWorkflow() (*job.Workflow, error) {
 	}
 
 	scenarios := []*job.Scenario{}
-	for {
-		scenario, cont, err := p.parseScenario()
+	for ctx.Err() == nil {
+		scenario, cont, err := p.parseScenario(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -271,7 +274,7 @@ func (p *parser) parseWorkflow() (*job.Workflow, error) {
 			continue
 		}
 
-		line, err := p.readLine()
+		line, err := p.readLine(ctx)
 		if errors.Is(err, ErrEOF) {
 			return nil, fmt.Errorf("%w (scenario parsing): %s", ErrUnexpectedEOF, err.Error())
 		}
@@ -289,10 +292,12 @@ func (p *parser) parseWorkflow() (*job.Workflow, error) {
 			Scenarios:   scenarios,
 		}, nil
 	}
+
+	return nil, ctx.Err()
 }
 
-func (p *parser) readLine() (string, error) {
-	for {
+func (p *parser) readLine(ctx context.Context) (string, error) {
+	for ctx.Err() == nil {
 		success := p.scanner.Scan()
 		if success {
 			p.lineNumber++
@@ -317,12 +322,14 @@ func (p *parser) readLine() (string, error) {
 
 		return "", ErrEOF
 	}
+
+	return "", ctx.Err()
 }
 
 // Parse loads a Rosetta constructor file and attempts
 // to parse it into []*job.Workflow.
-func Parse(file string) ([]*job.Workflow, *Error) {
-	f, err := os.Open(file)
+func Parse(ctx context.Context, file string) ([]*job.Workflow, *Error) {
+	f, err := os.Open(file) // #nosec G304
 	if err != nil {
 		return nil, &Error{Err: fmt.Errorf("%w: %s", ErrCannotOpenFile, err)}
 	}
@@ -331,8 +338,8 @@ func Parse(file string) ([]*job.Workflow, *Error) {
 	p := &parser{scanner: bufio.NewScanner(f)}
 
 	workflows := []*job.Workflow{}
-	for {
-		workflow, err := p.parseWorkflow()
+	for ctx.Err() == nil {
+		workflow, err := p.parseWorkflow(ctx)
 		if errors.Is(err, ErrEOF) {
 			return workflows, nil
 		}
@@ -346,4 +353,6 @@ func Parse(file string) ([]*job.Workflow, *Error) {
 
 		workflows = append(workflows, workflow)
 	}
+
+	return nil, &Error{Err: ctx.Err()}
 }

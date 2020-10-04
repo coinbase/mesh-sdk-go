@@ -1,6 +1,7 @@
 package dsl
 
 import (
+	"context"
 	"errors"
 	"path"
 	"testing"
@@ -245,7 +246,7 @@ func TestParse(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			fullPath := path.Join("testdata", test.file)
-			workflows, err := Parse(fullPath)
+			workflows, err := Parse(context.Background(), fullPath)
 			assert.Equal(t, test.expectedWorkflows, workflows)
 			if test.expectedErr != nil {
 				assert.NotNil(t, err)
