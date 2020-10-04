@@ -14,7 +14,7 @@ import (
 type parser struct {
 	scanner      *bufio.Scanner
 	lineNumber   int
-	lastLineRead string // used for error response
+	lastLineRead string
 }
 
 func wrapValue(input string) string {
@@ -184,23 +184,26 @@ func parseNameConcurrency(line string) (string, int, error) {
 
 	tokens := strings.SplitN(line, "(", 2)
 	if len(tokens) != 2 {
-		return "", -1, errors.New("unable to read workflow name")
+		return "", -1, ErrParsingWorkflowConcurrency
 	}
 
 	workflowName = strings.TrimSpace(tokens[0])
+	if len(workflowName) == 0 {
+		return "", -1, ErrParsingWorkflowName
+	}
 
 	tokens = strings.SplitN(tokens[1], ")", 2)
 	if len(tokens) != 2 {
-		return "", -1, errors.New("unable to read workflow concurrency")
+		return "", -1, ErrParsingWorkflowConcurrency
 	}
 
 	workflowConcurrency, err = strconv.Atoi(tokens[0])
 	if err != nil {
-		return "", -1, fmt.Errorf("%w: workflow concurrency is not an integer", err)
+		return "", -1, fmt.Errorf("%w: %s", ErrParsingWorkflowConcurrency, err.Error())
 	}
 
 	if tokens[1] != "{" {
-		return "", -1, fmt.Errorf("workflow entrypoint ends with %s, not {", tokens[1])
+		return "", -1, fmt.Errorf("%w: workflow entrypoint ends with %s, not {", ErrSyntax, tokens[1])
 	}
 
 	return workflowName, workflowConcurrency, nil
@@ -276,14 +279,14 @@ func (p *parser) readLine() (string, error) {
 
 // Parse loads a Rosetta constructor file and attempts
 // to parse it into []*job.Workflow.
-func Parse(file string) ([]*job.Workflow, error) {
+func Parse(file string) ([]*job.Workflow, *Error) {
 	f, err := os.Open(file)
 	if err != nil {
-		return nil, err
+		return nil, &Error{Err: err}
 	}
 	defer f.Close()
 
-	p := &parser{bufio.NewScanner(f), 1, ""}
+	p := &parser{scanner: bufio.NewScanner(f)}
 
 	workflows := []*job.Workflow{}
 	for {
@@ -292,7 +295,7 @@ func Parse(file string) ([]*job.Workflow, error) {
 			return workflows, nil
 		}
 		if err != nil {
-			return nil, err
+			return nil, &Error{Err: err, Line: p.lineNumber, LineContents: p.lastLineRead}
 		}
 
 		workflows = append(workflows, workflow)
