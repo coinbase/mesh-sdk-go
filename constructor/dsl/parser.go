@@ -65,7 +65,11 @@ func rootOutputPath(outputPath string) string {
 	return tokens[0]
 }
 
-func checkForVariables(ctx context.Context, variables map[string]struct{}, input string) ([]string, error) {
+func checkForVariables(
+	ctx context.Context,
+	variables map[string]struct{},
+	input string,
+) ([]string, error) {
 	missingVariables := []string{}
 	for ctx.Err() == nil {
 		tokens := strings.SplitN(input, openDoubleBracket, split2)
@@ -162,7 +166,11 @@ func parseActionType(line string) (job.ActionType, string, string, error) {
 	return "", "", "", ErrSyntax
 }
 
-func (p *parser) parseAction(ctx context.Context, variables map[string]struct{}, previousLine string) (*job.Action, error) {
+func (p *parser) parseAction(
+	ctx context.Context,
+	variables map[string]struct{},
+	previousLine string,
+) (*job.Action, error) {
 	var actionType job.ActionType
 	var input, outputPath string
 
@@ -235,7 +243,10 @@ func parseScenarioName(line string) (string, error) {
 	return tokens[0], nil
 }
 
-func (p *parser) parseScenario(ctx context.Context, variables map[string]struct{}) (*job.Scenario, bool, error) {
+func (p *parser) parseScenario(
+	ctx context.Context,
+	variables map[string]struct{},
+) (*job.Scenario, bool, error) {
 	line, err := p.readLine(ctx)
 	if errors.Is(err, ErrEOF) {
 		return nil, false, fmt.Errorf("%w (scenario parsing): %s", ErrUnexpectedEOF, err.Error())
