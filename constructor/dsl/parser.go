@@ -29,8 +29,9 @@ import (
 const (
 	split2              = 2
 	openBrakcet         = "{"
-	openDoubleBracket   = "{{"
 	closeBracket        = "}"
+	openDoubleBracket   = "{{"
+	closeDoubleBracket  = "}}"
 	endScenarioContinue = "},"
 	quote               = "\""
 	equal               = "="
@@ -41,6 +42,7 @@ const (
 	endLine             = ";"
 	functionEndLine     = ");"
 	commentMarker       = "//"
+	pathSeparator       = "."
 )
 
 type parser struct {
@@ -55,6 +57,35 @@ func newParser(f *os.File) *parser {
 
 func (p *parser) scannerError() error {
 	return p.scanner.Err()
+}
+
+func rootOutputPath(outputPath string) string {
+	tokens := strings.Split(outputPath, pathSeparator)
+
+	return tokens[0]
+}
+
+func checkForVariables(ctx context.Context, variables map[string]struct{}, input string) ([]string, error) {
+	missingVariables := []string{}
+	for ctx.Err() == nil {
+		tokens := strings.SplitN(input, openDoubleBracket, split2)
+		if len(tokens) != split2 {
+			return missingVariables, nil
+		}
+
+		tokens = strings.SplitN(tokens[1], closeDoubleBracket, split2)
+		if len(tokens) != split2 {
+			return nil, fmt.Errorf("%w: variable is missing }}", ErrSyntax)
+		}
+
+		if _, ok := variables[rootOutputPath(tokens[0])]; !ok {
+			missingVariables = append(missingVariables, tokens[0])
+		}
+
+		input = tokens[1]
+	}
+
+	return nil, ctx.Err()
 }
 
 func wrapValue(input string) string {
@@ -131,7 +162,7 @@ func parseActionType(line string) (job.ActionType, string, string, error) {
 	return "", "", "", ErrSyntax
 }
 
-func (p *parser) parseAction(ctx context.Context, previousLine string) (*job.Action, error) {
+func (p *parser) parseAction(ctx context.Context, variables map[string]struct{}, previousLine string) (*job.Action, error) {
 	var actionType job.ActionType
 	var input, outputPath string
 
@@ -161,10 +192,21 @@ func (p *parser) parseAction(ctx context.Context, previousLine string) (*job.Act
 			}
 		}
 
+		// Ensure all referenced variables exist
+		missingVariables, err := checkForVariables(ctx, variables, line)
+		if err != nil {
+			return nil, err
+		}
+
+		if len(missingVariables) > 0 {
+			return nil, fmt.Errorf("%w: %v", ErrVariableUndefined, missingVariables)
+		}
+
 		// Clean input if in a function or if using native syntax
 		// (i.e. set_variable or math).
 		input += strings.TrimSuffix(strings.TrimSuffix(line, functionEndLine), endLine)
 		if strings.HasSuffix(line, endLine) {
+			variables[rootOutputPath(outputPath)] = struct{}{}
 			return &job.Action{
 				Type:       actionType,
 				Input:      input,
@@ -193,7 +235,7 @@ func parseScenarioName(line string) (string, error) {
 	return tokens[0], nil
 }
 
-func (p *parser) parseScenario(ctx context.Context) (*job.Scenario, bool, error) {
+func (p *parser) parseScenario(ctx context.Context, variables map[string]struct{}) (*job.Scenario, bool, error) {
 	line, err := p.readLine(ctx)
 	if errors.Is(err, ErrEOF) {
 		return nil, false, fmt.Errorf("%w (scenario parsing): %s", ErrUnexpectedEOF, err.Error())
@@ -226,7 +268,7 @@ func (p *parser) parseScenario(ctx context.Context) (*job.Scenario, bool, error)
 			}, true, nil
 		}
 
-		action, err := p.parseAction(ctx, line)
+		action, err := p.parseAction(ctx, variables, line)
 		if err != nil {
 			return nil, false, fmt.Errorf("%w: unable to parse action", err)
 		}
@@ -285,8 +327,9 @@ func (p *parser) parseWorkflow(ctx context.Context) (*job.Workflow, error) {
 	}
 
 	scenarios := []*job.Scenario{}
+	variables := map[string]struct{}{}
 	for ctx.Err() == nil {
-		scenario, cont, err := p.parseScenario(ctx)
+		scenario, cont, err := p.parseScenario(ctx, variables)
 		if err != nil {
 			return nil, err
 		}

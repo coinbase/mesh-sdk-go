@@ -116,7 +116,7 @@ func TestParse(t *testing.T) {
 								},
 								{
 									Type:       job.Math,
-									Input:      `{"operation": "subtraction","left_value": {{math_3}},"right_value": "20"}`,
+									Input:      `{"operation": "subtraction","left_value": {{math_2}},"right_value": "20"}`,
 									OutputPath: "math_3",
 								},
 								{
@@ -260,7 +260,13 @@ func TestParse(t *testing.T) {
 			file:                "action_variable_undefined.ros",
 			expectedErr:         ErrVariableUndefined,
 			expectedErrLine:     10,
-			expectedErrContents: `"currency":{{currency2}}`,
+			expectedErrContents: `"currency": {{currency2}}`,
+		},
+		"action error: variable incorrectly formatted": {
+			file:                "action_variable_format.ros",
+			expectedErr:         ErrSyntax,
+			expectedErrLine:     12,
+			expectedErrContents: `"currency": {{currency}`,
 		},
 		"file error: file does not exist": {
 			file:        "blah_blah.ros",
