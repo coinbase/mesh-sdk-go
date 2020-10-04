@@ -83,6 +83,21 @@ func TestLoadFile(t *testing.T) {
 							Name: "request",
 							Actions: []*job.Action{
 								{
+									Type:       job.Math,
+									Input:      `{"operation": "subtraction","left_value": "0","right_value": "100"}`,
+									OutputPath: "math_1",
+								},
+								{
+									Type:       job.Math,
+									Input:      `{"operation":"addition","left_value":"10", "right_value":{{math_1}}}`,
+									OutputPath: "math_2",
+								},
+								{
+									Type:       job.Math,
+									Input:      `{"operation":"addition","left_value": {{math_3}},"right_value":"20"}`,
+									OutputPath: "math_3",
+								},
+								{
 									Type:       job.FindBalance,
 									Input:      `{"account_identifier": {{random_account.account_identifier}},"minimum_balance":{"value": "10000000000000000","currency": {{currency}}}}`, // nolint
 									OutputPath: "loaded_account",
