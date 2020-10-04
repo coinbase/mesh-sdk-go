@@ -255,6 +255,10 @@ func TestParse(t *testing.T) {
 			file:        "blah_blah.ros",
 			expectedErr: ErrCannotOpenFile,
 		},
+		"file error: bad extension": {
+			file:        "blah_blah.txt",
+			expectedErr: ErrIncorrectExtension,
+		},
 	}
 
 	for name, test := range tests {
