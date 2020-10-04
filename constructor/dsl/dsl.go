@@ -125,8 +125,11 @@ func (p *parser) parseAction(previousLine string) (*job.Action, error) {
 		} else {
 			var err error
 			line, err = p.readLine()
+			if errors.Is(err, ErrEOF) {
+				return nil, fmt.Errorf("%w (action parsing): %s", ErrUnexpectedEOF, err.Error())
+			}
 			if err != nil {
-				return nil, fmt.Errorf("%w: action parsing failed", err)
+				return nil, err
 			}
 		}
 
@@ -173,9 +176,13 @@ func parseScenarioName(line string) (string, error) {
 
 func (p *parser) parseScenario() (*job.Scenario, bool, error) {
 	line, err := p.readLine()
-	if err != nil {
-		return nil, false, errors.New("unexpected end of input")
+	if errors.Is(err, ErrEOF) {
+		return nil, false, fmt.Errorf("%w (scenario parsing): %s", ErrUnexpectedEOF, err.Error())
 	}
+	if err != nil {
+		return nil, false, err
+	}
+
 	name, err := parseScenarioName(line)
 	if err != nil {
 		return nil, false, fmt.Errorf("%w: unable to parse scenario name", err)
@@ -265,6 +272,9 @@ func (p *parser) parseWorkflow() (*job.Workflow, error) {
 		}
 
 		line, err := p.readLine()
+		if errors.Is(err, ErrEOF) {
+			return nil, fmt.Errorf("%w (scenario parsing): %s", ErrUnexpectedEOF, err.Error())
+		}
 		if err != nil {
 			return nil, err
 		}

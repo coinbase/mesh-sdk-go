@@ -164,6 +164,12 @@ func TestParse(t *testing.T) {
 			expectedErrLine:     1,
 			expectedErrContents: "request_funds(1)",
 		},
+		"workflow error: closing bracket syntax error": {
+			file:                "workflow_closing_syntax.ros",
+			expectedErr:         ErrSyntax,
+			expectedErrLine:     26,
+			expectedErrContents: ")",
+		},
 		"scenario error: missing name": {
 			file:                "missing_scenario_name.ros",
 			expectedErr:         ErrParsingScenarioName,
@@ -188,6 +194,18 @@ func TestParse(t *testing.T) {
 			expectedErrLine:     17,
 			expectedErrContents: "request{",
 		},
+		"scenario error: unexpected end of input": {
+			file:                "scenario_eof.ros",
+			expectedErr:         ErrUnexpectedEOF,
+			expectedErrLine:     14,
+			expectedErrContents: "},",
+		},
+		"scenario error: unexpected end of input 2": {
+			file:                "scenario_eof_2.ros",
+			expectedErr:         ErrUnexpectedEOF,
+			expectedErrLine:     15,
+			expectedErrContents: "}",
+		},
 		"action error: invalid type": {
 			file:                "action_invalid_type.ros",
 			expectedErr:         ErrInvalidActionType,
@@ -211,6 +229,12 @@ func TestParse(t *testing.T) {
 			expectedErr:         ErrSyntax,
 			expectedErrLine:     8,
 			expectedErrContents: "math = 1 * 10;",
+		},
+		"action error: unexpected end of input": {
+			file:                "action_eof.ros",
+			expectedErr:         ErrUnexpectedEOF,
+			expectedErrLine:     8,
+			expectedErrContents: `"minimum_balance":{`,
 		},
 		"file error: file does not exist": {
 			file:        "blah_blah.ros",
