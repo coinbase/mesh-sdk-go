@@ -78,7 +78,7 @@ func parseActionType(line string) (job.ActionType, string, string, error) {
 			job.FindCurrencyAmount, job.LoadEnv, job.HTTPRequest:
 			return thisAction, outputPath, tokens[1], nil
 		default:
-			return "", "", "", ErrInvalidAction
+			return "", "", "", ErrInvalidActionType
 		}
 	}
 

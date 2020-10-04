@@ -188,6 +188,24 @@ func TestParse(t *testing.T) {
 			expectedErrLine:     17,
 			expectedErrContents: "request{",
 		},
+		"action error: invalid type": {
+			file:                "action_invalid_type.ros",
+			expectedErr:         ErrInvalidActionType,
+			expectedErrLine:     8,
+			expectedErrContents: "random_account = cool_stuff({",
+		},
+		"action error: set without output 1": {
+			file:                "action_invalid_set_1.ros",
+			expectedErr:         ErrCannotSetVariableWithoutOutput,
+			expectedErrLine:     3,
+			expectedErrContents: "set_variable({",
+		},
+		"action error: set without output 2": {
+			file:                "action_invalid_set_2.ros",
+			expectedErr:         ErrCannotSetVariableWithoutOutput,
+			expectedErrLine:     3,
+			expectedErrContents: "{",
+		},
 	}
 
 	for name, test := range tests {

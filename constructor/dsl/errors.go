@@ -34,6 +34,6 @@ var (
 
 	ErrParsingScenarioName = errors.New("cannot parse scenario name")
 
-	ErrInvalidAction                  = errors.New("invalid actions")
+	ErrInvalidActionType              = errors.New("invalid action type")
 	ErrCannotSetVariableWithoutOutput = errors.New("cannot set variable without output path")
 )
