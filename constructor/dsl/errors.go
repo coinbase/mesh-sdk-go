@@ -40,6 +40,7 @@ var (
 
 	ErrInvalidActionType              = errors.New("invalid action type")
 	ErrCannotSetVariableWithoutOutput = errors.New("cannot set variable without output path")
+	ErrVariableUndefined              = errors.New("variable undefined")
 )
 
 // Error contains a parsing error and context about

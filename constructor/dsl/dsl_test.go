@@ -256,6 +256,12 @@ func TestParse(t *testing.T) {
 			expectedErrLine:     8,
 			expectedErrContents: `"minimum_balance":{`,
 		},
+		"action error: variable undefined": {
+			file:                "action_variable_undefined.ros",
+			expectedErr:         ErrVariableUndefined,
+			expectedErrLine:     10,
+			expectedErrContents: `"currency":{{currency2}}`,
+		},
 		"file error: file does not exist": {
 			file:        "blah_blah.ros",
 			expectedErr: ErrCannotOpenFile,
