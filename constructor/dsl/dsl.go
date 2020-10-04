@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/coinbase/rosetta-sdk-go/constructor/job"
+	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
 type parser struct {
@@ -43,6 +44,26 @@ func extractOutputPathAndType(line string) (job.ActionType, string, string, erro
 		}
 	}
 
+	// Attempt to parse Math
+	tokens = strings.SplitN(remaining, "+", 2)
+	if len(tokens) == 2 {
+		return job.Math, outputPath, types.PrintStruct(&job.MathInput{
+			Operation:  job.Addition,
+			LeftValue:  strings.TrimSpace(tokens[0]),
+			RightValue: strings.TrimSuffix(strings.TrimSpace(tokens[1]), ";"),
+		}) + ";", nil
+	}
+
+	tokens = strings.SplitN(remaining, "-", 2)
+	if len(tokens) == 2 {
+		return job.Math, outputPath, types.PrintStruct(&job.MathInput{
+			Operation:  job.Subtraction,
+			LeftValue:  strings.TrimSpace(tokens[0]),
+			RightValue: strings.TrimSuffix(strings.TrimSpace(tokens[1]), ";"),
+		}) + ";", nil
+	}
+
+	// Attempt to parse SetVariable
 	if strings.HasPrefix(tokens[0], "{") {
 		if len(outputPath) > 0 {
 			return job.SetVariable, outputPath, tokens[0], nil
