@@ -64,6 +64,10 @@ func TestParse(t *testing.T) {
 							Name: "request",
 							Actions: []*job.Action{
 								{
+									Type:  job.PrintMessage,
+									Input: `{{find_account.suggested_fee}}`,
+								},
+								{
 									Type:       job.FindBalance,
 									Input:      `{"account_identifier": {{random_account.account_identifier}},"minimum_balance":{"value": "10000000000000000","currency": {{currency}}}}`, // nolint
 									OutputPath: "loaded_account",
