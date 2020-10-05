@@ -28,7 +28,7 @@ package types
 type BalanceExemption struct {
 	// SubAccountAddress is the SubAccountIdentifier.Address that the BalanceExemption applies to
 	// (regardless of the value of SubAccountIdentifier.Metadata).
-	SubAccountAddress *string        `json:"sub_account_address,omitempty"`
-	Currency          *Currency      `json:"currency,omitempty"`
-	ExemptionType     *ExemptionType `json:"exemption_type,omitempty"`
+	SubAccountAddress *string       `json:"sub_account_address,omitempty"`
+	Currency          *Currency     `json:"currency,omitempty"`
+	ExemptionType     ExemptionType `json:"exemption_type,omitempty"`
 }

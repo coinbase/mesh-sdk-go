@@ -118,6 +118,7 @@ sed "${SED_IFLAG[@]}" 's/Url/URL/g' client/* server/*;
 sed "${SED_IFLAG[@]}" 's/*CurveType/CurveType/g' client/* server/*;
 sed "${SED_IFLAG[@]}" 's/*SignatureType/SignatureType/g' client/* server/*;
 sed "${SED_IFLAG[@]}" 's/*CoinAction/CoinAction/g' client/* server/*;
+sed "${SED_IFLAG[@]}" 's/*ExemptionType/ExemptionType/g' client/* server/*;
 
 # Fix CurveTypes, SignatureTypes, CoinActions, and ExemptionTypes
 sed "${SED_IFLAG[@]}" 's/SECP256K1/Secp256k1/g' client/* server/*;
