@@ -277,7 +277,6 @@ func TestNewWithOptions(t *testing.T) {
 				assert.NoError(t, thisErr)
 			} else {
 				assert.Nil(t, thisA)
-				fmt.Println(thisErr.Error())
 				assert.True(t, errors.Is(thisErr, test.err) || strings.Contains(thisErr.Error(), test.err.Error()))
 			}
 		})
