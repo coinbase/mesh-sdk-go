@@ -22,6 +22,14 @@ import (
 
 // Named error types for Asserter errors
 var (
+	/////////////////////
+	/* ASSERTER ERRORS */
+	/////////////////////
+
+	// ErrAsserterNotInitialized is returned when some call in the asserter
+	// package requires the asserter to be initialized first.
+	ErrAsserterNotInitialized = errors.New("asserter not initialized")
+
 	//////////////////////////////////
 	/* ACCOUNT BALANCE QUERY ERRORS */
 	//////////////////////////////////
