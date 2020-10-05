@@ -16,18 +16,11 @@ package asserter
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"path"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
-)
-
-var (
-	// ErrAsserterNotInitialized is returned when some call in the asserter
-	// package requires the asserter to be initialized first.
-	ErrAsserterNotInitialized = errors.New("asserter not initialized")
 )
 
 // Asserter contains all logic to perform static

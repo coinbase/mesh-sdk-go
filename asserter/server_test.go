@@ -205,6 +205,8 @@ var (
 )
 
 func TestNewWithOptions(t *testing.T) {
+	assert.NotNil(t, a)
+	assert.NoError(t, aErr)
 	tests := map[string]struct {
 		supportedOperationTypes []string
 		historicalBalanceLookup bool

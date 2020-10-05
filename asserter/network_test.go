@@ -257,7 +257,10 @@ func TestAllow(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			err := Allow(test.allow)
-			assert.True(t, errors.Is(err, test.err) || strings.Contains(err.Error(), test.err.Error()))
+			assert.True(
+				t,
+				errors.Is(err, test.err) || strings.Contains(err.Error(), test.err.Error()),
+			)
 		})
 	}
 }
