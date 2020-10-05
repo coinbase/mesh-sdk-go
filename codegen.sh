@@ -119,7 +119,7 @@ sed "${SED_IFLAG[@]}" 's/*CurveType/CurveType/g' client/* server/*;
 sed "${SED_IFLAG[@]}" 's/*SignatureType/SignatureType/g' client/* server/*;
 sed "${SED_IFLAG[@]}" 's/*CoinAction/CoinAction/g' client/* server/*;
 
-# Fix CurveTypes, SignatureTypes, and CoinActions
+# Fix CurveTypes, SignatureTypes, CoinActions, and ExemptionTypes
 sed "${SED_IFLAG[@]}" 's/SECP256K1/Secp256k1/g' client/* server/*;
 sed "${SED_IFLAG[@]}" 's/SECP256R1/Secp256r1/g' client/* server/*;
 sed "${SED_IFLAG[@]}" 's/EDWARDS25519/Edwards25519/g' client/* server/*;
@@ -131,6 +131,9 @@ sed "${SED_IFLAG[@]}" 's/SCHNORR_1/Schnorr1/g' client/* server/*;
 sed "${SED_IFLAG[@]}" 's/SCHNORR_POSEIDON/SchnorrPoseidon/g' client/* server/*;
 sed "${SED_IFLAG[@]}" 's/CREATED/CoinCreated/g' client/* server/*;
 sed "${SED_IFLAG[@]}" 's/SPENT/CoinSpent/g' client/* server/*;
+sed "${SED_IFLAG[@]}" 's/GREATER_OR_EQUAL/BalanceGreaterOrEqual/g' client/* server/*;
+sed "${SED_IFLAG[@]}" 's/LESS_OR_EQUAL/BalanceLessOrEqual/g' client/* server/*;
+sed "${SED_IFLAG[@]}" 's/DYNAMIC/BalanceDynamic/g' client/* server/*;
 
 # Convert HexBytes to Bytes
 sed "${SED_IFLAG[@]}" '/Hex-encoded public key bytes in the format specified by the CurveType/d' client/* server/*;
