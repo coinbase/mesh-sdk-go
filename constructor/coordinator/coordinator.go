@@ -84,14 +84,6 @@ func New(
 		workflows = append(workflows, workflow)
 	}
 
-	if createAccountWorkflow == nil {
-		return nil, ErrCreateAccountWorkflowMissing
-	}
-
-	if requestFundsWorkflow == nil {
-		return nil, ErrRequestFundsWorkflowMissing
-	}
-
 	return &Coordinator{
 		storage:               storage,
 		helper:                helper,
@@ -173,7 +165,7 @@ func (c *Coordinator) findJob(
 
 	// Check if ErrCreateAccount, then create account if less
 	// processing CreateAccount jobs than ReservedWorkflowConcurrency.
-	if c.seenErrCreateAccount {
+	if c.seenErrCreateAccount && c.createAccountWorkflow != nil {
 		processing, err := c.storage.Processing(ctx, dbTx, string(job.CreateAccount))
 		if err != nil {
 			return nil, fmt.Errorf(
@@ -214,7 +206,11 @@ func (c *Coordinator) findJob(
 		return nil, ErrNoAvailableJobs
 	}
 
-	return job.New(c.requestFundsWorkflow), nil
+	if c.requestFundsWorkflow != nil {
+		return job.New(c.requestFundsWorkflow), nil
+	}
+
+	return nil, ErrNoRemainingJobs
 }
 
 // createTransaction constructs and signs a transaction with the provided intent.
@@ -491,6 +487,11 @@ func (c *Coordinator) process( // nolint:gocognit
 
 		c.resetVars()
 		return NoJobsWaitTime, nil
+	}
+	if errors.Is(err, ErrNoRemainingJobs) {
+		color.Cyan("no remaining jobs!")
+
+		return -1, nil
 	}
 	if errors.Is(err, ErrReturnFundsComplete) {
 		color.Cyan("fund return complete!")

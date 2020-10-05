@@ -1224,8 +1224,8 @@ func TestInitialization_OnlyCreateAccountWorkflows(t *testing.T) {
 		p,
 		workflows,
 	)
-	assert.Nil(t, c)
-	assert.True(t, errors.Is(err, ErrRequestFundsWorkflowMissing))
+	assert.NotNil(t, c)
+	assert.NoError(t, err)
 	helper.AssertExpectations(t)
 	handler.AssertExpectations(t)
 }
@@ -1283,8 +1283,8 @@ func TestInitialization_OnlyRequestFundsWorkflows(t *testing.T) {
 		workflows,
 	)
 
-	assert.Nil(t, c)
-	assert.True(t, errors.Is(err, ErrCreateAccountWorkflowMissing))
+	assert.NotNil(t, c)
+	assert.NoError(t, err)
 	helper.AssertExpectations(t)
 	handler.AssertExpectations(t)
 }
