@@ -28,7 +28,7 @@ type ExemptionType string
 
 // List of ExemptionType
 const (
-	GREATER_OR_EQUAL ExemptionType = "greater_or_equal"
-	LESS_OR_EQUAL    ExemptionType = "less_or_equal"
-	DYNAMIC          ExemptionType = "dynamic"
+	BalanceGreaterOrEqual ExemptionType = "greater_or_equal"
+	BalanceLessOrEqual    ExemptionType = "less_or_equal"
+	BalanceDynamic        ExemptionType = "dynamic"
 )
