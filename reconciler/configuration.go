@@ -102,3 +102,11 @@ func WithDebugLogging(debug bool) Option {
 		r.debugLogging = debug
 	}
 }
+
+// WithBalanceExemptions is which reconciliation errors to
+// skip.
+func WithBalanceExemptions(exemptions []*types.BalanceExemption) Option {
+	return func(r *Reconciler) {
+		r.exemptions = exemptions
+	}
+}
