@@ -1,0 +1,26 @@
+request_funds(1){ 
+  find_account{
+    currency = {
+      "symbol":"ETH",
+      "decimals":18
+    };
+    random_account = find_balance({
+      "minimum_balance":{
+        "value": "0",
+        "currency": {{currency2}}
+      }, 
+      "create_limit":1
+    });
+  },
+  // test comment
+  request{
+    loaded_account = find_balance({ // test comment 2 // blah
+      "account_identifier": {{random_account.account_identifier}},
+      "minimum_balance":{
+        "value": "10000000000000000",
+        "currency": {{currency}}
+      }
+    });
+  }
+}
+

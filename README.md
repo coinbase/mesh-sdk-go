@@ -40,6 +40,7 @@ any Rosetta server
 * [Syncer](syncer): Sync Rosetta blocks with customizable handling
 * [Reconciler](reconciler): Compare derived balances with node balances
 * [Keys](keys): Cryptographic operations for Rosetta-supported curves
+* [Constructor](constructor): Coordinate the construction and broadcast of transactions
 
 ## Examples
 The packages listed above are demoed extensively in
