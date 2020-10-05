@@ -245,6 +245,7 @@ func parseScenarioName(line string) (string, error) {
 
 func (p *parser) parseScenario(
 	ctx context.Context,
+	scenarioNames map[string]struct{},
 	variables map[string]struct{},
 ) (*job.Scenario, bool, error) {
 	line, err := p.readLine(ctx)
@@ -258,6 +259,10 @@ func (p *parser) parseScenario(
 	name, err := parseScenarioName(line)
 	if err != nil {
 		return nil, false, fmt.Errorf("%w: unable to parse scenario name", err)
+	}
+
+	if _, ok := scenarioNames[name]; ok {
+		return nil, false, fmt.Errorf("%w: %s", ErrDuplicateScenarioName, name)
 	}
 
 	actions := []*job.Action{}
@@ -326,7 +331,7 @@ func parseWorkflowName(line string) (string, int, error) {
 	return workflowName, workflowConcurrency, nil
 }
 
-func (p *parser) parseWorkflow(ctx context.Context) (*job.Workflow, error) {
+func (p *parser) parseWorkflow(ctx context.Context, workflowNames map[string]struct{}) (*job.Workflow, error) {
 	line, err := p.readLine(ctx)
 	if err != nil {
 		return nil, err
@@ -337,18 +342,26 @@ func (p *parser) parseWorkflow(ctx context.Context) (*job.Workflow, error) {
 		return nil, fmt.Errorf("%w: could not parse workflow name", err)
 	}
 
+	if _, ok := workflowNames[name]; ok {
+		return nil, fmt.Errorf("%w: %s", ErrDuplicateWorkflowName, name)
+	}
+
 	scenarios := []*job.Scenario{}
 	variables := map[string]struct{}{}
+	scenarioNames := map[string]struct{}{}
 	for ctx.Err() == nil {
-		scenario, cont, err := p.parseScenario(ctx, variables)
+		scenario, cont, err := p.parseScenario(ctx, scenarioNames, variables)
 		if err != nil {
 			return nil, err
 		}
 
+		scenarioNames[scenario.Name] = struct{}{}
+		scenarios = append(scenarios, scenario)
+
 		// Allow following scenarios to call injected variables
 		variables[scenario.Name] = struct{}{}
 
-		scenarios = append(scenarios, scenario)
+		// If a comma is detected, we continue parsing scenarios
 		if cont {
 			continue
 		}
