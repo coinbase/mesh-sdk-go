@@ -54,7 +54,8 @@ var (
 	// is <= 0.
 	ErrInvalidConcurrency = errors.New("invalid concurrency")
 
-	// ErrNoRemainingJobs is returned when the caller does not define
-	// a RequestFunds workflow and we run out of funds.
-	ErrNoRemainingJobs = errors.New("no remaining jobs")
+	// ErrStalled is returned when the caller does not define
+	// a CreateAccount and/or RequestFunds workflow and we run out
+	// of available options (i.e. we can't do anything).
+	ErrStalled = errors.New("processing stalled")
 )
