@@ -455,12 +455,20 @@ func (r *Reconciler) handleBalanceMismatch(
 ) error {
 	// Check if the reconciliation was exempt (supports compound exemptions)
 	for _, exemption := range r.exemptions {
-		if exemption.Currency != nil && types.Hash(currency) != types.Hash(exemption.Currency) {
-			continue
+		if exemption.Currency != nil {
+			if types.Hash(currency) != types.Hash(exemption.Currency) {
+				continue
+			}
 		}
 
-		if exemption.SubAccountAddress != nil && account.SubAccount != nil && *exemption.SubAccountAddress != account.SubAccount.Address {
-			continue
+		if exemption.SubAccountAddress != nil {
+			if account.SubAccount == nil {
+				continue
+			}
+
+			if *exemption.SubAccountAddress != account.SubAccount.Address {
+				continue
+			}
 		}
 
 		// This should never error because we check for validity
