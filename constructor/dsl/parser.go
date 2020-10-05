@@ -331,7 +331,10 @@ func parseWorkflowName(line string) (string, int, error) {
 	return workflowName, workflowConcurrency, nil
 }
 
-func (p *parser) parseWorkflow(ctx context.Context, workflowNames map[string]struct{}) (*job.Workflow, error) {
+func (p *parser) parseWorkflow(
+	ctx context.Context,
+	workflowNames map[string]struct{},
+) (*job.Workflow, error) {
 	line, err := p.readLine(ctx)
 	if err != nil {
 		return nil, err

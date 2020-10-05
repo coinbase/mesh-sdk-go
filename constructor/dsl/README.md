@@ -6,7 +6,7 @@ This DSL is most commonly used for writing automated Construction API
 tests for the [`rosetta-cli`](https://github.com/coinbase/rosetta-cli#writing-checkconstruction-tests).
 
 _Before reading more about the Rosetta Constructor DSL, we recommend learning
-about the frameworks used in the [`constructor`](https://github.com/coinbase/rosetta-sdk-go/tree/master/constructor)
+about the frameworks used in the [`constructor`](/constructor/README.md)
 to coordinate the creation of transactions._
 
 ## Syntax
