@@ -40,6 +40,10 @@ func New(
 	parser *parser.Parser,
 	inputWorkflows []*job.Workflow,
 ) (*Coordinator, error) {
+	if len(inputWorkflows) == 0 {
+		return nil, ErrNoWorkflows
+	}
+
 	workflowNames := make([]string, len(inputWorkflows))
 	workflows := []*job.Workflow{}
 	var createAccountWorkflow *job.Workflow
@@ -193,7 +197,7 @@ func (c *Coordinator) findJob(
 		return nil, ErrReturnFundsComplete
 	}
 
-	if c.returnFundsWorkflow != nil {
+	if c.requestFundsWorkflow != nil {
 		processing, err := c.storage.Processing(ctx, dbTx, string(job.RequestFunds))
 		if err != nil {
 			return nil, fmt.Errorf(

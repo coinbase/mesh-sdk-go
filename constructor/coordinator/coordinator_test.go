@@ -216,6 +216,8 @@ func TestProcess(t *testing.T) {
 		workflows,
 	)
 	assert.NotNil(t, c)
+	assert.NotNil(t, c.requestFundsWorkflow)
+	assert.NotNil(t, c.createAccountWorkflow)
 	assert.NoError(t, err)
 
 	// Create coordination channels
@@ -1199,7 +1201,7 @@ func TestInitialization_NoWorkflows(t *testing.T) {
 		workflows,
 	)
 	assert.Nil(t, c)
-	assert.Error(t, err)
+	assert.True(t, errors.Is(err, ErrNoWorkflows))
 
 	helper.AssertExpectations(t)
 	handler.AssertExpectations(t)
