@@ -1,23 +1,21 @@
 # Rosetta Constructor DSL
 The Rosetta Constructor DSL ([domain-specific language](https://en.wikipedia.org/wiki/Domain-specific_language))
-makes it easy
+makes it easy to write `Workflows` for the `constructor` package.
 
+This DSL is most commonly used for writing automated Construction API
+tests for the [`rosetta-cli`](https://github.com/coinbase/rosetta-cli#writing-checkconstruction-tests).
 
+_Before reading more about the Rosetta Constructor DSL, we recommend learning
+about the frameworks used in the [`constructor`](https://github.com/coinbase/rosetta-sdk-go/tree/master/constructor)
+to coordinate the creation of transactions._
 
-to define `Workflows`, `Scenarios`, and `Actions`
-
-the `constructor` to create transactions on any
-blockchain that implements the Rosetta Construction API.
-
-_Before reading about the Rosetta Constructor DSL, we recommend refreshing
-your understanding of how the entire Constructor fits together._
-
-### Syntax
-At a basic level, the Rosetta Constructor DSL looks like this:
+## Syntax
+At a basic level, the Rosetta Constructor DSL syntax looks like this:
 ```text
+// line comment
 <workflow name>(<concurrency>){
   <scenario 1 name>{
-    <output path> = <action type>(<input>);
+    <output path> = <action type>(<input>); // another comment
   },
   <scenario 2 name>{
     <output path 2> = <action type>(<input>);
@@ -25,6 +23,7 @@ At a basic level, the Rosetta Constructor DSL looks like this:
 }
 ```
 
+### Basic Example
 Here is a specific example for `Bitcoin`:
 ```text
 request_funds(1){
@@ -148,20 +147,116 @@ would look like:
 ]
 ```
 
-### Functions
+### Workflows
+`Workflows` are defined using the following syntax:
+```text
+<workflow name>(<concurrency>){
+...
+}
+```
 
-#### Input
-JSON input into constructor
+Note, `concurrency` must be provided when defining a `Workflow` and
+no 2 `Workflows` can have the same name.
+
+### Scenarios
+`Scenarios` are defined using the following syntax:
+```text
+<workflow name>(<concurrency>){
+  <scenario name>{
+  ...
+  }
+}
+```
+
+`Scenarios` must be defined within a `Workflow` and no 2 `Scenarios`
+in the same `Worfklow` can have the same name.
+
+It is also important to note that `Workflows` containing multiple
+`Scenarios` should be separated by a comma:
+```text
+<workflow name>(<concurrency>){
+  <scenario name>{
+  ...
+  },
+  <scenario name 2>{
+  ...
+  }
+}
+```
+
+### Functions
+In the Rosetta Constructor DSL, it is possible to invoke functions (where
+the function name is an `Action.Type`) but not possible to define your own
+functions (yet!).
+
+The input for all functions is a JSON blob that will be evaluated by
+the `Worker`. Note, it is possible to reference other variables
+in an input using the syntax `{{var}}`. The Rosetta Constructor DSL
+compiler will automatically check that referenced variables are previously
+defined.
+
+#### End Line
+Function invocations can span multiple lines (if you "pretty print" the JSON
+blob) but each function call line must end with a semi-colon.
 
 #### Native Invocation
+The Rosetta Constructor DSL provides optional "native invocation" support for 2 `Action.Types`:
 * `math`
 * `set_variable`
 
-### Status
+"Native invocation" in this case means that the caller does not need to
+invoke the `Action.Type` in the normal format:
+```text
+<output path> = <function name>(<input>);
+```
+
+##### math
+`math` can be invoked by following the syntax:
+```text
+<output path> = <left side> <operator> <right side>;
+```
+
+A simple addition would look like:
+```text
+a = 10 + {{fee}};
+```
+
+Instead of:
+```text
+a = math({"operation":"addition","left_side":"10","right_side":{{fee}}});
+```
+
+##### set_variable
+`set_variable` can be invoked by following the syntax:
+```text
+<output path> = <input>
+```
+
+A simple set would look like:
+```text
+a = {"message": "hello"};
+```
+
+Instead of:
+```text
+a = set_variable({"message": "hello"});
+```
+
+#### Recursive Calls
+It is not possible to invoke a function from the input of another function. There
+MUST be exactly 1 function call per line.
+
+For example, this is not allowed:
+```text
+a = 1 + load_env("value");
+```
+
+### Comments
+It is possible to add new line comments of comments at the end of lines
+using a double slash (`//`).
+
+## Status
 The Rosetta Constructor DSL should be considered `ALPHA` and may
-still include breaking changes. If you have any ideas of how to improve
-the language, open an issue!
-
-### Parser Features
-* Ensure you aren't using any invalid variables
-
+include breaking changes in later releases. If you have any ideas on how to improve
+the language, please
+[open an issue in `rosetta-sdk-go`](https://github.com/coinbase/rosetta-sdk-go/issues)!
