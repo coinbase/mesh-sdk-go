@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"math/big"
 	"sync"
 	"time"
 
@@ -133,6 +134,17 @@ type Handler interface {
 		balance string,
 		block *types.BlockIdentifier,
 	) error
+
+	ReconciliationExempt(
+		ctx context.Context,
+		reconciliationType string,
+		account *types.AccountIdentifier,
+		currency *types.Currency,
+		computedBalance string,
+		liveBalance string,
+		block *types.BlockIdentifier,
+		exemption *types.BalanceExemption,
+	) error
 }
 
 // InactiveEntry is used to track the last
@@ -190,6 +202,10 @@ type Reconciler struct {
 	// inactiveQueueMutex needed because we can't peek at the tip
 	// of a channel to determine when it is ready to look at.
 	inactiveQueueMutex sync.Mutex
+
+	// exemptions allows for certain reconciliation failures
+	// to be skipped.
+	exemptions []*types.BalanceExemption
 }
 
 // New creates a new Reconciler.
@@ -372,7 +388,7 @@ func (r *Reconciler) CompareBalance(
 		)
 	}
 
-	difference, err := types.SubtractValues(computedBalance.Value, amount)
+	difference, err := types.SubtractValues(amount, computedBalance.Value)
 	if err != nil {
 		return "", "", -1, err
 	}
@@ -423,6 +439,74 @@ func (r *Reconciler) bestLiveBalance(
 		types.PrintStruct(currency),
 		types.PrintStruct(lookupBlock),
 	)
+}
+
+// handleBalanceMismatch determines if a mismatch
+// is considered exempt and handles it accordingly.
+func (r *Reconciler) handleBalanceMismatch(
+	ctx context.Context,
+	difference string,
+	reconciliationType string,
+	account *types.AccountIdentifier,
+	currency *types.Currency,
+	computedBalance string,
+	liveBalance string,
+	block *types.BlockIdentifier,
+) error {
+	// Check if the reconciliation was exempt (supports compound exemptions)
+	for _, exemption := range r.exemptions {
+		if exemption.Currency != nil && types.Hash(currency) != types.Hash(exemption.Currency) {
+			continue
+		}
+
+		if exemption.SubAccountAddress != nil && account.SubAccount != nil && *exemption.SubAccountAddress != account.SubAccount.Address {
+			continue
+		}
+
+		// This should never error because we check for validity
+		// before calling this method.
+		bigDifference, ok := new(big.Int).SetString(difference, 10)
+		if !ok {
+			return fmt.Errorf("could not convert difference %s to integer", difference)
+		}
+
+		if exemption.ExemptionType == types.BalanceDynamic ||
+			(exemption.ExemptionType == types.BalanceGreaterOrEqual && bigDifference.Sign() >= 0) ||
+			(exemption.ExemptionType == types.BalanceLessOrEqual && bigDifference.Sign() <= 0) {
+			err := r.handler.ReconciliationExempt(
+				ctx,
+				reconciliationType,
+				account,
+				currency,
+				computedBalance,
+				liveBalance,
+				block,
+				exemption,
+			)
+			if err != nil { // error only returned if we should exit on failure
+				return err
+			}
+
+		}
+	}
+
+	// If we didn't find a matching exemption,
+	// we should consider the reconciliation
+	// a failure.
+	err := r.handler.ReconciliationFailed(
+		ctx,
+		reconciliationType,
+		account,
+		currency,
+		computedBalance,
+		liveBalance,
+		block,
+	)
+	if err != nil { // error only returned if we should exit on failure
+		return err
+	}
+
+	return nil
 }
 
 // accountReconciliation returns an error if the provided
@@ -503,8 +587,9 @@ func (r *Reconciler) accountReconciliation(
 		}
 
 		if difference != zeroString {
-			err := r.handler.ReconciliationFailed(
+			return r.handleBalanceMismatch(
 				ctx,
+				difference,
 				reconciliationType,
 				accountCurrency.Account,
 				accountCurrency.Currency,
@@ -512,11 +597,6 @@ func (r *Reconciler) accountReconciliation(
 				liveAmount,
 				liveBlock,
 			)
-			if err != nil { // error only returned if we should exit on failure
-				return err
-			}
-
-			return nil
 		}
 
 		return r.handler.ReconciliationSucceeded(
