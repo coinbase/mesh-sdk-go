@@ -58,4 +58,8 @@ var (
 	// a CreateAccount and/or RequestFunds workflow and we run out
 	// of available options (i.e. we can't do anything).
 	ErrStalled = errors.New("processing stalled")
+
+	// ErrNoWorkflows is returned when no workflows are provided
+	// during initialization.
+	ErrNoWorkflows = errors.New("no workflows")
 )
