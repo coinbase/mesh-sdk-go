@@ -42,6 +42,15 @@ type BlockAPIRouter interface {
 	BlockTransaction(http.ResponseWriter, *http.Request)
 }
 
+// CallAPIRouter defines the required methods for binding the api requests to a responses for the
+// CallAPI
+// The CallAPIRouter implementation should parse necessary information from the http request,
+// pass the data to a CallAPIServicer to perform the required actions, then write the service
+// results to the http response.
+type CallAPIRouter interface {
+	Call(http.ResponseWriter, *http.Request)
+}
+
 // ConstructionAPIRouter defines the required methods for binding the api requests to a responses
 // for the ConstructionAPI
 // The ConstructionAPIRouter implementation should parse necessary information from the http
@@ -101,6 +110,14 @@ type BlockAPIServicer interface {
 		context.Context,
 		*types.BlockTransactionRequest,
 	) (*types.BlockTransactionResponse, *types.Error)
+}
+
+// CallAPIServicer defines the api actions for the CallAPI service
+// This interface intended to stay up to date with the openapi yaml used to generate it,
+// while the service implementation can ignored with the .openapi-generator-ignore file
+// and updated with the logic required for the API.
+type CallAPIServicer interface {
+	Call(context.Context, *types.CallRequest) (*types.CallResponse, *types.Error)
 }
 
 // ConstructionAPIServicer defines the api actions for the ConstructionAPI service

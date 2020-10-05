@@ -15,7 +15,9 @@
 package asserter
 
 import (
+	"errors"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
@@ -198,14 +200,89 @@ var (
 		[]string{"PAYMENT"},
 		true,
 		[]*types.NetworkIdentifier{validNetworkIdentifier},
+		[]string{"eth_call"},
 	)
 )
 
 func TestNewWithOptions(t *testing.T) {
-	t.Run("ensure asserter initialized", func(t *testing.T) {
-		assert.NotNil(t, a)
-		assert.NoError(t, aErr)
-	})
+	assert.NotNil(t, a)
+	assert.NoError(t, aErr)
+	tests := map[string]struct {
+		supportedOperationTypes []string
+		historicalBalanceLookup bool
+		supportedNetworks       []*types.NetworkIdentifier
+		callMethods             []string
+
+		err error
+	}{
+		"basic": {
+			supportedOperationTypes: []string{"PAYMENT"},
+			historicalBalanceLookup: true,
+			supportedNetworks:       []*types.NetworkIdentifier{validNetworkIdentifier},
+			callMethods:             []string{"eth_call"},
+		},
+		"no call methods": {
+			supportedOperationTypes: []string{"PAYMENT"},
+			historicalBalanceLookup: true,
+			supportedNetworks:       []*types.NetworkIdentifier{validNetworkIdentifier},
+		},
+		"duplicate operation types": {
+			supportedOperationTypes: []string{"PAYMENT", "PAYMENT"},
+			historicalBalanceLookup: true,
+			supportedNetworks:       []*types.NetworkIdentifier{validNetworkIdentifier},
+			callMethods:             []string{"eth_call"},
+			err: errors.New(
+				"Allow.OperationTypes contains a duplicate PAYMENT",
+			),
+		},
+		"empty operation type": {
+			supportedOperationTypes: []string{"PAYMENT", ""},
+			historicalBalanceLookup: true,
+			supportedNetworks:       []*types.NetworkIdentifier{validNetworkIdentifier},
+			callMethods:             []string{"eth_call"},
+			err:                     errors.New("Allow.OperationTypes has an empty string"),
+		},
+		"duplicate network identifier": {
+			supportedOperationTypes: []string{"PAYMENT"},
+			historicalBalanceLookup: true,
+			supportedNetworks: []*types.NetworkIdentifier{
+				validNetworkIdentifier,
+				validNetworkIdentifier,
+			},
+			callMethods: []string{"eth_call"},
+			err:         ErrSupportedNetworksDuplicate,
+		},
+		"nil network identifier": {
+			supportedOperationTypes: []string{"PAYMENT"},
+			historicalBalanceLookup: true,
+			supportedNetworks:       []*types.NetworkIdentifier{validNetworkIdentifier, nil},
+			callMethods:             []string{"eth_call"},
+			err:                     ErrNetworkIdentifierIsNil,
+		},
+		"no supported networks": {
+			supportedOperationTypes: []string{"PAYMENT"},
+			historicalBalanceLookup: true,
+			callMethods:             []string{"eth_call"},
+			err:                     ErrNoSupportedNetworks,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			thisA, thisErr := NewServer(
+				test.supportedOperationTypes,
+				test.historicalBalanceLookup,
+				test.supportedNetworks,
+				test.callMethods,
+			)
+			if test.err == nil {
+				assert.NotNil(t, thisA)
+				assert.NoError(t, thisErr)
+			} else {
+				assert.Nil(t, thisA)
+				assert.True(t, errors.Is(thisErr, test.err) || strings.Contains(thisErr.Error(), test.err.Error()))
+			}
+		})
+	}
 }
 
 func TestSupportedNetworks(t *testing.T) {
@@ -324,6 +401,7 @@ func TestAccountBalanceRequest(t *testing.T) {
 				[]string{"PAYMENT"},
 				test.allowHistorical,
 				[]*types.NetworkIdentifier{validNetworkIdentifier},
+				nil,
 			)
 			assert.NotNil(t, asserter)
 			assert.NoError(t, err)
@@ -509,7 +587,6 @@ func TestConstructionMetadataRequest(t *testing.T) {
 			request: &types.ConstructionMetadataRequest{
 				NetworkIdentifier: validNetworkIdentifier,
 			},
-			err: ErrConstructionMetadataRequestOptionsIsNil,
 		},
 		"invalid request with public keys": {
 			request: &types.ConstructionMetadataRequest{
@@ -1167,6 +1244,70 @@ func TestConstructionParseRequest(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			err := a.ConstructionParseRequest(test.request)
+			if test.err != nil {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), test.err.Error())
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestCallRequest(t *testing.T) {
+	var tests = map[string]struct {
+		request *types.CallRequest
+		err     error
+	}{
+		"valid request": {
+			request: &types.CallRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+				Method:            "eth_call",
+			},
+			err: nil,
+		},
+		"valid request with params": {
+			request: &types.CallRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+				Method:            "eth_call",
+				Parameters: map[string]interface{}{
+					"hello": "test",
+				},
+			},
+			err: nil,
+		},
+		"invalid request wrong network": {
+			request: &types.CallRequest{
+				NetworkIdentifier: wrongNetworkIdentifier,
+			},
+			err: fmt.Errorf(
+				"%w: %+v",
+				ErrRequestedNetworkNotSupported,
+				wrongNetworkIdentifier,
+			),
+		},
+		"unsupported method": {
+			request: &types.CallRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+				Method:            "eth_debug",
+			},
+			err: ErrCallMethodUnsupported,
+		},
+		"nil request": {
+			request: nil,
+			err:     ErrCallRequestIsNil,
+		},
+		"empty method": {
+			request: &types.CallRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+			},
+			err: ErrCallMethodEmpty,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			err := a.CallRequest(test.request)
 			if test.err != nil {
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), test.err.Error())

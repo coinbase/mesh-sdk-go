@@ -22,6 +22,14 @@ import (
 
 // Named error types for Asserter errors
 var (
+	/////////////////////
+	/* ASSERTER ERRORS */
+	/////////////////////
+
+	// ErrAsserterNotInitialized is returned when some call in the asserter
+	// package requires the asserter to be initialized first.
+	ErrAsserterNotInitialized = errors.New("asserter not initialized")
+
 	//////////////////////////////////
 	/* ACCOUNT BALANCE QUERY ERRORS */
 	//////////////////////////////////
@@ -266,11 +274,17 @@ var (
 	ErrErrorDetailsPopulated      = errors.New(
 		"error details populated in /network/options",
 	)
-	ErrAllowIsNil                                   = errors.New("Allow is nil")
-	ErrNetworkOptionsResponseIsNil                  = errors.New("options is nil")
-	ErrNetworkListResponseIsNil                     = errors.New("NetworkListResponse is nil")
-	ErrNetworkListResponseNetworksContinsDuplicates = errors.New(
+	ErrAllowIsNil                                    = errors.New("Allow is nil")
+	ErrNetworkOptionsResponseIsNil                   = errors.New("options is nil")
+	ErrNetworkListResponseIsNil                      = errors.New("NetworkListResponse is nil")
+	ErrNetworkListResponseNetworksContainsDuplicates = errors.New(
 		"NetworkListResponse.Networks contains duplicates",
+	)
+	ErrBalanceExemptionIsNil                  = errors.New("BalanceExemption is nil")
+	ErrBalanceExemptionTypeInvalid            = errors.New("BalanceExemption.Type is invalid")
+	ErrBalanceExemptionMissingSubject         = errors.New("BalanceExemption missing subject")
+	ErrBalanceExemptionSubAccountAddressEmpty = errors.New(
+		"BalanceExemption.SubAccountAddress is empty",
 	)
 
 	NetworkErrs = []error{
@@ -290,7 +304,11 @@ var (
 		ErrAllowIsNil,
 		ErrNetworkOptionsResponseIsNil,
 		ErrNetworkListResponseIsNil,
-		ErrNetworkListResponseNetworksContinsDuplicates,
+		ErrNetworkListResponseNetworksContainsDuplicates,
+		ErrBalanceExemptionIsNil,
+		ErrBalanceExemptionTypeInvalid,
+		ErrBalanceExemptionMissingSubject,
+		ErrBalanceExemptionSubAccountAddressEmpty,
 	}
 
 	///////////////////
@@ -312,12 +330,9 @@ var (
 	ErrAccountBalanceRequestHistoricalBalanceLookupNotSupported = errors.New(
 		"historical balance lookup is not supported",
 	)
-	ErrBlockRequestIsNil                       = errors.New("BlockRequest is nil")
-	ErrBlockTransactionRequestIsNil            = errors.New("BlockTransactionRequest is nil")
-	ErrConstructionMetadataRequestIsNil        = errors.New("ConstructionMetadataRequest is nil")
-	ErrConstructionMetadataRequestOptionsIsNil = errors.New(
-		"ConstructionMetadataRequest.Options is nil",
-	)
+	ErrBlockRequestIsNil                      = errors.New("BlockRequest is nil")
+	ErrBlockTransactionRequestIsNil           = errors.New("BlockTransactionRequest is nil")
+	ErrConstructionMetadataRequestIsNil       = errors.New("ConstructionMetadataRequest is nil")
 	ErrConstructionSubmitRequestIsNil         = errors.New("ConstructionSubmitRequest is nil")
 	ErrConstructionSubmitRequestSignedTxEmpty = errors.New(
 		"ConstructionSubmitRequest.SignedTransaction is empty",
@@ -347,6 +362,10 @@ var (
 	ErrConstructionHashRequestSignedTxEmpty      = errors.New("SignedTransaction cannot be empty")
 	ErrConstructionParseRequestIsNil             = errors.New("ConstructionParseRequest is nil")
 	ErrConstructionParseRequestEmpty             = errors.New("Transaction cannot be empty")
+	ErrCallRequestIsNil                          = errors.New("CallRequest is nil")
+	ErrCallMethodEmpty                           = errors.New("call method cannot be empty")
+	ErrCallMethodUnsupported                     = errors.New("call method is not supported")
+	ErrCallMethodDuplicate                       = errors.New("duplicate call method detected")
 
 	ServerErrs = []error{
 		ErrNoSupportedNetworks,
@@ -357,7 +376,6 @@ var (
 		ErrBlockRequestIsNil,
 		ErrBlockTransactionRequestIsNil,
 		ErrConstructionMetadataRequestIsNil,
-		ErrConstructionMetadataRequestOptionsIsNil,
 		ErrConstructionSubmitRequestIsNil,
 		ErrConstructionSubmitRequestSignedTxEmpty,
 		ErrMempoolTransactionRequestIsNil,
@@ -373,6 +391,10 @@ var (
 		ErrConstructionHashRequestSignedTxEmpty,
 		ErrConstructionParseRequestIsNil,
 		ErrConstructionParseRequestEmpty,
+		ErrCallRequestIsNil,
+		ErrCallMethodEmpty,
+		ErrCallMethodUnsupported,
+		ErrCallMethodDuplicate,
 	}
 
 	///////////////////

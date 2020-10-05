@@ -16,18 +16,11 @@ package asserter
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"path"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
-)
-
-var (
-	// ErrAsserterNotInitialized is returned when some call in the asserter
-	// package requires the asserter to be initialized first.
-	ErrAsserterNotInitialized = errors.New("asserter not initialized")
 )
 
 // Asserter contains all logic to perform static
@@ -43,6 +36,7 @@ type Asserter struct {
 	// These variables are used for request assertion.
 	historicalBalanceLookup bool
 	supportedNetworks       []*types.NetworkIdentifier
+	callMethods             map[string]struct{}
 }
 
 // NewServer constructs a new Asserter for use in the
@@ -51,6 +45,7 @@ func NewServer(
 	supportedOperationTypes []string,
 	historicalBalanceLookup bool,
 	supportedNetworks []*types.NetworkIdentifier,
+	callMethods []string,
 ) (*Asserter, error) {
 	if err := OperationTypes(supportedOperationTypes); err != nil {
 		return nil, err
@@ -60,10 +55,24 @@ func NewServer(
 		return nil, err
 	}
 
+	callMap := map[string]struct{}{}
+	for _, method := range callMethods {
+		if len(method) == 0 {
+			return nil, ErrCallMethodEmpty
+		}
+
+		if _, ok := callMap[method]; ok {
+			return nil, fmt.Errorf("%w: %s", ErrCallMethodDuplicate, method)
+		}
+
+		callMap[method] = struct{}{}
+	}
+
 	return &Asserter{
 		operationTypes:          supportedOperationTypes,
 		historicalBalanceLookup: historicalBalanceLookup,
 		supportedNetworks:       supportedNetworks,
+		callMethods:             callMap,
 	}, nil
 }
 
