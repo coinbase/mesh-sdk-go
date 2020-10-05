@@ -229,9 +229,7 @@ func TestNewWithOptions(t *testing.T) {
 			historicalBalanceLookup: true,
 			supportedNetworks:       []*types.NetworkIdentifier{validNetworkIdentifier},
 			callMethods:             []string{"eth_call"},
-			err: errors.New(
-				"Allow.OperationTypes contains a duplicate PAYMENT",
-			),
+			err:                     errors.New("Allow.OperationTypes contains a duplicate PAYMENT"),
 		},
 		"empty operation type": {
 			supportedOperationTypes: []string{"PAYMENT", ""},
@@ -243,12 +241,9 @@ func TestNewWithOptions(t *testing.T) {
 		"duplicate network identifier": {
 			supportedOperationTypes: []string{"PAYMENT"},
 			historicalBalanceLookup: true,
-			supportedNetworks: []*types.NetworkIdentifier{
-				validNetworkIdentifier,
-				validNetworkIdentifier,
-			},
-			callMethods: []string{"eth_call"},
-			err:         ErrSupportedNetworksDuplicate,
+			supportedNetworks:       []*types.NetworkIdentifier{validNetworkIdentifier, validNetworkIdentifier},
+			callMethods:             []string{"eth_call"},
+			err:                     ErrSupportedNetworksDuplicate,
 		},
 		"nil network identifier": {
 			supportedOperationTypes: []string{"PAYMENT"},
@@ -586,7 +581,6 @@ func TestConstructionMetadataRequest(t *testing.T) {
 			request: &types.ConstructionMetadataRequest{
 				NetworkIdentifier: validNetworkIdentifier,
 			},
-			err: ErrConstructionMetadataRequestOptionsIsNil,
 		},
 		"invalid request with public keys": {
 			request: &types.ConstructionMetadataRequest{

@@ -159,10 +159,6 @@ func (a *Asserter) ConstructionMetadataRequest(request *types.ConstructionMetada
 		return err
 	}
 
-	if request.Options == nil {
-		return ErrConstructionMetadataRequestOptionsIsNil
-	}
-
 	for _, publicKey := range request.PublicKeys {
 		if err := PublicKey(publicKey); err != nil {
 			return err

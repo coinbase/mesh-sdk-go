@@ -312,12 +312,9 @@ var (
 	ErrAccountBalanceRequestHistoricalBalanceLookupNotSupported = errors.New(
 		"historical balance lookup is not supported",
 	)
-	ErrBlockRequestIsNil                       = errors.New("BlockRequest is nil")
-	ErrBlockTransactionRequestIsNil            = errors.New("BlockTransactionRequest is nil")
-	ErrConstructionMetadataRequestIsNil        = errors.New("ConstructionMetadataRequest is nil")
-	ErrConstructionMetadataRequestOptionsIsNil = errors.New(
-		"ConstructionMetadataRequest.Options is nil",
-	)
+	ErrBlockRequestIsNil                      = errors.New("BlockRequest is nil")
+	ErrBlockTransactionRequestIsNil           = errors.New("BlockTransactionRequest is nil")
+	ErrConstructionMetadataRequestIsNil       = errors.New("ConstructionMetadataRequest is nil")
 	ErrConstructionSubmitRequestIsNil         = errors.New("ConstructionSubmitRequest is nil")
 	ErrConstructionSubmitRequestSignedTxEmpty = errors.New(
 		"ConstructionSubmitRequest.SignedTransaction is empty",
@@ -361,7 +358,6 @@ var (
 		ErrBlockRequestIsNil,
 		ErrBlockTransactionRequestIsNil,
 		ErrConstructionMetadataRequestIsNil,
-		ErrConstructionMetadataRequestOptionsIsNil,
 		ErrConstructionSubmitRequestIsNil,
 		ErrConstructionSubmitRequestSignedTxEmpty,
 		ErrMempoolTransactionRequestIsNil,
