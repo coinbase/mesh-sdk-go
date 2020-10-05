@@ -272,6 +272,12 @@ var (
 	ErrNetworkListResponseNetworksContainsDuplicates = errors.New(
 		"NetworkListResponse.Networks contains duplicates",
 	)
+	ErrBalanceExemptionIsNil                  = errors.New("BalanceExemption is nil")
+	ErrBalanceExemptionTypeInvalid            = errors.New("BalanceExemption.Type is invalid")
+	ErrBalanceExemptionMissingSubject         = errors.New("BalanceExemption missing subject")
+	ErrBalanceExemptionSubAccountAddressEmpty = errors.New(
+		"BalanceExemption.SubAccountAddress is empty",
+	)
 
 	NetworkErrs = []error{
 		ErrSubNetworkIdentifierInvalid,
@@ -291,6 +297,10 @@ var (
 		ErrNetworkOptionsResponseIsNil,
 		ErrNetworkListResponseIsNil,
 		ErrNetworkListResponseNetworksContainsDuplicates,
+		ErrBalanceExemptionIsNil,
+		ErrBalanceExemptionTypeInvalid,
+		ErrBalanceExemptionMissingSubject,
+		ErrBalanceExemptionSubAccountAddressEmpty,
 	}
 
 	///////////////////
