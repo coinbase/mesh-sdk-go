@@ -247,7 +247,7 @@ func NetworkListResponse(response *types.NetworkListResponse) error {
 		}
 
 		if containsNetworkIdentifier(seen, network) {
-			return ErrNetworkListResponseNetworksContinsDuplicates
+			return ErrNetworkListResponseNetworksContainsDuplicates
 		}
 
 		seen = append(seen, network)

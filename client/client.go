@@ -36,7 +36,7 @@ var (
 	jsonCheck = regexp.MustCompile(`(?i:(?:application|text)/(?:vnd\.[^;]+\+)?json)`)
 )
 
-// APIClient manages communication with the Rosetta API v1.4.4
+// APIClient manages communication with the Rosetta API v1.4.5
 // In most cases there should be only one, shared, APIClient.
 type APIClient struct {
 	cfg    *Configuration
@@ -47,6 +47,8 @@ type APIClient struct {
 	AccountAPI *AccountAPIService
 
 	BlockAPI *BlockAPIService
+
+	CallAPI *CallAPIService
 
 	ConstructionAPI *ConstructionAPIService
 
@@ -73,6 +75,7 @@ func NewAPIClient(cfg *Configuration) *APIClient {
 	// API Services
 	c.AccountAPI = (*AccountAPIService)(&c.common)
 	c.BlockAPI = (*BlockAPIService)(&c.common)
+	c.CallAPI = (*CallAPIService)(&c.common)
 	c.ConstructionAPI = (*ConstructionAPIService)(&c.common)
 	c.MempoolAPI = (*MempoolAPIService)(&c.common)
 	c.NetworkAPI = (*NetworkAPIService)(&c.common)

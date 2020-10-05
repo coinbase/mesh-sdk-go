@@ -18,8 +18,9 @@ package types
 
 // ConstructionMetadataRequest A ConstructionMetadataRequest is utilized to get information required
 // to construct a transaction. The Options object used to specify which metadata to return is left
-// purposely unstructured to allow flexibility for implementers. Optionally, the request can also
-// include an array of PublicKeys associated with the AccountIdentifiers returned in
+// purposely unstructured to allow flexibility for implementers. Options is not required in the case
+// that there is network-wide metadata of interest. Optionally, the request can also include an
+// array of PublicKeys associated with the AccountIdentifiers returned in
 // ConstructionPreprocessResponse.
 type ConstructionMetadataRequest struct {
 	NetworkIdentifier *NetworkIdentifier `json:"network_identifier"`
@@ -28,6 +29,6 @@ type ConstructionMetadataRequest struct {
 	// possible types of metadata for construction (which may require multiple node fetches), the
 	// client can populate an options object to limit the metadata returned to only the subset
 	// required.
-	Options    map[string]interface{} `json:"options"`
+	Options    map[string]interface{} `json:"options,omitempty"`
 	PublicKeys []*PublicKey           `json:"public_keys,omitempty"`
 }
