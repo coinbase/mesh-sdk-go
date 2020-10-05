@@ -193,24 +193,24 @@ func (c *Coordinator) findJob(
 		return nil, ErrReturnFundsComplete
 	}
 
-	processing, err := c.storage.Processing(ctx, dbTx, string(job.RequestFunds))
-	if err != nil {
-		return nil, fmt.Errorf(
-			"%w: %s",
-			ErrJobsUnretrievable,
-			err.Error(),
-		)
-	}
+	if c.returnFundsWorkflow != nil {
+		processing, err := c.storage.Processing(ctx, dbTx, string(job.RequestFunds))
+		if err != nil {
+			return nil, fmt.Errorf(
+				"%w: %s",
+				ErrJobsUnretrievable,
+				err.Error(),
+			)
+		}
 
-	if len(processing) >= job.ReservedWorkflowConcurrency {
-		return nil, ErrNoAvailableJobs
-	}
+		if len(processing) >= job.ReservedWorkflowConcurrency {
+			return nil, ErrNoAvailableJobs
+		}
 
-	if c.requestFundsWorkflow != nil {
 		return job.New(c.requestFundsWorkflow), nil
 	}
 
-	return nil, ErrNoRemainingJobs
+	return nil, ErrStalled
 }
 
 // createTransaction constructs and signs a transaction with the provided intent.
@@ -488,10 +488,10 @@ func (c *Coordinator) process( // nolint:gocognit
 		c.resetVars()
 		return NoJobsWaitTime, nil
 	}
-	if errors.Is(err, ErrNoRemainingJobs) {
-		color.Cyan("no remaining jobs!")
+	if errors.Is(err, ErrStalled) {
+		color.Yellow("processing stalled")
 
-		return -1, nil
+		return -1, ErrStalled
 	}
 	if errors.Is(err, ErrReturnFundsComplete) {
 		color.Cyan("fund return complete!")
