@@ -189,11 +189,13 @@ In the Rosetta Constructor DSL, it is possible to invoke functions (where
 the function name is an `Action.Type`) but not possible to define your own
 functions (yet!).
 
+#### Inputs
 The input for all functions is a JSON blob that will be evaluated by
-the `Worker`. Note, it is possible to reference other variables
-in an input using the syntax `{{var}}`. The Rosetta Constructor DSL
-compiler will automatically check that referenced variables are previously
-defined.
+the `Worker`. It is possible to reference other variables
+in an input using the syntax `{{var}}` where `var` must follow
+[this syntax](https://github.com/tidwall/gjson/blob/master/SYNTAX.md).
+The Rosetta Constructor DSL compiler will automatically check that referenced
+variables are previously defined.
 
 #### End Line
 Function invocations can span multiple lines (if you "pretty print" the JSON
