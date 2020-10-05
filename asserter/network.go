@@ -15,6 +15,8 @@
 package asserter
 
 import (
+	"fmt"
+
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
@@ -182,6 +184,57 @@ func Errors(rosettaErrors []*types.Error) error {
 	return nil
 }
 
+// BalanceExemptions ensures []*types.BalanceExemption is valid.
+func BalanceExemptions(exemptions []*types.BalanceExemption) error {
+	for i, exemption := range exemptions {
+		if exemption == nil {
+			return fmt.Errorf("%w (index %d)", ErrBalanceExemptionIsNil, i)
+		}
+
+		switch exemption.ExemptionType {
+		case types.BalanceLessOrEqual, types.BalanceGreaterOrEqual, types.BalanceDynamic:
+		default:
+			return fmt.Errorf(
+				"%w (index %d): %s",
+				ErrBalanceExemptionTypeInvalid,
+				i,
+				exemption.ExemptionType,
+			)
+		}
+
+		if exemption.Currency == nil && exemption.SubAccountAddress == nil {
+			return fmt.Errorf("%w (index %d)", ErrBalanceExemptionMissingSubject, i)
+		}
+
+		if exemption.Currency != nil {
+			if err := Currency(exemption.Currency); err != nil {
+				return fmt.Errorf("%w (index %d)", err, i)
+			}
+		}
+
+		if exemption.SubAccountAddress != nil {
+			if len(*exemption.SubAccountAddress) == 0 {
+				return fmt.Errorf("%w (index %d)", ErrBalanceExemptionSubAccountAddressEmpty, i)
+			}
+		}
+	}
+
+	return nil
+}
+
+// CallMethods ensures Allow.CallMethods are valid.
+func CallMethods(methods []string) error {
+	if len(methods) == 0 {
+		return nil
+	}
+
+	if err := StringArray("Allow.CallMethods", methods); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // Allow ensures a types.Allow object is valid.
 func Allow(allowed *types.Allow) error {
 	if allowed == nil {
@@ -197,6 +250,14 @@ func Allow(allowed *types.Allow) error {
 	}
 
 	if err := Errors(allowed.Errors); err != nil {
+		return err
+	}
+
+	if err := CallMethods(allowed.CallMethods); err != nil {
+		return err
+	}
+
+	if err := BalanceExemptions(allowed.BalanceExemptions); err != nil {
 		return err
 	}
 
@@ -247,7 +308,7 @@ func NetworkListResponse(response *types.NetworkListResponse) error {
 		}
 
 		if containsNetworkIdentifier(seen, network) {
-			return ErrNetworkListResponseNetworksContinsDuplicates
+			return ErrNetworkListResponseNetworksContainsDuplicates
 		}
 
 		seen = append(seen, network)

@@ -27,8 +27,8 @@ type Operation struct {
 	// linking operations in a call tree.
 	RelatedOperations []*OperationIdentifier `json:"related_operations,omitempty"`
 	// The network-specific type of the operation. Ensure that any type that can be returned here is
-	// also specified in the NetworkStatus. This can be very useful to downstream consumers that
-	// parse all block data.
+	// also specified in the NetworkOptionsResponse. This can be very useful to downstream consumers
+	// that parse all block data.
 	Type string `json:"type"`
 	// The network-specific status of the operation. Status is not defined on the transaction object
 	// because blockchains with smart contracts may have transactions that partially apply.
