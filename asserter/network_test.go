@@ -16,6 +16,7 @@ package asserter
 
 import (
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
@@ -157,6 +158,20 @@ func TestAllow(t *testing.T) {
 		operationTypes = []string{
 			"PAYMENT",
 		}
+
+		callMethods = []string{
+			"call",
+		}
+
+		balanceExemptions = []*types.BalanceExemption{
+			{
+				ExemptionType: types.BalanceDynamic,
+				Currency: &types.Currency{
+					Symbol:   "BTC",
+					Decimals: 8,
+				},
+			},
+		}
 	)
 
 	var tests = map[string]struct {
@@ -167,6 +182,14 @@ func TestAllow(t *testing.T) {
 			allow: &types.Allow{
 				OperationStatuses: operationStatuses,
 				OperationTypes:    operationTypes,
+			},
+		},
+		"valid Allow with call methods and exemptions": {
+			allow: &types.Allow{
+				OperationStatuses: operationStatuses,
+				OperationTypes:    operationTypes,
+				CallMethods:       callMethods,
+				BalanceExemptions: balanceExemptions,
 			},
 		},
 		"nil Allow": {
@@ -194,11 +217,47 @@ func TestAllow(t *testing.T) {
 			},
 			err: errors.New("no Allow.OperationTypes found"),
 		},
+		"duplicate call methods": {
+			allow: &types.Allow{
+				OperationStatuses: operationStatuses,
+				OperationTypes:    operationTypes,
+				CallMethods:       []string{"call", "call"},
+				BalanceExemptions: balanceExemptions,
+			},
+			err: errors.New("Allow.CallMethods contains a duplicate call"),
+		},
+		"empty exemption": {
+			allow: &types.Allow{
+				OperationStatuses: operationStatuses,
+				OperationTypes:    operationTypes,
+				CallMethods:       []string{"call"},
+				BalanceExemptions: []*types.BalanceExemption{
+					{
+						ExemptionType: types.BalanceDynamic,
+					},
+				},
+			},
+			err: ErrBalanceExemptionMissingSubject,
+		},
+		"invalid exemption type": {
+			allow: &types.Allow{
+				OperationStatuses: operationStatuses,
+				OperationTypes:    operationTypes,
+				CallMethods:       []string{"call"},
+				BalanceExemptions: []*types.BalanceExemption{
+					{
+						ExemptionType: "test",
+					},
+				},
+			},
+			err: ErrBalanceExemptionTypeInvalid,
+		},
 	}
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			assert.Equal(t, test.err, Allow(test.allow))
+			err := Allow(test.allow)
+			assert.True(t, errors.Is(err, test.err) || strings.Contains(err.Error(), test.err.Error()))
 		})
 	}
 }

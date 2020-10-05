@@ -222,6 +222,19 @@ func BalanceExemptions(exemptions []*types.BalanceExemption) error {
 	return nil
 }
 
+// CallMethods ensures Allow.CallMethods are valid.
+func CallMethods(methods []string) error {
+	if len(methods) == 0 {
+		return nil
+	}
+
+	if err := StringArray("Allow.CallMethods", methods); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // Allow ensures a types.Allow object is valid.
 func Allow(allowed *types.Allow) error {
 	if allowed == nil {
@@ -240,7 +253,9 @@ func Allow(allowed *types.Allow) error {
 		return err
 	}
 
-	// TODO: add call methods
+	if err := CallMethods(allowed.CallMethods); err != nil {
+		return err
+	}
 
 	if err := BalanceExemptions(allowed.BalanceExemptions); err != nil {
 		return err
