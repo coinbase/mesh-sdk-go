@@ -345,6 +345,9 @@ func (p *parser) parseWorkflow(ctx context.Context) (*job.Workflow, error) {
 			return nil, err
 		}
 
+		// Allow following scenarios to call injected variables
+		variables[scenario.Name] = struct{}{}
+
 		scenarios = append(scenarios, scenario)
 		if cont {
 			continue

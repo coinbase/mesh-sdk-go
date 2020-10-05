@@ -13,5 +13,3 @@ JSON input into constructor
 #### Native Invocation
 * `math`
 * `set_variable`
-
-
