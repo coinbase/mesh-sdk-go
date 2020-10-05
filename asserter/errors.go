@@ -266,10 +266,10 @@ var (
 	ErrErrorDetailsPopulated      = errors.New(
 		"error details populated in /network/options",
 	)
-	ErrAllowIsNil                                   = errors.New("Allow is nil")
-	ErrNetworkOptionsResponseIsNil                  = errors.New("options is nil")
-	ErrNetworkListResponseIsNil                     = errors.New("NetworkListResponse is nil")
-	ErrNetworkListResponseNetworksContinsDuplicates = errors.New(
+	ErrAllowIsNil                                    = errors.New("Allow is nil")
+	ErrNetworkOptionsResponseIsNil                   = errors.New("options is nil")
+	ErrNetworkListResponseIsNil                      = errors.New("NetworkListResponse is nil")
+	ErrNetworkListResponseNetworksContainsDuplicates = errors.New(
 		"NetworkListResponse.Networks contains duplicates",
 	)
 
@@ -290,7 +290,7 @@ var (
 		ErrAllowIsNil,
 		ErrNetworkOptionsResponseIsNil,
 		ErrNetworkListResponseIsNil,
-		ErrNetworkListResponseNetworksContinsDuplicates,
+		ErrNetworkListResponseNetworksContainsDuplicates,
 	}
 
 	///////////////////
@@ -347,6 +347,10 @@ var (
 	ErrConstructionHashRequestSignedTxEmpty      = errors.New("SignedTransaction cannot be empty")
 	ErrConstructionParseRequestIsNil             = errors.New("ConstructionParseRequest is nil")
 	ErrConstructionParseRequestEmpty             = errors.New("Transaction cannot be empty")
+	ErrCallRequestIsNil                          = errors.New("CallRequest is nil")
+	ErrCallMethodEmpty                           = errors.New("call method cannot be empty")
+	ErrCallMethodUnsupported                     = errors.New("call method is not supported")
+	ErrCallMethodDuplicate                       = errors.New("duplicate call method detected")
 
 	ServerErrs = []error{
 		ErrNoSupportedNetworks,
@@ -373,6 +377,10 @@ var (
 		ErrConstructionHashRequestSignedTxEmpty,
 		ErrConstructionParseRequestIsNil,
 		ErrConstructionParseRequestEmpty,
+		ErrCallRequestIsNil,
+		ErrCallMethodEmpty,
+		ErrCallMethodUnsupported,
+		ErrCallMethodDuplicate,
 	}
 
 	///////////////////

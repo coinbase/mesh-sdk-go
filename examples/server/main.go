@@ -62,6 +62,7 @@ func main() {
 		[]string{"Transfer", "Reward"},
 		false,
 		[]*types.NetworkIdentifier{network},
+		nil,
 	)
 	if err != nil {
 		log.Fatal(err)

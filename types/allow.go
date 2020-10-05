@@ -33,4 +33,14 @@ type Allow struct {
 	// Any Rosetta implementation that supports querying the balance of an account at any height in
 	// the past should set this to true.
 	HistoricalBalanceLookup bool `json:"historical_balance_lookup"`
+	// All methods that are supported by the /call endpoint. Communicating which parameters should
+	// be provided to /call is the responsibility of the implementer (this is en lieu of defining an
+	// entire type system and requiring the implementer to define that in Allow).
+	CallMethods []string `json:"call_methods"`
+	// BalanceExemptions is an array of BalanceExemption indicating which account balances could
+	// change without a corresponding Operation. BalanceExemptions should be used sparingly as they
+	// may introduce significant complexity for integrators that attempt to reconcile all account
+	// balance changes. If your implementation relies on any BalanceExemptions, you MUST implement
+	// historical balance lookup (the ability to query an account balance at any BlockIdentifier).
+	BalanceExemptions []*BalanceExemption `json:"balance_exemptions"`
 }

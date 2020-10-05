@@ -399,3 +399,43 @@ func (a *Asserter) ConstructionParseRequest(request *types.ConstructionParseRequ
 
 	return nil
 }
+
+// ValidCallMethod returns an error if a CallRequest.Method
+// is not valid.
+func (a *Asserter) ValidCallMethod(method string) error {
+	if a == nil {
+		return ErrAsserterNotInitialized
+	}
+
+	if len(method) == 0 {
+		return ErrCallMethodEmpty
+	}
+
+	if _, ok := a.callMethods[method]; !ok {
+		return fmt.Errorf("%w: %s", ErrCallMethodUnsupported, method)
+	}
+
+	return nil
+}
+
+// CallRequest ensures that a types.CallRequest
+// is well-formatted.
+func (a *Asserter) CallRequest(request *types.CallRequest) error {
+	if a == nil {
+		return ErrAsserterNotInitialized
+	}
+
+	if request == nil {
+		return ErrCallRequestIsNil
+	}
+
+	if err := a.ValidSupportedNetwork(request.NetworkIdentifier); err != nil {
+		return err
+	}
+
+	if err := a.ValidCallMethod(request.Method); err != nil {
+		return err
+	}
+
+	return nil
+}

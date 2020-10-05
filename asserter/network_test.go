@@ -344,7 +344,7 @@ func TestNetworkListResponse(t *testing.T) {
 					network1Sub,
 				},
 			},
-			err: ErrNetworkListResponseNetworksContinsDuplicates,
+			err: ErrNetworkListResponseNetworksContainsDuplicates,
 		},
 		"invalid network": {
 			networkListResponse: &types.NetworkListResponse{
