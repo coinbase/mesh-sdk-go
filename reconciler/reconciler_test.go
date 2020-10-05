@@ -97,14 +97,26 @@ func TestNewReconciler(t *testing.T) {
 				return r
 			}(),
 		},
-		"with lookupBalanceByBlock": {
+		"with lookupBalanceByBlock and exemptions": {
 			options: []Option{
 				WithLookupBalanceByBlock(false),
+				WithBalanceExemptions([]*types.BalanceExemption{
+					{
+						ExemptionType: types.BalanceDynamic,
+						Currency:      accountCurrency.Currency,
+					},
+				}),
 			},
 			expected: func() *Reconciler {
 				r := New(nil, nil)
 				r.lookupBalanceByBlock = false
 				r.changeQueue = make(chan *parser.BalanceChange, backlogThreshold)
+				r.exemptions = []*types.BalanceExemption{
+					{
+						ExemptionType: types.BalanceDynamic,
+						Currency:      accountCurrency.Currency,
+					},
+				}
 
 				return r
 			}(),
@@ -121,6 +133,7 @@ func TestNewReconciler(t *testing.T) {
 			assert.Equal(t, test.expected.activeConcurrency, result.activeConcurrency)
 			assert.Equal(t, test.expected.lookupBalanceByBlock, result.lookupBalanceByBlock)
 			assert.Equal(t, cap(test.expected.changeQueue), cap(result.changeQueue))
+			assert.Equal(t, test.expected.exemptions, result.exemptions)
 		})
 	}
 }
@@ -450,7 +463,7 @@ func TestCompareBalance(t *testing.T) {
 			amount2.Value,
 			block2,
 		)
-		assert.Equal(t, "-100", difference)
+		assert.Equal(t, "100", difference)
 		assert.Equal(t, amount1.Value, cachedBalance)
 		assert.Equal(t, int64(2), headIndex)
 		assert.NoError(t, err)
