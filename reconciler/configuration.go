@@ -102,3 +102,9 @@ func WithDebugLogging(debug bool) Option {
 		r.debugLogging = debug
 	}
 }
+
+func WithBalanceExemptions(exemptions []*types.BalanceExemption) Option {
+	return func(r *Reconciler) {
+		r.exemptions = exemptions
+	}
+}

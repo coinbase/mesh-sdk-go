@@ -15,6 +15,20 @@ type Handler struct {
 	mock.Mock
 }
 
+// ReconciliationExempt provides a mock function with given fields: ctx, reconciliationType, account, currency, computedBalance, liveBalance, block, exemption
+func (_m *Handler) ReconciliationExempt(ctx context.Context, reconciliationType string, account *types.AccountIdentifier, currency *types.Currency, computedBalance string, liveBalance string, block *types.BlockIdentifier, exemption *types.BalanceExemption) error {
+	ret := _m.Called(ctx, reconciliationType, account, currency, computedBalance, liveBalance, block, exemption)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, *types.AccountIdentifier, *types.Currency, string, string, *types.BlockIdentifier, *types.BalanceExemption) error); ok {
+		r0 = rf(ctx, reconciliationType, account, currency, computedBalance, liveBalance, block, exemption)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // ReconciliationFailed provides a mock function with given fields: ctx, reconciliationType, account, currency, computedBalance, liveBalance, block
 func (_m *Handler) ReconciliationFailed(ctx context.Context, reconciliationType string, account *types.AccountIdentifier, currency *types.Currency, computedBalance string, liveBalance string, block *types.BlockIdentifier) error {
 	ret := _m.Called(ctx, reconciliationType, account, currency, computedBalance, liveBalance, block)
