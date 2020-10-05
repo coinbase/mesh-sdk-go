@@ -58,8 +58,9 @@ func Parse(ctx context.Context, file string) ([]*job.Workflow, *Error) {
 
 	p := newParser(f)
 	workflows := []*job.Workflow{}
+	workflowNames := map[string]struct{}{}
 	for ctx.Err() == nil {
-		workflow, err := p.parseWorkflow(ctx)
+		workflow, err := p.parseWorkflow(ctx, workflowNames)
 		if errors.Is(err, ErrEOF) {
 			return workflows, nil
 		}
@@ -71,6 +72,7 @@ func Parse(ctx context.Context, file string) ([]*job.Workflow, *Error) {
 			}
 		}
 
+		workflowNames[workflow.Name] = struct{}{}
 		workflows = append(workflows, workflow)
 	}
 

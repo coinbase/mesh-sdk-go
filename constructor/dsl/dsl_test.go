@@ -194,6 +194,12 @@ func TestParse(t *testing.T) {
 			expectedErrLine:     26,
 			expectedErrContents: ")",
 		},
+		"workflow error: duplicate worklow": {
+			file:                "duplicate_workflow.ros",
+			expectedErr:         ErrDuplicateWorkflowName,
+			expectedErrLine:     33,
+			expectedErrContents: "request_funds(1){",
+		},
 		"scenario error: missing name": {
 			file:                "missing_scenario_name.ros",
 			expectedErr:         ErrParsingScenarioName,
@@ -229,6 +235,12 @@ func TestParse(t *testing.T) {
 			expectedErr:         ErrUnexpectedEOF,
 			expectedErrLine:     15,
 			expectedErrContents: "}",
+		},
+		"scenario error: duplicate scenario": {
+			file:                "duplicate_scenario.ros",
+			expectedErr:         ErrDuplicateScenarioName,
+			expectedErrLine:     14,
+			expectedErrContents: "find_account{",
 		},
 		"action error: invalid type": {
 			file:                "action_invalid_type.ros",

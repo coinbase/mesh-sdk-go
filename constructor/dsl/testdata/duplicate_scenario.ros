@@ -1,0 +1,31 @@
+
+request_funds(1){ 
+  find_account{
+    currency = {"symbol":"ETH", "decimals":18};
+    currency_2 = set_variable({"symbol":"ETH", "decimals":18}); // support both native and function
+    random_account = find_balance({
+      "minimum_balance":{
+        "value": "0",
+        "currency": {{currency}}
+      }, 
+      "create_limit":1
+    });
+  },
+  find_account{
+    // Show different ways to do math
+    math_1 = math({
+      "operation": "subtraction",
+      "left_value": "0", 
+      "right_value": "100" 
+    });
+    math_2 = 10 + {{math_1}};
+    math_3 = {{math_2}} - "20";
+    loaded_account = find_balance({
+      "account_identifier": {{random_account.account_identifier}},
+      "minimum_balance":{
+        "value": "10000000000000000",
+        "currency": {{currency}}
+      }
+    });
+  }
+}

@@ -35,8 +35,10 @@ var (
 
 	ErrParsingWorkflowName        = errors.New("cannot parse workflow name")
 	ErrParsingWorkflowConcurrency = errors.New("cannot parse workflow concurrency")
+	ErrDuplicateWorkflowName      = errors.New("duplicate workflow name")
 
-	ErrParsingScenarioName = errors.New("cannot parse scenario name")
+	ErrParsingScenarioName   = errors.New("cannot parse scenario name")
+	ErrDuplicateScenarioName = errors.New("duplicate scenario name")
 
 	ErrInvalidActionType              = errors.New("invalid action type")
 	ErrCannotSetVariableWithoutOutput = errors.New("cannot set variable without output path")
