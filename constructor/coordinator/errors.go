@@ -37,14 +37,6 @@ var (
 	// ReturnsFundsWorkflow.
 	ErrReturnFundsComplete = errors.New("return funds complete")
 
-	// ErrCreateAccountWorkflowMissing is returned when we want
-	// to create an account but the create account workflow is missing.
-	ErrCreateAccountWorkflowMissing = errors.New("create account workflow missing")
-
-	// ErrRequestFundsWorkflowMissing is returned when we want
-	// to request funds but the request funds workflow is missing.
-	ErrRequestFundsWorkflowMissing = errors.New("request funds workflow missing")
-
 	// ErrJobMissing is returned when the coordinator is invoked with
 	// a broadcast complete call but the job that is affected does
 	// not exist.
@@ -61,4 +53,13 @@ var (
 	// ErrInvalidConcurrency is returned when the concurrency of a Workflow
 	// is <= 0.
 	ErrInvalidConcurrency = errors.New("invalid concurrency")
+
+	// ErrStalled is returned when the caller does not define
+	// a CreateAccount and/or RequestFunds workflow and we run out
+	// of available options (i.e. we can't do anything).
+	ErrStalled = errors.New("processing stalled")
+
+	// ErrNoWorkflows is returned when no workflows are provided
+	// during initialization.
+	ErrNoWorkflows = errors.New("no workflows")
 )

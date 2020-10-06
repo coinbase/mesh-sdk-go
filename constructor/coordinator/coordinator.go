@@ -40,6 +40,10 @@ func New(
 	parser *parser.Parser,
 	inputWorkflows []*job.Workflow,
 ) (*Coordinator, error) {
+	if len(inputWorkflows) == 0 {
+		return nil, ErrNoWorkflows
+	}
+
 	workflowNames := make([]string, len(inputWorkflows))
 	workflows := []*job.Workflow{}
 	var createAccountWorkflow *job.Workflow
@@ -82,14 +86,6 @@ func New(
 		}
 
 		workflows = append(workflows, workflow)
-	}
-
-	if createAccountWorkflow == nil {
-		return nil, ErrCreateAccountWorkflowMissing
-	}
-
-	if requestFundsWorkflow == nil {
-		return nil, ErrRequestFundsWorkflowMissing
 	}
 
 	return &Coordinator{
@@ -173,7 +169,7 @@ func (c *Coordinator) findJob(
 
 	// Check if ErrCreateAccount, then create account if less
 	// processing CreateAccount jobs than ReservedWorkflowConcurrency.
-	if c.seenErrCreateAccount {
+	if c.seenErrCreateAccount && c.createAccountWorkflow != nil {
 		processing, err := c.storage.Processing(ctx, dbTx, string(job.CreateAccount))
 		if err != nil {
 			return nil, fmt.Errorf(
@@ -201,20 +197,24 @@ func (c *Coordinator) findJob(
 		return nil, ErrReturnFundsComplete
 	}
 
-	processing, err := c.storage.Processing(ctx, dbTx, string(job.RequestFunds))
-	if err != nil {
-		return nil, fmt.Errorf(
-			"%w: %s",
-			ErrJobsUnretrievable,
-			err.Error(),
-		)
+	if c.requestFundsWorkflow != nil {
+		processing, err := c.storage.Processing(ctx, dbTx, string(job.RequestFunds))
+		if err != nil {
+			return nil, fmt.Errorf(
+				"%w: %s",
+				ErrJobsUnretrievable,
+				err.Error(),
+			)
+		}
+
+		if len(processing) >= job.ReservedWorkflowConcurrency {
+			return nil, ErrNoAvailableJobs
+		}
+
+		return job.New(c.requestFundsWorkflow), nil
 	}
 
-	if len(processing) >= job.ReservedWorkflowConcurrency {
-		return nil, ErrNoAvailableJobs
-	}
-
-	return job.New(c.requestFundsWorkflow), nil
+	return nil, ErrStalled
 }
 
 // createTransaction constructs and signs a transaction with the provided intent.
@@ -491,6 +491,11 @@ func (c *Coordinator) process( // nolint:gocognit
 
 		c.resetVars()
 		return NoJobsWaitTime, nil
+	}
+	if errors.Is(err, ErrStalled) {
+		color.Yellow("processing stalled")
+
+		return -1, ErrStalled
 	}
 	if errors.Is(err, ErrReturnFundsComplete) {
 		color.Cyan("fund return complete!")
