@@ -286,6 +286,7 @@ var (
 	ErrBalanceExemptionSubAccountAddressEmpty = errors.New(
 		"BalanceExemption.SubAccountAddress is empty",
 	)
+	ErrBalanceExemptionNoHistoricalLookup = errors.New("BalanceExemptions only supported when HistoricalBalanceLookup supported")
 
 	NetworkErrs = []error{
 		ErrSubNetworkIdentifierInvalid,
@@ -309,6 +310,7 @@ var (
 		ErrBalanceExemptionTypeInvalid,
 		ErrBalanceExemptionMissingSubject,
 		ErrBalanceExemptionSubAccountAddressEmpty,
+		ErrBalanceExemptionNoHistoricalLookup,
 	}
 
 	///////////////////
