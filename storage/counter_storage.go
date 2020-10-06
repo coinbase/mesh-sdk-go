@@ -58,6 +58,10 @@ const (
 	// reconciliations performed.
 	InactiveReconciliationCounter = "inactive_reconciliations"
 
+	// ExemptReconciliationCounter is the number of reconciliation
+	// failures that were exempt.
+	ExemptReconciliationCounter = "exempt_reconciliations"
+
 	// counterNamespace is preprended to any counter.
 	counterNamespace = "counter"
 )
