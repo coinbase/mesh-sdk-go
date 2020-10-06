@@ -15,6 +15,7 @@
 package fetcher
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -37,10 +38,13 @@ func (f *Fetcher) RequestFailedError(
 	err error,
 	message string,
 ) *Error {
-	// If there is a *types.Error assertion error, we log it instead
-	// of exiting. Exiting abruptly here may cause unintended consequences.
-	if assertionErr := f.Asserter.Error(rosettaErr); err != nil {
-		log.Printf("error %s assertion failed: %s", types.PrintStruct(rosettaErr), assertionErr)
+	// Only check for error correctness if err is not context.Canceled.
+	if !errors.Is(err, context.Canceled) {
+		// If there is a *types.Error assertion error, we log it instead
+		// of exiting. Exiting abruptly here may cause unintended consequences.
+		if assertionErr := f.Asserter.Error(rosettaErr); assertionErr != nil {
+			log.Printf("error %s assertion failed: %s", types.PrintStruct(rosettaErr), assertionErr)
+		}
 	}
 
 	return &Error{
