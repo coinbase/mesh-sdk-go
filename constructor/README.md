@@ -65,10 +65,12 @@ other `Scenarios` in the same `Job`. You can find an example of this in the
 will be constructed, signed, and broadcast.*
 
 ### Using with rosetta-cli
-If you use the `constructor` for automated Construction API testing, you must implement 2
-required `Workflows`:
+If you use the `constructor` for automated Construction API testing (without prefunded
+accounts), you MUST implement 2 required `Workflows`:
 * `create_account`
 * `request_funds`
+
+_If you don't implement these 2 `Workflows`, processing could stall._
 
 Please note that `create_account` can contain a transaction broadcast if
 on-chain origination is required for new accounts on your blockchain.
