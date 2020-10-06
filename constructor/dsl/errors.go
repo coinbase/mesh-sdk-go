@@ -43,14 +43,15 @@ var (
 	ErrInvalidActionType              = errors.New("invalid action type")
 	ErrCannotSetVariableWithoutOutput = errors.New("cannot set variable without output path")
 	ErrVariableUndefined              = errors.New("variable undefined")
+	ErrInvalidMathSymbol              = errors.New("invalid math symbol")
 )
 
 // Error contains a parsing error and context about
 // where the error occurred in the file.
 type Error struct {
-	Line         int
-	LineContents string
-	Err          error
+	Line         int    `json:"line"`
+	LineContents string `json:"line_contents"`
+	Err          error  `json:"err"`
 }
 
 // Log prints the *Error to the console in red.

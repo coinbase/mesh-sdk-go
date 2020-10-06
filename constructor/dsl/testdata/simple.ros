@@ -18,6 +18,11 @@ request_funds(1){
   // test comment
   request{
     print_message({{find_account.suggested_fee}}); // test variables that could be injected from other scenarios
+    varA = "hello";
+    varB = 10;
+    varC = [{"type":"transfer"}];
+    varD = "10";
+    varE = {{find_account}};
     loaded_account = find_balance({ // test comment 2 // blah
       "account_identifier": {{random_account.account_identifier}},
       "minimum_balance":{

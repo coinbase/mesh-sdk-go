@@ -68,6 +68,31 @@ func TestParse(t *testing.T) {
 									Input: `{{find_account.suggested_fee}}`,
 								},
 								{
+									Type:       job.SetVariable,
+									Input:      `"hello"`,
+									OutputPath: "varA",
+								},
+								{
+									Type:       job.SetVariable,
+									Input:      `10`,
+									OutputPath: "varB",
+								},
+								{
+									Type:       job.SetVariable,
+									Input:      `[{"type":"transfer"}]`,
+									OutputPath: "varC",
+								},
+								{
+									Type:       job.SetVariable,
+									Input:      `"10"`,
+									OutputPath: "varD",
+								},
+								{
+									Type:       job.SetVariable,
+									Input:      `{{find_account}}`,
+									OutputPath: "varE",
+								},
+								{
 									Type:       job.FindBalance,
 									Input:      `{"account_identifier": {{random_account.account_identifier}},"minimum_balance":{"value": "10000000000000000","currency": {{currency}}}}`, // nolint
 									OutputPath: "loaded_account",
@@ -262,7 +287,7 @@ func TestParse(t *testing.T) {
 		},
 		"action error: invalid math symbol": {
 			file:                "action_invalid_math.ros",
-			expectedErr:         ErrSyntax,
+			expectedErr:         ErrInvalidMathSymbol,
 			expectedErrLine:     8,
 			expectedErrContents: "math = 1 * 10;",
 		},
