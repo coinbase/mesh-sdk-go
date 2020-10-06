@@ -37,6 +37,8 @@ const (
 	equal               = "="
 	add                 = "+"
 	subtract            = "-"
+	multiply            = "*"
+	divide              = "/"
 	openParens          = "("
 	closeParens         = ")"
 	endLine             = ";"
@@ -140,9 +142,15 @@ func parseActionType(line string) (job.ActionType, string, string, error) {
 	for symbol, mathOperation := range map[string]job.MathOperation{
 		add:      job.Addition,
 		subtract: job.Subtraction,
+		multiply: "",
+		divide:   "",
 	} {
 		tokens = strings.SplitN(remaining, symbol, split2)
 		if len(tokens) == split2 {
+			if len(mathOperation) == 0 {
+				return "", "", "", ErrInvalidMathSymbol
+			}
+
 			syntheticOutput := fmt.Sprintf(
 				`{"operation": "%s","left_value": %s,"right_value": %s};`,
 				mathOperation,
@@ -155,15 +163,11 @@ func parseActionType(line string) (job.ActionType, string, string, error) {
 	}
 
 	// Attempt to parse native SetVariable
-	if strings.HasPrefix(tokens[0], openBrakcet) {
-		if len(outputPath) > 0 {
-			return job.SetVariable, outputPath, tokens[0], nil
-		}
-
-		return "", "", "", ErrCannotSetVariableWithoutOutput
+	if len(outputPath) > 0 {
+		return job.SetVariable, outputPath, tokens[0], nil
 	}
 
-	return "", "", "", ErrSyntax
+	return "", "", "", ErrCannotSetVariableWithoutOutput
 }
 
 func (p *parser) parseAction(
