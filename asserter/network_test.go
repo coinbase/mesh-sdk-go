@@ -186,11 +186,21 @@ func TestAllow(t *testing.T) {
 		},
 		"valid Allow with call methods and exemptions": {
 			allow: &types.Allow{
+				OperationStatuses:       operationStatuses,
+				OperationTypes:          operationTypes,
+				CallMethods:             callMethods,
+				BalanceExemptions:       balanceExemptions,
+				HistoricalBalanceLookup: true,
+			},
+		},
+		"invalid Allow with exemptions and no historical": {
+			allow: &types.Allow{
 				OperationStatuses: operationStatuses,
 				OperationTypes:    operationTypes,
 				CallMethods:       callMethods,
 				BalanceExemptions: balanceExemptions,
 			},
+			err: ErrBalanceExemptionNoHistoricalLookup,
 		},
 		"nil Allow": {
 			allow: nil,

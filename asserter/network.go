@@ -261,6 +261,10 @@ func Allow(allowed *types.Allow) error {
 		return err
 	}
 
+	if len(allowed.BalanceExemptions) > 0 && !allowed.HistoricalBalanceLookup {
+		return ErrBalanceExemptionNoHistoricalLookup
+	}
+
 	return nil
 }
 
