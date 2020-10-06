@@ -48,9 +48,9 @@ var (
 // Error contains a parsing error and context about
 // where the error occurred in the file.
 type Error struct {
-	Line         int
-	LineContents string
-	Err          error
+	Line         int    `json:"line"`
+	LineContents string `json:"line_contents"`
+	Err          error  `json:"err"`
 }
 
 // Log prints the *Error to the console in red.
