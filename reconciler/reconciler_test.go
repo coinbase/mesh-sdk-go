@@ -717,7 +717,7 @@ func mockReconcilerCalls(
 				liveValue,
 				headBlock,
 				exemption,
-			).Return(errors.New("reconciliation failed")).Once()
+			).Return(nil).Once()
 		}
 	}
 }
