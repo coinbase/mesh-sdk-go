@@ -474,7 +474,9 @@ func (r *Reconciler) handleBalanceMismatch(
 		if exemption.ExemptionType == types.BalanceDynamic ||
 			(exemption.ExemptionType == types.BalanceGreaterOrEqual && bigDifference.Sign() >= 0) ||
 			(exemption.ExemptionType == types.BalanceLessOrEqual && bigDifference.Sign() <= 0) {
-			err := r.handler.ReconciliationExempt(
+			// Return handler result (regardless if error) so that we don't invoke the handler for
+			// a failed reconciliation as well.
+			return r.handler.ReconciliationExempt(
 				ctx,
 				reconciliationType,
 				account,
@@ -484,14 +486,6 @@ func (r *Reconciler) handleBalanceMismatch(
 				block,
 				exemption,
 			)
-			if err != nil { // error only returned if we should exit on failure
-				return err
-			}
-
-			// Return if we find an exemption and the handler does not return
-			// an error so that we don't invoke the handler for a failed reconciliation
-			// as well.
-			return nil
 		}
 	}
 
