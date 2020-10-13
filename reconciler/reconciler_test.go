@@ -652,6 +652,7 @@ func mockReconcilerCalls(
 	reconciliationType string,
 	exemption *types.BalanceExemption,
 	exemptionHit bool,
+	exemptionThrows bool,
 ) {
 	if reconciliationType == ActiveReconciliation {
 		mockHelper.On("CurrentBlock", mock.Anything).Return(headBlock, nil).Once()
@@ -707,17 +708,31 @@ func mockReconcilerCalls(
 				headBlock,
 			).Return(errors.New("reconciliation failed")).Once()
 		} else {
-			mockHandler.On(
-				"ReconciliationExempt",
-				mock.Anything,
-				reconciliationType,
-				accountCurrency.Account,
-				accountCurrency.Currency,
-				computedValue,
-				liveValue,
-				headBlock,
-				exemption,
-			).Return(errors.New("reconciliation failed")).Once()
+			if !exemptionThrows {
+				mockHandler.On(
+					"ReconciliationExempt",
+					mock.Anything,
+					reconciliationType,
+					accountCurrency.Account,
+					accountCurrency.Currency,
+					computedValue,
+					liveValue,
+					headBlock,
+					exemption,
+				).Return(nil).Once()
+			} else {
+				mockHandler.On(
+					"ReconciliationExempt",
+					mock.Anything,
+					reconciliationType,
+					accountCurrency.Account,
+					accountCurrency.Currency,
+					computedValue,
+					liveValue,
+					headBlock,
+					exemption,
+				).Return(errors.New("reconciliation failed for exemption")).Once()
+			}
 		}
 	}
 }
@@ -781,6 +796,7 @@ func TestReconcile_SuccessOnlyActive(t *testing.T) {
 				ActiveReconciliation,
 				nil,
 				false,
+				false,
 			)
 
 			mockReconcilerCalls(
@@ -796,6 +812,7 @@ func TestReconcile_SuccessOnlyActive(t *testing.T) {
 				ActiveReconciliation,
 				nil,
 				false,
+				false,
 			)
 
 			mockReconcilerCalls(
@@ -810,6 +827,7 @@ func TestReconcile_SuccessOnlyActive(t *testing.T) {
 				true,
 				ActiveReconciliation,
 				nil,
+				false,
 				false,
 			)
 
@@ -916,6 +934,7 @@ func TestReconcile_HighWaterMark(t *testing.T) {
 		ActiveReconciliation,
 		nil,
 		false,
+		false,
 	)
 	mockReconcilerCalls(
 		mockHelper,
@@ -929,6 +948,7 @@ func TestReconcile_HighWaterMark(t *testing.T) {
 		true,
 		ActiveReconciliation,
 		nil,
+		false,
 		false,
 	)
 
@@ -1072,10 +1092,12 @@ func TestReconcile_FailureOnlyActive(t *testing.T) {
 				ActiveReconciliation,
 				nil,
 				false,
+				false,
 			)
 
 			go func() {
 				err := r.Reconcile(ctx)
+				assert.Error(t, err)
 				assert.Contains(t, "reconciliation failed", err.Error())
 			}()
 
@@ -1150,11 +1172,12 @@ func TestReconcile_ExemptOnlyActive(t *testing.T) {
 				ActiveReconciliation,
 				exemption,
 				true,
+				false,
 			)
 
 			go func() {
 				err := r.Reconcile(ctx)
-				assert.Contains(t, "reconciliation failed", err.Error())
+				assert.NoError(t, err)
 			}()
 
 			err := r.QueueChanges(ctx, block, []*parser.BalanceChange{
@@ -1232,11 +1255,12 @@ func TestReconcile_ExemptAddressOnlyActive(t *testing.T) {
 				ActiveReconciliation,
 				exemption,
 				true,
+				false,
 			)
 
 			go func() {
 				err := r.Reconcile(ctx)
-				assert.Contains(t, "reconciliation failed", err.Error())
+				assert.NoError(t, err)
 			}()
 
 			err := r.QueueChanges(ctx, block, []*parser.BalanceChange{
@@ -1314,11 +1338,96 @@ func TestReconcile_ExemptAddressDynamicActive(t *testing.T) {
 				ActiveReconciliation,
 				exemption,
 				true,
+				false,
 			)
 
 			go func() {
 				err := r.Reconcile(ctx)
-				assert.Contains(t, "reconciliation failed", err.Error())
+				assert.NoError(t, err)
+			}()
+
+			err := r.QueueChanges(ctx, block, []*parser.BalanceChange{
+				{
+					Account:    accountCurrency.Account,
+					Currency:   accountCurrency.Currency,
+					Difference: "100",
+					Block:      block,
+				},
+			})
+			assert.NoError(t, err)
+
+			time.Sleep(1 * time.Second)
+
+			mockHelper.AssertExpectations(t)
+			mockHandler.AssertExpectations(t)
+		})
+	}
+}
+
+func TestReconcile_ExemptAddressDynamicActiveThrow(t *testing.T) {
+	var (
+		block = &types.BlockIdentifier{
+			Hash:  "block 1",
+			Index: 1,
+		}
+		accountCurrency = &AccountCurrency{
+			Account: &types.AccountIdentifier{
+				Address: "addr 1",
+				SubAccount: &types.SubAccountIdentifier{
+					Address: "addr",
+				},
+			},
+			Currency: &types.Currency{
+				Symbol:   "BTC",
+				Decimals: 8,
+			},
+		}
+		block2 = &types.BlockIdentifier{
+			Hash:  "block 2",
+			Index: 2,
+		}
+		subAccountAddress = "addr"
+		exemption         = &types.BalanceExemption{
+			ExemptionType:     types.BalanceDynamic,
+			SubAccountAddress: &subAccountAddress,
+		}
+	)
+
+	lookupBalanceByBlocks := []bool{true, false}
+	for _, lookup := range lookupBalanceByBlocks {
+		t.Run(fmt.Sprintf("lookup balance by block %t", lookup), func(t *testing.T) {
+			mockHelper := &mocks.Helper{}
+			mockHandler := &mocks.Handler{}
+			r := New(
+				mockHelper,
+				mockHandler,
+				WithActiveConcurrency(1),
+				WithInactiveConcurrency(0),
+				WithLookupBalanceByBlock(lookup),
+				WithBalanceExemptions([]*types.BalanceExemption{exemption}),
+			)
+			ctx := context.Background()
+
+			mockReconcilerCalls(
+				mockHelper,
+				mockHandler,
+				lookup,
+				accountCurrency,
+				"100",
+				"105",
+				block2,
+				block,
+				false,
+				ActiveReconciliation,
+				exemption,
+				true,
+				true,
+			)
+
+			go func() {
+				err := r.Reconcile(ctx)
+				assert.Error(t, err)
+				assert.Contains(t, "reconciliation failed for exemption", err.Error())
 			}()
 
 			err := r.QueueChanges(ctx, block, []*parser.BalanceChange{
@@ -1392,10 +1501,12 @@ func TestReconcile_NotExemptOnlyActive(t *testing.T) {
 				ActiveReconciliation,
 				exemption,
 				false,
+				false,
 			)
 
 			go func() {
 				err := r.Reconcile(ctx)
+				assert.Error(t, err)
 				assert.Contains(t, "reconciliation failed", err.Error())
 			}()
 
@@ -1471,10 +1582,12 @@ func TestReconcile_NotExemptAddressOnlyActive(t *testing.T) {
 				ActiveReconciliation,
 				exemption,
 				false,
+				false,
 			)
 
 			go func() {
 				err := r.Reconcile(ctx)
+				assert.Error(t, err)
 				assert.Contains(t, "reconciliation failed", err.Error())
 			}()
 
@@ -1553,10 +1666,12 @@ func TestReconcile_NotExemptWrongAddressOnlyActive(t *testing.T) {
 				ActiveReconciliation,
 				exemption,
 				false,
+				false,
 			)
 
 			go func() {
 				err := r.Reconcile(ctx)
+				assert.Error(t, err)
 				assert.Contains(t, "reconciliation failed", err.Error())
 			}()
 
@@ -1631,6 +1746,7 @@ func TestReconcile_SuccessOnlyInactive(t *testing.T) {
 				InactiveReconciliation,
 				nil,
 				false,
+				false,
 			)
 
 			go func() {
@@ -1662,6 +1778,7 @@ func TestReconcile_SuccessOnlyInactive(t *testing.T) {
 				InactiveReconciliation,
 				nil,
 				false,
+				false,
 			)
 
 			go func() {
@@ -1669,6 +1786,7 @@ func TestReconcile_SuccessOnlyInactive(t *testing.T) {
 				cancel()
 			}()
 			err = r.Reconcile(ctx)
+			assert.Error(t, err)
 			assert.Contains(t, context.Canceled.Error(), err.Error())
 
 			mockHelper.AssertExpectations(t)
@@ -1728,6 +1846,7 @@ func TestReconcile_FailureOnlyInactive(t *testing.T) {
 				InactiveReconciliation,
 				nil,
 				false,
+				false,
 			)
 
 			go func() {
@@ -1736,6 +1855,7 @@ func TestReconcile_FailureOnlyInactive(t *testing.T) {
 			}()
 
 			err := r.Reconcile(ctx)
+			assert.Error(t, err)
 			assert.Contains(t, "reconciliation failed", err.Error())
 
 			mockHelper.AssertExpectations(t)
