@@ -488,7 +488,7 @@ func (r *Reconciler) handleBalanceMismatch(
 				return err
 			}
 
-			// return nil
+			return nil
 		}
 	}
 
