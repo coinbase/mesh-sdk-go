@@ -488,6 +488,9 @@ func (r *Reconciler) handleBalanceMismatch(
 				return err
 			}
 
+			// Return if we find an exemption and the handler does not return
+			// an error so that we don't invoke the handler for a failed reconciliation
+			// as well.
 			return nil
 		}
 	}
