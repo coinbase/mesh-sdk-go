@@ -38,8 +38,10 @@ func (f *Fetcher) RequestFailedError(
 	err error,
 	message string,
 ) *Error {
-	// Only check for error correctness if err is not context.Canceled.
-	if !errors.Is(err, context.Canceled) {
+	// Only check for error correctness if err is not context.Canceled
+	// and it is not transient (usually caused by the client failing
+	// the request).
+	if !errors.Is(err, context.Canceled) && !transientError(err) {
 		// If there is a *types.Error assertion error, we log it instead
 		// of exiting. Exiting abruptly here may cause unintended consequences.
 		if assertionErr := f.Asserter.Error(rosettaErr); assertionErr != nil {
