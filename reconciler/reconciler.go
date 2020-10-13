@@ -453,17 +453,14 @@ func (r *Reconciler) handleBalanceMismatch(
 	liveBalance string,
 	block *types.BlockIdentifier,
 ) error {
-	log.Println("balance mismatch detected")
 	// Check if the reconciliation was exempt (supports compound exemptions)
 	for _, exemption := range r.exemptions {
 		if exemption.Currency != nil && types.Hash(currency) != types.Hash(exemption.Currency) {
-			log.Printf("currency mismatch-> expected:%s and actual:%s\n", types.PrintStruct(exemption.Currency), types.PrintStruct(currency))
 			continue
 		}
 
 		if exemption.SubAccountAddress != nil &&
 			(account.SubAccount == nil || *exemption.SubAccountAddress != account.SubAccount.Address) {
-			log.Printf("sub account mismatch-> expected:%s and actual:%s\n", *exemption.SubAccountAddress, account.SubAccount.Address)
 			continue
 		}
 
@@ -491,13 +488,9 @@ func (r *Reconciler) handleBalanceMismatch(
 				return err
 			}
 
-			return nil
+			// return nil
 		}
-
-		log.Printf("value mismatch -> difference:%s wanted:%s\n", bigDifference.String(), exemption.ExemptionType)
 	}
-
-	log.Println("no exemption found")
 
 	// If we didn't find a matching exemption,
 	// we should consider the reconciliation
