@@ -69,8 +69,7 @@ func WithSeenAccounts(seen []*AccountCurrency) Option {
 	}
 }
 
-// WithLookupBalanceByBlock sets lookupBlockByBalance
-// and instantiates the correct changeQueue.
+// WithLookupBalanceByBlock sets lookupBlockByBalance.
 func WithLookupBalanceByBlock(lookup bool) Option {
 	return func(r *Reconciler) {
 		// We don't do anything if lookup == true because the default
