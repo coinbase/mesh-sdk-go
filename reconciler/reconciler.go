@@ -284,15 +284,10 @@ func (r *Reconciler) QueueChanges(
 			return err
 		}
 
-		if !r.lookupBalanceByBlock {
-			// All changes will have the same block. Continue
-			// if we are too far behind to start reconciling.
-			//
-			// Note: we don't return here so that we can ensure
-			// all seen accounts are added to the inactiveAccountQueue.
-			if block.Index < r.highWaterMark {
-				continue
-			}
+		// All changes will have the same block. Continue
+		// if we are too far behind to start reconciling.
+		if block.Index < r.highWaterMark {
+			continue
 		}
 
 		select {
