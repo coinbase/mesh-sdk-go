@@ -17,7 +17,6 @@ package reconciler
 import (
 	"fmt"
 
-	"github.com/coinbase/rosetta-sdk-go/parser"
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
@@ -74,13 +73,6 @@ func WithSeenAccounts(seen []*AccountCurrency) Option {
 // and instantiates the correct changeQueue.
 func WithLookupBalanceByBlock(lookup bool) Option {
 	return func(r *Reconciler) {
-		// When lookupBalanceByBlock is disabled, we must check
-		// balance changes asynchronously. Using a buffered
-		// channel allows us to add balance changes without blocking.
-		if !lookup {
-			r.changeQueue = make(chan *parser.BalanceChange, backlogThreshold)
-		}
-
 		// We don't do anything if lookup == true because the default
 		// is already to create a non-buffered channel.
 		r.lookupBalanceByBlock = lookup

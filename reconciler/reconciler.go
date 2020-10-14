@@ -227,7 +227,7 @@ func New(
 		// When lookupBalanceByBlock is enabled, we check
 		// balance changes synchronously.
 		lookupBalanceByBlock: defaultLookupBalanceByBlock,
-		changeQueue:          make(chan *parser.BalanceChange),
+		changeQueue:          make(chan *parser.BalanceChange, backlogThreshold),
 	}
 
 	for _, opt := range options {
@@ -293,20 +293,16 @@ func (r *Reconciler) QueueChanges(
 			if block.Index < r.highWaterMark {
 				continue
 			}
+		}
 
-			select {
-			case r.changeQueue <- change:
-			default:
-				if r.debugLogging {
-					log.Println("skipping active enqueue because backlog")
-				}
-			}
-		} else {
-			// Block until all checked for a block or context is Done
-			select {
-			case r.changeQueue <- change:
-			case <-ctx.Done():
-				return ctx.Err()
+		select {
+		case r.changeQueue <- change:
+		default:
+			if r.debugLogging {
+				log.Printf(
+					"skipping active enqueue because backlog has %d items",
+					backlogThreshold,
+				)
 			}
 		}
 	}
