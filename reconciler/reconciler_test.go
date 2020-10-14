@@ -853,6 +853,8 @@ func TestReconcile_SuccessOnlyActive(t *testing.T) {
 			})
 			assert.NoError(t, err)
 
+			assert.Equal(t, r.QueueSize(), 2)
+
 			time.Sleep(1 * time.Second)
 			cancel()
 

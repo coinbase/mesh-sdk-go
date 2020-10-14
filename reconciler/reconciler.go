@@ -305,6 +305,13 @@ func (r *Reconciler) QueueChanges(
 	return nil
 }
 
+// QueueSize is a helper that returns the total
+// number of items currently enqueued for active
+// reconciliation.
+func (r *Reconciler) QueueSize() int {
+	return len(r.changeQueue)
+}
+
 // CompareBalance checks to see if the computed balance of an account
 // is equal to the live balance of an account. This function ensures
 // balance is checked correctly in the case of orphaned blocks.
