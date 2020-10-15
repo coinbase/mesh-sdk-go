@@ -221,7 +221,7 @@ func (c *APIClient) decode(v interface{}, b []byte, contentType string) (err err
 		return nil
 	}
 
-	return fmt.Errorf("unsupported response type %s with body %s", contentType, string(b))
+	return fmt.Errorf("unsupported response content-type: %s body: %s", contentType, string(b))
 }
 
 // Set request body from an interface{}
