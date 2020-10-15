@@ -75,9 +75,10 @@ type BadgerStorage struct {
 	badgerOptions     badger.Options
 	compressorEntries []*CompressorEntry
 
-	pool       *BufferPool
-	db         *badger.DB
-	compressor *Compressor
+	pool     *BufferPool
+	db       *badger.DB
+	encoder  *Encoder
+	compress bool
 
 	writer sync.Mutex
 
@@ -161,6 +162,7 @@ func NewBadgerStorage(
 		badgerOptions: DefaultBadgerOptions(dir),
 		closed:        make(chan struct{}),
 		pool:          NewBufferPool(),
+		compress:      true,
 	}
 	for _, opt := range storageOptions {
 		opt(b)
@@ -172,11 +174,11 @@ func NewBadgerStorage(
 	}
 	b.db = db
 
-	compressor, err := NewCompressor(b.compressorEntries, b.pool)
+	encoder, err := NewEncoder(b.compressorEntries, b.pool, b.compress)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrCompressorLoadFailed, err)
 	}
-	b.compressor = compressor
+	b.encoder = encoder
 
 	// Start periodic ValueGC goroutine (up to user of BadgerDB to call
 	// periodically to reclaim value logs on-disk).
@@ -243,9 +245,9 @@ func (b *BadgerStorage) periodicGC(ctx context.Context) {
 	}
 }
 
-// Compressor returns the BadgerStorage compressor.
-func (b *BadgerStorage) Compressor() *Compressor {
-	return b.compressor
+// Encoder returns the BadgerStorage encoder.
+func (b *BadgerStorage) Encoder() *Encoder {
+	return b.encoder
 }
 
 // BadgerTransaction is a wrapper around a Badger
@@ -425,7 +427,7 @@ func (b *BadgerTransaction) Scan(
 }
 
 func decompressAndSave(
-	compressor *Compressor,
+	encoder *Encoder,
 	namespace string,
 	tmpDir string,
 	k []byte,
@@ -433,7 +435,7 @@ func decompressAndSave(
 ) (float64, float64, error) {
 	// We use a compressor.DecodeRaw here because the v may be
 	// encoded using dictionary compression.
-	decompressed, err := compressor.DecodeRaw(namespace, v)
+	decompressed, err := encoder.DecodeRaw(namespace, v)
 	if err != nil {
 		return -1, -1, fmt.Errorf("%w %s: %v", ErrDecompressFailed, string(k), err)
 	}
@@ -453,25 +455,25 @@ func decompressAndSave(
 func decompressAndEncode(
 	path string,
 	namespace string,
-	compressor *Compressor,
+	encoder *Encoder,
 ) (float64, float64, float64, error) {
 	decompressed, err := ioutil.ReadFile(path) // #nosec G304
 	if err != nil {
 		return -1, -1, -1, fmt.Errorf("%w for file %s: %v", ErrLoadFileUnsuccessful, path, err)
 	}
 
-	normalCompress, err := compressor.EncodeRaw("", decompressed)
+	normalCompress, err := encoder.EncodeRaw("", decompressed)
 	if err != nil {
 		return -1, -1, -1, fmt.Errorf("%w: %v", ErrCompressNormalFailed, err)
 	}
 
-	dictCompress, err := compressor.EncodeRaw(namespace, decompressed)
+	dictCompress, err := encoder.EncodeRaw(namespace, decompressed)
 	if err != nil {
 		return -1, -1, -1, fmt.Errorf("%w: %v", ErrCompressWithDictFailed, err)
 	}
 
 	// Ensure dict works
-	decompressedDict, err := compressor.DecodeRaw(namespace, dictCompress)
+	decompressedDict, err := encoder.DecodeRaw(namespace, dictCompress)
 	if err != nil {
 		return -1, -1, -1, fmt.Errorf("%w: %v", ErrDecompressWithDictFailed, err)
 	}
@@ -492,7 +494,7 @@ func recompress(
 	badgerDb Database,
 	namespace string,
 	restrictedNamespace string,
-	newCompressor *Compressor,
+	newCompressor *Encoder,
 ) (float64, float64, error) {
 	onDiskSize := float64(0)
 	newSize := float64(0)
@@ -503,7 +505,7 @@ func recompress(
 		ctx,
 		[]byte(restrictedNamespace),
 		func(k []byte, v []byte) error {
-			decompressed, err := badgerDb.Compressor().DecodeRaw(namespace, v)
+			decompressed, err := badgerDb.Encoder().DecodeRaw(namespace, v)
 			if err != nil {
 				return fmt.Errorf("%w %s: %v", ErrDecompressFailed, string(k), err)
 			}
@@ -576,7 +578,7 @@ func BadgerTrain(
 		[]byte(restrictedNamespace),
 		func(k []byte, v []byte) error {
 			decompressedSize, diskSize, err := decompressAndSave(
-				badgerDb.Compressor(),
+				badgerDb.Encoder(),
 				namespace,
 				tmpDir,
 				k,
@@ -639,12 +641,12 @@ func BadgerTrain(
 		return -1, -1, fmt.Errorf("%w: %v", ErrTrainZSTDFailed, err)
 	}
 
-	compressor, err := NewCompressor([]*CompressorEntry{
+	encoder, err := NewEncoder([]*CompressorEntry{
 		{
 			Namespace:      namespace,
 			DictionaryPath: dictPath,
 		},
-	}, NewBufferPool())
+	}, NewBufferPool(), true)
 	if err != nil {
 		return -1, -1, fmt.Errorf("%w: %v", ErrCompressorLoadFailed, err)
 	}
@@ -664,7 +666,7 @@ func BadgerTrain(
 		decompressed, normalCompress, dictCompress, err := decompressAndEncode(
 			path,
 			namespace,
-			compressor,
+			encoder,
 		)
 		if err != nil {
 			return fmt.Errorf("%w: unable to decompress and encode", err)
@@ -713,6 +715,6 @@ func BadgerTrain(
 		badgerDb,
 		namespace,
 		restrictedNamespace,
-		compressor,
+		encoder,
 	)
 }

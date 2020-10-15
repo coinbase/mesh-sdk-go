@@ -27,7 +27,15 @@ type BadgerOption func(b *BadgerStorage)
 // for given namespaces.
 func WithCompressorEntries(entries []*CompressorEntry) BadgerOption {
 	return func(b *BadgerStorage) {
+		b.compress = true
 		b.compressorEntries = entries
+	}
+}
+
+// WithoutCompression disables zstd compression.
+func WithoutCompression() BadgerOption {
+	return func(b *BadgerStorage) {
+		b.compress = false
 	}
 }
 
