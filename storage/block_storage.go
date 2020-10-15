@@ -198,8 +198,10 @@ func (b *BlockStorage) pruneBlock(
 		return -1, fmt.Errorf("%w: cannot get head block identifier", err)
 	}
 
+	// Ensure we are only pruning blocks that could not be
+	// accessed later in a reorg.
 	if oldestIndex > head.Index-syncer.PastBlockSize*2 {
-		return -1, ErrPruningDepthInsufficient
+		return -1, ErrNothingToPrune
 	}
 
 	blockResponse, err := b.getBlockResponse(
