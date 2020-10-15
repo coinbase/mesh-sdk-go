@@ -177,14 +177,11 @@ func (s *StatefulSyncer) Prune(ctx context.Context, helper PruneHelper) error {
 		}
 
 		firstPruned, lastPruned, err := s.blockStorage.Prune(ctx, pruneableIndex)
-		if errors.Is(err, storage.ErrNothingToPrune) {
-			time.Sleep(pruneSleepTime)
-			continue
-		}
 		if err != nil {
 			return err
 		}
 
+		// firstPruned and lastPruned are -1 if there is nothing to prune
 		if firstPruned != -1 && lastPruned != -1 {
 			pruneMessage := fmt.Sprintf("pruned blocks %d-%d", firstPruned, lastPruned)
 			if firstPruned == lastPruned {
