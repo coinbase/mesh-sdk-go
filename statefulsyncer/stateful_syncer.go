@@ -72,7 +72,7 @@ type Logger interface {
 // pruneable index is often a function of the state
 // of some number of structs.
 type PruneHelper interface {
-	//PruneableIndex is the largest block
+	// PruneableIndex is the largest block
 	// index that is considered safe to prune.
 	PruneableIndex(ctx context.Context, headIndex int64) (int64, error)
 }
