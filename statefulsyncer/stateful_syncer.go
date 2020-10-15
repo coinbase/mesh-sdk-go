@@ -66,6 +66,17 @@ type Logger interface {
 	RemoveBlockStream(context.Context, *types.BlockIdentifier) error
 }
 
+// PruneHelper is used by the stateful syncer
+// to determine the safe pruneable index. This is
+// a helper instead of a static argument because the
+// pruneable index is often a function of the state
+// of some number of structs.
+type PruneHelper interface {
+	//PruneableIndex is the largest block
+	// index that is considered safe to prune.
+	PruneableIndex(ctx context.Context, headIndex int64) (int64, error)
+}
+
 // New returns a new *StatefulSyncer.
 func New(
 	ctx context.Context,
@@ -129,7 +140,11 @@ func (s *StatefulSyncer) Sync(ctx context.Context, startIndex int64, endIndex in
 
 // Prune will repeatedly attempt to prune BlockStorage until
 // the context is canceled or an error is encountered.
-func (s *StatefulSyncer) Prune(ctx context.Context, depth int64) error {
+//
+// PruneHelper is provided as an argument here instead of
+// in the initializer because the caller may wish to change
+// pruning strategies during syncing.
+func (s *StatefulSyncer) Prune(ctx context.Context, helper PruneHelper) error {
 	for ctx.Err() == nil {
 		headBlock, err := s.blockStorage.GetHeadBlockIdentifier(ctx)
 		if headBlock == nil && errors.Is(err, storage.ErrHeadBlockNotFound) {
@@ -151,13 +166,21 @@ func (s *StatefulSyncer) Prune(ctx context.Context, depth int64) error {
 			return err
 		}
 
-		pruningIndex := headBlock.Index - depth
-		if pruningIndex < oldestIndex {
+		pruneableIndex, err := helper.PruneableIndex(ctx, headBlock.Index)
+		if err != nil {
+			return fmt.Errorf("%w: could not determine pruneable index", err)
+		}
+
+		if pruneableIndex < oldestIndex {
 			time.Sleep(pruneSleepTime)
 			continue
 		}
 
-		firstPruned, lastPruned, err := s.blockStorage.Prune(ctx, pruningIndex)
+		firstPruned, lastPruned, err := s.blockStorage.Prune(ctx, pruneableIndex)
+		if errors.Is(err, storage.ErrNothingToPrune) {
+			time.Sleep(pruneSleepTime)
+			continue
+		}
 		if err != nil {
 			return err
 		}
