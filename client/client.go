@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -228,17 +227,20 @@ func (c *APIClient) decode(v interface{}, b []byte, contentType string) (err err
 	if len(b) == 0 {
 		return nil
 	}
+
 	if s, ok := v.(*string); ok {
 		*s = string(b)
 		return nil
 	}
+
 	if jsonCheck.MatchString(contentType) {
 		if err = json.Unmarshal(b, v); err != nil {
 			return err
 		}
 		return nil
 	}
-	return errors.New("undefined response type")
+
+	return fmt.Errorf("unsupported response content-type: %s body: %s", contentType, string(b))
 }
 
 // Set request body from an interface{}
