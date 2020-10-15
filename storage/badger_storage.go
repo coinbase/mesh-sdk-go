@@ -107,6 +107,7 @@ func DefaultBadgerOptions(dir string) badger.Options {
 	// significantly increase memory usage.
 	opts.Compression = DefaultCompressionMode
 
+	// Use an extended table size for larger commits.
 	opts.MaxTableSize = DefaultMaxTableSize
 	opts.ValueLogFileSize = DefaultLogValueSize
 
@@ -159,6 +160,9 @@ func PerformanceBadgerOptions(dir string) badger.Options {
 	// By default, we do not compress the table at all. Doing so can
 	// significantly increase memory usage.
 	opts.Compression = DefaultCompressionMode
+
+	// Use an extended table size for larger commits.
+	opts.MaxTableSize = DefaultMaxTableSize
 
 	// Load tables into memory and memory map value logs.
 	opts.TableLoadingMode = options.MemoryMap
