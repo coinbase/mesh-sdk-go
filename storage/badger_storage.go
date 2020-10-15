@@ -161,13 +161,13 @@ func PerformanceBadgerOptions(dir string) badger.Options {
 	opts.Compression = DefaultCompressionMode
 
 	// Load tables into memory and memory map value logs.
-	opts.TableLoadingMode = options.LoadToRAM
+	opts.TableLoadingMode = options.MemoryMap
 	opts.ValueLogLoadingMode = options.MemoryMap
 
 	// This option will have a significant effect the memory. If the level is kept
 	// in-memory, read are faster but the tables will be kept in memory. By default,
 	// this is set to false.
-	opts.KeepL0InMemory = true
+	opts.KeepL0InMemory = false
 
 	// We don't compact L0 on close as this can greatly delay shutdown time.
 	opts.CompactL0OnClose = false
