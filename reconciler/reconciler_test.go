@@ -831,6 +831,8 @@ func TestReconcile_SuccessOnlyActive(t *testing.T) {
 				false,
 			)
 
+			assert.Equal(t, int64(-1), r.LastIndexReconciled())
+
 			go func() {
 				err := r.Reconcile(ctx)
 				assert.Contains(t, context.Canceled.Error(), err.Error())
@@ -856,6 +858,7 @@ func TestReconcile_SuccessOnlyActive(t *testing.T) {
 			time.Sleep(1 * time.Second)
 			cancel()
 
+			assert.Equal(t, block2.Index, r.LastIndexReconciled())
 			mockHelper.AssertExpectations(t)
 			mockHandler.AssertExpectations(t)
 		})
@@ -952,11 +955,6 @@ func TestReconcile_HighWaterMark(t *testing.T) {
 		false,
 	)
 
-	go func() {
-		err := r.Reconcile(ctx)
-		assert.Contains(t, context.Canceled.Error(), err.Error())
-	}()
-
 	err := r.QueueChanges(ctx, block, []*parser.BalanceChange{
 		{
 			Account:  accountCurrency.Account,
@@ -974,6 +972,12 @@ func TestReconcile_HighWaterMark(t *testing.T) {
 		},
 	})
 	assert.NoError(t, err)
+	assert.Equal(t, r.QueueSize(), 4) // includes interesting accounts
+
+	go func() {
+		err := r.Reconcile(ctx)
+		assert.Contains(t, context.Canceled.Error(), err.Error())
+	}()
 
 	time.Sleep(1 * time.Second)
 	cancel()
@@ -1095,12 +1099,6 @@ func TestReconcile_FailureOnlyActive(t *testing.T) {
 				false,
 			)
 
-			go func() {
-				err := r.Reconcile(ctx)
-				assert.Error(t, err)
-				assert.Contains(t, "reconciliation failed", err.Error())
-			}()
-
 			err := r.QueueChanges(ctx, block, []*parser.BalanceChange{
 				{
 					Account:    accountCurrency.Account,
@@ -1110,6 +1108,13 @@ func TestReconcile_FailureOnlyActive(t *testing.T) {
 				},
 			})
 			assert.NoError(t, err)
+			assert.Equal(t, r.QueueSize(), 1)
+
+			go func() {
+				err := r.Reconcile(ctx)
+				assert.Error(t, err)
+				assert.Contains(t, "reconciliation failed", err.Error())
+			}()
 
 			time.Sleep(1 * time.Second)
 

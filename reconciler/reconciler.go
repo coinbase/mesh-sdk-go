@@ -206,6 +206,10 @@ type Reconciler struct {
 	// exemptions allows for certain reconciliation failures
 	// to be skipped.
 	exemptions []*types.BalanceExemption
+
+	// LastIndexChecked is the last block index reconciled actively.
+	lastIndexMutex   sync.Mutex
+	lastIndexChecked int64
 }
 
 // New creates a new Reconciler.
@@ -215,19 +219,17 @@ func New(
 	options ...Option,
 ) *Reconciler {
 	r := &Reconciler{
-		helper:              helper,
-		handler:             handler,
-		inactiveFrequency:   defaultInactiveFrequency,
-		activeConcurrency:   defaultReconcilerConcurrency,
-		inactiveConcurrency: defaultReconcilerConcurrency,
-		highWaterMark:       -1,
-		seenAccounts:        map[string]struct{}{},
-		inactiveQueue:       []*InactiveEntry{},
-
-		// When lookupBalanceByBlock is enabled, we check
-		// balance changes synchronously.
+		helper:               helper,
+		handler:              handler,
+		inactiveFrequency:    defaultInactiveFrequency,
+		activeConcurrency:    defaultReconcilerConcurrency,
+		inactiveConcurrency:  defaultReconcilerConcurrency,
+		highWaterMark:        -1,
+		seenAccounts:         map[string]struct{}{},
+		inactiveQueue:        []*InactiveEntry{},
 		lookupBalanceByBlock: defaultLookupBalanceByBlock,
-		changeQueue:          make(chan *parser.BalanceChange),
+		changeQueue:          make(chan *parser.BalanceChange, backlogThreshold),
+		lastIndexChecked:     -1,
 	}
 
 	for _, opt := range options {
@@ -284,34 +286,40 @@ func (r *Reconciler) QueueChanges(
 			return err
 		}
 
-		if !r.lookupBalanceByBlock {
-			// All changes will have the same block. Continue
-			// if we are too far behind to start reconciling.
-			//
-			// Note: we don't return here so that we can ensure
-			// all seen accounts are added to the inactiveAccountQueue.
-			if block.Index < r.highWaterMark {
-				continue
-			}
+		// All changes will have the same block. Continue
+		// if we are too far behind to start reconciling.
+		if block.Index < r.highWaterMark {
+			continue
+		}
 
-			select {
-			case r.changeQueue <- change:
-			default:
-				if r.debugLogging {
-					log.Println("skipping active enqueue because backlog")
-				}
-			}
-		} else {
-			// Block until all checked for a block or context is Done
-			select {
-			case r.changeQueue <- change:
-			case <-ctx.Done():
-				return ctx.Err()
+		select {
+		case r.changeQueue <- change:
+		default:
+			if r.debugLogging {
+				log.Printf(
+					"skipping active enqueue because backlog has %d items",
+					backlogThreshold,
+				)
 			}
 		}
 	}
 
 	return nil
+}
+
+// QueueSize is a helper that returns the total
+// number of items currently enqueued for active
+// reconciliation.
+func (r *Reconciler) QueueSize() int {
+	return len(r.changeQueue)
+}
+
+// LastIndexReconciled is the last block index
+// reconciled. This is used to ensure all the
+// enqueued accounts for a particular block have
+// been reconciled.
+func (r *Reconciler) LastIndexReconciled() int64 {
+	return r.lastIndexChecked
 }
 
 // CompareBalance checks to see if the computed balance of an account
@@ -679,6 +687,22 @@ func (r *Reconciler) reconcileActiveAccounts(
 			)
 			if err != nil {
 				return err
+			}
+
+			// Update the lastIndexChecked value if the block
+			// index is greater. We don't acquire the lock
+			// to make this check to improve performance.
+			if balanceChange.Block.Index > r.lastIndexChecked {
+				r.lastIndexMutex.Lock()
+
+				// In the time since making the check and acquiring
+				// the lock, the lastIndexChecked could've increased
+				// so we check it again.
+				if balanceChange.Block.Index > r.lastIndexChecked {
+					r.lastIndexChecked = balanceChange.Block.Index
+				}
+
+				r.lastIndexMutex.Unlock()
 			}
 		}
 	}
