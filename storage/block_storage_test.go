@@ -571,12 +571,12 @@ func TestBlock(t *testing.T) {
 		firstPruned, lastPruned, err := storage.Prune(ctx, 2)
 		assert.Equal(t, int64(-1), firstPruned)
 		assert.Equal(t, int64(-1), lastPruned)
-		assert.Contains(t, err.Error(), ErrNothingToPrune.Error())
+		assert.NoError(t, err)
 
 		firstPruned, lastPruned, err = storage.Prune(ctx, 100)
 		assert.Equal(t, int64(-1), firstPruned)
 		assert.Equal(t, int64(-1), lastPruned)
-		assert.Contains(t, err.Error(), ErrNothingToPrune.Error())
+		assert.NoError(t, err)
 
 		// Attempt to sync sufficient blocks so we can test pruning
 		for i := gapBlock.BlockIdentifier.Index + 1; i < 200; i++ {
