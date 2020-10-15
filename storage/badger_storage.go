@@ -160,9 +160,9 @@ func PerformanceBadgerOptions(dir string) badger.Options {
 	// significantly increase memory usage.
 	opts.Compression = DefaultCompressionMode
 
-	// Don't load tables into memory.
+	// Load tables into memory and memory map value logs.
 	opts.TableLoadingMode = options.LoadToRAM
-	opts.ValueLogLoadingMode = options.LoadToRAM
+	opts.ValueLogLoadingMode = options.MemoryMap
 
 	// This option will have a significant effect the memory. If the level is kept
 	// in-memory, read are faster but the tables will be kept in memory. By default,
