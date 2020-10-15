@@ -35,93 +35,130 @@ func newTestBadgerStorage(ctx context.Context, dir string) (Database, error) {
 }
 
 func TestDatabase(t *testing.T) {
-	ctx := context.Background()
+	for _, compress := range []bool{true, false} {
+		t.Run(fmt.Sprintf("compress: %t", compress), func(t *testing.T) {
+			ctx := context.Background()
 
-	newDir, err := utils.CreateTempDir()
-	assert.NoError(t, err)
-	defer utils.RemoveTempDir(newDir)
-
-	database, err := newTestBadgerStorage(ctx, newDir)
-	assert.NoError(t, err)
-	defer database.Close(ctx)
-
-	t.Run("No key exists", func(t *testing.T) {
-		txn := database.NewDatabaseTransaction(ctx, false)
-		exists, value, err := txn.Get(ctx, []byte("hello"))
-		assert.False(t, exists)
-		assert.Nil(t, value)
-		assert.NoError(t, err)
-		txn.Discard(ctx)
-	})
-
-	t.Run("Set key", func(t *testing.T) {
-		txn := database.NewDatabaseTransaction(ctx, true)
-		err := txn.Set(ctx, []byte("hello"), []byte("hola"), true)
-		assert.NoError(t, err)
-		assert.NoError(t, txn.Commit(ctx))
-	})
-
-	t.Run("Get key", func(t *testing.T) {
-		txn := database.NewDatabaseTransaction(ctx, false)
-		exists, value, err := txn.Get(ctx, []byte("hello"))
-		assert.True(t, exists)
-		assert.Equal(t, []byte("hola"), value)
-		assert.NoError(t, err)
-		txn.Discard(ctx)
-	})
-
-	t.Run("Scan", func(t *testing.T) {
-		txn := database.NewDatabaseTransaction(ctx, true)
-		type scanItem struct {
-			Key   []byte
-			Value []byte
-		}
-
-		storedValues := []*scanItem{}
-		for i := 0; i < 100; i++ {
-			k := []byte(fmt.Sprintf("test/%d", i))
-			v := []byte(fmt.Sprintf("%d", i))
-			err := txn.Set(ctx, k, v, true)
+			newDir, err := utils.CreateTempDir()
 			assert.NoError(t, err)
+			defer utils.RemoveTempDir(newDir)
 
-			storedValues = append(storedValues, &scanItem{
-				Key:   k,
-				Value: v,
+			opts := []BadgerOption{
+				WithIndexCacheSize(TinyIndexCacheSize),
+			}
+			if !compress {
+				opts = append(opts, WithoutCompression())
+			}
+
+			database, err := NewBadgerStorage(
+				ctx,
+				newDir,
+				opts...,
+			)
+			assert.NoError(t, err)
+			defer database.Close(ctx)
+
+			t.Run("No key exists", func(t *testing.T) {
+				txn := database.NewDatabaseTransaction(ctx, false)
+				exists, value, err := txn.Get(ctx, []byte("hello"))
+				assert.False(t, exists)
+				assert.Nil(t, value)
+				assert.NoError(t, err)
+				txn.Discard(ctx)
 			})
-		}
 
-		for i := 0; i < 100; i++ {
-			k := []byte(fmt.Sprintf("testing/%d", i))
-			v := []byte(fmt.Sprintf("%d", i))
-			err := txn.Set(ctx, k, v, true)
-			assert.NoError(t, err)
-		}
+			t.Run("Set key", func(t *testing.T) {
+				txn := database.NewDatabaseTransaction(ctx, true)
+				err := txn.Set(ctx, []byte("hello"), []byte("hola"), true)
+				assert.NoError(t, err)
+				assert.NoError(t, txn.Commit(ctx))
+			})
 
-		retrievedStoredValues := []*scanItem{}
-		numValues, err := txn.Scan(
-			ctx,
-			[]byte("test/"),
-			func(k []byte, v []byte) error {
-				thisK := make([]byte, len(k))
-				thisV := make([]byte, len(v))
+			t.Run("Get key", func(t *testing.T) {
+				txn := database.NewDatabaseTransaction(ctx, false)
+				exists, value, err := txn.Get(ctx, []byte("hello"))
+				assert.True(t, exists)
+				assert.Equal(t, []byte("hola"), value)
+				assert.NoError(t, err)
+				txn.Discard(ctx)
+			})
 
-				copy(thisK, k)
-				copy(thisV, v)
+			t.Run("Many key set/get", func(t *testing.T) {
+				for i := 0; i < 1000; i++ {
+					txn := database.NewDatabaseTransaction(ctx, true)
+					k := []byte(fmt.Sprintf("blah/%d", i))
+					v := []byte(fmt.Sprintf("%d", i))
+					err := txn.Set(ctx, k, v, true)
+					assert.NoError(t, err)
+					assert.NoError(t, txn.Commit(ctx))
 
-				retrievedStoredValues = append(retrievedStoredValues, &scanItem{
-					Key:   thisK,
-					Value: thisV,
-				})
+					for j := 0; j <= i; j++ {
+						txn := database.NewDatabaseTransaction(ctx, false)
+						jk := []byte(fmt.Sprintf("blah/%d", j))
+						jv := []byte(fmt.Sprintf("%d", j))
+						exists, value, err := txn.Get(ctx, jk)
+						assert.True(t, exists)
+						assert.Equal(t, jv, value)
+						assert.NoError(t, err)
+						txn.Discard(ctx)
+					}
+				}
+			})
 
-				return nil
-			},
-			false,
-		)
-		assert.NoError(t, err)
-		assert.Equal(t, 100, numValues)
-		assert.ElementsMatch(t, storedValues, retrievedStoredValues)
-		assert.NoError(t, txn.Commit(ctx))
-	})
+			t.Run("Scan", func(t *testing.T) {
+				txn := database.NewDatabaseTransaction(ctx, true)
+				type scanItem struct {
+					Key   []byte
+					Value []byte
+				}
+
+				storedValues := []*scanItem{}
+				for i := 0; i < 100; i++ {
+					k := []byte(fmt.Sprintf("test/%d", i))
+					v := []byte(fmt.Sprintf("%d", i))
+					err := txn.Set(ctx, k, v, true)
+					assert.NoError(t, err)
+
+					storedValues = append(storedValues, &scanItem{
+						Key:   k,
+						Value: v,
+					})
+				}
+
+				for i := 0; i < 100; i++ {
+					k := []byte(fmt.Sprintf("testing/%d", i))
+					v := []byte(fmt.Sprintf("%d", i))
+					err := txn.Set(ctx, k, v, true)
+					assert.NoError(t, err)
+				}
+
+				retrievedStoredValues := []*scanItem{}
+				numValues, err := txn.Scan(
+					ctx,
+					[]byte("test/"),
+					func(k []byte, v []byte) error {
+						thisK := make([]byte, len(k))
+						thisV := make([]byte, len(v))
+
+						copy(thisK, k)
+						copy(thisV, v)
+
+						retrievedStoredValues = append(retrievedStoredValues, &scanItem{
+							Key:   thisK,
+							Value: thisV,
+						})
+
+						return nil
+					},
+					false,
+				)
+				assert.NoError(t, err)
+				assert.Equal(t, 100, numValues)
+				assert.ElementsMatch(t, storedValues, retrievedStoredValues)
+				assert.NoError(t, txn.Commit(ctx))
+			})
+		})
+	}
 }
 
 func TestDatabaseTransaction(t *testing.T) {
