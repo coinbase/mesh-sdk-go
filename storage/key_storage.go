@@ -89,7 +89,7 @@ func (k *KeyStorage) StoreTransactional(
 		)
 	}
 
-	val, err := k.db.Compressor().Encode("", &Key{
+	val, err := k.db.Encoder().Encode("", &Key{
 		Account: account,
 		KeyPair: keyPair,
 	})
@@ -143,7 +143,7 @@ func (k *KeyStorage) GetTransactional(
 	}
 
 	var kp Key
-	if err := k.db.Compressor().Decode("", rawKey, &kp, true); err != nil {
+	if err := k.db.Encoder().Decode("", rawKey, &kp, true); err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrParseSavedKeyFailed, err)
 	}
 
@@ -173,7 +173,7 @@ func (k *KeyStorage) GetAllAccountsTransactional(
 		func(key []byte, v []byte) error {
 			var kp Key
 			// We should not reclaim memory during a scan!!
-			if err := k.db.Compressor().Decode("", v, &kp, false); err != nil {
+			if err := k.db.Encoder().Decode("", v, &kp, false); err != nil {
 				return fmt.Errorf("%w: %v", ErrKeyScanFailed, err)
 			}
 

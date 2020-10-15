@@ -248,7 +248,7 @@ func (b *BroadcastStorage) AddingBlock(
 			block.BlockIdentifier.Index-broadcast.LastBroadcast.Index >= b.staleDepth-depthOffset {
 			staleBroadcasts = append(staleBroadcasts, broadcast)
 			broadcast.LastBroadcast = nil
-			bytes, err := b.db.Compressor().Encode(namespace, broadcast)
+			bytes, err := b.db.Encoder().Encode(namespace, broadcast)
 			if err != nil {
 				return nil, fmt.Errorf("%w: %v", ErrBroadcastEncodeUpdateFailed, err)
 			}
@@ -330,7 +330,7 @@ func (b *BroadcastStorage) Broadcast(
 		return fmt.Errorf("%w %s", ErrBroadcastAlreadyExists, transactionIdentifier.Hash)
 	}
 
-	bytes, err := b.db.Compressor().Encode(namespace, Broadcast{
+	bytes, err := b.db.Encoder().Encode(namespace, Broadcast{
 		Identifier:            identifier,
 		NetworkIdentifier:     network,
 		TransactionIdentifier: transactionIdentifier,
@@ -362,7 +362,7 @@ func (b *BroadcastStorage) getAllBroadcasts(
 		func(k []byte, v []byte) error {
 			var broadcast Broadcast
 			// We should not reclaim memory during a scan!!
-			if err := b.db.Compressor().Decode(namespace, v, &broadcast, false); err != nil {
+			if err := b.db.Encoder().Decode(namespace, v, &broadcast, false); err != nil {
 				return fmt.Errorf("%w: %v", ErrBroadcastDecodeFailed, err)
 			}
 
@@ -392,7 +392,7 @@ func (b *BroadcastStorage) performBroadcast(
 	onlyEligible bool,
 ) error {
 	namespace, key := getBroadcastKey(broadcast.TransactionIdentifier)
-	bytes, err := b.db.Compressor().Encode(namespace, broadcast)
+	bytes, err := b.db.Encoder().Encode(namespace, broadcast)
 	if err != nil {
 		return fmt.Errorf("%w: %v", ErrBroadcastEncodeFailed, err)
 	}
