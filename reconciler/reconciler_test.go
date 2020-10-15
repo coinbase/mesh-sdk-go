@@ -831,6 +831,8 @@ func TestReconcile_SuccessOnlyActive(t *testing.T) {
 				false,
 			)
 
+			assert.Equal(t, int64(-1), r.LastIndexReconciled())
+
 			go func() {
 				err := r.Reconcile(ctx)
 				assert.Contains(t, context.Canceled.Error(), err.Error())
@@ -856,6 +858,7 @@ func TestReconcile_SuccessOnlyActive(t *testing.T) {
 			time.Sleep(1 * time.Second)
 			cancel()
 
+			assert.Equal(t, block2.Index, r.LastIndexReconciled())
 			mockHelper.AssertExpectations(t)
 			mockHandler.AssertExpectations(t)
 		})
