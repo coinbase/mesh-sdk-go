@@ -30,30 +30,35 @@ import (
 	msgpack "github.com/vmihailenco/msgpack/v5"
 )
 
-// Compressor handles the compression and decompression
-// of data using zstd. Optionally, the caller can provide
-// a map of dicts on initialization that can be used by zstd.
-// You can read more about these "dicts" here:
+// Encoder handles the encoding/decoding of structs and the
+// compression/decompression of data using zstd. Optionally,
+// the caller can provide a map of dicts on initialization that
+// can be used by zstd. You can read more about these "dicts" here:
 // https://github.com/facebook/zstd#the-case-for-small-data-compression.
 //
 // NOTE: If you change these dicts, you will not be able
 // to decode previously encoded data. For many users, providing
 // no dicts is sufficient!
-type Compressor struct {
-	dicts map[string][]byte
-	pool  *BufferPool
+type Encoder struct {
+	compressionDicts map[string][]byte
+	pool             *BufferPool
+	compress         bool
 }
 
-// CompressorEntry is used to initialize a Compressor.
+// CompressorEntry is used to initialize a dictionary compression.
 // All DictionaryPaths are loaded from disk at initialization.
 type CompressorEntry struct {
 	Namespace      string
 	DictionaryPath string
 }
 
-// NewCompressor returns a new *Compressor. The dicts
+// NewEncoder returns a new *Encoder. The dicts
 // provided should contain k:v of namespace:zstd dict.
-func NewCompressor(entries []*CompressorEntry, pool *BufferPool) (*Compressor, error) {
+func NewEncoder(
+	entries []*CompressorEntry,
+	pool *BufferPool,
+	compress bool,
+) (*Encoder, error) {
 	dicts := map[string][]byte{}
 	for _, entry := range entries {
 		b, err := ioutil.ReadFile(path.Clean(entry.DictionaryPath))
@@ -70,9 +75,10 @@ func NewCompressor(entries []*CompressorEntry, pool *BufferPool) (*Compressor, e
 		dicts[entry.Namespace] = b
 	}
 
-	return &Compressor{
-		dicts: dicts,
-		pool:  pool,
+	return &Encoder{
+		compressionDicts: dicts,
+		pool:             pool,
+		compress:         compress,
 	}, nil
 }
 
@@ -85,26 +91,30 @@ func getEncoder(w io.Writer) *msgpack.Encoder {
 
 // Encode attempts to compress the object and will use a dict if
 // one exists for the namespace.
-func (c *Compressor) Encode(namespace string, object interface{}) ([]byte, error) {
-	buf := c.pool.Get()
+func (e *Encoder) Encode(namespace string, object interface{}) ([]byte, error) {
+	buf := e.pool.Get()
 	err := getEncoder(buf).Encode(object)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrObjectEncodeFailed, err)
 	}
 
-	output, err := c.EncodeRaw(namespace, buf.Bytes())
+	if !e.compress {
+		return buf.Bytes(), nil
+	}
+
+	output, err := e.EncodeRaw(namespace, buf.Bytes())
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrRawCompressFailed, err)
 	}
 
-	c.pool.Put(buf)
+	e.pool.Put(buf)
 	return output, nil
 }
 
 // EncodeRaw only compresses an input, leaving encoding to the caller.
 // This is particularly useful for training a compressor.
-func (c *Compressor) EncodeRaw(namespace string, input []byte) ([]byte, error) {
-	return c.encode(input, c.dicts[namespace])
+func (e *Encoder) EncodeRaw(namespace string, input []byte) ([]byte, error) {
+	return e.encode(input, e.compressionDicts[namespace])
 }
 
 func getDecoder(r io.Reader) *msgpack.Decoder {
@@ -116,36 +126,44 @@ func getDecoder(r io.Reader) *msgpack.Decoder {
 
 // Decode attempts to decompress the object and will use a dict if
 // one exists for the namespace.
-func (c *Compressor) Decode(
+func (e *Encoder) Decode(
 	namespace string,
 	input []byte,
 	object interface{},
 	reclaimInput bool,
 ) error {
-	decompressed, err := c.DecodeRaw(namespace, input)
-	if err != nil {
-		return fmt.Errorf("%w: %v", ErrRawDecompressFailed, err)
+	if e.compress {
+		decompressed, err := e.DecodeRaw(namespace, input)
+		if err != nil {
+			return fmt.Errorf("%w: %v", ErrRawDecompressFailed, err)
+		}
+
+		if err := getDecoder(bytes.NewReader(decompressed)).Decode(&object); err != nil {
+			return fmt.Errorf("%w: %v", ErrRawDecodeFailed, err)
+		}
+
+		e.pool.PutByteSlice(decompressed)
+	} else {
+		if err := getDecoder(bytes.NewReader(input)).Decode(&object); err != nil {
+			return fmt.Errorf("%w: %v", ErrRawDecodeFailed, err)
+		}
 	}
 
-	if err := getDecoder(bytes.NewReader(decompressed)).Decode(&object); err != nil {
-		return fmt.Errorf("%w: %v", ErrRawDecodeFailed, err)
-	}
-
-	c.pool.PutByteSlice(decompressed)
 	if reclaimInput {
-		c.pool.PutByteSlice(input)
+		e.pool.PutByteSlice(input)
 	}
+
 	return nil
 }
 
 // DecodeRaw only decompresses an input, leaving decoding to the caller.
 // This is particularly useful for training a compressor.
-func (c *Compressor) DecodeRaw(namespace string, input []byte) ([]byte, error) {
-	return c.decode(input, c.dicts[namespace])
+func (e *Encoder) DecodeRaw(namespace string, input []byte) ([]byte, error) {
+	return e.decode(input, e.compressionDicts[namespace])
 }
 
-func (c *Compressor) encode(input []byte, zstdDict []byte) ([]byte, error) {
-	buf := c.pool.Get()
+func (e *Encoder) encode(input []byte, zstdDict []byte) ([]byte, error) {
+	buf := e.pool.Get()
 	var writer io.WriteCloser
 	if len(zstdDict) > 0 {
 		writer = zstd.NewWriterLevelDict(buf, zstd.DefaultCompression, zstdDict)
@@ -163,8 +181,8 @@ func (c *Compressor) encode(input []byte, zstdDict []byte) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func (c *Compressor) decode(b []byte, zstdDict []byte) ([]byte, error) {
-	buf := c.pool.Get()
+func (e *Encoder) decode(b []byte, zstdDict []byte) ([]byte, error) {
+	buf := e.pool.Get()
 	var reader io.ReadCloser
 	if len(zstdDict) > 0 {
 		reader = zstd.NewReaderDict(bytes.NewReader(b), zstdDict)
@@ -212,8 +230,8 @@ const (
 	currencyMetadata
 )
 
-func (c *Compressor) encodeAndWrite(output *bytes.Buffer, object interface{}) error {
-	buf := c.pool.Get()
+func (e *Encoder) encodeAndWrite(output *bytes.Buffer, object interface{}) error {
+	buf := e.pool.Get()
 	err := getEncoder(buf).Encode(object)
 	if err != nil {
 		return fmt.Errorf("%w: %v", ErrObjectEncodeFailed, err)
@@ -223,11 +241,11 @@ func (c *Compressor) encodeAndWrite(output *bytes.Buffer, object interface{}) er
 		return fmt.Errorf("%w: %v", ErrObjectEncodeFailed, err)
 	}
 
-	c.pool.Put(buf)
+	e.pool.Put(buf)
 	return nil
 }
 
-func (c *Compressor) decodeMap(input []byte) (map[string]interface{}, error) {
+func (e *Encoder) decodeMap(input []byte) (map[string]interface{}, error) {
 	var m map[string]interface{}
 	if err := getDecoder(bytes.NewReader(input)).Decode(&m); err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrRawDecodeFailed, err)
@@ -246,10 +264,10 @@ func (c *Compressor) decodeMap(input []byte) (map[string]interface{}, error) {
 // subAccountMetadata|amountMetadata|currencyMetadata
 //
 // In both cases, the | character is represented by the unicodeRecordSeparator rune.
-func (c *Compressor) EncodeAccountCoin( // nolint:gocognit
+func (e *Encoder) EncodeAccountCoin( // nolint:gocognit
 	accountCoin *AccountCoin,
 ) ([]byte, error) {
-	output := c.pool.Get()
+	output := e.pool.Get()
 	if _, err := output.WriteString(accountCoin.Account.Address); err != nil {
 		return nil, fmt.Errorf("%w: %s", ErrObjectEncodeFailed, err.Error())
 	}
@@ -293,7 +311,7 @@ func (c *Compressor) EncodeAccountCoin( // nolint:gocognit
 		return nil, fmt.Errorf("%w: %s", ErrObjectEncodeFailed, err.Error())
 	}
 	if accountCoin.Account.Metadata != nil {
-		if err := c.encodeAndWrite(output, accountCoin.Account.Metadata); err != nil {
+		if err := e.encodeAndWrite(output, accountCoin.Account.Metadata); err != nil {
 			return nil, fmt.Errorf("%w: %s", ErrObjectEncodeFailed, err.Error())
 		}
 	}
@@ -311,7 +329,7 @@ func (c *Compressor) EncodeAccountCoin( // nolint:gocognit
 	}
 
 	if accountCoin.Account.SubAccount != nil && accountCoin.Account.SubAccount.Metadata != nil {
-		if err := c.encodeAndWrite(output, accountCoin.Account.SubAccount.Metadata); err != nil {
+		if err := e.encodeAndWrite(output, accountCoin.Account.SubAccount.Metadata); err != nil {
 			return nil, fmt.Errorf("%w: %s", ErrObjectEncodeFailed, err.Error())
 		}
 	}
@@ -320,7 +338,7 @@ func (c *Compressor) EncodeAccountCoin( // nolint:gocognit
 	}
 
 	if accountCoin.Coin.Amount.Metadata != nil {
-		if err := c.encodeAndWrite(output, accountCoin.Coin.Amount.Metadata); err != nil {
+		if err := e.encodeAndWrite(output, accountCoin.Coin.Amount.Metadata); err != nil {
 			return nil, fmt.Errorf("%w: %s", ErrObjectEncodeFailed, err.Error())
 		}
 	}
@@ -328,7 +346,7 @@ func (c *Compressor) EncodeAccountCoin( // nolint:gocognit
 		return nil, fmt.Errorf("%w: %s", ErrObjectEncodeFailed, err.Error())
 	}
 	if accountCoin.Coin.Amount.Currency.Metadata != nil {
-		if err := c.encodeAndWrite(output, accountCoin.Coin.Amount.Currency.Metadata); err != nil {
+		if err := e.encodeAndWrite(output, accountCoin.Coin.Amount.Currency.Metadata); err != nil {
 			return nil, fmt.Errorf("%w: %s", ErrObjectEncodeFailed, err.Error())
 		}
 	}
@@ -338,7 +356,7 @@ func (c *Compressor) EncodeAccountCoin( // nolint:gocognit
 
 // DecodeAccountCoin decodes an AccountCoin and optionally
 // reclaims the memory associated with the input.
-func (c *Compressor) DecodeAccountCoin( // nolint:gocognit
+func (e *Encoder) DecodeAccountCoin( // nolint:gocognit
 	b []byte,
 	accountCoin *AccountCoin,
 	reclaimInput bool,
@@ -387,7 +405,7 @@ func (c *Compressor) DecodeAccountCoin( // nolint:gocognit
 
 			accountCoin.Coin.Amount.Currency.Decimals = int32(i)
 		case accountMetadata:
-			m, err := c.decodeMap(val)
+			m, err := e.decodeMap(val)
 			if err != nil {
 				return fmt.Errorf("%w: account metadata %s", ErrRawDecodeFailed, err.Error())
 			}
@@ -402,21 +420,21 @@ func (c *Compressor) DecodeAccountCoin( // nolint:gocognit
 				return ErrRawDecodeFailed // must have address
 			}
 
-			m, err := c.decodeMap(val)
+			m, err := e.decodeMap(val)
 			if err != nil {
 				return fmt.Errorf("%w: subaccount metadata %s", ErrRawDecodeFailed, err.Error())
 			}
 
 			accountCoin.Account.SubAccount.Metadata = m
 		case amountMetadata:
-			m, err := c.decodeMap(val)
+			m, err := e.decodeMap(val)
 			if err != nil {
 				return fmt.Errorf("%w: amount metadata %s", ErrRawDecodeFailed, err.Error())
 			}
 
 			accountCoin.Coin.Amount.Metadata = m
 		case currencyMetadata:
-			m, err := c.decodeMap(val)
+			m, err := e.decodeMap(val)
 			if err != nil {
 				return fmt.Errorf("%w: currency metadata %s", ErrRawDecodeFailed, err.Error())
 			}
@@ -437,7 +455,7 @@ func (c *Compressor) DecodeAccountCoin( // nolint:gocognit
 	}
 
 	if reclaimInput {
-		c.pool.PutByteSlice(b)
+		e.pool.PutByteSlice(b)
 	}
 
 	return nil

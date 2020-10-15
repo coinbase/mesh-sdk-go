@@ -23,7 +23,7 @@ import (
 type Database interface {
 	NewDatabaseTransaction(context.Context, bool) DatabaseTransaction
 	Close(context.Context) error
-	Compressor() *Compressor
+	Encoder() *Encoder
 }
 
 // DatabaseTransaction is an interface that provides
