@@ -143,7 +143,7 @@ func (e *Encoder) Decode(
 		}
 
 		e.pool.PutByteSlice(decompressed)
-	} else {
+	} else { // nolint:gocritic
 		if err := getDecoder(bytes.NewReader(input)).Decode(&object); err != nil {
 			return fmt.Errorf("%w: %v", ErrRawDecodeFailed, err)
 		}

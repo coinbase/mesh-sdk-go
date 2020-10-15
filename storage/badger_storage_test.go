@@ -206,7 +206,7 @@ func TestBadgerTrain_NoLimit(t *testing.T) {
 			Index: i,
 			Stuff: fmt.Sprintf("block %d", i),
 		}
-		compressedEntry, err := database.Compressor().Encode(namespace, entry)
+		compressedEntry, err := database.Encoder().Encode(namespace, entry)
 		assert.NoError(t, err)
 		assert.NoError(
 			t,
@@ -251,7 +251,7 @@ func TestBadgerTrain_Limit(t *testing.T) {
 			Index: i,
 			Stuff: output,
 		}
-		compressedEntry, err := database.Compressor().Encode(namespace, entry)
+		compressedEntry, err := database.Encoder().Encode(namespace, entry)
 		assert.NoError(t, err)
 		assert.NoError(
 			t,
@@ -303,7 +303,7 @@ func TestBadgerTrain_Limit(t *testing.T) {
 			Index: i,
 			Stuff: output,
 		}
-		compressedEntry, err := database2.Compressor().Encode(namespace, entry)
+		compressedEntry, err := database2.Encoder().Encode(namespace, entry)
 		assert.NoError(t, err)
 		assert.NoError(
 			t,
