@@ -156,7 +156,7 @@ func (b *BalanceStorage) SetBalance(
 ) error {
 	namespace, key := GetBalanceKey(account, amount.Currency)
 
-	serialBal, err := b.db.Compressor().Encode(namespace, balanceEntry{
+	serialBal, err := b.db.Encoder().Encode(namespace, balanceEntry{
 		Account: account,
 		Amount:  amount,
 		Block:   block,
@@ -204,13 +204,13 @@ func (b *BalanceStorage) Reconciled(
 	}
 
 	var bal balanceEntry
-	if err := b.db.Compressor().Decode(namespace, balance, &bal, true); err != nil {
+	if err := b.db.Encoder().Decode(namespace, balance, &bal, true); err != nil {
 		return fmt.Errorf("%w: unable to decode balance entry", err)
 	}
 
 	bal.LastReconciled = block
 
-	serialBal, err := b.db.Compressor().Encode(namespace, bal)
+	serialBal, err := b.db.Encoder().Encode(namespace, bal)
 	if err != nil {
 		return fmt.Errorf("%w: unable to encod balance entry", err)
 	}
@@ -281,7 +281,7 @@ func (b *BalanceStorage) UpdateBalance(
 		// This could happen if balances are bootstrapped and should not be
 		// overridden.
 		var bal balanceEntry
-		err := b.db.Compressor().Decode(namespace, balance, &bal, true)
+		err := b.db.Encoder().Decode(namespace, balance, &bal, true)
 		if err != nil {
 			return err
 		}
@@ -328,7 +328,7 @@ func (b *BalanceStorage) UpdateBalance(
 		)
 	}
 
-	serialBal, err := b.db.Compressor().Encode(namespace, balanceEntry{
+	serialBal, err := b.db.Encoder().Encode(namespace, balanceEntry{
 		Account: change.Account,
 		Amount: &types.Amount{
 			Value:    newVal,
@@ -413,7 +413,7 @@ func (b *BalanceStorage) GetBalanceTransactional(
 	}
 
 	var popBal balanceEntry
-	err = b.db.Compressor().Decode(namespace, bal, &popBal, true)
+	err = b.db.Encoder().Decode(namespace, bal, &popBal, true)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -504,7 +504,7 @@ func (b *BalanceStorage) getAllBalanceEntries(
 		func(k []byte, v []byte) error {
 			var deserialBal balanceEntry
 			// We should not reclaim memory during a scan!!
-			err := b.db.Compressor().Decode(namespace, v, &deserialBal, false)
+			err := b.db.Encoder().Decode(namespace, v, &deserialBal, false)
 			if err != nil {
 				return fmt.Errorf(
 					"%w: unable to parse balance entry for %s",

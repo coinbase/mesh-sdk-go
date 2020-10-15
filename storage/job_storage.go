@@ -84,7 +84,7 @@ func (j *JobStorage) getAllJobs(
 	}
 
 	var identifiers map[string]struct{}
-	err = j.db.Compressor().Decode("", v, &identifiers, true)
+	err = j.db.Encoder().Decode("", v, &identifiers, true)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrJobIdentifierDecodeFailed, err)
 	}
@@ -176,7 +176,7 @@ func (j *JobStorage) getNextIdentifier(
 	// Get existing identifier
 	var nextIdentifier int
 	if exists {
-		err = j.db.Compressor().Decode("", v, &nextIdentifier, true)
+		err = j.db.Encoder().Decode("", v, &nextIdentifier, true)
 		if err != nil {
 			return "", fmt.Errorf("%w: %v", ErrJobIdentifierDecodeFailed, err)
 		}
@@ -185,7 +185,7 @@ func (j *JobStorage) getNextIdentifier(
 	}
 
 	// Increment and save
-	encoded, err := j.db.Compressor().Encode("", nextIdentifier+1)
+	encoded, err := j.db.Encoder().Encode("", nextIdentifier+1)
 	if err != nil {
 		return "", fmt.Errorf("%w: %v", ErrJobIdentifierEncodeFailed, err)
 	}
@@ -203,7 +203,7 @@ func (j *JobStorage) updateIdentifiers(
 	k []byte,
 	identifiers map[string]struct{},
 ) error {
-	encoded, err := j.db.Compressor().Encode("", identifiers)
+	encoded, err := j.db.Encoder().Encode("", identifiers)
 	if err != nil {
 		return fmt.Errorf("%w: %v", ErrJobIdentifiersEncodeAllFailed, err)
 	}
@@ -228,7 +228,7 @@ func (j *JobStorage) addJob(
 
 	var identifiers map[string]struct{}
 	if exists {
-		err = j.db.Compressor().Decode("", v, &identifiers, true)
+		err = j.db.Encoder().Decode("", v, &identifiers, true)
 		if err != nil {
 			return fmt.Errorf("%w: %v", ErrJobIdentifierDecodeFailed, err)
 		}
@@ -257,7 +257,7 @@ func (j *JobStorage) removeJob(
 		return fmt.Errorf("%w %s from %s", ErrJobIdentifierRemoveFailed, identifier, string(k))
 	}
 
-	err = j.db.Compressor().Decode("", v, &identifiers, true)
+	err = j.db.Encoder().Decode("", v, &identifiers, true)
 	if err != nil {
 		return fmt.Errorf("%w: unable to decode existing identifier", err)
 	}
@@ -350,7 +350,7 @@ func (j *JobStorage) Update(
 	}
 
 	k := getJobKey(v.Identifier)
-	encoded, err := j.db.Compressor().Encode("", v)
+	encoded, err := j.db.Encoder().Encode("", v)
 	if err != nil {
 		return "", fmt.Errorf("%w: %v", ErrJobEncodeFailed, err)
 	}
@@ -383,7 +383,7 @@ func (j *JobStorage) Get(
 	}
 
 	var output job.Job
-	err = j.db.Compressor().Decode("", v, &output, true)
+	err = j.db.Encoder().Decode("", v, &output, true)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrJobDecodeFailed, err)
 	}

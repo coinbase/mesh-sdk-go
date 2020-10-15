@@ -25,20 +25,20 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-func runCompressions(c *Compressor, t *testing.T) {
+func runCompressions(e *Encoder, t *testing.T) {
 	for i := int64(0); i < 500; i++ {
 		b := &types.BlockIdentifier{
 			Index: i,
 			Hash:  fmt.Sprintf("block %d", i),
 		}
 
-		bEnc, err := c.Encode("", b)
+		bEnc, err := e.Encode("", b)
 		assert.NoError(t, err)
 
 		tx := &types.Transaction{
 			TransactionIdentifier: &types.TransactionIdentifier{Hash: fmt.Sprintf("tx %d", i)},
 		}
-		txEnc, err := c.Encode("", tx)
+		txEnc, err := e.Encode("", tx)
 		assert.NoError(t, err)
 
 		block := &types.Block{
@@ -46,32 +46,32 @@ func runCompressions(c *Compressor, t *testing.T) {
 			ParentBlockIdentifier: b,
 			Transactions:          []*types.Transaction{tx},
 		}
-		blockEnc, err := c.Encode("", block)
+		blockEnc, err := e.Encode("", block)
 		assert.NoError(t, err)
 
 		var bDec types.BlockIdentifier
-		assert.NoError(t, c.Decode("", bEnc, &bDec, true))
+		assert.NoError(t, e.Decode("", bEnc, &bDec, true))
 		assert.Equal(t, types.Hash(b), types.Hash(bDec))
 
 		var txDec types.Transaction
-		assert.NoError(t, c.Decode("", txEnc, &txDec, true))
+		assert.NoError(t, e.Decode("", txEnc, &txDec, true))
 		assert.Equal(t, types.Hash(tx), types.Hash(txDec))
 
 		var blockDec types.Block
-		assert.NoError(t, c.Decode("", blockEnc, &blockDec, true))
+		assert.NoError(t, e.Decode("", blockEnc, &blockDec, true))
 		assert.Equal(t, types.Hash(block), types.Hash(blockDec))
 	}
 }
 
-func TestCompressor(t *testing.T) {
-	c, err := NewCompressor(nil, NewBufferPool())
+func TestEncoder(t *testing.T) {
+	e, err := NewEncoder(nil, NewBufferPool(), true)
 	assert.NoError(t, err)
 
 	g, _ := errgroup.WithContext(context.Background())
 
 	for i := 0; i < 10; i++ {
 		g.Go(func() error {
-			runCompressions(c, t)
+			runCompressions(e, t)
 
 			return nil
 		})
@@ -128,53 +128,53 @@ var (
 )
 
 func BenchmarkAccountCoinStandard(b *testing.B) {
-	c, _ := NewCompressor(nil, NewBufferPool())
+	e, _ := NewEncoder(nil, NewBufferPool(), true)
 
 	for i := 0; i < b.N; i++ {
 		// encode
-		compressedResult, _ := c.Encode("", benchmarkCoin)
+		compressedResult, _ := e.Encode("", benchmarkCoin)
 
 		// decode
 		var decoded AccountCoin
-		_ = c.Decode("", compressedResult, &decoded, true)
+		_ = e.Decode("", compressedResult, &decoded, true)
 	}
 }
 
 func BenchmarkComplexAccountCoinStandard(b *testing.B) {
-	c, _ := NewCompressor(nil, NewBufferPool())
+	e, _ := NewEncoder(nil, NewBufferPool(), true)
 
 	for i := 0; i < b.N; i++ {
 		// encode
-		compressedResult, _ := c.Encode("", complexCoin)
+		compressedResult, _ := e.Encode("", complexCoin)
 
 		// decode
 		var decoded AccountCoin
-		_ = c.Decode("", compressedResult, &decoded, true)
+		_ = e.Decode("", compressedResult, &decoded, true)
 	}
 }
 
 func BenchmarkAccountCoinOptimized(b *testing.B) {
-	c, _ := NewCompressor(nil, NewBufferPool())
+	e, _ := NewEncoder(nil, NewBufferPool(), true)
 
 	for i := 0; i < b.N; i++ {
 		// encode
-		manualResult, _ := c.EncodeAccountCoin(benchmarkCoin)
+		manualResult, _ := e.EncodeAccountCoin(benchmarkCoin)
 
 		// decode
 		var decoded AccountCoin
-		_ = c.DecodeAccountCoin(manualResult, &decoded, true)
+		_ = e.DecodeAccountCoin(manualResult, &decoded, true)
 	}
 }
 func BenchmarkComplexAccountCoinOptimized(b *testing.B) {
-	c, _ := NewCompressor(nil, NewBufferPool())
+	e, _ := NewEncoder(nil, NewBufferPool(), true)
 
 	for i := 0; i < b.N; i++ {
 		// encode
-		manualResult, _ := c.EncodeAccountCoin(complexCoin)
+		manualResult, _ := e.EncodeAccountCoin(complexCoin)
 
 		// decode
 		var decoded AccountCoin
-		_ = c.DecodeAccountCoin(manualResult, &decoded, true)
+		_ = e.DecodeAccountCoin(manualResult, &decoded, true)
 	}
 }
 
@@ -235,13 +235,13 @@ func TestEncodeDecodeAccountCoin(t *testing.T) {
 	}
 
 	for name, test := range tests {
-		c, err := NewCompressor(nil, NewBufferPool())
+		e, err := NewEncoder(nil, NewBufferPool(), true)
 		assert.NoError(t, err)
 
 		t.Run(name, func(t *testing.T) {
-			standardResult, err := c.Encode("", test.accountCoin)
+			standardResult, err := e.Encode("", test.accountCoin)
 			assert.NoError(t, err)
-			optimizedResult, err := c.EncodeAccountCoin(test.accountCoin)
+			optimizedResult, err := e.EncodeAccountCoin(test.accountCoin)
 			assert.NoError(t, err)
 			fmt.Printf(
 				"Uncompressed: %d, Standard Compressed: %d, Optimized: %d\n",
@@ -251,7 +251,7 @@ func TestEncodeDecodeAccountCoin(t *testing.T) {
 			)
 
 			var decoded AccountCoin
-			assert.NoError(t, c.DecodeAccountCoin(optimizedResult, &decoded, true))
+			assert.NoError(t, e.DecodeAccountCoin(optimizedResult, &decoded, true))
 
 			assert.Equal(t, test.accountCoin, &decoded)
 		})
