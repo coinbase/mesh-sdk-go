@@ -391,6 +391,10 @@ func TestBlock(t *testing.T) {
 			errors.Is(err, ErrBlockNotFound),
 		)
 		assert.Nil(t, block)
+
+		canonical, err := storage.CanonicalBlock(ctx, badBlockIdentifier)
+		assert.False(t, canonical)
+		assert.NoError(t, err)
 	})
 
 	t.Run("Get non-existent block index", func(t *testing.T) {
@@ -463,6 +467,10 @@ func TestBlock(t *testing.T) {
 
 	t.Run("Remove block and re-set block of same hash", func(t *testing.T) {
 		err := storage.RemoveBlock(ctx, newBlock2.BlockIdentifier)
+		assert.NoError(t, err)
+
+		canonical, err := storage.CanonicalBlock(ctx, newBlock2.BlockIdentifier)
+		assert.False(t, canonical)
 		assert.NoError(t, err)
 
 		oldestIndex, err := storage.GetOldestBlockIndex(ctx)
@@ -602,6 +610,13 @@ func TestBlock(t *testing.T) {
 			head, err := storage.GetHeadBlockIdentifier(ctx)
 			assert.NoError(t, err)
 			assert.Equal(t, blockIdentifier, head)
+
+			canonical, err := storage.CanonicalBlock(
+				ctx,
+				block.BlockIdentifier,
+			)
+			assert.True(t, canonical)
+			assert.NoError(t, err)
 		}
 
 		firstPruned, lastPruned, err = storage.Prune(ctx, 100)
@@ -619,6 +634,13 @@ func TestBlock(t *testing.T) {
 		)
 		assert.True(t, errors.Is(err, ErrCannotAccessPrunedData))
 		assert.Nil(t, block)
+
+		canonical, err := storage.CanonicalBlock(
+			ctx,
+			newBlock.BlockIdentifier,
+		)
+		assert.True(t, canonical)
+		assert.NoError(t, err)
 
 		blockTransaction, err := storage.GetBlockTransaction(
 			ctx,

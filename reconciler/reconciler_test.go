@@ -346,7 +346,7 @@ func TestCompareBalance(t *testing.T) {
 	})
 
 	mh.On("CurrentBlock", ctx).Return(block2, nil).Once()
-	mh.On("BlockExists", ctx, block1).Return(false, nil).Once()
+	mh.On("CanonicalBlock", ctx, block1).Return(false, nil).Once()
 	t.Run("Live block is not in store", func(t *testing.T) {
 		difference, cachedBalance, headIndex, err := reconciler.CompareBalance(
 			ctx,
@@ -362,7 +362,7 @@ func TestCompareBalance(t *testing.T) {
 	})
 
 	mh.On("CurrentBlock", ctx).Return(block2, nil).Once()
-	mh.On("BlockExists", ctx, block0).Return(true, nil).Once()
+	mh.On("CanonicalBlock", ctx, block0).Return(true, nil).Once()
 	mh.On(
 		"ComputedBalance",
 		ctx,
@@ -389,7 +389,7 @@ func TestCompareBalance(t *testing.T) {
 	})
 
 	mh.On("CurrentBlock", ctx).Return(block2, nil).Once()
-	mh.On("BlockExists", ctx, block1).Return(true, nil).Once()
+	mh.On("CanonicalBlock", ctx, block1).Return(true, nil).Once()
 	mh.On(
 		"ComputedBalance",
 		ctx,
@@ -416,7 +416,7 @@ func TestCompareBalance(t *testing.T) {
 	})
 
 	mh.On("CurrentBlock", ctx).Return(block2, nil).Once()
-	mh.On("BlockExists", ctx, block2).Return(true, nil).Once()
+	mh.On("CanonicalBlock", ctx, block2).Return(true, nil).Once()
 	mh.On(
 		"ComputedBalance",
 		ctx,
@@ -443,7 +443,7 @@ func TestCompareBalance(t *testing.T) {
 	})
 
 	mh.On("CurrentBlock", ctx).Return(block2, nil).Once()
-	mh.On("BlockExists", ctx, block2).Return(true, nil).Once()
+	mh.On("CanonicalBlock", ctx, block2).Return(true, nil).Once()
 	mh.On(
 		"ComputedBalance",
 		ctx,
@@ -470,7 +470,7 @@ func TestCompareBalance(t *testing.T) {
 	})
 
 	mh.On("CurrentBlock", ctx).Return(block2, nil).Once()
-	mh.On("BlockExists", ctx, block2).Return(true, nil).Once()
+	mh.On("CanonicalBlock", ctx, block2).Return(true, nil).Once()
 	mh.On(
 		"ComputedBalance",
 		ctx,
@@ -673,7 +673,7 @@ func mockReconcilerCalls(
 		headBlock,
 		nil,
 	).Once()
-	mockHelper.On("BlockExists", mock.Anything, headBlock).Return(true, nil).Once()
+	mockHelper.On("CanonicalBlock", mock.Anything, headBlock).Return(true, nil).Once()
 	mockHelper.On(
 		"ComputedBalance",
 		mock.Anything,
@@ -1025,7 +1025,7 @@ func TestReconcile_Orphan(t *testing.T) {
 		nil,
 		errors.New("cannot find block"),
 	).Once()
-	mockHelper.On("BlockExists", mock.Anything, block).Return(false, nil).Once()
+	mockHelper.On("CanonicalBlock", mock.Anything, block).Return(false, nil).Once()
 
 	go func() {
 		err := r.Reconcile(ctx)

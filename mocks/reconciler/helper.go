@@ -15,8 +15,8 @@ type Helper struct {
 	mock.Mock
 }
 
-// BlockExists provides a mock function with given fields: ctx, block
-func (_m *Helper) BlockExists(ctx context.Context, block *types.BlockIdentifier) (bool, error) {
+// CanonicalBlock provides a mock function with given fields: ctx, block
+func (_m *Helper) CanonicalBlock(ctx context.Context, block *types.BlockIdentifier) (bool, error) {
 	ret := _m.Called(ctx, block)
 
 	var r0 bool

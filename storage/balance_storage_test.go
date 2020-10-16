@@ -845,6 +845,20 @@ func TestBalanceReconciliation(t *testing.T) {
 		assert.Equal(t, 0.5, coverage)
 	})
 
+	t.Run("update reconciliation to old block", func(t *testing.T) {
+		err := storage.Reconciled(ctx, account, currency, genesisBlock)
+		assert.NoError(t, err)
+
+		coverage, err := storage.ReconciliationCoverage(ctx, 0)
+		assert.NoError(t, err)
+		assert.Equal(t, 0.5, coverage)
+
+		// We should skip update so this stays 0.5
+		coverage, err = storage.ReconciliationCoverage(ctx, 1)
+		assert.NoError(t, err)
+		assert.Equal(t, 0.5, coverage)
+	})
+
 	t.Run("add unreconciled", func(t *testing.T) {
 		txn := storage.db.NewDatabaseTransaction(ctx, true)
 		err = storage.UpdateBalance(
