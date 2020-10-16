@@ -406,14 +406,17 @@ func (b *BlockStorage) GetBlockLazy(
 }
 
 // CanonicalBlock returns a boolean indicating if
-// a block with the provided *types.PartialBlockIdentifier
+// a block with the provided *types.BlockIdentifier
 // is in the canonical chain (regardless if it has
 // been pruned).
 func (b *BlockStorage) CanonicalBlock(
 	ctx context.Context,
-	blockIdentifier *types.PartialBlockIdentifier,
+	blockIdentifier *types.BlockIdentifier,
 ) (bool, error) {
-	block, err := b.GetBlockLazy(ctx, blockIdentifier)
+	block, err := b.GetBlockLazy(
+		ctx,
+		types.ConstructPartialBlockIdentifier(blockIdentifier),
+	)
 	if errors.Is(err, ErrCannotAccessPrunedData) {
 		return true, nil
 	}
