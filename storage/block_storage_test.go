@@ -391,6 +391,10 @@ func TestBlock(t *testing.T) {
 			errors.Is(err, ErrBlockNotFound),
 		)
 		assert.Nil(t, block)
+
+		canonical, err := storage.CanonicalBlock(ctx, identifier)
+		assert.False(t, canonical)
+		assert.NoError(t, err)
 	})
 
 	t.Run("Get non-existent block index", func(t *testing.T) {

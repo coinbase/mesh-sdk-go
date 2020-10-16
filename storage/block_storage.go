@@ -417,6 +417,9 @@ func (b *BlockStorage) CanonicalBlock(
 	if errors.Is(err, ErrCannotAccessPrunedData) {
 		return true, nil
 	}
+	if errors.Is(err, ErrBlockNotFound) {
+		return false, nil
+	}
 	if err != nil {
 		return false, err
 	}
