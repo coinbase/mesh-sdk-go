@@ -602,6 +602,13 @@ func TestBlock(t *testing.T) {
 			head, err := storage.GetHeadBlockIdentifier(ctx)
 			assert.NoError(t, err)
 			assert.Equal(t, blockIdentifier, head)
+
+			canonical, err := storage.CanonicalBlock(
+				ctx,
+				&types.PartialBlockIdentifier{Index: &blockIdentifier.Index},
+			)
+			assert.True(t, canonical)
+			assert.NoError(t, err)
 		}
 
 		firstPruned, lastPruned, err = storage.Prune(ctx, 100)
@@ -619,6 +626,13 @@ func TestBlock(t *testing.T) {
 		)
 		assert.True(t, errors.Is(err, ErrCannotAccessPrunedData))
 		assert.Nil(t, block)
+
+		canonical, err := storage.CanonicalBlock(
+			ctx,
+			types.ConstructPartialBlockIdentifier(newBlock.BlockIdentifier),
+		)
+		assert.True(t, canonical)
+		assert.NoError(t, err)
 
 		blockTransaction, err := storage.GetBlockTransaction(
 			ctx,

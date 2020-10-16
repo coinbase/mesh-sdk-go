@@ -405,6 +405,29 @@ func (b *BlockStorage) GetBlockLazy(
 	return b.getBlockResponse(ctx, blockIdentifier, transaction)
 }
 
+// CanonicalBlock returns a boolean indicating if
+// a block with the provided *types.PartialBlockIdentifier
+// is in the canonical chain (regardless if it has
+// been pruned).
+func (b *BlockStorage) CanonicalBlock(
+	ctx context.Context,
+	blockIdentifier *types.PartialBlockIdentifier,
+) (bool, error) {
+	block, err := b.GetBlockLazy(ctx, blockIdentifier)
+	if errors.Is(err, ErrCannotAccessPrunedData) {
+		return true, nil
+	}
+	if err != nil {
+		return false, err
+	}
+
+	if block == nil {
+		return false, nil
+	}
+
+	return true, nil
+}
+
 // GetBlockTransactional gets a block in the context of a database
 // transaction.
 func (b *BlockStorage) GetBlockTransactional(
