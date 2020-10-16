@@ -208,6 +208,13 @@ func (b *BalanceStorage) Reconciled(
 		return fmt.Errorf("%w: unable to decode balance entry", err)
 	}
 
+	// Don't update last reconciled if the most recent reconciliation was
+	// lower than the last reconciliation. This can occur when inactive
+	// reconciliation gets ahead of the active reconciliation backlog.
+	if bal.LastReconciled != nil && bal.LastReconciled.Index > block.Index {
+		return nil
+	}
+
 	bal.LastReconciled = block
 
 	serialBal, err := b.db.Encoder().Encode(namespace, bal)

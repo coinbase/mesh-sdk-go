@@ -88,7 +88,7 @@ const (
 // what sort of storage layer they want to use to provide the required
 // information.
 type Helper interface {
-	BlockExists(
+	CanonicalBlock(
 		ctx context.Context,
 		block *types.BlockIdentifier,
 	) (bool, error)
@@ -353,7 +353,7 @@ func (r *Reconciler) CompareBalance(
 	}
 
 	// Check if live block is in store (ensure not reorged)
-	exists, err := r.helper.BlockExists(ctx, liveBlock)
+	canonical, err := r.helper.CanonicalBlock(ctx, liveBlock)
 	if err != nil {
 		return zeroString, "", 0, fmt.Errorf(
 			"%w: %v: on live block %+v",
@@ -362,7 +362,7 @@ func (r *Reconciler) CompareBalance(
 			liveBlock,
 		)
 	}
-	if !exists {
+	if !canonical {
 		return zeroString, "", head.Index, fmt.Errorf(
 			"%w %+v",
 			ErrBlockGone,
@@ -435,8 +435,8 @@ func (r *Reconciler) bestLiveBalance(
 	// If there is a reorg, there is a chance that balance
 	// lookup can fail if we try to query an orphaned block.
 	// If this is the case, we continue reconciling.
-	exists, existsErr := r.helper.BlockExists(ctx, block)
-	if existsErr != nil || !exists {
+	canonical, canonicalErr := r.helper.CanonicalBlock(ctx, block)
+	if canonicalErr != nil || !canonical {
 		return nil, nil, ErrBlockGone
 	}
 
