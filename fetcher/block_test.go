@@ -238,6 +238,7 @@ func TestBlockRetry(t *testing.T) {
 				basicNetworkOptions.Allow.OperationTypes,
 				basicNetworkOptions.Allow.OperationStatuses,
 				nil,
+				nil,
 			)
 			assert.NoError(err)
 

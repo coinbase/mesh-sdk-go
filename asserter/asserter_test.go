@@ -313,7 +313,11 @@ func TestNew(t *testing.T) {
 			)
 			assert.ElementsMatch(t, test.networkOptions.Allow.Errors, configuration.AllowedErrors)
 			if test.networkOptions.Allow.TimestampStartIndex != nil {
-				assert.Equal(t, *test.networkOptions.Allow.TimestampStartIndex, configuration.AllowedTimestampStartIndex)
+				assert.Equal(
+					t,
+					*test.networkOptions.Allow.TimestampStartIndex,
+					configuration.AllowedTimestampStartIndex,
+				)
 			} else {
 				assert.Equal(t, test.networkStatus.GenesisBlockIdentifier.Index+1, configuration.AllowedTimestampStartIndex)
 			}
@@ -329,10 +333,8 @@ func TestNew(t *testing.T) {
 			}
 			if test.networkOptions.Allow.TimestampStartIndex != nil {
 				fileConfig.AllowedTimestampStartIndex = *test.networkOptions.Allow.TimestampStartIndex
-			} else {
-				if fileConfig.GenesisBlockIdentifier != nil {
-					fileConfig.AllowedTimestampStartIndex = fileConfig.GenesisBlockIdentifier.Index + 1
-				}
+			} else if fileConfig.GenesisBlockIdentifier != nil {
+				fileConfig.AllowedTimestampStartIndex = fileConfig.GenesisBlockIdentifier.Index + 1
 			}
 
 			tmpfile, err := ioutil.TempFile("", "test.json")
@@ -378,7 +380,11 @@ func TestNew(t *testing.T) {
 			)
 			assert.ElementsMatch(t, test.networkOptions.Allow.Errors, configuration.AllowedErrors)
 			if test.networkOptions.Allow.TimestampStartIndex != nil {
-				assert.Equal(t, *test.networkOptions.Allow.TimestampStartIndex, configuration.AllowedTimestampStartIndex)
+				assert.Equal(
+					t,
+					*test.networkOptions.Allow.TimestampStartIndex,
+					configuration.AllowedTimestampStartIndex,
+				)
 			} else {
 				assert.Equal(t, test.networkStatus.GenesisBlockIdentifier.Index+1, configuration.AllowedTimestampStartIndex)
 			}

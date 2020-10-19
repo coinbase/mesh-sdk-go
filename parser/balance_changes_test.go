@@ -322,5 +322,6 @@ func simpleAsserterConfiguration(
 		[]string{"Transfer"},
 		allowedStatus,
 		[]*types.Error{},
+		nil,
 	)
 }
