@@ -172,6 +172,9 @@ func TestAllow(t *testing.T) {
 				},
 			},
 		}
+
+		negativeIndex = int64(-1)
+		positiveIndex = int64(100)
 	)
 
 	var tests = map[string]struct {
@@ -191,6 +194,7 @@ func TestAllow(t *testing.T) {
 				CallMethods:             callMethods,
 				BalanceExemptions:       balanceExemptions,
 				HistoricalBalanceLookup: true,
+				TimestampStartIndex:     &positiveIndex,
 			},
 		},
 		"invalid Allow with exemptions and no historical": {
@@ -201,6 +205,14 @@ func TestAllow(t *testing.T) {
 				BalanceExemptions: balanceExemptions,
 			},
 			err: ErrBalanceExemptionNoHistoricalLookup,
+		},
+		"invalid timestamp start index": {
+			allow: &types.Allow{
+				OperationStatuses:   operationStatuses,
+				OperationTypes:      operationTypes,
+				TimestampStartIndex: &negativeIndex,
+			},
+			err: ErrTimestampStartIndexInvalid,
 		},
 		"nil Allow": {
 			allow: nil,

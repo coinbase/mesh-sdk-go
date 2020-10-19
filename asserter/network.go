@@ -269,6 +269,10 @@ func Allow(allowed *types.Allow) error {
 		return ErrBalanceExemptionNoHistoricalLookup
 	}
 
+	if allowed.TimestampStartIndex != nil && *allowed.TimestampStartIndex < 0 {
+		return ErrTimestampStartIndexInvalid
+	}
+
 	return nil
 }
 
