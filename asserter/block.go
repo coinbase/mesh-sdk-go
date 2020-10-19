@@ -381,7 +381,7 @@ func (a *Asserter) Block(
 		return err
 	}
 
-	// Only apply some assertions if the block index is not the
+	// Only apply duplicate hash and index checks if the block index is not the
 	// genesis index.
 	if a.genesisBlock.Index != block.BlockIdentifier.Index {
 		if block.BlockIdentifier.Hash == block.ParentBlockIdentifier.Hash {
@@ -391,7 +391,12 @@ func (a *Asserter) Block(
 		if block.BlockIdentifier.Index <= block.ParentBlockIdentifier.Index {
 			return ErrBlockIndexPrecedesParentBlockIndex
 		}
+	}
 
+	// Only check for timestamp validity if timestamp start index is nil
+	// or if timestamp start index is <+ the current block index.
+	if a.timestampStartIndex == nil ||
+		*a.timestampStartIndex <= block.BlockIdentifier.Index {
 		if err := Timestamp(block.Timestamp); err != nil {
 			return err
 		}
