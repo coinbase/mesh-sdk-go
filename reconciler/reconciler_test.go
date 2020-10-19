@@ -1029,7 +1029,7 @@ func TestReconcile_Orphan(t *testing.T) {
 
 	go func() {
 		err := r.Reconcile(ctx)
-		assert.Contains(t, context.Canceled.Error(), err.Error())
+		assert.True(t, errors.Is(err, context.Canceled))
 	}()
 
 	err := r.QueueChanges(ctx, block, []*parser.BalanceChange{

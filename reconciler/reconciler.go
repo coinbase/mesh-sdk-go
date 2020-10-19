@@ -457,7 +457,7 @@ func (r *Reconciler) bestLiveBalance(
 	// lookup can fail if we try to query an orphaned block.
 	// If this is the case, we continue reconciling.
 	canonical, canonicalErr := r.helper.CanonicalBlock(ctx, lookupBlock)
-	if err != nil {
+	if canonicalErr != nil {
 		return nil, nil, fmt.Errorf(
 			"%w: unable to check canonical block %s",
 			canonicalErr,
