@@ -487,6 +487,10 @@ func TestOperation(t *testing.T) {
 }
 
 func TestBlock(t *testing.T) {
+	genesisIdentifier := &types.BlockIdentifier{
+		Hash:  "gen",
+		Index: 0,
+	}
 	validBlockIdentifier := &types.BlockIdentifier{
 		Hash:  "blah",
 		Index: 100,
@@ -654,6 +658,7 @@ func TestBlock(t *testing.T) {
 			},
 		},
 	}
+	timestampStartIndex := int64(1)
 	var tests = map[string]struct {
 		block        *types.Block
 		genesisIndex int64
@@ -670,11 +675,11 @@ func TestBlock(t *testing.T) {
 		},
 		"genesis block": {
 			block: &types.Block{
-				BlockIdentifier:       validBlockIdentifier,
-				ParentBlockIdentifier: validBlockIdentifier,
+				BlockIdentifier:       genesisIdentifier,
+				ParentBlockIdentifier: genesisIdentifier,
 				Transactions:          []*types.Transaction{validTransaction},
 			},
-			genesisIndex: validBlockIdentifier.Index,
+			genesisIndex: genesisIdentifier.Index,
 			err:          nil,
 		},
 		"out of order transaction operations": {
@@ -840,6 +845,7 @@ func TestBlock(t *testing.T) {
 						OperationTypes: []string{
 							"PAYMENT",
 						},
+						TimestampStartIndex: &timestampStartIndex,
 					},
 				},
 			)
