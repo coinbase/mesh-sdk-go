@@ -1029,7 +1029,7 @@ func TestReconcile_Orphan(t *testing.T) {
 
 	go func() {
 		err := r.Reconcile(ctx)
-		assert.Contains(t, context.Canceled.Error(), err.Error())
+		assert.True(t, errors.Is(err, context.Canceled))
 	}()
 
 	err := r.QueueChanges(ctx, block, []*parser.BalanceChange{
@@ -1867,4 +1867,70 @@ func TestReconcile_FailureOnlyInactive(t *testing.T) {
 			mockHandler.AssertExpectations(t)
 		})
 	}
+}
+
+func TestReconcile_EnqueueCancel(t *testing.T) {
+	var (
+		block = &types.BlockIdentifier{
+			Hash:  "block 1",
+			Index: 1,
+		}
+		accountCurrency = &AccountCurrency{
+			Account: &types.AccountIdentifier{
+				Address: "addr 1",
+			},
+			Currency: &types.Currency{
+				Symbol:   "BTC",
+				Decimals: 8,
+			},
+		}
+	)
+
+	mockHelper := &mocks.Helper{}
+	mockHandler := &mocks.Handler{}
+	r := New(
+		mockHelper,
+		mockHandler,
+		WithActiveConcurrency(1),
+		WithInactiveConcurrency(0),
+		WithLookupBalanceByBlock(true),
+	)
+	ctx := context.Background()
+
+	mockHelper.On(
+		"LiveBalance",
+		mock.Anything,
+		accountCurrency.Account,
+		accountCurrency.Currency,
+		block,
+	).Return(
+		nil,
+		nil,
+		context.Canceled,
+	).Once()
+
+	change := &parser.BalanceChange{
+		Account:    accountCurrency.Account,
+		Currency:   accountCurrency.Currency,
+		Difference: "100",
+		Block:      block,
+	}
+	err := r.QueueChanges(ctx, block, []*parser.BalanceChange{
+		change,
+	})
+	assert.NoError(t, err)
+	assert.Equal(t, r.QueueSize(), 1)
+
+	go func() {
+		err := r.Reconcile(ctx)
+		assert.True(t, errors.Is(err, context.Canceled))
+	}()
+
+	time.Sleep(1 * time.Second)
+	assert.Equal(t, r.QueueSize(), 1)
+	existingChange := <-r.changeQueue
+	assert.Equal(t, change, existingChange)
+
+	mockHelper.AssertExpectations(t)
+	mockHandler.AssertExpectations(t)
 }
