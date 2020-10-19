@@ -19,7 +19,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"math/big"
 	"sync"
 	"time"
 
@@ -488,31 +487,25 @@ func (r *Reconciler) handleBalanceMismatch(
 	liveBalance string,
 	block *types.BlockIdentifier,
 ) error {
-	// This should never error because we check for validity
-	// before calling this method.
-	bigDifference, ok := new(big.Int).SetString(difference, 10)
-	if !ok {
-		return fmt.Errorf("could not convert difference %s to integer", difference)
-	}
-
 	// Check if the reconciliation was exempt (supports compound exemptions)
-	for _, exemption := range r.parser.FindExemptions(account, currency) {
-		if exemption.ExemptionType == types.BalanceDynamic ||
-			(exemption.ExemptionType == types.BalanceGreaterOrEqual && bigDifference.Sign() >= 0) ||
-			(exemption.ExemptionType == types.BalanceLessOrEqual && bigDifference.Sign() <= 0) {
-			// Return handler result (regardless if error) so that we don't invoke the handler for
-			// a failed reconciliation as well.
-			return r.handler.ReconciliationExempt(
-				ctx,
-				reconciliationType,
-				account,
-				currency,
-				computedBalance,
-				liveBalance,
-				block,
-				exemption,
-			)
-		}
+	exemption := r.parser.MatchBalanceExemption(
+		account,
+		currency,
+		difference,
+	)
+	if exemption != nil {
+		// Return handler result (regardless if error) so that we don't invoke the handler for
+		// a failed reconciliation as well.
+		return r.handler.ReconciliationExempt(
+			ctx,
+			reconciliationType,
+			account,
+			currency,
+			computedBalance,
+			liveBalance,
+			block,
+			exemption,
+		)
 	}
 
 	// If we didn't find a matching exemption,
