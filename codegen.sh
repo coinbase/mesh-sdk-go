@@ -53,8 +53,8 @@ done
 rm -rf tmp;
 
 # Download spec file from releases
-ROSETTA_SPEC_VERSION=v1.4.5
-curl -L https://github.com/coinbase/rosetta-specifications/releases/download/${ROSETTA_SPEC_VERSION}/api.json -o api.json;
+ROSETTA_SPEC_VERSION=1.4.6
+curl -L https://github.com/coinbase/rosetta-specifications/releases/download/v${ROSETTA_SPEC_VERSION}/api.json -o api.json;
 
 # Generate client + types code
 GENERATOR_VERSION=v4.3.0
@@ -165,6 +165,11 @@ done
 
 # Change model files to correct package
 sed "${SED_IFLAG[@]}" 's/package client/package types/g' types/*;
+
+# Add version file
+VERSION_CONTENTS=$(sed "s/VERSION/${ROSETTA_SPEC_VERSION}/g" < templates/types.txt);
+echo "${VERSION_CONTENTS}" >> "types/types.go";
+
 
 # Inject Custom Marshaling Logic
 # shellcheck disable=SC2013

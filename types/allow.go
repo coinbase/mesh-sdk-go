@@ -33,6 +33,11 @@ type Allow struct {
 	// Any Rosetta implementation that supports querying the balance of an account at any height in
 	// the past should set this to true.
 	HistoricalBalanceLookup bool `json:"historical_balance_lookup"`
+	// If populated, `timestamp_start_index` indicates the first block index where block timestamps
+	// are considered valid (i.e. all blocks less than `timestamp_start_index` could have invalid
+	// timestamps). This is useful when the genesis block (or blocks) of a network have timestamp 0.
+	// If not populated, block timestamps are assumed to be valid for all available blocks.
+	TimestampStartIndex *int64 `json:"timestamp_start_index,omitempty"`
 	// All methods that are supported by the /call endpoint. Communicating which parameters should
 	// be provided to /call is the responsibility of the implementer (this is en lieu of defining an
 	// entire type system and requiring the implementer to define that in Allow).
