@@ -1,0 +1,8 @@
+package types
+
+const (
+  // RosettaAPIVersion is the version of the Rosetta API
+  // specification used to generate code for this release
+  // of the SDK.
+  RosettaAPIVersion = "VERSION"
+)

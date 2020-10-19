@@ -289,6 +289,9 @@ var (
 	ErrBalanceExemptionNoHistoricalLookup = errors.New(
 		"BalanceExemptions only supported when HistoricalBalanceLookup supported",
 	)
+	ErrTimestampStartIndexInvalid = errors.New(
+		"TimestampStartIndex is invalid",
+	)
 
 	NetworkErrs = []error{
 		ErrSubNetworkIdentifierInvalid,
@@ -313,6 +316,7 @@ var (
 		ErrBalanceExemptionMissingSubject,
 		ErrBalanceExemptionSubAccountAddressEmpty,
 		ErrBalanceExemptionNoHistoricalLookup,
+		ErrTimestampStartIndexInvalid,
 	}
 
 	///////////////////
@@ -412,6 +416,9 @@ var (
 		"Error.Message does not match message from /network/options",
 	)
 	ErrErrorRetriableMismatch = errors.New("Error.Retriable mismatch")
+	ErrErrorDescriptionEmpty  = errors.New(
+		"Error.Description is provided but is empty",
+	)
 
 	ErrorErrs = []error{
 		ErrErrorIsNil,
@@ -420,6 +427,7 @@ var (
 		ErrErrorUnexpectedCode,
 		ErrErrorMessageMismatch,
 		ErrErrorRetriableMismatch,
+		ErrErrorDescriptionEmpty,
 	}
 )
 

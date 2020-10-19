@@ -150,8 +150,12 @@ func Error(err *types.Error) error {
 		return ErrErrorCodeIsNeg
 	}
 
-	if err.Message == "" {
+	if len(err.Message) == 0 {
 		return ErrErrorMessageMissing
+	}
+
+	if err.Description != nil && len(*err.Description) == 0 {
+		return ErrErrorDescriptionEmpty
 	}
 
 	return nil
@@ -263,6 +267,14 @@ func Allow(allowed *types.Allow) error {
 
 	if len(allowed.BalanceExemptions) > 0 && !allowed.HistoricalBalanceLookup {
 		return ErrBalanceExemptionNoHistoricalLookup
+	}
+
+	if allowed.TimestampStartIndex != nil && *allowed.TimestampStartIndex < 0 {
+		return fmt.Errorf(
+			"%w: %d",
+			ErrTimestampStartIndexInvalid,
+			*allowed.TimestampStartIndex,
+		)
 	}
 
 	return nil

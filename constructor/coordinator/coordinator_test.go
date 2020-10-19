@@ -61,6 +61,7 @@ func simpleAsserterConfiguration() (*asserter.Asserter, error) {
 			},
 		},
 		[]*types.Error{},
+		nil,
 	)
 }
 
