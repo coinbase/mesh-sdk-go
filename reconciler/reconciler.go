@@ -239,6 +239,21 @@ func New(
 	return r
 }
 
+func (r *Reconciler) wrappedActiveEnqueue(
+	change *parser.BalanceChange,
+) {
+	select {
+	case r.changeQueue <- change:
+	default:
+		if r.debugLogging {
+			log.Printf(
+				"skipping active enqueue because backlog has %d items",
+				backlogThreshold,
+			)
+		}
+	}
+}
+
 // QueueChanges enqueues a slice of *BalanceChanges
 // for reconciliation.
 func (r *Reconciler) QueueChanges(
@@ -274,6 +289,12 @@ func (r *Reconciler) QueueChanges(
 		})
 	}
 
+	// All changes will have the same block. Continue
+	// if we are too far behind to start reconciling.
+	if block.Index < r.highWaterMark {
+		return nil
+	}
+
 	for _, change := range balanceChanges {
 		// Add all seen accounts to inactive reconciler queue.
 		//
@@ -286,22 +307,7 @@ func (r *Reconciler) QueueChanges(
 			return err
 		}
 
-		// All changes will have the same block. Continue
-		// if we are too far behind to start reconciling.
-		if block.Index < r.highWaterMark {
-			continue
-		}
-
-		select {
-		case r.changeQueue <- change:
-		default:
-			if r.debugLogging {
-				log.Printf(
-					"skipping active enqueue because backlog has %d items",
-					backlogThreshold,
-				)
-			}
-		}
+		r.wrappedActiveEnqueue(change)
 	}
 
 	return nil
@@ -620,6 +626,15 @@ func (r *Reconciler) accountReconciliation(
 	return nil
 }
 
+func (r *Reconciler) wrappedInactiveEnqueue(
+	accountCurrency *AccountCurrency,
+	liveBlock *types.BlockIdentifier,
+) {
+	if err := r.inactiveAccountQueue(true, accountCurrency, liveBlock); err != nil {
+		log.Printf("%s: unable to queue account %s", err.Error(), types.PrintStruct(accountCurrency))
+	}
+}
+
 func (r *Reconciler) inactiveAccountQueue(
 	inactive bool,
 	accountCurrency *AccountCurrency,
@@ -672,8 +687,13 @@ func (r *Reconciler) reconcileActiveAccounts(
 			if errors.Is(err, ErrBlockGone) {
 				continue
 			}
-
 			if err != nil {
+				// Ensure we don't leak reconciliations if
+				// context is canceled.
+				if errors.Is(err, context.Canceled) {
+					r.wrappedActiveEnqueue(balanceChange)
+				}
+
 				return fmt.Errorf("%w: %v", ErrLiveBalanceLookupFailed, err)
 			}
 
@@ -686,6 +706,12 @@ func (r *Reconciler) reconcileActiveAccounts(
 				false,
 			)
 			if err != nil {
+				// Ensure we don't leak reconciliations if
+				// context is canceled.
+				if errors.Is(err, context.Canceled) {
+					r.wrappedActiveEnqueue(balanceChange)
+				}
+
 				return err
 			}
 
@@ -795,9 +821,11 @@ func (r *Reconciler) reconcileInactiveAccounts(
 					true,
 				)
 				if err != nil {
+					r.wrappedInactiveEnqueue(nextAcct.Entry, block)
 					return err
 				}
 			case !errors.Is(err, ErrBlockGone):
+				r.wrappedInactiveEnqueue(nextAcct.Entry, block)
 				return fmt.Errorf("%w: %v", ErrLiveBalanceLookupFailed, err)
 			}
 
