@@ -116,7 +116,7 @@ type Configuration struct {
 	AllowedOperationTypes      []string                 `json:"allowed_operation_types"`
 	AllowedOperationStatuses   []*types.OperationStatus `json:"allowed_operation_statuses"`
 	AllowedErrors              []*types.Error           `json:"allowed_errors"`
-	AllowedTimestampStartIndex int64                    `json:"allowed_timestamp_start_index,omitempty"`
+	AllowedTimestampStartIndex int64                    `json:"allowed_timestamp_start_index"`
 }
 
 // NewClientWithFile constructs a new Asserter using a specification
@@ -179,7 +179,11 @@ func NewClientWithOptions(
 	parsedTimestampStartIndex := genesisBlockIdentifier.Index + 1
 	if timestampStartIndex != nil {
 		if *timestampStartIndex < 0 {
-			return nil, ErrTimestampStartIndexInvalid
+			return nil, fmt.Errorf(
+				"%w: %d",
+				ErrTimestampStartIndexInvalid,
+				*timestampStartIndex,
+			)
 		}
 
 		parsedTimestampStartIndex = *timestampStartIndex

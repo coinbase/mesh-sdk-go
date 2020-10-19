@@ -90,6 +90,33 @@ func TestNew(t *testing.T) {
 			},
 		}
 
+		validNetworkOptionsWithStartIndex = &types.NetworkOptionsResponse{
+			Version: &types.Version{
+				RosettaVersion: "1.4.0",
+				NodeVersion:    "1.0",
+			},
+			Allow: &types.Allow{
+				OperationStatuses: []*types.OperationStatus{
+					{
+						Status:     "Success",
+						Successful: true,
+					},
+				},
+				OperationTypes: []string{
+					"Transfer",
+				},
+				Errors: []*types.Error{
+					{
+						Code:      1,
+						Message:   "error",
+						Retriable: true,
+					},
+				},
+				HistoricalBalanceLookup: true,
+				TimestampStartIndex:     int64Pointer(10),
+			},
+		}
+
 		invalidNetworkOptions = &types.NetworkOptionsResponse{
 			Version: &types.Version{
 				RosettaVersion: "1.4.0",
@@ -163,6 +190,33 @@ func TestNew(t *testing.T) {
 				},
 			},
 		}
+
+		negativeStartIndex = &types.NetworkOptionsResponse{
+			Version: &types.Version{
+				RosettaVersion: "1.4.0",
+				NodeVersion:    "1.0",
+			},
+			Allow: &types.Allow{
+				OperationStatuses: []*types.OperationStatus{
+					{
+						Status:     "Success",
+						Successful: true,
+					},
+				},
+				OperationTypes: []string{
+					"Transfer",
+				},
+				Errors: []*types.Error{
+					{
+						Code:      1,
+						Message:   "error",
+						Retriable: true,
+					},
+				},
+				HistoricalBalanceLookup: true,
+				TimestampStartIndex:     int64Pointer(-1),
+			},
+		}
 	)
 
 	var tests = map[string]struct {
@@ -176,6 +230,13 @@ func TestNew(t *testing.T) {
 			network:        validNetwork,
 			networkStatus:  validNetworkStatus,
 			networkOptions: validNetworkOptions,
+
+			err: nil,
+		},
+		"valid responses (with start index)": {
+			network:        validNetwork,
+			networkStatus:  validNetworkStatus,
+			networkOptions: validNetworkOptionsWithStartIndex,
 
 			err: nil,
 		},
@@ -207,6 +268,13 @@ func TestNew(t *testing.T) {
 
 			err: errors.New("Allow.OperationTypes contains a duplicate Transfer"),
 		},
+		"invalid start index": {
+			network:        validNetwork,
+			networkStatus:  validNetworkStatus,
+			networkOptions: negativeStartIndex,
+
+			err: errors.New("TimestampStartIndex is invalid: -1"),
+		},
 	}
 
 	for name, test := range tests {
@@ -217,11 +285,12 @@ func TestNew(t *testing.T) {
 				test.networkOptions,
 			)
 
-			assert.Equal(t, test.err, err)
-
 			if test.err != nil {
+				assert.Error(t, err)
+				assert.Contains(t, test.err.Error(), err.Error())
 				return
 			}
+			assert.NoError(t, err)
 
 			assert.NotNil(t, asserter)
 			configuration, err := asserter.ClientConfiguration()
@@ -243,6 +312,11 @@ func TestNew(t *testing.T) {
 				configuration.AllowedOperationStatuses,
 			)
 			assert.ElementsMatch(t, test.networkOptions.Allow.Errors, configuration.AllowedErrors)
+			if test.networkOptions.Allow.TimestampStartIndex != nil {
+				assert.Equal(t, *test.networkOptions.Allow.TimestampStartIndex, configuration.AllowedTimestampStartIndex)
+			} else {
+				assert.Equal(t, test.networkStatus.GenesisBlockIdentifier.Index+1, configuration.AllowedTimestampStartIndex)
+			}
 		})
 
 		t.Run(fmt.Sprintf("%s with file", name), func(t *testing.T) {
@@ -253,6 +327,14 @@ func TestNew(t *testing.T) {
 				AllowedOperationStatuses: test.networkOptions.Allow.OperationStatuses,
 				AllowedErrors:            test.networkOptions.Allow.Errors,
 			}
+			if test.networkOptions.Allow.TimestampStartIndex != nil {
+				fileConfig.AllowedTimestampStartIndex = *test.networkOptions.Allow.TimestampStartIndex
+			} else {
+				if fileConfig.GenesisBlockIdentifier != nil {
+					fileConfig.AllowedTimestampStartIndex = fileConfig.GenesisBlockIdentifier.Index + 1
+				}
+			}
+
 			tmpfile, err := ioutil.TempFile("", "test.json")
 			assert.NoError(t, err)
 			defer os.Remove(tmpfile.Name())
@@ -268,11 +350,12 @@ func TestNew(t *testing.T) {
 				tmpfile.Name(),
 			)
 
-			assert.Equal(t, test.err, err)
-
 			if test.err != nil {
+				assert.Error(t, err)
+				assert.Contains(t, test.err.Error(), err.Error())
 				return
 			}
+			assert.NoError(t, err)
 
 			assert.NotNil(t, asserter)
 			configuration, err := asserter.ClientConfiguration()
@@ -294,6 +377,11 @@ func TestNew(t *testing.T) {
 				configuration.AllowedOperationStatuses,
 			)
 			assert.ElementsMatch(t, test.networkOptions.Allow.Errors, configuration.AllowedErrors)
+			if test.networkOptions.Allow.TimestampStartIndex != nil {
+				assert.Equal(t, *test.networkOptions.Allow.TimestampStartIndex, configuration.AllowedTimestampStartIndex)
+			} else {
+				assert.Equal(t, test.networkStatus.GenesisBlockIdentifier.Index+1, configuration.AllowedTimestampStartIndex)
+			}
 		})
 	}
 
