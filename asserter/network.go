@@ -150,8 +150,12 @@ func Error(err *types.Error) error {
 		return ErrErrorCodeIsNeg
 	}
 
-	if err.Message == "" {
+	if len(err.Message) == 0 {
 		return ErrErrorMessageMissing
+	}
+
+	if err.Description != nil && len(*err.Description) == 0 {
+		return ErrErrorDescriptionEmpty
 	}
 
 	return nil
