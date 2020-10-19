@@ -447,20 +447,27 @@ func (r *Reconciler) bestLiveBalance(
 	)
 
 	// Don't check canonical block if context
-	// is canceled (to make sure we don't erroneously
-	// return ErrBlockGone).
-	if errors.Is(err, context.Canceled) {
+	// is canceled or lookupBlock is nil (to
+	// make sure we don't erroneously return ErrBlockGone).
+	if errors.Is(err, context.Canceled) || lookupBlock == nil {
 		return nil, nil, liveFetchErr
 	}
 
 	// If there is a reorg, there is a chance that balance
 	// lookup can fail if we try to query an orphaned block.
 	// If this is the case, we continue reconciling.
-	canonical, canonicalErr := r.helper.CanonicalBlock(ctx, block)
-	if errors.Is(canonicalErr, context.Canceled) {
-		return nil, nil, liveFetchErr
+	canonical, canonicalErr := r.helper.CanonicalBlock(ctx, lookupBlock)
+	if err != nil {
+		return nil, nil, fmt.Errorf(
+			"%w: unable to check canonical block %s",
+			canonicalErr,
+			types.PrintStruct(lookupBlock),
+		)
 	}
-	if canonicalErr != nil || !canonical {
+
+	// Return ErrBlockGone if lookupBlock is not considered
+	// canonical.
+	if !canonical {
 		return nil, nil, ErrBlockGone
 	}
 
