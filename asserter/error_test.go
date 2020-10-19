@@ -24,6 +24,7 @@ import (
 )
 
 func TestErrorMap(t *testing.T) {
+	emptyString := ""
 	var tests = map[string]struct {
 		err         *types.Error
 		expectedErr error
@@ -37,6 +38,18 @@ func TestErrorMap(t *testing.T) {
 					"hello": "goodbye",
 				},
 			},
+		},
+		"empty description": {
+			err: &types.Error{
+				Code:        10,
+				Message:     "error 10",
+				Description: &emptyString,
+				Retriable:   true,
+				Details: map[string]interface{}{
+					"hello": "goodbye",
+				},
+			},
+			expectedErr: ErrErrorDescriptionEmpty,
 		},
 		"negative error": {
 			err: &types.Error{

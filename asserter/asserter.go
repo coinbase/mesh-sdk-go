@@ -27,11 +27,12 @@ import (
 // validation on Rosetta Server responses.
 type Asserter struct {
 	// These variables are used for response assertion.
-	network            *types.NetworkIdentifier
-	operationTypes     []string
-	operationStatusMap map[string]bool
-	errorTypeMap       map[int32]*types.Error
-	genesisBlock       *types.BlockIdentifier
+	network             *types.NetworkIdentifier
+	operationTypes      []string
+	operationStatusMap  map[string]bool
+	errorTypeMap        map[int32]*types.Error
+	genesisBlock        *types.BlockIdentifier
+	timestampStartIndex int64
 
 	// These variables are used for request assertion.
 	historicalBalanceLookup bool
@@ -102,6 +103,7 @@ func NewClientWithResponses(
 		networkOptions.Allow.OperationTypes,
 		networkOptions.Allow.OperationStatuses,
 		networkOptions.Allow.Errors,
+		networkOptions.Allow.TimestampStartIndex,
 	)
 }
 
@@ -109,11 +111,12 @@ func NewClientWithResponses(
 // configuration can be exported by the Asserter and used to instantiate an
 // Asserter.
 type Configuration struct {
-	NetworkIdentifier        *types.NetworkIdentifier `json:"network_identifier"`
-	GenesisBlockIdentifier   *types.BlockIdentifier   `json:"genesis_block_identifier"`
-	AllowedOperationTypes    []string                 `json:"allowed_operation_types"`
-	AllowedOperationStatuses []*types.OperationStatus `json:"allowed_operation_statuses"`
-	AllowedErrors            []*types.Error           `json:"allowed_errors"`
+	NetworkIdentifier          *types.NetworkIdentifier `json:"network_identifier"`
+	GenesisBlockIdentifier     *types.BlockIdentifier   `json:"genesis_block_identifier"`
+	AllowedOperationTypes      []string                 `json:"allowed_operation_types"`
+	AllowedOperationStatuses   []*types.OperationStatus `json:"allowed_operation_statuses"`
+	AllowedErrors              []*types.Error           `json:"allowed_errors"`
+	AllowedTimestampStartIndex int64                    `json:"allowed_timestamp_start_index"`
 }
 
 // NewClientWithFile constructs a new Asserter using a specification
@@ -140,6 +143,7 @@ func NewClientWithFile(
 		config.AllowedOperationTypes,
 		config.AllowedOperationStatuses,
 		config.AllowedErrors,
+		&config.AllowedTimestampStartIndex,
 	)
 }
 
@@ -152,6 +156,7 @@ func NewClientWithOptions(
 	operationTypes []string,
 	operationStatuses []*types.OperationStatus,
 	errors []*types.Error,
+	timestampStartIndex *int64,
 ) (*Asserter, error) {
 	if err := NetworkIdentifier(network); err != nil {
 		return nil, err
@@ -169,10 +174,26 @@ func NewClientWithOptions(
 		return nil, err
 	}
 
+	// TimestampStartIndex defaults to genesisIndex + 1 (this
+	// avoid breaking existing clients using < v1.4.6).
+	parsedTimestampStartIndex := genesisBlockIdentifier.Index + 1
+	if timestampStartIndex != nil {
+		if *timestampStartIndex < 0 {
+			return nil, fmt.Errorf(
+				"%w: %d",
+				ErrTimestampStartIndexInvalid,
+				*timestampStartIndex,
+			)
+		}
+
+		parsedTimestampStartIndex = *timestampStartIndex
+	}
+
 	asserter := &Asserter{
-		network:        network,
-		operationTypes: operationTypes,
-		genesisBlock:   genesisBlockIdentifier,
+		network:             network,
+		operationTypes:      operationTypes,
+		genesisBlock:        genesisBlockIdentifier,
+		timestampStartIndex: parsedTimestampStartIndex,
 	}
 
 	asserter.operationStatusMap = map[string]bool{}
@@ -209,11 +230,12 @@ func (a *Asserter) ClientConfiguration() (*Configuration, error) {
 	}
 
 	return &Configuration{
-		NetworkIdentifier:        a.network,
-		GenesisBlockIdentifier:   a.genesisBlock,
-		AllowedOperationTypes:    a.operationTypes,
-		AllowedOperationStatuses: operationStatuses,
-		AllowedErrors:            errors,
+		NetworkIdentifier:          a.network,
+		GenesisBlockIdentifier:     a.genesisBlock,
+		AllowedOperationTypes:      a.operationTypes,
+		AllowedOperationStatuses:   operationStatuses,
+		AllowedErrors:              errors,
+		AllowedTimestampStartIndex: a.timestampStartIndex,
 	}, nil
 }
 
