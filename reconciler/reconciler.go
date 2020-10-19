@@ -434,25 +434,39 @@ func (r *Reconciler) bestLiveBalance(
 		currency,
 		lookupBlock,
 	)
-	if err != nil {
-		return nil, nil, fmt.Errorf(
-			"%w: unable to get live balance for %s %s at %s",
-			err,
-			types.PrintStruct(account),
-			types.PrintStruct(currency),
-			types.PrintStruct(lookupBlock),
-		)
+	if err == nil {
+		return amount, currentBlock, nil
+	}
+
+	liveFetchErr := fmt.Errorf(
+		"%w: unable to get live balance for %s %s at %s",
+		err,
+		types.PrintStruct(account),
+		types.PrintStruct(currency),
+		types.PrintStruct(lookupBlock),
+	)
+
+	// Don't check canonical block if context
+	// is canceled (to make sure we don't erroneously
+	// return ErrBlockGone).
+	if errors.Is(err, context.Canceled) {
+		return nil, nil, liveFetchErr
 	}
 
 	// If there is a reorg, there is a chance that balance
 	// lookup can fail if we try to query an orphaned block.
 	// If this is the case, we continue reconciling.
 	canonical, canonicalErr := r.helper.CanonicalBlock(ctx, block)
+	if errors.Is(canonicalErr, context.Canceled) {
+		return nil, nil, liveFetchErr
+	}
 	if canonicalErr != nil || !canonical {
 		return nil, nil, ErrBlockGone
 	}
 
-	return amount, currentBlock, nil
+	// We return a fetch error if the block is canonical but
+	// we can't retrieve it.
+	return nil, nil, liveFetchErr
 }
 
 // handleBalanceMismatch determines if a mismatch
