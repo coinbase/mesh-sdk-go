@@ -16,18 +16,25 @@ package parser
 
 import (
 	"github.com/coinbase/rosetta-sdk-go/asserter"
+	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
 // Parser provides support for parsing Rosetta blocks.
 type Parser struct {
-	Asserter   *asserter.Asserter
-	ExemptFunc ExemptOperation
+	Asserter          *asserter.Asserter
+	ExemptFunc        ExemptOperation
+	BalanceExemptions []*types.BalanceExemption
 }
 
 // New creates a new Parser.
-func New(asserter *asserter.Asserter, exemptFunc ExemptOperation) *Parser {
+func New(
+	asserter *asserter.Asserter,
+	exemptFunc ExemptOperation,
+	balanceExemptions []*types.BalanceExemption,
+) *Parser {
 	return &Parser{
-		Asserter:   asserter,
-		ExemptFunc: exemptFunc,
+		Asserter:          asserter,
+		ExemptFunc:        exemptFunc,
+		BalanceExemptions: balanceExemptions,
 	}
 }
