@@ -486,6 +486,10 @@ func TestOperation(t *testing.T) {
 	}
 }
 
+func int64Pointer(a int64) *int64 {
+	return &a
+}
+
 func TestBlock(t *testing.T) {
 	genesisIdentifier := &types.BlockIdentifier{
 		Hash:  "gen",
@@ -658,10 +662,10 @@ func TestBlock(t *testing.T) {
 			},
 		},
 	}
-	timestampStartIndex := int64(1)
 	var tests = map[string]struct {
 		block        *types.Block
 		genesisIndex int64
+		startIndex   *int64
 		err          error
 	}{
 		"valid block": {
@@ -673,14 +677,43 @@ func TestBlock(t *testing.T) {
 			},
 			err: nil,
 		},
-		"genesis block": {
+		"valid block (before start index)": {
+			block: &types.Block{
+				BlockIdentifier:       validBlockIdentifier,
+				ParentBlockIdentifier: validParentBlockIdentifier,
+				Transactions:          []*types.Transaction{validTransaction},
+			},
+			startIndex: int64Pointer(validBlockIdentifier.Index + 1),
+			err:        nil,
+		},
+		"genesis block (without start index)": {
+			block: &types.Block{
+				BlockIdentifier:       validBlockIdentifier,
+				ParentBlockIdentifier: validBlockIdentifier,
+				Transactions:          []*types.Transaction{validTransaction},
+			},
+			genesisIndex: validBlockIdentifier.Index,
+			err:          nil,
+		},
+		"genesis block (with start index)": {
 			block: &types.Block{
 				BlockIdentifier:       genesisIdentifier,
 				ParentBlockIdentifier: genesisIdentifier,
 				Transactions:          []*types.Transaction{validTransaction},
 			},
 			genesisIndex: genesisIdentifier.Index,
+			startIndex:   int64Pointer(genesisIdentifier.Index + 1),
 			err:          nil,
+		},
+		"invalid genesis block (with start index)": {
+			block: &types.Block{
+				BlockIdentifier:       genesisIdentifier,
+				ParentBlockIdentifier: genesisIdentifier,
+				Transactions:          []*types.Transaction{validTransaction},
+			},
+			genesisIndex: genesisIdentifier.Index,
+			startIndex:   int64Pointer(genesisIdentifier.Index),
+			err:          ErrTimestampBeforeMin,
 		},
 		"out of order transaction operations": {
 			block: &types.Block{
@@ -845,7 +878,7 @@ func TestBlock(t *testing.T) {
 						OperationTypes: []string{
 							"PAYMENT",
 						},
-						TimestampStartIndex: &timestampStartIndex,
+						TimestampStartIndex: test.startIndex,
 					},
 				},
 			)

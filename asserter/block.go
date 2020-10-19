@@ -393,10 +393,9 @@ func (a *Asserter) Block(
 		}
 	}
 
-	// Only check for timestamp validity if timestamp start index is nil
-	// or if timestamp start index is <+ the current block index.
-	if a.timestampStartIndex == nil ||
-		*a.timestampStartIndex <= block.BlockIdentifier.Index {
+	// Only check for timestamp validity if timestamp start index is <=
+	// the current block index.
+	if a.timestampStartIndex <= block.BlockIdentifier.Index {
 		if err := Timestamp(block.Timestamp); err != nil {
 			return err
 		}

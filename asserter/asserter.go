@@ -32,7 +32,7 @@ type Asserter struct {
 	operationStatusMap  map[string]bool
 	errorTypeMap        map[int32]*types.Error
 	genesisBlock        *types.BlockIdentifier
-	timestampStartIndex *int64
+	timestampStartIndex int64
 
 	// These variables are used for request assertion.
 	historicalBalanceLookup bool
@@ -116,7 +116,7 @@ type Configuration struct {
 	AllowedOperationTypes      []string                 `json:"allowed_operation_types"`
 	AllowedOperationStatuses   []*types.OperationStatus `json:"allowed_operation_statuses"`
 	AllowedErrors              []*types.Error           `json:"allowed_errors"`
-	AllowedTimestampStartIndex *int64                   `json:"allowed_timestamp_start_index,omitempty"`
+	AllowedTimestampStartIndex int64                    `json:"allowed_timestamp_start_index,omitempty"`
 }
 
 // NewClientWithFile constructs a new Asserter using a specification
@@ -143,7 +143,7 @@ func NewClientWithFile(
 		config.AllowedOperationTypes,
 		config.AllowedOperationStatuses,
 		config.AllowedErrors,
-		config.AllowedTimestampStartIndex,
+		&config.AllowedTimestampStartIndex,
 	)
 }
 
@@ -174,15 +174,22 @@ func NewClientWithOptions(
 		return nil, err
 	}
 
-	if timestampStartIndex != nil && *timestampStartIndex < 0 {
-		return nil, ErrTimestampStartIndexInvalid
+	// TimestampStartIndex defaults to genesisIndex + 1 (this
+	// avoid breaking existing clients using < v1.4.6).
+	parsedTimestampStartIndex := genesisBlockIdentifier.Index + 1
+	if timestampStartIndex != nil {
+		if *timestampStartIndex < 0 {
+			return nil, ErrTimestampStartIndexInvalid
+		}
+
+		parsedTimestampStartIndex = *timestampStartIndex
 	}
 
 	asserter := &Asserter{
 		network:             network,
 		operationTypes:      operationTypes,
 		genesisBlock:        genesisBlockIdentifier,
-		timestampStartIndex: timestampStartIndex,
+		timestampStartIndex: parsedTimestampStartIndex,
 	}
 
 	asserter.operationStatusMap = map[string]bool{}
