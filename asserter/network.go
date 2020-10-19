@@ -270,7 +270,11 @@ func Allow(allowed *types.Allow) error {
 	}
 
 	if allowed.TimestampStartIndex != nil && *allowed.TimestampStartIndex < 0 {
-		return ErrTimestampStartIndexInvalid
+		return fmt.Errorf(
+			"%w: %d",
+			ErrTimestampStartIndexInvalid,
+			*allowed.TimestampStartIndex,
+		)
 	}
 
 	return nil
