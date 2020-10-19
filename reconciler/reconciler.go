@@ -434,8 +434,14 @@ func (r *Reconciler) bestLiveBalance(
 		currency,
 		lookupBlock,
 	)
-	if err == nil {
-		return amount, currentBlock, nil
+	if err != nil {
+		return nil, nil, fmt.Errorf(
+			"%w: unable to get live balance for %s %s at %s",
+			err,
+			types.PrintStruct(account),
+			types.PrintStruct(currency),
+			types.PrintStruct(lookupBlock),
+		)
 	}
 
 	// If there is a reorg, there is a chance that balance
@@ -446,13 +452,7 @@ func (r *Reconciler) bestLiveBalance(
 		return nil, nil, ErrBlockGone
 	}
 
-	return nil, nil, fmt.Errorf(
-		"%w: unable to get live balance for %s %s at %s",
-		err,
-		types.PrintStruct(account),
-		types.PrintStruct(currency),
-		types.PrintStruct(lookupBlock),
-	)
+	return amount, currentBlock, nil
 }
 
 // handleBalanceMismatch determines if a mismatch
@@ -696,6 +696,7 @@ func (r *Reconciler) reconcileActiveAccounts(
 				// context is canceled.
 				if errors.Is(err, context.Canceled) {
 					r.wrappedActiveEnqueue(balanceChange)
+					return err
 				}
 
 				return fmt.Errorf("%w: %v", ErrLiveBalanceLookupFailed, err)
