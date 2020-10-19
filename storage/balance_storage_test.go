@@ -931,6 +931,7 @@ func (h *MockBalanceStorageHelper) Asserter() *asserter.Asserter {
 			},
 		},
 		[]*types.Error{},
+		nil,
 	)
 	return a
 }

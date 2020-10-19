@@ -416,6 +416,7 @@ func TestCoinStorage(t *testing.T) {
 			},
 		},
 		[]*types.Error{},
+		nil,
 	)
 	assert.NoError(t, err)
 	assert.NotNil(t, a)
