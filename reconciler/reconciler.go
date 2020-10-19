@@ -631,7 +631,11 @@ func (r *Reconciler) wrappedInactiveEnqueue(
 	liveBlock *types.BlockIdentifier,
 ) {
 	if err := r.inactiveAccountQueue(true, accountCurrency, liveBlock); err != nil {
-		log.Printf("%s: unable to queue account %s", err.Error(), types.PrintStruct(accountCurrency))
+		log.Printf(
+			"%s: unable to queue account %s",
+			err.Error(),
+			types.PrintStruct(accountCurrency),
+		)
 	}
 }
 
