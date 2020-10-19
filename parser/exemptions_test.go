@@ -8,6 +8,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func stringPointer(s string) *string {
+	return &s
+}
+
 func TestFindExemptions(t *testing.T) {
 	tests := map[string]struct {
 		balanceExemptions []*types.BalanceExemption
@@ -24,6 +28,154 @@ func TestFindExemptions(t *testing.T) {
 				Decimals: 8,
 			},
 			expected: []*types.BalanceExemption{},
+		},
+		"no matching exemption": {
+			balanceExemptions: []*types.BalanceExemption{
+				{
+					ExemptionType: types.BalanceDynamic,
+					Currency: &types.Currency{
+						Symbol:   "BTC",
+						Decimals: 7,
+					},
+				},
+			},
+			account: &types.AccountIdentifier{
+				Address: "test",
+			},
+			currency: &types.Currency{
+				Symbol:   "BTC",
+				Decimals: 8,
+			},
+			expected: []*types.BalanceExemption{},
+		},
+		"no matching exemptions": {
+			balanceExemptions: []*types.BalanceExemption{
+				{
+					ExemptionType: types.BalanceDynamic,
+					Currency: &types.Currency{
+						Symbol:   "BTC",
+						Decimals: 7,
+					},
+				},
+				{
+					ExemptionType:     types.BalanceDynamic,
+					SubAccountAddress: stringPointer("hello"),
+				},
+			},
+			account: &types.AccountIdentifier{
+				Address: "test",
+				SubAccount: &types.SubAccountIdentifier{
+					Address: "blah",
+				},
+			},
+			currency: &types.Currency{
+				Symbol:   "BTC",
+				Decimals: 8,
+			},
+			expected: []*types.BalanceExemption{},
+		},
+		"currency match": {
+			balanceExemptions: []*types.BalanceExemption{
+				{
+					ExemptionType: types.BalanceDynamic,
+					Currency: &types.Currency{
+						Symbol:   "BTC",
+						Decimals: 8,
+					},
+				},
+				{
+					ExemptionType:     types.BalanceDynamic,
+					SubAccountAddress: stringPointer("hello"),
+				},
+			},
+			account: &types.AccountIdentifier{
+				Address: "test",
+				SubAccount: &types.SubAccountIdentifier{
+					Address: "blah",
+				},
+			},
+			currency: &types.Currency{
+				Symbol:   "BTC",
+				Decimals: 8,
+			},
+			expected: []*types.BalanceExemption{
+				{
+					ExemptionType: types.BalanceDynamic,
+					Currency: &types.Currency{
+						Symbol:   "BTC",
+						Decimals: 8,
+					},
+				},
+			},
+		},
+		"subaccount match": {
+			balanceExemptions: []*types.BalanceExemption{
+				{
+					ExemptionType: types.BalanceDynamic,
+					Currency: &types.Currency{
+						Symbol:   "BTC",
+						Decimals: 7,
+					},
+				},
+				{
+					ExemptionType:     types.BalanceDynamic,
+					SubAccountAddress: stringPointer("hello"),
+				},
+			},
+			account: &types.AccountIdentifier{
+				Address: "test",
+				SubAccount: &types.SubAccountIdentifier{
+					Address: "hello",
+				},
+			},
+			currency: &types.Currency{
+				Symbol:   "BTC",
+				Decimals: 8,
+			},
+			expected: []*types.BalanceExemption{
+				{
+					ExemptionType:     types.BalanceDynamic,
+					SubAccountAddress: stringPointer("hello"),
+				},
+			},
+		},
+		"multiple match": {
+			balanceExemptions: []*types.BalanceExemption{
+				{
+					ExemptionType: types.BalanceDynamic,
+					Currency: &types.Currency{
+						Symbol:   "BTC",
+						Decimals: 8,
+					},
+				},
+				{
+					ExemptionType:     types.BalanceDynamic,
+					SubAccountAddress: stringPointer("hello"),
+				},
+			},
+			account: &types.AccountIdentifier{
+				Address: "test",
+				SubAccount: &types.SubAccountIdentifier{
+					Address: "hello",
+				},
+			},
+			currency: &types.Currency{
+				Symbol:   "BTC",
+				Decimals: 8,
+			},
+			expected: []*types.BalanceExemption{
+				{
+					ExemptionType: types.BalanceDynamic,
+					Currency: &types.Currency{
+						Symbol:   "BTC",
+						Decimals: 8,
+					},
+				},
+				{
+					ExemptionType:     types.BalanceDynamic,
+					SubAccountAddress: stringPointer("hello"),
+				},
+			},
 		},
 	}
 
