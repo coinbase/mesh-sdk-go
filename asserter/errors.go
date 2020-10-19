@@ -289,6 +289,9 @@ var (
 	ErrBalanceExemptionNoHistoricalLookup = errors.New(
 		"BalanceExemptions only supported when HistoricalBalanceLookup supported",
 	)
+	ErrTimestampStartIndexInvalid = errors.New(
+		"TimestampStartIndex is invalid",
+	)
 
 	NetworkErrs = []error{
 		ErrSubNetworkIdentifierInvalid,
@@ -313,6 +316,7 @@ var (
 		ErrBalanceExemptionMissingSubject,
 		ErrBalanceExemptionSubAccountAddressEmpty,
 		ErrBalanceExemptionNoHistoricalLookup,
+		ErrTimestampStartIndexInvalid,
 	}
 
 	///////////////////
