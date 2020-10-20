@@ -27,44 +27,36 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-// ReconciliationType is the type of reconciliation
-// performed.
-type ReconciliationType string
-
 const (
 	// ActiveReconciliation is included in the reconciliation
 	// error message if reconciliation failed during active
 	// reconciliation.
-	ActiveReconciliation ReconciliationType = "ACTIVE"
+	ActiveReconciliation = "ACTIVE"
 
 	// InactiveReconciliation is included in the reconciliation
 	// error message if reconciliation failed during inactive
 	// reconciliation.
-	InactiveReconciliation ReconciliationType = "INACTIVE"
+	InactiveReconciliation = "INACTIVE"
 )
-
-// SkipCause is the reason reconciliation of a particular account
-// is skipped.
-type SkipCause string
 
 const (
 	// BlockGone is when the block where a reconciliation
 	// is supposed to happen is orphaned.
-	BlockGone SkipCause = "BLOCK_GONE"
+	BlockGone = "BLOCK_GONE"
 
 	// AccountUpdated is when an account that is to be
 	// reconciled is updated after the block where the
 	// balance change occurs (this usually occurs
 	// in large backlogs).
-	AccountUpdated SkipCause = "ACCOUNT_UPDATED"
+	AccountUpdated = "ACCOUNT_UPDATED"
 
 	// HeadBehind is when the synced tip (where balances
 	// were last computed) is behind the *types.BlockIdentifier
 	// returned by the call to /account/balance.
-	HeadBehind SkipCause = "HEAD_BEHIND"
+	HeadBehind = "HEAD_BEHIND"
 
 	// BacklogFull is when the reconciliation backlog is full.
-	BacklogFull SkipCause = "BACKLOG_FULL"
+	BacklogFull = "BACKLOG_FULL"
 )
 
 const (
@@ -148,7 +140,7 @@ type Helper interface {
 type Handler interface {
 	ReconciliationFailed(
 		ctx context.Context,
-		reconciliationType ReconciliationType,
+		reconciliationType string,
 		account *types.AccountIdentifier,
 		currency *types.Currency,
 		computedBalance string,
@@ -158,7 +150,7 @@ type Handler interface {
 
 	ReconciliationSucceeded(
 		ctx context.Context,
-		reconciliationType ReconciliationType,
+		reconciliationType string,
 		account *types.AccountIdentifier,
 		currency *types.Currency,
 		balance string,
@@ -167,7 +159,7 @@ type Handler interface {
 
 	ReconciliationExempt(
 		ctx context.Context,
-		reconciliationType ReconciliationType,
+		reconciliationType string,
 		account *types.AccountIdentifier,
 		currency *types.Currency,
 		computedBalance string,
@@ -178,10 +170,10 @@ type Handler interface {
 
 	ReconciliationSkipped(
 		ctx context.Context,
-		reconciliationType ReconciliationType,
+		reconciliationType string,
 		account *types.AccountIdentifier,
 		currency *types.Currency,
-		cause SkipCause,
+		cause string,
 	) error
 }
 
@@ -539,7 +531,7 @@ func (r *Reconciler) bestLiveBalance(
 func (r *Reconciler) handleBalanceMismatch(
 	ctx context.Context,
 	difference string,
-	reconciliationType ReconciliationType,
+	reconciliationType string,
 	account *types.AccountIdentifier,
 	currency *types.Currency,
 	computedBalance string,

@@ -43,6 +43,20 @@ func (_m *Handler) ReconciliationFailed(ctx context.Context, reconciliationType 
 	return r0
 }
 
+// ReconciliationSkipped provides a mock function with given fields: ctx, reconciliationType, account, currency, cause
+func (_m *Handler) ReconciliationSkipped(ctx context.Context, reconciliationType string, account *types.AccountIdentifier, currency *types.Currency, cause string) error {
+	ret := _m.Called(ctx, reconciliationType, account, currency, cause)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, *types.AccountIdentifier, *types.Currency, string) error); ok {
+		r0 = rf(ctx, reconciliationType, account, currency, cause)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // ReconciliationSucceeded provides a mock function with given fields: ctx, reconciliationType, account, currency, balance, block
 func (_m *Handler) ReconciliationSucceeded(ctx context.Context, reconciliationType string, account *types.AccountIdentifier, currency *types.Currency, balance string, block *types.BlockIdentifier) error {
 	ret := _m.Called(ctx, reconciliationType, account, currency, balance, block)
