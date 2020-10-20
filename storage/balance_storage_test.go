@@ -93,6 +93,19 @@ func TestBalance(t *testing.T) {
 				},
 			},
 		}
+		exemptionAccount = &types.AccountIdentifier{
+			Address: "exemption",
+		}
+		exemptionCurrency = &types.Currency{
+			Symbol:   "exempt",
+			Decimals: 3,
+		}
+		exemptions = []*types.BalanceExemption{
+			{
+				ExemptionType: types.BalanceGreaterOrEqual,
+				Currency:      exemptionCurrency,
+			},
+		}
 		currency = &types.Currency{
 			Symbol:   "BLAH",
 			Decimals: 2,
@@ -128,6 +141,10 @@ func TestBalance(t *testing.T) {
 			Hash:  "pkdgdj",
 			Index: 123891,
 		}
+		newBlock4 = &types.BlockIdentifier{
+			Hash:  "asdjkajsdk",
+			Index: 123892,
+		}
 		largeDeduction = &types.Amount{
 			Value:    "-1000",
 			Currency: currency,
@@ -136,6 +153,7 @@ func TestBalance(t *testing.T) {
 			AccountBalances: map[string]string{
 				"genesis": "100",
 			},
+			BalExemptions: exemptions,
 		}
 	)
 
@@ -426,6 +444,116 @@ func TestBalance(t *testing.T) {
 		assert.Equal(t, newBlock, block)
 	})
 
+	t.Run("balance exemption update", func(t *testing.T) {
+		mockHelper.AccountBalanceAmount = "0"
+		txn := storage.db.NewDatabaseTransaction(ctx, true)
+		err := storage.UpdateBalance(
+			ctx,
+			txn,
+			&parser.BalanceChange{
+				Account:    exemptionAccount,
+				Currency:   exemptionCurrency,
+				Block:      newBlock,
+				Difference: amount.Value,
+			},
+			nil,
+		)
+		assert.NoError(t, err)
+		assert.NoError(t, txn.Commit(ctx))
+
+		retrievedAmount, block, err := storage.GetBalance(
+			ctx,
+			exemptionAccount,
+			exemptionCurrency,
+			newBlock,
+		)
+		assert.NoError(t, err)
+		assert.Equal(t, amount.Value, retrievedAmount.Value)
+		assert.Equal(t, newBlock, block)
+
+		// Successful (balance == computed)
+		mockHelper.AccountBalanceAmount = amount.Value
+		txn = storage.db.NewDatabaseTransaction(ctx, true)
+		err = storage.UpdateBalance(
+			ctx,
+			txn,
+			&parser.BalanceChange{
+				Account:    exemptionAccount,
+				Currency:   exemptionCurrency,
+				Block:      newBlock3,
+				Difference: "50",
+			},
+			nil,
+		)
+		assert.NoError(t, err)
+		assert.NoError(t, txn.Commit(ctx))
+
+		retrievedAmount, block, err = storage.GetBalance(
+			ctx,
+			exemptionAccount,
+			exemptionCurrency,
+			newBlock3,
+		)
+		assert.NoError(t, err)
+		assert.Equal(t, "150", retrievedAmount.Value)
+		assert.Equal(t, newBlock3, block)
+
+		// Successful (balance > computed)
+		mockHelper.AccountBalanceAmount = "200"
+		txn = storage.db.NewDatabaseTransaction(ctx, true)
+		err = storage.UpdateBalance(
+			ctx,
+			txn,
+			&parser.BalanceChange{
+				Account:    exemptionAccount,
+				Currency:   exemptionCurrency,
+				Block:      newBlock4,
+				Difference: "50",
+			},
+			nil,
+		)
+		assert.NoError(t, err)
+		assert.NoError(t, txn.Commit(ctx))
+
+		retrievedAmount, block, err = storage.GetBalance(
+			ctx,
+			exemptionAccount,
+			exemptionCurrency,
+			newBlock4,
+		)
+		assert.NoError(t, err)
+		assert.Equal(t, "250", retrievedAmount.Value)
+		assert.Equal(t, newBlock4, block)
+
+		// Unsuccessful (balance < computed)
+		mockHelper.AccountBalanceAmount = "10"
+		txn = storage.db.NewDatabaseTransaction(ctx, true)
+		err = storage.UpdateBalance(
+			ctx,
+			txn,
+			&parser.BalanceChange{
+				Account:    exemptionAccount,
+				Currency:   exemptionCurrency,
+				Block:      newBlock4,
+				Difference: "50",
+			},
+			nil,
+		)
+		assert.Error(t, err)
+		txn.Discard(ctx)
+
+		retrievedAmount, block, err = storage.GetBalance(
+			ctx,
+			exemptionAccount,
+			exemptionCurrency,
+			newBlock4,
+		)
+		assert.NoError(t, err)
+		assert.Equal(t, "250", retrievedAmount.Value)
+		assert.Equal(t, newBlock4, block)
+		mockHelper.AccountBalanceAmount = ""
+	})
+
 	t.Run("get all set AccountCurrency", func(t *testing.T) {
 		accounts, err := storage.GetAllAccountCurrency(ctx)
 		assert.NoError(t, err)
@@ -453,6 +581,10 @@ func TestBalance(t *testing.T) {
 			{
 				Account:  subAccountMetadata2,
 				Currency: currency,
+			},
+			{
+				Account:  exemptionAccount,
+				Currency: exemptionCurrency,
 			},
 		}, accounts)
 	})
@@ -887,6 +1019,7 @@ type MockBalanceStorageHelper struct {
 	AccountBalanceAmount string
 	AccountBalances      map[string]string
 	ExemptAccounts       []*reconciler.AccountCurrency
+	BalExemptions        []*types.BalanceExemption
 }
 
 func (h *MockBalanceStorageHelper) AccountBalance(
@@ -951,4 +1084,8 @@ func (h *MockBalanceStorageHelper) ExemptFunc() parser.ExemptOperation {
 
 		return false
 	}
+}
+
+func (h *MockBalanceStorageHelper) BalanceExemptions() []*types.BalanceExemption {
+	return h.BalExemptions
 }

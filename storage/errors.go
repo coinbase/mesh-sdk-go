@@ -315,8 +315,14 @@ var (
 	// balance goes negative as the result of an operation.
 	ErrNegativeBalance = errors.New("negative balance")
 
+	// ErrInvalidLiveBalance is returned when an account's
+	// live balance varies in a way that is inconsistent
+	// with any balance exemption.
+	ErrInvalidLiveBalance = errors.New("invalid live balance")
+
 	BalanceStorageErrs = []error{
 		ErrNegativeBalance,
+		ErrInvalidLiveBalance,
 	}
 
 	///////////////////

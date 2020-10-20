@@ -264,6 +264,7 @@ func TestBalanceChanges(t *testing.T) {
 			parser := New(
 				asserter,
 				test.exemptFunc,
+				nil,
 			)
 
 			changes, err := parser.BalanceChanges(
