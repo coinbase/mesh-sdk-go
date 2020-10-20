@@ -887,6 +887,7 @@ type MockBalanceStorageHelper struct {
 	AccountBalanceAmount string
 	AccountBalances      map[string]string
 	ExemptAccounts       []*reconciler.AccountCurrency
+	BalExemptions        []*types.BalanceExemption
 }
 
 func (h *MockBalanceStorageHelper) AccountBalance(
@@ -951,4 +952,8 @@ func (h *MockBalanceStorageHelper) ExemptFunc() parser.ExemptOperation {
 
 		return false
 	}
+}
+
+func (h *MockBalanceStorageHelper) BalanceExemptions() []*types.BalanceExemption {
+	return h.BalExemptions
 }
