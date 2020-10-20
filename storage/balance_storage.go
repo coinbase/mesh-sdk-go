@@ -252,6 +252,7 @@ func (b *BalanceStorage) ReconciliationCoverage(
 	err := b.getAllBalanceEntries(ctx, func(entry balanceEntry) {
 		seen++
 		if entry.LastReconciled == nil {
+			log.Println("not yet reconciled", types.PrintStruct(entry.Account))
 			return
 		}
 
