@@ -62,12 +62,16 @@ const (
 	// were last computed) is behind the *types.BlockIdentifier
 	// returned by the call to /account/balance.
 	HeadBehind SkipCause = "HEAD_BEHIND"
+
+	// BacklogFull is when the reconciliation backlog is full.
+	BacklogFull SkipCause = "BACKLOG_FULL"
 )
 
 const (
 	// backlogThreshold is the limit of account lookups
 	// that can be enqueued to reconcile before new
 	// requests are dropped.
+	//
 	// TODO: Make configurable
 	backlogThreshold = 50000
 
@@ -178,7 +182,7 @@ type Handler interface {
 		account *types.AccountIdentifier,
 		currency *types.Currency,
 		cause SkipCause,
-	)
+	) error
 }
 
 // InactiveEntry is used to track the last
@@ -274,10 +278,12 @@ func New(
 }
 
 func (r *Reconciler) wrappedActiveEnqueue(
+	ctx context.Context,
 	change *parser.BalanceChange,
-) {
+) error {
 	select {
 	case r.changeQueue <- change:
+		return nil
 	default:
 		if r.debugLogging {
 			log.Printf(
@@ -285,6 +291,14 @@ func (r *Reconciler) wrappedActiveEnqueue(
 				backlogThreshold,
 			)
 		}
+
+		return r.handler.ReconciliationSkipped(
+			ctx,
+			ActiveReconciliation,
+			change.Account,
+			change.Currency,
+			BacklogFull,
+		)
 	}
 }
 
@@ -323,13 +337,21 @@ func (r *Reconciler) QueueChanges(
 		})
 	}
 
-	// All changes will have the same block. Continue
-	// if we are too far behind to start reconciling.
-	if block.Index < r.highWaterMark {
-		return nil
-	}
-
 	for _, change := range balanceChanges {
+		// All changes will have the same block. Continue
+		// if we are too far behind to start reconciling.
+		if block.Index < r.highWaterMark {
+			if err := r.handler.ReconciliationSkipped(
+				ctx,
+				ActiveReconciliation,
+				change.Account,
+				change.Currency,
+				HeadBehind,
+			); err != nil {
+				return err
+			}
+		}
+
 		// Add all seen accounts to inactive reconciler queue.
 		//
 		// Note: accounts are only added if they have not been seen before.
@@ -341,7 +363,9 @@ func (r *Reconciler) QueueChanges(
 			return err
 		}
 
-		r.wrappedActiveEnqueue(change)
+		if err := r.wrappedActiveEnqueue(ctx, change); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -576,11 +600,11 @@ func (r *Reconciler) accountReconciliation(
 		Account:  account,
 		Currency: currency,
 	}
-	for {
-		if ctx.Err() != nil {
-			return ctx.Err()
-		}
-
+	reconciliationType := ActiveReconciliation
+	if inactive {
+		reconciliationType = InactiveReconciliation
+	}
+	for ctx.Err() != nil {
 		// If don't have previous balance because stateless, check diff on block
 		// instead of comparing entire computed balance
 		difference, computedBalance, headIndex, err := r.CompareBalance(
@@ -615,7 +639,14 @@ func (r *Reconciler) accountReconciliation(
 				// reconciliation requests unless they happened
 				// after this new highWaterMark.
 				r.highWaterMark = liveBlock.Index
-				break
+
+				return r.handler.ReconciliationSkipped(
+					ctx,
+					reconciliationType,
+					account,
+					currency,
+					HeadBehind,
+				)
 			}
 
 			if errors.Is(err, ErrBlockGone) {
@@ -627,7 +658,14 @@ func (r *Reconciler) accountReconciliation(
 						types.PrintStruct(liveBlock),
 					)
 				}
-				break
+
+				return r.handler.ReconciliationSkipped(
+					ctx,
+					reconciliationType,
+					account,
+					currency,
+					BlockGone,
+				)
 			}
 
 			if errors.Is(err, ErrAccountUpdated) {
@@ -639,15 +677,17 @@ func (r *Reconciler) accountReconciliation(
 						types.PrintStruct(accountCurrency.Account),
 					)
 				}
-				break
+
+				return r.handler.ReconciliationSkipped(
+					ctx,
+					reconciliationType,
+					account,
+					currency,
+					AccountUpdated,
+				)
 			}
 
 			return err
-		}
-
-		reconciliationType := ActiveReconciliation
-		if inactive {
-			reconciliationType = InactiveReconciliation
 		}
 
 		if difference != zeroString {
@@ -673,23 +713,24 @@ func (r *Reconciler) accountReconciliation(
 		)
 	}
 
-	// We return here if we gave up trying to reconcile an account.
-
-	// TODO: track reconciliations skipped
-	return nil
+	return ctx.Err()
 }
 
 func (r *Reconciler) wrappedInactiveEnqueue(
 	accountCurrency *AccountCurrency,
 	liveBlock *types.BlockIdentifier,
-) {
+) error {
 	if err := r.inactiveAccountQueue(true, accountCurrency, liveBlock); err != nil {
 		log.Printf(
 			"%s: unable to queue account %s",
 			err.Error(),
 			types.PrintStruct(accountCurrency),
 		)
+
+		return err
 	}
+
+	return nil
 }
 
 func (r *Reconciler) inactiveAccountQueue(
@@ -737,10 +778,22 @@ func (r *Reconciler) reconcileActiveAccounts(
 						"waiting to continue active reconciliation until reaching high water mark...",
 					)
 				}
+
+				if err := r.handler.ReconciliationSkipped(
+					ctx,
+					ActiveReconciliation,
+					balanceChange.Account,
+					balanceChange.Currency,
+					HeadBehind,
+				); err != nil {
+					return err
+				}
+
 				continue
 			}
 
-			// TODO: check if account computed balance height > best live balance
+			// TODO: Skip reconciliation if account has been updated so we don't lookup
+			// balance unnecessarily
 
 			amount, block, err := r.bestLiveBalance(
 				ctx,
@@ -761,7 +814,7 @@ func (r *Reconciler) reconcileActiveAccounts(
 				// Ensure we don't leak reconciliations if
 				// context is canceled.
 				if errors.Is(err, context.Canceled) {
-					r.wrappedActiveEnqueue(balanceChange)
+					_ = r.wrappedActiveEnqueue(ctx, balanceChange)
 					return err
 				}
 
@@ -780,7 +833,7 @@ func (r *Reconciler) reconcileActiveAccounts(
 				// Ensure we don't leak reconciliations if
 				// context is canceled.
 				if errors.Is(err, context.Canceled) {
-					r.wrappedActiveEnqueue(balanceChange)
+					_ = r.wrappedActiveEnqueue(ctx, balanceChange)
 				}
 
 				return err
@@ -892,11 +945,11 @@ func (r *Reconciler) reconcileInactiveAccounts(
 					true,
 				)
 				if err != nil {
-					r.wrappedInactiveEnqueue(nextAcct.Entry, block)
+					_ = r.wrappedInactiveEnqueue(nextAcct.Entry, block)
 					return err
 				}
 			case !errors.Is(err, ErrBlockGone):
-				r.wrappedInactiveEnqueue(nextAcct.Entry, block)
+				_ = r.wrappedInactiveEnqueue(nextAcct.Entry, block)
 				return fmt.Errorf("%w: %v", ErrLiveBalanceLookupFailed, err)
 			}
 
