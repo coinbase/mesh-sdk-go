@@ -683,6 +683,11 @@ func (r *Reconciler) reconcileActiveAccounts(
 			return ctx.Err()
 		case balanceChange := <-r.changeQueue:
 			if balanceChange.Block.Index < r.highWaterMark {
+				if r.debugLogging {
+					log.Println(
+						"waiting to continue active reconciliation until reaching high water mark...",
+					)
+				}
 				continue
 			}
 
@@ -693,6 +698,12 @@ func (r *Reconciler) reconcileActiveAccounts(
 				balanceChange.Block,
 			)
 			if errors.Is(err, ErrBlockGone) {
+				if r.debugLogging {
+					log.Println(
+						"err block gone...",
+						types.PrintStruct(balanceChange.Block),
+					)
+				}
 				continue
 			}
 			if err != nil {
