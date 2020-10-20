@@ -722,6 +722,8 @@ func TestBootstrapBalances(t *testing.T) {
 	defer database.Close(ctx)
 
 	storage := NewBalanceStorage(database)
+	mockHelper := &MockBalanceStorageHelper{}
+	storage.Initialize(mockHelper, nil)
 	bootstrapBalancesFile := path.Join(newDir, "balances.csv")
 
 	t.Run("File doesn't exist", func(t *testing.T) {
@@ -771,6 +773,33 @@ func TestBootstrapBalances(t *testing.T) {
 		)
 
 		assert.Equal(t, amount, retrievedAmount)
+		assert.Equal(t, genesisBlockIdentifier, blockIdentifier)
+		assert.NoError(t, err)
+
+		// Attempt to update balance
+		txn := storage.db.NewDatabaseTransaction(ctx, true)
+		err = storage.UpdateBalance(
+			ctx,
+			txn,
+			&parser.BalanceChange{
+				Account:    account,
+				Currency:   amount.Currency,
+				Block:      genesisBlockIdentifier,
+				Difference: "100",
+			},
+			genesisBlockIdentifier,
+		)
+		assert.NoError(t, err)
+		assert.NoError(t, txn.Commit(ctx))
+
+		retrievedAmount, blockIdentifier, err = storage.GetBalance(
+			ctx,
+			account,
+			amount.Currency,
+			genesisBlockIdentifier,
+		)
+
+		assert.Equal(t, "110", retrievedAmount.Value)
 		assert.Equal(t, genesisBlockIdentifier, blockIdentifier)
 		assert.NoError(t, err)
 	})
