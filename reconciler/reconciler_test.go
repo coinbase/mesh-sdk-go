@@ -47,7 +47,7 @@ func TestNewReconciler(t *testing.T) {
 		expected *Reconciler
 	}{
 		"no options": {
-			expected: New(nil, nil),
+			expected: New(nil, nil, nil),
 		},
 		"with reconciler concurrency": {
 			options: []Option{
@@ -55,7 +55,7 @@ func TestNewReconciler(t *testing.T) {
 				WithActiveConcurrency(200),
 			},
 			expected: func() *Reconciler {
-				r := New(nil, nil)
+				r := New(nil, nil, nil)
 				r.inactiveConcurrency = 100
 				r.activeConcurrency = 200
 
@@ -69,7 +69,7 @@ func TestNewReconciler(t *testing.T) {
 				}),
 			},
 			expected: func() *Reconciler {
-				r := New(nil, nil)
+				r := New(nil, nil, nil)
 				r.interestingAccounts = []*AccountCurrency{
 					accountCurrency,
 				}
@@ -84,7 +84,7 @@ func TestNewReconciler(t *testing.T) {
 				}),
 			},
 			expected: func() *Reconciler {
-				r := New(nil, nil)
+				r := New(nil, nil, nil)
 				r.inactiveQueue = []*InactiveEntry{
 					{
 						Entry: accountCurrency,
@@ -97,26 +97,14 @@ func TestNewReconciler(t *testing.T) {
 				return r
 			}(),
 		},
-		"with lookupBalanceByBlock and exemptions": {
+		"with lookupBalanceByBlock": {
 			options: []Option{
 				WithLookupBalanceByBlock(false),
-				WithBalanceExemptions([]*types.BalanceExemption{
-					{
-						ExemptionType: types.BalanceDynamic,
-						Currency:      accountCurrency.Currency,
-					},
-				}),
 			},
 			expected: func() *Reconciler {
-				r := New(nil, nil)
+				r := New(nil, nil, nil)
 				r.lookupBalanceByBlock = false
 				r.changeQueue = make(chan *parser.BalanceChange, backlogThreshold)
-				r.exemptions = []*types.BalanceExemption{
-					{
-						ExemptionType: types.BalanceDynamic,
-						Currency:      accountCurrency.Currency,
-					},
-				}
 
 				return r
 			}(),
@@ -125,7 +113,7 @@ func TestNewReconciler(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			result := New(nil, nil, test.options...)
+			result := New(nil, nil, nil, test.options...)
 			assert.ElementsMatch(t, test.expected.inactiveQueue, result.inactiveQueue)
 			assert.Equal(t, test.expected.seenAccounts, result.seenAccounts)
 			assert.ElementsMatch(t, test.expected.interestingAccounts, result.interestingAccounts)
@@ -133,7 +121,6 @@ func TestNewReconciler(t *testing.T) {
 			assert.Equal(t, test.expected.activeConcurrency, result.activeConcurrency)
 			assert.Equal(t, test.expected.lookupBalanceByBlock, result.lookupBalanceByBlock)
 			assert.Equal(t, cap(test.expected.changeQueue), cap(result.changeQueue))
-			assert.Equal(t, test.expected.exemptions, result.exemptions)
 		})
 	}
 }
@@ -307,6 +294,7 @@ func TestCompareBalance(t *testing.T) {
 
 	reconciler := New(
 		mh,
+		nil,
 		nil,
 	)
 
@@ -508,7 +496,7 @@ func assertContainsAllAccounts(t *testing.T, m map[string]struct{}, a []*Account
 
 func TestInactiveAccountQueue(t *testing.T) {
 	var (
-		r     = New(nil, nil)
+		r     = New(nil, nil, parser.New(nil, nil, nil))
 		block = &types.BlockIdentifier{
 			Hash:  "block 1",
 			Index: 1,
@@ -775,6 +763,7 @@ func TestReconcile_SuccessOnlyActive(t *testing.T) {
 			r := New(
 				mockHelper,
 				mockHandler,
+				nil,
 				WithActiveConcurrency(1),
 				WithInactiveConcurrency(0),
 				WithInterestingAccounts([]*AccountCurrency{accountCurrency2}),
@@ -900,6 +889,7 @@ func TestReconcile_HighWaterMark(t *testing.T) {
 	r := New(
 		mockHelper,
 		mockHandler,
+		nil,
 		WithActiveConcurrency(1),
 		WithInactiveConcurrency(0),
 		WithInterestingAccounts([]*AccountCurrency{accountCurrency2}),
@@ -1008,6 +998,7 @@ func TestReconcile_Orphan(t *testing.T) {
 	r := New(
 		mockHelper,
 		mockHandler,
+		nil,
 		WithActiveConcurrency(1),
 		WithInactiveConcurrency(0),
 	)
@@ -1077,6 +1068,7 @@ func TestReconcile_FailureOnlyActive(t *testing.T) {
 			r := New(
 				mockHelper,
 				mockHandler,
+				parser.New(nil, nil, nil),
 				WithActiveConcurrency(1),
 				WithInactiveConcurrency(0),
 				WithLookupBalanceByBlock(lookup),
@@ -1147,6 +1139,9 @@ func TestReconcile_ExemptOnlyActive(t *testing.T) {
 			ExemptionType: types.BalanceGreaterOrEqual,
 			Currency:      accountCurrency.Currency,
 		}
+		p = parser.New(nil, nil, []*types.BalanceExemption{
+			exemption,
+		})
 	)
 
 	lookupBalanceByBlocks := []bool{true, false}
@@ -1157,10 +1152,10 @@ func TestReconcile_ExemptOnlyActive(t *testing.T) {
 			r := New(
 				mockHelper,
 				mockHandler,
+				p,
 				WithActiveConcurrency(1),
 				WithInactiveConcurrency(0),
 				WithLookupBalanceByBlock(lookup),
-				WithBalanceExemptions([]*types.BalanceExemption{exemption}),
 			)
 			ctx := context.Background()
 
@@ -1230,6 +1225,9 @@ func TestReconcile_ExemptAddressOnlyActive(t *testing.T) {
 			ExemptionType:     types.BalanceLessOrEqual,
 			SubAccountAddress: &subAccountAddress,
 		}
+		p = parser.New(nil, nil, []*types.BalanceExemption{
+			exemption,
+		})
 	)
 
 	lookupBalanceByBlocks := []bool{true, false}
@@ -1240,10 +1238,10 @@ func TestReconcile_ExemptAddressOnlyActive(t *testing.T) {
 			r := New(
 				mockHelper,
 				mockHandler,
+				p,
 				WithActiveConcurrency(1),
 				WithInactiveConcurrency(0),
 				WithLookupBalanceByBlock(lookup),
-				WithBalanceExemptions([]*types.BalanceExemption{exemption}),
 			)
 			ctx := context.Background()
 
@@ -1313,6 +1311,9 @@ func TestReconcile_ExemptAddressDynamicActive(t *testing.T) {
 			ExemptionType:     types.BalanceDynamic,
 			SubAccountAddress: &subAccountAddress,
 		}
+		p = parser.New(nil, nil, []*types.BalanceExemption{
+			exemption,
+		})
 	)
 
 	lookupBalanceByBlocks := []bool{true, false}
@@ -1323,10 +1324,9 @@ func TestReconcile_ExemptAddressDynamicActive(t *testing.T) {
 			r := New(
 				mockHelper,
 				mockHandler,
-				WithActiveConcurrency(1),
+				p,
 				WithInactiveConcurrency(0),
 				WithLookupBalanceByBlock(lookup),
-				WithBalanceExemptions([]*types.BalanceExemption{exemption}),
 			)
 			ctx := context.Background()
 
@@ -1396,6 +1396,9 @@ func TestReconcile_ExemptAddressDynamicActiveThrow(t *testing.T) {
 			ExemptionType:     types.BalanceDynamic,
 			SubAccountAddress: &subAccountAddress,
 		}
+		p = parser.New(nil, nil, []*types.BalanceExemption{
+			exemption,
+		})
 	)
 
 	lookupBalanceByBlocks := []bool{true, false}
@@ -1406,10 +1409,9 @@ func TestReconcile_ExemptAddressDynamicActiveThrow(t *testing.T) {
 			r := New(
 				mockHelper,
 				mockHandler,
-				WithActiveConcurrency(1),
+				p,
 				WithInactiveConcurrency(0),
 				WithLookupBalanceByBlock(lookup),
-				WithBalanceExemptions([]*types.BalanceExemption{exemption}),
 			)
 			ctx := context.Background()
 
@@ -1476,6 +1478,9 @@ func TestReconcile_NotExemptOnlyActive(t *testing.T) {
 			ExemptionType: types.BalanceLessOrEqual,
 			Currency:      accountCurrency.Currency,
 		}
+		p = parser.New(nil, nil, []*types.BalanceExemption{
+			exemption,
+		})
 	)
 
 	lookupBalanceByBlocks := []bool{true, false}
@@ -1486,10 +1491,9 @@ func TestReconcile_NotExemptOnlyActive(t *testing.T) {
 			r := New(
 				mockHelper,
 				mockHandler,
-				WithActiveConcurrency(1),
+				p,
 				WithInactiveConcurrency(0),
 				WithLookupBalanceByBlock(lookup),
-				WithBalanceExemptions([]*types.BalanceExemption{exemption}),
 			)
 			ctx := context.Background()
 
@@ -1557,6 +1561,9 @@ func TestReconcile_NotExemptAddressOnlyActive(t *testing.T) {
 			ExemptionType:     types.BalanceGreaterOrEqual,
 			SubAccountAddress: &subAddr,
 		}
+		p = parser.New(nil, nil, []*types.BalanceExemption{
+			exemption,
+		})
 	)
 
 	lookupBalanceByBlocks := []bool{true, false}
@@ -1567,10 +1574,9 @@ func TestReconcile_NotExemptAddressOnlyActive(t *testing.T) {
 			r := New(
 				mockHelper,
 				mockHandler,
-				WithActiveConcurrency(1),
+				p,
 				WithInactiveConcurrency(0),
 				WithLookupBalanceByBlock(lookup),
-				WithBalanceExemptions([]*types.BalanceExemption{exemption}),
 			)
 			ctx := context.Background()
 
@@ -1641,6 +1647,9 @@ func TestReconcile_NotExemptWrongAddressOnlyActive(t *testing.T) {
 			ExemptionType:     types.BalanceGreaterOrEqual,
 			SubAccountAddress: &subAddr,
 		}
+		p = parser.New(nil, nil, []*types.BalanceExemption{
+			exemption,
+		})
 	)
 
 	lookupBalanceByBlocks := []bool{true, false}
@@ -1651,10 +1660,10 @@ func TestReconcile_NotExemptWrongAddressOnlyActive(t *testing.T) {
 			r := New(
 				mockHelper,
 				mockHandler,
+				p,
 				WithActiveConcurrency(1),
 				WithInactiveConcurrency(0),
 				WithLookupBalanceByBlock(lookup),
-				WithBalanceExemptions([]*types.BalanceExemption{exemption}),
 			)
 			ctx := context.Background()
 
@@ -1727,6 +1736,7 @@ func TestReconcile_SuccessOnlyInactive(t *testing.T) {
 			r := New(
 				mockHelper,
 				mockHandler,
+				nil,
 				WithActiveConcurrency(0),
 				WithInactiveConcurrency(1),
 				WithSeenAccounts([]*AccountCurrency{accountCurrency}),
@@ -1827,6 +1837,7 @@ func TestReconcile_FailureOnlyInactive(t *testing.T) {
 			r := New(
 				mockHelper,
 				mockHandler,
+				parser.New(nil, nil, nil),
 				WithActiveConcurrency(0),
 				WithInactiveConcurrency(1),
 				WithSeenAccounts([]*AccountCurrency{accountCurrency}),
@@ -1891,6 +1902,7 @@ func TestReconcile_EnqueueCancel(t *testing.T) {
 	r := New(
 		mockHelper,
 		mockHandler,
+		nil,
 		WithActiveConcurrency(1),
 		WithInactiveConcurrency(0),
 		WithLookupBalanceByBlock(true),

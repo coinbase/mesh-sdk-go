@@ -64,6 +64,7 @@ type BalanceStorageHelper interface {
 	) (*types.Amount, error)
 
 	ExemptFunc() parser.ExemptOperation
+	BalanceExemptions() []*types.BalanceExemption
 	Asserter() *asserter.Asserter
 }
 
@@ -88,10 +89,17 @@ func NewBalanceStorage(
 
 // Initialize adds a BalanceStorageHelper and BalanceStorageHandler to BalanceStorage.
 // This must be called prior to syncing!
-func (b *BalanceStorage) Initialize(helper BalanceStorageHelper, handler BalanceStorageHandler) {
+func (b *BalanceStorage) Initialize(
+	helper BalanceStorageHelper,
+	handler BalanceStorageHandler,
+) {
 	b.helper = helper
 	b.handler = handler
-	b.parser = parser.New(helper.Asserter(), helper.ExemptFunc())
+	b.parser = parser.New(
+		helper.Asserter(),
+		helper.ExemptFunc(),
+		helper.BalanceExemptions(),
+	)
 }
 
 // AddingBlock is called by BlockStorage when adding a block to storage.
@@ -262,6 +270,81 @@ func (b *BalanceStorage) ReconciliationCoverage(
 	return float64(validCoverage) / float64(seen), nil
 }
 
+// existingValue finds the existing value for
+// a given *types.AccountIdentifier and *types.Currency.
+func (b *BalanceStorage) existingValue(
+	ctx context.Context,
+	change *parser.BalanceChange,
+	parentBlock *types.BlockIdentifier,
+	namespace string,
+	balance []byte,
+	exists bool,
+	exemptions []*types.BalanceExemption,
+) (string, error) {
+	if parentBlock != nil && change.Block.Hash == parentBlock.Hash {
+		// Don't attempt to use the helper if we are going to query the same
+		// block we are processing (causes the duplicate issue).
+		return "0", nil
+	}
+
+	var existingValue string
+	if exists {
+		var bal balanceEntry
+		err := b.db.Encoder().Decode(namespace, balance, &bal, true)
+		if err != nil {
+			return "", err
+		}
+
+		existingValue = bal.Amount.Value
+		if len(exemptions) == 0 {
+			return existingValue, nil
+		}
+	}
+
+	// Use helper to fetch existing balance.
+	amount, err := b.helper.AccountBalance(ctx, change.Account, change.Currency, parentBlock)
+	if err != nil {
+		return "", fmt.Errorf(
+			"%w: unable to get previous account balance for %s %s at %s",
+			err,
+			types.PrintStruct(change.Account),
+			types.PrintStruct(change.Currency),
+			types.PrintStruct(parentBlock),
+		)
+	}
+
+	// Nothing to compare, so should return.
+	if len(existingValue) == 0 {
+		return amount.Value, nil
+	}
+
+	// Determine if new live balance complies
+	// with any balance exemption.
+	difference, err := types.SubtractValues(amount.Value, existingValue)
+	if err != nil {
+		return "", fmt.Errorf(
+			"%w: unable to calculate difference between live and computed balances",
+			err,
+		)
+	}
+
+	exemption := parser.MatchBalanceExemption(
+		exemptions,
+		difference,
+	)
+	if exemption == nil {
+		return "", fmt.Errorf(
+			"%w: account %s balance difference (live - computed) %s at %s is not allowed by any balance exemption",
+			ErrInvalidLiveBalance,
+			types.PrintStruct(change.Account),
+			difference,
+			types.PrintStruct(parentBlock),
+		)
+	}
+
+	return amount.Value, nil
+}
+
 // UpdateBalance updates a types.AccountIdentifer
 // by a types.Amount and sets the account's most
 // recent accessed block.
@@ -275,43 +358,30 @@ func (b *BalanceStorage) UpdateBalance(
 		return errors.New("invalid currency")
 	}
 
-	namespace, key := GetBalanceKey(change.Account, change.Currency)
 	// Get existing balance on key
+	namespace, key := GetBalanceKey(change.Account, change.Currency)
 	exists, balance, err := dbTransaction.Get(ctx, key)
 	if err != nil {
 		return err
 	}
 
-	var existingValue string
-	switch {
-	case exists:
-		// This could happen if balances are bootstrapped and should not be
-		// overridden.
-		var bal balanceEntry
-		err := b.db.Encoder().Decode(namespace, balance, &bal, true)
-		if err != nil {
-			return err
-		}
+	// Find exemptions that are applicable to the *parser.BalanceChange
+	exemptions := b.parser.FindExemptions(change.Account, change.Currency)
 
-		existingValue = bal.Amount.Value
-	case parentBlock != nil && change.Block.Hash == parentBlock.Hash:
-		// Don't attempt to use the helper if we are going to query the same
-		// block we are processing (causes the duplicate issue).
-		existingValue = "0"
-	default:
-		// Use helper to fetch existing balance.
-		amount, err := b.helper.AccountBalance(ctx, change.Account, change.Currency, parentBlock)
-		if err != nil {
-			return fmt.Errorf(
-				"%w: unable to get previous account balance for %s %s at %s",
-				err,
-				types.PrintStruct(change.Account),
-				types.PrintStruct(change.Currency),
-				types.PrintStruct(parentBlock),
-			)
-		}
-
-		existingValue = amount.Value
+	// Find account existing value whether the account is new, has an
+	// existing balance, or is subject to additional accounting from
+	// a balance exemption.
+	existingValue, err := b.existingValue(
+		ctx,
+		change,
+		parentBlock,
+		namespace,
+		balance,
+		exists,
+		exemptions,
+	)
+	if err != nil {
+		return err
 	}
 
 	newVal, err := types.AddValues(change.Difference, existingValue)

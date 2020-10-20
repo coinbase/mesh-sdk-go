@@ -19,7 +19,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"math/big"
 	"sync"
 	"time"
 
@@ -166,8 +165,10 @@ type AccountCurrency struct {
 // types.AccountIdentifiers returned in types.Operations
 // by a Rosetta Server.
 type Reconciler struct {
-	helper               Helper
-	handler              Handler
+	helper  Helper
+	handler Handler
+	parser  *parser.Parser
+
 	lookupBalanceByBlock bool
 	interestingAccounts  []*AccountCurrency
 	changeQueue          chan *parser.BalanceChange
@@ -203,10 +204,6 @@ type Reconciler struct {
 	// of a channel to determine when it is ready to look at.
 	inactiveQueueMutex sync.Mutex
 
-	// exemptions allows for certain reconciliation failures
-	// to be skipped.
-	exemptions []*types.BalanceExemption
-
 	// LastIndexChecked is the last block index reconciled actively.
 	lastIndexMutex   sync.Mutex
 	lastIndexChecked int64
@@ -216,11 +213,13 @@ type Reconciler struct {
 func New(
 	helper Helper,
 	handler Handler,
+	p *parser.Parser,
 	options ...Option,
 ) *Reconciler {
 	r := &Reconciler{
 		helper:               helper,
 		handler:              handler,
+		parser:               p,
 		inactiveFrequency:    defaultInactiveFrequency,
 		activeConcurrency:    defaultReconcilerConcurrency,
 		inactiveConcurrency:  defaultReconcilerConcurrency,
@@ -489,39 +488,23 @@ func (r *Reconciler) handleBalanceMismatch(
 	block *types.BlockIdentifier,
 ) error {
 	// Check if the reconciliation was exempt (supports compound exemptions)
-	for _, exemption := range r.exemptions {
-		if exemption.Currency != nil && types.Hash(currency) != types.Hash(exemption.Currency) {
-			continue
-		}
-
-		if exemption.SubAccountAddress != nil &&
-			(account.SubAccount == nil || *exemption.SubAccountAddress != account.SubAccount.Address) {
-			continue
-		}
-
-		// This should never error because we check for validity
-		// before calling this method.
-		bigDifference, ok := new(big.Int).SetString(difference, 10)
-		if !ok {
-			return fmt.Errorf("could not convert difference %s to integer", difference)
-		}
-
-		if exemption.ExemptionType == types.BalanceDynamic ||
-			(exemption.ExemptionType == types.BalanceGreaterOrEqual && bigDifference.Sign() >= 0) ||
-			(exemption.ExemptionType == types.BalanceLessOrEqual && bigDifference.Sign() <= 0) {
-			// Return handler result (regardless if error) so that we don't invoke the handler for
-			// a failed reconciliation as well.
-			return r.handler.ReconciliationExempt(
-				ctx,
-				reconciliationType,
-				account,
-				currency,
-				computedBalance,
-				liveBalance,
-				block,
-				exemption,
-			)
-		}
+	exemption := parser.MatchBalanceExemption(
+		r.parser.FindExemptions(account, currency),
+		difference,
+	)
+	if exemption != nil {
+		// Return handler result (regardless if error) so that we don't invoke the handler for
+		// a failed reconciliation as well.
+		return r.handler.ReconciliationExempt(
+			ctx,
+			reconciliationType,
+			account,
+			currency,
+			computedBalance,
+			liveBalance,
+			block,
+			exemption,
+		)
 	}
 
 	// If we didn't find a matching exemption,
