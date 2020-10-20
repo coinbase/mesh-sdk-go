@@ -945,6 +945,24 @@ func TestReconcile_HighWaterMark(t *testing.T) {
 		false,
 	)
 
+	// Skip handler called
+	mockHandler.On(
+		"ReconciliationSkipped",
+		mock.Anything,
+		ActiveReconciliation,
+		accountCurrency.Account,
+		accountCurrency.Currency,
+		HeadBehind,
+	).Return(nil).Once()
+	mockHandler.On(
+		"ReconciliationSkipped",
+		mock.Anything,
+		ActiveReconciliation,
+		accountCurrency2.Account,
+		accountCurrency2.Currency,
+		HeadBehind,
+	).Return(nil).Once()
+
 	err := r.QueueChanges(ctx, block, []*parser.BalanceChange{
 		{
 			Account:  accountCurrency.Account,
@@ -966,7 +984,7 @@ func TestReconcile_HighWaterMark(t *testing.T) {
 
 	go func() {
 		err := r.Reconcile(ctx)
-		assert.Contains(t, context.Canceled.Error(), err.Error())
+		assert.True(t, errors.Is(err, context.Canceled))
 	}()
 
 	time.Sleep(1 * time.Second)

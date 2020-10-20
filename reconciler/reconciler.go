@@ -596,7 +596,7 @@ func (r *Reconciler) accountReconciliation(
 	if inactive {
 		reconciliationType = InactiveReconciliation
 	}
-	for ctx.Err() != nil {
+	for ctx.Err() == nil {
 		// If don't have previous balance because stateless, check diff on block
 		// instead of comparing entire computed balance
 		difference, computedBalance, headIndex, err := r.CompareBalance(
