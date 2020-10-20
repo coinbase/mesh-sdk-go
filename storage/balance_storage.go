@@ -322,7 +322,10 @@ func (b *BalanceStorage) existingValue(
 	// with any balance exemption.
 	difference, err := types.SubtractValues(amount.Value, existingValue)
 	if err != nil {
-		return "", fmt.Errorf("%w: unable to calculate difference between live and computed balances", err)
+		return "", fmt.Errorf(
+			"%w: unable to calculate difference between live and computed balances",
+			err,
+		)
 	}
 
 	exemption := parser.MatchBalanceExemption(
