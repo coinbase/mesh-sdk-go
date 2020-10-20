@@ -488,9 +488,8 @@ func (r *Reconciler) handleBalanceMismatch(
 	block *types.BlockIdentifier,
 ) error {
 	// Check if the reconciliation was exempt (supports compound exemptions)
-	exemption := r.parser.MatchBalanceExemption(
-		account,
-		currency,
+	exemption := parser.MatchBalanceExemption(
+		r.parser.FindExemptions(account, currency),
 		difference,
 	)
 	if exemption != nil {
