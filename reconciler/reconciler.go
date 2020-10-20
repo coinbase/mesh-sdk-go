@@ -639,6 +639,8 @@ func (r *Reconciler) accountReconciliation(
 	}
 
 	// We return here if we gave up trying to reconcile an account.
+
+	// TODO: track reconciliations skipped
 	return nil
 }
 
@@ -702,6 +704,8 @@ func (r *Reconciler) reconcileActiveAccounts(
 				}
 				continue
 			}
+
+			// TODO: check if account computed balance height > best live balance
 
 			amount, block, err := r.bestLiveBalance(
 				ctx,
