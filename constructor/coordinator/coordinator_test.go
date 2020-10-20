@@ -69,7 +69,7 @@ func defaultParser(t *testing.T) *parser.Parser {
 	asserter, err := simpleAsserterConfiguration()
 	assert.NoError(t, err)
 
-	return parser.New(asserter, nil)
+	return parser.New(asserter, nil, nil)
 }
 
 func TestProcess(t *testing.T) {
