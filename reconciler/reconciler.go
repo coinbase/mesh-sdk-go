@@ -214,8 +214,8 @@ type Reconciler struct {
 	// it is useful to allocate more resources to
 	// active reconciliation as it is synchronous
 	// (when lookupBalanceByBlock is enabled).
-	activeConcurrency   int
-	inactiveConcurrency int
+	ActiveConcurrency   int
+	InactiveConcurrency int
 
 	// highWaterMark is used to skip requests when
 	// we are very far behind the live head.
@@ -252,8 +252,8 @@ func New(
 		handler:              handler,
 		parser:               p,
 		inactiveFrequency:    defaultInactiveFrequency,
-		activeConcurrency:    defaultReconcilerConcurrency,
-		inactiveConcurrency:  defaultReconcilerConcurrency,
+		ActiveConcurrency:    defaultReconcilerConcurrency,
+		InactiveConcurrency:  defaultReconcilerConcurrency,
 		highWaterMark:        -1,
 		seenAccounts:         map[string]struct{}{},
 		inactiveQueue:        []*InactiveEntry{},
@@ -973,13 +973,13 @@ func (r *Reconciler) reconcileInactiveAccounts(
 // If any goroutine errors, the function will return an error.
 func (r *Reconciler) Reconcile(ctx context.Context) error {
 	g, ctx := errgroup.WithContext(ctx)
-	for j := 0; j < r.activeConcurrency; j++ {
+	for j := 0; j < r.ActiveConcurrency; j++ {
 		g.Go(func() error {
 			return r.reconcileActiveAccounts(ctx)
 		})
 	}
 
-	for j := 0; j < r.inactiveConcurrency; j++ {
+	for j := 0; j < r.InactiveConcurrency; j++ {
 		g.Go(func() error {
 			return r.reconcileInactiveAccounts(ctx)
 		})
