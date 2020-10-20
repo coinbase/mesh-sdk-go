@@ -29,7 +29,7 @@ type Option func(r *Reconciler)
 // concurrency.
 func WithInactiveConcurrency(concurrency int) Option {
 	return func(r *Reconciler) {
-		r.inactiveConcurrency = concurrency
+		r.InactiveConcurrency = concurrency
 	}
 }
 
@@ -37,7 +37,7 @@ func WithInactiveConcurrency(concurrency int) Option {
 // concurrency.
 func WithActiveConcurrency(concurrency int) Option {
 	return func(r *Reconciler) {
-		r.activeConcurrency = concurrency
+		r.ActiveConcurrency = concurrency
 	}
 }
 

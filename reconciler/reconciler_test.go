@@ -56,8 +56,8 @@ func TestNewReconciler(t *testing.T) {
 			},
 			expected: func() *Reconciler {
 				r := New(nil, nil, nil)
-				r.inactiveConcurrency = 100
-				r.activeConcurrency = 200
+				r.InactiveConcurrency = 100
+				r.ActiveConcurrency = 200
 
 				return r
 			}(),
@@ -117,8 +117,8 @@ func TestNewReconciler(t *testing.T) {
 			assert.ElementsMatch(t, test.expected.inactiveQueue, result.inactiveQueue)
 			assert.Equal(t, test.expected.seenAccounts, result.seenAccounts)
 			assert.ElementsMatch(t, test.expected.interestingAccounts, result.interestingAccounts)
-			assert.Equal(t, test.expected.inactiveConcurrency, result.inactiveConcurrency)
-			assert.Equal(t, test.expected.activeConcurrency, result.activeConcurrency)
+			assert.Equal(t, test.expected.InactiveConcurrency, result.InactiveConcurrency)
+			assert.Equal(t, test.expected.ActiveConcurrency, result.ActiveConcurrency)
 			assert.Equal(t, test.expected.lookupBalanceByBlock, result.lookupBalanceByBlock)
 			assert.Equal(t, cap(test.expected.changeQueue), cap(result.changeQueue))
 		})
