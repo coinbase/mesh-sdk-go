@@ -27,17 +27,44 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+// ReconciliationType is the type of reconciliation
+// performed.
+type ReconciliationType string
+
 const (
 	// ActiveReconciliation is included in the reconciliation
 	// error message if reconciliation failed during active
 	// reconciliation.
-	ActiveReconciliation = "ACTIVE"
+	ActiveReconciliation ReconciliationType = "ACTIVE"
 
 	// InactiveReconciliation is included in the reconciliation
 	// error message if reconciliation failed during inactive
 	// reconciliation.
-	InactiveReconciliation = "INACTIVE"
+	InactiveReconciliation ReconciliationType = "INACTIVE"
+)
 
+// SkipCause is the reason reconciliation of a particular account
+// is skipped.
+type SkipCause string
+
+const (
+	// BlockGone is when the block where a reconciliation
+	// is supposed to happen is orphaned.
+	BlockGone SkipCause = "BLOCK_GONE"
+
+	// AccountUpdated is when an account that is to be
+	// reconciled is updated after the block where the
+	// balance change occurs (this usually occurs
+	// in large backlogs).
+	AccountUpdated SkipCause = "ACCOUNT_UPDATED"
+
+	// HeadBehind is when the synced tip (where balances
+	// were last computed) is behind the *types.BlockIdentifier
+	// returned by the call to /account/balance.
+	HeadBehind SkipCause = "HEAD_BEHIND"
+)
+
+const (
 	// backlogThreshold is the limit of account lookups
 	// that can be enqueued to reconcile before new
 	// requests are dropped.
@@ -117,7 +144,7 @@ type Helper interface {
 type Handler interface {
 	ReconciliationFailed(
 		ctx context.Context,
-		reconciliationType string,
+		reconciliationType ReconciliationType,
 		account *types.AccountIdentifier,
 		currency *types.Currency,
 		computedBalance string,
@@ -127,7 +154,7 @@ type Handler interface {
 
 	ReconciliationSucceeded(
 		ctx context.Context,
-		reconciliationType string,
+		reconciliationType ReconciliationType,
 		account *types.AccountIdentifier,
 		currency *types.Currency,
 		balance string,
@@ -136,7 +163,7 @@ type Handler interface {
 
 	ReconciliationExempt(
 		ctx context.Context,
-		reconciliationType string,
+		reconciliationType ReconciliationType,
 		account *types.AccountIdentifier,
 		currency *types.Currency,
 		computedBalance string,
@@ -144,6 +171,14 @@ type Handler interface {
 		block *types.BlockIdentifier,
 		exemption *types.BalanceExemption,
 	) error
+
+	ReconciliationSkipped(
+		ctx context.Context,
+		reconciliationType ReconciliationType,
+		account *types.AccountIdentifier,
+		currency *types.Currency,
+		cause SkipCause,
+	)
 }
 
 // InactiveEntry is used to track the last
@@ -480,7 +515,7 @@ func (r *Reconciler) bestLiveBalance(
 func (r *Reconciler) handleBalanceMismatch(
 	ctx context.Context,
 	difference string,
-	reconciliationType string,
+	reconciliationType ReconciliationType,
 	account *types.AccountIdentifier,
 	currency *types.Currency,
 	computedBalance string,
