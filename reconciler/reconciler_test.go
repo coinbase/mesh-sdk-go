@@ -56,8 +56,8 @@ func TestNewReconciler(t *testing.T) {
 			},
 			expected: func() *Reconciler {
 				r := New(nil, nil, nil)
-				r.inactiveConcurrency = 100
-				r.activeConcurrency = 200
+				r.InactiveConcurrency = 100
+				r.ActiveConcurrency = 200
 
 				return r
 			}(),
@@ -117,8 +117,8 @@ func TestNewReconciler(t *testing.T) {
 			assert.ElementsMatch(t, test.expected.inactiveQueue, result.inactiveQueue)
 			assert.Equal(t, test.expected.seenAccounts, result.seenAccounts)
 			assert.ElementsMatch(t, test.expected.interestingAccounts, result.interestingAccounts)
-			assert.Equal(t, test.expected.inactiveConcurrency, result.inactiveConcurrency)
-			assert.Equal(t, test.expected.activeConcurrency, result.activeConcurrency)
+			assert.Equal(t, test.expected.InactiveConcurrency, result.InactiveConcurrency)
+			assert.Equal(t, test.expected.ActiveConcurrency, result.ActiveConcurrency)
 			assert.Equal(t, test.expected.lookupBalanceByBlock, result.lookupBalanceByBlock)
 			assert.Equal(t, cap(test.expected.changeQueue), cap(result.changeQueue))
 		})
@@ -945,6 +945,24 @@ func TestReconcile_HighWaterMark(t *testing.T) {
 		false,
 	)
 
+	// Skip handler called
+	mockHandler.On(
+		"ReconciliationSkipped",
+		mock.Anything,
+		ActiveReconciliation,
+		accountCurrency.Account,
+		accountCurrency.Currency,
+		HeadBehind,
+	).Return(nil).Once()
+	mockHandler.On(
+		"ReconciliationSkipped",
+		mock.Anything,
+		ActiveReconciliation,
+		accountCurrency2.Account,
+		accountCurrency2.Currency,
+		HeadBehind,
+	).Return(nil).Once()
+
 	err := r.QueueChanges(ctx, block, []*parser.BalanceChange{
 		{
 			Account:  accountCurrency.Account,
@@ -966,7 +984,7 @@ func TestReconcile_HighWaterMark(t *testing.T) {
 
 	go func() {
 		err := r.Reconcile(ctx)
-		assert.Contains(t, context.Canceled.Error(), err.Error())
+		assert.True(t, errors.Is(err, context.Canceled))
 	}()
 
 	time.Sleep(1 * time.Second)
@@ -1017,6 +1035,14 @@ func TestReconcile_Orphan(t *testing.T) {
 		errors.New("cannot find block"),
 	).Once()
 	mockHelper.On("CanonicalBlock", mock.Anything, block).Return(false, nil).Once()
+	mockHandler.On(
+		"ReconciliationSkipped",
+		mock.Anything,
+		ActiveReconciliation,
+		accountCurrency.Account,
+		accountCurrency.Currency,
+		BlockGone,
+	).Return(nil).Once()
 
 	go func() {
 		err := r.Reconcile(ctx)

@@ -66,6 +66,12 @@ const (
 	// failures that were not exempt.
 	FailedReconciliationCounter = "failed_reconciliations"
 
+	// SkippedReconciliationsCounter is the number of reconciliation
+	// attempts that were skipped. This typically occurs because an
+	// account balance has been updated since being marked for reconciliation
+	// or the block where an account was updated has been orphaned.
+	SkippedReconciliationsCounter = "skipped_reconciliations"
+
 	// counterNamespace is preprended to any counter.
 	counterNamespace = "counter"
 )
