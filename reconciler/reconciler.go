@@ -753,14 +753,30 @@ func (r *Reconciler) inactiveAccountQueue(
 	return nil
 }
 
+func (r *Reconciler) updateLastChecked(index int64) {
+	// Update the lastIndexChecked value if the block
+	// index is greater. We don't acquire the lock
+	// to make this check to improve performance.
+	if index > r.lastIndexChecked {
+		r.lastIndexMutex.Lock()
+
+		// In the time since making the check and acquiring
+		// the lock, the lastIndexChecked could've increased
+		// so we check it again.
+		if index > r.lastIndexChecked {
+			r.lastIndexChecked = index
+		}
+
+		r.lastIndexMutex.Unlock()
+	}
+}
+
 // reconcileActiveAccounts selects an account
 // from the Reconciler account queue and
 // reconciles the balance. This is useful
 // for detecting if balance changes in operations
 // were correct.
-func (r *Reconciler) reconcileActiveAccounts(
-	ctx context.Context,
-) error {
+func (r *Reconciler) reconcileActiveAccounts(ctx context.Context) error { // nolint:gocognit
 	for {
 		select {
 		case <-ctx.Done():
@@ -840,21 +856,7 @@ func (r *Reconciler) reconcileActiveAccounts(
 				return err
 			}
 
-			// Update the lastIndexChecked value if the block
-			// index is greater. We don't acquire the lock
-			// to make this check to improve performance.
-			if balanceChange.Block.Index > r.lastIndexChecked {
-				r.lastIndexMutex.Lock()
-
-				// In the time since making the check and acquiring
-				// the lock, the lastIndexChecked could've increased
-				// so we check it again.
-				if balanceChange.Block.Index > r.lastIndexChecked {
-					r.lastIndexChecked = balanceChange.Block.Index
-				}
-
-				r.lastIndexMutex.Unlock()
-			}
+			r.updateLastChecked(balanceChange.Block.Index)
 		}
 	}
 }
