@@ -281,9 +281,12 @@ func (b *BalanceStorage) existingValue(
 	exists bool,
 	exemptions []*types.BalanceExemption,
 ) (string, error) {
-	if parentBlock != nil && change.Block.Hash == parentBlock.Hash {
-		// Don't attempt to use the helper if we are going to query the same
-		// block we are processing (causes the duplicate issue).
+	// Don't attempt to use the helper if we are going to query the same
+	// block we are processing (causes the duplicate issue).
+	//
+	// We also ensure we don't exit with 0 if the value already exists,
+	// which could be true if balances are bootstrapped.
+	if !exists && parentBlock != nil && change.Block.Hash == parentBlock.Hash {
 		return "0", nil
 	}
 
@@ -296,6 +299,9 @@ func (b *BalanceStorage) existingValue(
 		}
 
 		existingValue = bal.Amount.Value
+
+		// We can exit with the existing value if there are no
+		// applicable exemptions.
 		if len(exemptions) == 0 {
 			return existingValue, nil
 		}
