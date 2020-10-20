@@ -586,12 +586,24 @@ func (r *Reconciler) accountReconciliation(
 			if errors.Is(err, ErrBlockGone) {
 				// Either the block has not been processed in a re-org yet
 				// or the block was orphaned
+				if r.debugLogging {
+					log.Println(
+						"skipping reconciliation because block gone",
+						types.PrintStruct(liveBlock),
+					)
+				}
 				break
 			}
 
 			if errors.Is(err, ErrAccountUpdated) {
 				// If account was updated, it must be
 				// enqueued again
+				if r.debugLogging {
+					log.Println(
+						"skipping reconciliation because account updated",
+						types.PrintStruct(accountCurrency.Account),
+					)
+				}
 				break
 			}
 
