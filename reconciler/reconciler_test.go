@@ -1035,6 +1035,14 @@ func TestReconcile_Orphan(t *testing.T) {
 		errors.New("cannot find block"),
 	).Once()
 	mockHelper.On("CanonicalBlock", mock.Anything, block).Return(false, nil).Once()
+	mockHandler.On(
+		"ReconciliationSkipped",
+		mock.Anything,
+		ActiveReconciliation,
+		accountCurrency.Account,
+		accountCurrency.Currency,
+		BlockGone,
+	).Return(nil).Once()
 
 	go func() {
 		err := r.Reconcile(ctx)
