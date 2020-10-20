@@ -6,9 +6,9 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
-// findExemptions returns all matching *types.BalanceExemption
+// FindExemptions returns all matching *types.BalanceExemption
 // for a particular *types.AccountIdentifier and *types.Currency.
-func (p *Parser) findExemptions(
+func (p *Parser) FindExemptions(
 	account *types.AccountIdentifier,
 	currency *types.Currency,
 ) []*types.BalanceExemption {
@@ -31,26 +31,18 @@ func (p *Parser) findExemptions(
 
 // MatchBalanceExemption returns a *types.BalanceExemption
 // associated with the *types.AccountIdentifier, *types.Currency,
-// and difference, if it exists.
-func (p *Parser) MatchBalanceExemption(
-	account *types.AccountIdentifier,
-	currency *types.Currency,
+// and difference, if it exists. The provided exemptions
+// should be produced using FindExemptions.
+func MatchBalanceExemption(
+	matchedExemptions []*types.BalanceExemption,
 	difference string, // live - computed
 ) *types.BalanceExemption {
-	exemptions := p.findExemptions(account, currency)
-	if len(exemptions) == 0 {
-		return nil
-	}
-
-	// This should never error because we check for validity
-	// before calling this method.
 	bigDifference, ok := new(big.Int).SetString(difference, 10)
 	if !ok {
 		return nil
 	}
 
-	// Check if the reconciliation was exempt (supports compound exemptions)
-	for _, exemption := range exemptions {
+	for _, exemption := range matchedExemptions {
 		if exemption.ExemptionType == types.BalanceDynamic ||
 			(exemption.ExemptionType == types.BalanceGreaterOrEqual && bigDifference.Sign() >= 0) ||
 			(exemption.ExemptionType == types.BalanceLessOrEqual && bigDifference.Sign() <= 0) {
