@@ -269,6 +269,16 @@ func New(
 	return r
 }
 
+// TODO: replace with structured logging
+func (r *Reconciler) debugLog(
+	format string,
+	v ...interface{},
+) {
+	if r.debugLogging {
+		log.Printf(format+"\n", v...)
+	}
+}
+
 func (r *Reconciler) wrappedActiveEnqueue(
 	ctx context.Context,
 	change *parser.BalanceChange,
@@ -277,12 +287,10 @@ func (r *Reconciler) wrappedActiveEnqueue(
 	case r.changeQueue <- change:
 		return nil
 	default:
-		if r.debugLogging {
-			log.Printf(
-				"skipping active enqueue because backlog has %d items",
-				backlogThreshold,
-			)
-		}
+		r.debugLog(
+			"skipping active enqueue because backlog has %d items",
+			backlogThreshold,
+		)
 
 		return r.handler.ReconciliationSkipped(
 			ctx,
@@ -619,13 +627,11 @@ func (r *Reconciler) accountReconciliation(
 				}
 
 				// Don't wait to check if we are very far behind
-				if r.debugLogging {
-					log.Printf(
-						"Skipping reconciliation for %s: %d blocks behind\n",
-						types.PrettyPrintStruct(accountCurrency),
-						diff,
-					)
-				}
+				r.debugLog(
+					"Skipping reconciliation for %s: %d blocks behind",
+					types.PrettyPrintStruct(accountCurrency),
+					diff,
+				)
 
 				// Set a highWaterMark to not accept any new
 				// reconciliation requests unless they happened
@@ -644,12 +650,10 @@ func (r *Reconciler) accountReconciliation(
 			if errors.Is(err, ErrBlockGone) {
 				// Either the block has not been processed in a re-org yet
 				// or the block was orphaned
-				if r.debugLogging {
-					log.Println(
-						"skipping reconciliation because block gone",
-						types.PrintStruct(liveBlock),
-					)
-				}
+				r.debugLog(
+					"skipping reconciliation because block %s gone",
+					types.PrintStruct(liveBlock),
+				)
 
 				return r.handler.ReconciliationSkipped(
 					ctx,
@@ -663,12 +667,10 @@ func (r *Reconciler) accountReconciliation(
 			if errors.Is(err, ErrAccountUpdated) {
 				// If account was updated, it must be
 				// enqueued again
-				if r.debugLogging {
-					log.Println(
-						"skipping reconciliation because account updated",
-						types.PrintStruct(accountCurrency.Account),
-					)
-				}
+				r.debugLog(
+					"skipping reconciliation because account %s updated",
+					types.PrintStruct(accountCurrency.Account),
+				)
 
 				return r.handler.ReconciliationSkipped(
 					ctx,
@@ -765,11 +767,9 @@ func (r *Reconciler) reconcileActiveAccounts(
 			return ctx.Err()
 		case balanceChange := <-r.changeQueue:
 			if balanceChange.Block.Index < r.highWaterMark {
-				if r.debugLogging {
-					log.Println(
-						"waiting to continue active reconciliation until reaching high water mark...",
-					)
-				}
+				r.debugLog(
+					"waiting to continue active reconciliation until reaching high water mark...",
+				)
 
 				if err := r.handler.ReconciliationSkipped(
 					ctx,
@@ -794,12 +794,21 @@ func (r *Reconciler) reconcileActiveAccounts(
 				balanceChange.Block,
 			)
 			if errors.Is(err, ErrBlockGone) {
-				if r.debugLogging {
-					log.Println(
-						"err block gone...",
-						types.PrintStruct(balanceChange.Block),
-					)
+				r.debugLog(
+					"block %s gone",
+					types.PrintStruct(balanceChange.Block),
+				)
+
+				if err := r.handler.ReconciliationSkipped(
+					ctx,
+					ActiveReconciliation,
+					balanceChange.Account,
+					balanceChange.Currency,
+					BlockGone,
+				); err != nil {
+					return err
 				}
+
 				continue
 			}
 			if err != nil {
@@ -859,19 +868,15 @@ func (r *Reconciler) shouldAttemptInactiveReconciliation(
 	// When first start syncing, this loop may run before the genesis block is synced.
 	// If this is the case, we should sleep and try again later instead of exiting.
 	if err != nil {
-		if r.debugLogging {
-			log.Println("waiting to start intactive reconciliation until a block is synced...")
-		}
+		r.debugLog("waiting to start intactive reconciliation until a block is synced...")
 
 		return false, nil
 	}
 
 	if head.Index < r.highWaterMark {
-		if r.debugLogging {
-			log.Println(
-				"waiting to continue intactive reconciliation until reaching high water mark...",
-			)
-		}
+		r.debugLog(
+			"waiting to continue intactive reconciliation until reaching high water mark...",
+		)
 
 		return false, nil
 	}
@@ -901,11 +906,9 @@ func (r *Reconciler) reconcileInactiveAccounts(
 		queueLen := len(r.inactiveQueue)
 		if queueLen == 0 {
 			r.inactiveQueueMutex.Unlock()
-			if r.debugLogging {
-				log.Println(
-					"no accounts ready for inactive reconciliation (0 accounts in queue)",
-				)
-			}
+			r.debugLog(
+				"no accounts ready for inactive reconciliation (0 accounts in queue)",
+			)
 			time.Sleep(inactiveReconciliationSleep)
 			continue
 		}
@@ -954,13 +957,11 @@ func (r *Reconciler) reconcileInactiveAccounts(
 			}
 		} else {
 			r.inactiveQueueMutex.Unlock()
-			if r.debugLogging {
-				log.Printf(
-					"no accounts ready for inactive reconciliation (%d accounts in queue, will reconcile next account at index %d)\n",
-					queueLen,
-					nextValidIndex,
-				)
-			}
+			r.debugLog(
+				"no accounts ready for inactive reconciliation (%d accounts in queue, will reconcile next account at index %d)",
+				queueLen,
+				nextValidIndex,
+			)
 			time.Sleep(inactiveReconciliationSleep)
 		}
 	}
