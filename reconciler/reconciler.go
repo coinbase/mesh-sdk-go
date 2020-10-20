@@ -37,10 +37,33 @@ const (
 	// error message if reconciliation failed during inactive
 	// reconciliation.
 	InactiveReconciliation = "INACTIVE"
+)
 
+const (
+	// BlockGone is when the block where a reconciliation
+	// is supposed to happen is orphaned.
+	BlockGone = "BLOCK_GONE"
+
+	// AccountUpdated is when an account that is to be
+	// reconciled is updated after the block where the
+	// balance change occurs (this usually occurs
+	// in large backlogs).
+	AccountUpdated = "ACCOUNT_UPDATED"
+
+	// HeadBehind is when the synced tip (where balances
+	// were last computed) is behind the *types.BlockIdentifier
+	// returned by the call to /account/balance.
+	HeadBehind = "HEAD_BEHIND"
+
+	// BacklogFull is when the reconciliation backlog is full.
+	BacklogFull = "BACKLOG_FULL"
+)
+
+const (
 	// backlogThreshold is the limit of account lookups
 	// that can be enqueued to reconcile before new
 	// requests are dropped.
+	//
 	// TODO: Make configurable
 	backlogThreshold = 50000
 
@@ -144,6 +167,14 @@ type Handler interface {
 		block *types.BlockIdentifier,
 		exemption *types.BalanceExemption,
 	) error
+
+	ReconciliationSkipped(
+		ctx context.Context,
+		reconciliationType string,
+		account *types.AccountIdentifier,
+		currency *types.Currency,
+		cause string,
+	) error
 }
 
 // InactiveEntry is used to track the last
@@ -183,8 +214,8 @@ type Reconciler struct {
 	// it is useful to allocate more resources to
 	// active reconciliation as it is synchronous
 	// (when lookupBalanceByBlock is enabled).
-	activeConcurrency   int
-	inactiveConcurrency int
+	ActiveConcurrency   int
+	InactiveConcurrency int
 
 	// highWaterMark is used to skip requests when
 	// we are very far behind the live head.
@@ -221,8 +252,8 @@ func New(
 		handler:              handler,
 		parser:               p,
 		inactiveFrequency:    defaultInactiveFrequency,
-		activeConcurrency:    defaultReconcilerConcurrency,
-		inactiveConcurrency:  defaultReconcilerConcurrency,
+		ActiveConcurrency:    defaultReconcilerConcurrency,
+		InactiveConcurrency:  defaultReconcilerConcurrency,
 		highWaterMark:        -1,
 		seenAccounts:         map[string]struct{}{},
 		inactiveQueue:        []*InactiveEntry{},
@@ -238,18 +269,50 @@ func New(
 	return r
 }
 
+// TODO: replace with structured logging
+func (r *Reconciler) debugLog(
+	format string,
+	v ...interface{},
+) {
+	if r.debugLogging {
+		log.Printf(format+"\n", v...)
+	}
+}
+
 func (r *Reconciler) wrappedActiveEnqueue(
+	ctx context.Context,
 	change *parser.BalanceChange,
 ) {
 	select {
 	case r.changeQueue <- change:
 	default:
-		if r.debugLogging {
-			log.Printf(
-				"skipping active enqueue because backlog has %d items",
-				backlogThreshold,
-			)
+		r.debugLog(
+			"skipping active enqueue because backlog has %d items",
+			backlogThreshold,
+		)
+
+		if err := r.handler.ReconciliationSkipped(
+			ctx,
+			ActiveReconciliation,
+			change.Account,
+			change.Currency,
+			BacklogFull,
+		); err != nil {
+			log.Printf("%s: reconciliation skipped handling failed\n", err.Error())
 		}
+	}
+}
+
+func (r *Reconciler) wrappedInactiveEnqueue(
+	accountCurrency *AccountCurrency,
+	liveBlock *types.BlockIdentifier,
+) {
+	if err := r.inactiveAccountQueue(true, accountCurrency, liveBlock); err != nil {
+		log.Printf(
+			"%s: unable to queue account %s",
+			err.Error(),
+			types.PrintStruct(accountCurrency),
+		)
 	}
 }
 
@@ -288,13 +351,21 @@ func (r *Reconciler) QueueChanges(
 		})
 	}
 
-	// All changes will have the same block. Continue
-	// if we are too far behind to start reconciling.
-	if block.Index < r.highWaterMark {
-		return nil
-	}
-
 	for _, change := range balanceChanges {
+		// All changes will have the same block. Continue
+		// if we are too far behind to start reconciling.
+		if block.Index < r.highWaterMark {
+			if err := r.handler.ReconciliationSkipped(
+				ctx,
+				ActiveReconciliation,
+				change.Account,
+				change.Currency,
+				HeadBehind,
+			); err != nil {
+				return err
+			}
+		}
+
 		// Add all seen accounts to inactive reconciler queue.
 		//
 		// Note: accounts are only added if they have not been seen before.
@@ -306,7 +377,7 @@ func (r *Reconciler) QueueChanges(
 			return err
 		}
 
-		r.wrappedActiveEnqueue(change)
+		r.wrappedActiveEnqueue(ctx, change)
 	}
 
 	return nil
@@ -541,11 +612,11 @@ func (r *Reconciler) accountReconciliation(
 		Account:  account,
 		Currency: currency,
 	}
-	for {
-		if ctx.Err() != nil {
-			return ctx.Err()
-		}
-
+	reconciliationType := ActiveReconciliation
+	if inactive {
+		reconciliationType = InactiveReconciliation
+	}
+	for ctx.Err() == nil {
 		// If don't have previous balance because stateless, check diff on block
 		// instead of comparing entire computed balance
 		difference, computedBalance, headIndex, err := r.CompareBalance(
@@ -568,39 +639,61 @@ func (r *Reconciler) accountReconciliation(
 				}
 
 				// Don't wait to check if we are very far behind
-				if r.debugLogging {
-					log.Printf(
-						"Skipping reconciliation for %s: %d blocks behind\n",
-						types.PrettyPrintStruct(accountCurrency),
-						diff,
-					)
-				}
+				r.debugLog(
+					"Skipping reconciliation for %s: %d blocks behind",
+					types.PrettyPrintStruct(accountCurrency),
+					diff,
+				)
 
 				// Set a highWaterMark to not accept any new
 				// reconciliation requests unless they happened
 				// after this new highWaterMark.
 				r.highWaterMark = liveBlock.Index
-				break
+
+				return r.handler.ReconciliationSkipped(
+					ctx,
+					reconciliationType,
+					account,
+					currency,
+					HeadBehind,
+				)
 			}
 
 			if errors.Is(err, ErrBlockGone) {
 				// Either the block has not been processed in a re-org yet
 				// or the block was orphaned
-				break
+				r.debugLog(
+					"skipping reconciliation because block %s gone",
+					types.PrintStruct(liveBlock),
+				)
+
+				return r.handler.ReconciliationSkipped(
+					ctx,
+					reconciliationType,
+					account,
+					currency,
+					BlockGone,
+				)
 			}
 
 			if errors.Is(err, ErrAccountUpdated) {
 				// If account was updated, it must be
 				// enqueued again
-				break
+				r.debugLog(
+					"skipping reconciliation because account %s updated",
+					types.PrintStruct(accountCurrency.Account),
+				)
+
+				return r.handler.ReconciliationSkipped(
+					ctx,
+					reconciliationType,
+					account,
+					currency,
+					AccountUpdated,
+				)
 			}
 
 			return err
-		}
-
-		reconciliationType := ActiveReconciliation
-		if inactive {
-			reconciliationType = InactiveReconciliation
 		}
 
 		if difference != zeroString {
@@ -626,21 +719,7 @@ func (r *Reconciler) accountReconciliation(
 		)
 	}
 
-	// We return here if we gave up trying to reconcile an account.
-	return nil
-}
-
-func (r *Reconciler) wrappedInactiveEnqueue(
-	accountCurrency *AccountCurrency,
-	liveBlock *types.BlockIdentifier,
-) {
-	if err := r.inactiveAccountQueue(true, accountCurrency, liveBlock); err != nil {
-		log.Printf(
-			"%s: unable to queue account %s",
-			err.Error(),
-			types.PrintStruct(accountCurrency),
-		)
-	}
+	return ctx.Err()
 }
 
 func (r *Reconciler) inactiveAccountQueue(
@@ -669,22 +748,55 @@ func (r *Reconciler) inactiveAccountQueue(
 	return nil
 }
 
+func (r *Reconciler) updateLastChecked(index int64) {
+	// Update the lastIndexChecked value if the block
+	// index is greater. We don't acquire the lock
+	// to make this check to improve performance.
+	if index > r.lastIndexChecked {
+		r.lastIndexMutex.Lock()
+
+		// In the time since making the check and acquiring
+		// the lock, the lastIndexChecked could've increased
+		// so we check it again.
+		if index > r.lastIndexChecked {
+			r.lastIndexChecked = index
+		}
+
+		r.lastIndexMutex.Unlock()
+	}
+}
+
 // reconcileActiveAccounts selects an account
 // from the Reconciler account queue and
 // reconciles the balance. This is useful
 // for detecting if balance changes in operations
 // were correct.
-func (r *Reconciler) reconcileActiveAccounts(
-	ctx context.Context,
-) error {
+func (r *Reconciler) reconcileActiveAccounts(ctx context.Context) error { // nolint:gocognit
 	for {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		case balanceChange := <-r.changeQueue:
 			if balanceChange.Block.Index < r.highWaterMark {
+				r.debugLog(
+					"waiting to continue active reconciliation until reaching high water mark...",
+				)
+
+				if err := r.handler.ReconciliationSkipped(
+					ctx,
+					ActiveReconciliation,
+					balanceChange.Account,
+					balanceChange.Currency,
+					HeadBehind,
+				); err != nil {
+					return err
+				}
+
 				continue
 			}
+
+			// TODO: Skip reconciliation if account has been updated so we don't lookup
+			// balance unnecessarily
 
 			amount, block, err := r.bestLiveBalance(
 				ctx,
@@ -693,13 +805,28 @@ func (r *Reconciler) reconcileActiveAccounts(
 				balanceChange.Block,
 			)
 			if errors.Is(err, ErrBlockGone) {
+				r.debugLog(
+					"block %s gone",
+					types.PrintStruct(balanceChange.Block),
+				)
+
+				if err := r.handler.ReconciliationSkipped(
+					ctx,
+					ActiveReconciliation,
+					balanceChange.Account,
+					balanceChange.Currency,
+					BlockGone,
+				); err != nil {
+					return err
+				}
+
 				continue
 			}
 			if err != nil {
 				// Ensure we don't leak reconciliations if
 				// context is canceled.
 				if errors.Is(err, context.Canceled) {
-					r.wrappedActiveEnqueue(balanceChange)
+					r.wrappedActiveEnqueue(ctx, balanceChange)
 					return err
 				}
 
@@ -718,27 +845,13 @@ func (r *Reconciler) reconcileActiveAccounts(
 				// Ensure we don't leak reconciliations if
 				// context is canceled.
 				if errors.Is(err, context.Canceled) {
-					r.wrappedActiveEnqueue(balanceChange)
+					r.wrappedActiveEnqueue(ctx, balanceChange)
 				}
 
 				return err
 			}
 
-			// Update the lastIndexChecked value if the block
-			// index is greater. We don't acquire the lock
-			// to make this check to improve performance.
-			if balanceChange.Block.Index > r.lastIndexChecked {
-				r.lastIndexMutex.Lock()
-
-				// In the time since making the check and acquiring
-				// the lock, the lastIndexChecked could've increased
-				// so we check it again.
-				if balanceChange.Block.Index > r.lastIndexChecked {
-					r.lastIndexChecked = balanceChange.Block.Index
-				}
-
-				r.lastIndexMutex.Unlock()
-			}
+			r.updateLastChecked(balanceChange.Block.Index)
 		}
 	}
 }
@@ -752,19 +865,15 @@ func (r *Reconciler) shouldAttemptInactiveReconciliation(
 	// When first start syncing, this loop may run before the genesis block is synced.
 	// If this is the case, we should sleep and try again later instead of exiting.
 	if err != nil {
-		if r.debugLogging {
-			log.Println("waiting to start intactive reconciliation until a block is synced...")
-		}
+		r.debugLog("waiting to start intactive reconciliation until a block is synced...")
 
 		return false, nil
 	}
 
 	if head.Index < r.highWaterMark {
-		if r.debugLogging {
-			log.Println(
-				"waiting to continue intactive reconciliation until reaching high water mark...",
-			)
-		}
+		r.debugLog(
+			"waiting to continue intactive reconciliation until reaching high water mark...",
+		)
 
 		return false, nil
 	}
@@ -794,11 +903,9 @@ func (r *Reconciler) reconcileInactiveAccounts(
 		queueLen := len(r.inactiveQueue)
 		if queueLen == 0 {
 			r.inactiveQueueMutex.Unlock()
-			if r.debugLogging {
-				log.Println(
-					"no accounts ready for inactive reconciliation (0 accounts in queue)",
-				)
-			}
+			r.debugLog(
+				"no accounts ready for inactive reconciliation (0 accounts in queue)",
+			)
 			time.Sleep(inactiveReconciliationSleep)
 			continue
 		}
@@ -847,13 +954,11 @@ func (r *Reconciler) reconcileInactiveAccounts(
 			}
 		} else {
 			r.inactiveQueueMutex.Unlock()
-			if r.debugLogging {
-				log.Printf(
-					"no accounts ready for inactive reconciliation (%d accounts in queue, will reconcile next account at index %d)\n",
-					queueLen,
-					nextValidIndex,
-				)
-			}
+			r.debugLog(
+				"no accounts ready for inactive reconciliation (%d accounts in queue, will reconcile next account at index %d)",
+				queueLen,
+				nextValidIndex,
+			)
 			time.Sleep(inactiveReconciliationSleep)
 		}
 	}
@@ -863,13 +968,13 @@ func (r *Reconciler) reconcileInactiveAccounts(
 // If any goroutine errors, the function will return an error.
 func (r *Reconciler) Reconcile(ctx context.Context) error {
 	g, ctx := errgroup.WithContext(ctx)
-	for j := 0; j < r.activeConcurrency; j++ {
+	for j := 0; j < r.ActiveConcurrency; j++ {
 		g.Go(func() error {
 			return r.reconcileActiveAccounts(ctx)
 		})
 	}
 
-	for j := 0; j < r.inactiveConcurrency; j++ {
+	for j := 0; j < r.InactiveConcurrency; j++ {
 		g.Go(func() error {
 			return r.reconcileInactiveAccounts(ctx)
 		})
