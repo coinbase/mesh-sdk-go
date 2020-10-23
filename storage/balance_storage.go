@@ -343,6 +343,9 @@ func (b *BalanceStorage) ReconciliationCoverage(
 
 // existingValue finds the existing value for
 // a given *types.AccountIdentifier and *types.Currency.
+//
+// If there are matching balance exemptions,
+// we update the passed in existing value.
 func (b *BalanceStorage) existingValue(
 	ctx context.Context,
 	change *parser.BalanceChange,
@@ -350,18 +353,20 @@ func (b *BalanceStorage) existingValue(
 	existingValue string,
 	exemptions []*types.BalanceExemption,
 ) (string, error) {
+	exists := len(existingValue) > 0
+
 	// Don't attempt to use the helper if we are going to query the same
 	// block we are processing (causes the duplicate issue).
 	//
 	// We also ensure we don't exit with 0 if the value already exists,
 	// which could be true if balances are bootstrapped.
-	if len(existingValue) == 0 && parentBlock != nil && change.Block.Hash == parentBlock.Hash {
+	if !exists && parentBlock != nil && change.Block.Hash == parentBlock.Hash {
 		return "0", nil
 	}
 
 	// We can exit with the existing value if there are no
 	// applicable exemptions.
-	if len(existingValue) > 0 && len(exemptions) == 0 {
+	if exists && len(exemptions) == 0 {
 		return existingValue, nil
 	}
 
@@ -383,7 +388,7 @@ func (b *BalanceStorage) existingValue(
 	}
 
 	// Nothing to compare, so should return.
-	if len(existingValue) == 0 {
+	if !exists {
 		return amount.Value, nil
 	}
 
