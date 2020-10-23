@@ -132,7 +132,7 @@ func TestBalance(t *testing.T) {
 		}
 		newBlock2 = &types.BlockIdentifier{
 			Hash:  "pkdasdj",
-			Index: 123890,
+			Index: 123891,
 		}
 		result = &types.Amount{
 			Value:    "200",
@@ -140,11 +140,11 @@ func TestBalance(t *testing.T) {
 		}
 		newBlock3 = &types.BlockIdentifier{
 			Hash:  "pkdgdj",
-			Index: 123891,
+			Index: 123892,
 		}
 		newBlock4 = &types.BlockIdentifier{
 			Hash:  "asdjkajsdk",
-			Index: 123892,
+			Index: 123893,
 		}
 		largeDeduction = &types.Amount{
 			Value:    "-1000",
@@ -205,16 +205,12 @@ func TestBalance(t *testing.T) {
 
 	t.Run("Set and get balance", func(t *testing.T) {
 		txn := storage.db.NewDatabaseTransaction(ctx, true)
-		err := storage.UpdateBalance(
+		err := storage.SetBalance(
 			ctx,
 			txn,
-			&parser.BalanceChange{
-				Account:    account,
-				Currency:   currency,
-				Block:      newBlock,
-				Difference: amount.Value,
-			},
-			nil,
+			account,
+			amount,
+			newBlock,
 		)
 		assert.NoError(t, err)
 		assert.NoError(t, txn.Commit(ctx))
