@@ -449,12 +449,10 @@ func (b *BalanceStorage) UpdateBalance(
 		)
 		switch {
 		case errors.Is(err, errAccountMissing):
-			fmt.Println("account missing", balance, lastUpdate)
 			storedValue = "0"
 		case err != nil:
 			return err
 		default:
-			fmt.Println("account exists", balance.Value)
 			storedValue = balance.Value
 		}
 
@@ -482,14 +480,10 @@ func (b *BalanceStorage) UpdateBalance(
 		return err
 	}
 
-	fmt.Println("existing value", existingValue)
-
 	newVal, err := types.AddValues(change.Difference, existingValue)
 	if err != nil {
 		return err
 	}
-
-	fmt.Println("new val", newVal)
 
 	bigNewVal, ok := new(big.Int).SetString(newVal, 10)
 	if !ok {
@@ -590,7 +584,6 @@ func (b *BalanceStorage) GetBalanceTransactional(
 	// we fetch the balance from the node for the given height and persist
 	// it. This is particularly useful when monitoring interesting accounts.
 	if !exists {
-		fmt.Println("doesn't exist")
 		amount, err := b.helper.AccountBalance(ctx, account, currency, block)
 		if err != nil {
 			return nil, fmt.Errorf("%w: unable to get account balance from helper", err)
@@ -632,7 +625,6 @@ func (b *BalanceStorage) GetBalanceTransactional(
 		return nil, err
 	}
 
-	fmt.Println("historical balance", amount)
 	return amount, nil
 }
 
@@ -824,7 +816,6 @@ func (b *BalanceStorage) getHistoricalBalance(
 		GetHistoricalBalancePrefix(account, currency),
 		GetHistoricalBalanceKey(account, currency, block.Index),
 		func(k []byte, v []byte) error {
-			fmt.Println(string(k))
 			var deserialBal balanceEntry
 			// We should not reclaim memory during a scan!!
 			err := b.db.Encoder().Decode(historicalBalanceNamespace, v, &deserialBal, false)
