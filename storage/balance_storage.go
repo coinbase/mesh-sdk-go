@@ -33,6 +33,10 @@ var _ BlockWorker = (*BalanceStorage)(nil)
 const (
 	// balanceNamespace is prepended to any stored balance.
 	balanceNamespace = "balance"
+
+	// historicalBalanceNamespace is prepended to any stored
+	// historical balance.
+	historicalBalanceNamespace = "hbalance"
 )
 
 var (
@@ -54,7 +58,7 @@ func GetBalanceKey(account *types.AccountIdentifier, currency *types.Currency) [
 // GetBalanceKeyHistorical returns a deterministic hash of an types.Account + types.Currency + block index.
 func GetBalanceKeyHistorical(account *types.AccountIdentifier, currency *types.Currency, blockIndex int64) []byte {
 	return []byte(
-		fmt.Sprintf("%s/%s/%s/%020d", balanceNamespace, types.Hash(account), types.Hash(currency), blockIndex),
+		fmt.Sprintf("%s/%s/%s/%020d", historicalBalanceNamespace, types.Hash(account), types.Hash(currency), blockIndex),
 	)
 }
 

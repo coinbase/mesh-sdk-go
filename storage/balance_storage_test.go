@@ -588,9 +588,12 @@ func TestBalance(t *testing.T) {
 		assert.NoError(t, err)
 		assert.NoError(t, txn.Commit(ctx))
 
-		retrievedAmount, err := storage.GetBalance(ctx, account, currency, newBlock3)
+		retrievedAmount, err := storage.GetBalance(ctx, account, largeDeduction.Currency, newBlock3)
 		assert.NoError(t, err)
-		assert.Equal(t, result, retrievedAmount)
+		assert.Equal(t, &types.Amount{
+			Value:    "1200",
+			Currency: largeDeduction.Currency,
+		}, retrievedAmount)
 	})
 }
 
@@ -708,6 +711,11 @@ func TestBootstrapBalances(t *testing.T) {
 			Hash:  "0",
 		}
 
+		newBlock = &types.BlockIdentifier{
+			Index: 1,
+			Hash:  "1",
+		}
+
 		account = &types.AccountIdentifier{
 			Address: "hello",
 		}
@@ -785,10 +793,10 @@ func TestBootstrapBalances(t *testing.T) {
 			&parser.BalanceChange{
 				Account:    account,
 				Currency:   amount.Currency,
-				Block:      genesisBlockIdentifier,
+				Block:      newBlock,
 				Difference: "100",
 			},
-			genesisBlockIdentifier,
+			newBlock,
 		)
 		assert.NoError(t, err)
 		assert.NoError(t, txn.Commit(ctx))
@@ -797,7 +805,7 @@ func TestBootstrapBalances(t *testing.T) {
 			ctx,
 			account,
 			amount.Currency,
-			genesisBlockIdentifier,
+			newBlock,
 		)
 
 		assert.Equal(t, "110", retrievedAmount.Value)
