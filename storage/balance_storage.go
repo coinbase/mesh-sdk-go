@@ -166,7 +166,8 @@ type balanceEntry struct {
 }
 
 // SetBalance allows a client to set the balance of an account in a database
-// transaction. This is particularly useful for bootstrapping balances.
+// transaction (removing all historical states). This is particularly useful
+// for bootstrapping balances.
 func (b *BalanceStorage) SetBalance(
 	ctx context.Context,
 	dbTransaction DatabaseTransaction,
@@ -174,6 +175,17 @@ func (b *BalanceStorage) SetBalance(
 	amount *types.Amount,
 	block *types.BlockIdentifier,
 ) error {
+	// Remove all historical records
+	if err := b.removeHistoricalBalances(
+		ctx,
+		dbTransaction,
+		account,
+		amount.Currency,
+		-1,
+	); err != nil {
+		return err
+	}
+
 	serialBal, err := b.db.Encoder().Encode(balanceNamespace, balanceEntry{
 		Account: account,
 		Amount:  amount,
@@ -413,6 +425,8 @@ func (b *BalanceStorage) UpdateBalance(
 		return err
 	}
 
+	fmt.Println("new val", newVal)
+
 	bigNewVal, ok := new(big.Int).SetString(newVal, 10)
 	if !ok {
 		return fmt.Errorf("%s is not an integer", newVal)
@@ -430,7 +444,10 @@ func (b *BalanceStorage) UpdateBalance(
 	}
 
 	// Remove any historical state balances keys >= change.BlockIndex
+	var orphanEvent bool
 	if exists && balEntry.Block.Index >= change.Block.Index {
+		fmt.Println("orphan event", types.PrintStruct(balEntry), change.Block.Index)
+		orphanEvent = true
 		if err := b.removeHistoricalBalances(
 			ctx,
 			dbTransaction,
@@ -451,15 +468,16 @@ func (b *BalanceStorage) UpdateBalance(
 		Block: change.Block,
 	}
 
-	// Add a new historical record
-	if !exists || balEntry.Block.Index < change.Block.Index {
+	// Add a new historical record if balance change is not
+	// the result of an orphan.
+	if !orphanEvent {
 		serialBal, err := b.db.Encoder().Encode(balanceNamespace, newEntry)
 		if err != nil {
 			return err
 		}
 
-		key = GetBalanceKeyHistorical(change.Account, change.Currency, change.Block.Index)
-		if err := dbTransaction.Set(ctx, key, serialBal, true); err != nil {
+		historicalKey := GetBalanceKeyHistorical(change.Account, change.Currency, change.Block.Index)
+		if err := dbTransaction.Set(ctx, historicalKey, serialBal, true); err != nil {
 			return err
 		}
 	}
@@ -518,21 +536,6 @@ func (b *BalanceStorage) GetBalanceTransactional(
 ) (*types.Amount, error) {
 	// TODO: if block > head block, should return an error
 
-	// TODO: nil block == current block
-	// -> use balance record
-
-	// TODO: Need to pad 0s to front of index to ensure sorting works correctly
-	// account hash/padded index
-
-	// TODO: Need to remove balance states during a reorg
-
-	// TODO: Need to do a reverse scan in badger otherwise we will always get
-	// the balance after the height we desire
-
-	// TODO: Prune historical states?
-
-	// TODO: Keep current balance
-
 	key := GetBalanceKey(account, currency)
 	exists, _, err := dbTx.Get(ctx, key)
 	if err != nil {
@@ -544,6 +547,7 @@ func (b *BalanceStorage) GetBalanceTransactional(
 	// we fetch the balance from the node for the given height and persist
 	// it. This is particularly useful when monitoring interesting accounts.
 	if !exists {
+		fmt.Println("doesn't exist")
 		amount, err := b.helper.AccountBalance(ctx, account, currency, block)
 		if err != nil {
 			return nil, fmt.Errorf("%w: unable to get account balance from helper", err)
@@ -585,6 +589,7 @@ func (b *BalanceStorage) GetBalanceTransactional(
 		return nil, err
 	}
 
+	fmt.Println("historical balance", amount)
 	return amount, nil
 }
 
@@ -774,6 +779,7 @@ func (b *BalanceStorage) getHistoricalBalance(
 		ctx,
 		GetBalanceKeyHistorical(account, currency, block.Index),
 		func(k []byte, v []byte) error {
+			fmt.Println(string(k))
 			var deserialBal balanceEntry
 			// We should not reclaim memory during a scan!!
 			err := b.db.Encoder().Decode(balanceNamespace, v, &deserialBal, false)
@@ -802,7 +808,7 @@ func (b *BalanceStorage) getHistoricalBalance(
 		true,
 	)
 	if errors.Is(err, errAccountFound) {
-		return foundAmount, foundBlock, err
+		return foundAmount, foundBlock, nil
 	}
 	if err != nil {
 		return nil, nil, fmt.Errorf("%w: database scan failed", err)
