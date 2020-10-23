@@ -43,6 +43,7 @@ type DatabaseTransaction interface {
 		[]byte,
 		func([]byte, []byte) error,
 		bool, // log entries
+		bool, // reverse == true means greatest to least
 	) (int, error)
 
 	Commit(context.Context) error

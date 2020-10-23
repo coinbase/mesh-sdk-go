@@ -431,10 +431,12 @@ func (b *BadgerTransaction) Scan(
 	prefix []byte,
 	worker func([]byte, []byte) error,
 	logEntries bool,
+	reverse bool, // reverse == true means greatest to least
 ) (int, error) {
 	entries := 0
 	opts := badger.DefaultIteratorOptions
 	opts.PrefetchValues = false
+	opts.Reverse = reverse
 	it := b.txn.NewIterator(opts)
 	defer it.Close()
 	for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
@@ -554,6 +556,7 @@ func recompress(
 			return nil
 		},
 		true,
+		false,
 	)
 	if err != nil {
 		return -1, -1, fmt.Errorf("%w: %v", ErrRecompressFailed, err)
@@ -633,6 +636,7 @@ func BadgerTrain(
 			return nil
 		},
 		true,
+		false,
 	)
 	if err != nil && !errors.Is(err, ErrMaxEntries) {
 		return -1, -1, fmt.Errorf("%w for %s: %v", ErrScanFailed, namespace, err)

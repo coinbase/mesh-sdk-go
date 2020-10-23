@@ -151,6 +151,7 @@ func TestDatabase(t *testing.T) {
 						return nil
 					},
 					false,
+					false,
 				)
 				assert.NoError(t, err)
 				assert.Equal(t, 100, numValues)

@@ -181,6 +181,7 @@ func (k *KeyStorage) GetAllAccountsTransactional(
 			return nil
 		},
 		false,
+		false,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrKeyScanFailed, err)
