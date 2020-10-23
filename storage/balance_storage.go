@@ -534,7 +534,7 @@ func (b *BalanceStorage) GetBalanceTransactional(
 	// TODO: Keep current balance
 
 	key := GetBalanceKey(account, currency)
-	exists, bal, err := dbTx.Get(ctx, key)
+	exists, _, err := dbTx.Get(ctx, key)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -563,13 +563,29 @@ func (b *BalanceStorage) GetBalanceTransactional(
 		return amount, block, nil
 	}
 
-	var popBal balanceEntry
-	err = b.db.Encoder().Decode(balanceNamespace, bal, &popBal, true)
+	amount, _, err := b.getHistoricalBalance(
+		ctx,
+		dbTx,
+		account,
+		currency,
+		block,
+	)
+	// If account record exists but we don't
+	// find any records for the index, we assume
+	// the balance to be 0 (i.e. before any balance
+	// changes applied). If syncing starts after
+	// genesis, this behavior could cause issues.
+	if errors.Is(err, errAccountMissing) {
+		return &types.Amount{
+			Value:    "0",
+			Currency: currency,
+		}, block, nil
+	}
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return popBal.Amount, popBal.Block, nil
+	return amount, block, nil
 }
 
 // BootstrapBalance represents a balance of
@@ -770,7 +786,7 @@ func (b *BalanceStorage) getHistoricalBalance(
 			}
 
 			// Ensure block hash matches in case of orphan
-			if deserialBal.Block.Hash != block.Hash {
+			if deserialBal.Block.Index == block.Index && deserialBal.Block.Hash != block.Hash {
 				return fmt.Errorf(
 					"wanted block identifier %s but got %s",
 					types.PrintStruct(block),
