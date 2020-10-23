@@ -429,6 +429,7 @@ func (b *BadgerTransaction) Delete(ctx context.Context, key []byte) error {
 func (b *BadgerTransaction) Scan(
 	ctx context.Context,
 	prefix []byte,
+	seekStart []byte,
 	worker func([]byte, []byte) error,
 	logEntries bool,
 	reverse bool, // reverse == true means greatest to least
@@ -439,7 +440,7 @@ func (b *BadgerTransaction) Scan(
 	opts.Reverse = reverse
 	it := b.txn.NewIterator(opts)
 	defer it.Close()
-	for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
+	for it.Seek(seekStart); it.ValidForPrefix(prefix); it.Next() {
 		item := it.Item()
 		k := item.Key()
 		err := item.Value(func(v []byte) error {
@@ -540,6 +541,7 @@ func recompress(
 	_, err := txn.Scan(
 		ctx,
 		[]byte(restrictedNamespace),
+		[]byte(restrictedNamespace),
 		func(k []byte, v []byte) error {
 			decompressed, err := badgerDb.Encoder().DecodeRaw(namespace, v)
 			if err != nil {
@@ -612,6 +614,7 @@ func BadgerTrain(
 	defer txn.Discard(ctx)
 	_, err = txn.Scan(
 		ctx,
+		[]byte(restrictedNamespace),
 		[]byte(restrictedNamespace),
 		func(k []byte, v []byte) error {
 			decompressedSize, diskSize, err := decompressAndSave(

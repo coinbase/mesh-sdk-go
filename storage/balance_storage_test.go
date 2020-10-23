@@ -218,6 +218,10 @@ func TestBalance(t *testing.T) {
 		retrievedAmount, err := storage.GetBalance(ctx, account, currency, newBlock)
 		assert.NoError(t, err)
 		assert.Equal(t, amount, retrievedAmount)
+
+		retrievedAmount, err = storage.GetBalance(ctx, account, currency, newBlock2)
+		assert.NoError(t, err)
+		assert.Equal(t, amount, retrievedAmount)
 	})
 
 	t.Run("Set and get balance with storage helper", func(t *testing.T) {
@@ -267,7 +271,7 @@ func TestBalance(t *testing.T) {
 
 	t.Run("Modify existing balance", func(t *testing.T) {
 		txn := storage.db.NewDatabaseTransaction(ctx, true)
-		err := storage.UpdateBalance(
+		err = storage.UpdateBalance(
 			ctx,
 			txn,
 			&parser.BalanceChange{
@@ -580,38 +584,45 @@ func TestBalance(t *testing.T) {
 			&parser.BalanceChange{
 				Account:    account,
 				Currency:   largeDeduction.Currency,
-				Block:      newBlock3,
+				Block:      newBlock2,
 				Difference: new(big.Int).Neg(orphanValue).String(),
 			},
 			nil,
 		)
-		assert.NoError(t, err)
-		assert.NoError(t, txn.Commit(ctx))
+		assert.Error(t, err)
+		txn.Discard(ctx)
 
 		retrievedAmount, err := storage.GetBalance(ctx, account, largeDeduction.Currency, newBlock3)
 		assert.NoError(t, err)
 		assert.Equal(t, &types.Amount{
-			Value:    "1200",
+			Value:    "200",
 			Currency: largeDeduction.Currency,
 		}, retrievedAmount)
 	})
 
 	t.Run("orphan balance correctly", func(t *testing.T) {
+		retrievedAmount, err := storage.GetBalance(ctx, account, largeDeduction.Currency, newBlock)
+		assert.NoError(t, err)
+		assert.Equal(t, &types.Amount{
+			Value:    "100",
+			Currency: largeDeduction.Currency,
+		}, retrievedAmount)
+
 		txn := storage.db.NewDatabaseTransaction(ctx, true)
-		err := storage.OrphanBalance(
+		err = storage.OrphanBalance(
 			ctx,
 			txn,
 			account,
 			largeDeduction.Currency,
-			newBlock3,
+			newBlock2,
 		)
 		assert.NoError(t, err)
 		assert.NoError(t, txn.Commit(ctx))
 
-		retrievedAmount, err := storage.GetBalance(ctx, account, largeDeduction.Currency, newBlock3)
+		retrievedAmount, err = storage.GetBalance(ctx, account, largeDeduction.Currency, newBlock3)
 		assert.NoError(t, err)
 		assert.Equal(t, &types.Amount{
-			Value:    "1200",
+			Value:    "100",
 			Currency: largeDeduction.Currency,
 		}, retrievedAmount)
 	})

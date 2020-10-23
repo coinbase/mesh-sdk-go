@@ -40,7 +40,8 @@ type DatabaseTransaction interface {
 
 	Scan(
 		context.Context,
-		[]byte,
+		[]byte, // prefix restriction
+		[]byte, // seek start
 		func([]byte, []byte) error,
 		bool, // log entries
 		bool, // reverse == true means greatest to least

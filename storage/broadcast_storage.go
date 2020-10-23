@@ -359,6 +359,7 @@ func (b *BroadcastStorage) getAllBroadcasts(
 	_, err := dbTx.Scan(
 		ctx,
 		[]byte(namespace),
+		[]byte(namespace),
 		func(k []byte, v []byte) error {
 			var broadcast Broadcast
 			// We should not reclaim memory during a scan!!

@@ -136,6 +136,7 @@ func TestDatabase(t *testing.T) {
 				numValues, err := txn.Scan(
 					ctx,
 					[]byte("test/"),
+					[]byte("test/"),
 					func(k []byte, v []byte) error {
 						thisK := make([]byte, len(k))
 						thisV := make([]byte, len(v))
