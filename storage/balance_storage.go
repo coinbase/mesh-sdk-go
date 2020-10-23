@@ -55,17 +55,34 @@ func GetAccountKey(account *types.AccountIdentifier, currency *types.Currency) [
 	)
 }
 
-// GetHistoricalBalanceKey returns a deterministic hash of an types.Account + types.Currency + block index.
-func GetHistoricalBalanceKey(account *types.AccountIdentifier, currency *types.Currency, blockIndex int64) []byte {
+// GetHistoricalBalanceKey returns a deterministic hash of an types.Account + types.Currency + block
+// index.
+func GetHistoricalBalanceKey(
+	account *types.AccountIdentifier,
+	currency *types.Currency,
+	blockIndex int64,
+) []byte {
 	return []byte(
-		fmt.Sprintf("%s/%s/%s/%020d", historicalBalanceNamespace, types.Hash(account), types.Hash(currency), blockIndex),
+		fmt.Sprintf(
+			"%s/%s/%s/%020d",
+			historicalBalanceNamespace,
+			types.Hash(account),
+			types.Hash(currency),
+			blockIndex,
+		),
 	)
 }
 
-// GetHistoricalBalancePrefix returns a deterministic hash of an types.Account + types.Currency to limit scan results.
+// GetHistoricalBalancePrefix returns a deterministic hash of an types.Account + types.Currency to
+// limit scan results.
 func GetHistoricalBalancePrefix(account *types.AccountIdentifier, currency *types.Currency) []byte {
 	return []byte(
-		fmt.Sprintf("%s/%s/%s/", historicalBalanceNamespace, types.Hash(account), types.Hash(currency)),
+		fmt.Sprintf(
+			"%s/%s/%s/",
+			historicalBalanceNamespace,
+			types.Hash(account),
+			types.Hash(currency),
+		),
 	)
 }
 
