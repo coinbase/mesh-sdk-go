@@ -192,12 +192,14 @@ func getAndDecodeCoins(
 	_, err := transaction.Scan(
 		ctx,
 		getCoinAccountPrefix(accountIdentifier),
+		getCoinAccountPrefix(accountIdentifier),
 		func(k []byte, v []byte) error {
 			vals := strings.Split(string(k), "/")
 			coinIdentifier := vals[len(vals)-1]
 			coins[coinIdentifier] = struct{}{}
 			return nil
 		},
+		false,
 		false,
 	)
 	if err != nil {
