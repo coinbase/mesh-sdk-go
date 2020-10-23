@@ -370,6 +370,7 @@ func (b *BroadcastStorage) getAllBroadcasts(
 			return nil
 		},
 		false,
+		false,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrBroadcastScanFailed, err)

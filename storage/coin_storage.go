@@ -199,6 +199,7 @@ func getAndDecodeCoins(
 			return nil
 		},
 		false,
+		false,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrAccountCoinQueryFailed, err)

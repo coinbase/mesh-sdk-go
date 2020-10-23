@@ -40,9 +40,16 @@ const (
 */
 
 // GetBalanceKey returns a deterministic hash of an types.Account + types.Currency.
-func GetBalanceKey(account *types.AccountIdentifier, currency *types.Currency) (string, []byte) {
-	return balanceNamespace, []byte(
+func GetBalanceKey(account *types.AccountIdentifier, currency *types.Currency) []byte {
+	return []byte(
 		fmt.Sprintf("%s/%s/%s", balanceNamespace, types.Hash(account), types.Hash(currency)),
+	)
+}
+
+// GetBalanceKeyHistorical returns a deterministic hash of an types.Account + types.Currency + block index.
+func GetBalanceKeyHistorical(account *types.AccountIdentifier, currency *types.Currency, blockIndex int64) []byte {
+	return []byte(
+		fmt.Sprintf("%s/%s/%s/%020d", balanceNamespace, types.Hash(account), types.Hash(currency), blockIndex),
 	)
 }
 
@@ -162,9 +169,7 @@ func (b *BalanceStorage) SetBalance(
 	amount *types.Amount,
 	block *types.BlockIdentifier,
 ) error {
-	namespace, key := GetBalanceKey(account, amount.Currency)
-
-	serialBal, err := b.db.Encoder().Encode(namespace, balanceEntry{
+	serialBal, err := b.db.Encoder().Encode(balanceNamespace, balanceEntry{
 		Account: account,
 		Amount:  amount,
 		Block:   block,
@@ -173,6 +178,14 @@ func (b *BalanceStorage) SetBalance(
 		return err
 	}
 
+	// Set current record
+	key := GetBalanceKey(account, amount.Currency)
+	if err := dbTransaction.Set(ctx, key, serialBal, false); err != nil {
+		return err
+	}
+
+	// Set historical record
+	key = GetBalanceKeyHistorical(account, amount.Currency, block.Index)
 	if err := dbTransaction.Set(ctx, key, serialBal, true); err != nil {
 		return err
 	}
@@ -192,7 +205,7 @@ func (b *BalanceStorage) Reconciled(
 	dbTransaction := b.db.NewDatabaseTransaction(ctx, true)
 	defer dbTransaction.Discard(ctx)
 
-	namespace, key := GetBalanceKey(account, currency)
+	key := GetBalanceKey(account, currency)
 	exists, balance, err := dbTransaction.Get(ctx, key)
 	if err != nil {
 		return fmt.Errorf(
@@ -212,7 +225,7 @@ func (b *BalanceStorage) Reconciled(
 	}
 
 	var bal balanceEntry
-	if err := b.db.Encoder().Decode(namespace, balance, &bal, true); err != nil {
+	if err := b.db.Encoder().Decode(balanceNamespace, balance, &bal, true); err != nil {
 		return fmt.Errorf("%w: unable to decode balance entry", err)
 	}
 
@@ -225,7 +238,7 @@ func (b *BalanceStorage) Reconciled(
 
 	bal.LastReconciled = block
 
-	serialBal, err := b.db.Encoder().Encode(namespace, bal)
+	serialBal, err := b.db.Encoder().Encode(balanceNamespace, bal)
 	if err != nil {
 		return fmt.Errorf("%w: unable to encod balance entry", err)
 	}
@@ -276,7 +289,6 @@ func (b *BalanceStorage) existingValue(
 	ctx context.Context,
 	change *parser.BalanceChange,
 	parentBlock *types.BlockIdentifier,
-	namespace string,
 	balance []byte,
 	exists bool,
 	exemptions []*types.BalanceExemption,
@@ -293,7 +305,7 @@ func (b *BalanceStorage) existingValue(
 	var existingValue string
 	if exists {
 		var bal balanceEntry
-		err := b.db.Encoder().Decode(namespace, balance, &bal, true)
+		err := b.db.Encoder().Decode(balanceNamespace, balance, &bal, true)
 		if err != nil {
 			return "", err
 		}
@@ -365,7 +377,7 @@ func (b *BalanceStorage) UpdateBalance(
 	}
 
 	// Get existing balance on key
-	namespace, key := GetBalanceKey(change.Account, change.Currency)
+	key := GetBalanceKey(change.Account, change.Currency)
 	exists, balance, err := dbTransaction.Get(ctx, key)
 	if err != nil {
 		return err
@@ -381,7 +393,6 @@ func (b *BalanceStorage) UpdateBalance(
 		ctx,
 		change,
 		parentBlock,
-		namespace,
 		balance,
 		exists,
 		exemptions,
@@ -411,7 +422,7 @@ func (b *BalanceStorage) UpdateBalance(
 		)
 	}
 
-	serialBal, err := b.db.Encoder().Encode(namespace, balanceEntry{
+	serialBal, err := b.db.Encoder().Encode(balanceNamespace, balanceEntry{
 		Account: change.Account,
 		Amount: &types.Amount{
 			Value:    newVal,
@@ -427,6 +438,8 @@ func (b *BalanceStorage) UpdateBalance(
 		return err
 	}
 
+	// TODO: Remove any historical state balances keys greater than change.BlockIndex
+
 	return nil
 }
 
@@ -436,14 +449,14 @@ func (b *BalanceStorage) GetBalance(
 	ctx context.Context,
 	account *types.AccountIdentifier,
 	currency *types.Currency,
-	headBlock *types.BlockIdentifier,
+	block *types.BlockIdentifier,
 ) (*types.Amount, *types.BlockIdentifier, error) {
 	// We use a write-ready transaction here in case we need to
 	// inject a non-existent balance into storage.
 	dbTx := b.db.NewDatabaseTransaction(ctx, true)
 	defer dbTx.Discard(ctx)
 
-	amount, headBlock, err := b.GetBalanceTransactional(ctx, dbTx, account, currency, headBlock)
+	amount, computedBlock, err := b.GetBalanceTransactional(ctx, dbTx, account, currency, block)
 	if err != nil {
 		return nil, nil, fmt.Errorf("%w: unable to get balance", err)
 	}
@@ -453,7 +466,7 @@ func (b *BalanceStorage) GetBalance(
 		return nil, nil, fmt.Errorf("%w: unable to commit account balance transaction", err)
 	}
 
-	return amount, headBlock, nil
+	return amount, computedBlock, nil
 }
 
 // GetBalanceTransactional returns all the balances of a types.AccountIdentifier
@@ -463,9 +476,26 @@ func (b *BalanceStorage) GetBalanceTransactional(
 	dbTx DatabaseTransaction,
 	account *types.AccountIdentifier,
 	currency *types.Currency,
-	headBlock *types.BlockIdentifier,
+	block *types.BlockIdentifier,
 ) (*types.Amount, *types.BlockIdentifier, error) {
-	namespace, key := GetBalanceKey(account, currency)
+	// TODO: if block > head block, should return an error
+
+	// TODO: nil block == current block
+	// -> use balance record
+
+	// TODO: Need to pad 0s to front of index to ensure sorting works correctly
+	// account hash/padded index
+
+	// TODO: Need to remove balance states during a reorg
+
+	// TODO: Need to do a reverse scan in badger otherwise we will always get
+	// the balance after the height we desire
+
+	// TODO: Prune historical states?
+
+	// TODO: Keep current balance
+
+	key := GetBalanceKey(account, currency)
 	exists, bal, err := dbTx.Get(ctx, key)
 	if err != nil {
 		return nil, nil, err
@@ -476,7 +506,7 @@ func (b *BalanceStorage) GetBalanceTransactional(
 	// we fetch the balance from the node for the given height and persist
 	// it. This is particularly useful when monitoring interesting accounts.
 	if !exists {
-		amount, err := b.helper.AccountBalance(ctx, account, currency, headBlock)
+		amount, err := b.helper.AccountBalance(ctx, account, currency, block)
 		if err != nil {
 			return nil, nil, fmt.Errorf("%w: unable to get account balance from helper", err)
 		}
@@ -486,17 +516,17 @@ func (b *BalanceStorage) GetBalanceTransactional(
 			dbTx,
 			account,
 			amount,
-			headBlock,
+			block,
 		)
 		if err != nil {
 			return nil, nil, fmt.Errorf("%w: unable to set account balance", err)
 		}
 
-		return amount, headBlock, nil
+		return amount, block, nil
 	}
 
 	var popBal balanceEntry
-	err = b.db.Encoder().Decode(namespace, bal, &popBal, true)
+	err = b.db.Encoder().Decode(balanceNamespace, bal, &popBal, true)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -599,6 +629,7 @@ func (b *BalanceStorage) getAllBalanceEntries(
 			handler(deserialBal)
 			return nil
 		},
+		false,
 		false,
 	)
 	if err != nil {
