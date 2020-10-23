@@ -795,8 +795,46 @@ func (r *Reconciler) reconcileActiveAccounts(ctx context.Context) error { // nol
 				continue
 			}
 
-			// TODO: Skip reconciliation if account has been updated so we don't lookup
+			// Skip reconciliation if account has been updated so we don't lookup
 			// balance unnecessarily
+			head, err := r.helper.CurrentBlock(ctx)
+			if err != nil {
+				return fmt.Errorf(
+					"%w: %v",
+					ErrGetCurrentBlockFailed,
+					err,
+				)
+			}
+
+			_, computedBlock, err := r.helper.ComputedBalance(
+				ctx,
+				balanceChange.Account,
+				balanceChange.Currency,
+				head,
+			)
+			if err != nil {
+				return fmt.Errorf(
+					"%w for %+v:%+v: %v",
+					ErrGetComputedBalanceFailed,
+					balanceChange.Account,
+					balanceChange.Currency,
+					err,
+				)
+			}
+
+			if balanceChange.Block.Index < computedBlock.Index {
+				if err := r.handler.ReconciliationSkipped(
+					ctx,
+					ActiveReconciliation,
+					balanceChange.Account,
+					balanceChange.Currency,
+					AccountUpdated,
+				); err != nil {
+					return err
+				}
+
+				continue
+			}
 
 			amount, block, err := r.bestLiveBalance(
 				ctx,
