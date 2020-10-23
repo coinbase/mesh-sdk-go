@@ -31,18 +31,58 @@ import (
 var _ BlockWorker = (*BalanceStorage)(nil)
 
 const (
-	// balanceNamespace is prepended to any stored balance.
-	balanceNamespace = "balance"
+	// accountNamespace is prepended to any stored account.
+	accountNamespace = "account"
+
+	// historicalBalanceNamespace is prepended to any stored
+	// historical balance.
+	historicalBalanceNamespace = "balance"
+)
+
+var (
+	errAccountMissing = errors.New("account missing")
+	errAccountFound   = errors.New("account found")
 )
 
 /*
   Key Construction
 */
 
-// GetBalanceKey returns a deterministic hash of an types.Account + types.Currency.
-func GetBalanceKey(account *types.AccountIdentifier, currency *types.Currency) (string, []byte) {
-	return balanceNamespace, []byte(
-		fmt.Sprintf("%s/%s/%s", balanceNamespace, types.Hash(account), types.Hash(currency)),
+// GetAccountKey returns a deterministic hash of a types.Account + types.Currency.
+func GetAccountKey(account *types.AccountIdentifier, currency *types.Currency) []byte {
+	return []byte(
+		fmt.Sprintf("%s/%s/%s", accountNamespace, types.Hash(account), types.Hash(currency)),
+	)
+}
+
+// GetHistoricalBalanceKey returns a deterministic hash of a types.Account + types.Currency + block
+// index.
+func GetHistoricalBalanceKey(
+	account *types.AccountIdentifier,
+	currency *types.Currency,
+	blockIndex int64,
+) []byte {
+	return []byte(
+		fmt.Sprintf(
+			"%s/%s/%s/%020d",
+			historicalBalanceNamespace,
+			types.Hash(account),
+			types.Hash(currency),
+			blockIndex,
+		),
+	)
+}
+
+// GetHistoricalBalancePrefix returns a deterministic hash of a types.Account + types.Currency to
+// limit scan results.
+func GetHistoricalBalancePrefix(account *types.AccountIdentifier, currency *types.Currency) []byte {
+	return []byte(
+		fmt.Sprintf(
+			"%s/%s/%s/",
+			historicalBalanceNamespace,
+			types.Hash(account),
+			types.Hash(currency),
+		),
 	)
 }
 
@@ -136,7 +176,7 @@ func (b *BalanceStorage) RemovingBlock(
 	}
 
 	for _, change := range changes {
-		if err := b.UpdateBalance(ctx, transaction, change, block.BlockIdentifier); err != nil {
+		if err := b.OrphanBalance(ctx, transaction, change.Account, change.Currency, block.BlockIdentifier); err != nil {
 			return nil, err
 		}
 	}
@@ -147,14 +187,20 @@ func (b *BalanceStorage) RemovingBlock(
 }
 
 type balanceEntry struct {
+	Account *types.AccountIdentifier `json:"account"`
+	Amount  *types.Amount            `json:"amount"`
+	Block   *types.BlockIdentifier   `json:"block"`
+}
+
+type accountEntry struct {
 	Account        *types.AccountIdentifier `json:"account"`
-	Amount         *types.Amount            `json:"amount"`
-	Block          *types.BlockIdentifier   `json:"block"`
+	Currency       *types.Currency          `json:"currency"`
 	LastReconciled *types.BlockIdentifier   `json:"last_reconciled"`
 }
 
 // SetBalance allows a client to set the balance of an account in a database
-// transaction. This is particularly useful for bootstrapping balances.
+// transaction (removing all historical states). This is particularly useful
+// for bootstrapping balances.
 func (b *BalanceStorage) SetBalance(
 	ctx context.Context,
 	dbTransaction DatabaseTransaction,
@@ -162,9 +208,32 @@ func (b *BalanceStorage) SetBalance(
 	amount *types.Amount,
 	block *types.BlockIdentifier,
 ) error {
-	namespace, key := GetBalanceKey(account, amount.Currency)
+	// Remove all historical records
+	if err := b.removeHistoricalBalances(
+		ctx,
+		dbTransaction,
+		account,
+		amount.Currency,
+		-1,
+	); err != nil {
+		return err
+	}
 
-	serialBal, err := b.db.Encoder().Encode(namespace, balanceEntry{
+	serialAcc, err := b.db.Encoder().Encode(historicalBalanceNamespace, accountEntry{
+		Account:  account,
+		Currency: amount.Currency,
+	})
+	if err != nil {
+		return err
+	}
+
+	// Set current record
+	key := GetAccountKey(account, amount.Currency)
+	if err := dbTransaction.Set(ctx, key, serialAcc, true); err != nil {
+		return err
+	}
+
+	serialBal, err := b.db.Encoder().Encode(historicalBalanceNamespace, balanceEntry{
 		Account: account,
 		Amount:  amount,
 		Block:   block,
@@ -173,6 +242,8 @@ func (b *BalanceStorage) SetBalance(
 		return err
 	}
 
+	// Set historical record
+	key = GetHistoricalBalanceKey(account, amount.Currency, block.Index)
 	if err := dbTransaction.Set(ctx, key, serialBal, true); err != nil {
 		return err
 	}
@@ -192,8 +263,8 @@ func (b *BalanceStorage) Reconciled(
 	dbTransaction := b.db.NewDatabaseTransaction(ctx, true)
 	defer dbTransaction.Discard(ctx)
 
-	namespace, key := GetBalanceKey(account, currency)
-	exists, balance, err := dbTransaction.Get(ctx, key)
+	key := GetAccountKey(account, currency)
+	exists, acc, err := dbTransaction.Get(ctx, key)
 	if err != nil {
 		return fmt.Errorf(
 			"%w: unable to get balance entry for account %s:%s",
@@ -211,27 +282,27 @@ func (b *BalanceStorage) Reconciled(
 		)
 	}
 
-	var bal balanceEntry
-	if err := b.db.Encoder().Decode(namespace, balance, &bal, true); err != nil {
-		return fmt.Errorf("%w: unable to decode balance entry", err)
+	var accEntry accountEntry
+	if err := b.db.Encoder().Decode(accountNamespace, acc, &accEntry, true); err != nil {
+		return fmt.Errorf("%w: unable to decode account entry", err)
 	}
 
 	// Don't update last reconciled if the most recent reconciliation was
 	// lower than the last reconciliation. This can occur when inactive
 	// reconciliation gets ahead of the active reconciliation backlog.
-	if bal.LastReconciled != nil && bal.LastReconciled.Index > block.Index {
+	if accEntry.LastReconciled != nil && accEntry.LastReconciled.Index > block.Index {
 		return nil
 	}
 
-	bal.LastReconciled = block
+	accEntry.LastReconciled = block
 
-	serialBal, err := b.db.Encoder().Encode(namespace, bal)
+	serialAcc, err := b.db.Encoder().Encode(accountNamespace, accEntry)
 	if err != nil {
 		return fmt.Errorf("%w: unable to encod balance entry", err)
 	}
 
-	if err := dbTransaction.Set(ctx, key, serialBal, true); err != nil {
-		return fmt.Errorf("%w: unable to set balance entry", err)
+	if err := dbTransaction.Set(ctx, key, serialAcc, true); err != nil {
+		return fmt.Errorf("%w: unable to set account entry", err)
 	}
 
 	if err := dbTransaction.Commit(ctx); err != nil {
@@ -249,7 +320,7 @@ func (b *BalanceStorage) ReconciliationCoverage(
 ) (float64, error) {
 	seen := 0
 	validCoverage := 0
-	err := b.getAllBalanceEntries(ctx, func(entry balanceEntry) {
+	err := b.getAllAccountEntries(ctx, func(entry accountEntry) {
 		seen++
 		if entry.LastReconciled == nil {
 			return
@@ -260,7 +331,7 @@ func (b *BalanceStorage) ReconciliationCoverage(
 		}
 	})
 	if err != nil {
-		return -1, fmt.Errorf("%w: unable to get all balance entries", err)
+		return -1, fmt.Errorf("%w: unable to get all account entries", err)
 	}
 
 	if seen == 0 {
@@ -272,15 +343,18 @@ func (b *BalanceStorage) ReconciliationCoverage(
 
 // existingValue finds the existing value for
 // a given *types.AccountIdentifier and *types.Currency.
+//
+// If there are matching balance exemptions,
+// we update the passed in existing value.
 func (b *BalanceStorage) existingValue(
 	ctx context.Context,
 	change *parser.BalanceChange,
 	parentBlock *types.BlockIdentifier,
-	namespace string,
-	balance []byte,
-	exists bool,
+	existingValue string,
 	exemptions []*types.BalanceExemption,
 ) (string, error) {
+	exists := len(existingValue) > 0
+
 	// Don't attempt to use the helper if we are going to query the same
 	// block we are processing (causes the duplicate issue).
 	//
@@ -290,25 +364,19 @@ func (b *BalanceStorage) existingValue(
 		return "0", nil
 	}
 
-	var existingValue string
-	if exists {
-		var bal balanceEntry
-		err := b.db.Encoder().Decode(namespace, balance, &bal, true)
-		if err != nil {
-			return "", err
-		}
-
-		existingValue = bal.Amount.Value
-
-		// We can exit with the existing value if there are no
-		// applicable exemptions.
-		if len(exemptions) == 0 {
-			return existingValue, nil
-		}
+	// We can exit with the existing value if there are no
+	// applicable exemptions.
+	if exists && len(exemptions) == 0 {
+		return existingValue, nil
 	}
 
 	// Use helper to fetch existing balance.
-	amount, err := b.helper.AccountBalance(ctx, change.Account, change.Currency, parentBlock)
+	amount, err := b.helper.AccountBalance(
+		ctx,
+		change.Account,
+		change.Currency,
+		parentBlock,
+	)
 	if err != nil {
 		return "", fmt.Errorf(
 			"%w: unable to get previous account balance for %s %s at %s",
@@ -320,7 +388,7 @@ func (b *BalanceStorage) existingValue(
 	}
 
 	// Nothing to compare, so should return.
-	if len(existingValue) == 0 {
+	if !exists {
 		return amount.Value, nil
 	}
 
@@ -351,6 +419,25 @@ func (b *BalanceStorage) existingValue(
 	return amount.Value, nil
 }
 
+// OrphanBalance removes all saved
+// states for a *types.Account and *types.Currency
+// at blocks >= the provided block.
+func (b *BalanceStorage) OrphanBalance(
+	ctx context.Context,
+	dbTransaction DatabaseTransaction,
+	account *types.AccountIdentifier,
+	currency *types.Currency,
+	block *types.BlockIdentifier,
+) error {
+	return b.removeHistoricalBalances(
+		ctx,
+		dbTransaction,
+		account,
+		currency,
+		block.Index,
+	)
+}
+
 // UpdateBalance updates a types.AccountIdentifer
 // by a types.Amount and sets the account's most
 // recent accessed block.
@@ -364,11 +451,38 @@ func (b *BalanceStorage) UpdateBalance(
 		return errors.New("invalid currency")
 	}
 
-	// Get existing balance on key
-	namespace, key := GetBalanceKey(change.Account, change.Currency)
-	exists, balance, err := dbTransaction.Get(ctx, key)
+	// Get existing account key to determine if
+	// balance should be fetched.
+	key := GetAccountKey(change.Account, change.Currency)
+	exists, _, err := dbTransaction.Get(ctx, key)
 	if err != nil {
 		return err
+	}
+
+	var storedValue string
+	if exists {
+		// Get most recent historical balance
+		balance, lastUpdate, err := b.getHistoricalBalance(
+			ctx,
+			dbTransaction,
+			change.Account,
+			change.Currency,
+			change.Block,
+		)
+		switch {
+		case errors.Is(err, errAccountMissing):
+			storedValue = "0"
+		case err != nil:
+			return err
+		default:
+			storedValue = balance.Value
+		}
+
+		// Ensure the caller isn't trying to orphan balances by calling
+		// UpdateBalance.
+		if lastUpdate != nil && lastUpdate.Index >= change.Block.Index {
+			return errors.New("cannot update already updated balance")
+		}
 	}
 
 	// Find exemptions that are applicable to the *parser.BalanceChange
@@ -381,9 +495,7 @@ func (b *BalanceStorage) UpdateBalance(
 		ctx,
 		change,
 		parentBlock,
-		namespace,
-		balance,
-		exists,
+		storedValue,
 		exemptions,
 	)
 	if err != nil {
@@ -411,7 +523,22 @@ func (b *BalanceStorage) UpdateBalance(
 		)
 	}
 
-	serialBal, err := b.db.Encoder().Encode(namespace, balanceEntry{
+	// Add account entry if doesn't exist
+	if !exists {
+		serialAcc, err := b.db.Encoder().Encode(historicalBalanceNamespace, accountEntry{
+			Account:  change.Account,
+			Currency: change.Currency,
+		})
+		if err != nil {
+			return err
+		}
+		if err := dbTransaction.Set(ctx, key, serialAcc, true); err != nil {
+			return err
+		}
+	}
+
+	// Add a new historical record for the balance.
+	serialBal, err := b.db.Encoder().Encode(historicalBalanceNamespace, balanceEntry{
 		Account: change.Account,
 		Amount: &types.Amount{
 			Value:    newVal,
@@ -423,7 +550,8 @@ func (b *BalanceStorage) UpdateBalance(
 		return err
 	}
 
-	if err := dbTransaction.Set(ctx, key, serialBal, true); err != nil {
+	historicalKey := GetHistoricalBalanceKey(change.Account, change.Currency, change.Block.Index)
+	if err := dbTransaction.Set(ctx, historicalKey, serialBal, true); err != nil {
 		return err
 	}
 
@@ -436,24 +564,24 @@ func (b *BalanceStorage) GetBalance(
 	ctx context.Context,
 	account *types.AccountIdentifier,
 	currency *types.Currency,
-	headBlock *types.BlockIdentifier,
-) (*types.Amount, *types.BlockIdentifier, error) {
+	block *types.BlockIdentifier,
+) (*types.Amount, error) {
 	// We use a write-ready transaction here in case we need to
 	// inject a non-existent balance into storage.
 	dbTx := b.db.NewDatabaseTransaction(ctx, true)
 	defer dbTx.Discard(ctx)
 
-	amount, headBlock, err := b.GetBalanceTransactional(ctx, dbTx, account, currency, headBlock)
+	amount, err := b.GetBalanceTransactional(ctx, dbTx, account, currency, block)
 	if err != nil {
-		return nil, nil, fmt.Errorf("%w: unable to get balance", err)
+		return nil, fmt.Errorf("%w: unable to get balance", err)
 	}
 
 	// We commit any changes made during the balance lookup.
 	if err := dbTx.Commit(ctx); err != nil {
-		return nil, nil, fmt.Errorf("%w: unable to commit account balance transaction", err)
+		return nil, fmt.Errorf("%w: unable to commit account balance transaction", err)
 	}
 
-	return amount, headBlock, nil
+	return amount, nil
 }
 
 // GetBalanceTransactional returns all the balances of a types.AccountIdentifier
@@ -463,12 +591,14 @@ func (b *BalanceStorage) GetBalanceTransactional(
 	dbTx DatabaseTransaction,
 	account *types.AccountIdentifier,
 	currency *types.Currency,
-	headBlock *types.BlockIdentifier,
-) (*types.Amount, *types.BlockIdentifier, error) {
-	namespace, key := GetBalanceKey(account, currency)
-	exists, bal, err := dbTx.Get(ctx, key)
+	block *types.BlockIdentifier,
+) (*types.Amount, error) {
+	// TODO: if block > head block, should return an error
+
+	key := GetAccountKey(account, currency)
+	exists, _, err := dbTx.Get(ctx, key)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	// When beginning syncing from an arbitrary height, an account may
@@ -476,9 +606,9 @@ func (b *BalanceStorage) GetBalanceTransactional(
 	// we fetch the balance from the node for the given height and persist
 	// it. This is particularly useful when monitoring interesting accounts.
 	if !exists {
-		amount, err := b.helper.AccountBalance(ctx, account, currency, headBlock)
+		amount, err := b.helper.AccountBalance(ctx, account, currency, block)
 		if err != nil {
-			return nil, nil, fmt.Errorf("%w: unable to get account balance from helper", err)
+			return nil, fmt.Errorf("%w: unable to get account balance from helper", err)
 		}
 
 		err = b.SetBalance(
@@ -486,22 +616,38 @@ func (b *BalanceStorage) GetBalanceTransactional(
 			dbTx,
 			account,
 			amount,
-			headBlock,
+			block,
 		)
 		if err != nil {
-			return nil, nil, fmt.Errorf("%w: unable to set account balance", err)
+			return nil, fmt.Errorf("%w: unable to set account balance", err)
 		}
 
-		return amount, headBlock, nil
+		return amount, nil
 	}
 
-	var popBal balanceEntry
-	err = b.db.Encoder().Decode(namespace, bal, &popBal, true)
+	amount, _, err := b.getHistoricalBalance(
+		ctx,
+		dbTx,
+		account,
+		currency,
+		block,
+	)
+	// If account record exists but we don't
+	// find any records for the index, we assume
+	// the balance to be 0 (i.e. before any balance
+	// changes applied). If syncing starts after
+	// genesis, this behavior could cause issues.
+	if errors.Is(err, errAccountMissing) {
+		return &types.Amount{
+			Value:    "0",
+			Currency: currency,
+		}, nil
+	}
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	return popBal.Amount, popBal.Block, nil
+	return amount, nil
 }
 
 // BootstrapBalance represents a balance of
@@ -574,20 +720,20 @@ func (b *BalanceStorage) BootstrapBalances(
 	return nil
 }
 
-func (b *BalanceStorage) getAllBalanceEntries(
+func (b *BalanceStorage) getAllAccountEntries(
 	ctx context.Context,
-	handler func(balanceEntry),
+	handler func(accountEntry),
 ) error {
-	namespace := balanceNamespace
 	txn := b.db.NewDatabaseTransaction(ctx, false)
 	defer txn.Discard(ctx)
 	_, err := txn.Scan(
 		ctx,
-		[]byte(namespace),
+		[]byte(accountNamespace),
+		[]byte(accountNamespace),
 		func(k []byte, v []byte) error {
-			var deserialBal balanceEntry
+			var accEntry accountEntry
 			// We should not reclaim memory during a scan!!
-			err := b.db.Encoder().Decode(namespace, v, &deserialBal, false)
+			err := b.db.Encoder().Decode(accountNamespace, v, &accEntry, false)
 			if err != nil {
 				return fmt.Errorf(
 					"%w: unable to parse balance entry for %s",
@@ -596,9 +742,11 @@ func (b *BalanceStorage) getAllBalanceEntries(
 				)
 			}
 
-			handler(deserialBal)
+			handler(accEntry)
+
 			return nil
 		},
+		false,
 		false,
 	)
 	if err != nil {
@@ -616,18 +764,18 @@ func (b *BalanceStorage) GetAllAccountCurrency(
 ) ([]*reconciler.AccountCurrency, error) {
 	log.Println("Loading previously seen accounts (this could take a while)...")
 
-	balances := []*balanceEntry{}
-	if err := b.getAllBalanceEntries(ctx, func(entry balanceEntry) {
-		balances = append(balances, &entry)
+	accountEntries := []*accountEntry{}
+	if err := b.getAllAccountEntries(ctx, func(entry accountEntry) {
+		accountEntries = append(accountEntries, &entry)
 	}); err != nil {
 		return nil, fmt.Errorf("%w: unable to get all balance entries", err)
 	}
 
-	accounts := make([]*reconciler.AccountCurrency, len(balances))
-	for i, balance := range balances {
+	accounts := make([]*reconciler.AccountCurrency, len(accountEntries))
+	for i, account := range accountEntries {
 		accounts[i] = &reconciler.AccountCurrency{
-			Account:  balance.Account,
-			Currency: balance.Amount.Currency,
+			Account:  account.Account,
+			Currency: account.Currency,
 		}
 	}
 
@@ -671,5 +819,95 @@ func (b *BalanceStorage) SetBalanceImported(
 	}
 
 	log.Printf("%d Balances Updated\n", len(accountBalances))
+	return nil
+}
+
+// getHistoricalBalance returns the balance of an account
+// at a particular *types.BlockIdentifier.
+func (b *BalanceStorage) getHistoricalBalance(
+	ctx context.Context,
+	dbTx DatabaseTransaction,
+	account *types.AccountIdentifier,
+	currency *types.Currency,
+	block *types.BlockIdentifier,
+) (*types.Amount, *types.BlockIdentifier, error) {
+	var foundAmount *types.Amount
+	var foundBlock *types.BlockIdentifier
+	_, err := dbTx.Scan(
+		ctx,
+		GetHistoricalBalancePrefix(account, currency),
+		GetHistoricalBalanceKey(account, currency, block.Index),
+		func(k []byte, v []byte) error {
+			var deserialBal balanceEntry
+			// We should not reclaim memory during a scan!!
+			err := b.db.Encoder().Decode(historicalBalanceNamespace, v, &deserialBal, false)
+			if err != nil {
+				return fmt.Errorf(
+					"%w: unable to parse balance entry for %s",
+					err,
+					string(v),
+				)
+			}
+
+			// Ensure block hash matches in case of orphan
+			if deserialBal.Block.Index == block.Index && deserialBal.Block.Hash != block.Hash {
+				return fmt.Errorf(
+					"wanted block identifier %s but got %s",
+					types.PrintStruct(block),
+					types.PrintStruct(deserialBal.Block),
+				)
+			}
+
+			foundAmount = deserialBal.Amount
+			foundBlock = deserialBal.Block
+			return errAccountFound
+		},
+		false,
+		true,
+	)
+	if errors.Is(err, errAccountFound) {
+		return foundAmount, foundBlock, nil
+	}
+	if err != nil {
+		return nil, nil, fmt.Errorf("%w: database scan failed", err)
+	}
+
+	return nil, nil, errAccountMissing
+}
+
+// removeHistoricalBalances deletes all historical balances
+// >= a particular index (used during reorg).
+func (b *BalanceStorage) removeHistoricalBalances(
+	ctx context.Context,
+	dbTx DatabaseTransaction,
+	account *types.AccountIdentifier,
+	currency *types.Currency,
+	index int64,
+) error {
+	foundKeys := [][]byte{}
+	_, err := dbTx.Scan(
+		ctx,
+		GetHistoricalBalancePrefix(account, currency),
+		GetHistoricalBalanceKey(account, currency, index),
+		func(k []byte, v []byte) error {
+			thisK := make([]byte, len(k))
+			copy(thisK, k)
+
+			foundKeys = append(foundKeys, thisK)
+			return nil
+		},
+		false,
+		false,
+	)
+	if err != nil {
+		return fmt.Errorf("%w: database scan failed", err)
+	}
+
+	for _, k := range foundKeys {
+		if err := dbTx.Delete(ctx, k); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }

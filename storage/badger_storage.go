@@ -429,15 +429,18 @@ func (b *BadgerTransaction) Delete(ctx context.Context, key []byte) error {
 func (b *BadgerTransaction) Scan(
 	ctx context.Context,
 	prefix []byte,
+	seekStart []byte,
 	worker func([]byte, []byte) error,
 	logEntries bool,
+	reverse bool, // reverse == true means greatest to least
 ) (int, error) {
 	entries := 0
 	opts := badger.DefaultIteratorOptions
 	opts.PrefetchValues = false
+	opts.Reverse = reverse
 	it := b.txn.NewIterator(opts)
 	defer it.Close()
-	for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
+	for it.Seek(seekStart); it.ValidForPrefix(prefix); it.Next() {
 		item := it.Item()
 		k := item.Key()
 		err := item.Value(func(v []byte) error {
@@ -538,6 +541,7 @@ func recompress(
 	_, err := txn.Scan(
 		ctx,
 		[]byte(restrictedNamespace),
+		[]byte(restrictedNamespace),
 		func(k []byte, v []byte) error {
 			decompressed, err := badgerDb.Encoder().DecodeRaw(namespace, v)
 			if err != nil {
@@ -554,6 +558,7 @@ func recompress(
 			return nil
 		},
 		true,
+		false,
 	)
 	if err != nil {
 		return -1, -1, fmt.Errorf("%w: %v", ErrRecompressFailed, err)
@@ -610,6 +615,7 @@ func BadgerTrain(
 	_, err = txn.Scan(
 		ctx,
 		[]byte(restrictedNamespace),
+		[]byte(restrictedNamespace),
 		func(k []byte, v []byte) error {
 			decompressedSize, diskSize, err := decompressAndSave(
 				badgerDb.Encoder(),
@@ -633,6 +639,7 @@ func BadgerTrain(
 			return nil
 		},
 		true,
+		false,
 	)
 	if err != nil && !errors.Is(err, ErrMaxEntries) {
 		return -1, -1, fmt.Errorf("%w for %s: %v", ErrScanFailed, namespace, err)
