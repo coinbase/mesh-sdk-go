@@ -48,14 +48,14 @@ var (
   Key Construction
 */
 
-// GetAccountKey returns a deterministic hash of an types.Account + types.Currency.
+// GetAccountKey returns a deterministic hash of a types.Account + types.Currency.
 func GetAccountKey(account *types.AccountIdentifier, currency *types.Currency) []byte {
 	return []byte(
 		fmt.Sprintf("%s/%s/%s", accountNamespace, types.Hash(account), types.Hash(currency)),
 	)
 }
 
-// GetHistoricalBalanceKey returns a deterministic hash of an types.Account + types.Currency + block
+// GetHistoricalBalanceKey returns a deterministic hash of a types.Account + types.Currency + block
 // index.
 func GetHistoricalBalanceKey(
 	account *types.AccountIdentifier,
@@ -73,7 +73,7 @@ func GetHistoricalBalanceKey(
 	)
 }
 
-// GetHistoricalBalancePrefix returns a deterministic hash of an types.Account + types.Currency to
+// GetHistoricalBalancePrefix returns a deterministic hash of a types.Account + types.Currency to
 // limit scan results.
 func GetHistoricalBalancePrefix(account *types.AccountIdentifier, currency *types.Currency) []byte {
 	return []byte(
