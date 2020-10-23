@@ -488,23 +488,23 @@ func (b *BalanceStorage) GetBalance(
 	account *types.AccountIdentifier,
 	currency *types.Currency,
 	block *types.BlockIdentifier,
-) (*types.Amount, *types.BlockIdentifier, error) {
+) (*types.Amount, error) {
 	// We use a write-ready transaction here in case we need to
 	// inject a non-existent balance into storage.
 	dbTx := b.db.NewDatabaseTransaction(ctx, true)
 	defer dbTx.Discard(ctx)
 
-	amount, computedBlock, err := b.GetBalanceTransactional(ctx, dbTx, account, currency, block)
+	amount, err := b.GetBalanceTransactional(ctx, dbTx, account, currency, block)
 	if err != nil {
-		return nil, nil, fmt.Errorf("%w: unable to get balance", err)
+		return nil, fmt.Errorf("%w: unable to get balance", err)
 	}
 
 	// We commit any changes made during the balance lookup.
 	if err := dbTx.Commit(ctx); err != nil {
-		return nil, nil, fmt.Errorf("%w: unable to commit account balance transaction", err)
+		return nil, fmt.Errorf("%w: unable to commit account balance transaction", err)
 	}
 
-	return amount, computedBlock, nil
+	return amount, nil
 }
 
 // GetBalanceTransactional returns all the balances of a types.AccountIdentifier
@@ -515,7 +515,7 @@ func (b *BalanceStorage) GetBalanceTransactional(
 	account *types.AccountIdentifier,
 	currency *types.Currency,
 	block *types.BlockIdentifier,
-) (*types.Amount, *types.BlockIdentifier, error) {
+) (*types.Amount, error) {
 	// TODO: if block > head block, should return an error
 
 	// TODO: nil block == current block
@@ -536,7 +536,7 @@ func (b *BalanceStorage) GetBalanceTransactional(
 	key := GetBalanceKey(account, currency)
 	exists, _, err := dbTx.Get(ctx, key)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	// When beginning syncing from an arbitrary height, an account may
@@ -546,7 +546,7 @@ func (b *BalanceStorage) GetBalanceTransactional(
 	if !exists {
 		amount, err := b.helper.AccountBalance(ctx, account, currency, block)
 		if err != nil {
-			return nil, nil, fmt.Errorf("%w: unable to get account balance from helper", err)
+			return nil, fmt.Errorf("%w: unable to get account balance from helper", err)
 		}
 
 		err = b.SetBalance(
@@ -557,10 +557,10 @@ func (b *BalanceStorage) GetBalanceTransactional(
 			block,
 		)
 		if err != nil {
-			return nil, nil, fmt.Errorf("%w: unable to set account balance", err)
+			return nil, fmt.Errorf("%w: unable to set account balance", err)
 		}
 
-		return amount, block, nil
+		return amount, nil
 	}
 
 	amount, _, err := b.getHistoricalBalance(
@@ -579,13 +579,13 @@ func (b *BalanceStorage) GetBalanceTransactional(
 		return &types.Amount{
 			Value:    "0",
 			Currency: currency,
-		}, block, nil
+		}, nil
 	}
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	return amount, block, nil
+	return amount, nil
 }
 
 // BootstrapBalance represents a balance of
