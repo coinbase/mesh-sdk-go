@@ -571,7 +571,7 @@ func TestBalance(t *testing.T) {
 		}, accounts)
 	})
 
-	t.Run("orphan balance", func(t *testing.T) {
+	t.Run("orphan balance with update balance", func(t *testing.T) {
 		txn := storage.db.NewDatabaseTransaction(ctx, true)
 		orphanValue, _ := new(big.Int).SetString(largeDeduction.Value, 10)
 		err := storage.UpdateBalance(
@@ -584,6 +584,26 @@ func TestBalance(t *testing.T) {
 				Difference: new(big.Int).Neg(orphanValue).String(),
 			},
 			nil,
+		)
+		assert.NoError(t, err)
+		assert.NoError(t, txn.Commit(ctx))
+
+		retrievedAmount, err := storage.GetBalance(ctx, account, largeDeduction.Currency, newBlock3)
+		assert.NoError(t, err)
+		assert.Equal(t, &types.Amount{
+			Value:    "1200",
+			Currency: largeDeduction.Currency,
+		}, retrievedAmount)
+	})
+
+	t.Run("orphan balance correctly", func(t *testing.T) {
+		txn := storage.db.NewDatabaseTransaction(ctx, true)
+		err := storage.OrphanBalance(
+			ctx,
+			txn,
+			account,
+			largeDeduction.Currency,
+			newBlock3,
 		)
 		assert.NoError(t, err)
 		assert.NoError(t, txn.Commit(ctx))
