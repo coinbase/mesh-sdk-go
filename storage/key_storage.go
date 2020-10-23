@@ -170,6 +170,7 @@ func (k *KeyStorage) GetAllAccountsTransactional(
 	_, err := dbTx.Scan(
 		ctx,
 		[]byte(keyNamespace),
+		[]byte(keyNamespace),
 		func(key []byte, v []byte) error {
 			var kp Key
 			// We should not reclaim memory during a scan!!

@@ -62,6 +62,13 @@ func GetHistoricalBalanceKey(account *types.AccountIdentifier, currency *types.C
 	)
 }
 
+// GetHistoricalBalancePrefix returns a deterministic hash of an types.Account + types.Currency to limit scan results.
+func GetHistoricalBalancePrefix(account *types.AccountIdentifier, currency *types.Currency) []byte {
+	return []byte(
+		fmt.Sprintf("%s/%s/%s/", historicalBalanceNamespace, types.Hash(account), types.Hash(currency)),
+	)
+}
+
 // BalanceStorageHandler is invoked after balance changes are committed to the database.
 type BalanceStorageHandler interface {
 	BlockAdded(ctx context.Context, block *types.Block, changes []*parser.BalanceChange) error
@@ -430,30 +437,31 @@ func (b *BalanceStorage) UpdateBalance(
 		return err
 	}
 
-	// Get most recent historical balance
-	balance, lastUpdate, err := b.getHistoricalBalance(
-		ctx,
-		dbTransaction,
-		change.Account,
-		change.Currency,
-		change.Block,
-	)
-	if !errors.Is(err, errAccountMissing) && err != nil {
-		return err
-	}
-
-	// Ensure the caller isn't trying to orphan balances by calling
-	// UpdateBalance.
-	if lastUpdate != nil && lastUpdate.Index >= change.Block.Index {
-		return errors.New("cannot update already updated balance")
-	}
-
 	var storedValue string
 	if exists {
-		if errors.Is(err, errAccountMissing) {
+		// Get most recent historical balance
+		balance, lastUpdate, err := b.getHistoricalBalance(
+			ctx,
+			dbTransaction,
+			change.Account,
+			change.Currency,
+			change.Block,
+		)
+		switch {
+		case errors.Is(err, errAccountMissing):
+			fmt.Println("account missing", balance, lastUpdate)
 			storedValue = "0"
-		} else {
+		case err != nil:
+			return err
+		default:
+			fmt.Println("account exists", balance.Value)
 			storedValue = balance.Value
+		}
+
+		// Ensure the caller isn't trying to orphan balances by calling
+		// UpdateBalance.
+		if lastUpdate != nil && lastUpdate.Index >= change.Block.Index {
+			return errors.New("cannot update already updated balance")
 		}
 	}
 
@@ -473,6 +481,8 @@ func (b *BalanceStorage) UpdateBalance(
 	if err != nil {
 		return err
 	}
+
+	fmt.Println("existing value", existingValue)
 
 	newVal, err := types.AddValues(change.Difference, existingValue)
 	if err != nil {
@@ -495,6 +505,20 @@ func (b *BalanceStorage) UpdateBalance(
 			change.Account,
 			change.Block,
 		)
+	}
+
+	// Add account entry if doesn't exist
+	if !exists {
+		serialAcc, err := b.db.Encoder().Encode(historicalBalanceNamespace, accountEntry{
+			Account:  change.Account,
+			Currency: change.Currency,
+		})
+		if err != nil {
+			return err
+		}
+		if err := dbTransaction.Set(ctx, key, serialAcc, true); err != nil {
+			return err
+		}
 	}
 
 	// Add a new historical record for the balance.
@@ -555,7 +579,7 @@ func (b *BalanceStorage) GetBalanceTransactional(
 ) (*types.Amount, error) {
 	// TODO: if block > head block, should return an error
 
-	key := GetHistoricalBalanceKey(account, currency, block.Index)
+	key := GetAccountKey(account, currency)
 	exists, _, err := dbTx.Get(ctx, key)
 	if err != nil {
 		return nil, err
@@ -691,6 +715,7 @@ func (b *BalanceStorage) getAllAccountEntries(
 	_, err := txn.Scan(
 		ctx,
 		[]byte(accountNamespace),
+		[]byte(accountNamespace),
 		func(k []byte, v []byte) error {
 			var accEntry accountEntry
 			// We should not reclaim memory during a scan!!
@@ -704,6 +729,7 @@ func (b *BalanceStorage) getAllAccountEntries(
 			}
 
 			handler(accEntry)
+
 			return nil
 		},
 		false,
@@ -732,10 +758,10 @@ func (b *BalanceStorage) GetAllAccountCurrency(
 	}
 
 	accounts := make([]*reconciler.AccountCurrency, len(accountEntries))
-	for i, balance := range accounts {
+	for i, account := range accountEntries {
 		accounts[i] = &reconciler.AccountCurrency{
-			Account:  balance.Account,
-			Currency: balance.Currency,
+			Account:  account.Account,
+			Currency: account.Currency,
 		}
 	}
 
@@ -795,6 +821,7 @@ func (b *BalanceStorage) getHistoricalBalance(
 	var foundBlock *types.BlockIdentifier
 	_, err := dbTx.Scan(
 		ctx,
+		GetHistoricalBalancePrefix(account, currency),
 		GetHistoricalBalanceKey(account, currency, block.Index),
 		func(k []byte, v []byte) error {
 			fmt.Println(string(k))
@@ -847,6 +874,7 @@ func (b *BalanceStorage) removeHistoricalBalances(
 	foundKeys := [][]byte{}
 	_, err := dbTx.Scan(
 		ctx,
+		GetHistoricalBalancePrefix(account, currency),
 		GetHistoricalBalanceKey(account, currency, index),
 		func(k []byte, v []byte) error {
 			thisK := make([]byte, len(k))
