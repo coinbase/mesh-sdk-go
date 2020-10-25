@@ -102,7 +102,7 @@ func TestNewReconciler(t *testing.T) {
 			expected: func() *Reconciler {
 				r := New(nil, nil, nil)
 				r.lookupBalanceByBlock = false
-				r.changeQueue = make(chan *parser.BalanceChange, backlogThreshold)
+				r.changeQueue = make(chan *parser.BalanceChange, defaultBacklogSize)
 
 				return r
 			}(),
