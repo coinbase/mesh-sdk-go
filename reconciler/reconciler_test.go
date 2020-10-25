@@ -97,10 +97,8 @@ func TestNewReconciler(t *testing.T) {
 				return r
 			}(),
 		},
-		"with lookupBalanceByBlock": {
-			options: []Option{
-				WithLookupBalanceByBlock(false),
-			},
+		"without lookupBalanceByBlock": {
+			options: []Option{},
 			expected: func() *Reconciler {
 				r := New(nil, nil, nil)
 				r.lookupBalanceByBlock = false
@@ -754,14 +752,19 @@ func TestReconcile_SuccessOnlyActive(t *testing.T) {
 		t.Run(fmt.Sprintf("lookup balance by block %t", lookup), func(t *testing.T) {
 			mockHelper := &mocks.Helper{}
 			mockHandler := &mocks.Handler{}
+			opts := []Option{
+				WithActiveConcurrency(1),
+				WithInactiveConcurrency(0),
+				WithInterestingAccounts([]*AccountCurrency{accountCurrency2}),
+			}
+			if lookup {
+				opts = append(opts, WithLookupBalanceByBlock())
+			}
 			r := New(
 				mockHelper,
 				mockHandler,
 				nil,
-				WithActiveConcurrency(1),
-				WithInactiveConcurrency(0),
-				WithInterestingAccounts([]*AccountCurrency{accountCurrency2}),
-				WithLookupBalanceByBlock(lookup),
+				opts...,
 			)
 			ctx := context.Background()
 			ctx, cancel := context.WithCancel(ctx)
@@ -880,15 +883,17 @@ func TestReconcile_HighWaterMark(t *testing.T) {
 
 	mockHelper := &mocks.Helper{}
 	mockHandler := &mocks.Handler{}
+	opts := []Option{
+		WithActiveConcurrency(1),
+		WithInactiveConcurrency(0),
+		WithInterestingAccounts([]*AccountCurrency{accountCurrency2}),
+		WithDebugLogging(),
+	}
 	r := New(
 		mockHelper,
 		mockHandler,
 		nil,
-		WithActiveConcurrency(1),
-		WithInactiveConcurrency(0),
-		WithInterestingAccounts([]*AccountCurrency{accountCurrency2}),
-		WithLookupBalanceByBlock(false),
-		WithDebugLogging(true),
+		opts...,
 	)
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
@@ -1013,6 +1018,7 @@ func TestReconcile_Orphan(t *testing.T) {
 		nil,
 		WithActiveConcurrency(1),
 		WithInactiveConcurrency(0),
+		WithLookupBalanceByBlock(),
 	)
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
@@ -1085,13 +1091,18 @@ func TestReconcile_FailureOnlyActive(t *testing.T) {
 		t.Run(fmt.Sprintf("lookup balance by block %t", lookup), func(t *testing.T) {
 			mockHelper := &mocks.Helper{}
 			mockHandler := &mocks.Handler{}
+			opts := []Option{
+				WithActiveConcurrency(1),
+				WithInactiveConcurrency(0),
+			}
+			if lookup {
+				opts = append(opts, WithLookupBalanceByBlock())
+			}
 			r := New(
 				mockHelper,
 				mockHandler,
 				parser.New(nil, nil, nil),
-				WithActiveConcurrency(1),
-				WithInactiveConcurrency(0),
-				WithLookupBalanceByBlock(lookup),
+				opts...,
 			)
 			ctx := context.Background()
 
@@ -1169,13 +1180,18 @@ func TestReconcile_ExemptOnlyActive(t *testing.T) {
 		t.Run(fmt.Sprintf("lookup balance by block %t", lookup), func(t *testing.T) {
 			mockHelper := &mocks.Helper{}
 			mockHandler := &mocks.Handler{}
+			opts := []Option{
+				WithActiveConcurrency(1),
+				WithInactiveConcurrency(0),
+			}
+			if lookup {
+				opts = append(opts, WithLookupBalanceByBlock())
+			}
 			r := New(
 				mockHelper,
 				mockHandler,
 				p,
-				WithActiveConcurrency(1),
-				WithInactiveConcurrency(0),
-				WithLookupBalanceByBlock(lookup),
+				opts...,
 			)
 			ctx := context.Background()
 
@@ -1255,13 +1271,18 @@ func TestReconcile_ExemptAddressOnlyActive(t *testing.T) {
 		t.Run(fmt.Sprintf("lookup balance by block %t", lookup), func(t *testing.T) {
 			mockHelper := &mocks.Helper{}
 			mockHandler := &mocks.Handler{}
+			opts := []Option{
+				WithActiveConcurrency(1),
+				WithInactiveConcurrency(0),
+			}
+			if lookup {
+				opts = append(opts, WithLookupBalanceByBlock())
+			}
 			r := New(
 				mockHelper,
 				mockHandler,
 				p,
-				WithActiveConcurrency(1),
-				WithInactiveConcurrency(0),
-				WithLookupBalanceByBlock(lookup),
+				opts...,
 			)
 			ctx := context.Background()
 
@@ -1341,12 +1362,17 @@ func TestReconcile_ExemptAddressDynamicActive(t *testing.T) {
 		t.Run(fmt.Sprintf("lookup balance by block %t", lookup), func(t *testing.T) {
 			mockHelper := &mocks.Helper{}
 			mockHandler := &mocks.Handler{}
+			opts := []Option{
+				WithInactiveConcurrency(0),
+			}
+			if lookup {
+				opts = append(opts, WithLookupBalanceByBlock())
+			}
 			r := New(
 				mockHelper,
 				mockHandler,
 				p,
-				WithInactiveConcurrency(0),
-				WithLookupBalanceByBlock(lookup),
+				opts...,
 			)
 			ctx := context.Background()
 
@@ -1426,12 +1452,17 @@ func TestReconcile_ExemptAddressDynamicActiveThrow(t *testing.T) {
 		t.Run(fmt.Sprintf("lookup balance by block %t", lookup), func(t *testing.T) {
 			mockHelper := &mocks.Helper{}
 			mockHandler := &mocks.Handler{}
+			opts := []Option{
+				WithInactiveConcurrency(0),
+			}
+			if lookup {
+				opts = append(opts, WithLookupBalanceByBlock())
+			}
 			r := New(
 				mockHelper,
 				mockHandler,
 				p,
-				WithInactiveConcurrency(0),
-				WithLookupBalanceByBlock(lookup),
+				opts...,
 			)
 			ctx := context.Background()
 
@@ -1508,12 +1539,17 @@ func TestReconcile_NotExemptOnlyActive(t *testing.T) {
 		t.Run(fmt.Sprintf("lookup balance by block %t", lookup), func(t *testing.T) {
 			mockHelper := &mocks.Helper{}
 			mockHandler := &mocks.Handler{}
+			opts := []Option{
+				WithInactiveConcurrency(0),
+			}
+			if lookup {
+				opts = append(opts, WithLookupBalanceByBlock())
+			}
 			r := New(
 				mockHelper,
 				mockHandler,
 				p,
-				WithInactiveConcurrency(0),
-				WithLookupBalanceByBlock(lookup),
+				opts...,
 			)
 			ctx := context.Background()
 
@@ -1591,12 +1627,17 @@ func TestReconcile_NotExemptAddressOnlyActive(t *testing.T) {
 		t.Run(fmt.Sprintf("lookup balance by block %t", lookup), func(t *testing.T) {
 			mockHelper := &mocks.Helper{}
 			mockHandler := &mocks.Handler{}
+			opts := []Option{
+				WithInactiveConcurrency(0),
+			}
+			if lookup {
+				opts = append(opts, WithLookupBalanceByBlock())
+			}
 			r := New(
 				mockHelper,
 				mockHandler,
 				p,
-				WithInactiveConcurrency(0),
-				WithLookupBalanceByBlock(lookup),
+				opts...,
 			)
 			ctx := context.Background()
 
@@ -1677,13 +1718,18 @@ func TestReconcile_NotExemptWrongAddressOnlyActive(t *testing.T) {
 		t.Run(fmt.Sprintf("lookup balance by block %t", lookup), func(t *testing.T) {
 			mockHelper := &mocks.Helper{}
 			mockHandler := &mocks.Handler{}
+			opts := []Option{
+				WithActiveConcurrency(1),
+				WithInactiveConcurrency(0),
+			}
+			if lookup {
+				opts = append(opts, WithLookupBalanceByBlock())
+			}
 			r := New(
 				mockHelper,
 				mockHandler,
 				p,
-				WithActiveConcurrency(1),
-				WithInactiveConcurrency(0),
-				WithLookupBalanceByBlock(lookup),
+				opts...,
 			)
 			ctx := context.Background()
 
@@ -1753,16 +1799,21 @@ func TestReconcile_SuccessOnlyInactive(t *testing.T) {
 		t.Run(fmt.Sprintf("lookup balance by block %t", lookup), func(t *testing.T) {
 			mockHelper := &mocks.Helper{}
 			mockHandler := &mocks.Handler{}
+			opts := []Option{
+				WithActiveConcurrency(0),
+				WithInactiveConcurrency(1),
+				WithSeenAccounts([]*AccountCurrency{accountCurrency}),
+				WithDebugLogging(),
+				WithInactiveFrequency(1),
+			}
+			if lookup {
+				opts = append(opts, WithLookupBalanceByBlock())
+			}
 			r := New(
 				mockHelper,
 				mockHandler,
 				nil,
-				WithActiveConcurrency(0),
-				WithInactiveConcurrency(1),
-				WithSeenAccounts([]*AccountCurrency{accountCurrency}),
-				WithLookupBalanceByBlock(lookup),
-				WithInactiveFrequency(1),
-				WithDebugLogging(true),
+				opts...,
 			)
 			ctx := context.Background()
 			ctx, cancel := context.WithCancel(ctx)
@@ -1854,16 +1905,21 @@ func TestReconcile_FailureOnlyInactive(t *testing.T) {
 		t.Run(fmt.Sprintf("lookup balance by block %t", lookup), func(t *testing.T) {
 			mockHelper := &mocks.Helper{}
 			mockHandler := &mocks.Handler{}
+			opts := []Option{
+				WithActiveConcurrency(0),
+				WithInactiveConcurrency(1),
+				WithSeenAccounts([]*AccountCurrency{accountCurrency}),
+				WithDebugLogging(),
+				WithInactiveFrequency(1),
+			}
+			if lookup {
+				opts = append(opts, WithLookupBalanceByBlock())
+			}
 			r := New(
 				mockHelper,
 				mockHandler,
 				parser.New(nil, nil, nil),
-				WithActiveConcurrency(0),
-				WithInactiveConcurrency(1),
-				WithSeenAccounts([]*AccountCurrency{accountCurrency}),
-				WithLookupBalanceByBlock(lookup),
-				WithInactiveFrequency(1),
-				WithDebugLogging(true),
+				opts...,
 			)
 			ctx := context.Background()
 			ctx, cancel := context.WithCancel(ctx)
@@ -1919,13 +1975,16 @@ func TestReconcile_EnqueueCancel(t *testing.T) {
 
 	mockHelper := &mocks.Helper{}
 	mockHandler := &mocks.Handler{}
+	opts := []Option{
+		WithActiveConcurrency(1),
+		WithInactiveConcurrency(0),
+		WithLookupBalanceByBlock(),
+	}
 	r := New(
 		mockHelper,
 		mockHandler,
 		nil,
-		WithActiveConcurrency(1),
-		WithInactiveConcurrency(0),
-		WithLookupBalanceByBlock(true),
+		opts...,
 	)
 	ctx := context.Background()
 
