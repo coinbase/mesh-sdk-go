@@ -91,12 +91,6 @@ const (
 	// inactive reconciliations for each account.
 	defaultInactiveFrequency = 200
 
-	// defaultLookupBalanceByBlock is the default setting
-	// for how to perform balance queries. It is preferable
-	// to perform queries by sepcific blocks but this is not
-	// always supported by the node.
-	defaultLookupBalanceByBlock = false
-
 	// defaultReconcilerConcurrency is the number of goroutines
 	// to start for reconciliation. Half of the goroutines are assigned
 	// to inactive reconciliation and half are assigned to active
@@ -138,7 +132,10 @@ type Helper interface {
 		block *types.BlockIdentifier,
 	) (*types.Amount, *types.BlockIdentifier, error)
 
-	PruneHistoricalBalances(
+	// PruneBalances is invoked by the reconciler
+	// to indicate that all historical balance states
+	// <= to index can be removed.
+	PruneBalances(
 		ctx context.Context,
 		account *types.AccountIdentifier,
 		currency *types.Currency,
@@ -212,12 +209,12 @@ type Reconciler struct {
 	handler Handler
 	parser  *parser.Parser
 
-	lookupBalanceByBlock     bool
-	interestingAccounts      []*AccountCurrency
-	changeQueue              chan *parser.BalanceChange
-	inactiveFrequency        int64
-	debugLogging             bool
-	historicalBalancePruning bool
+	lookupBalanceByBlock bool
+	interestingAccounts  []*AccountCurrency
+	changeQueue          chan *parser.BalanceChange
+	inactiveFrequency    int64
+	debugLogging         bool
+	balancePruning       bool
 
 	// Reconciler concurrency is separated between
 	// active and inactive concurrency to allow for
@@ -261,18 +258,17 @@ func New(
 	options ...Option,
 ) *Reconciler {
 	r := &Reconciler{
-		helper:               helper,
-		handler:              handler,
-		parser:               p,
-		inactiveFrequency:    defaultInactiveFrequency,
-		ActiveConcurrency:    defaultReconcilerConcurrency,
-		InactiveConcurrency:  defaultReconcilerConcurrency,
-		highWaterMark:        -1,
-		seenAccounts:         map[string]struct{}{},
-		inactiveQueue:        []*InactiveEntry{},
-		lookupBalanceByBlock: defaultLookupBalanceByBlock,
-		changeQueue:          make(chan *parser.BalanceChange, backlogThreshold),
-		lastIndexChecked:     -1,
+		helper:              helper,
+		handler:             handler,
+		parser:              p,
+		inactiveFrequency:   defaultInactiveFrequency,
+		ActiveConcurrency:   defaultReconcilerConcurrency,
+		InactiveConcurrency: defaultReconcilerConcurrency,
+		highWaterMark:       -1,
+		seenAccounts:        map[string]struct{}{},
+		inactiveQueue:       []*InactiveEntry{},
+		changeQueue:         make(chan *parser.BalanceChange, backlogThreshold),
+		lastIndexChecked:    -1,
 	}
 
 	for _, opt := range options {
@@ -753,12 +749,12 @@ func (r *Reconciler) updateLastChecked(index int64) {
 	}
 }
 
-func (r *Reconciler) pruneHistoricalBalances(ctx context.Context, change *parser.BalanceChange) error {
-	if !r.historicalBalancePruning {
+func (r *Reconciler) pruneBalances(ctx context.Context, change *parser.BalanceChange) error {
+	if !r.balancePruning {
 		return nil
 	}
 
-	return r.helper.PruneHistoricalBalances(
+	return r.helper.PruneBalances(
 		ctx,
 		change.Account,
 		change.Currency,
@@ -851,7 +847,7 @@ func (r *Reconciler) reconcileActiveAccounts(ctx context.Context) error { // nol
 
 			// Attempt to prune historical balances that will not be used
 			// anymore.
-			if err := r.pruneHistoricalBalances(ctx, balanceChange); err != nil {
+			if err := r.pruneBalances(ctx, balanceChange); err != nil {
 				return err
 			}
 

@@ -92,12 +92,12 @@ func WithDebugLogging() Option {
 	}
 }
 
-// WithHistoricalBalancePruning determines if historical
+// WithBalancePruning determines if historical
 // balance states should be pruned after they are used.
 // This can prevent storage blowup if historical states
 // are only ever used once.
-func WithHistoricalBalancePruning() Option {
+func WithBalancePruning() Option {
 	return func(r *Reconciler) {
-		r.historicalBalancePruning = true
+		r.balancePruning = true
 	}
 }
