@@ -114,8 +114,8 @@ func (_m *Helper) LiveBalance(ctx context.Context, account *types.AccountIdentif
 	return r0, r1, r2
 }
 
-// PruneHistoricalBalances provides a mock function with given fields: ctx, account, currency, index
-func (_m *Helper) PruneHistoricalBalances(ctx context.Context, account *types.AccountIdentifier, currency *types.Currency, index int64) error {
+// PruneBalances provides a mock function with given fields: ctx, account, currency, index
+func (_m *Helper) PruneBalances(ctx context.Context, account *types.AccountIdentifier, currency *types.Currency, index int64) error {
 	ret := _m.Called(ctx, account, currency, index)
 
 	var r0 error
