@@ -123,8 +123,8 @@ type Helper interface {
 		ctx context.Context,
 		account *types.AccountIdentifier,
 		currency *types.Currency,
-		headBlock *types.BlockIdentifier,
-	) (*types.Amount, *types.BlockIdentifier, error)
+		block *types.BlockIdentifier,
+	) (*types.Amount, error)
 
 	LiveBalance(
 		ctx context.Context,
@@ -446,12 +446,12 @@ func (r *Reconciler) CompareBalance(
 		)
 	}
 
-	// Check if live block < computed head
-	computedBalance, computedBlock, err := r.helper.ComputedBalance(
+	// Get computed balance at live block
+	computedBalance, err := r.helper.ComputedBalance(
 		ctx,
 		account,
 		currency,
-		head,
+		liveBlock,
 	)
 	if err != nil {
 		return zeroString, "", head.Index, fmt.Errorf(
@@ -460,15 +460,6 @@ func (r *Reconciler) CompareBalance(
 			account,
 			currency,
 			err,
-		)
-	}
-
-	if liveBlock.Index < computedBlock.Index {
-		return zeroString, "", head.Index, fmt.Errorf(
-			"%w %+v updated at %d",
-			ErrAccountUpdated,
-			account,
-			computedBlock.Index,
 		)
 	}
 
@@ -676,23 +667,6 @@ func (r *Reconciler) accountReconciliation(
 				)
 			}
 
-			if errors.Is(err, ErrAccountUpdated) {
-				// If account was updated, it must be
-				// enqueued again
-				r.debugLog(
-					"skipping reconciliation because account %s updated",
-					types.PrintStruct(accountCurrency.Account),
-				)
-
-				return r.handler.ReconciliationSkipped(
-					ctx,
-					reconciliationType,
-					account,
-					currency,
-					AccountUpdated,
-				)
-			}
-
 			return err
 		}
 
@@ -773,6 +747,7 @@ func (r *Reconciler) updateLastChecked(index int64) {
 // were correct.
 func (r *Reconciler) reconcileActiveAccounts(ctx context.Context) error { // nolint:gocognit
 	for {
+		// TODO: delete old states after reconciled (otherwise could use significantly more storage)..optionally
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
@@ -794,9 +769,6 @@ func (r *Reconciler) reconcileActiveAccounts(ctx context.Context) error { // nol
 
 				continue
 			}
-
-			// TODO: Skip reconciliation if account has been updated so we don't lookup
-			// balance unnecessarily
 
 			amount, block, err := r.bestLiveBalance(
 				ctx,
