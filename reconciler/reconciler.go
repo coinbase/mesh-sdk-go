@@ -44,12 +44,6 @@ const (
 	// is supposed to happen is orphaned.
 	BlockGone = "BLOCK_GONE"
 
-	// AccountUpdated is when an account that is to be
-	// reconciled is updated after the block where the
-	// balance change occurs (this usually occurs
-	// in large backlogs).
-	AccountUpdated = "ACCOUNT_UPDATED"
-
 	// HeadBehind is when the synced tip (where balances
 	// were last computed) is behind the *types.BlockIdentifier
 	// returned by the call to /account/balance.
@@ -60,12 +54,10 @@ const (
 )
 
 const (
-	// backlogThreshold is the limit of account lookups
+	// defaultBacklogSize is the limit of account lookups
 	// that can be enqueued to reconcile before new
 	// requests are dropped.
-	//
-	// TODO: Make configurable
-	backlogThreshold = 50000
+	defaultBacklogSize = 50000
 
 	// waitToCheckDiff is the syncing difference (live-head)
 	// to retry instead of exiting. In other words, if the
@@ -211,6 +203,7 @@ type Reconciler struct {
 
 	lookupBalanceByBlock bool
 	interestingAccounts  []*AccountCurrency
+	backlogSize          int
 	changeQueue          chan *parser.BalanceChange
 	inactiveFrequency    int64
 	debugLogging         bool
@@ -267,13 +260,16 @@ func New(
 		highWaterMark:       -1,
 		seenAccounts:        map[string]struct{}{},
 		inactiveQueue:       []*InactiveEntry{},
-		changeQueue:         make(chan *parser.BalanceChange, backlogThreshold),
+		backlogSize:         defaultBacklogSize,
 		lastIndexChecked:    -1,
 	}
 
 	for _, opt := range options {
 		opt(r)
 	}
+
+	// Create change queue
+	r.changeQueue = make(chan *parser.BalanceChange, r.backlogSize)
 
 	return r
 }
@@ -297,7 +293,7 @@ func (r *Reconciler) wrappedActiveEnqueue(
 	default:
 		r.debugLog(
 			"skipping active enqueue because backlog has %d items",
-			backlogThreshold,
+			r.backlogSize,
 		)
 
 		if err := r.handler.ReconciliationSkipped(
@@ -769,7 +765,6 @@ func (r *Reconciler) pruneBalances(ctx context.Context, change *parser.BalanceCh
 // were correct.
 func (r *Reconciler) reconcileActiveAccounts(ctx context.Context) error { // nolint:gocognit
 	for {
-		// TODO: delete old states after reconciled (otherwise could use significantly more storage)..optionally
 		select {
 		case <-ctx.Done():
 			return ctx.Err()

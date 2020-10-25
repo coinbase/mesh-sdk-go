@@ -101,3 +101,12 @@ func WithBalancePruning() Option {
 		r.balancePruning = true
 	}
 }
+
+// WithBacklogSize overrides the defaultBacklogSize
+// to some new size. This is often useful for blockchains
+// that have high network activity.
+func WithBacklogSize(size int) Option {
+	return func(r *Reconciler) {
+		r.backlogSize = size
+	}
+}
