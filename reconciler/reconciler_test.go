@@ -489,7 +489,12 @@ func assertContainsAllAccounts(t *testing.T, m map[string]struct{}, a []*Account
 
 func TestInactiveAccountQueue(t *testing.T) {
 	var (
-		r     = New(nil, nil, parser.New(nil, nil, nil))
+		r = New(
+			nil,
+			nil,
+			parser.New(nil, nil, nil),
+			WithBalancePruning(), // test that not invoked for inactive reconciliation
+		)
 		block = &types.BlockIdentifier{
 			Hash:  "block 1",
 			Index: 1,
@@ -756,6 +761,7 @@ func TestReconcile_SuccessOnlyActive(t *testing.T) {
 				WithActiveConcurrency(1),
 				WithInactiveConcurrency(0),
 				WithInterestingAccounts([]*AccountCurrency{accountCurrency2}),
+				WithBalancePruning(),
 			}
 			if lookup {
 				opts = append(opts, WithLookupBalanceByBlock())
@@ -769,6 +775,15 @@ func TestReconcile_SuccessOnlyActive(t *testing.T) {
 			ctx := context.Background()
 			ctx, cancel := context.WithCancel(ctx)
 
+			mockHelper.On(
+				"PruneBalances",
+				mock.Anything,
+				accountCurrency.Account,
+				accountCurrency.Currency,
+				block.Index-safeBalancePruneDepth,
+			).Return(
+				nil,
+			).Once()
 			mockReconcilerCalls(
 				mockHelper,
 				mockHandler,
@@ -785,6 +800,15 @@ func TestReconcile_SuccessOnlyActive(t *testing.T) {
 				false,
 			)
 
+			mockHelper.On(
+				"PruneBalances",
+				mock.Anything,
+				accountCurrency2.Account,
+				accountCurrency2.Currency,
+				block.Index-safeBalancePruneDepth,
+			).Return(
+				nil,
+			).Once()
 			mockReconcilerCalls(
 				mockHelper,
 				mockHandler,
@@ -801,6 +825,15 @@ func TestReconcile_SuccessOnlyActive(t *testing.T) {
 				false,
 			)
 
+			mockHelper.On(
+				"PruneBalances",
+				mock.Anything,
+				accountCurrency2.Account,
+				accountCurrency2.Currency,
+				block2.Index-safeBalancePruneDepth,
+			).Return(
+				nil,
+			).Once()
 			mockReconcilerCalls(
 				mockHelper,
 				mockHandler,
