@@ -215,6 +215,7 @@ func (b *BalanceStorage) SetBalance(
 		account,
 		amount.Currency,
 		-1,
+		true, // We want everything >= -1
 	); err != nil {
 		return err
 	}
@@ -435,6 +436,28 @@ func (b *BalanceStorage) OrphanBalance(
 		account,
 		currency,
 		block.Index,
+		true,
+	)
+}
+
+// PruneBalances removes all historical balance states
+// <= some index. This can significantly reduce storage
+// usage in scenarios where historical balances are only
+// retrieved once (like reconciliation).
+func (b *BalanceStorage) PruneBalances(
+	ctx context.Context,
+	dbTransaction DatabaseTransaction,
+	account *types.AccountIdentifier,
+	currency *types.Currency,
+	index int64,
+) error {
+	return b.removeHistoricalBalances(
+		ctx,
+		dbTransaction,
+		account,
+		currency,
+		index,
+		false,
 	)
 }
 
@@ -876,13 +899,15 @@ func (b *BalanceStorage) getHistoricalBalance(
 }
 
 // removeHistoricalBalances deletes all historical balances
-// >= a particular index (used during reorg).
+// >= (used during reorg) or <= (used during pruning) a particular
+// index.
 func (b *BalanceStorage) removeHistoricalBalances(
 	ctx context.Context,
 	dbTx DatabaseTransaction,
 	account *types.AccountIdentifier,
 	currency *types.Currency,
 	index int64,
+	orphan bool,
 ) error {
 	foundKeys := [][]byte{}
 	_, err := dbTx.Scan(
@@ -897,7 +922,11 @@ func (b *BalanceStorage) removeHistoricalBalances(
 			return nil
 		},
 		false,
-		false,
+
+		// If we are orphaning blocks, we should sort
+		// from greatest to least (i.e. reverse). If we
+		// are pruning, we want to sort least to greatest.
+		orphan,
 	)
 	if err != nil {
 		return fmt.Errorf("%w: database scan failed", err)
