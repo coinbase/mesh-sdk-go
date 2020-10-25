@@ -36,36 +36,27 @@ func (_m *Helper) CanonicalBlock(ctx context.Context, block *types.BlockIdentifi
 	return r0, r1
 }
 
-// ComputedBalance provides a mock function with given fields: ctx, account, currency, headBlock
-func (_m *Helper) ComputedBalance(ctx context.Context, account *types.AccountIdentifier, currency *types.Currency, headBlock *types.BlockIdentifier) (*types.Amount, *types.BlockIdentifier, error) {
-	ret := _m.Called(ctx, account, currency, headBlock)
+// ComputedBalance provides a mock function with given fields: ctx, account, currency, block
+func (_m *Helper) ComputedBalance(ctx context.Context, account *types.AccountIdentifier, currency *types.Currency, block *types.BlockIdentifier) (*types.Amount, error) {
+	ret := _m.Called(ctx, account, currency, block)
 
 	var r0 *types.Amount
 	if rf, ok := ret.Get(0).(func(context.Context, *types.AccountIdentifier, *types.Currency, *types.BlockIdentifier) *types.Amount); ok {
-		r0 = rf(ctx, account, currency, headBlock)
+		r0 = rf(ctx, account, currency, block)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*types.Amount)
 		}
 	}
 
-	var r1 *types.BlockIdentifier
-	if rf, ok := ret.Get(1).(func(context.Context, *types.AccountIdentifier, *types.Currency, *types.BlockIdentifier) *types.BlockIdentifier); ok {
-		r1 = rf(ctx, account, currency, headBlock)
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *types.AccountIdentifier, *types.Currency, *types.BlockIdentifier) error); ok {
+		r1 = rf(ctx, account, currency, block)
 	} else {
-		if ret.Get(1) != nil {
-			r1 = ret.Get(1).(*types.BlockIdentifier)
-		}
+		r1 = ret.Error(1)
 	}
 
-	var r2 error
-	if rf, ok := ret.Get(2).(func(context.Context, *types.AccountIdentifier, *types.Currency, *types.BlockIdentifier) error); ok {
-		r2 = rf(ctx, account, currency, headBlock)
-	} else {
-		r2 = ret.Error(2)
-	}
-
-	return r0, r1, r2
+	return r0, r1
 }
 
 // CurrentBlock provides a mock function with given fields: ctx

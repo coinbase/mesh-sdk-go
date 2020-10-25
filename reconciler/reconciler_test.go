@@ -356,10 +356,9 @@ func TestCompareBalance(t *testing.T) {
 		ctx,
 		account1,
 		amount1.Currency,
-		block2,
+		block0,
 	).Return(
 		amount1,
-		block2,
 		nil,
 	).Once()
 	t.Run("Account updated after live block", func(t *testing.T) {
@@ -371,9 +370,9 @@ func TestCompareBalance(t *testing.T) {
 			block0,
 		)
 		assert.Equal(t, "0", difference)
-		assert.Equal(t, "", cachedBalance)
+		assert.Equal(t, amount1.Value, cachedBalance)
 		assert.Equal(t, int64(2), headIndex)
-		assert.Contains(t, err.Error(), ErrAccountUpdated.Error())
+		assert.NoError(t, err)
 	})
 
 	mh.On("CurrentBlock", ctx).Return(block2, nil).Once()
@@ -383,10 +382,9 @@ func TestCompareBalance(t *testing.T) {
 		ctx,
 		account1,
 		amount1.Currency,
-		block2,
+		block1,
 	).Return(
 		amount1,
-		block1,
 		nil,
 	).Once()
 	t.Run("Account balance matches", func(t *testing.T) {
@@ -413,7 +411,6 @@ func TestCompareBalance(t *testing.T) {
 		block2,
 	).Return(
 		amount1,
-		block1,
 		nil,
 	).Once()
 	t.Run("Account balance matches later live block", func(t *testing.T) {
@@ -440,7 +437,6 @@ func TestCompareBalance(t *testing.T) {
 		block2,
 	).Return(
 		amount1,
-		block1,
 		nil,
 	).Once()
 	t.Run("Balances are not equal", func(t *testing.T) {
@@ -466,7 +462,6 @@ func TestCompareBalance(t *testing.T) {
 		currency1,
 		block2,
 	).Return(
-		nil,
 		nil,
 		errors.New("account missing"),
 	).Once()
@@ -670,7 +665,6 @@ func mockReconcilerCalls(
 		headBlock,
 	).Return(
 		&types.Amount{Value: computedValue, Currency: accountCurrency.Currency},
-		liveBlock,
 		nil,
 	).Once()
 	if success {
