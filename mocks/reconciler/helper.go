@@ -113,3 +113,17 @@ func (_m *Helper) LiveBalance(ctx context.Context, account *types.AccountIdentif
 
 	return r0, r1, r2
 }
+
+// PruneHistoricalBalances provides a mock function with given fields: ctx, account, currency, index
+func (_m *Helper) PruneHistoricalBalances(ctx context.Context, account *types.AccountIdentifier, currency *types.Currency, index int64) error {
+	ret := _m.Called(ctx, account, currency, index)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, *types.AccountIdentifier, *types.Currency, int64) error); ok {
+		r0 = rf(ctx, account, currency, index)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}

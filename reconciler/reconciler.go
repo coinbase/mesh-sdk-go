@@ -95,13 +95,18 @@ const (
 	// for how to perform balance queries. It is preferable
 	// to perform queries by sepcific blocks but this is not
 	// always supported by the node.
-	defaultLookupBalanceByBlock = true
+	defaultLookupBalanceByBlock = false
 
 	// defaultReconcilerConcurrency is the number of goroutines
 	// to start for reconciliation. Half of the goroutines are assigned
 	// to inactive reconciliation and half are assigned to active
 	// reconciliation.
 	defaultReconcilerConcurrency = 8
+
+	// safeBalancePruneDepth is the depth from the last balance
+	// change that we consider safe to prune. We are very conservative
+	// here to prevent removing balances we may need in a reorg.
+	safeBalancePruneDepth = int64(100) // nolint:gomnd
 )
 
 // Helper functions are used by Reconciler to compare
@@ -132,6 +137,13 @@ type Helper interface {
 		currency *types.Currency,
 		block *types.BlockIdentifier,
 	) (*types.Amount, *types.BlockIdentifier, error)
+
+	PruneHistoricalBalances(
+		ctx context.Context,
+		account *types.AccountIdentifier,
+		currency *types.Currency,
+		index int64,
+	) error
 }
 
 // Handler is called by Reconciler after a reconciliation
@@ -200,11 +212,12 @@ type Reconciler struct {
 	handler Handler
 	parser  *parser.Parser
 
-	lookupBalanceByBlock bool
-	interestingAccounts  []*AccountCurrency
-	changeQueue          chan *parser.BalanceChange
-	inactiveFrequency    int64
-	debugLogging         bool
+	lookupBalanceByBlock     bool
+	interestingAccounts      []*AccountCurrency
+	changeQueue              chan *parser.BalanceChange
+	inactiveFrequency        int64
+	debugLogging             bool
+	historicalBalancePruning bool
 
 	// Reconciler concurrency is separated between
 	// active and inactive concurrency to allow for
@@ -740,6 +753,19 @@ func (r *Reconciler) updateLastChecked(index int64) {
 	}
 }
 
+func (r *Reconciler) pruneHistoricalBalances(ctx context.Context, change *parser.BalanceChange) error {
+	if !r.historicalBalancePruning {
+		return nil
+	}
+
+	return r.helper.PruneHistoricalBalances(
+		ctx,
+		change.Account,
+		change.Currency,
+		change.Block.Index-safeBalancePruneDepth,
+	)
+}
+
 // reconcileActiveAccounts selects an account
 // from the Reconciler account queue and
 // reconciles the balance. This is useful
@@ -820,6 +846,12 @@ func (r *Reconciler) reconcileActiveAccounts(ctx context.Context) error { // nol
 					r.wrappedActiveEnqueue(ctx, balanceChange)
 				}
 
+				return err
+			}
+
+			// Attempt to prune historical balances that will not be used
+			// anymore.
+			if err := r.pruneHistoricalBalances(ctx, balanceChange); err != nil {
 				return err
 			}
 
