@@ -674,21 +674,18 @@ func TestBalance(t *testing.T) {
 		retrievedAmount, err := storage.GetBalance(ctx, account, largeDeduction.Currency, newBlock3)
 		assert.NoError(t, err)
 		assert.Equal(t, &types.Amount{
-			Value:    "200",
+			Value:    "0",
 			Currency: largeDeduction.Currency,
 		}, retrievedAmount)
 		retrievedAmount, err = storage.GetBalance(ctx, account, largeDeduction.Currency, newBlock2)
 		assert.NoError(t, err)
 		assert.Equal(t, &types.Amount{
-			Value:    "200",
+			Value:    "0",
 			Currency: largeDeduction.Currency,
 		}, retrievedAmount)
 		retrievedAmount, err = storage.GetBalance(ctx, account, largeDeduction.Currency, newBlock)
-		assert.NoError(t, err)
-		assert.Equal(t, &types.Amount{
-			Value:    "100",
-			Currency: largeDeduction.Currency,
-		}, retrievedAmount)
+		assert.True(t, errors.Is(err, ErrBalancePruned))
+		assert.Nil(t, retrievedAmount)
 	})
 }
 

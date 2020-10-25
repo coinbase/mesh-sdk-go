@@ -262,52 +262,32 @@ func (b *BalanceStorage) Reconciled(
 	currency *types.Currency,
 	block *types.BlockIdentifier,
 ) error {
-	dbTransaction := b.db.NewDatabaseTransaction(ctx, true)
-	defer dbTransaction.Discard(ctx)
+	dbTx := b.db.NewDatabaseTransaction(ctx, true)
+	defer dbTx.Discard(ctx)
 
-	key := GetAccountKey(account, currency)
-	exists, acc, err := dbTransaction.Get(ctx, key)
+	err := b.updateAccountEntry(
+		ctx,
+		dbTx,
+		account,
+		currency,
+		func(accEntry accountEntry) *accountEntry {
+			// Don't update last reconciled if the most recent reconciliation was
+			// lower than the last reconciliation. This can occur when inactive
+			// reconciliation gets ahead of the active reconciliation backlog.
+			if accEntry.LastReconciled != nil && accEntry.LastReconciled.Index > block.Index {
+				return nil
+			}
+
+			accEntry.LastReconciled = block
+
+			return &accEntry
+		},
+	)
 	if err != nil {
-		return fmt.Errorf(
-			"%w: unable to get account entry for %s:%s",
-			err,
-			types.PrettyPrintStruct(account),
-			types.PrettyPrintStruct(currency),
-		)
+		return err
 	}
 
-	if !exists {
-		return fmt.Errorf(
-			"account entry is missing for %s:%s",
-			types.PrettyPrintStruct(account),
-			types.PrettyPrintStruct(currency),
-		)
-	}
-
-	var accEntry accountEntry
-	if err := b.db.Encoder().Decode(accountNamespace, acc, &accEntry, true); err != nil {
-		return fmt.Errorf("%w: unable to decode account entry", err)
-	}
-
-	// Don't update last reconciled if the most recent reconciliation was
-	// lower than the last reconciliation. This can occur when inactive
-	// reconciliation gets ahead of the active reconciliation backlog.
-	if accEntry.LastReconciled != nil && accEntry.LastReconciled.Index > block.Index {
-		return nil
-	}
-
-	accEntry.LastReconciled = block
-
-	serialAcc, err := b.db.Encoder().Encode(accountNamespace, accEntry)
-	if err != nil {
-		return fmt.Errorf("%w: unable to encode account entry", err)
-	}
-
-	if err := dbTransaction.Set(ctx, key, serialAcc, true); err != nil {
-		return fmt.Errorf("%w: unable to set account entry", err)
-	}
-
-	if err := dbTransaction.Commit(ctx); err != nil {
+	if err := dbTx.Commit(ctx); err != nil {
 		return fmt.Errorf("%w: unable to commit last reconciliation update", err)
 	}
 
@@ -916,6 +896,54 @@ func (b *BalanceStorage) getHistoricalBalance(
 	return nil, nil, errAccountMissing
 }
 
+func (b *BalanceStorage) updateAccountEntry(
+	ctx context.Context,
+	dbTx DatabaseTransaction,
+	account *types.AccountIdentifier,
+	currency *types.Currency,
+	handler func(accountEntry) *accountEntry,
+) error {
+	key := GetAccountKey(account, currency)
+	exists, acc, err := dbTx.Get(ctx, key)
+	if err != nil {
+		return fmt.Errorf(
+			"%w: unable to get account entry for %s:%s",
+			err,
+			types.PrettyPrintStruct(account),
+			types.PrettyPrintStruct(currency),
+		)
+	}
+
+	if !exists {
+		return fmt.Errorf(
+			"account entry is missing for %s:%s",
+			types.PrettyPrintStruct(account),
+			types.PrettyPrintStruct(currency),
+		)
+	}
+
+	var accEntry accountEntry
+	if err := b.db.Encoder().Decode(accountNamespace, acc, &accEntry, true); err != nil {
+		return fmt.Errorf("%w: unable to decode account entry", err)
+	}
+
+	newAcctEntry := handler(accEntry)
+	if newAcctEntry == nil {
+		return nil
+	}
+
+	serialAcc, err := b.db.Encoder().Encode(accountNamespace, newAcctEntry)
+	if err != nil {
+		return fmt.Errorf("%w: unable to encode account entry", err)
+	}
+
+	if err := dbTx.Set(ctx, key, serialAcc, true); err != nil {
+		return fmt.Errorf("%w: unable to set account entry", err)
+	}
+
+	return nil
+}
+
 // removeHistoricalBalances deletes all historical balances
 // >= (used during reorg) or <= (used during pruning) a particular
 // index.
@@ -958,45 +986,25 @@ func (b *BalanceStorage) removeHistoricalBalances(
 
 	// Update the last pruned index
 	if !orphan {
-		key := GetAccountKey(account, currency)
-		exists, acc, err := dbTx.Get(ctx, key)
+		err := b.updateAccountEntry(
+			ctx,
+			dbTx,
+			account,
+			currency,
+			func(accEntry accountEntry) *accountEntry {
+				// Don't update last pruned if the most recent pruning was
+				// lower than the last prune.
+				if accEntry.LastPruned != nil && *accEntry.LastPruned > index {
+					return nil
+				}
+
+				accEntry.LastPruned = &index
+
+				return &accEntry
+			},
+		)
 		if err != nil {
-			return fmt.Errorf(
-				"%w: unable to get account entry for %s:%s",
-				err,
-				types.PrettyPrintStruct(account),
-				types.PrettyPrintStruct(currency),
-			)
-		}
-
-		if !exists {
-			return fmt.Errorf(
-				"balance entry is missing for account %s:%s",
-				types.PrettyPrintStruct(account),
-				types.PrettyPrintStruct(currency),
-			)
-		}
-
-		var accEntry accountEntry
-		if err := b.db.Encoder().Decode(accountNamespace, acc, &accEntry, true); err != nil {
-			return fmt.Errorf("%w: unable to decode account entry", err)
-		}
-
-		// Don't update last pruned if the most recent pruning was
-		// lower than the last prune.
-		if accEntry.LastPruned != nil && *accEntry.LastPruned > index {
-			return nil
-		}
-
-		accEntry.LastPruned = &index
-
-		serialAcc, err := b.db.Encoder().Encode(accountNamespace, accEntry)
-		if err != nil {
-			return fmt.Errorf("%w: unable to encod balance entry", err)
-		}
-
-		if err := dbTx.Set(ctx, key, serialAcc, true); err != nil {
-			return fmt.Errorf("%w: unable to set account entry", err)
+			return err
 		}
 	}
 
