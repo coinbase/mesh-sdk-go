@@ -44,12 +44,6 @@ const (
 	// is supposed to happen is orphaned.
 	BlockGone = "BLOCK_GONE"
 
-	// AccountUpdated is when an account that is to be
-	// reconciled is updated after the block where the
-	// balance change occurs (this usually occurs
-	// in large backlogs).
-	AccountUpdated = "ACCOUNT_UPDATED"
-
 	// HeadBehind is when the synced tip (where balances
 	// were last computed) is behind the *types.BlockIdentifier
 	// returned by the call to /account/balance.
@@ -60,12 +54,10 @@ const (
 )
 
 const (
-	// backlogThreshold is the limit of account lookups
+	// defaultBacklogSize is the limit of account lookups
 	// that can be enqueued to reconcile before new
 	// requests are dropped.
-	//
-	// TODO: Make configurable
-	backlogThreshold = 50000
+	defaultBacklogSize = 50000
 
 	// waitToCheckDiff is the syncing difference (live-head)
 	// to retry instead of exiting. In other words, if the
@@ -91,17 +83,16 @@ const (
 	// inactive reconciliations for each account.
 	defaultInactiveFrequency = 200
 
-	// defaultLookupBalanceByBlock is the default setting
-	// for how to perform balance queries. It is preferable
-	// to perform queries by sepcific blocks but this is not
-	// always supported by the node.
-	defaultLookupBalanceByBlock = true
-
 	// defaultReconcilerConcurrency is the number of goroutines
 	// to start for reconciliation. Half of the goroutines are assigned
 	// to inactive reconciliation and half are assigned to active
 	// reconciliation.
 	defaultReconcilerConcurrency = 8
+
+	// safeBalancePruneDepth is the depth from the last balance
+	// change that we consider safe to prune. We are very conservative
+	// here to prevent removing balances we may need in a reorg.
+	safeBalancePruneDepth = int64(100) // nolint:gomnd
 )
 
 // Helper functions are used by Reconciler to compare
@@ -123,8 +114,8 @@ type Helper interface {
 		ctx context.Context,
 		account *types.AccountIdentifier,
 		currency *types.Currency,
-		headBlock *types.BlockIdentifier,
-	) (*types.Amount, *types.BlockIdentifier, error)
+		block *types.BlockIdentifier,
+	) (*types.Amount, error)
 
 	LiveBalance(
 		ctx context.Context,
@@ -132,6 +123,16 @@ type Helper interface {
 		currency *types.Currency,
 		block *types.BlockIdentifier,
 	) (*types.Amount, *types.BlockIdentifier, error)
+
+	// PruneBalances is invoked by the reconciler
+	// to indicate that all historical balance states
+	// <= to index can be removed.
+	PruneBalances(
+		ctx context.Context,
+		account *types.AccountIdentifier,
+		currency *types.Currency,
+		index int64,
+	) error
 }
 
 // Handler is called by Reconciler after a reconciliation
@@ -202,9 +203,11 @@ type Reconciler struct {
 
 	lookupBalanceByBlock bool
 	interestingAccounts  []*AccountCurrency
+	backlogSize          int
 	changeQueue          chan *parser.BalanceChange
 	inactiveFrequency    int64
 	debugLogging         bool
+	balancePruning       bool
 
 	// Reconciler concurrency is separated between
 	// active and inactive concurrency to allow for
@@ -248,23 +251,25 @@ func New(
 	options ...Option,
 ) *Reconciler {
 	r := &Reconciler{
-		helper:               helper,
-		handler:              handler,
-		parser:               p,
-		inactiveFrequency:    defaultInactiveFrequency,
-		ActiveConcurrency:    defaultReconcilerConcurrency,
-		InactiveConcurrency:  defaultReconcilerConcurrency,
-		highWaterMark:        -1,
-		seenAccounts:         map[string]struct{}{},
-		inactiveQueue:        []*InactiveEntry{},
-		lookupBalanceByBlock: defaultLookupBalanceByBlock,
-		changeQueue:          make(chan *parser.BalanceChange, backlogThreshold),
-		lastIndexChecked:     -1,
+		helper:              helper,
+		handler:             handler,
+		parser:              p,
+		inactiveFrequency:   defaultInactiveFrequency,
+		ActiveConcurrency:   defaultReconcilerConcurrency,
+		InactiveConcurrency: defaultReconcilerConcurrency,
+		highWaterMark:       -1,
+		seenAccounts:        map[string]struct{}{},
+		inactiveQueue:       []*InactiveEntry{},
+		backlogSize:         defaultBacklogSize,
+		lastIndexChecked:    -1,
 	}
 
 	for _, opt := range options {
 		opt(r)
 	}
+
+	// Create change queue
+	r.changeQueue = make(chan *parser.BalanceChange, r.backlogSize)
 
 	return r
 }
@@ -288,7 +293,7 @@ func (r *Reconciler) wrappedActiveEnqueue(
 	default:
 		r.debugLog(
 			"skipping active enqueue because backlog has %d items",
-			backlogThreshold,
+			r.backlogSize,
 		)
 
 		if err := r.handler.ReconciliationSkipped(
@@ -446,12 +451,12 @@ func (r *Reconciler) CompareBalance(
 		)
 	}
 
-	// Check if live block < computed head
-	computedBalance, computedBlock, err := r.helper.ComputedBalance(
+	// Get computed balance at live block
+	computedBalance, err := r.helper.ComputedBalance(
 		ctx,
 		account,
 		currency,
-		head,
+		liveBlock,
 	)
 	if err != nil {
 		return zeroString, "", head.Index, fmt.Errorf(
@@ -460,15 +465,6 @@ func (r *Reconciler) CompareBalance(
 			account,
 			currency,
 			err,
-		)
-	}
-
-	if liveBlock.Index < computedBlock.Index {
-		return zeroString, "", head.Index, fmt.Errorf(
-			"%w %+v updated at %d",
-			ErrAccountUpdated,
-			account,
-			computedBlock.Index,
 		)
 	}
 
@@ -676,23 +672,6 @@ func (r *Reconciler) accountReconciliation(
 				)
 			}
 
-			if errors.Is(err, ErrAccountUpdated) {
-				// If account was updated, it must be
-				// enqueued again
-				r.debugLog(
-					"skipping reconciliation because account %s updated",
-					types.PrintStruct(accountCurrency.Account),
-				)
-
-				return r.handler.ReconciliationSkipped(
-					ctx,
-					reconciliationType,
-					account,
-					currency,
-					AccountUpdated,
-				)
-			}
-
 			return err
 		}
 
@@ -766,6 +745,19 @@ func (r *Reconciler) updateLastChecked(index int64) {
 	}
 }
 
+func (r *Reconciler) pruneBalances(ctx context.Context, change *parser.BalanceChange) error {
+	if !r.balancePruning {
+		return nil
+	}
+
+	return r.helper.PruneBalances(
+		ctx,
+		change.Account,
+		change.Currency,
+		change.Block.Index-safeBalancePruneDepth,
+	)
+}
+
 // reconcileActiveAccounts selects an account
 // from the Reconciler account queue and
 // reconciles the balance. This is useful
@@ -794,9 +786,6 @@ func (r *Reconciler) reconcileActiveAccounts(ctx context.Context) error { // nol
 
 				continue
 			}
-
-			// TODO: Skip reconciliation if account has been updated so we don't lookup
-			// balance unnecessarily
 
 			amount, block, err := r.bestLiveBalance(
 				ctx,
@@ -848,6 +837,12 @@ func (r *Reconciler) reconcileActiveAccounts(ctx context.Context) error { // nol
 					r.wrappedActiveEnqueue(ctx, balanceChange)
 				}
 
+				return err
+			}
+
+			// Attempt to prune historical balances that will not be used
+			// anymore.
+			if err := r.pruneBalances(ctx, balanceChange); err != nil {
 				return err
 			}
 
