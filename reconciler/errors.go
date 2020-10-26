@@ -28,11 +28,6 @@ var (
 	// we are close to the live head (waitToCheckDiff).
 	ErrHeadBlockBehindLive = errors.New("head block behind")
 
-	// ErrAccountUpdated is returned when the
-	// account was updated at a height later than
-	// the live height (when the account balance was fetched).
-	ErrAccountUpdated = errors.New("account updated")
-
 	// ErrBlockGone is returned when the processed block
 	// head is greater than the live head but the block
 	// does not exist in the store. This likely means
@@ -50,7 +45,6 @@ var (
 func Err(err error) bool {
 	reconcilerErrors := []error{
 		ErrHeadBlockBehindLive,
-		ErrAccountUpdated,
 		ErrBlockGone,
 		ErrGetCurrentBlockFailed,
 		ErrBlockExistsFailed,

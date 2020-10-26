@@ -69,12 +69,10 @@ func WithSeenAccounts(seen []*AccountCurrency) Option {
 	}
 }
 
-// WithLookupBalanceByBlock sets lookupBlockByBalance.
-func WithLookupBalanceByBlock(lookup bool) Option {
+// WithLookupBalanceByBlock sets lookupBlockByBalance to false.
+func WithLookupBalanceByBlock() Option {
 	return func(r *Reconciler) {
-		// We don't do anything if lookup == true because the default
-		// is already to create a non-buffered channel.
-		r.lookupBalanceByBlock = lookup
+		r.lookupBalanceByBlock = true
 	}
 }
 
@@ -88,8 +86,27 @@ func WithInactiveFrequency(blocks int64) Option {
 
 // WithDebugLogging determines if verbose logs should
 // be printed.
-func WithDebugLogging(debug bool) Option {
+func WithDebugLogging() Option {
 	return func(r *Reconciler) {
-		r.debugLogging = debug
+		r.debugLogging = true
+	}
+}
+
+// WithBalancePruning determines if historical
+// balance states should be pruned after they are used.
+// This can prevent storage blowup if historical states
+// are only ever used once.
+func WithBalancePruning() Option {
+	return func(r *Reconciler) {
+		r.balancePruning = true
+	}
+}
+
+// WithBacklogSize overrides the defaultBacklogSize
+// to some new size. This is often useful for blockchains
+// that have high network activity.
+func WithBacklogSize(size int) Option {
+	return func(r *Reconciler) {
+		r.backlogSize = size
 	}
 }
