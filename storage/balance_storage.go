@@ -461,19 +461,30 @@ func (b *BalanceStorage) OrphanBalance(
 // retrieved once (like reconciliation).
 func (b *BalanceStorage) PruneBalances(
 	ctx context.Context,
-	dbTransaction DatabaseTransaction,
 	account *types.AccountIdentifier,
 	currency *types.Currency,
 	index int64,
 ) error {
-	return b.removeHistoricalBalances(
+	dbTx := b.db.NewDatabaseTransaction(ctx, true)
+	defer dbTx.Discard(ctx)
+
+	err := b.removeHistoricalBalances(
 		ctx,
-		dbTransaction,
+		dbTx,
 		account,
 		currency,
 		index,
 		false,
 	)
+	if err != nil {
+		return fmt.Errorf("%w: unable to remove historical balances", err)
+	}
+
+	if err := dbTx.Commit(ctx); err != nil {
+		return fmt.Errorf("%w: unable to commit historical balance removal", err)
+	}
+
+	return nil
 }
 
 // UpdateBalance updates a types.AccountIdentifer
@@ -639,7 +650,9 @@ func (b *BalanceStorage) GetBalanceTransactional(
 	currency *types.Currency,
 	block *types.BlockIdentifier,
 ) (*types.Amount, error) {
-	// TODO: if block > head block, should return an error
+	if block == nil {
+		return nil, errors.New("block cannot be empty")
+	}
 
 	key := GetAccountKey(account, currency)
 	exists, acct, err := dbTx.Get(ctx, key)
