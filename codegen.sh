@@ -205,4 +205,4 @@ FORMAT_GEN="gofmt -w /local/types; gofmt -w /local/client; gofmt -w /local/serve
 GOLANG_VERSION=1.13
 docker run --rm -v "${PWD}":/local \
   golang:${GOLANG_VERSION} sh -c \
-  "cd /local; make deps; ${FORMAT_GEN}; make add-license; make shorten-lines;"
+  "cd /local; make deps; ${FORMAT_GEN}; make add-license; make shorten-lines; go mod tidy;"
