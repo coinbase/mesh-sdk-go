@@ -511,7 +511,7 @@ func (b *BalanceStorage) UpdateBalance(
 	var storedValue string
 	if exists {
 		// Get most recent historical balance
-		balance, lastUpdate, err := b.getHistoricalBalance(
+		balance, err := b.getHistoricalBalance(
 			ctx,
 			dbTransaction,
 			change.Account,
@@ -525,12 +525,6 @@ func (b *BalanceStorage) UpdateBalance(
 			return err
 		default:
 			storedValue = balance.Value
-		}
-
-		// Ensure the caller isn't trying to orphan balances by calling
-		// UpdateBalance.
-		if lastUpdate != nil && lastUpdate.Index >= change.Block.Index {
-			return errors.New("cannot update already updated balance")
 		}
 	}
 
@@ -651,7 +645,7 @@ func (b *BalanceStorage) GetBalanceTransactional(
 	block *types.BlockIdentifier,
 ) (*types.Amount, error) {
 	if block == nil {
-		return nil, errors.New("block cannot be empty")
+		return nil, ErrBlockNil
 	}
 
 	key := GetAccountKey(account, currency)
@@ -701,7 +695,7 @@ func (b *BalanceStorage) GetBalanceTransactional(
 		)
 	}
 
-	amount, _, err := b.getHistoricalBalance(
+	amount, err := b.getHistoricalBalance(
 		ctx,
 		dbTx,
 		account,
@@ -906,9 +900,8 @@ func (b *BalanceStorage) getHistoricalBalance(
 	account *types.AccountIdentifier,
 	currency *types.Currency,
 	block *types.BlockIdentifier,
-) (*types.Amount, *types.BlockIdentifier, error) {
+) (*types.Amount, error) {
 	var foundAmount *types.Amount
-	var foundBlock *types.BlockIdentifier
 	_, err := dbTx.Scan(
 		ctx,
 		GetHistoricalBalancePrefix(account, currency),
@@ -935,20 +928,19 @@ func (b *BalanceStorage) getHistoricalBalance(
 			}
 
 			foundAmount = deserialBal.Amount
-			foundBlock = deserialBal.Block
 			return errAccountFound
 		},
 		false,
 		true,
 	)
 	if errors.Is(err, errAccountFound) {
-		return foundAmount, foundBlock, nil
+		return foundAmount, nil
 	}
 	if err != nil {
-		return nil, nil, fmt.Errorf("%w: database scan failed", err)
+		return nil, fmt.Errorf("%w: database scan failed", err)
 	}
 
-	return nil, nil, errAccountMissing
+	return nil, errAccountMissing
 }
 
 func (b *BalanceStorage) updateAccountEntry(
