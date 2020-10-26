@@ -449,7 +449,7 @@ func TestBalance(t *testing.T) {
 		assert.NoError(t, err)
 		assert.NoError(t, txn.Commit(ctx))
 
-		// Successful (balance > computed)
+		// Successful (balance > computed and negative intermediate value)
 		mockHelper.AccountBalanceAmount = "150"
 		txn = storage.db.NewDatabaseTransaction(ctx, true)
 		err = storage.UpdateBalance(
@@ -459,7 +459,7 @@ func TestBalance(t *testing.T) {
 				Account:    exemptionAccount,
 				Currency:   exemptionCurrency,
 				Block:      newBlock,
-				Difference: amount.Value,
+				Difference: "-10",
 			},
 			nil,
 		)
