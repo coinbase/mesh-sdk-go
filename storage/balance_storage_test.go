@@ -171,6 +171,12 @@ func TestBalance(t *testing.T) {
 	storage := NewBalanceStorage(database)
 	storage.Initialize(mockHelper, nil)
 
+	t.Run("Get balance at nil block", func(t *testing.T) {
+		amount, err := storage.GetBalance(ctx, account, currency, nil)
+		assert.True(t, errors.Is(err, ErrBlockNil))
+		assert.Nil(t, amount)
+	})
+
 	t.Run("Get unset balance", func(t *testing.T) {
 		amount, err := storage.GetBalance(ctx, account, currency, newBlock)
 		assert.NoError(t, err)
