@@ -333,23 +333,20 @@ func (b *BalanceStorage) existingValue(
 	change *parser.BalanceChange,
 	parentBlock *types.BlockIdentifier,
 	existingValue string,
-	exemptions []*types.BalanceExemption,
 ) (string, error) {
 	exists := len(existingValue) > 0
+
+	if exists {
+		return existingValue, nil
+	}
 
 	// Don't attempt to use the helper if we are going to query the same
 	// block we are processing (causes the duplicate issue).
 	//
 	// We also ensure we don't exit with 0 if the value already exists,
 	// which could be true if balances are bootstrapped.
-	if !exists && parentBlock != nil && change.Block.Hash == parentBlock.Hash {
+	if parentBlock != nil && change.Block.Hash == parentBlock.Hash {
 		return "0", nil
-	}
-
-	// We can exit with the existing value if there are no
-	// applicable exemptions.
-	if exists && len(exemptions) == 0 {
-		return existingValue, nil
 	}
 
 	// Use helper to fetch existing balance.
@@ -369,14 +366,51 @@ func (b *BalanceStorage) existingValue(
 		)
 	}
 
-	// Nothing to compare, so should return.
-	if !exists {
-		return amount.Value, nil
+	return amount.Value, nil
+}
+
+// applyExemptions compares the computed balance of an account
+// with the live balance of an account at the *types.BlockIdentifier
+// of the *parser.BalanceChange, if any exemptions apply.
+//
+// We compare the balance of the provided account after the
+// new balance has been calculated instead of at the parent block
+// because many blockchains apply rewards at the start
+// of each block, which can be spent in the block. This
+// means it is possible for an account balance to go negative
+// if the balance change is applied to the balance of the account
+// at the parent block.
+func (b *BalanceStorage) applyExemptions(
+	ctx context.Context,
+	change *parser.BalanceChange,
+	newVal string,
+) (string, error) {
+	// Find exemptions that are applicable to the *parser.BalanceChange
+	exemptions := b.parser.FindExemptions(change.Account, change.Currency)
+	if len(exemptions) == 0 {
+		return newVal, nil
+	}
+
+	// Use helper to fetch live balance.
+	liveAmount, err := b.helper.AccountBalance(
+		ctx,
+		change.Account,
+		change.Currency,
+		change.Block,
+	)
+	if err != nil {
+		return "", fmt.Errorf(
+			"%w: unable to get current account balance for %s %s at %s",
+			err,
+			types.PrintStruct(change.Account),
+			types.PrintStruct(change.Currency),
+			types.PrintStruct(change.Block),
+		)
 	}
 
 	// Determine if new live balance complies
 	// with any balance exemption.
-	difference, err := types.SubtractValues(amount.Value, existingValue)
+	difference, err := types.SubtractValues(liveAmount.Value, newVal)
 	if err != nil {
 		return "", fmt.Errorf(
 			"%w: unable to calculate difference between live and computed balances",
@@ -394,11 +428,11 @@ func (b *BalanceStorage) existingValue(
 			ErrInvalidLiveBalance,
 			types.PrintStruct(change.Account),
 			difference,
-			types.PrintStruct(parentBlock),
+			types.PrintStruct(change.Block),
 		)
 	}
 
-	return amount.Value, nil
+	return liveAmount.Value, nil
 }
 
 // OrphanBalance removes all saved
@@ -489,9 +523,6 @@ func (b *BalanceStorage) UpdateBalance(
 		}
 	}
 
-	// Find exemptions that are applicable to the *parser.BalanceChange
-	exemptions := b.parser.FindExemptions(change.Account, change.Currency)
-
 	// Find account existing value whether the account is new, has an
 	// existing balance, or is subject to additional accounting from
 	// a balance exemption.
@@ -500,13 +531,20 @@ func (b *BalanceStorage) UpdateBalance(
 		change,
 		parentBlock,
 		storedValue,
-		exemptions,
 	)
 	if err != nil {
 		return err
 	}
 
 	newVal, err := types.AddValues(change.Difference, existingValue)
+	if err != nil {
+		return err
+	}
+
+	// If any exemptions apply, the returned new value will
+	// reflect the live balance for the *types.AccountIdentifier
+	// and *types.Currency.
+	newVal, err = b.applyExemptions(ctx, change, newVal)
 	if err != nil {
 		return err
 	}
@@ -554,7 +592,11 @@ func (b *BalanceStorage) UpdateBalance(
 		return err
 	}
 
-	historicalKey := GetHistoricalBalanceKey(change.Account, change.Currency, change.Block.Index)
+	historicalKey := GetHistoricalBalanceKey(
+		change.Account,
+		change.Currency,
+		change.Block.Index,
+	)
 	if err := dbTransaction.Set(ctx, historicalKey, serialBal, true); err != nil {
 		return err
 	}
