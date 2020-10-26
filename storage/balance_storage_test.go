@@ -435,16 +435,31 @@ func TestBalance(t *testing.T) {
 	})
 
 	t.Run("balance exemption update", func(t *testing.T) {
-		mockHelper.AccountBalanceAmount = "0"
 		txn := storage.db.NewDatabaseTransaction(ctx, true)
-		err := storage.UpdateBalance(
+		err := storage.SetBalance(
+			ctx,
+			txn,
+			exemptionAccount,
+			&types.Amount{
+				Value:    "0",
+				Currency: exemptionCurrency,
+			},
+			genesisBlock,
+		)
+		assert.NoError(t, err)
+		assert.NoError(t, txn.Commit(ctx))
+
+		// Successful (balance > computed and negative intermediate value)
+		mockHelper.AccountBalanceAmount = "150"
+		txn = storage.db.NewDatabaseTransaction(ctx, true)
+		err = storage.UpdateBalance(
 			ctx,
 			txn,
 			&parser.BalanceChange{
 				Account:    exemptionAccount,
 				Currency:   exemptionCurrency,
 				Block:      newBlock,
-				Difference: amount.Value,
+				Difference: "-10",
 			},
 			nil,
 		)
@@ -458,10 +473,10 @@ func TestBalance(t *testing.T) {
 			newBlock,
 		)
 		assert.NoError(t, err)
-		assert.Equal(t, amount.Value, retrievedAmount.Value)
+		assert.Equal(t, "150", retrievedAmount.Value)
 
 		// Successful (balance == computed)
-		mockHelper.AccountBalanceAmount = amount.Value
+		mockHelper.AccountBalanceAmount = "200"
 		txn = storage.db.NewDatabaseTransaction(ctx, true)
 		err = storage.UpdateBalance(
 			ctx,
@@ -484,33 +499,7 @@ func TestBalance(t *testing.T) {
 			newBlock3,
 		)
 		assert.NoError(t, err)
-		assert.Equal(t, "150", retrievedAmount.Value)
-
-		// Successful (balance > computed)
-		mockHelper.AccountBalanceAmount = "200"
-		txn = storage.db.NewDatabaseTransaction(ctx, true)
-		err = storage.UpdateBalance(
-			ctx,
-			txn,
-			&parser.BalanceChange{
-				Account:    exemptionAccount,
-				Currency:   exemptionCurrency,
-				Block:      newBlock4,
-				Difference: "50",
-			},
-			nil,
-		)
-		assert.NoError(t, err)
-		assert.NoError(t, txn.Commit(ctx))
-
-		retrievedAmount, err = storage.GetBalance(
-			ctx,
-			exemptionAccount,
-			exemptionCurrency,
-			newBlock4,
-		)
-		assert.NoError(t, err)
-		assert.Equal(t, "250", retrievedAmount.Value)
+		assert.Equal(t, "200", retrievedAmount.Value)
 
 		// Unsuccessful (balance < computed)
 		mockHelper.AccountBalanceAmount = "10"
@@ -536,7 +525,7 @@ func TestBalance(t *testing.T) {
 			newBlock4,
 		)
 		assert.NoError(t, err)
-		assert.Equal(t, "250", retrievedAmount.Value)
+		assert.Equal(t, "200", retrievedAmount.Value)
 		mockHelper.AccountBalanceAmount = ""
 	})
 
