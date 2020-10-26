@@ -614,7 +614,13 @@ func TestBalance(t *testing.T) {
 			nil,
 		)
 		assert.NoError(t, err)
-		retrievedAmount, err := storage.GetBalanceTransactional(ctx, txn, account, largeDeduction.Currency, newBlock3)
+		retrievedAmount, err := storage.GetBalanceTransactional(
+			ctx,
+			txn,
+			account,
+			largeDeduction.Currency,
+			newBlock3,
+		)
 		assert.NoError(t, err)
 		assert.Equal(t, &types.Amount{
 			Value:    "1200",
