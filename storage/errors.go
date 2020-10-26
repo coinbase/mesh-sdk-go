@@ -324,10 +324,15 @@ var (
 	// to retrieve a pruned balance.
 	ErrBalancePruned = errors.New("balance pruned")
 
+	// ErrBlockNil is returned when the block to lookup
+	// a balance at is nil.
+	ErrBlockNil = errors.New("block nil")
+
 	BalanceStorageErrs = []error{
 		ErrNegativeBalance,
 		ErrInvalidLiveBalance,
 		ErrBalancePruned,
+		ErrBlockNil,
 	}
 
 	///////////////////
