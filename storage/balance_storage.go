@@ -196,6 +196,7 @@ type accountEntry struct {
 	Account        *types.AccountIdentifier `json:"account"`
 	Currency       *types.Currency          `json:"currency"`
 	LastReconciled *types.BlockIdentifier   `json:"last_reconciled"`
+	LastPruned     *int64                   `json:"last_pruned"`
 }
 
 // SetBalance allows a client to set the balance of an account in a database
@@ -215,6 +216,7 @@ func (b *BalanceStorage) SetBalance(
 		account,
 		amount.Currency,
 		-1,
+		true, // We want everything >= -1
 	); err != nil {
 		return err
 	}
@@ -260,52 +262,32 @@ func (b *BalanceStorage) Reconciled(
 	currency *types.Currency,
 	block *types.BlockIdentifier,
 ) error {
-	dbTransaction := b.db.NewDatabaseTransaction(ctx, true)
-	defer dbTransaction.Discard(ctx)
+	dbTx := b.db.NewDatabaseTransaction(ctx, true)
+	defer dbTx.Discard(ctx)
 
-	key := GetAccountKey(account, currency)
-	exists, acc, err := dbTransaction.Get(ctx, key)
+	err := b.updateAccountEntry(
+		ctx,
+		dbTx,
+		account,
+		currency,
+		func(accEntry accountEntry) *accountEntry {
+			// Don't update last reconciled if the most recent reconciliation was
+			// lower than the last reconciliation. This can occur when inactive
+			// reconciliation gets ahead of the active reconciliation backlog.
+			if accEntry.LastReconciled != nil && accEntry.LastReconciled.Index > block.Index {
+				return nil
+			}
+
+			accEntry.LastReconciled = block
+
+			return &accEntry
+		},
+	)
 	if err != nil {
-		return fmt.Errorf(
-			"%w: unable to get balance entry for account %s:%s",
-			err,
-			types.PrettyPrintStruct(account),
-			types.PrettyPrintStruct(currency),
-		)
+		return err
 	}
 
-	if !exists {
-		return fmt.Errorf(
-			"balance entry is missing for account %s:%s",
-			types.PrettyPrintStruct(account),
-			types.PrettyPrintStruct(currency),
-		)
-	}
-
-	var accEntry accountEntry
-	if err := b.db.Encoder().Decode(accountNamespace, acc, &accEntry, true); err != nil {
-		return fmt.Errorf("%w: unable to decode account entry", err)
-	}
-
-	// Don't update last reconciled if the most recent reconciliation was
-	// lower than the last reconciliation. This can occur when inactive
-	// reconciliation gets ahead of the active reconciliation backlog.
-	if accEntry.LastReconciled != nil && accEntry.LastReconciled.Index > block.Index {
-		return nil
-	}
-
-	accEntry.LastReconciled = block
-
-	serialAcc, err := b.db.Encoder().Encode(accountNamespace, accEntry)
-	if err != nil {
-		return fmt.Errorf("%w: unable to encod balance entry", err)
-	}
-
-	if err := dbTransaction.Set(ctx, key, serialAcc, true); err != nil {
-		return fmt.Errorf("%w: unable to set account entry", err)
-	}
-
-	if err := dbTransaction.Commit(ctx); err != nil {
+	if err := dbTx.Commit(ctx); err != nil {
 		return fmt.Errorf("%w: unable to commit last reconciliation update", err)
 	}
 
@@ -435,6 +417,28 @@ func (b *BalanceStorage) OrphanBalance(
 		account,
 		currency,
 		block.Index,
+		true,
+	)
+}
+
+// PruneBalances removes all historical balance states
+// <= some index. This can significantly reduce storage
+// usage in scenarios where historical balances are only
+// retrieved once (like reconciliation).
+func (b *BalanceStorage) PruneBalances(
+	ctx context.Context,
+	dbTransaction DatabaseTransaction,
+	account *types.AccountIdentifier,
+	currency *types.Currency,
+	index int64,
+) error {
+	return b.removeHistoricalBalances(
+		ctx,
+		dbTransaction,
+		account,
+		currency,
+		index,
+		false,
 	)
 }
 
@@ -596,7 +600,7 @@ func (b *BalanceStorage) GetBalanceTransactional(
 	// TODO: if block > head block, should return an error
 
 	key := GetAccountKey(account, currency)
-	exists, _, err := dbTx.Get(ctx, key)
+	exists, acct, err := dbTx.Get(ctx, key)
 	if err != nil {
 		return nil, err
 	}
@@ -623,6 +627,23 @@ func (b *BalanceStorage) GetBalanceTransactional(
 		}
 
 		return amount, nil
+	}
+
+	var accEntry accountEntry
+	if err := b.db.Encoder().Decode(accountNamespace, acct, &accEntry, true); err != nil {
+		return nil, fmt.Errorf(
+			"%w: unable to parse balance entry for %s",
+			err,
+			string(acct),
+		)
+	}
+
+	if accEntry.LastPruned != nil && *accEntry.LastPruned >= block.Index {
+		return nil, fmt.Errorf(
+			"%w: last pruned %d",
+			ErrBalancePruned,
+			*accEntry.LastPruned,
+		)
 	}
 
 	amount, _, err := b.getHistoricalBalance(
@@ -875,14 +896,64 @@ func (b *BalanceStorage) getHistoricalBalance(
 	return nil, nil, errAccountMissing
 }
 
+func (b *BalanceStorage) updateAccountEntry(
+	ctx context.Context,
+	dbTx DatabaseTransaction,
+	account *types.AccountIdentifier,
+	currency *types.Currency,
+	handler func(accountEntry) *accountEntry,
+) error {
+	key := GetAccountKey(account, currency)
+	exists, acc, err := dbTx.Get(ctx, key)
+	if err != nil {
+		return fmt.Errorf(
+			"%w: unable to get account entry for %s:%s",
+			err,
+			types.PrettyPrintStruct(account),
+			types.PrettyPrintStruct(currency),
+		)
+	}
+
+	if !exists {
+		return fmt.Errorf(
+			"account entry is missing for %s:%s",
+			types.PrettyPrintStruct(account),
+			types.PrettyPrintStruct(currency),
+		)
+	}
+
+	var accEntry accountEntry
+	if err := b.db.Encoder().Decode(accountNamespace, acc, &accEntry, true); err != nil {
+		return fmt.Errorf("%w: unable to decode account entry", err)
+	}
+
+	newAcctEntry := handler(accEntry)
+	if newAcctEntry == nil {
+		return nil
+	}
+
+	serialAcc, err := b.db.Encoder().Encode(accountNamespace, newAcctEntry)
+	if err != nil {
+		return fmt.Errorf("%w: unable to encode account entry", err)
+	}
+
+	if err := dbTx.Set(ctx, key, serialAcc, true); err != nil {
+		return fmt.Errorf("%w: unable to set account entry", err)
+	}
+
+	return nil
+}
+
 // removeHistoricalBalances deletes all historical balances
-// >= a particular index (used during reorg).
+// >= (used during reorg) or <= (used during pruning) a particular
+// index.
 func (b *BalanceStorage) removeHistoricalBalances(
 	ctx context.Context,
 	dbTx DatabaseTransaction,
 	account *types.AccountIdentifier,
 	currency *types.Currency,
 	index int64,
+	orphan bool,
 ) error {
 	foundKeys := [][]byte{}
 	_, err := dbTx.Scan(
@@ -897,7 +968,11 @@ func (b *BalanceStorage) removeHistoricalBalances(
 			return nil
 		},
 		false,
-		false,
+
+		// If we are orphaning blocks, we should sort
+		// from greatest to least (i.e. reverse). If we
+		// are pruning, we want to sort least to greatest.
+		!orphan,
 	)
 	if err != nil {
 		return fmt.Errorf("%w: database scan failed", err)
@@ -905,6 +980,30 @@ func (b *BalanceStorage) removeHistoricalBalances(
 
 	for _, k := range foundKeys {
 		if err := dbTx.Delete(ctx, k); err != nil {
+			return err
+		}
+	}
+
+	// Update the last pruned index
+	if !orphan {
+		err := b.updateAccountEntry(
+			ctx,
+			dbTx,
+			account,
+			currency,
+			func(accEntry accountEntry) *accountEntry {
+				// Don't update last pruned if the most recent pruning was
+				// lower than the last prune.
+				if accEntry.LastPruned != nil && *accEntry.LastPruned > index {
+					return nil
+				}
+
+				accEntry.LastPruned = &index
+
+				return &accEntry
+			},
+		)
+		if err != nil {
 			return err
 		}
 	}
