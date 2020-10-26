@@ -171,6 +171,12 @@ func TestBalance(t *testing.T) {
 	storage := NewBalanceStorage(database)
 	storage.Initialize(mockHelper, nil)
 
+	t.Run("Get balance at nil block", func(t *testing.T) {
+		amount, err := storage.GetBalance(ctx, account, currency, nil)
+		assert.True(t, errors.Is(err, ErrBlockNil))
+		assert.Nil(t, amount)
+	})
+
 	t.Run("Get unset balance", func(t *testing.T) {
 		amount, err := storage.GetBalance(ctx, account, currency, newBlock)
 		assert.NoError(t, err)
@@ -565,16 +571,13 @@ func TestBalance(t *testing.T) {
 	})
 
 	t.Run("prune negative index (no-op)", func(t *testing.T) {
-		txn := storage.db.NewDatabaseTransaction(ctx, true)
 		err := storage.PruneBalances(
 			ctx,
-			txn,
 			account,
 			largeDeduction.Currency,
 			-1,
 		)
 		assert.NoError(t, err)
-		assert.NoError(t, txn.Commit(ctx))
 
 		retrievedAmount, err := storage.GetBalance(ctx, account, largeDeduction.Currency, newBlock3)
 		assert.NoError(t, err)
@@ -596,7 +599,7 @@ func TestBalance(t *testing.T) {
 		}, retrievedAmount)
 	})
 
-	t.Run("attempt orphan balance with update balance", func(t *testing.T) {
+	t.Run("update existing balance", func(t *testing.T) {
 		txn := storage.db.NewDatabaseTransaction(ctx, true)
 		orphanValue, _ := new(big.Int).SetString(largeDeduction.Value, 10)
 		err := storage.UpdateBalance(
@@ -610,10 +613,22 @@ func TestBalance(t *testing.T) {
 			},
 			nil,
 		)
-		assert.Error(t, err)
+		assert.NoError(t, err)
+		retrievedAmount, err := storage.GetBalanceTransactional(
+			ctx,
+			txn,
+			account,
+			largeDeduction.Currency,
+			newBlock3,
+		)
+		assert.NoError(t, err)
+		assert.Equal(t, &types.Amount{
+			Value:    "1200",
+			Currency: largeDeduction.Currency,
+		}, retrievedAmount)
 		txn.Discard(ctx)
 
-		retrievedAmount, err := storage.GetBalance(ctx, account, largeDeduction.Currency, newBlock3)
+		retrievedAmount, err = storage.GetBalance(ctx, account, largeDeduction.Currency, newBlock3)
 		assert.NoError(t, err)
 		assert.Equal(t, &types.Amount{
 			Value:    "200",
@@ -649,16 +664,13 @@ func TestBalance(t *testing.T) {
 	})
 
 	t.Run("prune index", func(t *testing.T) {
-		txn := storage.db.NewDatabaseTransaction(ctx, true)
 		err := storage.PruneBalances(
 			ctx,
-			txn,
 			account,
 			largeDeduction.Currency,
 			newBlock.Index,
 		)
 		assert.NoError(t, err)
-		assert.NoError(t, txn.Commit(ctx))
 
 		retrievedAmount, err := storage.GetBalance(ctx, account, largeDeduction.Currency, newBlock3)
 		assert.NoError(t, err)
