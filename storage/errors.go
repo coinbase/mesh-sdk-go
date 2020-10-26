@@ -320,9 +320,14 @@ var (
 	// with any balance exemption.
 	ErrInvalidLiveBalance = errors.New("invalid live balance")
 
+	// ErrBalancePruned is returned when the caller attempts
+	// to retrieve a pruned balance.
+	ErrBalancePruned = errors.New("balance pruned")
+
 	BalanceStorageErrs = []error{
 		ErrNegativeBalance,
 		ErrInvalidLiveBalance,
+		ErrBalancePruned,
 	}
 
 	///////////////////
