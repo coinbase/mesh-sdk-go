@@ -328,11 +328,16 @@ var (
 	// a balance at is nil.
 	ErrBlockNil = errors.New("block nil")
 
+	// ErrAccountMissing is returned when a fetched
+	// account does not exist.
+	ErrAccountMissing = errors.New("block nil")
+
 	BalanceStorageErrs = []error{
 		ErrNegativeBalance,
 		ErrInvalidLiveBalance,
 		ErrBalancePruned,
 		ErrBlockNil,
+		ErrAccountMissing,
 	}
 
 	///////////////////
