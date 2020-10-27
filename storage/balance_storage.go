@@ -572,7 +572,7 @@ func (b *BalanceStorage) UpdateBalance(
 
 	// Add account entry if doesn't exist
 	if !exists {
-		serialAcc, err := b.db.Encoder().Encode(historicalBalanceNamespace, accountEntry{
+		serialAcc, err := b.db.Encoder().Encode(accountNamespace, accountEntry{
 			Account:  change.Account,
 			Currency: change.Currency,
 		})
@@ -616,13 +616,14 @@ func (b *BalanceStorage) GetBalance(
 	account *types.AccountIdentifier,
 	currency *types.Currency,
 	block *types.BlockIdentifier,
+	setIfEmpty bool,
 ) (*types.Amount, error) {
 	// We use a write-ready transaction here in case we need to
 	// inject a non-existent balance into storage.
-	dbTx := b.db.NewDatabaseTransaction(ctx, true)
+	dbTx := b.db.NewDatabaseTransaction(ctx, setIfEmpty)
 	defer dbTx.Discard(ctx)
 
-	amount, err := b.GetBalanceTransactional(ctx, dbTx, account, currency, block)
+	amount, err := b.GetBalanceTransactional(ctx, dbTx, account, currency, block, setIfEmpty)
 	if err != nil {
 		return nil, fmt.Errorf("%w: unable to get balance", err)
 	}
@@ -643,6 +644,7 @@ func (b *BalanceStorage) GetBalanceTransactional(
 	account *types.AccountIdentifier,
 	currency *types.Currency,
 	block *types.BlockIdentifier,
+	setIfEmpty bool,
 ) (*types.Amount, error) {
 	if block == nil {
 		return nil, ErrBlockNil
@@ -662,6 +664,11 @@ func (b *BalanceStorage) GetBalanceTransactional(
 		amount, err := b.helper.AccountBalance(ctx, account, currency, block)
 		if err != nil {
 			return nil, fmt.Errorf("%w: unable to get account balance from helper", err)
+		}
+
+		// If setIfEmpty is false, we don't attempt to set balance.
+		if !setIfEmpty {
+			return amount, nil
 		}
 
 		err = b.SetBalance(

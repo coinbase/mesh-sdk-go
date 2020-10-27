@@ -204,7 +204,7 @@ func (b *BlockStorage) pruneBlock(
 		return -1, ErrNothingToPrune
 	}
 
-	blockResponse, err := b.getBlockResponse(
+	blockResponse, err := b.GetBlockLazyTransactional(
 		ctx,
 		&types.PartialBlockIdentifier{Index: &oldestIndex},
 		dbTx,
@@ -336,7 +336,11 @@ func (b *BlockStorage) StoreHeadBlockIdentifier(
 	return nil
 }
 
-func (b *BlockStorage) getBlockResponse(
+// GetBlockLazyTransactional returns a *types.BlockResponse
+// with populated OtherTransactions array containing
+// all the transactions the caller must retrieve
+// in a provided database transaction.
+func (b *BlockStorage) GetBlockLazyTransactional(
 	ctx context.Context,
 	blockIdentifier *types.PartialBlockIdentifier,
 	transaction DatabaseTransaction,
@@ -402,7 +406,7 @@ func (b *BlockStorage) GetBlockLazy(
 	transaction := b.db.NewDatabaseTransaction(ctx, false)
 	defer transaction.Discard(ctx)
 
-	return b.getBlockResponse(ctx, blockIdentifier, transaction)
+	return b.GetBlockLazyTransactional(ctx, blockIdentifier, transaction)
 }
 
 // CanonicalBlock returns a boolean indicating if
@@ -441,7 +445,7 @@ func (b *BlockStorage) GetBlockTransactional(
 	dbTx DatabaseTransaction,
 	blockIdentifier *types.PartialBlockIdentifier,
 ) (*types.Block, error) {
-	blockResponse, err := b.getBlockResponse(ctx, blockIdentifier, dbTx)
+	blockResponse, err := b.GetBlockLazyTransactional(ctx, blockIdentifier, dbTx)
 	if err != nil {
 		return nil, err
 	}
