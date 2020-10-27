@@ -185,11 +185,6 @@ func (b *BalanceStorage) RemovingBlock(
 	}, nil
 }
 
-type balanceEntry struct {
-	Account *types.AccountIdentifier `json:"account"`
-	Amount  *types.Amount            `json:"amount"`
-}
-
 type accountEntry struct {
 	Account        *types.AccountIdentifier `json:"account"`
 	Currency       *types.Currency          `json:"currency"`
@@ -233,17 +228,9 @@ func (b *BalanceStorage) SetBalance(
 		return err
 	}
 
-	serialBal, err := b.db.Encoder().Encode(historicalBalanceNamespace, balanceEntry{
-		Account: account,
-		Amount:  amount,
-	})
-	if err != nil {
-		return err
-	}
-
 	// Set historical record
 	key = GetHistoricalBalanceKey(account, amount.Currency, block.Index)
-	if err := dbTransaction.Set(ctx, key, serialBal, true); err != nil {
+	if err := dbTransaction.Set(ctx, key, []byte(amount.Value), true); err != nil {
 		return err
 	}
 
@@ -582,23 +569,12 @@ func (b *BalanceStorage) UpdateBalance(
 	}
 
 	// Add a new historical record for the balance.
-	serialBal, err := b.db.Encoder().Encode(historicalBalanceNamespace, balanceEntry{
-		Account: change.Account,
-		Amount: &types.Amount{
-			Value:    newVal,
-			Currency: change.Currency,
-		},
-	})
-	if err != nil {
-		return err
-	}
-
 	historicalKey := GetHistoricalBalanceKey(
 		change.Account,
 		change.Currency,
 		change.Block.Index,
 	)
-	if err := dbTransaction.Set(ctx, historicalKey, serialBal, true); err != nil {
+	if err := dbTransaction.Set(ctx, historicalKey, []byte(newVal), true); err != nil {
 		return err
 	}
 
@@ -965,31 +941,23 @@ func (b *BalanceStorage) getHistoricalBalance(
 	currency *types.Currency,
 	index int64,
 ) (*types.Amount, error) {
-	var foundAmount *types.Amount
+	var foundValue string
 	_, err := dbTx.Scan(
 		ctx,
 		GetHistoricalBalancePrefix(account, currency),
 		GetHistoricalBalanceKey(account, currency, index),
 		func(k []byte, v []byte) error {
-			var deserialBal balanceEntry
-			// We should not reclaim memory during a scan!!
-			err := b.db.Encoder().Decode(historicalBalanceNamespace, v, &deserialBal, false)
-			if err != nil {
-				return fmt.Errorf(
-					"%w: unable to parse balance entry for %s",
-					err,
-					string(v),
-				)
-			}
-
-			foundAmount = deserialBal.Amount
+			foundValue = string(v)
 			return errAccountFound
 		},
 		false,
 		true,
 	)
 	if errors.Is(err, errAccountFound) {
-		return foundAmount, nil
+		return &types.Amount{
+			Value:    foundValue,
+			Currency: currency,
+		}, nil
 	}
 	if err != nil {
 		return nil, fmt.Errorf("%w: database scan failed", err)
