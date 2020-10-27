@@ -630,70 +630,6 @@ func (b *BalanceStorage) GetBalance(
 	return amount, nil
 }
 
-func (b *BalanceStorage) fetchAndSetBalance(
-	ctx context.Context,
-	dbTx DatabaseTransaction,
-	account *types.AccountIdentifier,
-	currency *types.Currency,
-	block *types.BlockIdentifier,
-) (*types.Amount, error) {
-	amount, err := b.helper.AccountBalance(ctx, account, currency, block)
-	if err != nil {
-		return nil, fmt.Errorf("%w: unable to get account balance from helper", err)
-	}
-
-	err = b.SetBalance(
-		ctx,
-		dbTx,
-		account,
-		amount,
-		block,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("%w: unable to set account balance", err)
-	}
-
-	return amount, nil
-}
-
-// GetOrSetBalance returns the balance of a types.AccountIdentifier
-// at the canonical block of a certain index, setting it if it
-// doesn't exist.
-func (b *BalanceStorage) GetOrSetBalance(
-	ctx context.Context,
-	account *types.AccountIdentifier,
-	currency *types.Currency,
-	block *types.BlockIdentifier,
-) (*types.Amount, error) {
-	dbTx := b.db.NewDatabaseTransaction(ctx, true)
-	defer dbTx.Discard(ctx)
-
-	amount, err := b.GetBalanceTransactional(
-		ctx,
-		dbTx,
-		account,
-		currency,
-		block.Index,
-	)
-	if err != nil && !errors.Is(err, ErrAccountMissing) {
-		return nil, fmt.Errorf("%w: unable to get balance", err)
-	}
-
-	if errors.Is(err, ErrAccountMissing) {
-		amount, err = b.fetchAndSetBalance(ctx, dbTx, account, currency, block)
-		if err != nil {
-			return nil, fmt.Errorf("%w: unable to set balance", err)
-		}
-	}
-
-	// We commit any changes made during the balance lookup.
-	if err := dbTx.Commit(ctx); err != nil {
-		return nil, fmt.Errorf("%w: unable to commit account balance transaction", err)
-	}
-
-	return amount, nil
-}
-
 // GetBalanceTransactional returns all the balances of a types.AccountIdentifier
 // and the types.BlockIdentifier it was last updated at in a database transaction.
 func (b *BalanceStorage) GetBalanceTransactional(
@@ -750,6 +686,95 @@ func (b *BalanceStorage) GetBalanceTransactional(
 	}
 	if err != nil {
 		return nil, err
+	}
+
+	return amount, nil
+}
+
+func (b *BalanceStorage) fetchAndSetBalance(
+	ctx context.Context,
+	dbTx DatabaseTransaction,
+	account *types.AccountIdentifier,
+	currency *types.Currency,
+	block *types.BlockIdentifier,
+) (*types.Amount, error) {
+	amount, err := b.helper.AccountBalance(ctx, account, currency, block)
+	if err != nil {
+		return nil, fmt.Errorf("%w: unable to get account balance from helper", err)
+	}
+
+	err = b.SetBalance(
+		ctx,
+		dbTx,
+		account,
+		amount,
+		block,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("%w: unable to set account balance", err)
+	}
+
+	return amount, nil
+}
+
+// GetOrSetBalance returns the balance of a types.AccountIdentifier
+// at the canonical block of a certain index, setting it if it
+// doesn't exist.
+func (b *BalanceStorage) GetOrSetBalance(
+	ctx context.Context,
+	account *types.AccountIdentifier,
+	currency *types.Currency,
+	block *types.BlockIdentifier,
+) (*types.Amount, error) {
+	dbTx := b.db.NewDatabaseTransaction(ctx, true)
+	defer dbTx.Discard(ctx)
+
+	amount, err := b.GetOrSetBalanceTransactional(
+		ctx,
+		dbTx,
+		account,
+		currency,
+		block,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("%w: unable to get balance", err)
+	}
+
+	// We commit any changes made during the balance lookup.
+	if err := dbTx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("%w: unable to commit account balance transaction", err)
+	}
+
+	return amount, nil
+}
+
+// GetOrSetBalanceTransactional returns the balance of a types.AccountIdentifier
+// at the canonical block of a certain index, setting it if it
+// doesn't exist.
+func (b *BalanceStorage) GetOrSetBalanceTransactional(
+	ctx context.Context,
+	dbTx DatabaseTransaction,
+	account *types.AccountIdentifier,
+	currency *types.Currency,
+	block *types.BlockIdentifier,
+) (*types.Amount, error) {
+	amount, err := b.GetBalanceTransactional(
+		ctx,
+		dbTx,
+		account,
+		currency,
+		block.Index,
+	)
+	if errors.Is(err, ErrAccountMissing) {
+		amount, err = b.fetchAndSetBalance(ctx, dbTx, account, currency, block)
+		if err != nil {
+			return nil, fmt.Errorf("%w: unable to set balance", err)
+		}
+
+		return amount, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("%w: unable to get balance", err)
 	}
 
 	return amount, nil
