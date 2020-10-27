@@ -324,6 +324,10 @@ var (
 	// to retrieve a pruned balance.
 	ErrBalancePruned = errors.New("balance pruned")
 
+	// ErrBlockNil is returned when the block to lookup
+	// a balance at is nil.
+	ErrBlockNil = errors.New("block nil")
+
 	// ErrAccountMissing is returned when a fetched
 	// account does not exist.
 	ErrAccountMissing = errors.New("block nil")
@@ -332,6 +336,7 @@ var (
 		ErrNegativeBalance,
 		ErrInvalidLiveBalance,
 		ErrBalancePruned,
+		ErrBlockNil,
 		ErrAccountMissing,
 	}
 

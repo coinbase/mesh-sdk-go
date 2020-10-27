@@ -758,6 +758,10 @@ func (b *BalanceStorage) GetOrSetBalanceTransactional(
 	currency *types.Currency,
 	block *types.BlockIdentifier,
 ) (*types.Amount, error) {
+	if block == nil {
+		return nil, ErrBlockNil
+	}
+
 	amount, err := b.GetBalanceTransactional(
 		ctx,
 		dbTx,
