@@ -460,3 +460,202 @@ func (e *Encoder) DecodeAccountCoin( // nolint:gocognit
 
 	return nil
 }
+
+// EncodeBalanceEntry is used to encode a *balanceEntry using the scheme (on the happy path):
+// accountAddress|amountValue|amountCurrencySymbol|amountCurrencyDecimals
+//
+// And the following scheme on the unhappy path:
+// accountAddress|amountValue|amountCurrencySymbol|
+// amountCurrencyDecimals|accountMetadata|subAccountAddress|
+// subAccountMetadata|amountMetadata|currencyMetadata
+//
+// In both cases, the | character is represented by the unicodeRecordSeparator rune.
+func (e *Encoder) EncodeBalanceEntry( // nolint:gocognit
+	entry *balanceEntry,
+) ([]byte, error) {
+	output := e.pool.Get()
+	if _, err := output.WriteString(entry.Account.Address); err != nil {
+		return nil, fmt.Errorf("%w: %s", ErrObjectEncodeFailed, err.Error())
+	}
+	if _, err := output.WriteRune(unicodeRecordSeparator); err != nil {
+		return nil, fmt.Errorf("%w: %s", ErrObjectEncodeFailed, err.Error())
+	}
+	if _, err := output.WriteString(entry.Amount.Value); err != nil {
+		return nil, fmt.Errorf("%w: %s", ErrObjectEncodeFailed, err.Error())
+	}
+	if _, err := output.WriteRune(unicodeRecordSeparator); err != nil {
+		return nil, fmt.Errorf("%w: %s", ErrObjectEncodeFailed, err.Error())
+	}
+	if _, err := output.WriteString(entry.Amount.Currency.Symbol); err != nil {
+		return nil, fmt.Errorf("%w: %s", ErrObjectEncodeFailed, err.Error())
+	}
+	if _, err := output.WriteRune(unicodeRecordSeparator); err != nil {
+		return nil, fmt.Errorf("%w: %s", ErrObjectEncodeFailed, err.Error())
+	}
+	if _, err := output.WriteString(
+		strconv.FormatInt(int64(entry.Amount.Currency.Decimals), 10),
+	); err != nil {
+		return nil, fmt.Errorf("%w: %s", ErrObjectEncodeFailed, err.Error())
+	}
+
+	// Exit early if we don't have any complex data to record (this helps
+	// us save a lot of space on the happy path).
+	if entry.Account.Metadata == nil &&
+		entry.Account.SubAccount == nil &&
+		entry.Amount.Metadata == nil &&
+		entry.Amount.Currency.Metadata == nil {
+		return output.Bytes(), nil
+	}
+
+	if _, err := output.WriteRune(unicodeRecordSeparator); err != nil {
+		return nil, fmt.Errorf("%w: %s", ErrObjectEncodeFailed, err.Error())
+	}
+	if entry.Account.Metadata != nil {
+		if err := e.encodeAndWrite(output, entry.Account.Metadata); err != nil {
+			return nil, fmt.Errorf("%w: %s", ErrObjectEncodeFailed, err.Error())
+		}
+	}
+	if _, err := output.WriteRune(unicodeRecordSeparator); err != nil {
+		return nil, fmt.Errorf("%w: %s", ErrObjectEncodeFailed, err.Error())
+	}
+
+	if entry.Account.SubAccount != nil {
+		if _, err := output.WriteString(entry.Account.SubAccount.Address); err != nil {
+			return nil, fmt.Errorf("%w: %s", ErrObjectEncodeFailed, err.Error())
+		}
+	}
+	if _, err := output.WriteRune(unicodeRecordSeparator); err != nil {
+		return nil, fmt.Errorf("%w: %s", ErrObjectEncodeFailed, err.Error())
+	}
+
+	if entry.Account.SubAccount != nil && entry.Account.SubAccount.Metadata != nil {
+		if err := e.encodeAndWrite(output, entry.Account.SubAccount.Metadata); err != nil {
+			return nil, fmt.Errorf("%w: %s", ErrObjectEncodeFailed, err.Error())
+		}
+	}
+	if _, err := output.WriteRune(unicodeRecordSeparator); err != nil {
+		return nil, fmt.Errorf("%w: %s", ErrObjectEncodeFailed, err.Error())
+	}
+
+	if entry.Amount.Metadata != nil {
+		if err := e.encodeAndWrite(output, entry.Amount.Metadata); err != nil {
+			return nil, fmt.Errorf("%w: %s", ErrObjectEncodeFailed, err.Error())
+		}
+	}
+	if _, err := output.WriteRune(unicodeRecordSeparator); err != nil {
+		return nil, fmt.Errorf("%w: %s", ErrObjectEncodeFailed, err.Error())
+	}
+	if entry.Amount.Currency.Metadata != nil {
+		if err := e.encodeAndWrite(output, entry.Amount.Currency.Metadata); err != nil {
+			return nil, fmt.Errorf("%w: %s", ErrObjectEncodeFailed, err.Error())
+		}
+	}
+
+	return output.Bytes(), nil
+}
+
+// DecodeBalanceEntry decodes a *balanceEntry and optionally
+// reclaims the memory associated with the input.
+func (e *Encoder) DecodeBalanceEntry( // nolint:gocognit
+	b []byte,
+	entry *balanceEntry,
+	reclaimInput bool,
+) error {
+	count := 0
+	currentBytes := b
+	for {
+		nextRune := bytes.IndexRune(currentBytes, unicodeRecordSeparator)
+		if nextRune == -1 {
+			if count != amountCurrencyDecimals && count != currencyMetadata {
+				return fmt.Errorf("%w: next rune is -1 at %d", ErrRawDecodeFailed, count)
+			}
+
+			nextRune = len(currentBytes)
+		}
+
+		val := currentBytes[:nextRune]
+		if len(val) == 0 {
+			goto handleNext
+		}
+
+		switch count {
+		case accountAddress:
+			entry.Account = &types.AccountIdentifier{
+				Address: string(val),
+			}
+		case amountValue:
+			entry.Amount = &types.Amount{
+				Value: string(val),
+			}
+		case amountCurrencySymbol:
+			entry.Amount.Currency = &types.Currency{
+				Symbol: string(val),
+			}
+		case amountCurrencyDecimals:
+			i, err := strconv.ParseInt(string(val), 10, 32)
+			if err != nil {
+				return fmt.Errorf("%w: %s", ErrRawDecodeFailed, err.Error())
+			}
+
+			entry.Amount.Currency.Decimals = int32(i)
+		case accountMetadata:
+			m, err := e.decodeMap(val)
+			if err != nil {
+				return fmt.Errorf("%w: account metadata %s", ErrRawDecodeFailed, err.Error())
+			}
+
+			entry.Account.Metadata = m
+		case subAccountAddress:
+			entry.Account.SubAccount = &types.SubAccountIdentifier{
+				Address: string(val),
+			}
+		case subAccountMetadata:
+			if entry.Account.SubAccount == nil {
+				return ErrRawDecodeFailed // must have address
+			}
+
+			m, err := e.decodeMap(val)
+			if err != nil {
+				return fmt.Errorf("%w: subaccount metadata %s", ErrRawDecodeFailed, err.Error())
+			}
+
+			entry.Account.SubAccount.Metadata = m
+		case amountMetadata:
+			m, err := e.decodeMap(val)
+			if err != nil {
+				return fmt.Errorf("%w: amount metadata %s", ErrRawDecodeFailed, err.Error())
+			}
+
+			entry.Amount.Metadata = m
+		case currencyMetadata:
+			m, err := e.decodeMap(val)
+			if err != nil {
+				return fmt.Errorf("%w: currency metadata %s", ErrRawDecodeFailed, err.Error())
+			}
+
+			entry.Amount.Currency.Metadata = m
+		default:
+			return fmt.Errorf("%w: count %d > end", ErrRawDecodeFailed, count)
+		}
+
+	handleNext:
+		if nextRune == len(currentBytes) &&
+			(count == amountCurrencyDecimals || count == currencyMetadata) {
+			break
+		}
+
+		currentBytes = currentBytes[nextRune+1:]
+		count++
+
+		// Skip count for CoinIdentifier
+		if count-1 == accountAddress {
+			count++
+		}
+	}
+
+	if reclaimInput {
+		e.pool.PutByteSlice(b)
+	}
+
+	return nil
+}
