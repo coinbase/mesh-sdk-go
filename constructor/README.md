@@ -59,7 +59,7 @@ a transaction broadcast if you set the follow field:
 
 The suggested fee will then be stored as `<scenario>.suggested_fee` for use by
 other `Scenarios` in the same `Job`. You can find an example of this in the
-[Bitcoin configuration](https://github.com/coinbase/rosetta-cli/blob/master/examples/configuration/bitcoin.json).
+[Ethereum configuration](https://github.com/coinbase/rosetta-ethereum/blob/master/rosetta-cli-conf/testnet/ethereum.ros).
 
 *If this field is not populated or set to `false`, the transaction
 will be constructed, signed, and broadcast.*
