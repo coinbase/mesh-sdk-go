@@ -604,19 +604,37 @@ func TestBalance(t *testing.T) {
 		)
 		assert.NoError(t, err)
 
-		retrievedAmount, err := storage.GetBalance(ctx, account, largeDeduction.Currency, newBlock3, false)
+		retrievedAmount, err := storage.GetBalance(
+			ctx,
+			account,
+			largeDeduction.Currency,
+			newBlock3,
+			false,
+		)
 		assert.NoError(t, err)
 		assert.Equal(t, &types.Amount{
 			Value:    "200",
 			Currency: largeDeduction.Currency,
 		}, retrievedAmount)
-		retrievedAmount, err = storage.GetBalance(ctx, account, largeDeduction.Currency, newBlock2, false)
+		retrievedAmount, err = storage.GetBalance(
+			ctx,
+			account,
+			largeDeduction.Currency,
+			newBlock2,
+			false,
+		)
 		assert.NoError(t, err)
 		assert.Equal(t, &types.Amount{
 			Value:    "200",
 			Currency: largeDeduction.Currency,
 		}, retrievedAmount)
-		retrievedAmount, err = storage.GetBalance(ctx, account, largeDeduction.Currency, newBlock, false)
+		retrievedAmount, err = storage.GetBalance(
+			ctx,
+			account,
+			largeDeduction.Currency,
+			newBlock,
+			false,
+		)
 		assert.NoError(t, err)
 		assert.Equal(t, &types.Amount{
 			Value:    "100",
@@ -654,7 +672,13 @@ func TestBalance(t *testing.T) {
 		}, retrievedAmount)
 		txn.Discard(ctx)
 
-		retrievedAmount, err = storage.GetBalance(ctx, account, largeDeduction.Currency, newBlock3, false)
+		retrievedAmount, err = storage.GetBalance(
+			ctx,
+			account,
+			largeDeduction.Currency,
+			newBlock3,
+			false,
+		)
 		assert.NoError(t, err)
 		assert.Equal(t, &types.Amount{
 			Value:    "200",
@@ -663,7 +687,13 @@ func TestBalance(t *testing.T) {
 	})
 
 	t.Run("orphan balance correctly", func(t *testing.T) {
-		retrievedAmount, err := storage.GetBalance(ctx, account, largeDeduction.Currency, newBlock, false)
+		retrievedAmount, err := storage.GetBalance(
+			ctx,
+			account,
+			largeDeduction.Currency,
+			newBlock,
+			false,
+		)
 		assert.NoError(t, err)
 		assert.Equal(t, &types.Amount{
 			Value:    "100",
@@ -681,7 +711,13 @@ func TestBalance(t *testing.T) {
 		assert.NoError(t, err)
 		assert.NoError(t, txn.Commit(ctx))
 
-		retrievedAmount, err = storage.GetBalance(ctx, account, largeDeduction.Currency, newBlock3, false)
+		retrievedAmount, err = storage.GetBalance(
+			ctx,
+			account,
+			largeDeduction.Currency,
+			newBlock3,
+			false,
+		)
 		assert.NoError(t, err)
 		assert.Equal(t, &types.Amount{
 			Value:    "100",
@@ -698,19 +734,37 @@ func TestBalance(t *testing.T) {
 		)
 		assert.NoError(t, err)
 
-		retrievedAmount, err := storage.GetBalance(ctx, account, largeDeduction.Currency, newBlock3, false)
+		retrievedAmount, err := storage.GetBalance(
+			ctx,
+			account,
+			largeDeduction.Currency,
+			newBlock3,
+			false,
+		)
 		assert.NoError(t, err)
 		assert.Equal(t, &types.Amount{
 			Value:    "0",
 			Currency: largeDeduction.Currency,
 		}, retrievedAmount)
-		retrievedAmount, err = storage.GetBalance(ctx, account, largeDeduction.Currency, newBlock2, false)
+		retrievedAmount, err = storage.GetBalance(
+			ctx,
+			account,
+			largeDeduction.Currency,
+			newBlock2,
+			false,
+		)
 		assert.NoError(t, err)
 		assert.Equal(t, &types.Amount{
 			Value:    "0",
 			Currency: largeDeduction.Currency,
 		}, retrievedAmount)
-		retrievedAmount, err = storage.GetBalance(ctx, account, largeDeduction.Currency, newBlock, false)
+		retrievedAmount, err = storage.GetBalance(
+			ctx,
+			account,
+			largeDeduction.Currency,
+			newBlock,
+			false,
+		)
 		assert.True(t, errors.Is(err, ErrBalancePruned))
 		assert.Nil(t, retrievedAmount)
 	})
