@@ -840,10 +840,10 @@ func (b *BlockStorage) storeTransaction(
 	if !exists {
 		blocks = make(map[string]*blockTransaction)
 	} else {
-		if err := b.db.Encoder().Decode(namespace, val, &blocks, true); err != nil {
+		err := b.db.Encoder().Decode(namespace, val, &blocks, true)
+		if err != nil {
 			return fmt.Errorf("%w: could not decode transaction hash contents", err)
 		}
-
 	}
 	// We check for duplicates before storing transaction,
 	// so this must be a new key.
