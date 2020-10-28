@@ -580,8 +580,11 @@ func (b *BlockStorage) AddBlock(
 	}
 
 	g, gctx := errgroup.WithContext(ctx)
-	for _, thisTransaction := range block.Transactions {
-		txn := thisTransaction
+	for i := range block.Transactions {
+		// We need to set variable before calling goroutine
+		// to avoid getting an updated pointer as loop iteration
+		// continues.
+		txn := block.Transactions[i]
 		g.Go(func() error {
 			err := b.storeTransaction(
 				gctx,
@@ -660,8 +663,11 @@ func (b *BlockStorage) RemoveBlock(
 
 	// Remove all transaction hashes
 	g, gctx := errgroup.WithContext(ctx)
-	for _, thisTransaction := range block.Transactions {
-		txn := thisTransaction
+	for i := range block.Transactions {
+		// We need to set variable before calling goroutine
+		// to avoid getting an updated pointer as loop iteration
+		// continues.
+		txn := block.Transactions[i]
 		g.Go(func() error {
 			return b.removeTransaction(
 				gctx,

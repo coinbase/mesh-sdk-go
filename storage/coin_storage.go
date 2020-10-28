@@ -307,14 +307,15 @@ func (c *CoinStorage) updateCoins( // nolint:gocognit
 	}
 
 	g, gctx := errgroup.WithContext(ctx)
-	for identifier, thisOp := range addCoins {
+	for identifier, val := range addCoins {
 		if _, ok := removeCoins[identifier]; ok {
 			continue
 		}
 
-		// Need to copy pointer, otherwise will use whatever
-		// item op is currently assigned to.
-		op := thisOp
+		// We need to set variable before calling goroutine
+		// to avoid getting an updated pointer as loop iteration
+		// continues.
+		op := val
 		g.Go(func() error {
 			if err := c.addCoin(
 				gctx,
@@ -332,14 +333,15 @@ func (c *CoinStorage) updateCoins( // nolint:gocognit
 		})
 	}
 
-	for identifier, thisOp := range removeCoins {
+	for identifier, val := range removeCoins {
 		if _, ok := addCoins[identifier]; ok {
 			continue
 		}
 
-		// Need to copy pointer, otherwise will use whatever
-		// item op is currently assigned to.
-		op := thisOp
+		// We need to set variable before calling goroutine
+		// to avoid getting an updated pointer as loop iteration
+		// continues.
+		op := val
 		g.Go(func() error {
 			if err := c.removeCoin(
 				gctx,
