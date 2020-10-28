@@ -24,6 +24,8 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/syncer"
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/coinbase/rosetta-sdk-go/utils"
+
+	"golang.org/x/sync/errgroup"
 )
 
 const (
@@ -565,16 +567,24 @@ func (b *BlockStorage) AddBlock(
 		return fmt.Errorf("%w: %v", ErrBlockStoreFailed, err)
 	}
 
+	g, gctx := errgroup.WithContext(ctx)
 	for _, txn := range block.Transactions {
-		err := b.storeTransaction(
-			ctx,
-			transaction,
-			block.BlockIdentifier,
-			txn,
-		)
-		if err != nil {
-			return fmt.Errorf("%w: %v", ErrTransactionHashStoreFailed, err)
-		}
+		g.Go(func() error {
+			err := b.storeTransaction(
+				gctx,
+				transaction,
+				block.BlockIdentifier,
+				txn,
+			)
+			if err != nil {
+				return fmt.Errorf("%w: %v", ErrTransactionHashStoreFailed, err)
+			}
+
+			return nil
+		})
+	}
+	if err := g.Wait(); err != nil {
+		return err
 	}
 
 	return b.callWorkersAndCommit(ctx, block, transaction, true)
@@ -636,11 +646,14 @@ func (b *BlockStorage) RemoveBlock(
 	}
 
 	// Remove all transaction hashes
+	g, gctx := errgroup.WithContext(ctx)
 	for _, txn := range block.Transactions {
-		err = b.removeTransaction(ctx, transaction, blockIdentifier, txn.TransactionIdentifier)
-		if err != nil {
-			return err
-		}
+		g.Go(func() error {
+			return b.removeTransaction(gctx, transaction, blockIdentifier, txn.TransactionIdentifier)
+		})
+	}
+	if err := g.Wait(); err != nil {
+		return err
 	}
 
 	// Delete block
