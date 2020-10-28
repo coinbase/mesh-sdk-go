@@ -449,7 +449,6 @@ func (b *BadgerTransaction) Scan(
 
 	entries := 0
 	opts := badger.DefaultIteratorOptions
-	opts.PrefetchValues = false
 	opts.Reverse = reverse
 	it := b.txn.NewIterator(opts)
 	defer it.Close()
