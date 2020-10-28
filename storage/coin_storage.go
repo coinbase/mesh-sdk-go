@@ -307,11 +307,14 @@ func (c *CoinStorage) updateCoins( // nolint:gocognit
 	}
 
 	g, gctx := errgroup.WithContext(ctx)
-	for identifier, op := range addCoins {
+	for identifier, thisOp := range addCoins {
 		if _, ok := removeCoins[identifier]; ok {
 			continue
 		}
 
+		// Need to copy pointer, otherwise will use whatever
+		// item op is currently assigned to.
+		op := thisOp
 		g.Go(func() error {
 			if err := c.addCoin(
 				gctx,
@@ -329,14 +332,17 @@ func (c *CoinStorage) updateCoins( // nolint:gocognit
 		})
 	}
 
-	for identifier, op := range removeCoins {
+	for identifier, thisOp := range removeCoins {
 		if _, ok := addCoins[identifier]; ok {
 			continue
 		}
 
+		// Need to copy pointer, otherwise will use whatever
+		// item op is currently assigned to.
+		op := thisOp
 		g.Go(func() error {
 			if err := c.removeCoin(
-				ctx,
+				gctx,
 				op.Account,
 				op.CoinChange.CoinIdentifier,
 				dbTx,
