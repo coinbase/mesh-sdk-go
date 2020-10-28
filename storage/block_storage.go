@@ -580,7 +580,8 @@ func (b *BlockStorage) AddBlock(
 	}
 
 	g, gctx := errgroup.WithContext(ctx)
-	for _, txn := range block.Transactions {
+	for _, thisTransaction := range block.Transactions {
+		txn := thisTransaction
 		g.Go(func() error {
 			err := b.storeTransaction(
 				gctx,
@@ -659,7 +660,8 @@ func (b *BlockStorage) RemoveBlock(
 
 	// Remove all transaction hashes
 	g, gctx := errgroup.WithContext(ctx)
-	for _, txn := range block.Transactions {
+	for _, thisTransaction := range block.Transactions {
+		txn := thisTransaction
 		g.Go(func() error {
 			return b.removeTransaction(gctx, transaction, blockIdentifier, txn.TransactionIdentifier)
 		})

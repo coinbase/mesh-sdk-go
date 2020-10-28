@@ -155,7 +155,8 @@ func (b *BalanceStorage) AddingBlock(
 	}
 
 	g, gctx := errgroup.WithContext(ctx)
-	for _, change := range changes {
+	for _, thisChange := range changes {
+		change := thisChange
 		g.Go(func() error {
 			return b.UpdateBalance(gctx, transaction, change, block.ParentBlockIdentifier)
 		})
@@ -182,7 +183,8 @@ func (b *BalanceStorage) RemovingBlock(
 	}
 
 	g, gctx := errgroup.WithContext(ctx)
-	for _, change := range changes {
+	for _, thisChange := range changes {
+		change := thisChange
 		g.Go(func() error {
 			return b.OrphanBalance(gctx, transaction, change.Account, change.Currency, block.BlockIdentifier)
 		})
