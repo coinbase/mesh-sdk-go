@@ -24,6 +24,8 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/asserter"
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/coinbase/rosetta-sdk-go/utils"
+
+	"golang.org/x/sync/errgroup"
 )
 
 const (
@@ -304,22 +306,27 @@ func (c *CoinStorage) updateCoins(
 		}
 	}
 
+	g, gctx := errgroup.WithContext(ctx)
 	for identifier, op := range addCoins {
 		if _, ok := removeCoins[identifier]; ok {
 			continue
 		}
 
-		if err := c.addCoin(
-			ctx,
-			op.Account,
-			&types.Coin{
-				CoinIdentifier: op.CoinChange.CoinIdentifier,
-				Amount:         op.Amount,
-			},
-			dbTx,
-		); err != nil {
-			return fmt.Errorf("%w: %v", ErrCoinAddFailed, err)
-		}
+		g.Go(func() error {
+			if err := c.addCoin(
+				gctx,
+				op.Account,
+				&types.Coin{
+					CoinIdentifier: op.CoinChange.CoinIdentifier,
+					Amount:         op.Amount,
+				},
+				dbTx,
+			); err != nil {
+				return fmt.Errorf("%w: %v", ErrCoinAddFailed, err)
+			}
+
+			return nil
+		})
 	}
 
 	for identifier, op := range removeCoins {
@@ -327,17 +334,21 @@ func (c *CoinStorage) updateCoins(
 			continue
 		}
 
-		if err := c.removeCoin(
-			ctx,
-			op.Account,
-			op.CoinChange.CoinIdentifier,
-			dbTx,
-		); err != nil {
-			return fmt.Errorf("%w: %v", ErrCoinRemoveFailed, err)
-		}
+		g.Go(func() error {
+			if err := c.removeCoin(
+				ctx,
+				op.Account,
+				op.CoinChange.CoinIdentifier,
+				dbTx,
+			); err != nil {
+				return fmt.Errorf("%w: %v", ErrCoinRemoveFailed, err)
+			}
+
+			return nil
+		})
 	}
 
-	return nil
+	return g.Wait()
 }
 
 // AddingBlock is called by BlockStorage when adding a block.
