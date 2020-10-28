@@ -26,6 +26,8 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/reconciler"
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/coinbase/rosetta-sdk-go/utils"
+
+	"golang.org/x/sync/errgroup"
 )
 
 var _ BlockWorker = (*BalanceStorage)(nil)
@@ -152,10 +154,19 @@ func (b *BalanceStorage) AddingBlock(
 		return nil, fmt.Errorf("%w: unable to calculate balance changes", err)
 	}
 
-	for _, change := range changes {
-		if err := b.UpdateBalance(ctx, transaction, change, block.ParentBlockIdentifier); err != nil {
-			return nil, err
-		}
+	g, gctx := errgroup.WithContext(ctx)
+	for i := range changes {
+		// We need to set variable before calling goroutine
+		// to avoid getting an updated pointer as loop iteration
+		// continues.
+		change := changes[i]
+		g.Go(func() error {
+			return b.UpdateBalance(gctx, transaction, change, block.ParentBlockIdentifier)
+		})
+	}
+
+	if err := g.Wait(); err != nil {
+		return nil, err
 	}
 
 	return func(ctx context.Context) error {
@@ -174,10 +185,25 @@ func (b *BalanceStorage) RemovingBlock(
 		return nil, fmt.Errorf("%w: unable to calculate balance changes", err)
 	}
 
-	for _, change := range changes {
-		if err := b.OrphanBalance(ctx, transaction, change.Account, change.Currency, block.BlockIdentifier); err != nil {
-			return nil, err
-		}
+	g, gctx := errgroup.WithContext(ctx)
+	for i := range changes {
+		// We need to set variable before calling goroutine
+		// to avoid getting an updated pointer as loop iteration
+		// continues.
+		change := changes[i]
+		g.Go(func() error {
+			return b.OrphanBalance(
+				gctx,
+				transaction,
+				change.Account,
+				change.Currency,
+				block.BlockIdentifier,
+			)
+		})
+	}
+
+	if err := g.Wait(); err != nil {
+		return nil, err
 	}
 
 	return func(ctx context.Context) error {

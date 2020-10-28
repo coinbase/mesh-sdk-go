@@ -24,6 +24,8 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/asserter"
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/coinbase/rosetta-sdk-go/utils"
+
+	"golang.org/x/sync/errgroup"
 )
 
 const (
@@ -269,7 +271,7 @@ func (c *CoinStorage) skipOperation(
 // Alternatively, we could add all coins to the database
 // (regardless of whether they are spent in the same block),
 // however, this would put a larger strain on the db.
-func (c *CoinStorage) updateCoins(
+func (c *CoinStorage) updateCoins( // nolint:gocognit
 	ctx context.Context,
 	block *types.Block,
 	addCoinCreated bool,
@@ -304,40 +306,57 @@ func (c *CoinStorage) updateCoins(
 		}
 	}
 
-	for identifier, op := range addCoins {
+	g, gctx := errgroup.WithContext(ctx)
+	for identifier, val := range addCoins {
 		if _, ok := removeCoins[identifier]; ok {
 			continue
 		}
 
-		if err := c.addCoin(
-			ctx,
-			op.Account,
-			&types.Coin{
-				CoinIdentifier: op.CoinChange.CoinIdentifier,
-				Amount:         op.Amount,
-			},
-			dbTx,
-		); err != nil {
-			return fmt.Errorf("%w: %v", ErrCoinAddFailed, err)
-		}
+		// We need to set variable before calling goroutine
+		// to avoid getting an updated pointer as loop iteration
+		// continues.
+		op := val
+		g.Go(func() error {
+			if err := c.addCoin(
+				gctx,
+				op.Account,
+				&types.Coin{
+					CoinIdentifier: op.CoinChange.CoinIdentifier,
+					Amount:         op.Amount,
+				},
+				dbTx,
+			); err != nil {
+				return fmt.Errorf("%w: %v", ErrCoinAddFailed, err)
+			}
+
+			return nil
+		})
 	}
 
-	for identifier, op := range removeCoins {
+	for identifier, val := range removeCoins {
 		if _, ok := addCoins[identifier]; ok {
 			continue
 		}
 
-		if err := c.removeCoin(
-			ctx,
-			op.Account,
-			op.CoinChange.CoinIdentifier,
-			dbTx,
-		); err != nil {
-			return fmt.Errorf("%w: %v", ErrCoinRemoveFailed, err)
-		}
+		// We need to set variable before calling goroutine
+		// to avoid getting an updated pointer as loop iteration
+		// continues.
+		op := val
+		g.Go(func() error {
+			if err := c.removeCoin(
+				gctx,
+				op.Account,
+				op.CoinChange.CoinIdentifier,
+				dbTx,
+			); err != nil {
+				return fmt.Errorf("%w: %v", ErrCoinRemoveFailed, err)
+			}
+
+			return nil
+		})
 	}
 
-	return nil
+	return g.Wait()
 }
 
 // AddingBlock is called by BlockStorage when adding a block.

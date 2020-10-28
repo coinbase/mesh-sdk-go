@@ -24,6 +24,8 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/syncer"
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/coinbase/rosetta-sdk-go/utils"
+
+	"golang.org/x/sync/errgroup"
 )
 
 const (
@@ -539,9 +541,21 @@ func (b *BlockStorage) AddBlock(
 	transaction := b.db.NewDatabaseTransaction(ctx, true)
 	defer transaction.Discard(ctx)
 
-	// Store all transactions
+	// Store all transactions in order and check for duplicates
 	identifiers := make([]*types.TransactionIdentifier, len(block.Transactions))
+	identiferSet := map[string]struct{}{}
 	for i, txn := range block.Transactions {
+		if _, exists := identiferSet[txn.TransactionIdentifier.Hash]; exists {
+			return fmt.Errorf(
+				"%w: duplicate transaction %s found in block %s:%d",
+				ErrDuplicateTransactionHash,
+				txn.TransactionIdentifier.Hash,
+				block.BlockIdentifier.Hash,
+				block.BlockIdentifier.Index,
+			)
+		}
+
+		identiferSet[txn.TransactionIdentifier.Hash] = struct{}{}
 		identifiers[i] = txn.TransactionIdentifier
 	}
 
@@ -565,16 +579,28 @@ func (b *BlockStorage) AddBlock(
 		return fmt.Errorf("%w: %v", ErrBlockStoreFailed, err)
 	}
 
-	for _, txn := range block.Transactions {
-		err := b.storeTransaction(
-			ctx,
-			transaction,
-			block.BlockIdentifier,
-			txn,
-		)
-		if err != nil {
-			return fmt.Errorf("%w: %v", ErrTransactionHashStoreFailed, err)
-		}
+	g, gctx := errgroup.WithContext(ctx)
+	for i := range block.Transactions {
+		// We need to set variable before calling goroutine
+		// to avoid getting an updated pointer as loop iteration
+		// continues.
+		txn := block.Transactions[i]
+		g.Go(func() error {
+			err := b.storeTransaction(
+				gctx,
+				transaction,
+				block.BlockIdentifier,
+				txn,
+			)
+			if err != nil {
+				return fmt.Errorf("%w: %v", ErrTransactionHashStoreFailed, err)
+			}
+
+			return nil
+		})
+	}
+	if err := g.Wait(); err != nil {
+		return err
 	}
 
 	return b.callWorkersAndCommit(ctx, block, transaction, true)
@@ -636,11 +662,23 @@ func (b *BlockStorage) RemoveBlock(
 	}
 
 	// Remove all transaction hashes
-	for _, txn := range block.Transactions {
-		err = b.removeTransaction(ctx, transaction, blockIdentifier, txn.TransactionIdentifier)
-		if err != nil {
-			return err
-		}
+	g, gctx := errgroup.WithContext(ctx)
+	for i := range block.Transactions {
+		// We need to set variable before calling goroutine
+		// to avoid getting an updated pointer as loop iteration
+		// continues.
+		txn := block.Transactions[i]
+		g.Go(func() error {
+			return b.removeTransaction(
+				gctx,
+				transaction,
+				blockIdentifier,
+				txn.TransactionIdentifier,
+			)
+		})
+	}
+	if err := g.Wait(); err != nil {
+		return err
 	}
 
 	// Delete block
@@ -813,20 +851,13 @@ func (b *BlockStorage) storeTransaction(
 	if !exists {
 		blocks = make(map[string]*blockTransaction)
 	} else {
-		if err := b.db.Encoder().Decode(namespace, val, &blocks, true); err != nil {
+		err := b.db.Encoder().Decode(namespace, val, &blocks, true)
+		if err != nil {
 			return fmt.Errorf("%w: could not decode transaction hash contents", err)
 		}
-
-		if _, exists := blocks[blockIdentifier.Hash]; exists {
-			return fmt.Errorf(
-				"%w: duplicate transaction %s found in block %s:%d",
-				ErrDuplicateTransactionHash,
-				tx.TransactionIdentifier.Hash,
-				blockIdentifier.Hash,
-				blockIdentifier.Index,
-			)
-		}
 	}
+	// We check for duplicates before storing transaction,
+	// so this must be a new key.
 	blocks[blockIdentifier.Hash] = &blockTransaction{
 		Transaction: tx,
 		BlockIndex:  blockIdentifier.Index,
