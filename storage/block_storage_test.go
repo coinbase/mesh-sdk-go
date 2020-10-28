@@ -529,6 +529,7 @@ func TestBlock(t *testing.T) {
 
 	t.Run("Set duplicate transaction hash (same block)", func(t *testing.T) {
 		err = storage.AddBlock(ctx, duplicateTxBlock)
+		fmt.Println(err)
 		assert.Contains(t, err.Error(), ErrDuplicateTransactionHash.Error())
 
 		head, err := storage.GetHeadBlockIdentifier(ctx)

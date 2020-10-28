@@ -541,9 +541,21 @@ func (b *BlockStorage) AddBlock(
 	transaction := b.db.NewDatabaseTransaction(ctx, true)
 	defer transaction.Discard(ctx)
 
-	// Store all transactions
+	// Store all transactions in order and check for duplicates
 	identifiers := make([]*types.TransactionIdentifier, len(block.Transactions))
+	identiferSet := map[string]struct{}{}
 	for i, txn := range block.Transactions {
+		if _, exists := identiferSet[txn.TransactionIdentifier.Hash]; exists {
+			return fmt.Errorf(
+				"%w: duplicate transaction %s found in block %s:%d",
+				ErrDuplicateTransactionHash,
+				txn.TransactionIdentifier.Hash,
+				block.BlockIdentifier.Hash,
+				block.BlockIdentifier.Index,
+			)
+		}
+
+		identiferSet[txn.TransactionIdentifier.Hash] = struct{}{}
 		identifiers[i] = txn.TransactionIdentifier
 	}
 
@@ -830,16 +842,9 @@ func (b *BlockStorage) storeTransaction(
 			return fmt.Errorf("%w: could not decode transaction hash contents", err)
 		}
 
-		if _, exists := blocks[blockIdentifier.Hash]; exists {
-			return fmt.Errorf(
-				"%w: duplicate transaction %s found in block %s:%d",
-				ErrDuplicateTransactionHash,
-				tx.TransactionIdentifier.Hash,
-				blockIdentifier.Hash,
-				blockIdentifier.Index,
-			)
-		}
 	}
+	// We check for duplicates before storing transaction,
+	// so this must be a new key.
 	blocks[blockIdentifier.Hash] = &blockTransaction{
 		Transaction: tx,
 		BlockIndex:  blockIdentifier.Index,

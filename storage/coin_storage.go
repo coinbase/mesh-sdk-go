@@ -271,7 +271,7 @@ func (c *CoinStorage) skipOperation(
 // Alternatively, we could add all coins to the database
 // (regardless of whether they are spent in the same block),
 // however, this would put a larger strain on the db.
-func (c *CoinStorage) updateCoins(
+func (c *CoinStorage) updateCoins( // nolint:gocognit
 	ctx context.Context,
 	block *types.Block,
 	addCoinCreated bool,
