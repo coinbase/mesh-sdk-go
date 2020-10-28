@@ -155,8 +155,11 @@ func (b *BalanceStorage) AddingBlock(
 	}
 
 	g, gctx := errgroup.WithContext(ctx)
-	for _, thisChange := range changes {
-		change := thisChange
+	for i := range changes {
+		// We need to set variable before calling goroutine
+		// to avoid getting an updated pointer as loop iteration
+		// continues.
+		change := changes[i]
 		g.Go(func() error {
 			return b.UpdateBalance(gctx, transaction, change, block.ParentBlockIdentifier)
 		})
@@ -183,8 +186,11 @@ func (b *BalanceStorage) RemovingBlock(
 	}
 
 	g, gctx := errgroup.WithContext(ctx)
-	for _, thisChange := range changes {
-		change := thisChange
+	for i := range changes {
+		// We need to set variable before calling goroutine
+		// to avoid getting an updated pointer as loop iteration
+		// continues.
+		change := changes[i]
 		g.Go(func() error {
 			return b.OrphanBalance(
 				gctx,
