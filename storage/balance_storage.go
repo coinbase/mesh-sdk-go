@@ -186,7 +186,13 @@ func (b *BalanceStorage) RemovingBlock(
 	for _, thisChange := range changes {
 		change := thisChange
 		g.Go(func() error {
-			return b.OrphanBalance(gctx, transaction, change.Account, change.Currency, block.BlockIdentifier)
+			return b.OrphanBalance(
+				gctx,
+				transaction,
+				change.Account,
+				change.Currency,
+				block.BlockIdentifier,
+			)
 		})
 	}
 

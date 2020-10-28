@@ -663,7 +663,12 @@ func (b *BlockStorage) RemoveBlock(
 	for _, thisTransaction := range block.Transactions {
 		txn := thisTransaction
 		g.Go(func() error {
-			return b.removeTransaction(gctx, transaction, blockIdentifier, txn.TransactionIdentifier)
+			return b.removeTransaction(
+				gctx,
+				transaction,
+				blockIdentifier,
+				txn.TransactionIdentifier,
+			)
 		})
 	}
 	if err := g.Wait(); err != nil {
