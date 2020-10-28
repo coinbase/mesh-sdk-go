@@ -288,8 +288,9 @@ func (b *BadgerStorage) Encoder() *Encoder {
 // DB transaction that implements the DatabaseTransaction
 // interface.
 type BadgerTransaction struct {
-	db  *BadgerStorage
-	txn *badger.Txn
+	db     *BadgerStorage
+	txn    *badger.Txn
+	rwLock sync.RWMutex
 
 	holdsLock bool
 
@@ -384,6 +385,9 @@ func (b *BadgerTransaction) Set(
 	value []byte,
 	reclaimValue bool,
 ) error {
+	b.rwLock.Lock()
+	defer b.rwLock.Unlock()
+
 	if reclaimValue {
 		b.buffersToReclaim = append(
 			b.buffersToReclaim,
@@ -400,6 +404,9 @@ func (b *BadgerTransaction) Get(
 	ctx context.Context,
 	key []byte,
 ) (bool, []byte, error) {
+	b.rwLock.RLock()
+	defer b.rwLock.RUnlock()
+
 	value := b.db.pool.Get()
 	item, err := b.txn.Get(key)
 	if err == badger.ErrKeyNotFound {
@@ -421,6 +428,9 @@ func (b *BadgerTransaction) Get(
 
 // Delete removes the key and its value within the transaction.
 func (b *BadgerTransaction) Delete(ctx context.Context, key []byte) error {
+	b.rwLock.Lock()
+	defer b.rwLock.Unlock()
+
 	return b.txn.Delete(key)
 }
 
@@ -434,6 +444,9 @@ func (b *BadgerTransaction) Scan(
 	logEntries bool,
 	reverse bool, // reverse == true means greatest to least
 ) (int, error) {
+	b.rwLock.RLock()
+	defer b.rwLock.RUnlock()
+
 	entries := 0
 	opts := badger.DefaultIteratorOptions
 	opts.PrefetchValues = false
