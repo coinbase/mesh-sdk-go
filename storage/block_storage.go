@@ -419,9 +419,25 @@ func (b *BlockStorage) CanonicalBlock(
 	ctx context.Context,
 	blockIdentifier *types.BlockIdentifier,
 ) (bool, error) {
-	block, err := b.GetBlockLazy(
+	dbTx := b.db.NewDatabaseTransaction(ctx, false)
+	defer dbTx.Discard(ctx)
+
+	return b.CanonicalBlockTransactional(ctx, blockIdentifier, dbTx)
+}
+
+// CanonicalBlockTransactional returns a boolean indicating if
+// a block with the provided *types.BlockIdentifier
+// is in the canonical chain (regardless if it has
+// been pruned) in a single storage.DatabaseTransaction.
+func (b *BlockStorage) CanonicalBlockTransactional(
+	ctx context.Context,
+	blockIdentifier *types.BlockIdentifier,
+	dbTx DatabaseTransaction,
+) (bool, error) {
+	block, err := b.GetBlockLazyTransactional(
 		ctx,
 		types.ConstructPartialBlockIdentifier(blockIdentifier),
+		dbTx,
 	)
 	if errors.Is(err, ErrCannotAccessPrunedData) {
 		return true, nil
