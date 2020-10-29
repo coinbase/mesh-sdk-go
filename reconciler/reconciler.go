@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/coinbase/rosetta-sdk-go/parser"
+	"github.com/coinbase/rosetta-sdk-go/storage"
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"golang.org/x/sync/errgroup"
 )
@@ -101,27 +102,32 @@ const (
 // what sort of storage layer they want to use to provide the required
 // information.
 type Helper interface {
-	CanonicalBlock(
-		ctx context.Context,
-		block *types.BlockIdentifier,
-	) (bool, error)
+	DatabaseTransaction(ctx context.Context) storage.DatabaseTransaction
 
 	CurrentBlock(
 		ctx context.Context,
+		dbTx storage.DatabaseTransaction,
 	) (*types.BlockIdentifier, error)
+
+	CanonicalBlock(
+		ctx context.Context,
+		dbTx storage.DatabaseTransaction,
+		block *types.BlockIdentifier,
+	) (bool, error)
 
 	ComputedBalance(
 		ctx context.Context,
+		dbTx storage.DatabaseTransaction,
 		account *types.AccountIdentifier,
 		currency *types.Currency,
-		block *types.BlockIdentifier,
+		index int64,
 	) (*types.Amount, error)
 
 	LiveBalance(
 		ctx context.Context,
 		account *types.AccountIdentifier,
 		currency *types.Currency,
-		block *types.BlockIdentifier,
+		index int64,
 	) (*types.Amount, *types.BlockIdentifier, error)
 
 	// PruneBalances is invoked by the reconciler
@@ -179,18 +185,10 @@ type Handler interface {
 }
 
 // InactiveEntry is used to track the last
-// time that an *AccountCurrency was reconciled.
+// time that an *types.AccountCurrency was reconciled.
 type InactiveEntry struct {
-	Entry     *AccountCurrency
+	Entry     *types.AccountCurrency
 	LastCheck *types.BlockIdentifier
-}
-
-// AccountCurrency is a simple struct combining
-// a *types.Account and *types.Currency. This can
-// be useful for looking up balances.
-type AccountCurrency struct {
-	Account  *types.AccountIdentifier `json:"account_identifier,omitempty"`
-	Currency *types.Currency          `json:"currency,omitempty"`
 }
 
 // Reconciler contains all logic to reconcile balances of
@@ -202,7 +200,7 @@ type Reconciler struct {
 	parser  *parser.Parser
 
 	lookupBalanceByBlock bool
-	interestingAccounts  []*AccountCurrency
+	interestingAccounts  []*types.AccountCurrency
 	backlogSize          int
 	changeQueue          chan *parser.BalanceChange
 	inactiveFrequency    int64
@@ -309,7 +307,7 @@ func (r *Reconciler) wrappedActiveEnqueue(
 }
 
 func (r *Reconciler) wrappedInactiveEnqueue(
-	accountCurrency *AccountCurrency,
+	accountCurrency *types.AccountCurrency,
 	liveBlock *types.BlockIdentifier,
 ) {
 	if err := r.inactiveAccountQueue(true, accountCurrency, liveBlock); err != nil {
@@ -333,7 +331,7 @@ func (r *Reconciler) QueueChanges(
 		skipAccount := false
 		// Look through balance changes for account + currency
 		for _, change := range balanceChanges {
-			if types.Hash(account) == types.Hash(&AccountCurrency{
+			if types.Hash(account) == types.Hash(&types.AccountCurrency{
 				Account:  change.Account,
 				Currency: change.Currency,
 			}) {
@@ -374,7 +372,7 @@ func (r *Reconciler) QueueChanges(
 		// Add all seen accounts to inactive reconciler queue.
 		//
 		// Note: accounts are only added if they have not been seen before.
-		err := r.inactiveAccountQueue(false, &AccountCurrency{
+		err := r.inactiveAccountQueue(false, &types.AccountCurrency{
 			Account:  change.Account,
 			Currency: change.Currency,
 		}, block)
@@ -406,15 +404,22 @@ func (r *Reconciler) LastIndexReconciled() int64 {
 // CompareBalance checks to see if the computed balance of an account
 // is equal to the live balance of an account. This function ensures
 // balance is checked correctly in the case of orphaned blocks.
+//
+// We must transactionally fetch the last synced head,
+// whether the liveBlock is canonical, and the computed
+// balance of the *types.AccountIdentifier and *types.Currency.
 func (r *Reconciler) CompareBalance(
 	ctx context.Context,
 	account *types.AccountIdentifier,
 	currency *types.Currency,
-	amount string,
+	liveBalance string,
 	liveBlock *types.BlockIdentifier,
 ) (string, string, int64, error) {
+	dbTx := r.helper.DatabaseTransaction(ctx)
+	defer dbTx.Discard(ctx)
+
 	// Head block should be set before we CompareBalance
-	head, err := r.helper.CurrentBlock(ctx)
+	head, err := r.helper.CurrentBlock(ctx, dbTx)
 	if err != nil {
 		return zeroString, "", 0, fmt.Errorf(
 			"%w: %v",
@@ -434,7 +439,7 @@ func (r *Reconciler) CompareBalance(
 	}
 
 	// Check if live block is in store (ensure not reorged)
-	canonical, err := r.helper.CanonicalBlock(ctx, liveBlock)
+	canonical, err := r.helper.CanonicalBlock(ctx, dbTx, liveBlock)
 	if err != nil {
 		return zeroString, "", 0, fmt.Errorf(
 			"%w: %v: on live block %+v",
@@ -454,9 +459,10 @@ func (r *Reconciler) CompareBalance(
 	// Get computed balance at live block
 	computedBalance, err := r.helper.ComputedBalance(
 		ctx,
+		dbTx,
 		account,
 		currency,
-		liveBlock,
+		liveBlock.Index,
 	)
 	if err != nil {
 		return zeroString, "", head.Index, fmt.Errorf(
@@ -468,7 +474,7 @@ func (r *Reconciler) CompareBalance(
 		)
 	}
 
-	difference, err := types.SubtractValues(amount, computedBalance.Value)
+	difference, err := types.SubtractValues(liveBalance, computedBalance.Value)
 	if err != nil {
 		return "", "", -1, err
 	}
@@ -483,63 +489,36 @@ func (r *Reconciler) bestLiveBalance(
 	ctx context.Context,
 	account *types.AccountIdentifier,
 	currency *types.Currency,
-	block *types.BlockIdentifier,
+	index int64,
 ) (*types.Amount, *types.BlockIdentifier, error) {
 	// Use the current balance to reconcile balances when lookupBalanceByBlock
 	// is disabled. This could be the case when a rosetta server does not
 	// support historical balance lookups.
-	var lookupBlock *types.BlockIdentifier
+	lookupIndex := int64(-1)
 
 	if r.lookupBalanceByBlock {
-		lookupBlock = block
+		lookupIndex = index
 	}
 
-	amount, currentBlock, err := r.helper.LiveBalance(
+	amount, liveBlock, err := r.helper.LiveBalance(
 		ctx,
 		account,
 		currency,
-		lookupBlock,
+		lookupIndex,
 	)
-	if err == nil {
-		return amount, currentBlock, nil
-	}
-
-	liveFetchErr := fmt.Errorf(
-		"%w: unable to get live balance for %s %s at %s",
-		err,
-		types.PrintStruct(account),
-		types.PrintStruct(currency),
-		types.PrintStruct(lookupBlock),
-	)
-
-	// Don't check canonical block if context
-	// is canceled or lookupBlock is nil (to
-	// make sure we don't erroneously return ErrBlockGone).
-	if errors.Is(err, context.Canceled) || lookupBlock == nil {
-		return nil, nil, liveFetchErr
-	}
-
-	// If there is a reorg, there is a chance that balance
-	// lookup can fail if we try to query an orphaned block.
-	// If this is the case, we continue reconciling.
-	canonical, canonicalErr := r.helper.CanonicalBlock(ctx, lookupBlock)
-	if canonicalErr != nil {
+	if err != nil {
 		return nil, nil, fmt.Errorf(
-			"%w: unable to check canonical block %s",
-			canonicalErr,
-			types.PrintStruct(lookupBlock),
+			"%w: unable to get live balance for %s %s at %d",
+			err,
+			types.PrintStruct(account),
+			types.PrintStruct(currency),
+			lookupIndex,
 		)
 	}
 
-	// Return ErrBlockGone if lookupBlock is not considered
-	// canonical.
-	if !canonical {
-		return nil, nil, ErrBlockGone
-	}
-
-	// We return a fetch error if the block is canonical but
-	// we can't retrieve it.
-	return nil, nil, liveFetchErr
+	// It is up to the caller to determine if
+	// liveBlock is considered canonical.
+	return amount, liveBlock, nil
 }
 
 // handleBalanceMismatch determines if a mismatch
@@ -604,7 +583,7 @@ func (r *Reconciler) accountReconciliation(
 	liveBlock *types.BlockIdentifier,
 	inactive bool,
 ) error {
-	accountCurrency := &AccountCurrency{
+	accountCurrency := &types.AccountCurrency{
 		Account:  account,
 		Currency: currency,
 	}
@@ -703,7 +682,7 @@ func (r *Reconciler) accountReconciliation(
 
 func (r *Reconciler) inactiveAccountQueue(
 	inactive bool,
-	accountCurrency *AccountCurrency,
+	accountCurrency *types.AccountCurrency,
 	liveBlock *types.BlockIdentifier,
 ) error {
 	r.inactiveQueueMutex.Lock()
@@ -791,26 +770,8 @@ func (r *Reconciler) reconcileActiveAccounts(ctx context.Context) error { // nol
 				ctx,
 				balanceChange.Account,
 				balanceChange.Currency,
-				balanceChange.Block,
+				balanceChange.Block.Index,
 			)
-			if errors.Is(err, ErrBlockGone) {
-				r.debugLog(
-					"block %s gone",
-					types.PrintStruct(balanceChange.Block),
-				)
-
-				if err := r.handler.ReconciliationSkipped(
-					ctx,
-					ActiveReconciliation,
-					balanceChange.Account,
-					balanceChange.Currency,
-					BlockGone,
-				); err != nil {
-					return err
-				}
-
-				continue
-			}
 			if err != nil {
 				// Ensure we don't leak reconciliations if
 				// context is canceled.
@@ -856,7 +817,10 @@ func (r *Reconciler) reconcileActiveAccounts(ctx context.Context) error { // nol
 func (r *Reconciler) shouldAttemptInactiveReconciliation(
 	ctx context.Context,
 ) (bool, *types.BlockIdentifier) {
-	head, err := r.helper.CurrentBlock(ctx)
+	dbTx := r.helper.DatabaseTransaction(ctx)
+	defer dbTx.Discard(ctx)
+
+	head, err := r.helper.CurrentBlock(ctx, dbTx)
 	// When first start syncing, this loop may run before the genesis block is synced.
 	// If this is the case, we should sleep and try again later instead of exiting.
 	if err != nil {
@@ -919,7 +883,7 @@ func (r *Reconciler) reconcileInactiveAccounts(
 				ctx,
 				nextAcct.Entry.Account,
 				nextAcct.Entry.Currency,
-				head,
+				head.Index,
 			)
 			switch {
 			case err == nil:
@@ -986,7 +950,7 @@ func (r *Reconciler) Reconcile(ctx context.Context) error {
 // AccountCurrency set already contains an Account and Currency combination.
 func ContainsAccountCurrency(
 	m map[string]struct{},
-	change *AccountCurrency,
+	change *types.AccountCurrency,
 ) bool {
 	_, exists := m[types.Hash(change)]
 	return exists

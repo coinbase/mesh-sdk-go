@@ -76,5 +76,6 @@ mocks:
 	mockery --dir constructor/worker --all --case underscore --outpkg worker --output mocks/constructor/worker;
 	mockery --dir constructor/coordinator --all --case underscore --outpkg coordinator --output mocks/constructor/coordinator;
 	mockery --dir utils --all --case underscore --outpkg utils --output mocks/utils;
+	mockery --dir storage --all --case underscore --outpkg storage --output mocks/storage;
 
 	${ADDLICENCE_SCRIPT} .;

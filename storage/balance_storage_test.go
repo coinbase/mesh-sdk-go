@@ -25,7 +25,6 @@ import (
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
 	"github.com/coinbase/rosetta-sdk-go/parser"
-	"github.com/coinbase/rosetta-sdk-go/reconciler"
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/coinbase/rosetta-sdk-go/utils"
 
@@ -553,7 +552,7 @@ func TestBalance(t *testing.T) {
 	t.Run("get all set AccountCurrency", func(t *testing.T) {
 		accounts, err := storage.GetAllAccountCurrency(ctx)
 		assert.NoError(t, err)
-		assert.ElementsMatch(t, []*reconciler.AccountCurrency{
+		assert.ElementsMatch(t, []*types.AccountCurrency{
 			{
 				Account:  genesisAccount,
 				Currency: currency,
@@ -1208,7 +1207,7 @@ var _ BalanceStorageHelper = (*MockBalanceStorageHelper)(nil)
 type MockBalanceStorageHelper struct {
 	AccountBalanceAmount string
 	AccountBalances      map[string]string
-	ExemptAccounts       []*reconciler.AccountCurrency
+	ExemptAccounts       []*types.AccountCurrency
 	BalExemptions        []*types.BalanceExemption
 }
 
@@ -1261,7 +1260,7 @@ func (h *MockBalanceStorageHelper) Asserter() *asserter.Asserter {
 
 func (h *MockBalanceStorageHelper) ExemptFunc() parser.ExemptOperation {
 	return func(op *types.Operation) bool {
-		thisAcct := &reconciler.AccountCurrency{
+		thisAcct := &types.AccountCurrency{
 			Account:  op.Account,
 			Currency: op.Amount.Currency,
 		}
