@@ -368,7 +368,7 @@ func TestCompareBalance(t *testing.T) {
 			mtxn,
 			account1,
 			amount1.Currency,
-			block0,
+			block0.Index,
 		).Return(
 			amount1,
 			nil,
@@ -398,7 +398,7 @@ func TestCompareBalance(t *testing.T) {
 			mtxn,
 			account1,
 			amount1.Currency,
-			block1,
+			block1.Index,
 		).Return(
 			amount1,
 			nil,
@@ -428,7 +428,7 @@ func TestCompareBalance(t *testing.T) {
 			mtxn,
 			account1,
 			currency1,
-			block2,
+			block2.Index,
 		).Return(
 			amount1,
 			nil,
@@ -458,7 +458,7 @@ func TestCompareBalance(t *testing.T) {
 			mtxn,
 			account1,
 			currency1,
-			block2,
+			block2.Index,
 		).Return(
 			amount1,
 			nil,
@@ -488,7 +488,7 @@ func TestCompareBalance(t *testing.T) {
 			mtxn,
 			account2,
 			currency1,
-			block2,
+			block2.Index,
 		).Return(
 			nil,
 			errors.New("account missing"),
@@ -695,7 +695,7 @@ func mockReconcilerCalls(
 		mtxn,
 		accountCurrency.Account,
 		accountCurrency.Currency,
-		headBlock,
+		headBlock.Index,
 	).Return(
 		&types.Amount{Value: computedValue, Currency: accountCurrency.Currency},
 		nil,

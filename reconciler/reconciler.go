@@ -117,7 +117,7 @@ type Helper interface {
 		dbTx storage.DatabaseTransaction,
 		account *types.AccountIdentifier,
 		currency *types.Currency,
-		liveBlock *types.BlockIdentifier,
+		liveIndex int64,
 	) (*types.Amount, error)
 
 	LiveBalance(
@@ -457,7 +457,7 @@ func (r *Reconciler) CompareBalance(
 		dbTx,
 		account,
 		currency,
-		liveBlock,
+		liveBlock.Index,
 	)
 	if err != nil {
 		return zeroString, "", head.Index, fmt.Errorf(
