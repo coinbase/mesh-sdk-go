@@ -23,7 +23,7 @@ import (
 	"time"
 
 	"github.com/coinbase/rosetta-sdk-go/parser"
-	// "github.com/coinbase/rosetta-sdk-go/storage"
+	"github.com/coinbase/rosetta-sdk-go/storage"
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"golang.org/x/sync/errgroup"
 )
@@ -104,19 +104,21 @@ const (
 type Helper interface {
 	CurrentBlock(
 		ctx context.Context,
-	) (*types.BlockIdentifier, error)
+	) (*types.BlockIdentifier, storage.DatabaseTransaction, error)
 
-	ChainAndBalance(
+	CanonicalBlock(
 		ctx context.Context,
+		dbTx storage.DatabaseTransaction,
+		block *types.BlockIdentifier,
+	) (bool, error)
+
+	ComputedBalance(
+		ctx context.Context,
+		dbTx storage.DatabaseTransaction,
 		account *types.AccountIdentifier,
 		currency *types.Currency,
 		liveBlock *types.BlockIdentifier,
-	) (
-		head *types.BlockIdentifier,
-		canonical bool,
-		computedBalance *types.Amount,
-		err error,
-	)
+	) (*types.Amount, error)
 
 	LiveBalance(
 		ctx context.Context,
@@ -399,6 +401,10 @@ func (r *Reconciler) LastIndexReconciled() int64 {
 // CompareBalance checks to see if the computed balance of an account
 // is equal to the live balance of an account. This function ensures
 // balance is checked correctly in the case of orphaned blocks.
+//
+// We must transactionally fetch the last synced head,
+// whether the liveBlock is canonical, and the computed
+// balance of the *types.AccountIdentifier and *types.Currency.
 func (r *Reconciler) CompareBalance(
 	ctx context.Context,
 	account *types.AccountIdentifier,
@@ -406,18 +412,59 @@ func (r *Reconciler) CompareBalance(
 	liveAmount string,
 	liveBlock *types.BlockIdentifier,
 ) (string, string, int64, error) {
-	// We must transactionally fetch the last synced head,
-	// whether the liveBlock is canonical, and the computed
-	// balance of the *types.AccountIdentifier and *types.Currency.
-	//
-	// When liveBlock is ahead of head, it is considered non-canonical
-	// and the computed balance returned will only reflect changes up to
-	// and including head.
-	head, canonical, computedBalance, err := r.helper.ChainAndBalance(ctx, account, currency, liveBlock)
+	// Head block should be set before we CompareBalance
+	head, dbTx, err := r.helper.CurrentBlock(ctx)
+	defer dbTx.Discard(ctx)
 	if err != nil {
 		return zeroString, "", 0, fmt.Errorf(
 			"%w: %v",
-			ErrChainAndBalance,
+			ErrGetCurrentBlockFailed,
+			err,
+		)
+	}
+
+	// Check if live block is < head (or wait)
+	if liveBlock.Index > head.Index {
+		return zeroString, "", head.Index, fmt.Errorf(
+			"%w live block %d > head block %d",
+			ErrHeadBlockBehindLive,
+			liveBlock.Index,
+			head.Index,
+		)
+	}
+
+	// Check if live block is in store (ensure not reorged)
+	canonical, err := r.helper.CanonicalBlock(ctx, dbTx, liveBlock)
+	if err != nil {
+		return zeroString, "", 0, fmt.Errorf(
+			"%w: %v: on live block %+v",
+			ErrBlockExistsFailed,
+			err,
+			liveBlock,
+		)
+	}
+	if !canonical {
+		return zeroString, "", head.Index, fmt.Errorf(
+			"%w %+v",
+			ErrBlockGone,
+			liveBlock,
+		)
+	}
+
+	// Get computed balance at live block
+	computedBalance, err := r.helper.ComputedBalance(
+		ctx,
+		dbTx,
+		account,
+		currency,
+		liveBlock,
+	)
+	if err != nil {
+		return zeroString, "", head.Index, fmt.Errorf(
+			"%w for %+v:%+v: %v",
+			ErrGetComputedBalanceFailed,
+			account,
+			currency,
 			err,
 		)
 	}
@@ -785,7 +832,8 @@ func (r *Reconciler) reconcileActiveAccounts(ctx context.Context) error { // nol
 func (r *Reconciler) shouldAttemptInactiveReconciliation(
 	ctx context.Context,
 ) (bool, *types.BlockIdentifier) {
-	head, err := r.helper.CurrentBlock(ctx)
+	head, dbTx, err := r.helper.CurrentBlock(ctx)
+	dbTx.Discard(ctx)
 	// When first start syncing, this loop may run before the genesis block is synced.
 	// If this is the case, we should sleep and try again later instead of exiting.
 	if err != nil {
