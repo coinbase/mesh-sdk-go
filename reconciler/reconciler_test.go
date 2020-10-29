@@ -22,6 +22,7 @@ import (
 	"time"
 
 	mocks "github.com/coinbase/rosetta-sdk-go/mocks/reconciler"
+	mockStorage "github.com/coinbase/rosetta-sdk-go/mocks/storage"
 	"github.com/coinbase/rosetta-sdk-go/parser"
 	"github.com/coinbase/rosetta-sdk-go/types"
 
@@ -296,8 +297,10 @@ func TestCompareBalance(t *testing.T) {
 		nil,
 	)
 
-	mh.On("CurrentBlock", ctx).Return(nil, errors.New("no head block")).Once()
 	t.Run("No head block yet", func(t *testing.T) {
+		mtxn := &mockStorage.DatabaseTransaction{}
+		mtxn.On("Discard", ctx).Once()
+		mh.On("CurrentBlock", ctx).Return(nil, mtxn, errors.New("no head block")).Once()
 		difference, cachedBalance, headIndex, err := reconciler.CompareBalance(
 			ctx,
 			account1,
@@ -309,10 +312,13 @@ func TestCompareBalance(t *testing.T) {
 		assert.Equal(t, "", cachedBalance)
 		assert.Equal(t, int64(0), headIndex)
 		assert.Error(t, err)
+		mtxn.AssertExpectations(t)
 	})
 
-	mh.On("CurrentBlock", ctx).Return(block0, nil).Once()
 	t.Run("Live block is ahead of head block", func(t *testing.T) {
+		mtxn := &mockStorage.DatabaseTransaction{}
+		mtxn.On("Discard", ctx).Once()
+		mh.On("CurrentBlock", ctx).Return(block0, mtxn, nil).Once()
 		difference, cachedBalance, headIndex, err := reconciler.CompareBalance(
 			ctx,
 			account1,
@@ -329,11 +335,14 @@ func TestCompareBalance(t *testing.T) {
 			1,
 			0,
 		).Error())
+		mtxn.AssertExpectations(t)
 	})
 
-	mh.On("CurrentBlock", ctx).Return(block2, nil).Once()
-	mh.On("CanonicalBlock", ctx, block1).Return(false, nil).Once()
 	t.Run("Live block is not in store", func(t *testing.T) {
+		mtxn := &mockStorage.DatabaseTransaction{}
+		mtxn.On("Discard", ctx).Once()
+		mh.On("CurrentBlock", ctx).Return(block2, mtxn, nil).Once()
+		mh.On("CanonicalBlock", ctx, mtxn, block1).Return(false, nil).Once()
 		difference, cachedBalance, headIndex, err := reconciler.CompareBalance(
 			ctx,
 			account1,
@@ -345,21 +354,25 @@ func TestCompareBalance(t *testing.T) {
 		assert.Equal(t, "", cachedBalance)
 		assert.Equal(t, int64(2), headIndex)
 		assert.Contains(t, err.Error(), ErrBlockGone.Error())
+		mtxn.AssertExpectations(t)
 	})
 
-	mh.On("CurrentBlock", ctx).Return(block2, nil).Once()
-	mh.On("CanonicalBlock", ctx, block0).Return(true, nil).Once()
-	mh.On(
-		"ComputedBalance",
-		ctx,
-		account1,
-		amount1.Currency,
-		block0,
-	).Return(
-		amount1,
-		nil,
-	).Once()
 	t.Run("Account updated after live block", func(t *testing.T) {
+		mtxn := &mockStorage.DatabaseTransaction{}
+		mtxn.On("Discard", ctx).Once()
+		mh.On("CurrentBlock", ctx).Return(block2, mtxn, nil).Once()
+		mh.On("CanonicalBlock", ctx, mtxn, block0).Return(true, nil).Once()
+		mh.On(
+			"ComputedBalance",
+			ctx,
+			mtxn,
+			account1,
+			amount1.Currency,
+			block0,
+		).Return(
+			amount1,
+			nil,
+		).Once()
 		difference, cachedBalance, headIndex, err := reconciler.CompareBalance(
 			ctx,
 			account1,
@@ -371,21 +384,25 @@ func TestCompareBalance(t *testing.T) {
 		assert.Equal(t, amount1.Value, cachedBalance)
 		assert.Equal(t, int64(2), headIndex)
 		assert.NoError(t, err)
+		mtxn.AssertExpectations(t)
 	})
 
-	mh.On("CurrentBlock", ctx).Return(block2, nil).Once()
-	mh.On("CanonicalBlock", ctx, block1).Return(true, nil).Once()
-	mh.On(
-		"ComputedBalance",
-		ctx,
-		account1,
-		amount1.Currency,
-		block1,
-	).Return(
-		amount1,
-		nil,
-	).Once()
 	t.Run("Account balance matches", func(t *testing.T) {
+		mtxn := &mockStorage.DatabaseTransaction{}
+		mtxn.On("Discard", ctx).Once()
+		mh.On("CurrentBlock", ctx).Return(block2, mtxn, nil).Once()
+		mh.On("CanonicalBlock", ctx, mtxn, block1).Return(true, nil).Once()
+		mh.On(
+			"ComputedBalance",
+			ctx,
+			mtxn,
+			account1,
+			amount1.Currency,
+			block1,
+		).Return(
+			amount1,
+			nil,
+		).Once()
 		difference, cachedBalance, headIndex, err := reconciler.CompareBalance(
 			ctx,
 			account1,
@@ -397,21 +414,25 @@ func TestCompareBalance(t *testing.T) {
 		assert.Equal(t, amount1.Value, cachedBalance)
 		assert.Equal(t, int64(2), headIndex)
 		assert.NoError(t, err)
+		mtxn.AssertExpectations(t)
 	})
 
-	mh.On("CurrentBlock", ctx).Return(block2, nil).Once()
-	mh.On("CanonicalBlock", ctx, block2).Return(true, nil).Once()
-	mh.On(
-		"ComputedBalance",
-		ctx,
-		account1,
-		currency1,
-		block2,
-	).Return(
-		amount1,
-		nil,
-	).Once()
 	t.Run("Account balance matches later live block", func(t *testing.T) {
+		mtxn := &mockStorage.DatabaseTransaction{}
+		mtxn.On("Discard", ctx).Once()
+		mh.On("CurrentBlock", ctx).Return(block2, mtxn, nil).Once()
+		mh.On("CanonicalBlock", ctx, mtxn, block2).Return(true, nil).Once()
+		mh.On(
+			"ComputedBalance",
+			ctx,
+			mtxn,
+			account1,
+			currency1,
+			block2,
+		).Return(
+			amount1,
+			nil,
+		).Once()
 		difference, cachedBalance, headIndex, err := reconciler.CompareBalance(
 			ctx,
 			account1,
@@ -423,21 +444,25 @@ func TestCompareBalance(t *testing.T) {
 		assert.Equal(t, amount1.Value, cachedBalance)
 		assert.Equal(t, int64(2), headIndex)
 		assert.NoError(t, err)
+		mtxn.AssertExpectations(t)
 	})
 
-	mh.On("CurrentBlock", ctx).Return(block2, nil).Once()
-	mh.On("CanonicalBlock", ctx, block2).Return(true, nil).Once()
-	mh.On(
-		"ComputedBalance",
-		ctx,
-		account1,
-		currency1,
-		block2,
-	).Return(
-		amount1,
-		nil,
-	).Once()
 	t.Run("Balances are not equal", func(t *testing.T) {
+		mtxn := &mockStorage.DatabaseTransaction{}
+		mtxn.On("Discard", ctx).Once()
+		mh.On("CurrentBlock", ctx).Return(block2, mtxn, nil).Once()
+		mh.On("CanonicalBlock", ctx, mtxn, block2).Return(true, nil).Once()
+		mh.On(
+			"ComputedBalance",
+			ctx,
+			mtxn,
+			account1,
+			currency1,
+			block2,
+		).Return(
+			amount1,
+			nil,
+		).Once()
 		difference, cachedBalance, headIndex, err := reconciler.CompareBalance(
 			ctx,
 			account1,
@@ -449,21 +474,25 @@ func TestCompareBalance(t *testing.T) {
 		assert.Equal(t, amount1.Value, cachedBalance)
 		assert.Equal(t, int64(2), headIndex)
 		assert.NoError(t, err)
+		mtxn.AssertExpectations(t)
 	})
 
-	mh.On("CurrentBlock", ctx).Return(block2, nil).Once()
-	mh.On("CanonicalBlock", ctx, block2).Return(true, nil).Once()
-	mh.On(
-		"ComputedBalance",
-		ctx,
-		account2,
-		currency1,
-		block2,
-	).Return(
-		nil,
-		errors.New("account missing"),
-	).Once()
 	t.Run("Compare balance for non-existent account", func(t *testing.T) {
+		mtxn := &mockStorage.DatabaseTransaction{}
+		mtxn.On("Discard", ctx).Once()
+		mh.On("CurrentBlock", ctx).Return(block2, mtxn, nil).Once()
+		mh.On("CanonicalBlock", ctx, mtxn, block2).Return(true, nil).Once()
+		mh.On(
+			"ComputedBalance",
+			ctx,
+			mtxn,
+			account2,
+			currency1,
+			block2,
+		).Return(
+			nil,
+			errors.New("account missing"),
+		).Once()
 		difference, cachedBalance, headIndex, err := reconciler.CompareBalance(
 			ctx,
 			account2,
@@ -475,6 +504,7 @@ func TestCompareBalance(t *testing.T) {
 		assert.Equal(t, "", cachedBalance)
 		assert.Equal(t, int64(2), headIndex)
 		assert.Error(t, err)
+		mtxn.AssertExpectations(t)
 	})
 
 	mh.AssertExpectations(t)
