@@ -833,7 +833,7 @@ func (r *Reconciler) shouldAttemptInactiveReconciliation(
 	ctx context.Context,
 ) (bool, *types.BlockIdentifier) {
 	head, dbTx, err := r.helper.CurrentBlock(ctx)
-	dbTx.Discard(ctx)
+	defer dbTx.Discard(ctx)
 	// When first start syncing, this loop may run before the genesis block is synced.
 	// If this is the case, we should sleep and try again later instead of exiting.
 	if err != nil {
