@@ -121,7 +121,7 @@ type Helper interface {
 		ctx context.Context,
 		account *types.AccountIdentifier,
 		currency *types.Currency,
-		block *types.BlockIdentifier,
+		index int64,
 	) (*types.Amount, *types.BlockIdentifier, error)
 
 	// PruneBalances is invoked by the reconciler
@@ -483,63 +483,36 @@ func (r *Reconciler) bestLiveBalance(
 	ctx context.Context,
 	account *types.AccountIdentifier,
 	currency *types.Currency,
-	block *types.BlockIdentifier,
+	index int64,
 ) (*types.Amount, *types.BlockIdentifier, error) {
 	// Use the current balance to reconcile balances when lookupBalanceByBlock
 	// is disabled. This could be the case when a rosetta server does not
 	// support historical balance lookups.
-	var lookupBlock *types.BlockIdentifier
+	lookupIndex := int64(-1)
 
 	if r.lookupBalanceByBlock {
-		lookupBlock = block
+		lookupIndex = index
 	}
 
 	amount, currentBlock, err := r.helper.LiveBalance(
 		ctx,
 		account,
 		currency,
-		lookupBlock,
+		lookupIndex,
 	)
-	if err == nil {
-		return amount, currentBlock, nil
-	}
-
-	liveFetchErr := fmt.Errorf(
-		"%w: unable to get live balance for %s %s at %s",
-		err,
-		types.PrintStruct(account),
-		types.PrintStruct(currency),
-		types.PrintStruct(lookupBlock),
-	)
-
-	// Don't check canonical block if context
-	// is canceled or lookupBlock is nil (to
-	// make sure we don't erroneously return ErrBlockGone).
-	if errors.Is(err, context.Canceled) || lookupBlock == nil {
-		return nil, nil, liveFetchErr
-	}
-
-	// If there is a reorg, there is a chance that balance
-	// lookup can fail if we try to query an orphaned block.
-	// If this is the case, we continue reconciling.
-	canonical, canonicalErr := r.helper.CanonicalBlock(ctx, lookupBlock)
-	if canonicalErr != nil {
+	if err != nil {
 		return nil, nil, fmt.Errorf(
-			"%w: unable to check canonical block %s",
-			canonicalErr,
-			types.PrintStruct(lookupBlock),
+			"%w: unable to get live balance for %s %s at %d",
+			err,
+			types.PrintStruct(account),
+			types.PrintStruct(currency),
+			lookupIndex,
 		)
 	}
 
-	// Return ErrBlockGone if lookupBlock is not considered
-	// canonical.
-	if !canonical {
-		return nil, nil, ErrBlockGone
-	}
-
-	// We return a fetch error if the block is canonical but
-	// we can't retrieve it.
-	return nil, nil, liveFetchErr
+	// It is up to the caller to determine if
+	// currentBlock is considered canonical.
+	return amount, currentBlock, nil
 }
 
 // handleBalanceMismatch determines if a mismatch
@@ -791,26 +764,8 @@ func (r *Reconciler) reconcileActiveAccounts(ctx context.Context) error { // nol
 				ctx,
 				balanceChange.Account,
 				balanceChange.Currency,
-				balanceChange.Block,
+				balanceChange.Block.Index,
 			)
-			if errors.Is(err, ErrBlockGone) {
-				r.debugLog(
-					"block %s gone",
-					types.PrintStruct(balanceChange.Block),
-				)
-
-				if err := r.handler.ReconciliationSkipped(
-					ctx,
-					ActiveReconciliation,
-					balanceChange.Account,
-					balanceChange.Currency,
-					BlockGone,
-				); err != nil {
-					return err
-				}
-
-				continue
-			}
 			if err != nil {
 				// Ensure we don't leak reconciliations if
 				// context is canceled.
@@ -919,7 +874,7 @@ func (r *Reconciler) reconcileInactiveAccounts(
 				ctx,
 				nextAcct.Entry.Account,
 				nextAcct.Entry.Currency,
-				head,
+				head.Index,
 			)
 			switch {
 			case err == nil:
