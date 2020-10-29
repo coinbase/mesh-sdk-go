@@ -38,13 +38,13 @@ func (_m *Helper) CanonicalBlock(ctx context.Context, dbTx storage.DatabaseTrans
 	return r0, r1
 }
 
-// ComputedBalance provides a mock function with given fields: ctx, dbTx, account, currency, liveIndex
-func (_m *Helper) ComputedBalance(ctx context.Context, dbTx storage.DatabaseTransaction, account *types.AccountIdentifier, currency *types.Currency, liveIndex int64) (*types.Amount, error) {
-	ret := _m.Called(ctx, dbTx, account, currency, liveIndex)
+// ComputedBalance provides a mock function with given fields: ctx, dbTx, account, currency, index
+func (_m *Helper) ComputedBalance(ctx context.Context, dbTx storage.DatabaseTransaction, account *types.AccountIdentifier, currency *types.Currency, index int64) (*types.Amount, error) {
+	ret := _m.Called(ctx, dbTx, account, currency, index)
 
 	var r0 *types.Amount
 	if rf, ok := ret.Get(0).(func(context.Context, storage.DatabaseTransaction, *types.AccountIdentifier, *types.Currency, int64) *types.Amount); ok {
-		r0 = rf(ctx, dbTx, account, currency, liveIndex)
+		r0 = rf(ctx, dbTx, account, currency, index)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*types.Amount)
@@ -53,7 +53,7 @@ func (_m *Helper) ComputedBalance(ctx context.Context, dbTx storage.DatabaseTran
 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, storage.DatabaseTransaction, *types.AccountIdentifier, *types.Currency, int64) error); ok {
-		r1 = rf(ctx, dbTx, account, currency, liveIndex)
+		r1 = rf(ctx, dbTx, account, currency, index)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -61,36 +61,43 @@ func (_m *Helper) ComputedBalance(ctx context.Context, dbTx storage.DatabaseTran
 	return r0, r1
 }
 
-// CurrentBlock provides a mock function with given fields: ctx
-func (_m *Helper) CurrentBlock(ctx context.Context) (*types.BlockIdentifier, storage.DatabaseTransaction, error) {
-	ret := _m.Called(ctx)
+// CurrentBlock provides a mock function with given fields: ctx, dbTx
+func (_m *Helper) CurrentBlock(ctx context.Context, dbTx storage.DatabaseTransaction) (*types.BlockIdentifier, error) {
+	ret := _m.Called(ctx, dbTx)
 
 	var r0 *types.BlockIdentifier
-	if rf, ok := ret.Get(0).(func(context.Context) *types.BlockIdentifier); ok {
-		r0 = rf(ctx)
+	if rf, ok := ret.Get(0).(func(context.Context, storage.DatabaseTransaction) *types.BlockIdentifier); ok {
+		r0 = rf(ctx, dbTx)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*types.BlockIdentifier)
 		}
 	}
 
-	var r1 storage.DatabaseTransaction
-	if rf, ok := ret.Get(1).(func(context.Context) storage.DatabaseTransaction); ok {
-		r1 = rf(ctx)
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, storage.DatabaseTransaction) error); ok {
+		r1 = rf(ctx, dbTx)
 	} else {
-		if ret.Get(1) != nil {
-			r1 = ret.Get(1).(storage.DatabaseTransaction)
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DatabaseTransaction provides a mock function with given fields: ctx
+func (_m *Helper) DatabaseTransaction(ctx context.Context) storage.DatabaseTransaction {
+	ret := _m.Called(ctx)
+
+	var r0 storage.DatabaseTransaction
+	if rf, ok := ret.Get(0).(func(context.Context) storage.DatabaseTransaction); ok {
+		r0 = rf(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(storage.DatabaseTransaction)
 		}
 	}
 
-	var r2 error
-	if rf, ok := ret.Get(2).(func(context.Context) error); ok {
-		r2 = rf(ctx)
-	} else {
-		r2 = ret.Error(2)
-	}
-
-	return r0, r1, r2
+	return r0
 }
 
 // LiveBalance provides a mock function with given fields: ctx, account, currency, index

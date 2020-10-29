@@ -102,9 +102,12 @@ const (
 // what sort of storage layer they want to use to provide the required
 // information.
 type Helper interface {
+	DatabaseTransaction(ctx context.Context) storage.DatabaseTransaction
+
 	CurrentBlock(
 		ctx context.Context,
-	) (*types.BlockIdentifier, storage.DatabaseTransaction, error)
+		dbTx storage.DatabaseTransaction,
+	) (*types.BlockIdentifier, error)
 
 	CanonicalBlock(
 		ctx context.Context,
@@ -412,9 +415,11 @@ func (r *Reconciler) CompareBalance(
 	liveBalance string,
 	liveBlock *types.BlockIdentifier,
 ) (string, string, int64, error) {
-	// Head block should be set before we CompareBalance
-	head, dbTx, err := r.helper.CurrentBlock(ctx)
+	dbTx := r.helper.DatabaseTransaction(ctx)
 	defer dbTx.Discard(ctx)
+
+	// Head block should be set before we CompareBalance
+	head, err := r.helper.CurrentBlock(ctx, dbTx)
 	if err != nil {
 		return zeroString, "", 0, fmt.Errorf(
 			"%w: %v",
@@ -812,8 +817,10 @@ func (r *Reconciler) reconcileActiveAccounts(ctx context.Context) error { // nol
 func (r *Reconciler) shouldAttemptInactiveReconciliation(
 	ctx context.Context,
 ) (bool, *types.BlockIdentifier) {
-	head, dbTx, err := r.helper.CurrentBlock(ctx)
+	dbTx := r.helper.DatabaseTransaction(ctx)
 	defer dbTx.Discard(ctx)
+
+	head, err := r.helper.CurrentBlock(ctx, dbTx)
 	// When first start syncing, this loop may run before the genesis block is synced.
 	// If this is the case, we should sleep and try again later instead of exiting.
 	if err != nil {
