@@ -34,8 +34,10 @@ var (
 	// that the block was orphaned.
 	ErrBlockGone = errors.New("block gone")
 
-	ErrChainAndBalance         = errors.New("unable to get chain and balance")
-	ErrLiveBalanceLookupFailed = errors.New("unable to lookup live balance")
+	ErrGetCurrentBlockFailed    = errors.New("unable to get current block for reconciliation")
+	ErrBlockExistsFailed        = errors.New("unable to check if block exists")
+	ErrGetComputedBalanceFailed = errors.New("unable to get computed balance")
+	ErrLiveBalanceLookupFailed  = errors.New("unable to lookup live balance")
 )
 
 // Err takes an error as an argument and returns
@@ -44,7 +46,9 @@ func Err(err error) bool {
 	reconcilerErrors := []error{
 		ErrHeadBlockBehindLive,
 		ErrBlockGone,
-		ErrChainAndBalance,
+		ErrGetCurrentBlockFailed,
+		ErrBlockExistsFailed,
+		ErrGetComputedBalanceFailed,
 		ErrLiveBalanceLookupFailed,
 	}
 
