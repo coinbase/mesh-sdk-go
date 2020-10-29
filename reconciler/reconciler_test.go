@@ -296,19 +296,8 @@ func TestCompareBalance(t *testing.T) {
 		nil,
 	)
 
+	mh.On("CurrentBlock", ctx).Return(nil, errors.New("no head block")).Once()
 	t.Run("No head block yet", func(t *testing.T) {
-		mh.On(
-			"ChainAndBalance",
-			mock.Anything,
-			account1,
-			currency1,
-			block1,
-		).Return(
-			nil,
-			false,
-			nil,
-			errors.New("no head block"),
-		).Once()
 		difference, cachedBalance, headIndex, err := reconciler.CompareBalance(
 			ctx,
 			account1,
@@ -322,19 +311,8 @@ func TestCompareBalance(t *testing.T) {
 		assert.Error(t, err)
 	})
 
+	mh.On("CurrentBlock", ctx).Return(block0, nil).Once()
 	t.Run("Live block is ahead of head block", func(t *testing.T) {
-		mh.On(
-			"ChainAndBalance",
-			mock.Anything,
-			account1,
-			currency1,
-			block1,
-		).Return(
-			block0,
-			false,
-			amount1,
-			nil,
-		).Once()
 		difference, cachedBalance, headIndex, err := reconciler.CompareBalance(
 			ctx,
 			account1,
@@ -353,19 +331,9 @@ func TestCompareBalance(t *testing.T) {
 		).Error())
 	})
 
+	mh.On("CurrentBlock", ctx).Return(block2, nil).Once()
+	mh.On("CanonicalBlock", ctx, block1).Return(false, nil).Once()
 	t.Run("Live block is not in store", func(t *testing.T) {
-		mh.On(
-			"ChainAndBalance",
-			mock.Anything,
-			account1,
-			currency1,
-			block1,
-		).Return(
-			block2,
-			false,
-			amount1,
-			nil,
-		).Once()
 		difference, cachedBalance, headIndex, err := reconciler.CompareBalance(
 			ctx,
 			account1,
@@ -691,15 +659,14 @@ func mockReconcilerCalls(
 		headBlock,
 		nil,
 	).Once()
+	mockHelper.On("CanonicalBlock", mock.Anything, headBlock).Return(true, nil).Once()
 	mockHelper.On(
-		"ChainAndBalance",
+		"ComputedBalance",
 		mock.Anything,
 		accountCurrency.Account,
 		accountCurrency.Currency,
 		headBlock,
 	).Return(
-		headBlock,
-		true,
 		&types.Amount{Value: computedValue, Currency: accountCurrency.Currency},
 		nil,
 	).Once()
