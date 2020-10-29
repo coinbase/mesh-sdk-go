@@ -101,21 +101,21 @@ const (
 // what sort of storage layer they want to use to provide the required
 // information.
 type Helper interface {
-	CanonicalBlock(
+	ChainAndBalance(
 		ctx context.Context,
-		block *types.BlockIdentifier,
-	) (bool, error)
+		account *types.AccountIdentifier,
+		currency *types.Currency,
+		liveBlock *types.BlockIdentifier,
+	) (
+		head *types.BlockIdentifier,
+		canonical bool,
+		computedBalance *types.Amount,
+		err error,
+	)
 
 	CurrentBlock(
 		ctx context.Context,
 	) (*types.BlockIdentifier, error)
-
-	ComputedBalance(
-		ctx context.Context,
-		account *types.AccountIdentifier,
-		currency *types.Currency,
-		block *types.BlockIdentifier,
-	) (*types.Amount, error)
 
 	LiveBalance(
 		ctx context.Context,
@@ -410,15 +410,17 @@ func (r *Reconciler) CompareBalance(
 	ctx context.Context,
 	account *types.AccountIdentifier,
 	currency *types.Currency,
-	amount string,
+	liveAmount string,
 	liveBlock *types.BlockIdentifier,
 ) (string, string, int64, error) {
-	// Head block should be set before we CompareBalance
-	head, err := r.helper.CurrentBlock(ctx)
+	// We must transactionally fetch the last synced head,
+	// whether the liveBlock is canonical, and the computed
+	// balance of the *types.AccountIdentifier and *types.Currency.
+	head, canonical, computedBalance, err := r.helper.ChainAndBalance(ctx, account, currency, liveBlock)
 	if err != nil {
 		return zeroString, "", 0, fmt.Errorf(
 			"%w: %v",
-			ErrGetCurrentBlockFailed,
+			ErrChainAndBalance,
 			err,
 		)
 	}
@@ -434,15 +436,6 @@ func (r *Reconciler) CompareBalance(
 	}
 
 	// Check if live block is in store (ensure not reorged)
-	canonical, err := r.helper.CanonicalBlock(ctx, liveBlock)
-	if err != nil {
-		return zeroString, "", 0, fmt.Errorf(
-			"%w: %v: on live block %+v",
-			ErrBlockExistsFailed,
-			err,
-			liveBlock,
-		)
-	}
 	if !canonical {
 		return zeroString, "", head.Index, fmt.Errorf(
 			"%w %+v",
@@ -451,24 +444,8 @@ func (r *Reconciler) CompareBalance(
 		)
 	}
 
-	// Get computed balance at live block
-	computedBalance, err := r.helper.ComputedBalance(
-		ctx,
-		account,
-		currency,
-		liveBlock,
-	)
-	if err != nil {
-		return zeroString, "", head.Index, fmt.Errorf(
-			"%w for %+v:%+v: %v",
-			ErrGetComputedBalanceFailed,
-			account,
-			currency,
-			err,
-		)
-	}
-
-	difference, err := types.SubtractValues(amount, computedBalance.Value)
+	// Compute difference between live balance and computed balance.
+	difference, err := types.SubtractValues(liveAmount, computedBalance.Value)
 	if err != nil {
 		return "", "", -1, err
 	}
@@ -494,7 +471,7 @@ func (r *Reconciler) bestLiveBalance(
 		lookupIndex = index
 	}
 
-	amount, currentBlock, err := r.helper.LiveBalance(
+	amount, liveBlock, err := r.helper.LiveBalance(
 		ctx,
 		account,
 		currency,
@@ -511,8 +488,8 @@ func (r *Reconciler) bestLiveBalance(
 	}
 
 	// It is up to the caller to determine if
-	// currentBlock is considered canonical.
-	return amount, currentBlock, nil
+	// liveBlock is considered canonical.
+	return amount, liveBlock, nil
 }
 
 // handleBalanceMismatch determines if a mismatch
