@@ -117,7 +117,7 @@ type Helper interface {
 		dbTx storage.DatabaseTransaction,
 		account *types.AccountIdentifier,
 		currency *types.Currency,
-		liveIndex int64,
+		index int64,
 	) (*types.Amount, error)
 
 	LiveBalance(
@@ -409,7 +409,7 @@ func (r *Reconciler) CompareBalance(
 	ctx context.Context,
 	account *types.AccountIdentifier,
 	currency *types.Currency,
-	liveAmount string,
+	liveBalance string,
 	liveBlock *types.BlockIdentifier,
 ) (string, string, int64, error) {
 	// Head block should be set before we CompareBalance
@@ -469,8 +469,7 @@ func (r *Reconciler) CompareBalance(
 		)
 	}
 
-	// Compute difference between live balance and computed balance.
-	difference, err := types.SubtractValues(liveAmount, computedBalance.Value)
+	difference, err := types.SubtractValues(liveBalance, computedBalance.Value)
 	if err != nil {
 		return "", "", -1, err
 	}
