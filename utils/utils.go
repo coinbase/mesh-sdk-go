@@ -302,18 +302,22 @@ func Milliseconds() int64 {
 }
 
 // CurrencyBalance returns the balance of an account
-// for a particular currency.
+// for a particular currency at a particular height.
+// It is up to the caller to determine if the retrieved
+// block has the expected hash for the requested index.
 func CurrencyBalance(
 	ctx context.Context,
 	network *types.NetworkIdentifier,
 	helper FetcherHelper,
 	account *types.AccountIdentifier,
 	currency *types.Currency,
-	block *types.BlockIdentifier,
+	index int64,
 ) (*types.Amount, *types.BlockIdentifier, []*types.Coin, error) {
 	var lookupBlock *types.PartialBlockIdentifier
-	if block != nil {
-		lookupBlock = types.ConstructPartialBlockIdentifier(block)
+	if index >= 0 {
+		lookupBlock = &types.PartialBlockIdentifier{
+			Index: &index,
+		}
 	}
 
 	liveBlock, liveBalances, liveCoins, _, fetchErr := helper.AccountBalanceRetry(
@@ -322,7 +326,6 @@ func CurrencyBalance(
 		account,
 		lookupBlock,
 	)
-
 	if fetchErr != nil {
 		return nil, nil, nil, fetchErr.Err
 	}
@@ -375,7 +378,7 @@ func GetAccountBalances(
 			fetcher,
 			balanceRequest.Account,
 			balanceRequest.Currency,
-			nil,
+			-1,
 		)
 
 		if err != nil {
