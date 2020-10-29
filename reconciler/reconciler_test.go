@@ -671,9 +671,7 @@ func mockReconcilerCalls(
 	exemptionHit bool,
 	exemptionThrows bool,
 ) {
-	if reconciliationType == ActiveReconciliation {
-		mockHelper.On("CurrentBlock", mock.Anything).Return(headBlock, mtxn, nil).Once()
-	}
+	mockHelper.On("CurrentBlock", mock.Anything).Return(headBlock, mtxn, nil).Once()
 	lookupIndex := liveBlock.Index
 	if !lookupBalanceByBlock {
 		lookupIndex = -1
@@ -1948,9 +1946,16 @@ func TestReconcile_SuccessOnlyInactive(t *testing.T) {
 
 			mtxn := &mockStorage.DatabaseTransaction{}
 			mtxn.On("Discard", mock.Anything).Once()
-			mockHelper.On("CurrentBlock", mock.Anything).Return(block, mtxn, nil)
+			mockHelper.On("CurrentBlock", mock.Anything).Return(block, mtxn, nil).Once()
 			mtxn2 := &mockStorage.DatabaseTransaction{}
-			mtxn2.On("Discard", mock.Anything).Once()
+			mtxn2.On(
+				"Discard",
+				mock.Anything,
+			).Run(
+				func(args mock.Arguments) {
+					cancel()
+				},
+			).Once()
 			mockReconcilerCalls(
 				mockHelper,
 				mockHandler,
@@ -1968,11 +1973,6 @@ func TestReconcile_SuccessOnlyInactive(t *testing.T) {
 				false,
 			)
 
-			go func() {
-				time.Sleep(2 * time.Second)
-				cancel()
-			}()
-
 			err := r.Reconcile(ctx)
 			assert.Contains(t, context.Canceled.Error(), err.Error())
 
@@ -1985,9 +1985,13 @@ func TestReconcile_SuccessOnlyInactive(t *testing.T) {
 
 			mtxn3 := &mockStorage.DatabaseTransaction{}
 			mtxn3.On("Discard", mock.Anything).Once()
-			mockHelper2.On("CurrentBlock", mock.Anything).Return(block2, mtxn3, nil)
+			mockHelper2.On("CurrentBlock", mock.Anything).Return(block2, mtxn3, nil).Once()
 			mtxn4 := &mockStorage.DatabaseTransaction{}
-			mtxn4.On("Discard", mock.Anything).Once()
+			mtxn4.On("Discard", mock.Anything).Run(
+				func(args mock.Arguments) {
+					cancel()
+				},
+			).Once()
 			mockReconcilerCalls(
 				mockHelper2,
 				mockHandler2,
@@ -2005,10 +2009,6 @@ func TestReconcile_SuccessOnlyInactive(t *testing.T) {
 				false,
 			)
 
-			go func() {
-				time.Sleep(2 * time.Second)
-				cancel()
-			}()
 			err = r.Reconcile(ctx)
 			assert.Error(t, err)
 			assert.Contains(t, context.Canceled.Error(), err.Error())
@@ -2068,11 +2068,20 @@ func TestReconcile_FailureOnlyInactive(t *testing.T) {
 
 			mtxn := &mockStorage.DatabaseTransaction{}
 			mtxn.On("Discard", mock.Anything).Once()
-			mockHelper.On("CurrentBlock", mock.Anything).Return(block, mtxn, nil)
+			mockHelper.On("CurrentBlock", mock.Anything).Return(block, mtxn, nil).Once()
+			mtxn2 := &mockStorage.DatabaseTransaction{}
+			mtxn2.On(
+				"Discard",
+				mock.Anything,
+			).Run(
+				func(args mock.Arguments) {
+					cancel()
+				},
+			).Once()
 			mockReconcilerCalls(
 				mockHelper,
 				mockHandler,
-				mtxn,
+				mtxn2,
 				lookup,
 				accountCurrency,
 				"100",
@@ -2086,11 +2095,6 @@ func TestReconcile_FailureOnlyInactive(t *testing.T) {
 				false,
 			)
 
-			go func() {
-				time.Sleep(2 * time.Second)
-				cancel()
-			}()
-
 			err := r.Reconcile(ctx)
 			assert.Error(t, err)
 			assert.Contains(t, "reconciliation failed", err.Error())
@@ -2098,6 +2102,7 @@ func TestReconcile_FailureOnlyInactive(t *testing.T) {
 			mockHelper.AssertExpectations(t)
 			mockHandler.AssertExpectations(t)
 			mtxn.AssertExpectations(t)
+			mtxn2.AssertExpectations(t)
 		})
 	}
 }
