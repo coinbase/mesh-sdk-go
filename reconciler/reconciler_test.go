@@ -643,9 +643,9 @@ func mockReconcilerCalls(
 	if reconciliationType == ActiveReconciliation {
 		mockHelper.On("CurrentBlock", mock.Anything).Return(headBlock, nil).Once()
 	}
-	lookupBlock := liveBlock
+	lookupIndex := liveBlock.Index
 	if !lookupBalanceByBlock {
-		lookupBlock = nil
+		lookupIndex = -1
 	}
 
 	mockHelper.On(
@@ -653,7 +653,7 @@ func mockReconcilerCalls(
 		mock.Anything,
 		accountCurrency.Account,
 		accountCurrency.Currency,
-		lookupBlock,
+		lookupIndex,
 	).Return(
 		&types.Amount{Value: liveValue, Currency: accountCurrency.Currency},
 		headBlock,
@@ -938,7 +938,7 @@ func TestReconcile_HighWaterMark(t *testing.T) {
 		mock.Anything,
 		accountCurrency.Account,
 		accountCurrency.Currency,
-		(*types.BlockIdentifier)(nil),
+		int64(-1),
 	).Return(
 		&types.Amount{Value: "100", Currency: accountCurrency.Currency},
 		block200,
@@ -1002,7 +1002,6 @@ func TestReconcile_HighWaterMark(t *testing.T) {
 			Block:    block,
 		},
 	})
-
 	assert.NoError(t, err)
 	err = r.QueueChanges(ctx, block200, []*parser.BalanceChange{
 		{
@@ -1061,12 +1060,19 @@ func TestReconcile_Orphan(t *testing.T) {
 		mock.Anything,
 		accountCurrency.Account,
 		accountCurrency.Currency,
-		block,
+		int64(1),
 	).Return(
+		&types.Amount{
+			Value:    "100",
+			Currency: accountCurrency.Currency,
+		},
+		block,
 		nil,
-		nil,
-		errors.New("cannot find block"),
 	).Once()
+	mockHelper.On("CurrentBlock", mock.Anything).Return(&types.BlockIdentifier{
+		Index: 1,
+		Hash:  "block 1a",
+	}, nil).Once()
 	mockHelper.On("CanonicalBlock", mock.Anything, block).Return(false, nil).Once()
 	mockHandler.On(
 		"ReconciliationSkipped",
@@ -2026,7 +2032,7 @@ func TestReconcile_EnqueueCancel(t *testing.T) {
 		mock.Anything,
 		accountCurrency.Account,
 		accountCurrency.Currency,
-		block,
+		block.Index,
 	).Return(
 		nil,
 		nil,
