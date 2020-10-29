@@ -469,25 +469,6 @@ func (r *Reconciler) CompareBalance(
 		)
 	}
 
-	// Check if live block is < head (or wait)
-	if liveBlock.Index > head.Index {
-		return zeroString, "", head.Index, fmt.Errorf(
-			"%w live block %d > head block %d",
-			ErrHeadBlockBehindLive,
-			liveBlock.Index,
-			head.Index,
-		)
-	}
-
-	// Check if live block is in store (ensure not reorged)
-	if !canonical {
-		return zeroString, "", head.Index, fmt.Errorf(
-			"%w %+v",
-			ErrBlockGone,
-			liveBlock,
-		)
-	}
-
 	// Compute difference between live balance and computed balance.
 	difference, err := types.SubtractValues(liveAmount, computedBalance.Value)
 	if err != nil {
