@@ -23,7 +23,6 @@ import (
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
 	"github.com/coinbase/rosetta-sdk-go/parser"
-	"github.com/coinbase/rosetta-sdk-go/reconciler"
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/coinbase/rosetta-sdk-go/utils"
 
@@ -897,7 +896,7 @@ func (b *BalanceStorage) getAllAccountEntries(
 // after restart.
 func (b *BalanceStorage) GetAllAccountCurrency(
 	ctx context.Context,
-) ([]*reconciler.AccountCurrency, error) {
+) ([]*types.AccountCurrency, error) {
 	log.Println("Loading previously seen accounts (this could take a while)...")
 
 	accountEntries := []*accountEntry{}
@@ -907,9 +906,9 @@ func (b *BalanceStorage) GetAllAccountCurrency(
 		return nil, fmt.Errorf("%w: unable to get all balance entries", err)
 	}
 
-	accounts := make([]*reconciler.AccountCurrency, len(accountEntries))
+	accounts := make([]*types.AccountCurrency, len(accountEntries))
 	for i, account := range accountEntries {
-		accounts[i] = &reconciler.AccountCurrency{
+		accounts[i] = &types.AccountCurrency{
 			Account:  account.Account,
 			Currency: account.Currency,
 		}

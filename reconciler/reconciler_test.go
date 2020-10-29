@@ -31,7 +31,7 @@ import (
 
 func TestNewReconciler(t *testing.T) {
 	var (
-		accountCurrency = &AccountCurrency{
+		accountCurrency = &types.AccountCurrency{
 			Account: &types.AccountIdentifier{
 				Address: "acct 1",
 			},
@@ -64,13 +64,13 @@ func TestNewReconciler(t *testing.T) {
 		},
 		"with interesting accounts": {
 			options: []Option{
-				WithInterestingAccounts([]*AccountCurrency{
+				WithInterestingAccounts([]*types.AccountCurrency{
 					accountCurrency,
 				}),
 			},
 			expected: func() *Reconciler {
 				r := New(nil, nil, nil)
-				r.interestingAccounts = []*AccountCurrency{
+				r.interestingAccounts = []*types.AccountCurrency{
 					accountCurrency,
 				}
 
@@ -79,7 +79,7 @@ func TestNewReconciler(t *testing.T) {
 		},
 		"with seen accounts": {
 			options: []Option{
-				WithSeenAccounts([]*AccountCurrency{
+				WithSeenAccounts([]*types.AccountCurrency{
 					accountCurrency,
 				}),
 			},
@@ -132,7 +132,7 @@ func TestContainsAccountCurrency(t *testing.T) {
 		Symbol:   "Blah2",
 		Decimals: 2,
 	}
-	acctSlice := []*AccountCurrency{
+	acctSlice := []*types.AccountCurrency{
 		{
 			Account: &types.AccountIdentifier{
 				Address: "test",
@@ -168,7 +168,7 @@ func TestContainsAccountCurrency(t *testing.T) {
 	}
 
 	t.Run("Non-existent account", func(t *testing.T) {
-		assert.False(t, ContainsAccountCurrency(accts, &AccountCurrency{
+		assert.False(t, ContainsAccountCurrency(accts, &types.AccountCurrency{
 			Account: &types.AccountIdentifier{
 				Address: "blah",
 			},
@@ -177,7 +177,7 @@ func TestContainsAccountCurrency(t *testing.T) {
 	})
 
 	t.Run("Basic account", func(t *testing.T) {
-		assert.True(t, ContainsAccountCurrency(accts, &AccountCurrency{
+		assert.True(t, ContainsAccountCurrency(accts, &types.AccountCurrency{
 			Account: &types.AccountIdentifier{
 				Address: "test",
 			},
@@ -186,7 +186,7 @@ func TestContainsAccountCurrency(t *testing.T) {
 	})
 
 	t.Run("Basic account with bad currency", func(t *testing.T) {
-		assert.False(t, ContainsAccountCurrency(accts, &AccountCurrency{
+		assert.False(t, ContainsAccountCurrency(accts, &types.AccountCurrency{
 			Account: &types.AccountIdentifier{
 				Address: "test",
 			},
@@ -195,7 +195,7 @@ func TestContainsAccountCurrency(t *testing.T) {
 	})
 
 	t.Run("Account with subaccount", func(t *testing.T) {
-		assert.True(t, ContainsAccountCurrency(accts, &AccountCurrency{
+		assert.True(t, ContainsAccountCurrency(accts, &types.AccountCurrency{
 			Account: &types.AccountIdentifier{
 				Address: "cool",
 				SubAccount: &types.SubAccountIdentifier{
@@ -207,7 +207,7 @@ func TestContainsAccountCurrency(t *testing.T) {
 	})
 
 	t.Run("Account with subaccount and metadata", func(t *testing.T) {
-		assert.True(t, ContainsAccountCurrency(accts, &AccountCurrency{
+		assert.True(t, ContainsAccountCurrency(accts, &types.AccountCurrency{
 			Account: &types.AccountIdentifier{
 				Address: "cool",
 				SubAccount: &types.SubAccountIdentifier{
@@ -222,7 +222,7 @@ func TestContainsAccountCurrency(t *testing.T) {
 	})
 
 	t.Run("Account with subaccount and unique metadata", func(t *testing.T) {
-		assert.False(t, ContainsAccountCurrency(accts, &AccountCurrency{
+		assert.False(t, ContainsAccountCurrency(accts, &types.AccountCurrency{
 			Account: &types.AccountIdentifier{
 				Address: "cool",
 				SubAccount: &types.SubAccountIdentifier{
@@ -296,8 +296,19 @@ func TestCompareBalance(t *testing.T) {
 		nil,
 	)
 
-	mh.On("CurrentBlock", ctx).Return(nil, errors.New("no head block")).Once()
 	t.Run("No head block yet", func(t *testing.T) {
+		mh.On(
+			"ChainAndBalance",
+			mock.Anything,
+			account1,
+			currency1,
+			block1,
+		).Return(
+			nil,
+			false,
+			nil,
+			errors.New("no head block"),
+		).Once()
 		difference, cachedBalance, headIndex, err := reconciler.CompareBalance(
 			ctx,
 			account1,
@@ -311,8 +322,19 @@ func TestCompareBalance(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	mh.On("CurrentBlock", ctx).Return(block0, nil).Once()
 	t.Run("Live block is ahead of head block", func(t *testing.T) {
+		mh.On(
+			"ChainAndBalance",
+			mock.Anything,
+			account1,
+			currency1,
+			block1,
+		).Return(
+			block0,
+			false,
+			amount1,
+			nil,
+		).Once()
 		difference, cachedBalance, headIndex, err := reconciler.CompareBalance(
 			ctx,
 			account1,
@@ -331,9 +353,19 @@ func TestCompareBalance(t *testing.T) {
 		).Error())
 	})
 
-	mh.On("CurrentBlock", ctx).Return(block2, nil).Once()
-	mh.On("CanonicalBlock", ctx, block1).Return(false, nil).Once()
 	t.Run("Live block is not in store", func(t *testing.T) {
+		mh.On(
+			"ChainAndBalance",
+			mock.Anything,
+			account1,
+			currency1,
+			block1,
+		).Return(
+			block2,
+			false,
+			amount1,
+			nil,
+		).Once()
 		difference, cachedBalance, headIndex, err := reconciler.CompareBalance(
 			ctx,
 			account1,
@@ -480,7 +512,7 @@ func TestCompareBalance(t *testing.T) {
 	mh.AssertExpectations(t)
 }
 
-func assertContainsAllAccounts(t *testing.T, m map[string]struct{}, a []*AccountCurrency) {
+func assertContainsAllAccounts(t *testing.T, m map[string]struct{}, a []*types.AccountCurrency) {
 	for _, account := range a {
 		_, exists := m[types.Hash(account)]
 		assert.True(t, exists)
@@ -499,7 +531,7 @@ func TestInactiveAccountQueue(t *testing.T) {
 			Hash:  "block 1",
 			Index: 1,
 		}
-		accountCurrency = &AccountCurrency{
+		accountCurrency = &types.AccountCurrency{
 			Account: &types.AccountIdentifier{
 				Address: "addr 1",
 			},
@@ -512,7 +544,7 @@ func TestInactiveAccountQueue(t *testing.T) {
 			Hash:  "block 2",
 			Index: 2,
 		}
-		accountCurrency2 = &AccountCurrency{
+		accountCurrency2 = &types.AccountCurrency{
 			Account: &types.AccountIdentifier{
 				Address: "addr 2",
 			},
@@ -530,7 +562,7 @@ func TestInactiveAccountQueue(t *testing.T) {
 			block,
 		)
 		assert.Nil(t, err)
-		assertContainsAllAccounts(t, r.seenAccounts, []*AccountCurrency{accountCurrency})
+		assertContainsAllAccounts(t, r.seenAccounts, []*types.AccountCurrency{accountCurrency})
 		assert.ElementsMatch(t, r.inactiveQueue, []*InactiveEntry{
 			{
 				Entry:     accountCurrency,
@@ -549,7 +581,7 @@ func TestInactiveAccountQueue(t *testing.T) {
 		assertContainsAllAccounts(
 			t,
 			r.seenAccounts,
-			[]*AccountCurrency{accountCurrency, accountCurrency2},
+			[]*types.AccountCurrency{accountCurrency, accountCurrency2},
 		)
 		assert.ElementsMatch(t, r.inactiveQueue, []*InactiveEntry{
 			{
@@ -575,7 +607,7 @@ func TestInactiveAccountQueue(t *testing.T) {
 		assertContainsAllAccounts(
 			t,
 			r.seenAccounts,
-			[]*AccountCurrency{accountCurrency, accountCurrency2},
+			[]*types.AccountCurrency{accountCurrency, accountCurrency2},
 		)
 		assert.ElementsMatch(t, r.inactiveQueue, []*InactiveEntry{})
 	})
@@ -590,7 +622,7 @@ func TestInactiveAccountQueue(t *testing.T) {
 		assertContainsAllAccounts(
 			t,
 			r.seenAccounts,
-			[]*AccountCurrency{accountCurrency, accountCurrency2},
+			[]*types.AccountCurrency{accountCurrency, accountCurrency2},
 		)
 		assert.ElementsMatch(t, r.inactiveQueue, []*InactiveEntry{
 			{
@@ -610,7 +642,7 @@ func TestInactiveAccountQueue(t *testing.T) {
 		assertContainsAllAccounts(
 			t,
 			r.seenAccounts,
-			[]*AccountCurrency{accountCurrency, accountCurrency2},
+			[]*types.AccountCurrency{accountCurrency, accountCurrency2},
 		)
 		assert.ElementsMatch(t, r.inactiveQueue, []*InactiveEntry{
 			{
@@ -629,7 +661,7 @@ func mockReconcilerCalls(
 	mockHelper *mocks.Helper,
 	mockHandler *mocks.Handler,
 	lookupBalanceByBlock bool,
-	accountCurrency *AccountCurrency,
+	accountCurrency *types.AccountCurrency,
 	liveValue string,
 	computedValue string,
 	headBlock *types.BlockIdentifier,
@@ -659,14 +691,15 @@ func mockReconcilerCalls(
 		headBlock,
 		nil,
 	).Once()
-	mockHelper.On("CanonicalBlock", mock.Anything, headBlock).Return(true, nil).Once()
 	mockHelper.On(
-		"ComputedBalance",
+		"ChainAndBalance",
 		mock.Anything,
 		accountCurrency.Account,
 		accountCurrency.Currency,
 		headBlock,
 	).Return(
+		headBlock,
+		true,
 		&types.Amount{Value: computedValue, Currency: accountCurrency.Currency},
 		nil,
 	).Once()
@@ -728,7 +761,7 @@ func TestReconcile_SuccessOnlyActive(t *testing.T) {
 			Hash:  "block 1",
 			Index: 1,
 		}
-		accountCurrency = &AccountCurrency{
+		accountCurrency = &types.AccountCurrency{
 			Account: &types.AccountIdentifier{
 				Address: "addr 1",
 			},
@@ -737,7 +770,7 @@ func TestReconcile_SuccessOnlyActive(t *testing.T) {
 				Decimals: 8,
 			},
 		}
-		accountCurrency2 = &AccountCurrency{
+		accountCurrency2 = &types.AccountCurrency{
 			Account: &types.AccountIdentifier{
 				Address: "addr 2",
 			},
@@ -760,7 +793,7 @@ func TestReconcile_SuccessOnlyActive(t *testing.T) {
 			opts := []Option{
 				WithActiveConcurrency(1),
 				WithInactiveConcurrency(0),
-				WithInterestingAccounts([]*AccountCurrency{accountCurrency2}),
+				WithInterestingAccounts([]*types.AccountCurrency{accountCurrency2}),
 				WithBalancePruning(),
 			}
 			if lookup {
@@ -890,7 +923,7 @@ func TestReconcile_HighWaterMark(t *testing.T) {
 			Hash:  "block 1",
 			Index: 1,
 		}
-		accountCurrency = &AccountCurrency{
+		accountCurrency = &types.AccountCurrency{
 			Account: &types.AccountIdentifier{
 				Address: "addr 1",
 			},
@@ -899,7 +932,7 @@ func TestReconcile_HighWaterMark(t *testing.T) {
 				Decimals: 8,
 			},
 		}
-		accountCurrency2 = &AccountCurrency{
+		accountCurrency2 = &types.AccountCurrency{
 			Account: &types.AccountIdentifier{
 				Address: "addr 2",
 			},
@@ -919,7 +952,7 @@ func TestReconcile_HighWaterMark(t *testing.T) {
 	opts := []Option{
 		WithActiveConcurrency(1),
 		WithInactiveConcurrency(0),
-		WithInterestingAccounts([]*AccountCurrency{accountCurrency2}),
+		WithInterestingAccounts([]*types.AccountCurrency{accountCurrency2}),
 		WithDebugLogging(),
 	}
 	r := New(
@@ -1031,7 +1064,7 @@ func TestReconcile_Orphan(t *testing.T) {
 			Hash:  "block 1",
 			Index: 1,
 		}
-		accountCurrency = &AccountCurrency{
+		accountCurrency = &types.AccountCurrency{
 			Account: &types.AccountIdentifier{
 				Address: "addr 1",
 			},
@@ -1110,7 +1143,7 @@ func TestReconcile_FailureOnlyActive(t *testing.T) {
 			Hash:  "block 1",
 			Index: 1,
 		}
-		accountCurrency = &AccountCurrency{
+		accountCurrency = &types.AccountCurrency{
 			Account: &types.AccountIdentifier{
 				Address: "addr 1",
 			},
@@ -1192,7 +1225,7 @@ func TestReconcile_ExemptOnlyActive(t *testing.T) {
 			Hash:  "block 1",
 			Index: 1,
 		}
-		accountCurrency = &AccountCurrency{
+		accountCurrency = &types.AccountCurrency{
 			Account: &types.AccountIdentifier{
 				Address: "addr 1",
 			},
@@ -1279,7 +1312,7 @@ func TestReconcile_ExemptAddressOnlyActive(t *testing.T) {
 			Hash:  "block 1",
 			Index: 1,
 		}
-		accountCurrency = &AccountCurrency{
+		accountCurrency = &types.AccountCurrency{
 			Account: &types.AccountIdentifier{
 				Address: "addr 1",
 				SubAccount: &types.SubAccountIdentifier{
@@ -1370,7 +1403,7 @@ func TestReconcile_ExemptAddressDynamicActive(t *testing.T) {
 			Hash:  "block 1",
 			Index: 1,
 		}
-		accountCurrency = &AccountCurrency{
+		accountCurrency = &types.AccountCurrency{
 			Account: &types.AccountIdentifier{
 				Address: "addr 1",
 				SubAccount: &types.SubAccountIdentifier{
@@ -1460,7 +1493,7 @@ func TestReconcile_ExemptAddressDynamicActiveThrow(t *testing.T) {
 			Hash:  "block 1",
 			Index: 1,
 		}
-		accountCurrency = &AccountCurrency{
+		accountCurrency = &types.AccountCurrency{
 			Account: &types.AccountIdentifier{
 				Address: "addr 1",
 				SubAccount: &types.SubAccountIdentifier{
@@ -1551,7 +1584,7 @@ func TestReconcile_NotExemptOnlyActive(t *testing.T) {
 			Hash:  "block 1",
 			Index: 1,
 		}
-		accountCurrency = &AccountCurrency{
+		accountCurrency = &types.AccountCurrency{
 			Account: &types.AccountIdentifier{
 				Address: "addr 1",
 			},
@@ -1638,7 +1671,7 @@ func TestReconcile_NotExemptAddressOnlyActive(t *testing.T) {
 			Hash:  "block 1",
 			Index: 1,
 		}
-		accountCurrency = &AccountCurrency{
+		accountCurrency = &types.AccountCurrency{
 			Account: &types.AccountIdentifier{
 				Address: "addr 1",
 			},
@@ -1726,7 +1759,7 @@ func TestReconcile_NotExemptWrongAddressOnlyActive(t *testing.T) {
 			Hash:  "block 1",
 			Index: 1,
 		}
-		accountCurrency = &AccountCurrency{
+		accountCurrency = &types.AccountCurrency{
 			Account: &types.AccountIdentifier{
 				Address: "addr 1",
 				SubAccount: &types.SubAccountIdentifier{
@@ -1822,7 +1855,7 @@ func TestReconcile_SuccessOnlyInactive(t *testing.T) {
 			Hash:  "block 2",
 			Index: 2,
 		}
-		accountCurrency = &AccountCurrency{
+		accountCurrency = &types.AccountCurrency{
 			Account: &types.AccountIdentifier{
 				Address: "addr 1",
 			},
@@ -1841,7 +1874,7 @@ func TestReconcile_SuccessOnlyInactive(t *testing.T) {
 			opts := []Option{
 				WithActiveConcurrency(0),
 				WithInactiveConcurrency(1),
-				WithSeenAccounts([]*AccountCurrency{accountCurrency}),
+				WithSeenAccounts([]*types.AccountCurrency{accountCurrency}),
 				WithDebugLogging(),
 				WithInactiveFrequency(1),
 			}
@@ -1928,7 +1961,7 @@ func TestReconcile_FailureOnlyInactive(t *testing.T) {
 			Hash:  "block 1",
 			Index: 1,
 		}
-		accountCurrency = &AccountCurrency{
+		accountCurrency = &types.AccountCurrency{
 			Account: &types.AccountIdentifier{
 				Address: "addr 1",
 			},
@@ -1947,7 +1980,7 @@ func TestReconcile_FailureOnlyInactive(t *testing.T) {
 			opts := []Option{
 				WithActiveConcurrency(0),
 				WithInactiveConcurrency(1),
-				WithSeenAccounts([]*AccountCurrency{accountCurrency}),
+				WithSeenAccounts([]*types.AccountCurrency{accountCurrency}),
 				WithDebugLogging(),
 				WithInactiveFrequency(1),
 			}
@@ -2001,7 +2034,7 @@ func TestReconcile_EnqueueCancel(t *testing.T) {
 			Hash:  "block 1",
 			Index: 1,
 		}
-		accountCurrency = &AccountCurrency{
+		accountCurrency = &types.AccountCurrency{
 			Account: &types.AccountIdentifier{
 				Address: "addr 1",
 			},

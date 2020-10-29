@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/coinbase/rosetta-sdk-go/parser"
+	// "github.com/coinbase/rosetta-sdk-go/storage"
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"golang.org/x/sync/errgroup"
 )
@@ -101,6 +102,10 @@ const (
 // what sort of storage layer they want to use to provide the required
 // information.
 type Helper interface {
+	CurrentBlock(
+		ctx context.Context,
+	) (*types.BlockIdentifier, error)
+
 	ChainAndBalance(
 		ctx context.Context,
 		account *types.AccountIdentifier,
@@ -112,10 +117,6 @@ type Helper interface {
 		computedBalance *types.Amount,
 		err error,
 	)
-
-	CurrentBlock(
-		ctx context.Context,
-	) (*types.BlockIdentifier, error)
 
 	LiveBalance(
 		ctx context.Context,
@@ -179,18 +180,10 @@ type Handler interface {
 }
 
 // InactiveEntry is used to track the last
-// time that an *AccountCurrency was reconciled.
+// time that an *types.AccountCurrency was reconciled.
 type InactiveEntry struct {
-	Entry     *AccountCurrency
+	Entry     *types.AccountCurrency
 	LastCheck *types.BlockIdentifier
-}
-
-// AccountCurrency is a simple struct combining
-// a *types.Account and *types.Currency. This can
-// be useful for looking up balances.
-type AccountCurrency struct {
-	Account  *types.AccountIdentifier `json:"account_identifier,omitempty"`
-	Currency *types.Currency          `json:"currency,omitempty"`
 }
 
 // Reconciler contains all logic to reconcile balances of
@@ -202,7 +195,7 @@ type Reconciler struct {
 	parser  *parser.Parser
 
 	lookupBalanceByBlock bool
-	interestingAccounts  []*AccountCurrency
+	interestingAccounts  []*types.AccountCurrency
 	backlogSize          int
 	changeQueue          chan *parser.BalanceChange
 	inactiveFrequency    int64
@@ -309,7 +302,7 @@ func (r *Reconciler) wrappedActiveEnqueue(
 }
 
 func (r *Reconciler) wrappedInactiveEnqueue(
-	accountCurrency *AccountCurrency,
+	accountCurrency *types.AccountCurrency,
 	liveBlock *types.BlockIdentifier,
 ) {
 	if err := r.inactiveAccountQueue(true, accountCurrency, liveBlock); err != nil {
@@ -333,7 +326,7 @@ func (r *Reconciler) QueueChanges(
 		skipAccount := false
 		// Look through balance changes for account + currency
 		for _, change := range balanceChanges {
-			if types.Hash(account) == types.Hash(&AccountCurrency{
+			if types.Hash(account) == types.Hash(&types.AccountCurrency{
 				Account:  change.Account,
 				Currency: change.Currency,
 			}) {
@@ -374,7 +367,7 @@ func (r *Reconciler) QueueChanges(
 		// Add all seen accounts to inactive reconciler queue.
 		//
 		// Note: accounts are only added if they have not been seen before.
-		err := r.inactiveAccountQueue(false, &AccountCurrency{
+		err := r.inactiveAccountQueue(false, &types.AccountCurrency{
 			Account:  change.Account,
 			Currency: change.Currency,
 		}, block)
@@ -416,6 +409,10 @@ func (r *Reconciler) CompareBalance(
 	// We must transactionally fetch the last synced head,
 	// whether the liveBlock is canonical, and the computed
 	// balance of the *types.AccountIdentifier and *types.Currency.
+	//
+	// When liveBlock is ahead of head, it is considered non-canonical
+	// and the computed balance returned will only reflect changes up to
+	// and including head.
 	head, canonical, computedBalance, err := r.helper.ChainAndBalance(ctx, account, currency, liveBlock)
 	if err != nil {
 		return zeroString, "", 0, fmt.Errorf(
@@ -554,7 +551,7 @@ func (r *Reconciler) accountReconciliation(
 	liveBlock *types.BlockIdentifier,
 	inactive bool,
 ) error {
-	accountCurrency := &AccountCurrency{
+	accountCurrency := &types.AccountCurrency{
 		Account:  account,
 		Currency: currency,
 	}
@@ -653,7 +650,7 @@ func (r *Reconciler) accountReconciliation(
 
 func (r *Reconciler) inactiveAccountQueue(
 	inactive bool,
-	accountCurrency *AccountCurrency,
+	accountCurrency *types.AccountCurrency,
 	liveBlock *types.BlockIdentifier,
 ) error {
 	r.inactiveQueueMutex.Lock()
@@ -918,7 +915,7 @@ func (r *Reconciler) Reconcile(ctx context.Context) error {
 // AccountCurrency set already contains an Account and Currency combination.
 func ContainsAccountCurrency(
 	m map[string]struct{},
-	change *AccountCurrency,
+	change *types.AccountCurrency,
 ) bool {
 	_, exists := m[types.Hash(change)]
 	return exists
