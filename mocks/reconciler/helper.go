@@ -15,48 +15,43 @@ type Helper struct {
 	mock.Mock
 }
 
-// CanonicalBlock provides a mock function with given fields: ctx, block
-func (_m *Helper) CanonicalBlock(ctx context.Context, block *types.BlockIdentifier) (bool, error) {
-	ret := _m.Called(ctx, block)
+// ChainAndBalance provides a mock function with given fields: ctx, account, currency, liveBlock
+func (_m *Helper) ChainAndBalance(ctx context.Context, account *types.AccountIdentifier, currency *types.Currency, liveBlock *types.BlockIdentifier) (*types.BlockIdentifier, bool, *types.Amount, error) {
+	ret := _m.Called(ctx, account, currency, liveBlock)
 
-	var r0 bool
-	if rf, ok := ret.Get(0).(func(context.Context, *types.BlockIdentifier) bool); ok {
-		r0 = rf(ctx, block)
-	} else {
-		r0 = ret.Get(0).(bool)
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *types.BlockIdentifier) error); ok {
-		r1 = rf(ctx, block)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// ComputedBalance provides a mock function with given fields: ctx, account, currency, block
-func (_m *Helper) ComputedBalance(ctx context.Context, account *types.AccountIdentifier, currency *types.Currency, block *types.BlockIdentifier) (*types.Amount, error) {
-	ret := _m.Called(ctx, account, currency, block)
-
-	var r0 *types.Amount
-	if rf, ok := ret.Get(0).(func(context.Context, *types.AccountIdentifier, *types.Currency, *types.BlockIdentifier) *types.Amount); ok {
-		r0 = rf(ctx, account, currency, block)
+	var r0 *types.BlockIdentifier
+	if rf, ok := ret.Get(0).(func(context.Context, *types.AccountIdentifier, *types.Currency, *types.BlockIdentifier) *types.BlockIdentifier); ok {
+		r0 = rf(ctx, account, currency, liveBlock)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*types.Amount)
+			r0 = ret.Get(0).(*types.BlockIdentifier)
 		}
 	}
 
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *types.AccountIdentifier, *types.Currency, *types.BlockIdentifier) error); ok {
-		r1 = rf(ctx, account, currency, block)
+	var r1 bool
+	if rf, ok := ret.Get(1).(func(context.Context, *types.AccountIdentifier, *types.Currency, *types.BlockIdentifier) bool); ok {
+		r1 = rf(ctx, account, currency, liveBlock)
 	} else {
-		r1 = ret.Error(1)
+		r1 = ret.Get(1).(bool)
 	}
 
-	return r0, r1
+	var r2 *types.Amount
+	if rf, ok := ret.Get(2).(func(context.Context, *types.AccountIdentifier, *types.Currency, *types.BlockIdentifier) *types.Amount); ok {
+		r2 = rf(ctx, account, currency, liveBlock)
+	} else {
+		if ret.Get(2) != nil {
+			r2 = ret.Get(2).(*types.Amount)
+		}
+	}
+
+	var r3 error
+	if rf, ok := ret.Get(3).(func(context.Context, *types.AccountIdentifier, *types.Currency, *types.BlockIdentifier) error); ok {
+		r3 = rf(ctx, account, currency, liveBlock)
+	} else {
+		r3 = ret.Error(3)
+	}
+
+	return r0, r1, r2, r3
 }
 
 // CurrentBlock provides a mock function with given fields: ctx
