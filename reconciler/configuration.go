@@ -43,7 +43,7 @@ func WithActiveConcurrency(concurrency int) Option {
 
 // WithInterestingAccounts adds interesting accounts
 // to check at each block.
-func WithInterestingAccounts(interesting []*AccountCurrency) Option {
+func WithInterestingAccounts(interesting []*types.AccountCurrency) Option {
 	return func(r *Reconciler) {
 		r.interestingAccounts = interesting
 	}
@@ -51,7 +51,7 @@ func WithInterestingAccounts(interesting []*AccountCurrency) Option {
 
 // WithSeenAccounts adds accounts to the seenAccounts
 // slice and inactiveQueue for inactive reconciliation.
-func WithSeenAccounts(seen []*AccountCurrency) Option {
+func WithSeenAccounts(seen []*types.AccountCurrency) Option {
 	return func(r *Reconciler) {
 		for _, acct := range seen {
 			// When block is not set, it is assumed that the account should

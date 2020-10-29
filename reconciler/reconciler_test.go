@@ -22,6 +22,7 @@ import (
 	"time"
 
 	mocks "github.com/coinbase/rosetta-sdk-go/mocks/reconciler"
+	mockStorage "github.com/coinbase/rosetta-sdk-go/mocks/storage"
 	"github.com/coinbase/rosetta-sdk-go/parser"
 	"github.com/coinbase/rosetta-sdk-go/types"
 
@@ -31,7 +32,7 @@ import (
 
 func TestNewReconciler(t *testing.T) {
 	var (
-		accountCurrency = &AccountCurrency{
+		accountCurrency = &types.AccountCurrency{
 			Account: &types.AccountIdentifier{
 				Address: "acct 1",
 			},
@@ -64,13 +65,13 @@ func TestNewReconciler(t *testing.T) {
 		},
 		"with interesting accounts": {
 			options: []Option{
-				WithInterestingAccounts([]*AccountCurrency{
+				WithInterestingAccounts([]*types.AccountCurrency{
 					accountCurrency,
 				}),
 			},
 			expected: func() *Reconciler {
 				r := New(nil, nil, nil)
-				r.interestingAccounts = []*AccountCurrency{
+				r.interestingAccounts = []*types.AccountCurrency{
 					accountCurrency,
 				}
 
@@ -79,7 +80,7 @@ func TestNewReconciler(t *testing.T) {
 		},
 		"with seen accounts": {
 			options: []Option{
-				WithSeenAccounts([]*AccountCurrency{
+				WithSeenAccounts([]*types.AccountCurrency{
 					accountCurrency,
 				}),
 			},
@@ -132,7 +133,7 @@ func TestContainsAccountCurrency(t *testing.T) {
 		Symbol:   "Blah2",
 		Decimals: 2,
 	}
-	acctSlice := []*AccountCurrency{
+	acctSlice := []*types.AccountCurrency{
 		{
 			Account: &types.AccountIdentifier{
 				Address: "test",
@@ -168,7 +169,7 @@ func TestContainsAccountCurrency(t *testing.T) {
 	}
 
 	t.Run("Non-existent account", func(t *testing.T) {
-		assert.False(t, ContainsAccountCurrency(accts, &AccountCurrency{
+		assert.False(t, ContainsAccountCurrency(accts, &types.AccountCurrency{
 			Account: &types.AccountIdentifier{
 				Address: "blah",
 			},
@@ -177,7 +178,7 @@ func TestContainsAccountCurrency(t *testing.T) {
 	})
 
 	t.Run("Basic account", func(t *testing.T) {
-		assert.True(t, ContainsAccountCurrency(accts, &AccountCurrency{
+		assert.True(t, ContainsAccountCurrency(accts, &types.AccountCurrency{
 			Account: &types.AccountIdentifier{
 				Address: "test",
 			},
@@ -186,7 +187,7 @@ func TestContainsAccountCurrency(t *testing.T) {
 	})
 
 	t.Run("Basic account with bad currency", func(t *testing.T) {
-		assert.False(t, ContainsAccountCurrency(accts, &AccountCurrency{
+		assert.False(t, ContainsAccountCurrency(accts, &types.AccountCurrency{
 			Account: &types.AccountIdentifier{
 				Address: "test",
 			},
@@ -195,7 +196,7 @@ func TestContainsAccountCurrency(t *testing.T) {
 	})
 
 	t.Run("Account with subaccount", func(t *testing.T) {
-		assert.True(t, ContainsAccountCurrency(accts, &AccountCurrency{
+		assert.True(t, ContainsAccountCurrency(accts, &types.AccountCurrency{
 			Account: &types.AccountIdentifier{
 				Address: "cool",
 				SubAccount: &types.SubAccountIdentifier{
@@ -207,7 +208,7 @@ func TestContainsAccountCurrency(t *testing.T) {
 	})
 
 	t.Run("Account with subaccount and metadata", func(t *testing.T) {
-		assert.True(t, ContainsAccountCurrency(accts, &AccountCurrency{
+		assert.True(t, ContainsAccountCurrency(accts, &types.AccountCurrency{
 			Account: &types.AccountIdentifier{
 				Address: "cool",
 				SubAccount: &types.SubAccountIdentifier{
@@ -222,7 +223,7 @@ func TestContainsAccountCurrency(t *testing.T) {
 	})
 
 	t.Run("Account with subaccount and unique metadata", func(t *testing.T) {
-		assert.False(t, ContainsAccountCurrency(accts, &AccountCurrency{
+		assert.False(t, ContainsAccountCurrency(accts, &types.AccountCurrency{
 			Account: &types.AccountIdentifier{
 				Address: "cool",
 				SubAccount: &types.SubAccountIdentifier{
@@ -296,8 +297,11 @@ func TestCompareBalance(t *testing.T) {
 		nil,
 	)
 
-	mh.On("CurrentBlock", ctx).Return(nil, errors.New("no head block")).Once()
 	t.Run("No head block yet", func(t *testing.T) {
+		mtxn := &mockStorage.DatabaseTransaction{}
+		mtxn.On("Discard", ctx).Once()
+		mh.On("DatabaseTransaction", ctx).Return(mtxn).Once()
+		mh.On("CurrentBlock", ctx, mtxn).Return(nil, errors.New("no head block")).Once()
 		difference, cachedBalance, headIndex, err := reconciler.CompareBalance(
 			ctx,
 			account1,
@@ -309,10 +313,14 @@ func TestCompareBalance(t *testing.T) {
 		assert.Equal(t, "", cachedBalance)
 		assert.Equal(t, int64(0), headIndex)
 		assert.Error(t, err)
+		mtxn.AssertExpectations(t)
 	})
 
-	mh.On("CurrentBlock", ctx).Return(block0, nil).Once()
 	t.Run("Live block is ahead of head block", func(t *testing.T) {
+		mtxn := &mockStorage.DatabaseTransaction{}
+		mtxn.On("Discard", ctx).Once()
+		mh.On("DatabaseTransaction", ctx).Return(mtxn).Once()
+		mh.On("CurrentBlock", ctx, mtxn).Return(block0, nil).Once()
 		difference, cachedBalance, headIndex, err := reconciler.CompareBalance(
 			ctx,
 			account1,
@@ -329,11 +337,15 @@ func TestCompareBalance(t *testing.T) {
 			1,
 			0,
 		).Error())
+		mtxn.AssertExpectations(t)
 	})
 
-	mh.On("CurrentBlock", ctx).Return(block2, nil).Once()
-	mh.On("CanonicalBlock", ctx, block1).Return(false, nil).Once()
 	t.Run("Live block is not in store", func(t *testing.T) {
+		mtxn := &mockStorage.DatabaseTransaction{}
+		mtxn.On("Discard", ctx).Once()
+		mh.On("DatabaseTransaction", ctx).Return(mtxn).Once()
+		mh.On("CurrentBlock", ctx, mtxn).Return(block2, nil).Once()
+		mh.On("CanonicalBlock", ctx, mtxn, block1).Return(false, nil).Once()
 		difference, cachedBalance, headIndex, err := reconciler.CompareBalance(
 			ctx,
 			account1,
@@ -345,21 +357,26 @@ func TestCompareBalance(t *testing.T) {
 		assert.Equal(t, "", cachedBalance)
 		assert.Equal(t, int64(2), headIndex)
 		assert.Contains(t, err.Error(), ErrBlockGone.Error())
+		mtxn.AssertExpectations(t)
 	})
 
-	mh.On("CurrentBlock", ctx).Return(block2, nil).Once()
-	mh.On("CanonicalBlock", ctx, block0).Return(true, nil).Once()
-	mh.On(
-		"ComputedBalance",
-		ctx,
-		account1,
-		amount1.Currency,
-		block0,
-	).Return(
-		amount1,
-		nil,
-	).Once()
 	t.Run("Account updated after live block", func(t *testing.T) {
+		mtxn := &mockStorage.DatabaseTransaction{}
+		mtxn.On("Discard", ctx).Once()
+		mh.On("DatabaseTransaction", ctx).Return(mtxn).Once()
+		mh.On("CurrentBlock", ctx, mtxn).Return(block2, nil).Once()
+		mh.On("CanonicalBlock", ctx, mtxn, block0).Return(true, nil).Once()
+		mh.On(
+			"ComputedBalance",
+			ctx,
+			mtxn,
+			account1,
+			amount1.Currency,
+			block0.Index,
+		).Return(
+			amount1,
+			nil,
+		).Once()
 		difference, cachedBalance, headIndex, err := reconciler.CompareBalance(
 			ctx,
 			account1,
@@ -371,21 +388,26 @@ func TestCompareBalance(t *testing.T) {
 		assert.Equal(t, amount1.Value, cachedBalance)
 		assert.Equal(t, int64(2), headIndex)
 		assert.NoError(t, err)
+		mtxn.AssertExpectations(t)
 	})
 
-	mh.On("CurrentBlock", ctx).Return(block2, nil).Once()
-	mh.On("CanonicalBlock", ctx, block1).Return(true, nil).Once()
-	mh.On(
-		"ComputedBalance",
-		ctx,
-		account1,
-		amount1.Currency,
-		block1,
-	).Return(
-		amount1,
-		nil,
-	).Once()
 	t.Run("Account balance matches", func(t *testing.T) {
+		mtxn := &mockStorage.DatabaseTransaction{}
+		mtxn.On("Discard", ctx).Once()
+		mh.On("DatabaseTransaction", ctx).Return(mtxn).Once()
+		mh.On("CurrentBlock", ctx, mtxn).Return(block2, nil).Once()
+		mh.On("CanonicalBlock", ctx, mtxn, block1).Return(true, nil).Once()
+		mh.On(
+			"ComputedBalance",
+			ctx,
+			mtxn,
+			account1,
+			amount1.Currency,
+			block1.Index,
+		).Return(
+			amount1,
+			nil,
+		).Once()
 		difference, cachedBalance, headIndex, err := reconciler.CompareBalance(
 			ctx,
 			account1,
@@ -397,21 +419,26 @@ func TestCompareBalance(t *testing.T) {
 		assert.Equal(t, amount1.Value, cachedBalance)
 		assert.Equal(t, int64(2), headIndex)
 		assert.NoError(t, err)
+		mtxn.AssertExpectations(t)
 	})
 
-	mh.On("CurrentBlock", ctx).Return(block2, nil).Once()
-	mh.On("CanonicalBlock", ctx, block2).Return(true, nil).Once()
-	mh.On(
-		"ComputedBalance",
-		ctx,
-		account1,
-		currency1,
-		block2,
-	).Return(
-		amount1,
-		nil,
-	).Once()
 	t.Run("Account balance matches later live block", func(t *testing.T) {
+		mtxn := &mockStorage.DatabaseTransaction{}
+		mtxn.On("Discard", ctx).Once()
+		mh.On("DatabaseTransaction", ctx).Return(mtxn).Once()
+		mh.On("CurrentBlock", ctx, mtxn).Return(block2, nil).Once()
+		mh.On("CanonicalBlock", ctx, mtxn, block2).Return(true, nil).Once()
+		mh.On(
+			"ComputedBalance",
+			ctx,
+			mtxn,
+			account1,
+			currency1,
+			block2.Index,
+		).Return(
+			amount1,
+			nil,
+		).Once()
 		difference, cachedBalance, headIndex, err := reconciler.CompareBalance(
 			ctx,
 			account1,
@@ -423,21 +450,26 @@ func TestCompareBalance(t *testing.T) {
 		assert.Equal(t, amount1.Value, cachedBalance)
 		assert.Equal(t, int64(2), headIndex)
 		assert.NoError(t, err)
+		mtxn.AssertExpectations(t)
 	})
 
-	mh.On("CurrentBlock", ctx).Return(block2, nil).Once()
-	mh.On("CanonicalBlock", ctx, block2).Return(true, nil).Once()
-	mh.On(
-		"ComputedBalance",
-		ctx,
-		account1,
-		currency1,
-		block2,
-	).Return(
-		amount1,
-		nil,
-	).Once()
 	t.Run("Balances are not equal", func(t *testing.T) {
+		mtxn := &mockStorage.DatabaseTransaction{}
+		mtxn.On("Discard", ctx).Once()
+		mh.On("DatabaseTransaction", ctx).Return(mtxn).Once()
+		mh.On("CurrentBlock", ctx, mtxn).Return(block2, nil).Once()
+		mh.On("CanonicalBlock", ctx, mtxn, block2).Return(true, nil).Once()
+		mh.On(
+			"ComputedBalance",
+			ctx,
+			mtxn,
+			account1,
+			currency1,
+			block2.Index,
+		).Return(
+			amount1,
+			nil,
+		).Once()
 		difference, cachedBalance, headIndex, err := reconciler.CompareBalance(
 			ctx,
 			account1,
@@ -449,21 +481,26 @@ func TestCompareBalance(t *testing.T) {
 		assert.Equal(t, amount1.Value, cachedBalance)
 		assert.Equal(t, int64(2), headIndex)
 		assert.NoError(t, err)
+		mtxn.AssertExpectations(t)
 	})
 
-	mh.On("CurrentBlock", ctx).Return(block2, nil).Once()
-	mh.On("CanonicalBlock", ctx, block2).Return(true, nil).Once()
-	mh.On(
-		"ComputedBalance",
-		ctx,
-		account2,
-		currency1,
-		block2,
-	).Return(
-		nil,
-		errors.New("account missing"),
-	).Once()
 	t.Run("Compare balance for non-existent account", func(t *testing.T) {
+		mtxn := &mockStorage.DatabaseTransaction{}
+		mtxn.On("Discard", ctx).Once()
+		mh.On("DatabaseTransaction", ctx).Return(mtxn).Once()
+		mh.On("CurrentBlock", ctx, mtxn).Return(block2, nil).Once()
+		mh.On("CanonicalBlock", ctx, mtxn, block2).Return(true, nil).Once()
+		mh.On(
+			"ComputedBalance",
+			ctx,
+			mtxn,
+			account2,
+			currency1,
+			block2.Index,
+		).Return(
+			nil,
+			errors.New("account missing"),
+		).Once()
 		difference, cachedBalance, headIndex, err := reconciler.CompareBalance(
 			ctx,
 			account2,
@@ -475,12 +512,13 @@ func TestCompareBalance(t *testing.T) {
 		assert.Equal(t, "", cachedBalance)
 		assert.Equal(t, int64(2), headIndex)
 		assert.Error(t, err)
+		mtxn.AssertExpectations(t)
 	})
 
 	mh.AssertExpectations(t)
 }
 
-func assertContainsAllAccounts(t *testing.T, m map[string]struct{}, a []*AccountCurrency) {
+func assertContainsAllAccounts(t *testing.T, m map[string]struct{}, a []*types.AccountCurrency) {
 	for _, account := range a {
 		_, exists := m[types.Hash(account)]
 		assert.True(t, exists)
@@ -499,7 +537,7 @@ func TestInactiveAccountQueue(t *testing.T) {
 			Hash:  "block 1",
 			Index: 1,
 		}
-		accountCurrency = &AccountCurrency{
+		accountCurrency = &types.AccountCurrency{
 			Account: &types.AccountIdentifier{
 				Address: "addr 1",
 			},
@@ -512,7 +550,7 @@ func TestInactiveAccountQueue(t *testing.T) {
 			Hash:  "block 2",
 			Index: 2,
 		}
-		accountCurrency2 = &AccountCurrency{
+		accountCurrency2 = &types.AccountCurrency{
 			Account: &types.AccountIdentifier{
 				Address: "addr 2",
 			},
@@ -530,7 +568,7 @@ func TestInactiveAccountQueue(t *testing.T) {
 			block,
 		)
 		assert.Nil(t, err)
-		assertContainsAllAccounts(t, r.seenAccounts, []*AccountCurrency{accountCurrency})
+		assertContainsAllAccounts(t, r.seenAccounts, []*types.AccountCurrency{accountCurrency})
 		assert.ElementsMatch(t, r.inactiveQueue, []*InactiveEntry{
 			{
 				Entry:     accountCurrency,
@@ -549,7 +587,7 @@ func TestInactiveAccountQueue(t *testing.T) {
 		assertContainsAllAccounts(
 			t,
 			r.seenAccounts,
-			[]*AccountCurrency{accountCurrency, accountCurrency2},
+			[]*types.AccountCurrency{accountCurrency, accountCurrency2},
 		)
 		assert.ElementsMatch(t, r.inactiveQueue, []*InactiveEntry{
 			{
@@ -575,7 +613,7 @@ func TestInactiveAccountQueue(t *testing.T) {
 		assertContainsAllAccounts(
 			t,
 			r.seenAccounts,
-			[]*AccountCurrency{accountCurrency, accountCurrency2},
+			[]*types.AccountCurrency{accountCurrency, accountCurrency2},
 		)
 		assert.ElementsMatch(t, r.inactiveQueue, []*InactiveEntry{})
 	})
@@ -590,7 +628,7 @@ func TestInactiveAccountQueue(t *testing.T) {
 		assertContainsAllAccounts(
 			t,
 			r.seenAccounts,
-			[]*AccountCurrency{accountCurrency, accountCurrency2},
+			[]*types.AccountCurrency{accountCurrency, accountCurrency2},
 		)
 		assert.ElementsMatch(t, r.inactiveQueue, []*InactiveEntry{
 			{
@@ -610,7 +648,7 @@ func TestInactiveAccountQueue(t *testing.T) {
 		assertContainsAllAccounts(
 			t,
 			r.seenAccounts,
-			[]*AccountCurrency{accountCurrency, accountCurrency2},
+			[]*types.AccountCurrency{accountCurrency, accountCurrency2},
 		)
 		assert.ElementsMatch(t, r.inactiveQueue, []*InactiveEntry{
 			{
@@ -628,8 +666,9 @@ func TestInactiveAccountQueue(t *testing.T) {
 func mockReconcilerCalls(
 	mockHelper *mocks.Helper,
 	mockHandler *mocks.Handler,
+	mtxn *mockStorage.DatabaseTransaction,
 	lookupBalanceByBlock bool,
-	accountCurrency *AccountCurrency,
+	accountCurrency *types.AccountCurrency,
 	liveValue string,
 	computedValue string,
 	headBlock *types.BlockIdentifier,
@@ -640,12 +679,10 @@ func mockReconcilerCalls(
 	exemptionHit bool,
 	exemptionThrows bool,
 ) {
-	if reconciliationType == ActiveReconciliation {
-		mockHelper.On("CurrentBlock", mock.Anything).Return(headBlock, nil).Once()
-	}
-	lookupBlock := liveBlock
+	mockHelper.On("CurrentBlock", mock.Anything, mtxn).Return(headBlock, nil).Once()
+	lookupIndex := liveBlock.Index
 	if !lookupBalanceByBlock {
-		lookupBlock = nil
+		lookupIndex = -1
 	}
 
 	mockHelper.On(
@@ -653,19 +690,20 @@ func mockReconcilerCalls(
 		mock.Anything,
 		accountCurrency.Account,
 		accountCurrency.Currency,
-		lookupBlock,
+		lookupIndex,
 	).Return(
 		&types.Amount{Value: liveValue, Currency: accountCurrency.Currency},
 		headBlock,
 		nil,
 	).Once()
-	mockHelper.On("CanonicalBlock", mock.Anything, headBlock).Return(true, nil).Once()
+	mockHelper.On("CanonicalBlock", mock.Anything, mtxn, headBlock).Return(true, nil).Once()
 	mockHelper.On(
 		"ComputedBalance",
 		mock.Anything,
+		mtxn,
 		accountCurrency.Account,
 		accountCurrency.Currency,
-		headBlock,
+		headBlock.Index,
 	).Return(
 		&types.Amount{Value: computedValue, Currency: accountCurrency.Currency},
 		nil,
@@ -728,7 +766,7 @@ func TestReconcile_SuccessOnlyActive(t *testing.T) {
 			Hash:  "block 1",
 			Index: 1,
 		}
-		accountCurrency = &AccountCurrency{
+		accountCurrency = &types.AccountCurrency{
 			Account: &types.AccountIdentifier{
 				Address: "addr 1",
 			},
@@ -737,7 +775,7 @@ func TestReconcile_SuccessOnlyActive(t *testing.T) {
 				Decimals: 8,
 			},
 		}
-		accountCurrency2 = &AccountCurrency{
+		accountCurrency2 = &types.AccountCurrency{
 			Account: &types.AccountIdentifier{
 				Address: "addr 2",
 			},
@@ -760,7 +798,7 @@ func TestReconcile_SuccessOnlyActive(t *testing.T) {
 			opts := []Option{
 				WithActiveConcurrency(1),
 				WithInactiveConcurrency(0),
-				WithInterestingAccounts([]*AccountCurrency{accountCurrency2}),
+				WithInterestingAccounts([]*types.AccountCurrency{accountCurrency2}),
 				WithBalancePruning(),
 			}
 			if lookup {
@@ -784,9 +822,13 @@ func TestReconcile_SuccessOnlyActive(t *testing.T) {
 			).Return(
 				nil,
 			).Once()
+			mtxn := &mockStorage.DatabaseTransaction{}
+			mtxn.On("Discard", mock.Anything).Once()
+			mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn).Once()
 			mockReconcilerCalls(
 				mockHelper,
 				mockHandler,
+				mtxn,
 				lookup,
 				accountCurrency,
 				"100",
@@ -809,9 +851,13 @@ func TestReconcile_SuccessOnlyActive(t *testing.T) {
 			).Return(
 				nil,
 			).Once()
+			mtxn2 := &mockStorage.DatabaseTransaction{}
+			mtxn2.On("Discard", mock.Anything).Once()
+			mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn2).Once()
 			mockReconcilerCalls(
 				mockHelper,
 				mockHandler,
+				mtxn2,
 				lookup,
 				accountCurrency2,
 				"250",
@@ -834,9 +880,13 @@ func TestReconcile_SuccessOnlyActive(t *testing.T) {
 			).Return(
 				nil,
 			).Once()
+			mtxn3 := &mockStorage.DatabaseTransaction{}
+			mtxn3.On("Discard", mock.Anything).Once()
+			mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn3).Once()
 			mockReconcilerCalls(
 				mockHelper,
 				mockHandler,
+				mtxn3,
 				lookup,
 				accountCurrency2,
 				"120",
@@ -880,6 +930,9 @@ func TestReconcile_SuccessOnlyActive(t *testing.T) {
 			assert.Equal(t, block2.Index, r.LastIndexReconciled())
 			mockHelper.AssertExpectations(t)
 			mockHandler.AssertExpectations(t)
+			mtxn.AssertExpectations(t)
+			mtxn2.AssertExpectations(t)
+			mtxn3.AssertExpectations(t)
 		})
 	}
 }
@@ -890,7 +943,7 @@ func TestReconcile_HighWaterMark(t *testing.T) {
 			Hash:  "block 1",
 			Index: 1,
 		}
-		accountCurrency = &AccountCurrency{
+		accountCurrency = &types.AccountCurrency{
 			Account: &types.AccountIdentifier{
 				Address: "addr 1",
 			},
@@ -899,7 +952,7 @@ func TestReconcile_HighWaterMark(t *testing.T) {
 				Decimals: 8,
 			},
 		}
-		accountCurrency2 = &AccountCurrency{
+		accountCurrency2 = &types.AccountCurrency{
 			Account: &types.AccountIdentifier{
 				Address: "addr 2",
 			},
@@ -919,7 +972,7 @@ func TestReconcile_HighWaterMark(t *testing.T) {
 	opts := []Option{
 		WithActiveConcurrency(1),
 		WithInactiveConcurrency(0),
-		WithInterestingAccounts([]*AccountCurrency{accountCurrency2}),
+		WithInterestingAccounts([]*types.AccountCurrency{accountCurrency2}),
 		WithDebugLogging(),
 	}
 	r := New(
@@ -932,13 +985,16 @@ func TestReconcile_HighWaterMark(t *testing.T) {
 	ctx, cancel := context.WithCancel(ctx)
 
 	// First call to QueueChanges
-	mockHelper.On("CurrentBlock", mock.Anything).Return(block, nil).Once()
+	mtxn := &mockStorage.DatabaseTransaction{}
+	mtxn.On("Discard", mock.Anything).Once()
+	mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn).Once()
+	mockHelper.On("CurrentBlock", mock.Anything, mtxn).Return(block, nil).Once()
 	mockHelper.On(
 		"LiveBalance",
 		mock.Anything,
 		accountCurrency.Account,
 		accountCurrency.Currency,
-		(*types.BlockIdentifier)(nil),
+		int64(-1),
 	).Return(
 		&types.Amount{Value: "100", Currency: accountCurrency.Currency},
 		block200,
@@ -946,9 +1002,13 @@ func TestReconcile_HighWaterMark(t *testing.T) {
 	).Once()
 
 	// Second call to QueueChanges
+	mtxn2 := &mockStorage.DatabaseTransaction{}
+	mtxn2.On("Discard", mock.Anything).Once()
+	mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn2).Once()
 	mockReconcilerCalls(
 		mockHelper,
 		mockHandler,
+		mtxn2,
 		false,
 		accountCurrency,
 		"150",
@@ -961,9 +1021,13 @@ func TestReconcile_HighWaterMark(t *testing.T) {
 		false,
 		false,
 	)
+	mtxn3 := &mockStorage.DatabaseTransaction{}
+	mtxn3.On("Discard", mock.Anything).Once()
+	mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn3).Once()
 	mockReconcilerCalls(
 		mockHelper,
 		mockHandler,
+		mtxn3,
 		false,
 		accountCurrency2,
 		"120",
@@ -1002,7 +1066,6 @@ func TestReconcile_HighWaterMark(t *testing.T) {
 			Block:    block,
 		},
 	})
-
 	assert.NoError(t, err)
 	err = r.QueueChanges(ctx, block200, []*parser.BalanceChange{
 		{
@@ -1024,6 +1087,9 @@ func TestReconcile_HighWaterMark(t *testing.T) {
 
 	mockHelper.AssertExpectations(t)
 	mockHandler.AssertExpectations(t)
+	mtxn.AssertExpectations(t)
+	mtxn2.AssertExpectations(t)
+	mtxn3.AssertExpectations(t)
 }
 
 func TestReconcile_Orphan(t *testing.T) {
@@ -1032,7 +1098,7 @@ func TestReconcile_Orphan(t *testing.T) {
 			Hash:  "block 1",
 			Index: 1,
 		}
-		accountCurrency = &AccountCurrency{
+		accountCurrency = &types.AccountCurrency{
 			Account: &types.AccountIdentifier{
 				Address: "addr 1",
 			},
@@ -1061,13 +1127,23 @@ func TestReconcile_Orphan(t *testing.T) {
 		mock.Anything,
 		accountCurrency.Account,
 		accountCurrency.Currency,
-		block,
+		int64(1),
 	).Return(
+		&types.Amount{
+			Value:    "100",
+			Currency: accountCurrency.Currency,
+		},
+		block,
 		nil,
-		nil,
-		errors.New("cannot find block"),
 	).Once()
-	mockHelper.On("CanonicalBlock", mock.Anything, block).Return(false, nil).Once()
+	mtxn := &mockStorage.DatabaseTransaction{}
+	mtxn.On("Discard", mock.Anything).Once()
+	mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn).Once()
+	mockHelper.On("CurrentBlock", mock.Anything, mtxn).Return(&types.BlockIdentifier{
+		Index: 1,
+		Hash:  "block 1a",
+	}, nil).Once()
+	mockHelper.On("CanonicalBlock", mock.Anything, mtxn, block).Return(false, nil).Once()
 	mockHandler.On(
 		"ReconciliationSkipped",
 		mock.Anything,
@@ -1096,6 +1172,7 @@ func TestReconcile_Orphan(t *testing.T) {
 
 	mockHelper.AssertExpectations(t)
 	mockHandler.AssertExpectations(t)
+	mtxn.AssertExpectations(t)
 }
 
 func TestReconcile_FailureOnlyActive(t *testing.T) {
@@ -1104,7 +1181,7 @@ func TestReconcile_FailureOnlyActive(t *testing.T) {
 			Hash:  "block 1",
 			Index: 1,
 		}
-		accountCurrency = &AccountCurrency{
+		accountCurrency = &types.AccountCurrency{
 			Account: &types.AccountIdentifier{
 				Address: "addr 1",
 			},
@@ -1139,9 +1216,13 @@ func TestReconcile_FailureOnlyActive(t *testing.T) {
 			)
 			ctx := context.Background()
 
+			mtxn := &mockStorage.DatabaseTransaction{}
+			mtxn.On("Discard", mock.Anything).Once()
+			mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn).Once()
 			mockReconcilerCalls(
 				mockHelper,
 				mockHandler,
+				mtxn,
 				lookup,
 				accountCurrency,
 				"105",
@@ -1176,6 +1257,7 @@ func TestReconcile_FailureOnlyActive(t *testing.T) {
 
 			mockHelper.AssertExpectations(t)
 			mockHandler.AssertExpectations(t)
+			mtxn.AssertExpectations(t)
 		})
 	}
 }
@@ -1186,7 +1268,7 @@ func TestReconcile_ExemptOnlyActive(t *testing.T) {
 			Hash:  "block 1",
 			Index: 1,
 		}
-		accountCurrency = &AccountCurrency{
+		accountCurrency = &types.AccountCurrency{
 			Account: &types.AccountIdentifier{
 				Address: "addr 1",
 			},
@@ -1227,10 +1309,13 @@ func TestReconcile_ExemptOnlyActive(t *testing.T) {
 				opts...,
 			)
 			ctx := context.Background()
-
+			mtxn := &mockStorage.DatabaseTransaction{}
+			mtxn.On("Discard", mock.Anything).Once()
+			mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn).Once()
 			mockReconcilerCalls(
 				mockHelper,
 				mockHandler,
+				mtxn,
 				lookup,
 				accountCurrency,
 				"105",
@@ -1263,6 +1348,7 @@ func TestReconcile_ExemptOnlyActive(t *testing.T) {
 
 			mockHelper.AssertExpectations(t)
 			mockHandler.AssertExpectations(t)
+			mtxn.AssertExpectations(t)
 		})
 	}
 }
@@ -1273,7 +1359,7 @@ func TestReconcile_ExemptAddressOnlyActive(t *testing.T) {
 			Hash:  "block 1",
 			Index: 1,
 		}
-		accountCurrency = &AccountCurrency{
+		accountCurrency = &types.AccountCurrency{
 			Account: &types.AccountIdentifier{
 				Address: "addr 1",
 				SubAccount: &types.SubAccountIdentifier{
@@ -1319,9 +1405,13 @@ func TestReconcile_ExemptAddressOnlyActive(t *testing.T) {
 			)
 			ctx := context.Background()
 
+			mtxn := &mockStorage.DatabaseTransaction{}
+			mtxn.On("Discard", mock.Anything).Once()
+			mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn).Once()
 			mockReconcilerCalls(
 				mockHelper,
 				mockHandler,
+				mtxn,
 				lookup,
 				accountCurrency,
 				"100",
@@ -1354,6 +1444,7 @@ func TestReconcile_ExemptAddressOnlyActive(t *testing.T) {
 
 			mockHelper.AssertExpectations(t)
 			mockHandler.AssertExpectations(t)
+			mtxn.AssertExpectations(t)
 		})
 	}
 }
@@ -1364,7 +1455,7 @@ func TestReconcile_ExemptAddressDynamicActive(t *testing.T) {
 			Hash:  "block 1",
 			Index: 1,
 		}
-		accountCurrency = &AccountCurrency{
+		accountCurrency = &types.AccountCurrency{
 			Account: &types.AccountIdentifier{
 				Address: "addr 1",
 				SubAccount: &types.SubAccountIdentifier{
@@ -1409,9 +1500,13 @@ func TestReconcile_ExemptAddressDynamicActive(t *testing.T) {
 			)
 			ctx := context.Background()
 
+			mtxn := &mockStorage.DatabaseTransaction{}
+			mtxn.On("Discard", mock.Anything).Once()
+			mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn).Once()
 			mockReconcilerCalls(
 				mockHelper,
 				mockHandler,
+				mtxn,
 				lookup,
 				accountCurrency,
 				"100",
@@ -1444,6 +1539,7 @@ func TestReconcile_ExemptAddressDynamicActive(t *testing.T) {
 
 			mockHelper.AssertExpectations(t)
 			mockHandler.AssertExpectations(t)
+			mtxn.AssertExpectations(t)
 		})
 	}
 }
@@ -1454,7 +1550,7 @@ func TestReconcile_ExemptAddressDynamicActiveThrow(t *testing.T) {
 			Hash:  "block 1",
 			Index: 1,
 		}
-		accountCurrency = &AccountCurrency{
+		accountCurrency = &types.AccountCurrency{
 			Account: &types.AccountIdentifier{
 				Address: "addr 1",
 				SubAccount: &types.SubAccountIdentifier{
@@ -1499,9 +1595,13 @@ func TestReconcile_ExemptAddressDynamicActiveThrow(t *testing.T) {
 			)
 			ctx := context.Background()
 
+			mtxn := &mockStorage.DatabaseTransaction{}
+			mtxn.On("Discard", mock.Anything).Once()
+			mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn).Once()
 			mockReconcilerCalls(
 				mockHelper,
 				mockHandler,
+				mtxn,
 				lookup,
 				accountCurrency,
 				"100",
@@ -1535,6 +1635,7 @@ func TestReconcile_ExemptAddressDynamicActiveThrow(t *testing.T) {
 
 			mockHelper.AssertExpectations(t)
 			mockHandler.AssertExpectations(t)
+			mtxn.AssertExpectations(t)
 		})
 	}
 }
@@ -1545,7 +1646,7 @@ func TestReconcile_NotExemptOnlyActive(t *testing.T) {
 			Hash:  "block 1",
 			Index: 1,
 		}
-		accountCurrency = &AccountCurrency{
+		accountCurrency = &types.AccountCurrency{
 			Account: &types.AccountIdentifier{
 				Address: "addr 1",
 			},
@@ -1586,9 +1687,13 @@ func TestReconcile_NotExemptOnlyActive(t *testing.T) {
 			)
 			ctx := context.Background()
 
+			mtxn := &mockStorage.DatabaseTransaction{}
+			mtxn.On("Discard", mock.Anything).Once()
+			mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn).Once()
 			mockReconcilerCalls(
 				mockHelper,
 				mockHandler,
+				mtxn,
 				lookup,
 				accountCurrency,
 				"105",
@@ -1622,6 +1727,7 @@ func TestReconcile_NotExemptOnlyActive(t *testing.T) {
 
 			mockHelper.AssertExpectations(t)
 			mockHandler.AssertExpectations(t)
+			mtxn.AssertExpectations(t)
 		})
 	}
 }
@@ -1632,7 +1738,7 @@ func TestReconcile_NotExemptAddressOnlyActive(t *testing.T) {
 			Hash:  "block 1",
 			Index: 1,
 		}
-		accountCurrency = &AccountCurrency{
+		accountCurrency = &types.AccountCurrency{
 			Account: &types.AccountIdentifier{
 				Address: "addr 1",
 			},
@@ -1674,9 +1780,13 @@ func TestReconcile_NotExemptAddressOnlyActive(t *testing.T) {
 			)
 			ctx := context.Background()
 
+			mtxn := &mockStorage.DatabaseTransaction{}
+			mtxn.On("Discard", mock.Anything).Once()
+			mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn).Once()
 			mockReconcilerCalls(
 				mockHelper,
 				mockHandler,
+				mtxn,
 				lookup,
 				accountCurrency,
 				"105",
@@ -1710,6 +1820,7 @@ func TestReconcile_NotExemptAddressOnlyActive(t *testing.T) {
 
 			mockHelper.AssertExpectations(t)
 			mockHandler.AssertExpectations(t)
+			mtxn.AssertExpectations(t)
 		})
 	}
 }
@@ -1720,7 +1831,7 @@ func TestReconcile_NotExemptWrongAddressOnlyActive(t *testing.T) {
 			Hash:  "block 1",
 			Index: 1,
 		}
-		accountCurrency = &AccountCurrency{
+		accountCurrency = &types.AccountCurrency{
 			Account: &types.AccountIdentifier{
 				Address: "addr 1",
 				SubAccount: &types.SubAccountIdentifier{
@@ -1766,9 +1877,13 @@ func TestReconcile_NotExemptWrongAddressOnlyActive(t *testing.T) {
 			)
 			ctx := context.Background()
 
+			mtxn := &mockStorage.DatabaseTransaction{}
+			mtxn.On("Discard", mock.Anything).Once()
+			mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn).Once()
 			mockReconcilerCalls(
 				mockHelper,
 				mockHandler,
+				mtxn,
 				lookup,
 				accountCurrency,
 				"105",
@@ -1802,6 +1917,7 @@ func TestReconcile_NotExemptWrongAddressOnlyActive(t *testing.T) {
 
 			mockHelper.AssertExpectations(t)
 			mockHandler.AssertExpectations(t)
+			mtxn.AssertExpectations(t)
 		})
 	}
 }
@@ -1816,7 +1932,7 @@ func TestReconcile_SuccessOnlyInactive(t *testing.T) {
 			Hash:  "block 2",
 			Index: 2,
 		}
-		accountCurrency = &AccountCurrency{
+		accountCurrency = &types.AccountCurrency{
 			Account: &types.AccountIdentifier{
 				Address: "addr 1",
 			},
@@ -1835,7 +1951,7 @@ func TestReconcile_SuccessOnlyInactive(t *testing.T) {
 			opts := []Option{
 				WithActiveConcurrency(0),
 				WithInactiveConcurrency(1),
-				WithSeenAccounts([]*AccountCurrency{accountCurrency}),
+				WithSeenAccounts([]*types.AccountCurrency{accountCurrency}),
 				WithDebugLogging(),
 				WithInactiveFrequency(1),
 			}
@@ -1851,10 +1967,24 @@ func TestReconcile_SuccessOnlyInactive(t *testing.T) {
 			ctx := context.Background()
 			ctx, cancel := context.WithCancel(ctx)
 
-			mockHelper.On("CurrentBlock", mock.Anything).Return(block, nil)
+			mtxn := &mockStorage.DatabaseTransaction{}
+			mtxn.On("Discard", mock.Anything).Once()
+			mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn).Once()
+			mockHelper.On("CurrentBlock", mock.Anything, mtxn).Return(block, nil).Once()
+			mtxn2 := &mockStorage.DatabaseTransaction{}
+			mtxn2.On(
+				"Discard",
+				mock.Anything,
+			).Run(
+				func(args mock.Arguments) {
+					cancel()
+				},
+			).Once()
+			mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn2).Once()
 			mockReconcilerCalls(
 				mockHelper,
 				mockHandler,
+				mtxn2,
 				lookup,
 				accountCurrency,
 				"100",
@@ -1867,11 +1997,6 @@ func TestReconcile_SuccessOnlyInactive(t *testing.T) {
 				false,
 				false,
 			)
-
-			go func() {
-				time.Sleep(2 * time.Second)
-				cancel()
-			}()
 
 			err := r.Reconcile(ctx)
 			assert.Contains(t, context.Canceled.Error(), err.Error())
@@ -1883,10 +2008,21 @@ func TestReconcile_SuccessOnlyInactive(t *testing.T) {
 			ctx = context.Background()
 			ctx, cancel = context.WithCancel(ctx)
 
-			mockHelper2.On("CurrentBlock", mock.Anything).Return(block2, nil)
+			mtxn3 := &mockStorage.DatabaseTransaction{}
+			mtxn3.On("Discard", mock.Anything).Once()
+			mockHelper2.On("DatabaseTransaction", mock.Anything).Return(mtxn3).Once()
+			mockHelper2.On("CurrentBlock", mock.Anything, mtxn3).Return(block2, nil).Once()
+			mtxn4 := &mockStorage.DatabaseTransaction{}
+			mtxn4.On("Discard", mock.Anything).Run(
+				func(args mock.Arguments) {
+					cancel()
+				},
+			).Once()
+			mockHelper2.On("DatabaseTransaction", mock.Anything).Return(mtxn4).Once()
 			mockReconcilerCalls(
 				mockHelper2,
 				mockHandler2,
+				mtxn4,
 				lookup,
 				accountCurrency,
 				"200",
@@ -1900,10 +2036,6 @@ func TestReconcile_SuccessOnlyInactive(t *testing.T) {
 				false,
 			)
 
-			go func() {
-				time.Sleep(2 * time.Second)
-				cancel()
-			}()
 			err = r.Reconcile(ctx)
 			assert.Error(t, err)
 			assert.Contains(t, context.Canceled.Error(), err.Error())
@@ -1912,6 +2044,10 @@ func TestReconcile_SuccessOnlyInactive(t *testing.T) {
 			mockHandler.AssertExpectations(t)
 			mockHelper2.AssertExpectations(t)
 			mockHandler2.AssertExpectations(t)
+			mtxn.AssertExpectations(t)
+			mtxn2.AssertExpectations(t)
+			mtxn3.AssertExpectations(t)
+			mtxn4.AssertExpectations(t)
 		})
 	}
 }
@@ -1922,7 +2058,7 @@ func TestReconcile_FailureOnlyInactive(t *testing.T) {
 			Hash:  "block 1",
 			Index: 1,
 		}
-		accountCurrency = &AccountCurrency{
+		accountCurrency = &types.AccountCurrency{
 			Account: &types.AccountIdentifier{
 				Address: "addr 1",
 			},
@@ -1941,7 +2077,7 @@ func TestReconcile_FailureOnlyInactive(t *testing.T) {
 			opts := []Option{
 				WithActiveConcurrency(0),
 				WithInactiveConcurrency(1),
-				WithSeenAccounts([]*AccountCurrency{accountCurrency}),
+				WithSeenAccounts([]*types.AccountCurrency{accountCurrency}),
 				WithDebugLogging(),
 				WithInactiveFrequency(1),
 			}
@@ -1957,10 +2093,24 @@ func TestReconcile_FailureOnlyInactive(t *testing.T) {
 			ctx := context.Background()
 			ctx, cancel := context.WithCancel(ctx)
 
-			mockHelper.On("CurrentBlock", mock.Anything).Return(block, nil)
+			mtxn := &mockStorage.DatabaseTransaction{}
+			mtxn.On("Discard", mock.Anything).Once()
+			mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn).Once()
+			mockHelper.On("CurrentBlock", mock.Anything, mtxn).Return(block, nil).Once()
+			mtxn2 := &mockStorage.DatabaseTransaction{}
+			mtxn2.On(
+				"Discard",
+				mock.Anything,
+			).Run(
+				func(args mock.Arguments) {
+					cancel()
+				},
+			).Once()
+			mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn2).Once()
 			mockReconcilerCalls(
 				mockHelper,
 				mockHandler,
+				mtxn2,
 				lookup,
 				accountCurrency,
 				"100",
@@ -1974,17 +2124,14 @@ func TestReconcile_FailureOnlyInactive(t *testing.T) {
 				false,
 			)
 
-			go func() {
-				time.Sleep(2 * time.Second)
-				cancel()
-			}()
-
 			err := r.Reconcile(ctx)
 			assert.Error(t, err)
 			assert.Contains(t, "reconciliation failed", err.Error())
 
 			mockHelper.AssertExpectations(t)
 			mockHandler.AssertExpectations(t)
+			mtxn.AssertExpectations(t)
+			mtxn2.AssertExpectations(t)
 		})
 	}
 }
@@ -1995,7 +2142,7 @@ func TestReconcile_EnqueueCancel(t *testing.T) {
 			Hash:  "block 1",
 			Index: 1,
 		}
-		accountCurrency = &AccountCurrency{
+		accountCurrency = &types.AccountCurrency{
 			Account: &types.AccountIdentifier{
 				Address: "addr 1",
 			},
@@ -2026,7 +2173,7 @@ func TestReconcile_EnqueueCancel(t *testing.T) {
 		mock.Anything,
 		accountCurrency.Account,
 		accountCurrency.Currency,
-		block,
+		block.Index,
 	).Return(
 		nil,
 		nil,
