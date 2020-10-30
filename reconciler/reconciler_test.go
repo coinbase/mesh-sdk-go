@@ -2206,7 +2206,7 @@ func TestReconcile_EnqueueCancel(t *testing.T) {
 	mockHandler.AssertExpectations(t)
 }
 
-func TestReconcile_ActiveAtTipError(t *testing.T) {
+func TestReconcile_ActiveIndexAtTipError(t *testing.T) {
 	var (
 		block = &types.BlockIdentifier{
 			Hash:  "block 1",
@@ -2247,7 +2247,7 @@ func TestReconcile_ActiveAtTipError(t *testing.T) {
 		nil,
 		errors.New("blah"),
 	).Once()
-	mockHelper.On("AtTip", mock.Anything).Return(true, nil).Once()
+	mockHelper.On("IndexAtTip", mock.Anything, int64(1)).Return(true, nil).Once()
 	mockHandler.On(
 		"ReconciliationSkipped",
 		mock.Anything,
@@ -2278,7 +2278,7 @@ func TestReconcile_ActiveAtTipError(t *testing.T) {
 	mockHandler.AssertExpectations(t)
 }
 
-func TestReconcile_ActiveNotAtTipError(t *testing.T) {
+func TestReconcile_ActiveNotIndexAtTipError(t *testing.T) {
 	var (
 		block = &types.BlockIdentifier{
 			Hash:  "block 1",
@@ -2319,7 +2319,7 @@ func TestReconcile_ActiveNotAtTipError(t *testing.T) {
 		nil,
 		errors.New("blah"),
 	).Once()
-	mockHelper.On("AtTip", mock.Anything).Return(false, nil).Once()
+	mockHelper.On("IndexAtTip", mock.Anything, int64(1)).Return(false, nil).Once()
 
 	go func() {
 		err := r.Reconcile(ctx)
@@ -2342,7 +2342,7 @@ func TestReconcile_ActiveNotAtTipError(t *testing.T) {
 	mockHandler.AssertExpectations(t)
 }
 
-func TestReconcile_ActiveErrorAtTipError(t *testing.T) {
+func TestReconcile_ActiveErrorIndexAtTipError(t *testing.T) {
 	var (
 		block = &types.BlockIdentifier{
 			Hash:  "block 1",
@@ -2383,7 +2383,7 @@ func TestReconcile_ActiveErrorAtTipError(t *testing.T) {
 		nil,
 		errors.New("blah"),
 	).Once()
-	mockHelper.On("AtTip", mock.Anything).Return(false, errors.New("blazz")).Once()
+	mockHelper.On("IndexAtTip", mock.Anything, int64(1)).Return(false, errors.New("blazz")).Once()
 
 	go func() {
 		err := r.Reconcile(ctx)
@@ -2406,7 +2406,7 @@ func TestReconcile_ActiveErrorAtTipError(t *testing.T) {
 	mockHandler.AssertExpectations(t)
 }
 
-func TestReconcile_FailureAtTipInactive(t *testing.T) {
+func TestReconcile_FailureIndexAtTipInactive(t *testing.T) {
 	var (
 		block = &types.BlockIdentifier{
 			Hash:  "block 1",
@@ -2458,7 +2458,7 @@ func TestReconcile_FailureAtTipInactive(t *testing.T) {
 		nil,
 		errors.New("blah"),
 	).Once()
-	mockHelper.On("AtTip", mock.Anything).Return(true, nil).Once()
+	mockHelper.On("IndexAtTip", mock.Anything, int64(1)).Return(true, nil).Once()
 	mockHandler.On(
 		"ReconciliationSkipped",
 		mock.Anything,
@@ -2483,7 +2483,7 @@ func TestReconcile_FailureAtTipInactive(t *testing.T) {
 	mtxn.AssertExpectations(t)
 }
 
-func TestReconcile_FailureNotAtTipInactive(t *testing.T) {
+func TestReconcile_FailureNotIndexAtTipInactive(t *testing.T) {
 	var (
 		block = &types.BlockIdentifier{
 			Hash:  "block 1",
@@ -2534,7 +2534,7 @@ func TestReconcile_FailureNotAtTipInactive(t *testing.T) {
 		nil,
 		errors.New("blah"),
 	).Once()
-	mockHelper.On("AtTip", mock.Anything).Return(false, nil).Once()
+	mockHelper.On("IndexAtTip", mock.Anything, int64(1)).Return(false, nil).Once()
 
 	go func() {
 		err := r.Reconcile(ctx)
@@ -2547,7 +2547,7 @@ func TestReconcile_FailureNotAtTipInactive(t *testing.T) {
 	mtxn.AssertExpectations(t)
 }
 
-func TestReconcile_FailureErrorAtTipInactive(t *testing.T) {
+func TestReconcile_FailureErrorIndexAtTipInactive(t *testing.T) {
 	var (
 		block = &types.BlockIdentifier{
 			Hash:  "block 1",
@@ -2598,7 +2598,7 @@ func TestReconcile_FailureErrorAtTipInactive(t *testing.T) {
 		nil,
 		errors.New("blah"),
 	).Once()
-	mockHelper.On("AtTip", mock.Anything).Return(false, errors.New("blah")).Once()
+	mockHelper.On("IndexAtTip", mock.Anything, int64(1)).Return(false, errors.New("blah")).Once()
 
 	go func() {
 		err := r.Reconcile(ctx)
