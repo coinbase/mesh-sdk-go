@@ -873,7 +873,7 @@ func (r *Reconciler) shouldAttemptInactiveReconciliation(
 // from all previously seen accounts and reconciles
 // the balance. This is useful for detecting balance
 // changes that were not returned in operations.
-func (r *Reconciler) reconcileInactiveAccounts(
+func (r *Reconciler) reconcileInactiveAccounts( // nolint:gocognit
 	ctx context.Context,
 ) error {
 	for {
