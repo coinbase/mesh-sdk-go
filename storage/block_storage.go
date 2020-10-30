@@ -1103,11 +1103,7 @@ func (b *BlockStorage) IndexAtTip(
 	// tip.
 	headBlock := headBlockResponse.Block
 	if headBlock.BlockIdentifier.Index < index {
-		if utils.AtTip(tipDelay, headBlock.Timestamp) {
-			return true, nil
-		}
-
-		return false, nil
+		return utils.AtTip(tipDelay, headBlock.Timestamp), nil
 	}
 
 	// Query block at index
@@ -1121,10 +1117,5 @@ func (b *BlockStorage) IndexAtTip(
 	}
 	block := blockResponse.Block
 
-	atTip := utils.AtTip(tipDelay, block.Timestamp)
-	if !atTip {
-		return false, nil
-	}
-
-	return true, nil
+	return utils.AtTip(tipDelay, block.Timestamp), nil
 }
