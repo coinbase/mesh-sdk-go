@@ -88,14 +88,17 @@ func (p *Parser) BalanceChanges(
 				continue
 			}
 
-			amount := op.Amount
+			// We create a copy of Amount.Value
+			// here to ensure we don't accidentally overwrite
+			// the value of op.Amount.
+			amountValue := op.Amount.Value
 			blockIdentifier := block.BlockIdentifier
 			if blockRemoved {
-				negatedValue, err := types.NegateValue(amount.Value)
+				negatedValue, err := types.NegateValue(amountValue)
 				if err != nil {
 					return nil, err
 				}
-				amount.Value = negatedValue
+				amountValue = negatedValue
 				blockIdentifier = block.ParentBlockIdentifier
 			}
 
@@ -111,13 +114,13 @@ func (p *Parser) BalanceChanges(
 				balanceChanges[key] = &BalanceChange{
 					Account:    op.Account,
 					Currency:   op.Amount.Currency,
-					Difference: amount.Value,
+					Difference: amountValue,
 					Block:      blockIdentifier,
 				}
 				continue
 			}
 
-			newDifference, err := types.AddValues(val.Difference, amount.Value)
+			newDifference, err := types.AddValues(val.Difference, amountValue)
 			if err != nil {
 				return nil, err
 			}
