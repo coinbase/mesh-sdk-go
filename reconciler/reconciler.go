@@ -116,8 +116,9 @@ type Helper interface {
 		dbTx storage.DatabaseTransaction,
 	) (*types.BlockIdentifier, error)
 
-	AtTip(
+	IndexAtTip(
 		ctx context.Context,
+		index int64,
 	) (bool, error)
 
 	CanonicalBlock(
@@ -791,7 +792,7 @@ func (r *Reconciler) reconcileActiveAccounts(ctx context.Context) error { // nol
 					return err
 				}
 
-				tip, tErr := r.helper.AtTip(ctx)
+				tip, tErr := r.helper.IndexAtTip(ctx, balanceChange.Block.Index)
 				switch {
 				case tErr == nil && tip:
 					if err := r.handler.ReconciliationSkipped(
@@ -922,7 +923,7 @@ func (r *Reconciler) reconcileInactiveAccounts( // nolint:gocognit
 					return err
 				}
 
-				tip, tErr := r.helper.AtTip(ctx)
+				tip, tErr := r.helper.IndexAtTip(ctx, head.Index)
 				switch {
 				case tErr == nil && tip:
 					if err := r.handler.ReconciliationSkipped(

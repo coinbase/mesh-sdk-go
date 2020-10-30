@@ -17,27 +17,6 @@ type Helper struct {
 	mock.Mock
 }
 
-// AtTip provides a mock function with given fields: ctx
-func (_m *Helper) AtTip(ctx context.Context) (bool, error) {
-	ret := _m.Called(ctx)
-
-	var r0 bool
-	if rf, ok := ret.Get(0).(func(context.Context) bool); ok {
-		r0 = rf(ctx)
-	} else {
-		r0 = ret.Get(0).(bool)
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
-		r1 = rf(ctx)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
 // CanonicalBlock provides a mock function with given fields: ctx, dbTx, block
 func (_m *Helper) CanonicalBlock(ctx context.Context, dbTx storage.DatabaseTransaction, block *types.BlockIdentifier) (bool, error) {
 	ret := _m.Called(ctx, dbTx, block)
@@ -119,6 +98,27 @@ func (_m *Helper) DatabaseTransaction(ctx context.Context) storage.DatabaseTrans
 	}
 
 	return r0
+}
+
+// IndexAtTip provides a mock function with given fields: ctx, index
+func (_m *Helper) IndexAtTip(ctx context.Context, index int64) (bool, error) {
+	ret := _m.Called(ctx, index)
+
+	var r0 bool
+	if rf, ok := ret.Get(0).(func(context.Context, int64) bool); ok {
+		r0 = rf(ctx, index)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
+		r1 = rf(ctx, index)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }
 
 // LiveBalance provides a mock function with given fields: ctx, account, currency, index
