@@ -1553,7 +1553,7 @@ func TestBlockSyncing(t *testing.T) {
 		amount, err = storage.GetBalance(ctx, addr1, curr, b2.BlockIdentifier.Index)
 		assert.NoError(t, err)
 		assert.Equal(t, &types.Amount{
-			Value:    "0",
+			Value:    "100",
 			Currency: curr,
 		}, amount)
 		amount, err = storage.GetBalance(ctx, addr2, curr, b2.BlockIdentifier.Index)
