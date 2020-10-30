@@ -2342,6 +2342,70 @@ func TestReconcile_ActiveNotAtTipError(t *testing.T) {
 	mockHandler.AssertExpectations(t)
 }
 
+func TestReconcile_ActiveErrorAtTipError(t *testing.T) {
+	var (
+		block = &types.BlockIdentifier{
+			Hash:  "block 1",
+			Index: 1,
+		}
+		accountCurrency = &types.AccountCurrency{
+			Account: &types.AccountIdentifier{
+				Address: "addr 1",
+			},
+			Currency: &types.Currency{
+				Symbol:   "BTC",
+				Decimals: 8,
+			},
+		}
+	)
+
+	mockHelper := &mocks.Helper{}
+	mockHandler := &mocks.Handler{}
+	r := New(
+		mockHelper,
+		mockHandler,
+		nil,
+		WithActiveConcurrency(1),
+		WithInactiveConcurrency(0),
+		WithLookupBalanceByBlock(),
+	)
+	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
+
+	mockHelper.On(
+		"LiveBalance",
+		mock.Anything,
+		accountCurrency.Account,
+		accountCurrency.Currency,
+		int64(1),
+	).Return(
+		nil,
+		nil,
+		errors.New("blah"),
+	).Once()
+	mockHelper.On("AtTip", mock.Anything).Return(false, errors.New("blazz")).Once()
+
+	go func() {
+		err := r.Reconcile(ctx)
+		assert.True(t, errors.Is(err, ErrLiveBalanceLookupFailed))
+	}()
+
+	err := r.QueueChanges(ctx, block, []*parser.BalanceChange{
+		{
+			Account:  accountCurrency.Account,
+			Currency: accountCurrency.Currency,
+			Block:    block,
+		},
+	})
+	assert.NoError(t, err)
+
+	time.Sleep(1 * time.Second)
+	cancel()
+
+	mockHelper.AssertExpectations(t)
+	mockHandler.AssertExpectations(t)
+}
+
 func TestReconcile_FailureAtTipInactive(t *testing.T) {
 	var (
 		block = &types.BlockIdentifier{
@@ -2471,6 +2535,70 @@ func TestReconcile_FailureNotAtTipInactive(t *testing.T) {
 		errors.New("blah"),
 	).Once()
 	mockHelper.On("AtTip", mock.Anything).Return(false, nil).Once()
+
+	go func() {
+		err := r.Reconcile(ctx)
+		assert.True(t, errors.Is(err, ErrLiveBalanceLookupFailed))
+	}()
+
+	time.Sleep(1 * time.Second)
+	mockHelper.AssertExpectations(t)
+	mockHandler.AssertExpectations(t)
+	mtxn.AssertExpectations(t)
+}
+
+func TestReconcile_FailureErrorAtTipInactive(t *testing.T) {
+	var (
+		block = &types.BlockIdentifier{
+			Hash:  "block 1",
+			Index: 1,
+		}
+		accountCurrency = &types.AccountCurrency{
+			Account: &types.AccountIdentifier{
+				Address: "addr 1",
+			},
+			Currency: &types.Currency{
+				Symbol:   "BTC",
+				Decimals: 8,
+			},
+		}
+	)
+
+	mockHelper := &mocks.Helper{}
+	mockHandler := &mocks.Handler{}
+	opts := []Option{
+		WithActiveConcurrency(0),
+		WithInactiveConcurrency(1),
+		WithSeenAccounts([]*types.AccountCurrency{accountCurrency}),
+		WithDebugLogging(),
+		WithInactiveFrequency(1),
+		WithLookupBalanceByBlock(),
+	}
+	r := New(
+		mockHelper,
+		mockHandler,
+		parser.New(nil, nil, nil),
+		opts...,
+	)
+	ctx := context.Background()
+
+	mtxn := &mockStorage.DatabaseTransaction{}
+	mtxn.On("Discard", mock.Anything).Once()
+	mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn).Once()
+	mockHelper.On("CurrentBlock", mock.Anything, mtxn).Return(block, nil).Once()
+
+	mockHelper.On(
+		"LiveBalance",
+		mock.Anything,
+		accountCurrency.Account,
+		accountCurrency.Currency,
+		int64(1),
+	).Return(
+		nil,
+		nil,
+		errors.New("blah"),
+	).Once()
+	mockHelper.On("AtTip", mock.Anything).Return(false, errors.New("blah")).Once()
 
 	go func() {
 		err := r.Reconcile(ctx)
