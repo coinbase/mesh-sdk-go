@@ -1040,17 +1040,19 @@ func (b *BlockStorage) GetBlockTransaction(
 	return b.findBlockTransaction(ctx, blockIdentifier, transactionIdentifier, transaction)
 }
 
-// AtTip returns a boolean indicating if we
+// AtTipTransactional returns a boolean indicating if we
 // are at tip (provided some acceptable
-// tip delay).
-func (b *BlockStorage) AtTip(
+// tip delay) in a database transaction.
+func (b *BlockStorage) AtTipTransactional(
 	ctx context.Context,
 	tipDelay int64,
+	txn DatabaseTransaction,
 ) (bool, *types.BlockIdentifier, error) {
-	block, err := b.GetBlock(ctx, nil)
+	blockResponse, err := b.GetBlockLazyTransactional(ctx, nil, txn)
 	if errors.Is(err, ErrHeadBlockNotFound) {
 		return false, nil, nil
 	}
+	block := blockResponse.Block
 
 	if err != nil {
 		return false, nil, fmt.Errorf("%w: %v", ErrHeadBlockGetFailed, err)
@@ -1062,4 +1064,17 @@ func (b *BlockStorage) AtTip(
 	}
 
 	return true, block.BlockIdentifier, nil
+}
+
+// AtTip returns a boolean indicating if we
+// are at tip (provided some acceptable
+// tip delay).
+func (b *BlockStorage) AtTip(
+	ctx context.Context,
+	tipDelay int64,
+) (bool, *types.BlockIdentifier, error) {
+	transaction := b.db.NewDatabaseTransaction(ctx, false)
+	defer transaction.Discard(ctx)
+
+	return b.AtTipTransactional(ctx, tipDelay, transaction)
 }
