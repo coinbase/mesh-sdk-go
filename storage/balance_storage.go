@@ -454,6 +454,8 @@ func (b *BalanceStorage) OrphanBalance(
 	currency *types.Currency,
 	block *types.BlockIdentifier,
 ) error {
+	// TODO: remove account record in the case that orphaned
+	// so that we don't accidentally delete fetched record
 	return b.removeHistoricalBalances(
 		ctx,
 		dbTransaction,
