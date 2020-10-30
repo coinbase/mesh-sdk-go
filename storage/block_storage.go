@@ -1040,21 +1040,22 @@ func (b *BlockStorage) GetBlockTransaction(
 	return b.findBlockTransaction(ctx, blockIdentifier, transactionIdentifier, transaction)
 }
 
-// AtTip returns a boolean indicating if we
+// AtTipTransactional returns a boolean indicating if we
 // are at tip (provided some acceptable
-// tip delay).
-func (b *BlockStorage) AtTip(
+// tip delay) in a database transaction.
+func (b *BlockStorage) AtTipTransactional(
 	ctx context.Context,
 	tipDelay int64,
+	txn DatabaseTransaction,
 ) (bool, *types.BlockIdentifier, error) {
-	block, err := b.GetBlock(ctx, nil)
+	blockResponse, err := b.GetBlockLazyTransactional(ctx, nil, txn)
 	if errors.Is(err, ErrHeadBlockNotFound) {
 		return false, nil, nil
 	}
-
 	if err != nil {
 		return false, nil, fmt.Errorf("%w: %v", ErrHeadBlockGetFailed, err)
 	}
+	block := blockResponse.Block
 
 	atTip := utils.AtTip(tipDelay, block.Timestamp)
 	if !atTip {
@@ -1062,4 +1063,59 @@ func (b *BlockStorage) AtTip(
 	}
 
 	return true, block.BlockIdentifier, nil
+}
+
+// AtTip returns a boolean indicating if we
+// are at tip (provided some acceptable
+// tip delay).
+func (b *BlockStorage) AtTip(
+	ctx context.Context,
+	tipDelay int64,
+) (bool, *types.BlockIdentifier, error) {
+	transaction := b.db.NewDatabaseTransaction(ctx, false)
+	defer transaction.Discard(ctx)
+
+	return b.AtTipTransactional(ctx, tipDelay, transaction)
+}
+
+// IndexAtTip returns a boolean indicating if a block
+// index is at tip (provided some acceptable
+// tip delay). If the index is ahead of the head block
+// and the head block is at tip, we consider the
+// index at tip.
+func (b *BlockStorage) IndexAtTip(
+	ctx context.Context,
+	tipDelay int64,
+	index int64,
+) (bool, error) {
+	transaction := b.db.NewDatabaseTransaction(ctx, false)
+	defer transaction.Discard(ctx)
+	headBlockResponse, err := b.GetBlockLazyTransactional(ctx, nil, transaction)
+	if errors.Is(err, ErrHeadBlockNotFound) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+
+	// Check if index is greater than headBlock and if headBlock
+	// is at tip. If so, this is a result of us querying ahead of
+	// tip.
+	headBlock := headBlockResponse.Block
+	if headBlock.BlockIdentifier.Index < index {
+		return utils.AtTip(tipDelay, headBlock.Timestamp), nil
+	}
+
+	// Query block at index
+	blockResponse, err := b.GetBlockLazyTransactional(
+		ctx,
+		&types.PartialBlockIdentifier{Index: &index},
+		transaction,
+	)
+	if err != nil {
+		return false, err
+	}
+	block := blockResponse.Block
+
+	return utils.AtTip(tipDelay, block.Timestamp), nil
 }
