@@ -454,9 +454,7 @@ func (b *BalanceStorage) OrphanBalance(
 	currency *types.Currency,
 	block *types.BlockIdentifier,
 ) error {
-	// TODO: remove account record in the case that orphaned
-	// so that we don't accidentally delete fetched record
-	return b.removeHistoricalBalances(
+	err := b.removeHistoricalBalances(
 		ctx,
 		dbTransaction,
 		account,
@@ -464,6 +462,28 @@ func (b *BalanceStorage) OrphanBalance(
 		block.Index,
 		true,
 	)
+	if err != nil {
+		return err
+	}
+
+	// Check if we should remove the account record
+	// so that balance can be re-fetched, if necessary.
+	_, err = b.getHistoricalBalance(
+		ctx,
+		dbTransaction,
+		account,
+		currency,
+		block.Index,
+	)
+	switch {
+	case errors.Is(err, ErrAccountMissing):
+		key := GetAccountKey(account, currency)
+		return dbTransaction.Delete(ctx, key)
+	case err != nil:
+		return err
+	default:
+		return nil
+	}
 }
 
 // PruneBalances removes all historical balance states
