@@ -53,12 +53,12 @@ const (
 	// BacklogFull is when the reconciliation backlog is full.
 	BacklogFull = "BACKLOG_FULL"
 
-	// TransientFailure is returned when looking up the live
+	// TipFailure is returned when looking up the live
 	// balance fails but we are at tip. This usually occurs
 	// when the node processes an re-org that we have yet
 	// to process (so the index we are querying at may be
 	// ahead of the nodes tip).
-	TransientFailure = "TRANSIENT_FAILURE"
+	TipFailure = "TIP_FAILURE"
 )
 
 const (
@@ -799,7 +799,7 @@ func (r *Reconciler) reconcileActiveAccounts(ctx context.Context) error { // nol
 						ActiveReconciliation,
 						balanceChange.Account,
 						balanceChange.Currency,
-						TransientFailure,
+						TipFailure,
 					); err != nil {
 						return err
 					}
@@ -930,7 +930,7 @@ func (r *Reconciler) reconcileInactiveAccounts(
 						InactiveReconciliation,
 						nextAcct.Entry.Account,
 						nextAcct.Entry.Currency,
-						TransientFailure,
+						TipFailure,
 					); err != nil {
 						return err
 					}
