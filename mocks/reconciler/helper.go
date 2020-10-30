@@ -100,6 +100,27 @@ func (_m *Helper) DatabaseTransaction(ctx context.Context) storage.DatabaseTrans
 	return r0
 }
 
+// IndexAtTip provides a mock function with given fields: ctx, index
+func (_m *Helper) IndexAtTip(ctx context.Context, index int64) (bool, error) {
+	ret := _m.Called(ctx, index)
+
+	var r0 bool
+	if rf, ok := ret.Get(0).(func(context.Context, int64) bool); ok {
+		r0 = rf(ctx, index)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
+		r1 = rf(ctx, index)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // LiveBalance provides a mock function with given fields: ctx, account, currency, index
 func (_m *Helper) LiveBalance(ctx context.Context, account *types.AccountIdentifier, currency *types.Currency, index int64) (*types.Amount, *types.BlockIdentifier, error) {
 	ret := _m.Called(ctx, account, currency, index)

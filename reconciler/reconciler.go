@@ -52,6 +52,13 @@ const (
 
 	// BacklogFull is when the reconciliation backlog is full.
 	BacklogFull = "BACKLOG_FULL"
+
+	// TipFailure is returned when looking up the live
+	// balance fails but we are at tip. This usually occurs
+	// when the node processes an re-org that we have yet
+	// to process (so the index we are querying at may be
+	// ahead of the nodes tip).
+	TipFailure = "TIP_FAILURE"
 )
 
 const (
@@ -108,6 +115,11 @@ type Helper interface {
 		ctx context.Context,
 		dbTx storage.DatabaseTransaction,
 	) (*types.BlockIdentifier, error)
+
+	IndexAtTip(
+		ctx context.Context,
+		index int64,
+	) (bool, error)
 
 	CanonicalBlock(
 		ctx context.Context,
@@ -780,6 +792,24 @@ func (r *Reconciler) reconcileActiveAccounts(ctx context.Context) error { // nol
 					return err
 				}
 
+				tip, tErr := r.helper.IndexAtTip(ctx, balanceChange.Block.Index)
+				switch {
+				case tErr == nil && tip:
+					if err := r.handler.ReconciliationSkipped(
+						ctx,
+						ActiveReconciliation,
+						balanceChange.Account,
+						balanceChange.Currency,
+						TipFailure,
+					); err != nil {
+						return err
+					}
+
+					continue
+				case tErr != nil:
+					fmt.Printf("%v: could not determine if at tip\n", tErr)
+				}
+
 				return fmt.Errorf("%w: %v", ErrLiveBalanceLookupFailed, err)
 			}
 
@@ -844,7 +874,7 @@ func (r *Reconciler) shouldAttemptInactiveReconciliation(
 // from all previously seen accounts and reconciles
 // the balance. This is useful for detecting balance
 // changes that were not returned in operations.
-func (r *Reconciler) reconcileInactiveAccounts(
+func (r *Reconciler) reconcileInactiveAccounts( // nolint:gocognit
 	ctx context.Context,
 ) error {
 	for {
@@ -885,23 +915,46 @@ func (r *Reconciler) reconcileInactiveAccounts(
 				nextAcct.Entry.Currency,
 				head.Index,
 			)
-			switch {
-			case err == nil:
-				err = r.accountReconciliation(
-					ctx,
-					nextAcct.Entry.Account,
-					nextAcct.Entry.Currency,
-					amount.Value,
-					block,
-					true,
-				)
-				if err != nil {
-					r.wrappedInactiveEnqueue(nextAcct.Entry, block)
+			if err != nil {
+				// Ensure we don't leak reconciliations
+				r.wrappedInactiveEnqueue(nextAcct.Entry, block)
+
+				if errors.Is(err, context.Canceled) {
 					return err
 				}
-			case !errors.Is(err, ErrBlockGone):
-				r.wrappedInactiveEnqueue(nextAcct.Entry, block)
+
+				tip, tErr := r.helper.IndexAtTip(ctx, head.Index)
+				switch {
+				case tErr == nil && tip:
+					if err := r.handler.ReconciliationSkipped(
+						ctx,
+						InactiveReconciliation,
+						nextAcct.Entry.Account,
+						nextAcct.Entry.Currency,
+						TipFailure,
+					); err != nil {
+						return err
+					}
+
+					continue
+				case tErr != nil:
+					fmt.Printf("%v: could not determine if at tip\n", tErr)
+				}
+
 				return fmt.Errorf("%w: %v", ErrLiveBalanceLookupFailed, err)
+			}
+
+			err = r.accountReconciliation(
+				ctx,
+				nextAcct.Entry.Account,
+				nextAcct.Entry.Currency,
+				amount.Value,
+				block,
+				true,
+			)
+			if err != nil {
+				r.wrappedInactiveEnqueue(nextAcct.Entry, block)
+				return err
 			}
 
 			// Always re-enqueue accounts after they have been inactively
