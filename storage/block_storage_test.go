@@ -792,6 +792,10 @@ func TestAtTip(t *testing.T) {
 		assert.NoError(t, err)
 		assert.False(t, atTip)
 		assert.Nil(t, blockIdentifier)
+
+		atTip, err = storage.IndexAtTip(ctx, tipDelay, 1)
+		assert.NoError(t, err)
+		assert.False(t, atTip)
 	})
 
 	t.Run("Add old block", func(t *testing.T) {
@@ -812,6 +816,10 @@ func TestAtTip(t *testing.T) {
 		assert.NoError(t, err)
 		assert.False(t, atTip)
 		assert.Nil(t, blockIdentifier)
+
+		atTip, err = storage.IndexAtTip(ctx, tipDelay, 1)
+		assert.NoError(t, err)
+		assert.False(t, atTip)
 	})
 
 	t.Run("Add new block", func(t *testing.T) {
@@ -835,5 +843,13 @@ func TestAtTip(t *testing.T) {
 			Hash:  "block 1",
 			Index: 1,
 		}, blockIdentifier)
+
+		atTip, err = storage.IndexAtTip(ctx, tipDelay, 1)
+		assert.NoError(t, err)
+		assert.True(t, atTip)
+
+		atTip, err = storage.IndexAtTip(ctx, tipDelay, 2)
+		assert.NoError(t, err)
+		assert.True(t, atTip)
 	})
 }
