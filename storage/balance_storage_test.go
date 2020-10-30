@@ -1213,7 +1213,11 @@ func TestBlockSyncing(t *testing.T) {
 	assert.NoError(t, err)
 	defer database.Close(ctx)
 
-	mockHelper := &MockBalanceStorageHelper{}
+	mockHelper := &MockBalanceStorageHelper{
+		AccountBalances: map[string]string{
+			"addr1": "1",
+		},
+	}
 	storage := NewBalanceStorage(database)
 	storage.Initialize(mockHelper, nil)
 
@@ -1404,7 +1408,7 @@ func TestBlockSyncing(t *testing.T) {
 		amount, err = storage.GetBalance(ctx, addr1, curr, b1.BlockIdentifier.Index)
 		assert.NoError(t, err)
 		assert.Equal(t, &types.Amount{
-			Value:    "100",
+			Value:    "101",
 			Currency: curr,
 		}, amount)
 		amount, err = storage.GetBalance(ctx, addr2, curr, b1.BlockIdentifier.Index)
@@ -1427,7 +1431,7 @@ func TestBlockSyncing(t *testing.T) {
 		amount, err = storage.GetBalance(ctx, addr1, curr, b1.BlockIdentifier.Index)
 		assert.NoError(t, err)
 		assert.Equal(t, &types.Amount{
-			Value:    "100",
+			Value:    "101",
 			Currency: curr,
 		}, amount)
 		amount, err = storage.GetBalance(ctx, addr2, curr, b1.BlockIdentifier.Index)
@@ -1439,7 +1443,7 @@ func TestBlockSyncing(t *testing.T) {
 		amount, err = storage.GetBalance(ctx, addr1, curr, b2.BlockIdentifier.Index)
 		assert.NoError(t, err)
 		assert.Equal(t, &types.Amount{
-			Value:    "49",
+			Value:    "50",
 			Currency: curr,
 		}, amount)
 		amount, err = storage.GetBalance(ctx, addr2, curr, b2.BlockIdentifier.Index)
@@ -1465,7 +1469,7 @@ func TestBlockSyncing(t *testing.T) {
 		amount, err = storage.GetBalance(ctx, addr1, curr, b1.BlockIdentifier.Index)
 		assert.NoError(t, err)
 		assert.Equal(t, &types.Amount{
-			Value:    "100",
+			Value:    "101",
 			Currency: curr,
 		}, amount)
 		amount, err = storage.GetBalance(ctx, addr2, curr, b1.BlockIdentifier.Index)
@@ -1477,7 +1481,7 @@ func TestBlockSyncing(t *testing.T) {
 		amount, err = storage.GetBalance(ctx, addr1, curr, b2.BlockIdentifier.Index)
 		assert.NoError(t, err)
 		assert.Equal(t, &types.Amount{
-			Value:    "100",
+			Value:    "101",
 			Currency: curr,
 		}, amount)
 		amount, err = storage.GetBalance(ctx, addr2, curr, b2.BlockIdentifier.Index)
@@ -1541,7 +1545,7 @@ func TestBlockSyncing(t *testing.T) {
 		amount, err = storage.GetBalance(ctx, addr1, curr, b1.BlockIdentifier.Index)
 		assert.NoError(t, err)
 		assert.Equal(t, &types.Amount{
-			Value:    "100",
+			Value:    "101",
 			Currency: curr,
 		}, amount)
 		amount, err = storage.GetBalance(ctx, addr2, curr, b1.BlockIdentifier.Index)
@@ -1553,7 +1557,7 @@ func TestBlockSyncing(t *testing.T) {
 		amount, err = storage.GetBalance(ctx, addr1, curr, b2.BlockIdentifier.Index)
 		assert.NoError(t, err)
 		assert.Equal(t, &types.Amount{
-			Value:    "100",
+			Value:    "101",
 			Currency: curr,
 		}, amount)
 		amount, err = storage.GetBalance(ctx, addr2, curr, b2.BlockIdentifier.Index)
@@ -1579,7 +1583,7 @@ func TestBlockSyncing(t *testing.T) {
 		amount, err = storage.GetBalance(ctx, addr1, curr, b1.BlockIdentifier.Index)
 		assert.NoError(t, err)
 		assert.Equal(t, &types.Amount{
-			Value:    "100",
+			Value:    "101",
 			Currency: curr,
 		}, amount)
 		amount, err = storage.GetBalance(ctx, addr2, curr, b1.BlockIdentifier.Index)
@@ -1591,7 +1595,7 @@ func TestBlockSyncing(t *testing.T) {
 		amount, err = storage.GetBalance(ctx, addr1, curr, b2.BlockIdentifier.Index)
 		assert.NoError(t, err)
 		assert.Equal(t, &types.Amount{
-			Value:    "0",
+			Value:    "1",
 			Currency: curr,
 		}, amount)
 		amount, err = storage.GetBalance(ctx, addr2, curr, b2.BlockIdentifier.Index)
