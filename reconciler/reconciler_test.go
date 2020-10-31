@@ -930,6 +930,7 @@ func TestReconcile_SuccessOnlyActive(t *testing.T) {
 			assert.Equal(t, block2.Index, r.LastIndexReconciled())
 			mockHelper.AssertExpectations(t)
 			mockHandler.AssertExpectations(t)
+			assert.Equal(t, 0, len(r.pruneMap))
 			mtxn.AssertExpectations(t)
 			mtxn2.AssertExpectations(t)
 			mtxn3.AssertExpectations(t)
