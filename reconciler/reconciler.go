@@ -66,7 +66,7 @@ const (
 	// defaultBacklogSize is the limit of account lookups
 	// that can be enqueued to reconcile before new
 	// requests are dropped.
-	defaultBacklogSize = 50000
+	defaultBacklogSize = 250000
 
 	// waitToCheckDiff is the syncing difference (live-head)
 	// to retry instead of exiting. In other words, if the
