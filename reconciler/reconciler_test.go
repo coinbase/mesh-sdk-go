@@ -2610,3 +2610,271 @@ func TestReconcile_FailureErrorIndexAtTipInactive(t *testing.T) {
 	mockHandler.AssertExpectations(t)
 	mtxn.AssertExpectations(t)
 }
+
+func mockReconcilerCallsDelay(
+	mockHelper *mocks.Helper,
+	mockHandler *mocks.Handler,
+	mtxn *mockStorage.DatabaseTransaction,
+	lookupBalanceByBlock bool,
+	accountCurrency *types.AccountCurrency,
+	liveValue string,
+	computedValue string,
+	headBlock *types.BlockIdentifier,
+	liveBlock *types.BlockIdentifier,
+	success bool,
+	reconciliationType string,
+	exemption *types.BalanceExemption,
+	exemptionHit bool,
+	exemptionThrows bool,
+	liveDelay int,
+) {
+	mockHelper.On("CurrentBlock", mock.Anything, mtxn).Return(headBlock, nil).Once()
+	lookupIndex := liveBlock.Index
+	if !lookupBalanceByBlock {
+		lookupIndex = -1
+	}
+
+	mockHelper.On(
+		"LiveBalance",
+		mock.Anything,
+		accountCurrency.Account,
+		accountCurrency.Currency,
+		lookupIndex,
+	).Return(
+		&types.Amount{Value: liveValue, Currency: accountCurrency.Currency},
+		headBlock,
+		nil,
+	).After(time.Duration(liveDelay) * time.Millisecond).Once()
+	mockHelper.On("CanonicalBlock", mock.Anything, mtxn, headBlock).Return(true, nil).Once()
+	mockHelper.On(
+		"ComputedBalance",
+		mock.Anything,
+		mtxn,
+		accountCurrency.Account,
+		accountCurrency.Currency,
+		headBlock.Index,
+	).Return(
+		&types.Amount{Value: computedValue, Currency: accountCurrency.Currency},
+		nil,
+	).Once()
+	if success {
+		mockHandler.On(
+			"ReconciliationSucceeded",
+			mock.Anything,
+			reconciliationType,
+			accountCurrency.Account,
+			accountCurrency.Currency,
+			liveValue,
+			headBlock,
+		).Return(nil).Once()
+	} else {
+		if !exemptionHit {
+			mockHandler.On(
+				"ReconciliationFailed",
+				mock.Anything,
+				reconciliationType,
+				accountCurrency.Account,
+				accountCurrency.Currency,
+				computedValue,
+				liveValue,
+				headBlock,
+			).Return(errors.New("reconciliation failed")).Once()
+		} else {
+			if !exemptionThrows {
+				mockHandler.On(
+					"ReconciliationExempt",
+					mock.Anything,
+					reconciliationType,
+					accountCurrency.Account,
+					accountCurrency.Currency,
+					computedValue,
+					liveValue,
+					headBlock,
+					exemption,
+				).Return(nil).Once()
+			} else {
+				mockHandler.On(
+					"ReconciliationExempt",
+					mock.Anything,
+					reconciliationType,
+					accountCurrency.Account,
+					accountCurrency.Currency,
+					computedValue,
+					liveValue,
+					headBlock,
+					exemption,
+				).Return(errors.New("reconciliation failed for exemption")).Once()
+			}
+		}
+	}
+}
+
+func TestPruningRaceCondition(t *testing.T) {
+	var (
+		block = &types.BlockIdentifier{
+			Hash:  "block 200",
+			Index: 200,
+		}
+		accountCurrency = &types.AccountCurrency{
+			Account: &types.AccountIdentifier{
+				Address: "addr 1",
+			},
+			Currency: &types.Currency{
+				Symbol:   "BTC",
+				Decimals: 8,
+			},
+		}
+		accountCurrency2 = &types.AccountCurrency{
+			Account: &types.AccountIdentifier{
+				Address: "addr 2",
+			},
+			Currency: &types.Currency{
+				Symbol:   "ETH",
+				Decimals: 18,
+			},
+		}
+		block2 = &types.BlockIdentifier{
+			Hash:  "block 300",
+			Index: 300,
+		}
+	)
+
+	mockHelper := &mocks.Helper{}
+	mockHandler := &mocks.Handler{}
+	opts := []Option{
+		WithActiveConcurrency(2),
+		WithInactiveConcurrency(0),
+		WithBalancePruning(),
+		WithLookupBalanceByBlock(),
+	}
+	r := New(
+		mockHelper,
+		mockHandler,
+		nil,
+		opts...,
+	)
+	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
+
+	mockHelper.On(
+		"PruneBalances",
+		mock.Anything,
+		accountCurrency.Account,
+		accountCurrency.Currency,
+		block.Index-safeBalancePruneDepth,
+	).Run(
+		func(args mock.Arguments) {
+			cancel()
+		},
+	).Return(
+		nil,
+	).Once()
+	mtxn := &mockStorage.DatabaseTransaction{}
+	mtxn.On("Discard", mock.Anything).Once()
+	mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn).Once()
+	mockReconcilerCallsDelay(
+		mockHelper,
+		mockHandler,
+		mtxn,
+		true,
+		accountCurrency,
+		"100",
+		"100",
+		block2,
+		block,
+		true,
+		ActiveReconciliation,
+		nil,
+		false,
+		false,
+		200, // delay live response 200 ms
+	)
+
+	mtxn3 := &mockStorage.DatabaseTransaction{}
+	mtxn3.On("Discard", mock.Anything).Once()
+	mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn3).Once()
+	mockReconcilerCalls(
+		mockHelper,
+		mockHandler,
+		mtxn3,
+		true,
+		accountCurrency,
+		"100",
+		"100",
+		block2,
+		block2,
+		true,
+		ActiveReconciliation,
+		nil,
+		false,
+		false,
+	)
+
+	mockHelper.On(
+		"PruneBalances",
+		mock.Anything,
+		accountCurrency2.Account,
+		accountCurrency2.Currency,
+		block2.Index-safeBalancePruneDepth,
+	).Return(
+		nil,
+	).Once()
+	mtxn2 := &mockStorage.DatabaseTransaction{}
+	mtxn2.On("Discard", mock.Anything).Once()
+	mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn2).Once()
+	mockReconcilerCalls(
+		mockHelper,
+		mockHandler,
+		mtxn2,
+		true,
+		accountCurrency2,
+		"120",
+		"120",
+		block2,
+		block2,
+		true,
+		ActiveReconciliation,
+		nil,
+		false,
+		false,
+	)
+
+	assert.Equal(t, int64(-1), r.LastIndexReconciled())
+
+	go func() {
+		err := r.Reconcile(ctx)
+		assert.Contains(t, context.Canceled.Error(), err.Error())
+	}()
+
+	err := r.QueueChanges(ctx, block, []*parser.BalanceChange{
+		{
+			Account:  accountCurrency.Account,
+			Currency: accountCurrency.Currency,
+			Block:    block,
+		},
+	})
+	assert.NoError(t, err)
+	err = r.QueueChanges(ctx, block2, []*parser.BalanceChange{
+		{
+			Account:  accountCurrency.Account,
+			Currency: accountCurrency.Currency,
+			Block:    block2,
+		},
+		{
+			Account:  accountCurrency2.Account,
+			Currency: accountCurrency2.Currency,
+			Block:    block2,
+		},
+	})
+	assert.NoError(t, err)
+
+	time.Sleep(1 * time.Second)
+	cancel()
+
+	assert.Equal(t, block2.Index, r.LastIndexReconciled())
+	mockHelper.AssertExpectations(t)
+	mockHandler.AssertExpectations(t)
+	mtxn.AssertExpectations(t)
+	mtxn2.AssertExpectations(t)
+	mtxn3.AssertExpectations(t)
+}
