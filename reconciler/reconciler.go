@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"sort"
 	"sync"
 	"time"
 
@@ -248,9 +249,14 @@ type Reconciler struct {
 	// of a channel to determine when it is ready to look at.
 	inactiveQueueMutex sync.Mutex
 
-	// LastIndexChecked is the last block index reconciled actively.
+	// lastIndexChecked is the last block index reconciled actively.
 	lastIndexMutex   sync.Mutex
 	lastIndexChecked int64
+
+	// pruneMap ensures we don't accidentally attempt to prune
+	// computed balances being used by other goroutines.
+	pruneMap      map[string]map[int64]int
+	pruneMapMutex sync.Mutex
 }
 
 // New creates a new Reconciler.
@@ -272,6 +278,7 @@ func New(
 		inactiveQueue:       []*InactiveEntry{},
 		backlogSize:         defaultBacklogSize,
 		lastIndexChecked:    -1,
+		pruneMap:            map[string]map[int64]int{},
 	}
 
 	for _, opt := range options {
@@ -384,14 +391,29 @@ func (r *Reconciler) QueueChanges(
 		// Add all seen accounts to inactive reconciler queue.
 		//
 		// Note: accounts are only added if they have not been seen before.
-		err := r.inactiveAccountQueue(false, &types.AccountCurrency{
+		acctCurrency := &types.AccountCurrency{
 			Account:  change.Account,
 			Currency: change.Currency,
-		}, block)
+		}
+		err := r.inactiveAccountQueue(false, acctCurrency, block)
 		if err != nil {
 			return err
 		}
 
+		// Add change to pruneMap before enqueuing to ensure
+		// there is no possible race.
+		r.pruneMapMutex.Lock()
+		key := types.Hash(acctCurrency)
+		if _, ok := r.pruneMap[key]; !ok {
+			r.pruneMap[key] = map[int64]int{}
+		}
+		if _, ok := r.pruneMap[key][change.Block.Index]; !ok {
+			r.pruneMap[key][change.Block.Index] = 0
+		}
+		r.pruneMap[key][change.Block.Index]++
+		r.pruneMapMutex.Unlock()
+
+		// Add change to active queue
 		r.wrappedActiveEnqueue(ctx, change)
 	}
 
@@ -749,6 +771,47 @@ func (r *Reconciler) pruneBalances(ctx context.Context, change *parser.BalanceCh
 	)
 }
 
+// removeAndPrune removes a *parser.BalanceChange
+// from the pruneMap and attempts to prune the associated
+// *types.AccountCurrency's balances, if appropriate.
+func (r *Reconciler) removeAndPrune(
+	ctx context.Context,
+	change *parser.BalanceChange,
+) error {
+	r.pruneMapMutex.Lock()
+	defer r.pruneMapMutex.Unlock()
+
+	key := types.Hash(&types.AccountCurrency{
+		Account:  change.Account,
+		Currency: change.Currency,
+	})
+	r.pruneMap[key][change.Block.Index]--
+	if r.pruneMap[key][change.Block.Index] > 0 {
+		return nil
+	}
+
+	delete(r.pruneMap[key], change.Block.Index)
+
+	// Sort indexes
+	indexes := []int64{}
+	for k := range r.pruneMap[key] {
+		indexes = append(indexes, k)
+	}
+	sort.Slice(indexes, func(i, j int) bool { return indexes[i] < indexes[j] })
+
+	// Don't prune if there are indexes for this AccountCurrency
+	// less than this change.
+	if len(indexes) > 0 && change.Block.Index >= indexes[0] {
+		return nil
+	}
+
+	delete(r.pruneMap, key)
+
+	// Attempt to prune historical balances that will not be used
+	// anymore.
+	return r.pruneBalances(ctx, change)
+}
+
 // reconcileActiveAccounts selects an account
 // from the Reconciler account queue and
 // reconciles the balance. This is useful
@@ -772,6 +835,10 @@ func (r *Reconciler) reconcileActiveAccounts(ctx context.Context) error { // nol
 					balanceChange.Currency,
 					HeadBehind,
 				); err != nil {
+					return err
+				}
+
+				if err := r.removeAndPrune(ctx, balanceChange); err != nil {
 					return err
 				}
 
@@ -805,6 +872,10 @@ func (r *Reconciler) reconcileActiveAccounts(ctx context.Context) error { // nol
 						return err
 					}
 
+					if err := r.removeAndPrune(ctx, balanceChange); err != nil {
+						return err
+					}
+
 					continue
 				case tErr != nil:
 					fmt.Printf("%v: could not determine if at tip\n", tErr)
@@ -833,7 +904,7 @@ func (r *Reconciler) reconcileActiveAccounts(ctx context.Context) error { // nol
 
 			// Attempt to prune historical balances that will not be used
 			// anymore.
-			if err := r.pruneBalances(ctx, balanceChange); err != nil {
+			if err := r.removeAndPrune(ctx, balanceChange); err != nil {
 				return err
 			}
 

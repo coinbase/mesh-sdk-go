@@ -2790,26 +2790,6 @@ func TestPruningRaceCondition(t *testing.T) {
 		200, // delay live response 200 ms
 	)
 
-	mtxn3 := &mockStorage.DatabaseTransaction{}
-	mtxn3.On("Discard", mock.Anything).Once()
-	mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn3).Once()
-	mockReconcilerCalls(
-		mockHelper,
-		mockHandler,
-		mtxn3,
-		true,
-		accountCurrency,
-		"100",
-		"100",
-		block2,
-		block2,
-		true,
-		ActiveReconciliation,
-		nil,
-		false,
-		false,
-	)
-
 	mockHelper.On(
 		"PruneBalances",
 		mock.Anything,
@@ -2830,6 +2810,26 @@ func TestPruningRaceCondition(t *testing.T) {
 		accountCurrency2,
 		"120",
 		"120",
+		block2,
+		block2,
+		true,
+		ActiveReconciliation,
+		nil,
+		false,
+		false,
+	)
+
+	mtxn3 := &mockStorage.DatabaseTransaction{}
+	mtxn3.On("Discard", mock.Anything).Once()
+	mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn3).Once()
+	mockReconcilerCalls(
+		mockHelper,
+		mockHandler,
+		mtxn3,
+		true,
+		accountCurrency,
+		"100",
+		"100",
 		block2,
 		block2,
 		true,
@@ -2872,6 +2872,7 @@ func TestPruningRaceCondition(t *testing.T) {
 	cancel()
 
 	assert.Equal(t, block2.Index, r.LastIndexReconciled())
+	assert.Equal(t, 0, len(r.pruneMap))
 	mockHelper.AssertExpectations(t)
 	mockHandler.AssertExpectations(t)
 	mtxn.AssertExpectations(t)
