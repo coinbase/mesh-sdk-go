@@ -779,7 +779,6 @@ func (r *Reconciler) removeAndPrune(
 	change *parser.BalanceChange,
 ) error {
 	r.pruneMapMutex.Lock()
-	defer r.pruneMapMutex.Unlock()
 
 	key := types.Hash(&types.AccountCurrency{
 		Account:  change.Account,
@@ -787,6 +786,7 @@ func (r *Reconciler) removeAndPrune(
 	})
 	r.pruneMap[key][change.Block.Index]--
 	if r.pruneMap[key][change.Block.Index] > 0 {
+		r.pruneMapMutex.Unlock()
 		return nil
 	}
 
@@ -802,10 +802,14 @@ func (r *Reconciler) removeAndPrune(
 	// Don't prune if there are indexes for this AccountCurrency
 	// less than this change.
 	if len(indexes) > 0 && change.Block.Index >= indexes[0] {
+		r.pruneMapMutex.Unlock()
 		return nil
 	}
 
 	delete(r.pruneMap, key)
+
+	// Unlock before pruning as this could take some time
+	r.pruneMapMutex.Unlock()
 
 	// Attempt to prune historical balances that will not be used
 	// anymore.
