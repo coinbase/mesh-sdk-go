@@ -790,6 +790,7 @@ func (r *Reconciler) removeAndPrune(
 		return nil
 	}
 
+	// Cleanup indexes when we don't need them anymore
 	delete(r.pruneMap[key], change.Block.Index)
 
 	// Sort indexes
@@ -806,7 +807,10 @@ func (r *Reconciler) removeAndPrune(
 		return nil
 	}
 
-	delete(r.pruneMap, key)
+	// Cleanup keys when we don't need them anymore
+	if len(r.pruneMap[key]) == 0 {
+		delete(r.pruneMap, key)
+	}
 
 	// Unlock before pruning as this could take some time
 	r.pruneMapMutex.Unlock()
