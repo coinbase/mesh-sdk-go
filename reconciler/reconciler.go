@@ -101,7 +101,7 @@ const (
 	// safeBalancePruneDepth is the depth from the last balance
 	// change that we consider safe to prune. We are very conservative
 	// here to prevent removing balances we may need in a reorg.
-	safeBalancePruneDepth = int64(100) // nolint:gomnd
+	safeBalancePruneDepth = int64(500) // nolint:gomnd
 )
 
 // Helper functions are used by Reconciler to compare
