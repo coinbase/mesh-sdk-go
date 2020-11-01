@@ -2634,7 +2634,15 @@ func mockReconcilerCallsDelay(
 		headBlock,
 		nil,
 	).After(time.Duration(liveDelay) * time.Millisecond).Once()
-	mockHelper.On("CanonicalBlock", mock.Anything, mock.Anything, headBlock).Return(true, nil).Once()
+	mockHelper.On(
+		"CanonicalBlock",
+		mock.Anything,
+		mock.Anything,
+		headBlock,
+	).Return(
+		true,
+		nil,
+	).Once()
 	mockHelper.On(
 		"ComputedBalance",
 		mock.Anything,

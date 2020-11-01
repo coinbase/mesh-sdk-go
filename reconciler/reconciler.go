@@ -338,6 +338,24 @@ func (r *Reconciler) wrappedInactiveEnqueue(
 	}
 }
 
+// addToPruneMap adds a *types.AccountCurrency
+// to the prune map at the provided index.
+func (r *Reconciler) addToPruneMap(
+	acctCurrency *types.AccountCurrency,
+	index int64,
+) {
+	r.pruneMapMutex.Lock()
+	key := types.Hash(acctCurrency)
+	if _, ok := r.pruneMap[key]; !ok {
+		r.pruneMap[key] = map[int64]int{}
+	}
+	if _, ok := r.pruneMap[key][index]; !ok {
+		r.pruneMap[key][index] = 0
+	}
+	r.pruneMap[key][index]++
+	r.pruneMapMutex.Unlock()
+}
+
 // QueueChanges enqueues a slice of *BalanceChanges
 // for reconciliation.
 func (r *Reconciler) QueueChanges(
@@ -402,16 +420,7 @@ func (r *Reconciler) QueueChanges(
 
 		// Add change to pruneMap before enqueuing to ensure
 		// there is no possible race.
-		r.pruneMapMutex.Lock()
-		key := types.Hash(acctCurrency)
-		if _, ok := r.pruneMap[key]; !ok {
-			r.pruneMap[key] = map[int64]int{}
-		}
-		if _, ok := r.pruneMap[key][change.Block.Index]; !ok {
-			r.pruneMap[key][change.Block.Index] = 0
-		}
-		r.pruneMap[key][change.Block.Index]++
-		r.pruneMapMutex.Unlock()
+		r.addToPruneMap(acctCurrency, change.Block.Index)
 
 		// Add change to active queue
 		r.wrappedActiveEnqueue(ctx, change)
@@ -771,6 +780,26 @@ func (r *Reconciler) pruneBalances(ctx context.Context, change *parser.BalanceCh
 	)
 }
 
+// skipAndPrune calls the ReconciliationSkipped
+// handler and attempts to prune.
+func (r *Reconciler) skipAndPrune(
+	ctx context.Context,
+	change *parser.BalanceChange,
+	skipCause string,
+) error {
+	if err := r.handler.ReconciliationSkipped(
+		ctx,
+		ActiveReconciliation,
+		change.Account,
+		change.Currency,
+		skipCause,
+	); err != nil {
+		return err
+	}
+
+	return r.removeAndPrune(ctx, change)
+}
+
 // removeAndPrune removes a *parser.BalanceChange
 // from the pruneMap and attempts to prune the associated
 // *types.AccountCurrency's balances, if appropriate.
@@ -836,17 +865,7 @@ func (r *Reconciler) reconcileActiveAccounts(ctx context.Context) error { // nol
 					"waiting to continue active reconciliation until reaching high water mark...",
 				)
 
-				if err := r.handler.ReconciliationSkipped(
-					ctx,
-					ActiveReconciliation,
-					balanceChange.Account,
-					balanceChange.Currency,
-					HeadBehind,
-				); err != nil {
-					return err
-				}
-
-				if err := r.removeAndPrune(ctx, balanceChange); err != nil {
+				if err := r.skipAndPrune(ctx, balanceChange, HeadBehind); err != nil {
 					return err
 				}
 
@@ -870,17 +889,7 @@ func (r *Reconciler) reconcileActiveAccounts(ctx context.Context) error { // nol
 				tip, tErr := r.helper.IndexAtTip(ctx, balanceChange.Block.Index)
 				switch {
 				case tErr == nil && tip:
-					if err := r.handler.ReconciliationSkipped(
-						ctx,
-						ActiveReconciliation,
-						balanceChange.Account,
-						balanceChange.Currency,
-						TipFailure,
-					); err != nil {
-						return err
-					}
-
-					if err := r.removeAndPrune(ctx, balanceChange); err != nil {
+					if err := r.skipAndPrune(ctx, balanceChange, TipFailure); err != nil {
 						return err
 					}
 
