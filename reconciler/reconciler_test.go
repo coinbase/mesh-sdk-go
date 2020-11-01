@@ -2615,25 +2615,14 @@ func TestReconcile_FailureErrorIndexAtTipInactive(t *testing.T) {
 func mockReconcilerCallsDelay(
 	mockHelper *mocks.Helper,
 	mockHandler *mocks.Handler,
-	lookupBalanceByBlock bool,
 	accountCurrency *types.AccountCurrency,
-	liveValue string,
-	computedValue string,
+	value string, // nolint:unparam
 	headBlock *types.BlockIdentifier,
 	liveBlock *types.BlockIdentifier,
-	success bool,
-	reconciliationType string,
-	exemption *types.BalanceExemption,
-	exemptionHit bool,
-	exemptionThrows bool,
 	liveDelay int,
 ) {
 	mockHelper.On("CurrentBlock", mock.Anything, mock.Anything).Return(headBlock, nil).Once()
 	lookupIndex := liveBlock.Index
-	if !lookupBalanceByBlock {
-		lookupIndex = -1
-	}
-
 	mockHelper.On(
 		"LiveBalance",
 		mock.Anything,
@@ -2641,7 +2630,7 @@ func mockReconcilerCallsDelay(
 		accountCurrency.Currency,
 		lookupIndex,
 	).Return(
-		&types.Amount{Value: liveValue, Currency: accountCurrency.Currency},
+		&types.Amount{Value: value, Currency: accountCurrency.Currency},
 		headBlock,
 		nil,
 	).After(time.Duration(liveDelay) * time.Millisecond).Once()
@@ -2654,59 +2643,18 @@ func mockReconcilerCallsDelay(
 		accountCurrency.Currency,
 		headBlock.Index,
 	).Return(
-		&types.Amount{Value: computedValue, Currency: accountCurrency.Currency},
+		&types.Amount{Value: value, Currency: accountCurrency.Currency},
 		nil,
 	).Once()
-	if success {
-		mockHandler.On(
-			"ReconciliationSucceeded",
-			mock.Anything,
-			reconciliationType,
-			accountCurrency.Account,
-			accountCurrency.Currency,
-			liveValue,
-			headBlock,
-		).Return(nil).Once()
-	} else {
-		if !exemptionHit {
-			mockHandler.On(
-				"ReconciliationFailed",
-				mock.Anything,
-				reconciliationType,
-				accountCurrency.Account,
-				accountCurrency.Currency,
-				computedValue,
-				liveValue,
-				headBlock,
-			).Return(errors.New("reconciliation failed")).Once()
-		} else {
-			if !exemptionThrows {
-				mockHandler.On(
-					"ReconciliationExempt",
-					mock.Anything,
-					reconciliationType,
-					accountCurrency.Account,
-					accountCurrency.Currency,
-					computedValue,
-					liveValue,
-					headBlock,
-					exemption,
-				).Return(nil).Once()
-			} else {
-				mockHandler.On(
-					"ReconciliationExempt",
-					mock.Anything,
-					reconciliationType,
-					accountCurrency.Account,
-					accountCurrency.Currency,
-					computedValue,
-					liveValue,
-					headBlock,
-					exemption,
-				).Return(errors.New("reconciliation failed for exemption")).Once()
-			}
-		}
-	}
+	mockHandler.On(
+		"ReconciliationSucceeded",
+		mock.Anything,
+		ActiveReconciliation,
+		accountCurrency.Account,
+		accountCurrency.Currency,
+		value,
+		headBlock,
+	).Return(nil).Once()
 }
 
 func TestPruningRaceCondition(t *testing.T) {
@@ -2775,17 +2723,10 @@ func TestPruningRaceCondition(t *testing.T) {
 	mockReconcilerCallsDelay(
 		mockHelper,
 		mockHandler,
-		true,
 		accountCurrency,
-		"100",
 		"100",
 		block2,
 		block,
-		true,
-		ActiveReconciliation,
-		nil,
-		false,
-		false,
 		200, // delay live response 200 ms
 	)
 
@@ -2932,17 +2873,10 @@ func TestPruningHappyPath(t *testing.T) {
 	mockReconcilerCallsDelay(
 		mockHelper,
 		mockHandler,
-		true,
 		accountCurrency,
-		"100",
 		"100",
 		block2,
 		block,
-		true,
-		ActiveReconciliation,
-		nil,
-		false,
-		false,
 		0,
 	)
 
@@ -2965,17 +2899,10 @@ func TestPruningHappyPath(t *testing.T) {
 	mockReconcilerCallsDelay(
 		mockHelper,
 		mockHandler,
-		true,
 		accountCurrency,
 		"100",
-		"100",
 		block2,
 		block2,
-		true,
-		ActiveReconciliation,
-		nil,
-		false,
-		false,
 		200, // delay by 200 ms
 	)
 
@@ -3058,17 +2985,10 @@ func TestPruningReorg(t *testing.T) {
 	mockReconcilerCallsDelay(
 		mockHelper,
 		mockHandler,
-		true,
 		accountCurrency,
 		"100",
-		"100",
 		block,
 		block,
-		true,
-		ActiveReconciliation,
-		nil,
-		false,
-		false,
 		0,
 	)
 
@@ -3091,17 +3011,10 @@ func TestPruningReorg(t *testing.T) {
 	mockReconcilerCallsDelay(
 		mockHelper,
 		mockHandler,
-		true,
 		accountCurrency,
 		"100",
-		"100",
 		blockB,
 		blockB,
-		true,
-		ActiveReconciliation,
-		nil,
-		false,
-		false,
 		200, // delay by 200 ms
 	)
 
