@@ -2840,9 +2840,11 @@ func TestPruningRaceCondition(t *testing.T) {
 
 	assert.Equal(t, int64(-1), r.LastIndexReconciled())
 
+	d := make(chan struct{})
 	go func() {
 		err := r.Reconcile(ctx)
 		assert.Contains(t, context.Canceled.Error(), err.Error())
+		close(d)
 	}()
 
 	err := r.QueueChanges(ctx, block, []*parser.BalanceChange{
@@ -2867,8 +2869,7 @@ func TestPruningRaceCondition(t *testing.T) {
 	})
 	assert.NoError(t, err)
 
-	time.Sleep(1 * time.Second)
-
+	<-d
 	assert.Equal(t, block2.Index, r.LastIndexReconciled())
 	assert.Equal(t, 0, len(r.pruneMap))
 	mockHelper.AssertExpectations(t)
@@ -2980,9 +2981,11 @@ func TestPruningHappyPath(t *testing.T) {
 
 	assert.Equal(t, int64(-1), r.LastIndexReconciled())
 
+	d := make(chan struct{})
 	go func() {
 		err := r.Reconcile(ctx)
 		assert.Contains(t, context.Canceled.Error(), err.Error())
+		close(d)
 	}()
 
 	err := r.QueueChanges(ctx, block, []*parser.BalanceChange{
@@ -3002,8 +3005,7 @@ func TestPruningHappyPath(t *testing.T) {
 	})
 	assert.NoError(t, err)
 
-	time.Sleep(1 * time.Second)
-
+	<-d
 	assert.Equal(t, block2.Index, r.LastIndexReconciled())
 	assert.Equal(t, 0, len(r.pruneMap))
 	mockHelper.AssertExpectations(t)
@@ -3122,13 +3124,14 @@ func TestPruningReorg(t *testing.T) {
 	})
 	assert.NoError(t, err)
 
+	d := make(chan struct{})
 	go func() {
 		err := r.Reconcile(ctx)
 		assert.Contains(t, context.Canceled.Error(), err.Error())
+		close(d)
 	}()
 
-	time.Sleep(1 * time.Second)
-
+	<-d
 	assert.Equal(t, blockB.Index, r.LastIndexReconciled())
 	assert.Equal(t, 0, len(r.pruneMap))
 	mockHelper.AssertExpectations(t)
