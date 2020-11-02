@@ -112,13 +112,11 @@ func (r *Reconciler) addToqueueMap(
 	acctCurrency *types.AccountCurrency,
 	index int64,
 ) {
-	r.queueMapMutex.Lock()
 	key := types.Hash(acctCurrency)
+
+	r.queueMapMutex.Lock()
 	if _, ok := r.queueMap[key]; !ok {
 		r.queueMap[key] = map[int64]int{}
-	}
-	if _, ok := r.queueMap[key][index]; !ok {
-		r.queueMap[key][index] = 0
 	}
 	r.queueMap[key][index]++
 	r.queueMapMutex.Unlock()
@@ -575,12 +573,12 @@ func (r *Reconciler) updateQueueMapAndPrune(
 	ctx context.Context,
 	change *parser.BalanceChange,
 ) error {
-	r.queueMapMutex.Lock()
-
 	key := types.Hash(&types.AccountCurrency{
 		Account:  change.Account,
 		Currency: change.Currency,
 	})
+
+	r.queueMapMutex.Lock()
 	r.queueMap[key][change.Block.Index]--
 	if r.queueMap[key][change.Block.Index] > 0 {
 		r.queueMapMutex.Unlock()
