@@ -10,12 +10,11 @@ require (
 	github.com/dgraph-io/ristretto v0.0.3 // indirect
 	github.com/dgryski/go-farm v0.0.0-20200201041132-a6ae2369ad13 // indirect
 	github.com/ethereum/go-ethereum v1.9.23
-	github.com/fatih/color v1.9.0
+	github.com/fatih/color v1.10.0
 	github.com/google/go-cmp v0.5.2 // indirect
 	github.com/gorilla/mux v1.8.0
 	github.com/kr/pretty v0.2.0 // indirect
 	github.com/lucasjones/reggen v0.0.0-20180717132126-cdb49ff09d77
-	github.com/mattn/go-colorable v0.1.7 // indirect
 	github.com/mitchellh/mapstructure v1.3.3
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/stretchr/objx v0.1.1 // indirect
