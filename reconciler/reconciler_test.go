@@ -930,7 +930,7 @@ func TestReconcile_SuccessOnlyActive(t *testing.T) {
 			assert.Equal(t, block2.Index, r.LastIndexReconciled())
 			mockHelper.AssertExpectations(t)
 			mockHandler.AssertExpectations(t)
-			assert.Equal(t, 0, len(r.pruneMap))
+			assert.Equal(t, 0, len(r.queueMap))
 			mtxn.AssertExpectations(t)
 			mtxn2.AssertExpectations(t)
 			mtxn3.AssertExpectations(t)
@@ -2820,7 +2820,7 @@ func TestPruningRaceCondition(t *testing.T) {
 
 	<-d
 	assert.Equal(t, block2.Index, r.LastIndexReconciled())
-	assert.Equal(t, 0, len(r.pruneMap))
+	assert.Equal(t, 0, len(r.queueMap))
 	mockHelper.AssertExpectations(t)
 	mockHandler.AssertExpectations(t)
 	mtxn.AssertExpectations(t)
@@ -2942,7 +2942,7 @@ func TestPruningHappyPath(t *testing.T) {
 
 	<-d
 	assert.Equal(t, block2.Index, r.LastIndexReconciled())
-	assert.Equal(t, 0, len(r.pruneMap))
+	assert.Equal(t, 0, len(r.queueMap))
 	mockHelper.AssertExpectations(t)
 	mockHandler.AssertExpectations(t)
 	mtxn.AssertExpectations(t)
@@ -3054,7 +3054,7 @@ func TestPruningReorg(t *testing.T) {
 
 	<-d
 	assert.Equal(t, blockB.Index, r.LastIndexReconciled())
-	assert.Equal(t, 0, len(r.pruneMap))
+	assert.Equal(t, 0, len(r.queueMap))
 	mockHelper.AssertExpectations(t)
 	mockHandler.AssertExpectations(t)
 	mtxn.AssertExpectations(t)
