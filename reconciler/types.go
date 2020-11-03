@@ -152,7 +152,8 @@ type Helper interface {
 
 // Handler is called by Reconciler after a reconciliation
 // is performed. When a reconciliation failure is observed,
-// it is up to the client to halt syncing or log the result.
+// it is up to the client to trigger a halt (by returning
+// an error) or to continue (by returning nil).
 type Handler interface {
 	ReconciliationFailed(
 		ctx context.Context,
