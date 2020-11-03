@@ -62,7 +62,7 @@ type Node struct {
 	right *Node
 }
 
-// set adds they key and value to the BST
+// set adds the key and value to the BST
 // if they key doesn't exist. If it does
 // exist, it is overwritten.
 func (n *Node) set(key int64, value int) {
