@@ -19,11 +19,11 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"sort"
 	"time"
 
 	"github.com/coinbase/rosetta-sdk-go/parser"
 	"github.com/coinbase/rosetta-sdk-go/types"
+	"github.com/coinbase/rosetta-sdk-go/utils"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -46,7 +46,7 @@ func New(
 		inactiveQueue:       []*InactiveEntry{},
 		backlogSize:         defaultBacklogSize,
 		lastIndexChecked:    -1,
-		queueMap:            map[string]map[int64]int{},
+		queueMap:            map[string]*utils.BST{},
 	}
 
 	for _, opt := range options {
@@ -116,9 +116,14 @@ func (r *Reconciler) addToqueueMap(
 
 	r.queueMapMutex.Lock()
 	if _, ok := r.queueMap[key]; !ok {
-		r.queueMap[key] = map[int64]int{}
+		r.queueMap[key] = &utils.BST{}
 	}
-	r.queueMap[key][index]++
+	existing := r.queueMap[key].Get(index)
+	if existing == nil {
+		r.queueMap[key].Set(index, 1)
+	} else {
+		existing.Value++
+	}
 	r.queueMapMutex.Unlock()
 }
 
@@ -579,31 +584,26 @@ func (r *Reconciler) updateQueueMapAndPrune(
 	})
 
 	r.queueMapMutex.Lock()
-	r.queueMap[key][change.Block.Index]--
-	if r.queueMap[key][change.Block.Index] > 0 {
+	existing := r.queueMap[key].Get(change.Block.Index)
+	existing.Value--
+	if existing.Value > 0 {
 		r.queueMapMutex.Unlock()
 		return nil
 	}
 
 	// Cleanup indexes when we don't need them anymore
-	delete(r.queueMap[key], change.Block.Index)
+	r.queueMap[key].Delete(change.Block.Index)
 
-	// Sort indexes
-	indexes := []int64{}
-	for k := range r.queueMap[key] {
-		indexes = append(indexes, k)
-	}
-	sort.Slice(indexes, func(i, j int) bool { return indexes[i] < indexes[j] })
-
-	// Don't prune if there are indexes for this AccountCurrency
+	// Don't prune if there are items for this AccountCurrency
 	// less than this change.
-	if len(indexes) > 0 && change.Block.Index >= indexes[0] {
+	if !r.queueMap[key].Empty() &&
+		change.Block.Index >= r.queueMap[key].Min().Key {
 		r.queueMapMutex.Unlock()
 		return nil
 	}
 
 	// Cleanup keys when we don't need them anymore
-	if len(r.queueMap[key]) == 0 {
+	if r.queueMap[key].Empty() {
 		delete(r.queueMap, key)
 	}
 

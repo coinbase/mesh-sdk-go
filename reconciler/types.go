@@ -22,6 +22,7 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/parser"
 	"github.com/coinbase/rosetta-sdk-go/storage"
 	"github.com/coinbase/rosetta-sdk-go/types"
+	"github.com/coinbase/rosetta-sdk-go/utils"
 )
 
 const (
@@ -252,6 +253,6 @@ type Reconciler struct {
 	// in the active reconciliation queue and being actively
 	// reconciled. It ensures we don't accidentally attempt to prune
 	// computed balances being used by other goroutines.
-	queueMap      map[string]map[int64]int
+	queueMap      map[string]*utils.BST
 	queueMapMutex sync.Mutex
 }
