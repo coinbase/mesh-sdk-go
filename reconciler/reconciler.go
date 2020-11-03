@@ -19,239 +19,13 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"sync"
 	"time"
 
 	"github.com/coinbase/rosetta-sdk-go/parser"
-	"github.com/coinbase/rosetta-sdk-go/storage"
 	"github.com/coinbase/rosetta-sdk-go/types"
+	"github.com/coinbase/rosetta-sdk-go/utils"
 	"golang.org/x/sync/errgroup"
 )
-
-const (
-	// ActiveReconciliation is included in the reconciliation
-	// error message if reconciliation failed during active
-	// reconciliation.
-	ActiveReconciliation = "ACTIVE"
-
-	// InactiveReconciliation is included in the reconciliation
-	// error message if reconciliation failed during inactive
-	// reconciliation.
-	InactiveReconciliation = "INACTIVE"
-)
-
-const (
-	// BlockGone is when the block where a reconciliation
-	// is supposed to happen is orphaned.
-	BlockGone = "BLOCK_GONE"
-
-	// HeadBehind is when the synced tip (where balances
-	// were last computed) is behind the *types.BlockIdentifier
-	// returned by the call to /account/balance.
-	HeadBehind = "HEAD_BEHIND"
-
-	// BacklogFull is when the reconciliation backlog is full.
-	BacklogFull = "BACKLOG_FULL"
-
-	// TipFailure is returned when looking up the live
-	// balance fails but we are at tip. This usually occurs
-	// when the node processes an re-org that we have yet
-	// to process (so the index we are querying at may be
-	// ahead of the nodes tip).
-	TipFailure = "TIP_FAILURE"
-)
-
-const (
-	// defaultBacklogSize is the limit of account lookups
-	// that can be enqueued to reconcile before new
-	// requests are dropped.
-	defaultBacklogSize = 50000
-
-	// waitToCheckDiff is the syncing difference (live-head)
-	// to retry instead of exiting. In other words, if the
-	// processed head is behind the live head by <
-	// waitToCheckDiff we should try again after sleeping.
-	// TODO: Make configurable
-	waitToCheckDiff = 10
-
-	// waitToCheckDiffSleep is the amount of time to wait
-	// to check a balance difference if the syncer is within
-	// waitToCheckDiff from the block a balance was queried at.
-	waitToCheckDiffSleep = 5 * time.Second
-
-	// zeroString is a string of value 0.
-	zeroString = "0"
-
-	// inactiveReconciliationSleep is used as the time.Duration
-	// to sleep when there are no seen accounts to reconcile.
-	inactiveReconciliationSleep = 1 * time.Second
-
-	// defaultInactiveFrequency is the minimum
-	// number of blocks the reconciler should wait between
-	// inactive reconciliations for each account.
-	defaultInactiveFrequency = 200
-
-	// defaultReconcilerConcurrency is the number of goroutines
-	// to start for reconciliation. Half of the goroutines are assigned
-	// to inactive reconciliation and half are assigned to active
-	// reconciliation.
-	defaultReconcilerConcurrency = 8
-
-	// safeBalancePruneDepth is the depth from the last balance
-	// change that we consider safe to prune. We are very conservative
-	// here to prevent removing balances we may need in a reorg.
-	safeBalancePruneDepth = int64(100) // nolint:gomnd
-)
-
-// Helper functions are used by Reconciler to compare
-// computed balances from a block with the balance calculated
-// by the node. Defining an interface allows the client to determine
-// what sort of storage layer they want to use to provide the required
-// information.
-type Helper interface {
-	DatabaseTransaction(ctx context.Context) storage.DatabaseTransaction
-
-	CurrentBlock(
-		ctx context.Context,
-		dbTx storage.DatabaseTransaction,
-	) (*types.BlockIdentifier, error)
-
-	IndexAtTip(
-		ctx context.Context,
-		index int64,
-	) (bool, error)
-
-	CanonicalBlock(
-		ctx context.Context,
-		dbTx storage.DatabaseTransaction,
-		block *types.BlockIdentifier,
-	) (bool, error)
-
-	ComputedBalance(
-		ctx context.Context,
-		dbTx storage.DatabaseTransaction,
-		account *types.AccountIdentifier,
-		currency *types.Currency,
-		index int64,
-	) (*types.Amount, error)
-
-	LiveBalance(
-		ctx context.Context,
-		account *types.AccountIdentifier,
-		currency *types.Currency,
-		index int64,
-	) (*types.Amount, *types.BlockIdentifier, error)
-
-	// PruneBalances is invoked by the reconciler
-	// to indicate that all historical balance states
-	// <= to index can be removed.
-	PruneBalances(
-		ctx context.Context,
-		account *types.AccountIdentifier,
-		currency *types.Currency,
-		index int64,
-	) error
-}
-
-// Handler is called by Reconciler after a reconciliation
-// is performed. When a reconciliation failure is observed,
-// it is up to the client to halt syncing or log the result.
-type Handler interface {
-	ReconciliationFailed(
-		ctx context.Context,
-		reconciliationType string,
-		account *types.AccountIdentifier,
-		currency *types.Currency,
-		computedBalance string,
-		liveBalance string,
-		block *types.BlockIdentifier,
-	) error
-
-	ReconciliationSucceeded(
-		ctx context.Context,
-		reconciliationType string,
-		account *types.AccountIdentifier,
-		currency *types.Currency,
-		balance string,
-		block *types.BlockIdentifier,
-	) error
-
-	ReconciliationExempt(
-		ctx context.Context,
-		reconciliationType string,
-		account *types.AccountIdentifier,
-		currency *types.Currency,
-		computedBalance string,
-		liveBalance string,
-		block *types.BlockIdentifier,
-		exemption *types.BalanceExemption,
-	) error
-
-	ReconciliationSkipped(
-		ctx context.Context,
-		reconciliationType string,
-		account *types.AccountIdentifier,
-		currency *types.Currency,
-		cause string,
-	) error
-}
-
-// InactiveEntry is used to track the last
-// time that an *types.AccountCurrency was reconciled.
-type InactiveEntry struct {
-	Entry     *types.AccountCurrency
-	LastCheck *types.BlockIdentifier
-}
-
-// Reconciler contains all logic to reconcile balances of
-// types.AccountIdentifiers returned in types.Operations
-// by a Rosetta Server.
-type Reconciler struct {
-	helper  Helper
-	handler Handler
-	parser  *parser.Parser
-
-	lookupBalanceByBlock bool
-	interestingAccounts  []*types.AccountCurrency
-	backlogSize          int
-	changeQueue          chan *parser.BalanceChange
-	inactiveFrequency    int64
-	debugLogging         bool
-	balancePruning       bool
-
-	// Reconciler concurrency is separated between
-	// active and inactive concurrency to allow for
-	// fine-grained tuning of reconciler behavior.
-	// When there are many transactions in a block
-	// on a resource-constrained machine (laptop),
-	// it is useful to allocate more resources to
-	// active reconciliation as it is synchronous
-	// (when lookupBalanceByBlock is enabled).
-	ActiveConcurrency   int
-	InactiveConcurrency int
-
-	// highWaterMark is used to skip requests when
-	// we are very far behind the live head.
-	highWaterMark int64
-
-	// seenAccounts are stored for inactive account
-	// reconciliation. seenAccounts must be stored
-	// separately from inactiveQueue to prevent duplicate
-	// accounts from being added to the inactive reconciliation
-	// queue. If this is not done, it is possible a goroutine
-	// could be processing an account (not in the queue) when
-	// we do a lookup to determine if we should add to the queue.
-	seenAccounts  map[string]struct{}
-	inactiveQueue []*InactiveEntry
-
-	// inactiveQueueMutex needed because we can't peek at the tip
-	// of a channel to determine when it is ready to look at.
-	inactiveQueueMutex sync.Mutex
-
-	// LastIndexChecked is the last block index reconciled actively.
-	lastIndexMutex   sync.Mutex
-	lastIndexChecked int64
-}
 
 // New creates a new Reconciler.
 func New(
@@ -272,6 +46,7 @@ func New(
 		inactiveQueue:       []*InactiveEntry{},
 		backlogSize:         defaultBacklogSize,
 		lastIndexChecked:    -1,
+		queueMap:            map[string]*utils.BST{},
 	}
 
 	for _, opt := range options {
@@ -331,6 +106,27 @@ func (r *Reconciler) wrappedInactiveEnqueue(
 	}
 }
 
+// addToqueueMap adds a *types.AccountCurrency
+// to the prune map at the provided index.
+func (r *Reconciler) addToqueueMap(
+	acctCurrency *types.AccountCurrency,
+	index int64,
+) {
+	key := types.Hash(acctCurrency)
+
+	r.queueMapMutex.Lock()
+	if _, ok := r.queueMap[key]; !ok {
+		r.queueMap[key] = &utils.BST{}
+	}
+	existing := r.queueMap[key].Get(index)
+	if existing == nil {
+		r.queueMap[key].Set(index, 1)
+	} else {
+		existing.Value++
+	}
+	r.queueMapMutex.Unlock()
+}
+
 // QueueChanges enqueues a slice of *BalanceChanges
 // for reconciliation.
 func (r *Reconciler) QueueChanges(
@@ -384,14 +180,20 @@ func (r *Reconciler) QueueChanges(
 		// Add all seen accounts to inactive reconciler queue.
 		//
 		// Note: accounts are only added if they have not been seen before.
-		err := r.inactiveAccountQueue(false, &types.AccountCurrency{
+		acctCurrency := &types.AccountCurrency{
 			Account:  change.Account,
 			Currency: change.Currency,
-		}, block)
+		}
+		err := r.inactiveAccountQueue(false, acctCurrency, block)
 		if err != nil {
 			return err
 		}
 
+		// Add change to queueMap before enqueuing to ensure
+		// there is no possible race.
+		r.addToqueueMap(acctCurrency, change.Block.Index)
+
+		// Add change to active queue
 		r.wrappedActiveEnqueue(ctx, change)
 	}
 
@@ -749,6 +551,70 @@ func (r *Reconciler) pruneBalances(ctx context.Context, change *parser.BalanceCh
 	)
 }
 
+// skipAndPrune calls the ReconciliationSkipped
+// handler and attempts to prune.
+func (r *Reconciler) skipAndPrune(
+	ctx context.Context,
+	change *parser.BalanceChange,
+	skipCause string,
+) error {
+	if err := r.handler.ReconciliationSkipped(
+		ctx,
+		ActiveReconciliation,
+		change.Account,
+		change.Currency,
+		skipCause,
+	); err != nil {
+		return err
+	}
+
+	return r.updateQueueMapAndPrune(ctx, change)
+}
+
+// updateQueueMapAndPrune removes a *parser.BalanceChange
+// from the queueMap and attempts to prune the associated
+// *types.AccountCurrency's balances, if appropriate.
+func (r *Reconciler) updateQueueMapAndPrune(
+	ctx context.Context,
+	change *parser.BalanceChange,
+) error {
+	key := types.Hash(&types.AccountCurrency{
+		Account:  change.Account,
+		Currency: change.Currency,
+	})
+
+	r.queueMapMutex.Lock()
+	existing := r.queueMap[key].Get(change.Block.Index)
+	existing.Value--
+	if existing.Value > 0 {
+		r.queueMapMutex.Unlock()
+		return nil
+	}
+
+	// Cleanup indexes when we don't need them anymore
+	r.queueMap[key].Delete(change.Block.Index)
+
+	// Don't prune if there are items for this AccountCurrency
+	// less than this change.
+	if !r.queueMap[key].Empty() &&
+		change.Block.Index >= r.queueMap[key].Min().Key {
+		r.queueMapMutex.Unlock()
+		return nil
+	}
+
+	// Cleanup keys when we don't need them anymore
+	if r.queueMap[key].Empty() {
+		delete(r.queueMap, key)
+	}
+
+	// Unlock before pruning as this could take some time
+	r.queueMapMutex.Unlock()
+
+	// Attempt to prune historical balances that will not be used
+	// anymore.
+	return r.pruneBalances(ctx, change)
+}
+
 // reconcileActiveAccounts selects an account
 // from the Reconciler account queue and
 // reconciles the balance. This is useful
@@ -765,13 +631,7 @@ func (r *Reconciler) reconcileActiveAccounts(ctx context.Context) error { // nol
 					"waiting to continue active reconciliation until reaching high water mark...",
 				)
 
-				if err := r.handler.ReconciliationSkipped(
-					ctx,
-					ActiveReconciliation,
-					balanceChange.Account,
-					balanceChange.Currency,
-					HeadBehind,
-				); err != nil {
+				if err := r.skipAndPrune(ctx, balanceChange, HeadBehind); err != nil {
 					return err
 				}
 
@@ -795,13 +655,7 @@ func (r *Reconciler) reconcileActiveAccounts(ctx context.Context) error { // nol
 				tip, tErr := r.helper.IndexAtTip(ctx, balanceChange.Block.Index)
 				switch {
 				case tErr == nil && tip:
-					if err := r.handler.ReconciliationSkipped(
-						ctx,
-						ActiveReconciliation,
-						balanceChange.Account,
-						balanceChange.Currency,
-						TipFailure,
-					); err != nil {
+					if err := r.skipAndPrune(ctx, balanceChange, TipFailure); err != nil {
 						return err
 					}
 
@@ -833,7 +687,7 @@ func (r *Reconciler) reconcileActiveAccounts(ctx context.Context) error { // nol
 
 			// Attempt to prune historical balances that will not be used
 			// anymore.
-			if err := r.pruneBalances(ctx, balanceChange); err != nil {
+			if err := r.updateQueueMapAndPrune(ctx, balanceChange); err != nil {
 				return err
 			}
 
