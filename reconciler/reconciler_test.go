@@ -930,6 +930,7 @@ func TestReconcile_SuccessOnlyActive(t *testing.T) {
 			assert.Equal(t, block2.Index, r.LastIndexReconciled())
 			mockHelper.AssertExpectations(t)
 			mockHandler.AssertExpectations(t)
+			assert.Equal(t, 0, len(r.queueMap))
 			mtxn.AssertExpectations(t)
 			mtxn2.AssertExpectations(t)
 			mtxn3.AssertExpectations(t)
@@ -2609,4 +2610,453 @@ func TestReconcile_FailureErrorIndexAtTipInactive(t *testing.T) {
 	mockHelper.AssertExpectations(t)
 	mockHandler.AssertExpectations(t)
 	mtxn.AssertExpectations(t)
+}
+
+func mockReconcilerCallsDelay(
+	mockHelper *mocks.Helper,
+	mockHandler *mocks.Handler,
+	accountCurrency *types.AccountCurrency,
+	value string, // nolint:unparam
+	headBlock *types.BlockIdentifier,
+	liveBlock *types.BlockIdentifier,
+	liveDelay int,
+) {
+	mockHelper.On("CurrentBlock", mock.Anything, mock.Anything).Return(headBlock, nil).Once()
+	lookupIndex := liveBlock.Index
+	mockHelper.On(
+		"LiveBalance",
+		mock.Anything,
+		accountCurrency.Account,
+		accountCurrency.Currency,
+		lookupIndex,
+	).Return(
+		&types.Amount{Value: value, Currency: accountCurrency.Currency},
+		headBlock,
+		nil,
+	).After(time.Duration(liveDelay) * time.Millisecond).Once()
+	mockHelper.On(
+		"CanonicalBlock",
+		mock.Anything,
+		mock.Anything,
+		headBlock,
+	).Return(
+		true,
+		nil,
+	).Once()
+	mockHelper.On(
+		"ComputedBalance",
+		mock.Anything,
+		mock.Anything,
+		accountCurrency.Account,
+		accountCurrency.Currency,
+		headBlock.Index,
+	).Return(
+		&types.Amount{Value: value, Currency: accountCurrency.Currency},
+		nil,
+	).Once()
+	mockHandler.On(
+		"ReconciliationSucceeded",
+		mock.Anything,
+		ActiveReconciliation,
+		accountCurrency.Account,
+		accountCurrency.Currency,
+		value,
+		headBlock,
+	).Return(nil).Once()
+}
+
+func TestPruningRaceCondition(t *testing.T) {
+	var (
+		block = &types.BlockIdentifier{
+			Hash:  "block 200",
+			Index: 200,
+		}
+		accountCurrency = &types.AccountCurrency{
+			Account: &types.AccountIdentifier{
+				Address: "addr 1",
+			},
+			Currency: &types.Currency{
+				Symbol:   "BTC",
+				Decimals: 8,
+			},
+		}
+		accountCurrency2 = &types.AccountCurrency{
+			Account: &types.AccountIdentifier{
+				Address: "addr 2",
+			},
+			Currency: &types.Currency{
+				Symbol:   "ETH",
+				Decimals: 18,
+			},
+		}
+		block2 = &types.BlockIdentifier{
+			Hash:  "block 300",
+			Index: 300,
+		}
+	)
+
+	mockHelper := &mocks.Helper{}
+	mockHandler := &mocks.Handler{}
+	opts := []Option{
+		WithActiveConcurrency(2),
+		WithInactiveConcurrency(0),
+		WithBalancePruning(),
+		WithLookupBalanceByBlock(),
+	}
+	r := New(
+		mockHelper,
+		mockHandler,
+		nil,
+		opts...,
+	)
+	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
+
+	mockHelper.On(
+		"PruneBalances",
+		mock.Anything,
+		accountCurrency.Account,
+		accountCurrency.Currency,
+		block.Index-safeBalancePruneDepth,
+	).Run(
+		func(args mock.Arguments) {
+			cancel()
+		},
+	).Return(
+		nil,
+	).Once()
+	mtxn := &mockStorage.DatabaseTransaction{}
+	mtxn.On("Discard", mock.Anything).Once()
+	mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn).Once()
+	mockReconcilerCallsDelay(
+		mockHelper,
+		mockHandler,
+		accountCurrency,
+		"100",
+		block2,
+		block,
+		200, // delay live response 200 ms
+	)
+
+	mockHelper.On(
+		"PruneBalances",
+		mock.Anything,
+		accountCurrency2.Account,
+		accountCurrency2.Currency,
+		block2.Index-safeBalancePruneDepth,
+	).Return(
+		nil,
+	).Once()
+	mtxn2 := &mockStorage.DatabaseTransaction{}
+	mtxn2.On("Discard", mock.Anything).Once()
+	mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn2).Once()
+	mockReconcilerCalls(
+		mockHelper,
+		mockHandler,
+		mtxn2,
+		true,
+		accountCurrency2,
+		"120",
+		"120",
+		block2,
+		block2,
+		true,
+		ActiveReconciliation,
+		nil,
+		false,
+		false,
+	)
+
+	mtxn3 := &mockStorage.DatabaseTransaction{}
+	mtxn3.On("Discard", mock.Anything).Once()
+	mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn3).Once()
+	mockReconcilerCalls(
+		mockHelper,
+		mockHandler,
+		mtxn3,
+		true,
+		accountCurrency,
+		"100",
+		"100",
+		block2,
+		block2,
+		true,
+		ActiveReconciliation,
+		nil,
+		false,
+		false,
+	)
+
+	assert.Equal(t, int64(-1), r.LastIndexReconciled())
+
+	d := make(chan struct{})
+	go func() {
+		err := r.Reconcile(ctx)
+		assert.Contains(t, context.Canceled.Error(), err.Error())
+		close(d)
+	}()
+
+	err := r.QueueChanges(ctx, block, []*parser.BalanceChange{
+		{
+			Account:  accountCurrency.Account,
+			Currency: accountCurrency.Currency,
+			Block:    block,
+		},
+	})
+	assert.NoError(t, err)
+	err = r.QueueChanges(ctx, block2, []*parser.BalanceChange{
+		{
+			Account:  accountCurrency.Account,
+			Currency: accountCurrency.Currency,
+			Block:    block2,
+		},
+		{
+			Account:  accountCurrency2.Account,
+			Currency: accountCurrency2.Currency,
+			Block:    block2,
+		},
+	})
+	assert.NoError(t, err)
+
+	<-d
+	assert.Equal(t, block2.Index, r.LastIndexReconciled())
+	assert.Equal(t, 0, len(r.queueMap))
+	mockHelper.AssertExpectations(t)
+	mockHandler.AssertExpectations(t)
+	mtxn.AssertExpectations(t)
+	mtxn2.AssertExpectations(t)
+	mtxn3.AssertExpectations(t)
+}
+
+func TestPruningHappyPath(t *testing.T) {
+	var (
+		block = &types.BlockIdentifier{
+			Hash:  "block 200",
+			Index: 200,
+		}
+		accountCurrency = &types.AccountCurrency{
+			Account: &types.AccountIdentifier{
+				Address: "addr 1",
+			},
+			Currency: &types.Currency{
+				Symbol:   "BTC",
+				Decimals: 8,
+			},
+		}
+		block2 = &types.BlockIdentifier{
+			Hash:  "block 300",
+			Index: 300,
+		}
+	)
+
+	mockHelper := &mocks.Helper{}
+	mockHandler := &mocks.Handler{}
+	opts := []Option{
+		WithActiveConcurrency(2),
+		WithInactiveConcurrency(0),
+		WithBalancePruning(),
+		WithLookupBalanceByBlock(),
+	}
+	r := New(
+		mockHelper,
+		mockHandler,
+		nil,
+		opts...,
+	)
+	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
+
+	mockHelper.On(
+		"PruneBalances",
+		mock.Anything,
+		accountCurrency.Account,
+		accountCurrency.Currency,
+		block.Index-safeBalancePruneDepth,
+	).Return(
+		nil,
+	).Once()
+	mtxn := &mockStorage.DatabaseTransaction{}
+	mtxn.On("Discard", mock.Anything).Once()
+	mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn).Once()
+	mockReconcilerCallsDelay(
+		mockHelper,
+		mockHandler,
+		accountCurrency,
+		"100",
+		block2,
+		block,
+		0,
+	)
+
+	mockHelper.On(
+		"PruneBalances",
+		mock.Anything,
+		accountCurrency.Account,
+		accountCurrency.Currency,
+		block2.Index-safeBalancePruneDepth,
+	).Run(
+		func(args mock.Arguments) {
+			cancel()
+		},
+	).Return(
+		nil,
+	).Once()
+	mtxn2 := &mockStorage.DatabaseTransaction{}
+	mtxn2.On("Discard", mock.Anything).Once()
+	mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn2).Once()
+	mockReconcilerCallsDelay(
+		mockHelper,
+		mockHandler,
+		accountCurrency,
+		"100",
+		block2,
+		block2,
+		200, // delay by 200 ms
+	)
+
+	assert.Equal(t, int64(-1), r.LastIndexReconciled())
+
+	d := make(chan struct{})
+	go func() {
+		err := r.Reconcile(ctx)
+		assert.Contains(t, context.Canceled.Error(), err.Error())
+		close(d)
+	}()
+
+	err := r.QueueChanges(ctx, block, []*parser.BalanceChange{
+		{
+			Account:  accountCurrency.Account,
+			Currency: accountCurrency.Currency,
+			Block:    block,
+		},
+	})
+	assert.NoError(t, err)
+	err = r.QueueChanges(ctx, block2, []*parser.BalanceChange{
+		{
+			Account:  accountCurrency.Account,
+			Currency: accountCurrency.Currency,
+			Block:    block2,
+		},
+	})
+	assert.NoError(t, err)
+
+	<-d
+	assert.Equal(t, block2.Index, r.LastIndexReconciled())
+	assert.Equal(t, 0, len(r.queueMap))
+	mockHelper.AssertExpectations(t)
+	mockHandler.AssertExpectations(t)
+	mtxn.AssertExpectations(t)
+	mtxn2.AssertExpectations(t)
+}
+
+func TestPruningReorg(t *testing.T) {
+	var (
+		block = &types.BlockIdentifier{
+			Hash:  "block 200",
+			Index: 200,
+		}
+		accountCurrency = &types.AccountCurrency{
+			Account: &types.AccountIdentifier{
+				Address: "addr 1",
+			},
+			Currency: &types.Currency{
+				Symbol:   "BTC",
+				Decimals: 8,
+			},
+		}
+		blockB = &types.BlockIdentifier{
+			Hash:  "block 200 B",
+			Index: 200,
+		}
+	)
+
+	mockHelper := &mocks.Helper{}
+	mockHandler := &mocks.Handler{}
+	opts := []Option{
+		WithActiveConcurrency(2),
+		WithInactiveConcurrency(0),
+		WithBalancePruning(),
+		WithLookupBalanceByBlock(),
+	}
+	r := New(
+		mockHelper,
+		mockHandler,
+		nil,
+		opts...,
+	)
+	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
+
+	mtxn := &mockStorage.DatabaseTransaction{}
+	mtxn.On("Discard", mock.Anything).Once()
+	mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn).Once()
+	mockReconcilerCallsDelay(
+		mockHelper,
+		mockHandler,
+		accountCurrency,
+		"100",
+		block,
+		block,
+		0,
+	)
+
+	mockHelper.On(
+		"PruneBalances",
+		mock.Anything,
+		accountCurrency.Account,
+		accountCurrency.Currency,
+		blockB.Index-safeBalancePruneDepth,
+	).Run(
+		func(args mock.Arguments) {
+			cancel()
+		},
+	).Return(
+		nil,
+	).Once()
+	mtxn2 := &mockStorage.DatabaseTransaction{}
+	mtxn2.On("Discard", mock.Anything).Once()
+	mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn2).Once()
+	mockReconcilerCallsDelay(
+		mockHelper,
+		mockHandler,
+		accountCurrency,
+		"100",
+		blockB,
+		blockB,
+		200, // delay by 200 ms
+	)
+
+	assert.Equal(t, int64(-1), r.LastIndexReconciled())
+
+	err := r.QueueChanges(ctx, block, []*parser.BalanceChange{
+		{
+			Account:  accountCurrency.Account,
+			Currency: accountCurrency.Currency,
+			Block:    block,
+		},
+	})
+	assert.NoError(t, err)
+	err = r.QueueChanges(ctx, blockB, []*parser.BalanceChange{
+		{
+			Account:  accountCurrency.Account,
+			Currency: accountCurrency.Currency,
+			Block:    blockB,
+		},
+	})
+	assert.NoError(t, err)
+
+	d := make(chan struct{})
+	go func() {
+		err := r.Reconcile(ctx)
+		assert.Contains(t, context.Canceled.Error(), err.Error())
+		close(d)
+	}()
+
+	<-d
+	assert.Equal(t, blockB.Index, r.LastIndexReconciled())
+	assert.Equal(t, 0, len(r.queueMap))
+	mockHelper.AssertExpectations(t)
+	mockHandler.AssertExpectations(t)
+	mtxn.AssertExpectations(t)
+	mtxn2.AssertExpectations(t)
 }
