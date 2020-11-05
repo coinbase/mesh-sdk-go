@@ -111,12 +111,15 @@ func (r *Reconciler) wrappedInactiveEnqueue(
 func (r *Reconciler) addToQueueMap(
 	acctCurrency *types.AccountCurrency,
 	index int64,
-	holdsLock bool,
+	unsafe bool,
 ) {
 	key := types.Hash(acctCurrency)
 
-	if !holdsLock {
+	// We acquire the lock for the queueMap
+	// if the call is safe.
+	if !unsafe {
 		r.queueMapMutex.Lock()
+		defer r.queueMapMutex.Unlock()
 	}
 
 	if _, ok := r.queueMap[key]; !ok {
@@ -127,10 +130,6 @@ func (r *Reconciler) addToQueueMap(
 		r.queueMap[key].Set(index, 1)
 	} else {
 		existing.Value++
-	}
-
-	if !holdsLock {
-		r.queueMapMutex.Unlock()
 	}
 }
 
