@@ -59,6 +59,16 @@ const (
 )
 
 const (
+	// pruneActiveReconciliation indicates if historical balances
+	// should be pruned during active reconciliation.
+	pruneActiveReconciliation = true
+
+	// pruneInactiveReconciliation indicates if historical balances
+	// should be pruned during inactive reconciliation.
+	pruneInactiveReconciliation = false
+)
+
+const (
 	// defaultBacklogSize is the limit of account lookups
 	// that can be enqueued to reconcile before new
 	// requests are dropped.

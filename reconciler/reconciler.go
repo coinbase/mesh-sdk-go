@@ -572,10 +572,15 @@ func (r *Reconciler) skipAndPrune(
 		return err
 	}
 
-	return r.updateQueueMap(ctx, &types.AccountCurrency{
-		Account:  change.Account,
-		Currency: change.Currency,
-	}, change.Block.Index, true)
+	return r.updateQueueMap(
+		ctx,
+		&types.AccountCurrency{
+			Account:  change.Account,
+			Currency: change.Currency,
+		},
+		change.Block.Index,
+		pruneActiveReconciliation,
+	)
 }
 
 // updateQueueMap removes a *parser.BalanceChange
@@ -697,10 +702,15 @@ func (r *Reconciler) reconcileActiveAccounts(ctx context.Context) error { // nol
 
 			// Attempt to prune historical balances that will not be used
 			// anymore.
-			if err := r.updateQueueMap(ctx, &types.AccountCurrency{
-				Account:  balanceChange.Account,
-				Currency: balanceChange.Currency,
-			}, balanceChange.Block.Index, true); err != nil {
+			if err := r.updateQueueMap(
+				ctx,
+				&types.AccountCurrency{
+					Account:  balanceChange.Account,
+					Currency: balanceChange.Currency,
+				},
+				balanceChange.Block.Index,
+				pruneActiveReconciliation,
+			); err != nil {
 				return err
 			}
 
@@ -819,7 +829,7 @@ func (r *Reconciler) reconcileInactiveAccounts( // nolint:gocognit
 						ctx,
 						nextAcct.Entry,
 						head.Index,
-						false,
+						pruneInactiveReconciliation,
 					); err != nil {
 						return err
 					}
@@ -853,7 +863,7 @@ func (r *Reconciler) reconcileInactiveAccounts( // nolint:gocognit
 				ctx,
 				nextAcct.Entry,
 				head.Index,
-				false,
+				pruneInactiveReconciliation,
 			); err != nil {
 				return err
 			}
