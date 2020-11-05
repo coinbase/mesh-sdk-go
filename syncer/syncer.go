@@ -29,13 +29,11 @@ import (
 )
 
 const (
-	// PastBlockSize is the maximum number of previously
+	// DefaultPastBlockLimit is the maximum number of previously
 	// processed blocks we keep in the syncer to handle
 	// reorgs correctly. If there is a reorg greater than
-	// PastBlockSize, it will not be handled correctly.
-	//
-	// TODO: make configurable
-	PastBlockSize = 20
+	// DefaultPastBlockLimit, it will not be handled correctly.
+	DefaultPastBlockLimit = 20
 
 	// DefaultConcurrency is the default number of
 	// blocks the syncer will try to get concurrently.
@@ -139,7 +137,8 @@ type Syncer struct {
 	//
 	// If a blockchain does not have reorgs, it is not necessary to populate
 	// the blockCache on creation.
-	pastBlocks []*types.BlockIdentifier
+	pastBlocks     []*types.BlockIdentifier
+	pastBlockLimit int
 
 	// Automatically manage concurrency based on the
 	// provided max cache size. The algorithm used here
@@ -179,6 +178,7 @@ func New(
 		sizeMultiplier: DefaultSizeMultiplier,
 		cancel:         cancel,
 		pastBlocks:     []*types.BlockIdentifier{},
+		pastBlockLimit: DefaultPastBlockLimit,
 	}
 
 	// Override defaults with any provided options
@@ -321,7 +321,7 @@ func (s *Syncer) processBlock(
 	}
 
 	s.pastBlocks = append(s.pastBlocks, block.BlockIdentifier)
-	if len(s.pastBlocks) > PastBlockSize {
+	if len(s.pastBlocks) > s.pastBlockLimit {
 		s.pastBlocks = s.pastBlocks[1:]
 	}
 	s.nextIndex = block.BlockIdentifier.Index + 1
