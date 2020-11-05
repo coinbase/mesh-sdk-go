@@ -753,7 +753,8 @@ func (r *Reconciler) reconcileInactiveAccounts( // nolint:gocognit
 
 		// Lock BST while determining if we should attempt reconciliation
 		// to ensure we don't allow any accounts to be pruned at retrieved
-		// head index.
+		// head index. Although this appears to be a long time to hold
+		// this mutex, this lookup takes less than a millisecond.
 		r.queueMapMutex.Lock()
 
 		shouldAttempt, head := r.shouldAttemptInactiveReconciliation(ctx)
@@ -845,6 +846,10 @@ func (r *Reconciler) reconcileInactiveAccounts( // nolint:gocognit
 				return err
 			}
 
+			// We always prune relative to the index we inserted
+			// into the BST. If we end up performing a reconciliation
+			// at an index after head.Index (because historical balances
+			// are disabled), we will not prune relative to it.
 			if err := r.updateQueueMapAndPrune(
 				ctx,
 				nextAcct.Entry,
