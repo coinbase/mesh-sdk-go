@@ -2624,17 +2624,19 @@ func mockReconcilerCallsDelay(
 ) {
 	mockHelper.On("CurrentBlock", mock.Anything, mock.Anything).Return(headBlock, nil).Once()
 	lookupIndex := liveBlock.Index
-	mockHelper.On(
-		"LiveBalance",
-		mock.Anything,
-		accountCurrency.Account,
-		accountCurrency.Currency,
-		lookupIndex,
-	).Return(
-		&types.Amount{Value: value, Currency: accountCurrency.Currency},
-		headBlock,
-		nil,
-	).After(time.Duration(liveDelay) * time.Millisecond).Once()
+	if liveDelay != -1 {
+		mockHelper.On(
+			"LiveBalance",
+			mock.Anything,
+			accountCurrency.Account,
+			accountCurrency.Currency,
+			lookupIndex,
+		).Return(
+			&types.Amount{Value: value, Currency: accountCurrency.Currency},
+			headBlock,
+			nil,
+		).After(time.Duration(liveDelay) * time.Millisecond).Once()
+	}
 	mockHelper.On(
 		"CanonicalBlock",
 		mock.Anything,
@@ -2655,15 +2657,17 @@ func mockReconcilerCallsDelay(
 		&types.Amount{Value: value, Currency: accountCurrency.Currency},
 		nil,
 	).Once()
-	mockHandler.On(
-		"ReconciliationSucceeded",
-		mock.Anything,
-		reconciliationType,
-		accountCurrency.Account,
-		accountCurrency.Currency,
-		value,
-		headBlock,
-	).Return(nil).Once()
+	if len(reconciliationType) != 0 {
+		mockHandler.On(
+			"ReconciliationSucceeded",
+			mock.Anything,
+			reconciliationType,
+			accountCurrency.Account,
+			accountCurrency.Currency,
+			value,
+			headBlock,
+		).Return(nil).Once()
+	}
 }
 
 func TestPruningRaceCondition(t *testing.T) {
@@ -3105,77 +3109,58 @@ func TestPruningRaceConditionInactive(t *testing.T) {
 	)
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
+	b := make(chan struct{})
+	c := make(chan time.Time)
 
 	// Start inactive fetch
 	mtxn := &mockStorage.DatabaseTransaction{}
 	mtxn.On("Discard", mock.Anything).Once()
-	a := make(chan time.Time)
-	b := make(chan time.Time)
 	mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn).Once()
 	mockHelper.On(
 		"CurrentBlock",
 		mock.Anything,
 		mtxn,
-	).WaitUntil(b).Return(blockOld, nil).Once()
+	).Return(blockOld, nil).Once()
 
-	// Active balance fetch
-	mtxn2 := &mockStorage.DatabaseTransaction{}
-	mtxn2.On(
-		"Discard",
+	// Hang on live balance fetch for inactive
+	mtxn3 := &mockStorage.DatabaseTransaction{}
+	mockHelper.On(
+		"LiveBalance",
 		mock.Anything,
+		accountCurrency.Account,
+		accountCurrency.Currency,
+		blockOld.Index,
+	).Return(
+		&types.Amount{Value: "100", Currency: accountCurrency.Currency},
+		blockOld,
+		nil,
 	).Run(
-		func(args mock.Arguments) {
-			close(a)
-		},
-	).Once()
-	mockHelper.On("DatabaseTransaction", mock.Anything).Run(
 		func(args mock.Arguments) {
 			close(b)
-		},
-	).Return(mtxn2).Once()
-	mockReconcilerCallsDelay(
-		mockHelper,
-		mockHandler,
-		accountCurrency,
-		"100",
-		block,
-		block,
-		0, // delay live response 0 ms
-		ActiveReconciliation,
-	)
+			<-c
 
-	// Finish inactive fetch
-	mtxn3 := &mockStorage.DatabaseTransaction{}
-	mockHelper.On("DatabaseTransaction", mock.Anything).WaitUntil(a).Return(mtxn3).Once()
-	mtxn3.On(
-		"Discard",
-		mock.Anything,
-	).Run(
-		func(args mock.Arguments) {
-			cancel()
+			// Finish inactive fetch
+			mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn3).Once()
+			mtxn3.On(
+				"Discard",
+				mock.Anything,
+			).Run(
+				func(args mock.Arguments) {
+					cancel()
+				},
+			).Once()
+			mockReconcilerCallsDelay(
+				mockHelper,
+				mockHandler,
+				accountCurrency,
+				"100",
+				blockOld,
+				blockOld,
+				-1, // delay live response 0 ms
+				InactiveReconciliation,
+			)
 		},
 	).Once()
-	mockReconcilerCallsDelay(
-		mockHelper,
-		mockHandler,
-		accountCurrency,
-		"100",
-		blockOld,
-		blockOld,
-		0, // delay live response 0 ms
-		InactiveReconciliation,
-	)
-
-	assert.Equal(t, int64(-1), r.LastIndexReconciled())
-
-	err := r.QueueChanges(ctx, block, []*parser.BalanceChange{
-		{
-			Account:  accountCurrency.Account,
-			Currency: accountCurrency.Currency,
-			Block:    block,
-		},
-	})
-	assert.NoError(t, err)
 
 	d := make(chan struct{})
 	go func() {
@@ -3184,8 +3169,47 @@ func TestPruningRaceConditionInactive(t *testing.T) {
 		close(d)
 	}()
 
-	// wait to queue changes until start inactive
-	<-a
+	<-b
+	// Active balance fetch
+	mtxn2 := &mockStorage.DatabaseTransaction{}
+	mtxn2.On(
+		"Discard",
+		mock.Anything,
+	).Once()
+	mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn2).Once()
+	mockReconcilerCallsDelay(
+		mockHelper,
+		mockHandler,
+		accountCurrency,
+		"100",
+		block,
+		block,
+		0, // delay live response 0 ms
+		"",
+	)
+	mockHandler.On(
+		"ReconciliationSucceeded",
+		mock.Anything,
+		ActiveReconciliation,
+		accountCurrency.Account,
+		accountCurrency.Currency,
+		"100",
+		block,
+	).Return(nil).Run(
+		func(args mock.Arguments) {
+			close(c)
+		},
+	).Once()
+
+	// Queue changes for active thread
+	err := r.QueueChanges(ctx, block, []*parser.BalanceChange{
+		{
+			Account:  accountCurrency.Account,
+			Currency: accountCurrency.Currency,
+			Block:    block,
+		},
+	})
+	assert.NoError(t, err)
 
 	<-d
 	assert.Equal(t, block.Index, r.LastIndexReconciled())
