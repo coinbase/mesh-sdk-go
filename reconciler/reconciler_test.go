@@ -3110,17 +3110,13 @@ func TestPruningRaceConditionInactive(t *testing.T) {
 	mtxn := &mockStorage.DatabaseTransaction{}
 	mtxn.On("Discard", mock.Anything).Once()
 	a := make(chan time.Time)
-	b := make(chan struct{})
+	b := make(chan time.Time)
 	mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn).Once()
 	mockHelper.On(
 		"CurrentBlock",
 		mock.Anything,
 		mtxn,
-	).Return(blockOld, nil).Run(
-		func(args mock.Arguments) {
-			<-b
-		},
-	).Once()
+	).WaitUntil(b).Return(blockOld, nil).Once()
 
 	// Active balance fetch
 	mtxn2 := &mockStorage.DatabaseTransaction{}
