@@ -26,6 +26,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const (
+	minPruningDepth = 20
+)
+
 func TestHeadBlockIdentifier(t *testing.T) {
 	var (
 		newBlockIdentifier = &types.BlockIdentifier{
@@ -319,7 +323,7 @@ func TestBlock(t *testing.T) {
 	})
 
 	t.Run("Attempt Block Pruning Before Syncing", func(t *testing.T) {
-		firstPruned, lastPruned, err := storage.Prune(ctx, 2)
+		firstPruned, lastPruned, err := storage.Prune(ctx, 2, minPruningDepth)
 		assert.Equal(t, int64(-1), firstPruned)
 		assert.Equal(t, int64(-1), lastPruned)
 		assert.True(t, errors.Is(err, ErrPruningFailed))
@@ -576,12 +580,12 @@ func TestBlock(t *testing.T) {
 	})
 
 	t.Run("Attempt Block Pruning", func(t *testing.T) {
-		firstPruned, lastPruned, err := storage.Prune(ctx, 2)
+		firstPruned, lastPruned, err := storage.Prune(ctx, 2, minPruningDepth)
 		assert.Equal(t, int64(-1), firstPruned)
 		assert.Equal(t, int64(-1), lastPruned)
 		assert.NoError(t, err)
 
-		firstPruned, lastPruned, err = storage.Prune(ctx, 100)
+		firstPruned, lastPruned, err = storage.Prune(ctx, 100, minPruningDepth)
 		assert.Equal(t, int64(-1), firstPruned)
 		assert.Equal(t, int64(-1), lastPruned)
 		assert.NoError(t, err)
@@ -619,7 +623,7 @@ func TestBlock(t *testing.T) {
 			assert.NoError(t, err)
 		}
 
-		firstPruned, lastPruned, err = storage.Prune(ctx, 100)
+		firstPruned, lastPruned, err = storage.Prune(ctx, 100, minPruningDepth)
 		assert.Equal(t, int64(0), firstPruned)
 		assert.Equal(t, int64(100), lastPruned)
 		assert.NoError(t, err)
@@ -699,7 +703,7 @@ func TestManyBlocks(t *testing.T) {
 		assert.Equal(t, blockIdentifier, head)
 	}
 
-	firstPruned, lastPruned, err := storage.Prune(ctx, 9959)
+	firstPruned, lastPruned, err := storage.Prune(ctx, 9959, minPruningDepth)
 	assert.Equal(t, int64(0), firstPruned)
 	assert.Equal(t, int64(9959), lastPruned)
 	assert.NoError(t, err)
@@ -727,7 +731,7 @@ func TestCreateBlockCache(t *testing.T) {
 	storage := NewBlockStorage(database)
 
 	t.Run("no blocks processed", func(t *testing.T) {
-		assert.Equal(t, []*types.BlockIdentifier{}, storage.CreateBlockCache(ctx))
+		assert.Equal(t, []*types.BlockIdentifier{}, storage.CreateBlockCache(ctx, minPruningDepth))
 	})
 
 	t.Run("1 block processed", func(t *testing.T) {
@@ -736,7 +740,7 @@ func TestCreateBlockCache(t *testing.T) {
 		assert.Equal(
 			t,
 			[]*types.BlockIdentifier{genesisBlock.BlockIdentifier},
-			storage.CreateBlockCache(ctx),
+			storage.CreateBlockCache(ctx, minPruningDepth),
 		)
 	})
 
@@ -746,7 +750,7 @@ func TestCreateBlockCache(t *testing.T) {
 		assert.Equal(
 			t,
 			[]*types.BlockIdentifier{genesisBlock.BlockIdentifier, newBlock.BlockIdentifier},
-			storage.CreateBlockCache(ctx),
+			storage.CreateBlockCache(ctx, minPruningDepth),
 		)
 	})
 
@@ -768,7 +772,7 @@ func TestCreateBlockCache(t *testing.T) {
 				newBlock.BlockIdentifier,
 				simpleGap.BlockIdentifier,
 			},
-			storage.CreateBlockCache(ctx),
+			storage.CreateBlockCache(ctx, minPruningDepth),
 		)
 	})
 }

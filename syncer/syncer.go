@@ -30,10 +30,10 @@ import (
 
 const (
 	// DefaultPastBlockLimit is the maximum number of previously
-	// processed blocks we keep in the syncer to handle
+	// processed block headers we keep in the syncer to handle
 	// reorgs correctly. If there is a reorg greater than
 	// DefaultPastBlockLimit, it will not be handled correctly.
-	DefaultPastBlockLimit = 20
+	DefaultPastBlockLimit = 100
 
 	// DefaultConcurrency is the default number of
 	// blocks the syncer will try to get concurrently.

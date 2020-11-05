@@ -21,7 +21,6 @@ import (
 	"log"
 	"strconv"
 
-	"github.com/coinbase/rosetta-sdk-go/syncer"
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/coinbase/rosetta-sdk-go/utils"
 
@@ -178,6 +177,7 @@ func (b *BlockStorage) GetOldestBlockIndex(
 func (b *BlockStorage) pruneBlock(
 	ctx context.Context,
 	index int64,
+	minDepth int64,
 ) (int64, error) {
 	// We create a separate transaction for each pruning attempt so that
 	// we don't hit the database tx size maximum. As a result, it is possible
@@ -202,7 +202,7 @@ func (b *BlockStorage) pruneBlock(
 
 	// Ensure we are only pruning blocks that could not be
 	// accessed later in a reorg.
-	if oldestIndex > head.Index-syncer.PastBlockSize*2 {
+	if oldestIndex > head.Index-minDepth {
 		return -1, ErrNothingToPrune
 	}
 
@@ -259,12 +259,13 @@ func (b *BlockStorage) pruneBlock(
 func (b *BlockStorage) Prune(
 	ctx context.Context,
 	index int64,
+	minDepth int64,
 ) (int64, int64, error) {
 	firstPruned := int64(-1)
 	lastPruned := int64(-1)
 
 	for ctx.Err() == nil {
-		prunedBlock, err := b.pruneBlock(ctx, index)
+		prunedBlock, err := b.pruneBlock(ctx, index, minDepth)
 		if errors.Is(err, ErrNothingToPrune) {
 			return firstPruned, lastPruned, nil
 		}
@@ -805,14 +806,14 @@ func (b *BlockStorage) SetNewStartIndex(
 
 // CreateBlockCache populates a slice of blocks with the most recent
 // ones in storage.
-func (b *BlockStorage) CreateBlockCache(ctx context.Context) []*types.BlockIdentifier {
+func (b *BlockStorage) CreateBlockCache(ctx context.Context, blocks int) []*types.BlockIdentifier {
 	cache := []*types.BlockIdentifier{}
 	head, err := b.GetHeadBlockIdentifier(ctx)
 	if err != nil {
 		return cache
 	}
 
-	for len(cache) < syncer.PastBlockSize {
+	for len(cache) < blocks {
 		block, err := b.GetBlock(ctx, types.ConstructPartialBlockIdentifier(head))
 		if err != nil {
 			return cache
