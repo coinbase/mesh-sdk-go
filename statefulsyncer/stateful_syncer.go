@@ -32,14 +32,13 @@ var _ syncer.Handler = (*StatefulSyncer)(nil)
 var _ syncer.Helper = (*StatefulSyncer)(nil)
 
 const (
-	// DefaultPruningDepth is the depth from tip
-	// we attempt to prune. A large pruning depth here
-	// protects us from re-orgs.
-	DefaultPruningDepth = int64(100) // nolint:gomnd
-
 	// pruneSleepTime is how long we sleep between
 	// pruning attempts.
 	pruneSleepTime = 10 * time.Second
+
+	// pruneBuffer is the cushion we apply to pastBlockLimit
+	// when pruning.
+	pruneBuffer = 2
 )
 
 // StatefulSyncer is an abstraction layer over
@@ -57,6 +56,7 @@ type StatefulSyncer struct {
 	workers        []storage.BlockWorker
 	cacheSize      int
 	maxConcurrency int64
+	pastBlockLimit int
 }
 
 // Logger is used by the statefulsyncer to
@@ -89,6 +89,7 @@ func New(
 	workers []storage.BlockWorker,
 	cacheSize int,
 	maxConcurrency int64,
+	pastBlockLimit int,
 ) *StatefulSyncer {
 	return &StatefulSyncer{
 		network:        network,
@@ -100,6 +101,7 @@ func New(
 		logger:         logger,
 		cacheSize:      cacheSize,
 		maxConcurrency: maxConcurrency,
+		pastBlockLimit: pastBlockLimit,
 	}
 }
 
@@ -123,7 +125,7 @@ func (s *StatefulSyncer) Sync(ctx context.Context, startIndex int64, endIndex in
 	// If previously processed blocks exist in storage, they are fetched.
 	// Otherwise, none are provided to the cache (the syncer will not attempt
 	// a reorg if the cache is empty).
-	pastBlocks := s.blockStorage.CreateBlockCache(ctx)
+	pastBlocks := s.blockStorage.CreateBlockCache(ctx, s.pastBlockLimit)
 
 	syncer := syncer.New(
 		s.network,
@@ -176,7 +178,11 @@ func (s *StatefulSyncer) Prune(ctx context.Context, helper PruneHelper) error {
 			continue
 		}
 
-		firstPruned, lastPruned, err := s.blockStorage.Prune(ctx, pruneableIndex)
+		firstPruned, lastPruned, err := s.blockStorage.Prune(
+			ctx,
+			pruneableIndex,
+			int64(s.pastBlockLimit)*pruneBuffer, // we should be very cautious about pruning
+		)
 		if err != nil {
 			return err
 		}
