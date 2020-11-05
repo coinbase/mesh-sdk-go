@@ -397,6 +397,17 @@ func (s *Syncer) fetchBlockResult(
 	return br, nil
 }
 
+// safeExit ensures we lower the concurrency in a lock while
+// exiting. This prevents us from accidentally increasing concurrency
+// when we are shutting down.
+func (s *Syncer) safeExit(err error) error {
+	s.concurrencyLock.Lock()
+	s.concurrency--
+	s.concurrencyLock.Unlock()
+
+	return err
+}
+
 // fetchChannelBlocks fetches blocks from a
 // channel with retries until there are no
 // more blocks in the channel or there is an
@@ -414,13 +425,13 @@ func (s *Syncer) fetchChannelBlocks(
 			b,
 		)
 		if err != nil {
-			return fmt.Errorf("%w %d: %v", ErrFetchBlockFailed, b, err)
+			return s.safeExit(fmt.Errorf("%w %d: %v", ErrFetchBlockFailed, b, err))
 		}
 
 		select {
 		case results <- br:
 		case <-ctx.Done():
-			return ctx.Err()
+			return s.safeExit(ctx.Err())
 		}
 
 		// Exit if concurrency is greater than
@@ -437,7 +448,7 @@ func (s *Syncer) fetchChannelBlocks(
 		}
 	}
 
-	return nil
+	return s.safeExit(nil)
 }
 
 // processBlocks is invoked whenever a new block is fetched. It attempts
@@ -513,7 +524,11 @@ func (s *Syncer) adjustWorkers() bool {
 	}
 	max := float64(maxSize) * s.sizeMultiplier
 
-	s.concurrencyLock.Lock()
+	// Check if we have entered shutdown
+	// and return false if we have.
+	if s.concurrency == 0 {
+		return false
+	}
 
 	// multiply average block size by concurrency
 	estimatedMaxCache := max * float64(s.concurrency)
@@ -554,7 +569,6 @@ func (s *Syncer) adjustWorkers() bool {
 			)
 		}
 	}
-	s.concurrencyLock.Unlock()
 
 	// Remove first element in array if
 	// we are over our trailing window.
@@ -632,22 +646,30 @@ func (s *Syncer) syncRange(
 		// Determine if concurrency should be adjusted.
 		s.recentBlockSizes = append(s.recentBlockSizes, utils.SizeOf(b))
 		s.lastAdjustment++
+
+		s.concurrencyLock.Lock()
 		shouldCreate := s.adjustWorkers()
 		if !shouldCreate {
+			s.concurrencyLock.Unlock()
 			continue
 		}
 
-		// If we have finished loading blocks, we should avoid
+		// If we have finished loading blocks or the pipelineCtx
+		// has an error (like context.Canceled), we should avoid
 		// creating more goroutines (as there is a chance that
 		// Wait has returned). Attempting to create more goroutines
 		// after Wait has returned will cause a panic.
 		s.doneLoadingLock.Lock()
-		if !s.doneLoading {
+		if !s.doneLoading && pipelineCtx.Err() == nil {
 			g.Go(func() error {
 				return s.fetchChannelBlocks(pipelineCtx, s.network, blockIndices, results)
 			})
 		}
 		s.doneLoadingLock.Unlock()
+
+		// Hold concurrencyLock until after we attempt to create another
+		// new goroutine in the case we accidentally go to 0 during shutdown.
+		s.concurrencyLock.Unlock()
 	}
 
 	err := g.Wait()
