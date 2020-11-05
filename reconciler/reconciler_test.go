@@ -3110,7 +3110,7 @@ func TestPruningRaceConditionInactive(t *testing.T) {
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
 	b := make(chan struct{})
-	c := make(chan time.Time)
+	c := make(chan struct{})
 
 	// Start inactive fetch
 	mtxn := &mockStorage.DatabaseTransaction{}
