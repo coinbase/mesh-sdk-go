@@ -572,19 +572,20 @@ func (r *Reconciler) skipAndPrune(
 		return err
 	}
 
-	return r.updateQueueMapAndPrune(ctx, &types.AccountCurrency{
+	return r.updateQueueMap(ctx, &types.AccountCurrency{
 		Account:  change.Account,
 		Currency: change.Currency,
-	}, change.Block.Index)
+	}, change.Block.Index, true)
 }
 
-// updateQueueMapAndPrune removes a *parser.BalanceChange
+// updateQueueMap removes a *parser.BalanceChange
 // from the queueMap and attempts to prune the associated
 // *types.AccountCurrency's balances, if appropriate.
-func (r *Reconciler) updateQueueMapAndPrune(
+func (r *Reconciler) updateQueueMap(
 	ctx context.Context,
 	acctCurrency *types.AccountCurrency,
 	index int64,
+	prune bool,
 ) error {
 	key := types.Hash(acctCurrency)
 
@@ -617,6 +618,10 @@ func (r *Reconciler) updateQueueMapAndPrune(
 
 	// Attempt to prune historical balances that will not be used
 	// anymore.
+	if !prune {
+		return nil
+	}
+
 	return r.pruneBalances(ctx, acctCurrency, index)
 }
 
@@ -692,10 +697,10 @@ func (r *Reconciler) reconcileActiveAccounts(ctx context.Context) error { // nol
 
 			// Attempt to prune historical balances that will not be used
 			// anymore.
-			if err := r.updateQueueMapAndPrune(ctx, &types.AccountCurrency{
+			if err := r.updateQueueMap(ctx, &types.AccountCurrency{
 				Account:  balanceChange.Account,
 				Currency: balanceChange.Currency,
-			}, balanceChange.Block.Index); err != nil {
+			}, balanceChange.Block.Index, true); err != nil {
 				return err
 			}
 
@@ -810,10 +815,11 @@ func (r *Reconciler) reconcileInactiveAccounts( // nolint:gocognit
 						return err
 					}
 
-					if err := r.updateQueueMapAndPrune(
+					if err := r.updateQueueMap(
 						ctx,
 						nextAcct.Entry,
 						head.Index,
+						false,
 					); err != nil {
 						return err
 					}
@@ -843,10 +849,11 @@ func (r *Reconciler) reconcileInactiveAccounts( // nolint:gocognit
 			// into the BST. If we end up performing a reconciliation
 			// at an index after head.Index (because historical balances
 			// are disabled), we will not prune relative to it.
-			if err := r.updateQueueMapAndPrune(
+			if err := r.updateQueueMap(
 				ctx,
 				nextAcct.Entry,
 				head.Index,
+				false,
 			); err != nil {
 				return err
 			}
