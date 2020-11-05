@@ -3106,12 +3106,11 @@ func TestPruningRaceConditionInactive(t *testing.T) {
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
 
-	// Start inactive fetch -> perform active then prune -> finish inactive fetch
-
 	// Start inactive fetch
 	mtxn := &mockStorage.DatabaseTransaction{}
 	mtxn.On("Discard", mock.Anything).Once()
 	a := make(chan time.Time)
+	b := make(chan struct{})
 	mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn).Once()
 	mockHelper.On(
 		"CurrentBlock",
@@ -3119,7 +3118,7 @@ func TestPruningRaceConditionInactive(t *testing.T) {
 		mtxn,
 	).Return(blockOld, nil).Run(
 		func(args mock.Arguments) {
-			time.Sleep(time.Second)
+			<-b
 		},
 	).Once()
 
@@ -3133,7 +3132,11 @@ func TestPruningRaceConditionInactive(t *testing.T) {
 			close(a)
 		},
 	).Once()
-	mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn2).Once()
+	mockHelper.On("DatabaseTransaction", mock.Anything).Run(
+		func(args mock.Arguments) {
+			close(b)
+		},
+	).Return(mtxn2).Once()
 	mockReconcilerCallsDelay(
 		mockHelper,
 		mockHandler,
