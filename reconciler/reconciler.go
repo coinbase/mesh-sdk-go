@@ -111,20 +111,12 @@ func (r *Reconciler) wrappedInactiveEnqueue(
 func (r *Reconciler) addToQueueMap(
 	acctCurrency *types.AccountCurrency,
 	index int64,
-	unsafe bool,
 ) {
 	key := types.Hash(acctCurrency)
-
-	// We acquire the lock for the queueMap
-	// if the call is safe.
-	if !unsafe {
-		r.queueMapMutex.Lock()
-		defer r.queueMapMutex.Unlock()
-	}
-
 	if _, ok := r.queueMap[key]; !ok {
 		r.queueMap[key] = &utils.BST{}
 	}
+
 	existing := r.queueMap[key].Get(index)
 	if existing == nil {
 		r.queueMap[key].Set(index, 1)
@@ -197,7 +189,9 @@ func (r *Reconciler) QueueChanges(
 
 		// Add change to queueMap before enqueuing to ensure
 		// there is no possible race.
-		r.addToQueueMap(acctCurrency, change.Block.Index, false)
+		r.queueMapMutex.Lock()
+		r.addToQueueMap(acctCurrency, change.Block.Index)
+		r.queueMapMutex.Unlock()
 
 		// Add change to active queue
 		r.wrappedActiveEnqueue(ctx, change)
@@ -787,7 +781,7 @@ func (r *Reconciler) reconcileInactiveAccounts( // nolint:gocognit
 
 			// Add nextAcct to queueMap before returning
 			// queueMapMutex lock.
-			r.addToQueueMap(nextAcct.Entry, head.Index, true)
+			r.addToQueueMap(nextAcct.Entry, head.Index)
 			r.queueMapMutex.Unlock()
 
 			amount, block, err := r.bestLiveBalance(
