@@ -664,6 +664,8 @@ func (s *Syncer) syncRange(
 			g.Go(func() error {
 				return s.fetchChannelBlocks(pipelineCtx, s.network, blockIndices, results)
 			})
+		} else {
+			s.concurrency--
 		}
 		s.doneLoadingLock.Unlock()
 
