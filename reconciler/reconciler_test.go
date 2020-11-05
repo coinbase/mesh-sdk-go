@@ -3151,6 +3151,10 @@ func TestPruningRaceConditionInactive(t *testing.T) {
 	mtxn3.On(
 		"Discard",
 		mock.Anything,
+	).Run(
+		func(args mock.Arguments) {
+			cancel()
+		},
 	).Once()
 	mockReconcilerCallsDelay(
 		mockHelper,
@@ -3162,19 +3166,6 @@ func TestPruningRaceConditionInactive(t *testing.T) {
 		0, // delay live response 0 ms
 		InactiveReconciliation,
 	)
-	mockHelper.On(
-		"PruneBalances",
-		mock.Anything,
-		accountCurrency.Account,
-		accountCurrency.Currency,
-		blockOld.Index-safeBalancePruneDepth,
-	).Run(
-		func(args mock.Arguments) {
-			cancel()
-		},
-	).Return(
-		nil,
-	).Once()
 
 	assert.Equal(t, int64(-1), r.LastIndexReconciled())
 
