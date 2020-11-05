@@ -473,12 +473,15 @@ func TestSync_NoReorg(t *testing.T) {
 			nil,
 		).Run(func(args mock.Arguments) {
 			assertNotCanceled(t, args)
+			if index == 1100 {
+				assert.Equal(t, int64(3), syncer.concurrency)
+			}
 		}).Once()
 	}
 
 	err := syncer.Sync(ctx, -1, 1200)
 	assert.NoError(t, err)
-	assert.Equal(t, syncer.concurrency, int64(3))
+	assert.Equal(t, int64(0), syncer.concurrency)
 	mockHelper.AssertExpectations(t)
 	mockHandler.AssertExpectations(t)
 }
@@ -522,12 +525,15 @@ func TestSync_SpecificStart(t *testing.T) {
 			nil,
 		).Run(func(args mock.Arguments) {
 			assertNotCanceled(t, args)
+			if b.BlockIdentifier.Index == 1100 {
+				assert.True(t, syncer.concurrency > DefaultConcurrency)
+			}
 		}).Once()
 	}
 
 	err := syncer.Sync(ctx, 100, 1200)
 	assert.NoError(t, err)
-	assert.True(t, syncer.concurrency > DefaultConcurrency)
+	assert.Equal(t, int64(0), syncer.concurrency)
 	mockHelper.AssertNumberOfCalls(t, "NetworkStatus", 3)
 	mockHelper.AssertExpectations(t)
 	mockHandler.AssertExpectations(t)
@@ -590,6 +596,7 @@ func TestSync_Cancel(t *testing.T) {
 
 	err := syncer.Sync(ctx, -1, 1200)
 	assert.True(t, errors.Is(err, context.Canceled))
+	assert.Equal(t, int64(0), syncer.concurrency)
 }
 
 func TestSync_Reorg(t *testing.T) {
@@ -712,6 +719,9 @@ func TestSync_Reorg(t *testing.T) {
 			nil,
 		).Run(func(args mock.Arguments) {
 			assertNotCanceled(t, args)
+			if b.BlockIdentifier.Index == 1100 {
+				assert.True(t, syncer.concurrency > DefaultConcurrency)
+			}
 		}).Once()
 	}
 
@@ -724,7 +734,7 @@ func TestSync_Reorg(t *testing.T) {
 
 	err := syncer.Sync(ctx, -1, 1200)
 	assert.NoError(t, err)
-	assert.True(t, syncer.concurrency > DefaultConcurrency)
+	assert.Equal(t, int64(0), syncer.concurrency)
 	mockHelper.AssertNumberOfCalls(t, "NetworkStatus", 3)
 	mockHelper.AssertExpectations(t)
 	mockHandler.AssertExpectations(t)
@@ -818,6 +828,9 @@ func TestSync_ManualReorg(t *testing.T) {
 			b,
 		).Run(func(args mock.Arguments) {
 			assertNotCanceled(t, args)
+			if b.BlockIdentifier.Index == 1100 {
+				assert.True(t, syncer.concurrency > DefaultConcurrency)
+			}
 		}).Return(
 			nil,
 		).Once()
@@ -830,7 +843,7 @@ func TestSync_ManualReorg(t *testing.T) {
 
 	err := syncer.Sync(ctx, -1, 1200)
 	assert.NoError(t, err)
-	assert.True(t, syncer.concurrency > DefaultConcurrency)
+	assert.Equal(t, int64(0), syncer.concurrency)
 	mockHelper.AssertNumberOfCalls(t, "NetworkStatus", 3)
 	mockHelper.AssertExpectations(t)
 	mockHandler.AssertExpectations(t)
@@ -902,8 +915,8 @@ func TestSync_Dynamic(t *testing.T) {
 			b,
 			nil,
 		).Run(func(args mock.Arguments) {
-			if index == 1 {
-				assert.Equal(t, syncer.concurrency, int64(2))
+			if index == 100 {
+				assert.Equal(t, int64(1), syncer.concurrency)
 			}
 			assertNotCanceled(t, args)
 		}).Once()
@@ -925,7 +938,7 @@ func TestSync_Dynamic(t *testing.T) {
 
 	err := syncer.Sync(ctx, -1, 200)
 	assert.NoError(t, err)
-	assert.Equal(t, syncer.concurrency, int64(1))
+	assert.Equal(t, int64(0), syncer.concurrency)
 	mockHelper.AssertExpectations(t)
 	mockHandler.AssertExpectations(t)
 }
@@ -983,8 +996,8 @@ func TestSync_DynamicOverhead(t *testing.T) {
 			b,
 			nil,
 		).Run(func(args mock.Arguments) {
-			if index == 1 {
-				assert.Equal(t, syncer.concurrency, int64(2))
+			if index == 100 {
+				assert.Equal(t, int64(1), syncer.concurrency)
 			}
 			assertNotCanceled(t, args)
 		}).Once()
@@ -1006,7 +1019,7 @@ func TestSync_DynamicOverhead(t *testing.T) {
 
 	err := syncer.Sync(ctx, -1, 200)
 	assert.NoError(t, err)
-	assert.Equal(t, syncer.concurrency, int64(1))
+	assert.Equal(t, int64(0), syncer.concurrency)
 	mockHelper.AssertExpectations(t)
 	mockHandler.AssertExpectations(t)
 }
