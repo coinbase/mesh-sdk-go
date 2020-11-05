@@ -106,25 +106,23 @@ func (r *Reconciler) wrappedInactiveEnqueue(
 	}
 }
 
-// addToqueueMap adds a *types.AccountCurrency
+// addToQueueMap adds a *types.AccountCurrency
 // to the prune map at the provided index.
-func (r *Reconciler) addToqueueMap(
+func (r *Reconciler) addToQueueMap(
 	acctCurrency *types.AccountCurrency,
 	index int64,
 ) {
 	key := types.Hash(acctCurrency)
-
-	r.queueMapMutex.Lock()
 	if _, ok := r.queueMap[key]; !ok {
 		r.queueMap[key] = &utils.BST{}
 	}
+
 	existing := r.queueMap[key].Get(index)
 	if existing == nil {
 		r.queueMap[key].Set(index, 1)
 	} else {
 		existing.Value++
 	}
-	r.queueMapMutex.Unlock()
 }
 
 // QueueChanges enqueues a slice of *BalanceChanges
@@ -191,7 +189,9 @@ func (r *Reconciler) QueueChanges(
 
 		// Add change to queueMap before enqueuing to ensure
 		// there is no possible race.
-		r.addToqueueMap(acctCurrency, change.Block.Index)
+		r.queueMapMutex.Lock()
+		r.addToQueueMap(acctCurrency, change.Block.Index)
+		r.queueMapMutex.Unlock()
 
 		// Add change to active queue
 		r.wrappedActiveEnqueue(ctx, change)
@@ -538,16 +538,20 @@ func (r *Reconciler) updateLastChecked(index int64) {
 	}
 }
 
-func (r *Reconciler) pruneBalances(ctx context.Context, change *parser.BalanceChange) error {
+func (r *Reconciler) pruneBalances(
+	ctx context.Context,
+	acctCurrency *types.AccountCurrency,
+	index int64,
+) error {
 	if !r.balancePruning {
 		return nil
 	}
 
 	return r.helper.PruneBalances(
 		ctx,
-		change.Account,
-		change.Currency,
-		change.Block.Index-safeBalancePruneDepth,
+		acctCurrency.Account,
+		acctCurrency.Currency,
+		index-safeBalancePruneDepth,
 	)
 }
 
@@ -568,7 +572,10 @@ func (r *Reconciler) skipAndPrune(
 		return err
 	}
 
-	return r.updateQueueMapAndPrune(ctx, change)
+	return r.updateQueueMapAndPrune(ctx, &types.AccountCurrency{
+		Account:  change.Account,
+		Currency: change.Currency,
+	}, change.Block.Index)
 }
 
 // updateQueueMapAndPrune removes a *parser.BalanceChange
@@ -576,15 +583,13 @@ func (r *Reconciler) skipAndPrune(
 // *types.AccountCurrency's balances, if appropriate.
 func (r *Reconciler) updateQueueMapAndPrune(
 	ctx context.Context,
-	change *parser.BalanceChange,
+	acctCurrency *types.AccountCurrency,
+	index int64,
 ) error {
-	key := types.Hash(&types.AccountCurrency{
-		Account:  change.Account,
-		Currency: change.Currency,
-	})
+	key := types.Hash(acctCurrency)
 
 	r.queueMapMutex.Lock()
-	existing := r.queueMap[key].Get(change.Block.Index)
+	existing := r.queueMap[key].Get(index)
 	existing.Value--
 	if existing.Value > 0 {
 		r.queueMapMutex.Unlock()
@@ -592,12 +597,12 @@ func (r *Reconciler) updateQueueMapAndPrune(
 	}
 
 	// Cleanup indexes when we don't need them anymore
-	r.queueMap[key].Delete(change.Block.Index)
+	r.queueMap[key].Delete(index)
 
 	// Don't prune if there are items for this AccountCurrency
 	// less than this change.
 	if !r.queueMap[key].Empty() &&
-		change.Block.Index >= r.queueMap[key].Min().Key {
+		index >= r.queueMap[key].Min().Key {
 		r.queueMapMutex.Unlock()
 		return nil
 	}
@@ -612,7 +617,7 @@ func (r *Reconciler) updateQueueMapAndPrune(
 
 	// Attempt to prune historical balances that will not be used
 	// anymore.
-	return r.pruneBalances(ctx, change)
+	return r.pruneBalances(ctx, acctCurrency, index)
 }
 
 // reconcileActiveAccounts selects an account
@@ -687,7 +692,10 @@ func (r *Reconciler) reconcileActiveAccounts(ctx context.Context) error { // nol
 
 			// Attempt to prune historical balances that will not be used
 			// anymore.
-			if err := r.updateQueueMapAndPrune(ctx, balanceChange); err != nil {
+			if err := r.updateQueueMapAndPrune(ctx, &types.AccountCurrency{
+				Account:  balanceChange.Account,
+				Currency: balanceChange.Currency,
+			}, balanceChange.Block.Index); err != nil {
 				return err
 			}
 
@@ -736,8 +744,15 @@ func (r *Reconciler) reconcileInactiveAccounts( // nolint:gocognit
 			return ctx.Err()
 		}
 
+		// Lock BST while determining if we should attempt reconciliation
+		// to ensure we don't allow any accounts to be pruned at retrieved
+		// head index. Although this appears to be a long time to hold
+		// this mutex, this lookup takes less than a millisecond.
+		r.queueMapMutex.Lock()
+
 		shouldAttempt, head := r.shouldAttemptInactiveReconciliation(ctx)
 		if !shouldAttempt {
+			r.queueMapMutex.Unlock()
 			time.Sleep(inactiveReconciliationSleep)
 			continue
 		}
@@ -746,6 +761,7 @@ func (r *Reconciler) reconcileInactiveAccounts( // nolint:gocognit
 		queueLen := len(r.inactiveQueue)
 		if queueLen == 0 {
 			r.inactiveQueueMutex.Unlock()
+			r.queueMapMutex.Unlock()
 			r.debugLog(
 				"no accounts ready for inactive reconciliation (0 accounts in queue)",
 			)
@@ -763,6 +779,11 @@ func (r *Reconciler) reconcileInactiveAccounts( // nolint:gocognit
 			r.inactiveQueue = r.inactiveQueue[1:]
 			r.inactiveQueueMutex.Unlock()
 
+			// Add nextAcct to queueMap before returning
+			// queueMapMutex lock.
+			r.addToQueueMap(nextAcct.Entry, head.Index)
+			r.queueMapMutex.Unlock()
+
 			amount, block, err := r.bestLiveBalance(
 				ctx,
 				nextAcct.Entry.Account,
@@ -772,7 +793,6 @@ func (r *Reconciler) reconcileInactiveAccounts( // nolint:gocognit
 			if err != nil {
 				// Ensure we don't leak reconciliations
 				r.wrappedInactiveEnqueue(nextAcct.Entry, block)
-
 				if errors.Is(err, context.Canceled) {
 					return err
 				}
@@ -786,6 +806,14 @@ func (r *Reconciler) reconcileInactiveAccounts( // nolint:gocognit
 						nextAcct.Entry.Account,
 						nextAcct.Entry.Currency,
 						TipFailure,
+					); err != nil {
+						return err
+					}
+
+					if err := r.updateQueueMapAndPrune(
+						ctx,
+						nextAcct.Entry,
+						head.Index,
 					); err != nil {
 						return err
 					}
@@ -811,6 +839,18 @@ func (r *Reconciler) reconcileInactiveAccounts( // nolint:gocognit
 				return err
 			}
 
+			// We always prune relative to the index we inserted
+			// into the BST. If we end up performing a reconciliation
+			// at an index after head.Index (because historical balances
+			// are disabled), we will not prune relative to it.
+			if err := r.updateQueueMapAndPrune(
+				ctx,
+				nextAcct.Entry,
+				head.Index,
+			); err != nil {
+				return err
+			}
+
 			// Always re-enqueue accounts after they have been inactively
 			// reconciled. If we don't re-enqueue, we will never check
 			// these accounts again.
@@ -820,6 +860,7 @@ func (r *Reconciler) reconcileInactiveAccounts( // nolint:gocognit
 			}
 		} else {
 			r.inactiveQueueMutex.Unlock()
+			r.queueMapMutex.Unlock()
 			r.debugLog(
 				"no accounts ready for inactive reconciliation (%d accounts in queue, will reconcile next account at index %d)",
 				queueLen,
