@@ -35,6 +35,10 @@ const (
 	// pruneSleepTime is how long we sleep between
 	// pruning attempts.
 	pruneSleepTime = 10 * time.Second
+
+	// pruneBuffer is the cushion we apply to pastBlockLimit
+	// when pruning.
+	pruneBuffer = 2
 )
 
 // StatefulSyncer is an abstraction layer over
@@ -177,7 +181,7 @@ func (s *StatefulSyncer) Prune(ctx context.Context, helper PruneHelper) error {
 		firstPruned, lastPruned, err := s.blockStorage.Prune(
 			ctx,
 			pruneableIndex,
-			int64(s.pastBlockLimit),
+			int64(s.pastBlockLimit)*pruneBuffer, // we should be very cautious about pruning
 		)
 		if err != nil {
 			return err
