@@ -45,6 +45,13 @@ func WithPastBlocks(blocks []*types.BlockIdentifier) Option {
 	}
 }
 
+// WithPastBlockLimit overrides the default past block limit
+func WithPastBlockLimit(blocks int) Option {
+	return func(s *Syncer) {
+		s.pastBlockLimit = blocks
+	}
+}
+
 // WithMaxConcurrency overrides the default max concurrency.
 func WithMaxConcurrency(concurrency int64) Option {
 	return func(s *Syncer) {
