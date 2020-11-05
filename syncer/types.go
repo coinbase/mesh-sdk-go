@@ -108,6 +108,7 @@ type Syncer struct {
 
 	// Used to keep track of sync state
 	genesisBlock *types.BlockIdentifier
+	tip          *types.BlockIdentifier
 	nextIndex    int64
 
 	// To ensure reorgs are handled correctly, the syncer must be able

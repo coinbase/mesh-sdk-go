@@ -101,6 +101,9 @@ func (s *Syncer) nextSyncableRange(
 		return -1, false, fmt.Errorf("%w: %v", ErrGetNetworkStatusFailed, err)
 	}
 
+	// Update the syncer's known tip
+	s.tip = networkStatus.CurrentBlockIdentifier
+
 	if endIndex == -1 || endIndex > networkStatus.CurrentBlockIdentifier.Index {
 		endIndex = networkStatus.CurrentBlockIdentifier.Index
 	}
@@ -548,6 +551,17 @@ func (s *Syncer) syncRange(
 	}
 
 	return nil
+}
+
+// Tip returns the last observed tip. The tip is recorded
+// at the start of each sync range and should only be thought
+// of as a best effort approximation of tip.
+//
+// This can be very helpful to callers who want to know
+// an approximation of tip very frequently (~every second)
+// but don't want to implement their own caching logic.
+func (s *Syncer) Tip() *types.BlockIdentifier {
+	return s.tip
 }
 
 // Sync cycles endlessly until there is an error
