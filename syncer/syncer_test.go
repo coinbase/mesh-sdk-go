@@ -419,6 +419,9 @@ func TestSync_NoReorg(t *testing.T) {
 	mockHandler := &mocks.Handler{}
 	syncer := New(networkIdentifier, mockHelper, mockHandler, cancel, WithMaxConcurrency(3))
 
+	// Tip should be nil before we start syncing
+	assert.Nil(t, syncer.Tip())
+
 	// Force syncer to only get part of the way through the full range
 	mockHelper.On("NetworkStatus", ctx, networkIdentifier).Return(&types.NetworkStatusResponse{
 		CurrentBlockIdentifier: &types.BlockIdentifier{
@@ -475,6 +478,19 @@ func TestSync_NoReorg(t *testing.T) {
 			assertNotCanceled(t, args)
 			if index == 1100 {
 				assert.Equal(t, int64(3), syncer.concurrency)
+			}
+
+			// Test tip method
+			if index > 200 {
+				assert.Equal(t, &types.BlockIdentifier{
+					Hash:  "block 1300",
+					Index: 1300,
+				}, syncer.Tip())
+			} else {
+				assert.Equal(t, &types.BlockIdentifier{
+					Hash:  "block 200",
+					Index: 200,
+				}, syncer.Tip())
 			}
 		}).Once()
 	}
