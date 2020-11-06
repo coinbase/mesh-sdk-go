@@ -72,12 +72,6 @@ func AccountBalanceResponse(
 		return fmt.Errorf("%w: balance amounts are invalid", err)
 	}
 
-	if response.Coins != nil {
-		if err := Coins(response.Coins); err != nil {
-			return fmt.Errorf("%w: coins are invalid", err)
-		}
-	}
-
 	if requestBlock == nil {
 		return nil
 	}
