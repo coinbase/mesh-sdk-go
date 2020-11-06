@@ -111,3 +111,19 @@ func AccountBalanceResponse(
 
 	return nil
 }
+
+// AccountCoinsResponse returns an error if the provided
+// *types.AccountCoinsResponse is invalid.
+func AccountCoinsResponse(
+	response *types.AccountCoinsResponse,
+) error {
+	if err := BlockIdentifier(response.BlockIdentifier); err != nil {
+		return fmt.Errorf("%w: block identifier is invalid", err)
+	}
+
+	if err := Coins(response.Coins); err != nil {
+		return fmt.Errorf("%w: coins are invalid", err)
+	}
+
+	return nil
+}
