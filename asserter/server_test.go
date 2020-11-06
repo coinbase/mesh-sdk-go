@@ -201,6 +201,7 @@ var (
 		true,
 		[]*types.NetworkIdentifier{validNetworkIdentifier},
 		[]string{"eth_call"},
+		false,
 	)
 )
 
@@ -273,6 +274,7 @@ func TestNewWithOptions(t *testing.T) {
 				test.historicalBalanceLookup,
 				test.supportedNetworks,
 				test.callMethods,
+				false,
 			)
 			if test.err == nil {
 				assert.NotNil(t, thisA)
@@ -402,6 +404,7 @@ func TestAccountBalanceRequest(t *testing.T) {
 				test.allowHistorical,
 				[]*types.NetworkIdentifier{validNetworkIdentifier},
 				nil,
+				false,
 			)
 			assert.NotNil(t, asserter)
 			assert.NoError(t, err)
