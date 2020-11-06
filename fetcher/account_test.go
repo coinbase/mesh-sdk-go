@@ -64,6 +64,7 @@ func TestAccountBalanceRetry(t *testing.T) {
 		expectedAmounts     []*types.Amount
 		expectedError       error
 		retriableError      bool
+		non500Error         bool
 
 		fetcherMaxRetries uint64
 		shouldCancel      bool
@@ -83,6 +84,15 @@ func TestAccountBalanceRetry(t *testing.T) {
 			expectedAmounts:     basicAmounts,
 			fetcherMaxRetries:   5,
 			retriableError:      true,
+		},
+		"non-500 retry failures": {
+			network:             basicNetwork,
+			account:             basicAccount,
+			errorsBeforeSuccess: 2,
+			expectedBlock:       basicBlock,
+			expectedAmounts:     basicAmounts,
+			fetcherMaxRetries:   5,
+			non500Error:         true,
 		},
 		"non-retriable error": {
 			network:             basicNetwork,
@@ -134,11 +144,17 @@ func TestAccountBalanceRetry(t *testing.T) {
 				}
 
 				if tries < test.errorsBeforeSuccess {
-					w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-					w.WriteHeader(http.StatusInternalServerError)
-					fmt.Fprintln(w, types.PrettyPrintStruct(&types.Error{
-						Retriable: test.retriableError,
-					}))
+					if test.non500Error {
+						w.Header().Set("Content-Type", "html/text; charset=UTF-8")
+						w.WriteHeader(http.StatusGatewayTimeout)
+						fmt.Fprintln(w, "blah")
+					} else {
+						w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+						w.WriteHeader(http.StatusInternalServerError)
+						fmt.Fprintln(w, types.PrettyPrintStruct(&types.Error{
+							Retriable: test.retriableError,
+						}))
+					}
 					tries++
 					return
 				}
