@@ -120,8 +120,8 @@ var (
 		},
 	}
 
-	successStatus = "success"
-	failureStatus = "failure"
+	successStatus = types.String("success")
+	failureStatus = types.String("failure")
 
 	currency = &types.Currency{
 		Symbol:   "sym",
@@ -407,11 +407,11 @@ func TestCoinStorage(t *testing.T) {
 		[]string{"Transfer"},
 		[]*types.OperationStatus{
 			{
-				Status:     successStatus,
+				Status:     *successStatus,
 				Successful: true,
 			},
 			{
-				Status:     failureStatus,
+				Status:     *failureStatus,
 				Successful: false,
 			},
 		},

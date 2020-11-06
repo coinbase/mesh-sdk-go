@@ -52,10 +52,16 @@ func (c *AccountAPIController) Routes() Routes {
 			"/account/balance",
 			c.AccountBalance,
 		},
+		{
+			"AccountCoins",
+			strings.ToUpper("Post"),
+			"/account/coins",
+			c.AccountCoins,
+		},
 	}
 }
 
-// AccountBalance - Get an Account Balance
+// AccountBalance - Get an Account's Balance
 func (c *AccountAPIController) AccountBalance(w http.ResponseWriter, r *http.Request) {
 	accountBalanceRequest := &types.AccountBalanceRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&accountBalanceRequest); err != nil {
@@ -76,6 +82,36 @@ func (c *AccountAPIController) AccountBalance(w http.ResponseWriter, r *http.Req
 	}
 
 	result, serviceErr := c.service.AccountBalance(r.Context(), accountBalanceRequest)
+	if serviceErr != nil {
+		EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
+
+		return
+	}
+
+	EncodeJSONResponse(result, http.StatusOK, w)
+}
+
+// AccountCoins - Get an Account's Unspent Coins
+func (c *AccountAPIController) AccountCoins(w http.ResponseWriter, r *http.Request) {
+	accountCoinsRequest := &types.AccountCoinsRequest{}
+	if err := json.NewDecoder(r.Body).Decode(&accountCoinsRequest); err != nil {
+		EncodeJSONResponse(&types.Error{
+			Message: err.Error(),
+		}, http.StatusInternalServerError, w)
+
+		return
+	}
+
+	// Assert that AccountCoinsRequest is correct
+	if err := c.asserter.AccountCoinsRequest(accountCoinsRequest); err != nil {
+		EncodeJSONResponse(&types.Error{
+			Message: err.Error(),
+		}, http.StatusInternalServerError, w)
+
+		return
+	}
+
+	result, serviceErr := c.service.AccountCoins(r.Context(), accountCoinsRequest)
 	if serviceErr != nil {
 		EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
 

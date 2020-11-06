@@ -191,7 +191,7 @@ func TestProcess(t *testing.T) {
 						},
 						{
 							Type:       job.SetVariable,
-							Input:      `[{"operation_identifier":{"index":0},"type":"Vin","status":"","account":{{sender.account_identifier}},"amount":{"value":{{sender_amount}},"currency":{{currency}}}},{"operation_identifier":{"index":1},"type":"Vout","status":"","account":{{recipient.account_identifier}},"amount":{"value":{{recipient_amount}},"currency":{{currency}}}}]`, // nolint
+							Input:      `[{"operation_identifier":{"index":0},"type":"Vin","account":{{sender.account_identifier}},"amount":{"value":{{sender_amount}},"currency":{{currency}}}},{"operation_identifier":{"index":1},"type":"Vout","account":{{recipient.account_identifier}},"amount":{"value":{{recipient_amount}},"currency":{{currency}}}}]`, // nolint
 							OutputPath: "transfer.operations",
 						},
 					},
@@ -693,7 +693,7 @@ func TestProcess(t *testing.T) {
 			OperationIdentifier: &types.OperationIdentifier{
 				Index: 0,
 			},
-			Status: "success",
+			Status: types.String("success"),
 			Type:   "Vin",
 			Account: &types.AccountIdentifier{
 				Address: "address1",
@@ -707,7 +707,7 @@ func TestProcess(t *testing.T) {
 			OperationIdentifier: &types.OperationIdentifier{
 				Index: 1,
 			},
-			Status: "success",
+			Status: types.String("success"),
 			Type:   "Vout",
 			Account: &types.AccountIdentifier{
 				Address: "address2",
@@ -833,7 +833,7 @@ func TestProcess_Failed(t *testing.T) {
 						},
 						{
 							Type:       job.SetVariable,
-							Input:      `[{"operation_identifier":{"index":0},"type":"Vin","status":"","account":{{sender.account_identifier}},"amount":{"value":{{sender_amount}},"currency":{{currency}}}},{"operation_identifier":{"index":1},"type":"Vout","status":"","account":{{recipient.account_identifier}},"amount":{"value":{{recipient_amount}},"currency":{{currency}}}}]`, // nolint
+							Input:      `[{"operation_identifier":{"index":0},"type":"Vin","account":{{sender.account_identifier}},"amount":{"value":{{sender_amount}},"currency":{{currency}}}},{"operation_identifier":{"index":1},"type":"Vout","account":{{recipient.account_identifier}},"amount":{"value":{{recipient_amount}},"currency":{{currency}}}}]`, // nolint
 							OutputPath: "transfer.operations",
 						},
 					},
@@ -1332,7 +1332,7 @@ func TestProcess_DryRun(t *testing.T) {
 						},
 						{
 							Type:       job.SetVariable,
-							Input:      `[{"operation_identifier":{"index":0},"type":"Vin","status":"","account":{"address":"sender"},"amount":{"value":"-10","currency":{{currency}}}},{"operation_identifier":{"index":1},"type":"Vout","status":"","account":{"address":"recipient"},"amount":{"value":"5","currency":{{currency}}}}]`, // nolint
+							Input:      `[{"operation_identifier":{"index":0},"type":"Vin","account":{"address":"sender"},"amount":{"value":"-10","currency":{{currency}}}},{"operation_identifier":{"index":1},"type":"Vout","account":{"address":"recipient"},"amount":{"value":"5","currency":{{currency}}}}]`, // nolint
 							OutputPath: "transfer_1.operations",
 						},
 						{
@@ -1362,7 +1362,7 @@ func TestProcess_DryRun(t *testing.T) {
 						},
 						{
 							Type:       job.SetVariable,
-							Input:      `[{"operation_identifier":{"index":0},"type":"Vin","status":"","account":{"address":"sender"},"amount":{"value":"-10","currency":{{currency}}}},{"operation_identifier":{"index":1},"type":"Vout","status":"","account":{"address":"recipient"},"amount":{{recipient_amount}}}]`, // nolint
+							Input:      `[{"operation_identifier":{"index":0},"type":"Vin","account":{"address":"sender"},"amount":{"value":"-10","currency":{{currency}}}},{"operation_identifier":{"index":1},"type":"Vout","account":{"address":"recipient"},"amount":{{recipient_amount}}}]`, // nolint
 							OutputPath: "transfer_2.operations",
 						},
 					},
@@ -1645,7 +1645,7 @@ func TestReturnFunds_NoBalance(t *testing.T) {
 						},
 						{
 							Type:       job.SetVariable,
-							Input:      `[{"operation_identifier":{"index":0},"type":"Vin","status":"","account":{{sender.account_identifier}},"amount":{"value":{{sender_amount}},"currency":{{currency}}}},{"operation_identifier":{"index":1},"type":"Vout","status":"","account":{{recipient.account_identifier}},"amount":{"value":{{recipient_amount}},"currency":{{currency}}}}]`, // nolint
+							Input:      `[{"operation_identifier":{"index":0},"type":"Vin","account":{{sender.account_identifier}},"amount":{"value":{{sender_amount}},"currency":{{currency}}}},{"operation_identifier":{"index":1},"type":"Vout","account":{{recipient.account_identifier}},"amount":{"value":{{recipient_amount}},"currency":{{currency}}}}]`, // nolint
 							OutputPath: "transfer.operations",
 						},
 					},
@@ -1977,7 +1977,7 @@ func TestReturnFunds(t *testing.T) {
 						},
 						{
 							Type:       job.SetVariable,
-							Input:      `[{"operation_identifier":{"index":0},"type":"Vin","status":"","account":{{sender.account_identifier}},"amount":{"value":{{sender_amount}},"currency":{{currency}}}},{"operation_identifier":{"index":1},"type":"Vout","status":"","account":{"address":"address2"},"amount":{"value":{{recipient_amount}},"currency":{{currency}}}}]`, // nolint
+							Input:      `[{"operation_identifier":{"index":0},"type":"Vin","account":{{sender.account_identifier}},"amount":{"value":{{sender_amount}},"currency":{{currency}}}},{"operation_identifier":{"index":1},"type":"Vout","account":{"address":"address2"},"amount":{"value":{{recipient_amount}},"currency":{{currency}}}}]`, // nolint
 							OutputPath: "transfer.operations",
 						},
 					},
@@ -2239,7 +2239,7 @@ func TestReturnFunds(t *testing.T) {
 			OperationIdentifier: &types.OperationIdentifier{
 				Index: 0,
 			},
-			Status: "success",
+			Status: types.String("success"),
 			Type:   "Vin",
 			Account: &types.AccountIdentifier{
 				Address: "address1",
@@ -2253,7 +2253,7 @@ func TestReturnFunds(t *testing.T) {
 			OperationIdentifier: &types.OperationIdentifier{
 				Index: 1,
 			},
-			Status: "success",
+			Status: types.String("success"),
 			Type:   "Vout",
 			Account: &types.AccountIdentifier{
 				Address: "address2",
@@ -2395,7 +2395,7 @@ func TestNoReservedWorkflows(t *testing.T) {
 						},
 						{
 							Type:       job.SetVariable,
-							Input:      `[{"operation_identifier":{"index":0},"type":"Vin","status":"","account":{{sender.account_identifier}},"amount":{"value":{{sender_amount}},"currency":{{currency}}}},{"operation_identifier":{"index":1},"type":"Vout","status":"","account":{{recipient.account_identifier}},"amount":{"value":{{recipient_amount}},"currency":{{currency}}}}]`, // nolint
+							Input:      `[{"operation_identifier":{"index":0},"type":"Vin","account":{{sender.account_identifier}},"amount":{"value":{{sender_amount}},"currency":{{currency}}}},{"operation_identifier":{"index":1},"type":"Vout","account":{{recipient.account_identifier}},"amount":{"value":{{recipient_amount}},"currency":{{currency}}}}]`, // nolint
 							OutputPath: "transfer.operations",
 						},
 					},

@@ -138,17 +138,29 @@ func containsInt64(valid []int64, value int64) bool {
 
 // OperationStatus returns an error if an operation.Status
 // is not valid.
-func (a *Asserter) OperationStatus(status string) error {
+func (a *Asserter) OperationStatus(status *string, construction bool) error {
 	if a == nil {
 		return ErrAsserterNotInitialized
 	}
 
-	if status == "" {
+	if status == nil {
+		if construction {
+			return nil
+		}
+
 		return ErrOperationStatusMissing
 	}
 
-	if _, ok := a.operationStatusMap[status]; !ok {
-		return fmt.Errorf("%w: %s", ErrOperationStatusInvalid, status)
+	if construction {
+		return ErrOperationStatusNotEmptyForConstruction
+	}
+
+	if len(*status) == 0 {
+		return ErrOperationStatusMissing
+	}
+
+	if _, ok := a.operationStatusMap[*status]; !ok {
+		return fmt.Errorf("%w: %s", ErrOperationStatusInvalid, *status)
 	}
 
 	return nil
@@ -191,11 +203,7 @@ func (a *Asserter) Operation(
 		return fmt.Errorf("%w: operation type is invalid in operation %d", err, index)
 	}
 
-	if construction && len(operation.Status) != 0 {
-		return ErrOperationStatusNotEmptyForConstruction
-	}
-
-	if err := a.OperationStatus(operation.Status); err != nil && !construction {
+	if err := a.OperationStatus(operation.Status, construction); err != nil {
 		return fmt.Errorf("%w: operation status is invalid in operation %d", err, index)
 	}
 

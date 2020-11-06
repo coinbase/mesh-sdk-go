@@ -53,7 +53,7 @@ var (
 			Index: 0,
 		},
 		Type:    "Transfer",
-		Status:  "Success",
+		Status:  types.String("Success"),
 		Account: recipient,
 		Amount:  recipientAmount,
 	}
@@ -63,7 +63,7 @@ var (
 			Index: 1,
 		},
 		Type:    "Transfer",
-		Status:  "Failure",
+		Status:  types.String("Failure"),
 		Account: recipient,
 		Amount:  recipientAmount,
 	}
@@ -92,7 +92,7 @@ var (
 			Index: 0,
 		},
 		Type:    "Transfer",
-		Status:  "Success",
+		Status:  types.String("Success"),
 		Account: sender,
 		Amount:  senderAmount,
 	}

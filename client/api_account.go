@@ -126,3 +126,97 @@ func (a *AccountAPIService) AccountBalance(
 		)
 	}
 }
+
+// AccountCoins Get an array of all unspent coins for an AccountIdentifier and the BlockIdentifier
+// at which the lookup was performed. If your implementation does not support coins (i.e. it is for
+// an account-based blockchain), you do not need to implement this endpoint. If you implementation
+// does support coins (i.e. it is fro a UTXO-based blockchain), you MUST also complete the
+// /account/balance endpoint. It is important to note that making a coins request for an account
+// without populating the SubAccountIdentifier should not result in the coins of all possible
+// SubAccountIdentifiers being returned. Rather, it should result in the coins pertaining to no
+// SubAccountIdentifiers being returned. To get all coins associated with an account, it may be
+// necessary to perform multiple coin requests with unique AccountIdentifiers. Optionally, an
+// implementation may choose to support updating an AccountIdentifier&#39;s unspent coins based on
+// the contents of the mempool. Note, using this functionality breaks any guarantee of idempotency.
+func (a *AccountAPIService) AccountCoins(
+	ctx _context.Context,
+	accountCoinsRequest *types.AccountCoinsRequest,
+) (*types.AccountCoinsResponse, *types.Error, error) {
+	var (
+		localVarPostBody interface{}
+	)
+
+	// create path and map variables
+	localVarPath := a.client.cfg.BasePath + "/account/coins"
+	localVarHeaderParams := make(map[string]string)
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{"application/json"}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	// body params
+	localVarPostBody = accountCoinsRequest
+
+	r, err := a.client.prepareRequest(ctx, localVarPath, localVarPostBody, localVarHeaderParams)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(ctx, r)
+	if err != nil || localVarHTTPResponse == nil {
+		return nil, nil, err
+	}
+
+	localVarBody, err := _ioutil.ReadAll(localVarHTTPResponse.Body)
+	defer localVarHTTPResponse.Body.Close()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	switch localVarHTTPResponse.StatusCode {
+	case _nethttp.StatusOK:
+		var v types.AccountCoinsResponse
+		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+		if err != nil {
+			return nil, nil, err
+		}
+
+		return &v, nil, nil
+	case _nethttp.StatusInternalServerError:
+		var v types.Error
+		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+		if err != nil {
+			return nil, nil, err
+		}
+
+		return nil, &v, fmt.Errorf("%+v", v)
+	case _nethttp.StatusBadGateway,
+		_nethttp.StatusServiceUnavailable,
+		_nethttp.StatusGatewayTimeout:
+		return nil, nil, fmt.Errorf(
+			"%w: code: %d body: %s",
+			ErrRetriable,
+			localVarHTTPResponse.StatusCode,
+			string(localVarBody),
+		)
+	default:
+		return nil, nil, fmt.Errorf(
+			"invalid status code: %d body: %s",
+			localVarHTTPResponse.StatusCode,
+			string(localVarBody),
+		)
+	}
+}

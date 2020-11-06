@@ -30,9 +30,9 @@ func (f *Fetcher) AccountBalance(
 	network *types.NetworkIdentifier,
 	account *types.AccountIdentifier,
 	block *types.PartialBlockIdentifier,
-) (*types.BlockIdentifier, []*types.Amount, []*types.Coin, map[string]interface{}, *Error) {
+) (*types.BlockIdentifier, []*types.Amount, map[string]interface{}, *Error) {
 	if err := f.connectionSemaphore.Acquire(ctx, semaphoreRequestWeight); err != nil {
-		return nil, nil, nil, nil, &Error{
+		return nil, nil, nil, &Error{
 			Err: fmt.Errorf("%w: %s", ErrCouldNotAcquireSemaphore, err.Error()),
 		}
 	}
@@ -46,7 +46,7 @@ func (f *Fetcher) AccountBalance(
 		},
 	)
 	if err != nil {
-		return nil, nil, nil, nil, f.RequestFailedError(clientErr, err, "/account/balance")
+		return nil, nil, nil, f.RequestFailedError(clientErr, err, "/account/balance")
 	}
 
 	if err := asserter.AccountBalanceResponse(
@@ -59,10 +59,10 @@ func (f *Fetcher) AccountBalance(
 				err,
 			),
 		}
-		return nil, nil, nil, nil, fetcherErr
+		return nil, nil, nil, fetcherErr
 	}
 
-	return response.BlockIdentifier, response.Balances, response.Coins, response.Metadata, nil
+	return response.BlockIdentifier, response.Balances, response.Metadata, nil
 }
 
 // AccountBalanceRetry retrieves the validated AccountBalance
@@ -73,25 +73,25 @@ func (f *Fetcher) AccountBalanceRetry(
 	network *types.NetworkIdentifier,
 	account *types.AccountIdentifier,
 	block *types.PartialBlockIdentifier,
-) (*types.BlockIdentifier, []*types.Amount, []*types.Coin, map[string]interface{}, *Error) {
+) (*types.BlockIdentifier, []*types.Amount, map[string]interface{}, *Error) {
 	backoffRetries := backoffRetries(
 		f.retryElapsedTime,
 		f.maxRetries,
 	)
 
 	for {
-		responseBlock, balances, coins, metadata, err := f.AccountBalance(
+		responseBlock, balances, metadata, err := f.AccountBalance(
 			ctx,
 			network,
 			account,
 			block,
 		)
 		if err == nil {
-			return responseBlock, balances, coins, metadata, nil
+			return responseBlock, balances, metadata, nil
 		}
 
 		if ctx.Err() != nil {
-			return nil, nil, nil, nil, &Error{
+			return nil, nil, nil, &Error{
 				Err: ctx.Err(),
 			}
 		}
@@ -101,7 +101,7 @@ func (f *Fetcher) AccountBalanceRetry(
 				Err:       fmt.Errorf("%w: /account/balance not attempting retry", err.Err),
 				ClientErr: err.ClientErr,
 			}
-			return nil, nil, nil, nil, fetcherErr
+			return nil, nil, nil, fetcherErr
 		}
 
 		if err := tryAgain(
@@ -109,7 +109,7 @@ func (f *Fetcher) AccountBalanceRetry(
 			backoffRetries,
 			err,
 		); err != nil {
-			return nil, nil, nil, nil, err
+			return nil, nil, nil, err
 		}
 	}
 }

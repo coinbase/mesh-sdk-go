@@ -23,4 +23,8 @@ type AccountBalanceRequest struct {
 	NetworkIdentifier *NetworkIdentifier      `json:"network_identifier"`
 	AccountIdentifier *AccountIdentifier      `json:"account_identifier"`
 	BlockIdentifier   *PartialBlockIdentifier `json:"block_identifier,omitempty"`
+	// In some cases, the caller may not want to retrieve all available balances for an
+	// AccountIdentifier. If the currencies field is populated, only balances for the specified
+	// currencies will be returned. If not populated, all available balances will be returned.
+	Currencies []*Currency `json:"currencies,omitempty"`
 }
