@@ -113,7 +113,7 @@ func TestNew(t *testing.T) {
 					},
 				},
 				HistoricalBalanceLookup: true,
-				TimestampStartIndex:     int64Pointer(10),
+				TimestampStartIndex:     types.Int64(10),
 			},
 		}
 
@@ -214,7 +214,7 @@ func TestNew(t *testing.T) {
 					},
 				},
 				HistoricalBalanceLookup: true,
-				TimestampStartIndex:     int64Pointer(-1),
+				TimestampStartIndex:     types.Int64(-1),
 			},
 		}
 	)

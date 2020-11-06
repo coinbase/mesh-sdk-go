@@ -132,6 +132,104 @@ func TestContainsCurrency(t *testing.T) {
 	}
 }
 
+func TestContainsDuplicateCurrency(t *testing.T) {
+	var tests = map[string]struct {
+		currencies []*types.Currency
+		duplicate  bool
+	}{
+		"simple contains": {
+			currencies: []*types.Currency{
+				{
+					Symbol:   "BTC",
+					Decimals: 8,
+				},
+			},
+		},
+		"complex contains": {
+			currencies: []*types.Currency{
+				{
+					Symbol:   "BTC",
+					Decimals: 8,
+					Metadata: map[string]interface{}{"blah": "hello"},
+				},
+				{
+					Symbol:   "BTC",
+					Decimals: 8,
+					Metadata: map[string]interface{}{"blah": "hello"},
+				},
+			},
+			duplicate: true,
+		},
+		"more complex contains": {
+			currencies: []*types.Currency{
+				{
+					Symbol:   "BTC",
+					Decimals: 8,
+					Metadata: map[string]interface{}{"blah2": "bye", "blah": "hello"},
+				},
+				{
+					Symbol:   "BTC",
+					Decimals: 8,
+					Metadata: map[string]interface{}{"blah": "hello", "blah2": "bye"},
+				},
+			},
+			duplicate: true,
+		},
+		"empty": {
+			currencies: []*types.Currency{},
+		},
+		"symbol mismatch": {
+			currencies: []*types.Currency{
+				{
+					Symbol:   "ERX",
+					Decimals: 8,
+				},
+				{
+					Symbol:   "BTC",
+					Decimals: 6,
+				},
+			},
+		},
+		"decimal mismatch": {
+			currencies: []*types.Currency{
+				{
+					Symbol:   "BTC",
+					Decimals: 8,
+				},
+				{
+					Symbol:   "BTC",
+					Decimals: 6,
+				},
+			},
+		},
+		"metadata mismatch": {
+			currencies: []*types.Currency{
+				{
+					Symbol:   "BTC",
+					Decimals: 8,
+					Metadata: map[string]interface{}{"blah": "hello"},
+				},
+				{
+					Symbol:   "BTC",
+					Decimals: 8,
+					Metadata: map[string]interface{}{"blah": "bye"},
+				},
+			},
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			exists := ContainsDuplicateCurrency(test.currencies)
+			if test.duplicate {
+				assert.NotNil(t, exists)
+			} else {
+				assert.Nil(t, exists)
+			}
+		})
+	}
+}
+
 func TestAccountBalance(t *testing.T) {
 	var (
 		validBlock = &types.BlockIdentifier{

@@ -374,6 +374,15 @@ var (
 	ErrCallMethodEmpty                           = errors.New("call method cannot be empty")
 	ErrCallMethodUnsupported                     = errors.New("call method is not supported")
 	ErrCallMethodDuplicate                       = errors.New("duplicate call method detected")
+	ErrAccountCoinsRequestIsNil                  = errors.New("AccountCoinsRequest is nil")
+	ErrMempoolCoinsNotSupported                  = errors.New("mempool coins not supported")
+	ErrEventsBlocksRequestIsNil                  = errors.New("EventsBlocksRequest is nil")
+	ErrOffsetIsNegative                          = errors.New("offset is negative")
+	ErrLimitIsNegative                           = errors.New("limit is negative")
+	ErrSearchTransactionsRequestIsNil            = errors.New("SearchTransactionsRequest is nil")
+	ErrOperatorInvalid                           = errors.New("operator is invalid")
+	ErrMaxBlockInvalid                           = errors.New("max block invalid")
+	ErrDuplicateCurrency                         = errors.New("duplicate currency")
 
 	ServerErrs = []error{
 		ErrNoSupportedNetworks,
@@ -403,6 +412,41 @@ var (
 		ErrCallMethodEmpty,
 		ErrCallMethodUnsupported,
 		ErrCallMethodDuplicate,
+		ErrAccountCoinsRequestIsNil,
+		ErrMempoolCoinsNotSupported,
+		ErrEventsBlocksRequestIsNil,
+		ErrOffsetIsNegative,
+		ErrLimitIsNegative,
+		ErrSearchTransactionsRequestIsNil,
+		ErrOperatorInvalid,
+		ErrMaxBlockInvalid,
+		ErrDuplicateCurrency,
+	}
+
+	///////////////////
+	/* EVENTS ERRORS */
+	///////////////////
+
+	ErrMaxSequenceInvalid    = errors.New("max sequence invalid")
+	ErrSequenceInvalid       = errors.New("sequence invalid")
+	ErrBlockEventTypeInvalid = errors.New("block event type invalid")
+	ErrSequenceOutOfOrder    = errors.New("sequence out of order")
+
+	EventsErrs = []error{
+		ErrMaxSequenceInvalid,
+		ErrSequenceInvalid,
+		ErrBlockEventTypeInvalid,
+		ErrSequenceOutOfOrder,
+	}
+
+	///////////////////
+	/* SEARCH ERRORS */
+	///////////////////
+
+	ErrNextOffsetInvalid = errors.New("next offset invalid")
+
+	SearchErrs = []error{
+		ErrNextOffsetInvalid,
 	}
 
 	///////////////////
@@ -442,6 +486,8 @@ func Err(err error) (bool, string) {
 		"construction error":    ConstructionErrs,
 		"network error":         NetworkErrs,
 		"server error":          ServerErrs,
+		"events error":          EventsErrs,
+		"search error":          SearchErrs,
 		"error error":           ErrorErrs,
 	}
 

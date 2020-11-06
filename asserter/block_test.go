@@ -486,10 +486,6 @@ func TestOperation(t *testing.T) {
 	}
 }
 
-func int64Pointer(a int64) *int64 {
-	return &a
-}
-
 func TestBlock(t *testing.T) {
 	genesisIdentifier := &types.BlockIdentifier{
 		Hash:  "gen",
@@ -683,7 +679,7 @@ func TestBlock(t *testing.T) {
 				ParentBlockIdentifier: validParentBlockIdentifier,
 				Transactions:          []*types.Transaction{validTransaction},
 			},
-			startIndex: int64Pointer(validBlockIdentifier.Index + 1),
+			startIndex: types.Int64(validBlockIdentifier.Index + 1),
 			err:        nil,
 		},
 		"genesis block (without start index)": {
@@ -702,7 +698,7 @@ func TestBlock(t *testing.T) {
 				Transactions:          []*types.Transaction{validTransaction},
 			},
 			genesisIndex: genesisIdentifier.Index,
-			startIndex:   int64Pointer(genesisIdentifier.Index + 1),
+			startIndex:   types.Int64(genesisIdentifier.Index + 1),
 			err:          nil,
 		},
 		"invalid genesis block (with start index)": {
@@ -712,7 +708,7 @@ func TestBlock(t *testing.T) {
 				Transactions:          []*types.Transaction{validTransaction},
 			},
 			genesisIndex: genesisIdentifier.Index,
-			startIndex:   int64Pointer(genesisIdentifier.Index),
+			startIndex:   types.Int64(genesisIdentifier.Index),
 			err:          ErrTimestampBeforeMin,
 		},
 		"out of order transaction operations": {

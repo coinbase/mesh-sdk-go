@@ -201,6 +201,7 @@ var (
 		true,
 		[]*types.NetworkIdentifier{validNetworkIdentifier},
 		[]string{"eth_call"},
+		false,
 	)
 )
 
@@ -273,6 +274,7 @@ func TestNewWithOptions(t *testing.T) {
 				test.historicalBalanceLookup,
 				test.supportedNetworks,
 				test.callMethods,
+				false,
 			)
 			if test.err == nil {
 				assert.NotNil(t, thisA)
@@ -339,16 +341,46 @@ func TestAccountBalanceRequest(t *testing.T) {
 			},
 			err: nil,
 		},
+		"valid request with currencies": {
+			request: &types.AccountBalanceRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+				AccountIdentifier: validAccountIdentifier,
+				Currencies: []*types.Currency{
+					{
+						Symbol:   "BTC",
+						Decimals: 8,
+					},
+					{
+						Symbol:   "ETH",
+						Decimals: 18,
+					},
+				},
+			},
+			err: nil,
+		},
+		"valid request with duplicate currencies": {
+			request: &types.AccountBalanceRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+				AccountIdentifier: validAccountIdentifier,
+				Currencies: []*types.Currency{
+					{
+						Symbol:   "BTC",
+						Decimals: 8,
+					},
+					{
+						Symbol:   "BTC",
+						Decimals: 8,
+					},
+				},
+			},
+			err: ErrDuplicateCurrency,
+		},
 		"invalid request wrong network": {
 			request: &types.AccountBalanceRequest{
 				NetworkIdentifier: wrongNetworkIdentifier,
 				AccountIdentifier: validAccountIdentifier,
 			},
-			err: fmt.Errorf(
-				"%w: %+v",
-				ErrRequestedNetworkNotSupported,
-				wrongNetworkIdentifier,
-			),
+			err: ErrRequestedNetworkNotSupported,
 		},
 		"nil request": {
 			request: nil,
@@ -402,12 +434,17 @@ func TestAccountBalanceRequest(t *testing.T) {
 				test.allowHistorical,
 				[]*types.NetworkIdentifier{validNetworkIdentifier},
 				nil,
+				false,
 			)
 			assert.NotNil(t, asserter)
 			assert.NoError(t, err)
 
 			err = asserter.AccountBalanceRequest(test.request)
-			assert.Equal(t, test.err, err)
+			if test.err != nil {
+				assert.True(t, errors.Is(err, test.err))
+			} else {
+				assert.NoError(t, err)
+			}
 		})
 	}
 }
@@ -1308,6 +1345,244 @@ func TestCallRequest(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			err := a.CallRequest(test.request)
+			if test.err != nil {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), test.err.Error())
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestAccountCoinsRequest(t *testing.T) {
+	var tests = map[string]struct {
+		request      *types.AccountCoinsRequest
+		allowMempool bool
+		err          error
+	}{
+		"valid request": {
+			request: &types.AccountCoinsRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+				AccountIdentifier: validAccountIdentifier,
+			},
+			err: nil,
+		},
+		"valid request with currencies": {
+			request: &types.AccountCoinsRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+				AccountIdentifier: validAccountIdentifier,
+				Currencies: []*types.Currency{
+					{
+						Symbol:   "BTC",
+						Decimals: 8,
+					},
+					{
+						Symbol:   "ETH",
+						Decimals: 18,
+					},
+				},
+			},
+			err: nil,
+		},
+		"valid request with duplicate currencies": {
+			request: &types.AccountCoinsRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+				AccountIdentifier: validAccountIdentifier,
+				Currencies: []*types.Currency{
+					{
+						Symbol:   "BTC",
+						Decimals: 8,
+					},
+					{
+						Symbol:   "BTC",
+						Decimals: 8,
+					},
+				},
+			},
+			err: ErrDuplicateCurrency,
+		},
+		"invalid request wrong network": {
+			request: &types.AccountCoinsRequest{
+				NetworkIdentifier: wrongNetworkIdentifier,
+				AccountIdentifier: validAccountIdentifier,
+			},
+			err: ErrRequestedNetworkNotSupported,
+		},
+		"nil request": {
+			request: nil,
+			err:     ErrAccountCoinsRequestIsNil,
+		},
+		"missing network": {
+			request: &types.AccountCoinsRequest{
+				AccountIdentifier: validAccountIdentifier,
+			},
+			err: ErrNetworkIdentifierIsNil,
+		},
+		"missing account": {
+			request: &types.AccountCoinsRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+			},
+			err: ErrAccountIsNil,
+		},
+		"valid mempool lookup request": {
+			request: &types.AccountCoinsRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+				AccountIdentifier: validAccountIdentifier,
+			},
+			allowMempool: true,
+			err:          nil,
+		},
+		"valid mempool lookup request when not enabled": {
+			request: &types.AccountCoinsRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+				AccountIdentifier: validAccountIdentifier,
+				IncludeMempool:    true,
+			},
+			allowMempool: false,
+			err:          ErrMempoolCoinsNotSupported,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			asserter, err := NewServer(
+				[]string{"PAYMENT"},
+				false,
+				[]*types.NetworkIdentifier{validNetworkIdentifier},
+				nil,
+				test.allowMempool,
+			)
+			assert.NotNil(t, asserter)
+			assert.NoError(t, err)
+
+			err = asserter.AccountCoinsRequest(test.request)
+			if test.err != nil {
+				assert.True(t, errors.Is(err, test.err))
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestEventsBlocksRequest(t *testing.T) {
+	var tests = map[string]struct {
+		request *types.EventsBlocksRequest
+		err     error
+	}{
+		"valid request": {
+			request: &types.EventsBlocksRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+			},
+			err: nil,
+		},
+		"invalid request wrong network": {
+			request: &types.EventsBlocksRequest{
+				NetworkIdentifier: wrongNetworkIdentifier,
+			},
+			err: fmt.Errorf(
+				"%w: %+v",
+				ErrRequestedNetworkNotSupported,
+				wrongNetworkIdentifier,
+			),
+		},
+		"nil request": {
+			request: nil,
+			err:     ErrEventsBlocksRequestIsNil,
+		},
+		"negative offset": {
+			request: &types.EventsBlocksRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+				Offset:            types.Int64(-1),
+			},
+			err: ErrOffsetIsNegative,
+		},
+		"negative limit": {
+			request: &types.EventsBlocksRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+				Limit:             types.Int64(-1),
+			},
+			err: ErrLimitIsNegative,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			err := a.EventsBlocksRequest(test.request)
+			if test.err != nil {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), test.err.Error())
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestSearchTransactionsRequest(t *testing.T) {
+	var tests = map[string]struct {
+		request *types.SearchTransactionsRequest
+		err     error
+	}{
+		"valid request": {
+			request: &types.SearchTransactionsRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+				Operator:          types.AND,
+			},
+			err: nil,
+		},
+		"invalid request wrong network": {
+			request: &types.SearchTransactionsRequest{
+				NetworkIdentifier: wrongNetworkIdentifier,
+				Operator:          types.OR,
+			},
+			err: fmt.Errorf(
+				"%w: %+v",
+				ErrRequestedNetworkNotSupported,
+				wrongNetworkIdentifier,
+			),
+		},
+		"nil request": {
+			request: nil,
+			err:     ErrSearchTransactionsRequestIsNil,
+		},
+		"negative max block": {
+			request: &types.SearchTransactionsRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+				Operator:          types.OR,
+				MaxBlock:          types.Int64(-1),
+			},
+			err: ErrMaxBlockInvalid,
+		},
+		"negative offset": {
+			request: &types.SearchTransactionsRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+				Operator:          types.OR,
+				Offset:            types.Int64(-1),
+			},
+			err: ErrOffsetIsNegative,
+		},
+		"negative limit": {
+			request: &types.SearchTransactionsRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+				Operator:          types.OR,
+				Limit:             types.Int64(-1),
+			},
+			err: ErrLimitIsNegative,
+		},
+		"invalid operator": {
+			request: &types.SearchTransactionsRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+				Operator:          "NOR",
+			},
+			err: ErrOperatorInvalid,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			err := a.SearchTransactionsRequest(test.request)
 			if test.err != nil {
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), test.err.Error())

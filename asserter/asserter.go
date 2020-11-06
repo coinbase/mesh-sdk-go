@@ -38,6 +38,7 @@ type Asserter struct {
 	historicalBalanceLookup bool
 	supportedNetworks       []*types.NetworkIdentifier
 	callMethods             map[string]struct{}
+	mempoolCoins            bool
 }
 
 // NewServer constructs a new Asserter for use in the
@@ -47,6 +48,7 @@ func NewServer(
 	historicalBalanceLookup bool,
 	supportedNetworks []*types.NetworkIdentifier,
 	callMethods []string,
+	mempoolCoins bool,
 ) (*Asserter, error) {
 	if err := OperationTypes(supportedOperationTypes); err != nil {
 		return nil, err
@@ -74,6 +76,7 @@ func NewServer(
 		historicalBalanceLookup: historicalBalanceLookup,
 		supportedNetworks:       supportedNetworks,
 		callMethods:             callMap,
+		mempoolCoins:            mempoolCoins,
 	}, nil
 }
 
