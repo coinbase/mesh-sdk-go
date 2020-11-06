@@ -1265,7 +1265,7 @@ func TestBlockSyncing(t *testing.T) {
 							Index: 0,
 						},
 						Account: addr1,
-						Status:  "Success",
+						Status:  types.String("Success"),
 						Type:    "Transfer",
 						Amount: &types.Amount{
 							Value:    "100",
@@ -1298,7 +1298,7 @@ func TestBlockSyncing(t *testing.T) {
 							Index: 0,
 						},
 						Account: addr1,
-						Status:  "Success",
+						Status:  types.String("Success"),
 						Type:    "Transfer",
 						Amount: &types.Amount{
 							Value:    "-50",
@@ -1310,7 +1310,7 @@ func TestBlockSyncing(t *testing.T) {
 							Index: 1,
 						},
 						Account: addr2,
-						Status:  "Success",
+						Status:  types.String("Success"),
 						Type:    "Transfer",
 						Amount: &types.Amount{
 							Value:    "50",
@@ -1322,7 +1322,7 @@ func TestBlockSyncing(t *testing.T) {
 							Index: 2,
 						},
 						Account: addr1,
-						Status:  "Success",
+						Status:  types.String("Success"),
 						Type:    "Transfer",
 						Amount: &types.Amount{
 							Value:    "-1",
@@ -1355,7 +1355,7 @@ func TestBlockSyncing(t *testing.T) {
 							Index: 0,
 						},
 						Account: addr1,
-						Status:  "Success",
+						Status:  types.String("Success"),
 						Type:    "Transfer",
 						Amount: &types.Amount{
 							Value:    "-100",
@@ -1367,7 +1367,7 @@ func TestBlockSyncing(t *testing.T) {
 							Index: 1,
 						},
 						Account: addr2,
-						Status:  "Success",
+						Status:  types.String("Success"),
 						Type:    "Transfer",
 						Amount: &types.Amount{
 							Value:    "100",

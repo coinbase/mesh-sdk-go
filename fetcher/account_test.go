@@ -176,7 +176,7 @@ func TestAccountBalanceRetry(t *testing.T) {
 				WithRetryElapsedTime(5*time.Second),
 				WithMaxRetries(test.fetcherMaxRetries),
 			)
-			block, amounts, _, metadata, err := f.AccountBalanceRetry(
+			block, amounts, metadata, err := f.AccountBalanceRetry(
 				ctx,
 				test.network,
 				test.account,

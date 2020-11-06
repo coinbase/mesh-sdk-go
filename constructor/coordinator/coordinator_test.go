@@ -693,7 +693,7 @@ func TestProcess(t *testing.T) {
 			OperationIdentifier: &types.OperationIdentifier{
 				Index: 0,
 			},
-			Status: "success",
+			Status: types.String("success"),
 			Type:   "Vin",
 			Account: &types.AccountIdentifier{
 				Address: "address1",
@@ -707,7 +707,7 @@ func TestProcess(t *testing.T) {
 			OperationIdentifier: &types.OperationIdentifier{
 				Index: 1,
 			},
-			Status: "success",
+			Status: types.String("success"),
 			Type:   "Vout",
 			Account: &types.AccountIdentifier{
 				Address: "address2",
@@ -2239,7 +2239,7 @@ func TestReturnFunds(t *testing.T) {
 			OperationIdentifier: &types.OperationIdentifier{
 				Index: 0,
 			},
-			Status: "success",
+			Status: types.String("success"),
 			Type:   "Vin",
 			Account: &types.AccountIdentifier{
 				Address: "address1",
@@ -2253,7 +2253,7 @@ func TestReturnFunds(t *testing.T) {
 			OperationIdentifier: &types.OperationIdentifier{
 				Index: 1,
 			},
-			Status: "success",
+			Status: types.String("success"),
 			Type:   "Vout",
 			Account: &types.AccountIdentifier{
 				Address: "address2",
