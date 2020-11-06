@@ -84,7 +84,7 @@ func (s *BlockAPIService) Block(
 								Index: 0,
 							},
 							Type:   "Transfer",
-							Status: "Success",
+							Status: types.String("Success"),
 							Account: &types.AccountIdentifier{
 								Address: "account 0",
 							},
@@ -106,7 +106,7 @@ func (s *BlockAPIService) Block(
 								},
 							},
 							Type:   "Transfer",
-							Status: "Reverted",
+							Status: types.String("Reverted"),
 							Account: &types.AccountIdentifier{
 								Address: "account 1",
 							},
@@ -146,7 +146,7 @@ func (s *BlockAPIService) BlockTransaction(
 						Index: 0,
 					},
 					Type:   "Reward",
-					Status: "Success",
+					Status: types.String("Success"),
 					Account: &types.AccountIdentifier{
 						Address: "account 2",
 					},
