@@ -53,7 +53,7 @@ done
 rm -rf tmp;
 
 # Download spec file from releases
-ROSETTA_SPEC_VERSION=1.4.6
+ROSETTA_SPEC_VERSION=1.4.7
 curl -L https://github.com/coinbase/rosetta-specifications/releases/download/v${ROSETTA_SPEC_VERSION}/api.json -o api.json;
 
 # Generate client + types code
@@ -119,8 +119,10 @@ sed "${SED_IFLAG[@]}" 's/*CurveType/CurveType/g' client/* server/*;
 sed "${SED_IFLAG[@]}" 's/*SignatureType/SignatureType/g' client/* server/*;
 sed "${SED_IFLAG[@]}" 's/*CoinAction/CoinAction/g' client/* server/*;
 sed "${SED_IFLAG[@]}" 's/*ExemptionType/ExemptionType/g' client/* server/*;
+sed "${SED_IFLAG[@]}" 's/*Operator/Operator/g' client/* server/*;
+sed "${SED_IFLAG[@]}" 's/*BlockEventType/BlockEventType/g' client/* server/*;
 
-# Fix CurveTypes, SignatureTypes, CoinActions, and ExemptionTypes
+# Fix CurveTypes, SignatureTypes, CoinActions, ExemptionTypes 
 sed "${SED_IFLAG[@]}" 's/SECP256K1/Secp256k1/g' client/* server/*;
 sed "${SED_IFLAG[@]}" 's/SECP256R1/Secp256r1/g' client/* server/*;
 sed "${SED_IFLAG[@]}" 's/EDWARDS25519/Edwards25519/g' client/* server/*;

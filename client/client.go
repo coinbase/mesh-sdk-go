@@ -41,7 +41,7 @@ var (
 	ErrRetriable = errors.New("retriable http status code received")
 )
 
-// APIClient manages communication with the Rosetta API v1.4.6
+// APIClient manages communication with the Rosetta API v1.4.7
 // In most cases there should be only one, shared, APIClient.
 type APIClient struct {
 	cfg    *Configuration
@@ -57,9 +57,13 @@ type APIClient struct {
 
 	ConstructionAPI *ConstructionAPIService
 
+	EventsAPI *EventsAPIService
+
 	MempoolAPI *MempoolAPIService
 
 	NetworkAPI *NetworkAPIService
+
+	SearchAPI *SearchAPIService
 }
 
 type service struct {
@@ -82,8 +86,10 @@ func NewAPIClient(cfg *Configuration) *APIClient {
 	c.BlockAPI = (*BlockAPIService)(&c.common)
 	c.CallAPI = (*CallAPIService)(&c.common)
 	c.ConstructionAPI = (*ConstructionAPIService)(&c.common)
+	c.EventsAPI = (*EventsAPIService)(&c.common)
 	c.MempoolAPI = (*MempoolAPIService)(&c.common)
 	c.NetworkAPI = (*NetworkAPIService)(&c.common)
+	c.SearchAPI = (*SearchAPIService)(&c.common)
 
 	return c
 }

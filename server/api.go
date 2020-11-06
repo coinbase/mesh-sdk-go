@@ -30,6 +30,7 @@ import (
 // results to the http response.
 type AccountAPIRouter interface {
 	AccountBalance(http.ResponseWriter, *http.Request)
+	AccountCoins(http.ResponseWriter, *http.Request)
 }
 
 // BlockAPIRouter defines the required methods for binding the api requests to a responses for the
@@ -68,6 +69,15 @@ type ConstructionAPIRouter interface {
 	ConstructionSubmit(http.ResponseWriter, *http.Request)
 }
 
+// EventsAPIRouter defines the required methods for binding the api requests to a responses for the
+// EventsAPI
+// The EventsAPIRouter implementation should parse necessary information from the http request,
+// pass the data to a EventsAPIServicer to perform the required actions, then write the service
+// results to the http response.
+type EventsAPIRouter interface {
+	EventsBlocks(http.ResponseWriter, *http.Request)
+}
+
 // MempoolAPIRouter defines the required methods for binding the api requests to a responses for the
 // MempoolAPI
 // The MempoolAPIRouter implementation should parse necessary information from the http request,
@@ -89,6 +99,15 @@ type NetworkAPIRouter interface {
 	NetworkStatus(http.ResponseWriter, *http.Request)
 }
 
+// SearchAPIRouter defines the required methods for binding the api requests to a responses for the
+// SearchAPI
+// The SearchAPIRouter implementation should parse necessary information from the http request,
+// pass the data to a SearchAPIServicer to perform the required actions, then write the service
+// results to the http response.
+type SearchAPIRouter interface {
+	SearchTransactions(http.ResponseWriter, *http.Request)
+}
+
 // AccountAPIServicer defines the api actions for the AccountAPI service
 // This interface intended to stay up to date with the openapi yaml used to generate it,
 // while the service implementation can ignored with the .openapi-generator-ignore file
@@ -98,6 +117,10 @@ type AccountAPIServicer interface {
 		context.Context,
 		*types.AccountBalanceRequest,
 	) (*types.AccountBalanceResponse, *types.Error)
+	AccountCoins(
+		context.Context,
+		*types.AccountCoinsRequest,
+	) (*types.AccountCoinsResponse, *types.Error)
 }
 
 // BlockAPIServicer defines the api actions for the BlockAPI service
@@ -159,6 +182,17 @@ type ConstructionAPIServicer interface {
 	) (*types.TransactionIdentifierResponse, *types.Error)
 }
 
+// EventsAPIServicer defines the api actions for the EventsAPI service
+// This interface intended to stay up to date with the openapi yaml used to generate it,
+// while the service implementation can ignored with the .openapi-generator-ignore file
+// and updated with the logic required for the API.
+type EventsAPIServicer interface {
+	EventsBlocks(
+		context.Context,
+		*types.EventsBlocksRequest,
+	) (*types.EventsBlocksResponse, *types.Error)
+}
+
 // MempoolAPIServicer defines the api actions for the MempoolAPI service
 // This interface intended to stay up to date with the openapi yaml used to generate it,
 // while the service implementation can ignored with the .openapi-generator-ignore file
@@ -185,4 +219,15 @@ type NetworkAPIServicer interface {
 		context.Context,
 		*types.NetworkRequest,
 	) (*types.NetworkStatusResponse, *types.Error)
+}
+
+// SearchAPIServicer defines the api actions for the SearchAPI service
+// This interface intended to stay up to date with the openapi yaml used to generate it,
+// while the service implementation can ignored with the .openapi-generator-ignore file
+// and updated with the logic required for the API.
+type SearchAPIServicer interface {
+	SearchTransactions(
+		context.Context,
+		*types.SearchTransactionsRequest,
+	) (*types.SearchTransactionsResponse, *types.Error)
 }

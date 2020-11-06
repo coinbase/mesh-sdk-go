@@ -435,3 +435,36 @@ func (a *Asserter) CallRequest(request *types.CallRequest) error {
 
 	return nil
 }
+
+// AccountCoinsRequest ensures that a types.AccountCoinsRequest
+// is well-formatted.
+func (a *Asserter) AccountCoinsRequest(request *types.AccountCoinsRequest) error {
+	if a == nil {
+		return ErrAsserterNotInitialized
+	}
+
+	// TODO: implement assertion
+	return nil
+}
+
+// EventsBlocksRequest ensures that a types.EventsBlocksRequest
+// is well-formatted.
+func (a *Asserter) EventsBlocksRequest(request *types.EventsBlocksRequest) error {
+	if a == nil {
+		return ErrAsserterNotInitialized
+	}
+
+	// TODO: implement assertion
+	return nil
+}
+
+// SearchTransactionsRequest ensures that a types.SearchTransactionsRequest
+// is well-formatted.
+func (a *Asserter) SearchTransactionsRequest(request *types.SearchTransactionsRequest) error {
+	if a == nil {
+		return ErrAsserterNotInitialized
+	}
+
+	// TODO: implement assertion
+	return nil
+}
