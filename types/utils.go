@@ -279,3 +279,21 @@ func ExtractAmount(
 		PrettyPrintStruct(currency),
 	)
 }
+
+// String returns a pointer to the
+// string passed as an argument.
+func String(s string) *string {
+	return &s
+}
+
+// Int64 returns a pointer to the
+// int64 passed as an argument.
+func Int64(i int64) *int64 {
+	return &i
+}
+
+// Bool returns a pointer to the
+// bool passed as an argument.
+func Bool(b bool) *bool {
+	return &b
+}
