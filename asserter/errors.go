@@ -376,6 +376,13 @@ var (
 	ErrCallMethodDuplicate                       = errors.New("duplicate call method detected")
 	ErrAccountCoinsRequestIsNil                  = errors.New("AccountCoinsRequest is nil")
 	ErrMempoolCoinsNotSupported                  = errors.New("mempool coins not supported")
+	ErrEventsBlocksRequestIsNil                  = errors.New("EventsBlocksRequest is nil")
+	ErrOffsetIsNegative                          = errors.New("offset is negative")
+	ErrLimitIsNegative                           = errors.New("limit is negative")
+	ErrSearchTransactionsRequestIsNil            = errors.New("SearchTransactionsRequest is nil")
+	ErrOperatorInvalid                           = errors.New("operator is invalid")
+	ErrMaxBlockInvalid                           = errors.New("max block invalid")
+	ErrDuplicateCurrency                         = errors.New("duplicate currency")
 
 	ServerErrs = []error{
 		ErrNoSupportedNetworks,
@@ -407,6 +414,13 @@ var (
 		ErrCallMethodDuplicate,
 		ErrAccountCoinsRequestIsNil,
 		ErrMempoolCoinsNotSupported,
+		ErrEventsBlocksRequestIsNil,
+		ErrOffsetIsNegative,
+		ErrLimitIsNegative,
+		ErrSearchTransactionsRequestIsNil,
+		ErrOperatorInvalid,
+		ErrMaxBlockInvalid,
+		ErrDuplicateCurrency,
 	}
 
 	///////////////////
