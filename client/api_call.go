@@ -92,7 +92,16 @@ func (a *CallAPIService) Call(
 		return nil, nil, err
 	}
 
-	if localVarHTTPResponse.StatusCode != _nethttp.StatusOK {
+	switch localVarHTTPResponse.StatusCode {
+	case _nethttp.StatusOK:
+		var v types.CallResponse
+		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+		if err != nil {
+			return nil, nil, err
+		}
+
+		return &v, nil, nil
+	case _nethttp.StatusInternalServerError:
 		var v types.Error
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
@@ -100,13 +109,20 @@ func (a *CallAPIService) Call(
 		}
 
 		return nil, &v, fmt.Errorf("%+v", v)
+	case _nethttp.StatusBadGateway,
+		_nethttp.StatusServiceUnavailable,
+		_nethttp.StatusGatewayTimeout:
+		return nil, nil, fmt.Errorf(
+			"%w: code: %d body: %s",
+			ErrRetriable,
+			localVarHTTPResponse.StatusCode,
+			string(localVarBody),
+		)
+	default:
+		return nil, nil, fmt.Errorf(
+			"invalid status code: %d body: %s",
+			localVarHTTPResponse.StatusCode,
+			string(localVarBody),
+		)
 	}
-
-	var v types.CallResponse
-	err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return &v, nil, nil
 }

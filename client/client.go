@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -33,6 +34,11 @@ import (
 
 var (
 	jsonCheck = regexp.MustCompile(`(?i:(?:application|text)/(?:vnd\.[^;]+\+)?json)`)
+
+	// ErrRetriable is returned when a 502, 503, or 504 HTTP code is encountered.
+	// These status codes may be returned by intermediate services when a Rosetta
+	// implementation is overloaded and should not be considered failures.
+	ErrRetriable = errors.New("retriable http status code received")
 )
 
 // APIClient manages communication with the Rosetta API v1.4.6

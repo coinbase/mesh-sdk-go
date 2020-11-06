@@ -22,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/coinbase/rosetta-sdk-go/client"
 	"github.com/coinbase/rosetta-sdk-go/types"
 
 	"github.com/cenkalti/backoff"
@@ -62,7 +63,8 @@ func backoffRetries(
 // retried). Currently, we consider EOF, connection reset by
 // peer, and timeout to be transient.
 func transientError(err error) bool {
-	if strings.Contains(err.Error(), io.EOF.Error()) ||
+	if errors.Is(err, client.ErrRetriable) ||
+		strings.Contains(err.Error(), io.EOF.Error()) ||
 		strings.Contains(err.Error(), connectionResetByPeer) ||
 		strings.Contains(err.Error(), clientTimeout) {
 		return true
@@ -74,10 +76,7 @@ func transientError(err error) bool {
 // tryAgain handles a backoff and prints error messages depending
 // on the fetchMsg.
 func tryAgain(fetchMsg string, thisBackoff *Backoff, err *Error) *Error {
-	// Only retry if an error is explicitly retriable or the server
-	// returned a transient error.
-	if !transientError(err.Err) &&
-		(err.ClientErr == nil || !err.ClientErr.Retriable) {
+	if !err.Retry {
 		return err
 	}
 
