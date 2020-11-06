@@ -23,13 +23,14 @@ import (
 // ContainsDuplicateCurrency retruns a boolean indicating
 // if an array of *types.Currency contains any duplicate currencies.
 func ContainsDuplicateCurrency(currencies []*types.Currency) *types.Currency {
-	seen := []*types.Currency{}
+	seen := map[string]struct{}{}
 	for _, curr := range currencies {
-		if ContainsCurrency(seen, curr) {
+		key := types.Hash(curr)
+		if _, ok := seen[key]; ok {
 			return curr
 		}
 
-		seen = append(seen, curr)
+		seen[key] = struct{}{}
 	}
 
 	return nil
@@ -55,14 +56,16 @@ func ContainsCurrency(currencies []*types.Currency, currency *types.Currency) bo
 // currency is returned multiple times (these shoould be
 // consolidated) or if a types.Amount is considered invalid.
 func AssertUniqueAmounts(amounts []*types.Amount) error {
-	currencies := make([]*types.Currency, 0)
+	seen := map[string]struct{}{}
 	for _, amount := range amounts {
 		// Ensure a currency is used at most once
-		if ContainsCurrency(currencies, amount.Currency) {
+		key := types.Hash(amount.Currency)
+		if _, ok := seen[key]; ok {
 			return fmt.Errorf("currency %+v used multiple times", amount.Currency)
 		}
-		currencies = append(currencies, amount.Currency)
+		seen[key] = struct{}{}
 
+		// Check amount for validity
 		if err := Amount(amount); err != nil {
 			return err
 		}
