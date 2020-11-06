@@ -374,6 +374,8 @@ var (
 	ErrCallMethodEmpty                           = errors.New("call method cannot be empty")
 	ErrCallMethodUnsupported                     = errors.New("call method is not supported")
 	ErrCallMethodDuplicate                       = errors.New("duplicate call method detected")
+	ErrAccountCoinsRequestIsNil                  = errors.New("AccountCoinsRequest is nil")
+	ErrMempoolCoinsNotSupported                  = errors.New("mempool coins not supported")
 
 	ServerErrs = []error{
 		ErrNoSupportedNetworks,
@@ -403,6 +405,8 @@ var (
 		ErrCallMethodEmpty,
 		ErrCallMethodUnsupported,
 		ErrCallMethodDuplicate,
+		ErrAccountCoinsRequestIsNil,
+		ErrMempoolCoinsNotSupported,
 	}
 
 	///////////////////
