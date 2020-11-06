@@ -498,7 +498,9 @@ func (a *Asserter) EventsBlocksRequest(request *types.EventsBlocksRequest) error
 
 // SearchTransactionsRequest ensures that a types.SearchTransactionsRequest
 // is well-formatted.
-func (a *Asserter) SearchTransactionsRequest(request *types.SearchTransactionsRequest) error {
+func (a *Asserter) SearchTransactionsRequest( // nolint:gocognit
+	request *types.SearchTransactionsRequest,
+) error {
 	if a == nil {
 		return ErrAsserterNotInitialized
 	}
