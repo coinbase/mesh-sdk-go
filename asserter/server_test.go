@@ -1451,3 +1451,76 @@ func TestEventsBlocksRequest(t *testing.T) {
 		})
 	}
 }
+
+func TestSearchTransactionsRequest(t *testing.T) {
+	var tests = map[string]struct {
+		request *types.SearchTransactionsRequest
+		err     error
+	}{
+		"valid request": {
+			request: &types.SearchTransactionsRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+				Operator:          types.AND,
+			},
+			err: nil,
+		},
+		"invalid request wrong network": {
+			request: &types.SearchTransactionsRequest{
+				NetworkIdentifier: wrongNetworkIdentifier,
+				Operator:          types.OR,
+			},
+			err: fmt.Errorf(
+				"%w: %+v",
+				ErrRequestedNetworkNotSupported,
+				wrongNetworkIdentifier,
+			),
+		},
+		"nil request": {
+			request: nil,
+			err:     ErrSearchTransactionsRequestIsNil,
+		},
+		"negative max block": {
+			request: &types.SearchTransactionsRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+				Operator:          types.OR,
+				MaxBlock:          types.Int64(-1),
+			},
+			err: ErrMaxBlockInvalid,
+		},
+		"negative offset": {
+			request: &types.SearchTransactionsRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+				Operator:          types.OR,
+				Offset:            types.Int64(-1),
+			},
+			err: ErrOffsetIsNegative,
+		},
+		"negative limit": {
+			request: &types.SearchTransactionsRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+				Operator:          types.OR,
+				Limit:             types.Int64(-1),
+			},
+			err: ErrLimitIsNegative,
+		},
+		"invalid operator": {
+			request: &types.SearchTransactionsRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+				Operator:          "NOR",
+			},
+			err: ErrOperatorInvalid,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			err := a.SearchTransactionsRequest(test.request)
+			if test.err != nil {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), test.err.Error())
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
