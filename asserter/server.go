@@ -481,6 +481,10 @@ func (a *Asserter) EventsBlocksRequest(request *types.EventsBlocksRequest) error
 		return ErrEventsBlocksRequestIsNil
 	}
 
+	if err := a.ValidSupportedNetwork(request.NetworkIdentifier); err != nil {
+		return err
+	}
+
 	if request.Offset != nil && *request.Offset < 0 {
 		return ErrOffsetIsNegative
 	}
