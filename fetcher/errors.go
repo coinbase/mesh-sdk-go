@@ -29,6 +29,11 @@ import (
 type Error struct {
 	Err       error        `json:"err"`
 	ClientErr *types.Error `json:"client_err"`
+
+	// Retry is a boolean that indicates if the request should be retried.
+	// It is the combination of the *types.Error.Retriable status and a
+	// collection of transient errors.
+	Retry bool `json:"retry"`
 }
 
 // RequestFailedError creates a new *Error and asserts the provided
@@ -52,6 +57,8 @@ func (f *Fetcher) RequestFailedError(
 	return &Error{
 		Err:       fmt.Errorf("%w: %s %s", ErrRequestFailed, message, err.Error()),
 		ClientErr: rosettaErr,
+		Retry: ((rosettaErr != nil && rosettaErr.Retriable) || transientError(err)) &&
+			!errors.Is(err, context.Canceled),
 	}
 }
 
