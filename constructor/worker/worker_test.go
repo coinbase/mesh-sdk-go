@@ -1034,7 +1034,7 @@ func TestJob_ComplicatedTransfer(t *testing.T) {
 			},
 			{
 				Type:       job.SetVariable,
-				Input:      `[{"operation_identifier":{"index":0},"type":"","status":"","account":{{account.account_identifier}},"amount":{"value":"-90","currency":{{default_curr}}}},{"operation_identifier":{"index":1},"type":"","status":"","account":{"address":{{random_address}}},"amount":{"value":"100","currency":{{default_curr}}}}]`, // nolint
+				Input:      `[{"operation_identifier":{"index":0},"type":"","account":{{account.account_identifier}},"amount":{"value":"-90","currency":{{default_curr}}}},{"operation_identifier":{"index":1},"type":"","account":{"address":{{random_address}}},"amount":{"value":"100","currency":{{default_curr}}}}]`, // nolint
 				OutputPath: "create_send.operations",
 			},
 			{
