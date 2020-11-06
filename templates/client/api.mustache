@@ -89,6 +89,16 @@ func (a *{{{classname}}}Service) {{{nickname}}}(ctx _context.Context{{#hasParams
 	}
 
 	switch localVarHTTPResponse.StatusCode {
+	case _nethttp.StatusOK:
+    {{#returnType}}
+    var v types.{{{returnType}}}
+    {{/returnType}}
+    err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+    if err != nil {
+      return nil, nil, err
+    }
+
+    return &v, nil, nil
 	case _nethttp.StatusInternalServerError:
 		var v types.Error
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
@@ -97,19 +107,22 @@ func (a *{{{classname}}}Service) {{{nickname}}}(ctx _context.Context{{#hasParams
 		}
 
 		return nil, &v, fmt.Errorf("%+v", v)
-	case _nethttp.StatusBadGateway, _nethttp.StatusServiceUnavailable, _nethttp.StatusGatewayTimeout:
-		return nil, nil, fmt.Errorf("%w: code: %d body: %s", ErrRetriable, localVarHTTPResponse.StatusCode, string(localVarBody))
+	case _nethttp.StatusBadGateway,
+		_nethttp.StatusServiceUnavailable,
+		_nethttp.StatusGatewayTimeout:
+		return nil, nil, fmt.Errorf(
+			"%w: code: %d body: %s",
+			ErrRetriable,
+			localVarHTTPResponse.StatusCode,
+			string(localVarBody),
+		)
+	default:
+		return nil, nil, fmt.Errorf(
+			"invalid status code: %d body: %s",
+			localVarHTTPResponse.StatusCode,
+			string(localVarBody),
+		)
 	}
-
-	{{#returnType}}
-  var v types.{{{returnType}}}
-	err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
-	if err != nil {
-		return nil, nil, err
-	}
-
-	{{/returnType}}
-	return &v, nil, nil
 }
 {{/operation}}
 {{/operations}}
