@@ -443,7 +443,22 @@ func (a *Asserter) AccountCoinsRequest(request *types.AccountCoinsRequest) error
 		return ErrAsserterNotInitialized
 	}
 
-	// TODO: implement assertion
+	if request == nil {
+		return ErrAccountCoinsRequestIsNil
+	}
+
+	if err := a.ValidSupportedNetwork(request.NetworkIdentifier); err != nil {
+		return err
+	}
+
+	if err := AccountIdentifier(request.AccountIdentifier); err != nil {
+		return err
+	}
+
+	if request.IncludeMempool && !a.mempoolCoins {
+		return ErrMempoolCoinsNotSupported
+	}
+
 	return nil
 }
 
