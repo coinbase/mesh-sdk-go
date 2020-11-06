@@ -160,7 +160,7 @@ func (a *Asserter) OperationStatus(status *string, construction bool) error {
 	}
 
 	if _, ok := a.operationStatusMap[*status]; !ok {
-		return fmt.Errorf("%w: %s", ErrOperationStatusInvalid, status)
+		return fmt.Errorf("%w: %s", ErrOperationStatusInvalid, *status)
 	}
 
 	return nil

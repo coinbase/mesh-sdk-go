@@ -253,7 +253,7 @@ func (a *Asserter) OperationSuccessful(operation *types.Operation) (bool, error)
 
 	val, ok := a.operationStatusMap[*operation.Status]
 	if !ok {
-		return false, fmt.Errorf("%s not found", operation.Status)
+		return false, fmt.Errorf("%s not found", *operation.Status)
 	}
 
 	return val, nil
