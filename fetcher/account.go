@@ -30,6 +30,7 @@ func (f *Fetcher) AccountBalance(
 	network *types.NetworkIdentifier,
 	account *types.AccountIdentifier,
 	block *types.PartialBlockIdentifier,
+	currencies []*types.Currency,
 ) (*types.BlockIdentifier, []*types.Amount, map[string]interface{}, *Error) {
 	if err := f.connectionSemaphore.Acquire(ctx, semaphoreRequestWeight); err != nil {
 		return nil, nil, nil, &Error{
@@ -43,6 +44,7 @@ func (f *Fetcher) AccountBalance(
 			NetworkIdentifier: network,
 			AccountIdentifier: account,
 			BlockIdentifier:   block,
+			Currencies:        currencies,
 		},
 	)
 	if err != nil {
@@ -73,6 +75,7 @@ func (f *Fetcher) AccountBalanceRetry(
 	network *types.NetworkIdentifier,
 	account *types.AccountIdentifier,
 	block *types.PartialBlockIdentifier,
+	currencies []*types.Currency,
 ) (*types.BlockIdentifier, []*types.Amount, map[string]interface{}, *Error) {
 	backoffRetries := backoffRetries(
 		f.retryElapsedTime,
@@ -85,6 +88,7 @@ func (f *Fetcher) AccountBalanceRetry(
 			network,
 			account,
 			block,
+			currencies,
 		)
 		if err == nil {
 			return responseBlock, balances, metadata, nil
@@ -105,7 +109,100 @@ func (f *Fetcher) AccountBalanceRetry(
 		}
 
 		if err := tryAgain(
-			fmt.Sprintf("account %s", types.PrintStruct(account)),
+			fmt.Sprintf("/account/balance %s", types.PrintStruct(account)),
+			backoffRetries,
+			err,
+		); err != nil {
+			return nil, nil, nil, err
+		}
+	}
+}
+
+// AccountCoins returns the validated response
+// from the AccountCoins method.
+func (f *Fetcher) AccountCoins(
+	ctx context.Context,
+	network *types.NetworkIdentifier,
+	account *types.AccountIdentifier,
+	includeMempool bool,
+	currencies []*types.Currency,
+) (*types.BlockIdentifier, []*types.Coin, map[string]interface{}, *Error) {
+	if err := f.connectionSemaphore.Acquire(ctx, semaphoreRequestWeight); err != nil {
+		return nil, nil, nil, &Error{
+			Err: fmt.Errorf("%w: %s", ErrCouldNotAcquireSemaphore, err.Error()),
+		}
+	}
+	defer f.connectionSemaphore.Release(semaphoreRequestWeight)
+
+	response, clientErr, err := f.rosettaClient.AccountAPI.AccountCoins(ctx,
+		&types.AccountCoinsRequest{
+			NetworkIdentifier: network,
+			AccountIdentifier: account,
+			IncludeMempool:    includeMempool,
+			Currencies:        currencies,
+		},
+	)
+	if err != nil {
+		return nil, nil, nil, f.RequestFailedError(clientErr, err, "/account/coins")
+	}
+
+	if err := asserter.AccountCoinsResponse(
+		response,
+	); err != nil {
+		fetcherErr := &Error{
+			Err: fmt.Errorf(
+				"%w: /account/coins",
+				err,
+			),
+		}
+		return nil, nil, nil, fetcherErr
+	}
+
+	return response.BlockIdentifier, response.Coins, response.Metadata, nil
+}
+
+// AccountCoinsRetry retrieves the validated AccountCoins
+// with a specified number of retries and max elapsed time.
+func (f *Fetcher) AccountCoinsRetry(
+	ctx context.Context,
+	network *types.NetworkIdentifier,
+	account *types.AccountIdentifier,
+	includeMempool bool,
+	currencies []*types.Currency,
+) (*types.BlockIdentifier, []*types.Coin, map[string]interface{}, *Error) {
+	backoffRetries := backoffRetries(
+		f.retryElapsedTime,
+		f.maxRetries,
+	)
+
+	for {
+		responseBlock, coins, metadata, err := f.AccountCoins(
+			ctx,
+			network,
+			account,
+			includeMempool,
+			currencies,
+		)
+		if err == nil {
+			return responseBlock, coins, metadata, nil
+		}
+
+		if ctx.Err() != nil {
+			return nil, nil, nil, &Error{
+				Err: ctx.Err(),
+			}
+		}
+
+		if is, _ := asserter.Err(err.Err); is {
+			fetcherErr := &Error{
+				Err:       fmt.Errorf("%w: /account/coins not attempting retry", err.Err),
+				ClientErr: err.ClientErr,
+			}
+			return nil, nil, nil, fetcherErr
+		}
+
+		if err := tryAgain(
+			fmt.Sprintf("/account/coins %s", types.PrintStruct(account)),
 			backoffRetries,
 			err,
 		); err != nil {
