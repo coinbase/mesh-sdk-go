@@ -341,16 +341,46 @@ func TestAccountBalanceRequest(t *testing.T) {
 			},
 			err: nil,
 		},
+		"valid request with currencies": {
+			request: &types.AccountBalanceRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+				AccountIdentifier: validAccountIdentifier,
+				Currencies: []*types.Currency{
+					{
+						Symbol:   "BTC",
+						Decimals: 8,
+					},
+					{
+						Symbol:   "ETH",
+						Decimals: 18,
+					},
+				},
+			},
+			err: nil,
+		},
+		"valid request with duplicate currencies": {
+			request: &types.AccountBalanceRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+				AccountIdentifier: validAccountIdentifier,
+				Currencies: []*types.Currency{
+					{
+						Symbol:   "BTC",
+						Decimals: 8,
+					},
+					{
+						Symbol:   "BTC",
+						Decimals: 8,
+					},
+				},
+			},
+			err: ErrDuplicateCurrency,
+		},
 		"invalid request wrong network": {
 			request: &types.AccountBalanceRequest{
 				NetworkIdentifier: wrongNetworkIdentifier,
 				AccountIdentifier: validAccountIdentifier,
 			},
-			err: fmt.Errorf(
-				"%w: %+v",
-				ErrRequestedNetworkNotSupported,
-				wrongNetworkIdentifier,
-			),
+			err: ErrRequestedNetworkNotSupported,
 		},
 		"nil request": {
 			request: nil,
@@ -410,7 +440,11 @@ func TestAccountBalanceRequest(t *testing.T) {
 			assert.NoError(t, err)
 
 			err = asserter.AccountBalanceRequest(test.request)
-			assert.Equal(t, test.err, err)
+			if test.err != nil {
+				assert.True(t, errors.Is(err, test.err))
+			} else {
+				assert.NoError(t, err)
+			}
 		})
 	}
 }
@@ -1334,16 +1368,46 @@ func TestAccountCoinsRequest(t *testing.T) {
 			},
 			err: nil,
 		},
+		"valid request with currencies": {
+			request: &types.AccountCoinsRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+				AccountIdentifier: validAccountIdentifier,
+				Currencies: []*types.Currency{
+					{
+						Symbol:   "BTC",
+						Decimals: 8,
+					},
+					{
+						Symbol:   "ETH",
+						Decimals: 18,
+					},
+				},
+			},
+			err: nil,
+		},
+		"valid request with duplicate currencies": {
+			request: &types.AccountCoinsRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+				AccountIdentifier: validAccountIdentifier,
+				Currencies: []*types.Currency{
+					{
+						Symbol:   "BTC",
+						Decimals: 8,
+					},
+					{
+						Symbol:   "BTC",
+						Decimals: 8,
+					},
+				},
+			},
+			err: ErrDuplicateCurrency,
+		},
 		"invalid request wrong network": {
 			request: &types.AccountCoinsRequest{
 				NetworkIdentifier: wrongNetworkIdentifier,
 				AccountIdentifier: validAccountIdentifier,
 			},
-			err: fmt.Errorf(
-				"%w: %+v",
-				ErrRequestedNetworkNotSupported,
-				wrongNetworkIdentifier,
-			),
+			err: ErrRequestedNetworkNotSupported,
 		},
 		"nil request": {
 			request: nil,
@@ -1393,7 +1457,11 @@ func TestAccountCoinsRequest(t *testing.T) {
 			assert.NoError(t, err)
 
 			err = asserter.AccountCoinsRequest(test.request)
-			assert.Equal(t, test.err, err)
+			if test.err != nil {
+				assert.True(t, errors.Is(err, test.err))
+			} else {
+				assert.NoError(t, err)
+			}
 		})
 	}
 }
