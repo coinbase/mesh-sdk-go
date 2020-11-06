@@ -48,4 +48,8 @@ type Allow struct {
 	// balance changes. If your implementation relies on any BalanceExemptions, you MUST implement
 	// historical balance lookup (the ability to query an account balance at any BlockIdentifier).
 	BalanceExemptions []*BalanceExemption `json:"balance_exemptions"`
+	// Any Rosetta implementation that can update an AccountIdentifier's unspent coins based on the
+	// contents of the mempool should populate this field as true. If false, requests to
+	// `/account/coins` that set `include_mempool` as true will be automatically rejected.
+	MempoolCoins bool `json:"mempool_coins"`
 }
