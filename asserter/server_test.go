@@ -1397,3 +1397,57 @@ func TestAccountCoinsRequest(t *testing.T) {
 		})
 	}
 }
+
+func TestEventsBlocksRequest(t *testing.T) {
+	var tests = map[string]struct {
+		request *types.EventsBlocksRequest
+		err     error
+	}{
+		"valid request": {
+			request: &types.EventsBlocksRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+			},
+			err: nil,
+		},
+		"invalid request wrong network": {
+			request: &types.EventsBlocksRequest{
+				NetworkIdentifier: wrongNetworkIdentifier,
+			},
+			err: fmt.Errorf(
+				"%w: %+v",
+				ErrRequestedNetworkNotSupported,
+				wrongNetworkIdentifier,
+			),
+		},
+		"nil request": {
+			request: nil,
+			err:     ErrEventsBlocksRequestIsNil,
+		},
+		"negative offset": {
+			request: &types.EventsBlocksRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+				Offset:            types.Int64(-1),
+			},
+			err: ErrOffsetIsNegative,
+		},
+		"negative limit": {
+			request: &types.EventsBlocksRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+				Limit:             types.Int64(-1),
+			},
+			err: ErrLimitIsNegative,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			err := a.EventsBlocksRequest(test.request)
+			if test.err != nil {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), test.err.Error())
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
