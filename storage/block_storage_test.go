@@ -113,7 +113,7 @@ func simpleTransactionFactory(
 					Index: 0,
 				},
 				Type:   "Transfer",
-				Status: "Success",
+				Status: types.String("Success"),
 				Account: &types.AccountIdentifier{
 					Address: address,
 				},
@@ -213,7 +213,7 @@ var (
 							Index: 0,
 						},
 						Type:   "Transfer",
-						Status: "Success",
+						Status: types.String("Success"),
 						Account: &types.AccountIdentifier{
 							Address: "addr1",
 							SubAccount: &types.SubAccountIdentifier{

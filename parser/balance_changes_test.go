@@ -45,7 +45,7 @@ func TestBalanceChanges(t *testing.T) {
 				Index: 0,
 			},
 			Type:   "Transfer",
-			Status: "Success",
+			Status: types.String("Success"),
 		}
 
 		emptyAmount = &types.Operation{
@@ -53,7 +53,7 @@ func TestBalanceChanges(t *testing.T) {
 				Index: 0,
 			},
 			Type:    "Transfer",
-			Status:  "Success",
+			Status:  types.String("Success"),
 			Account: recipient,
 		}
 
@@ -62,7 +62,7 @@ func TestBalanceChanges(t *testing.T) {
 				Index: 0,
 			},
 			Type:    "Transfer",
-			Status:  "Success",
+			Status:  types.String("Success"),
 			Account: recipient,
 			Amount:  recipientAmount,
 		}
@@ -72,7 +72,7 @@ func TestBalanceChanges(t *testing.T) {
 				Index: 1,
 			},
 			Type:    "Transfer",
-			Status:  "Failure",
+			Status:  types.String("Failure"),
 			Account: recipient,
 			Amount:  recipientAmount,
 		}
@@ -295,7 +295,7 @@ func simpleTransactionFactory(
 					Index: 0,
 				},
 				Type:   "Transfer",
-				Status: "Success",
+				Status: types.String("Success"),
 				Account: &types.AccountIdentifier{
 					Address: address,
 				},

@@ -50,7 +50,7 @@ func TestExpectedOperation(t *testing.T) {
 						Index: 2,
 					},
 				},
-				Status: "success",
+				Status: types.String("success"),
 				Type:   "transfer",
 				Account: &types.AccountIdentifier{
 					Address: "addr1",
@@ -82,7 +82,7 @@ func TestExpectedOperation(t *testing.T) {
 						Index: 2,
 					},
 				},
-				Status: "success",
+				Status: types.String("success"),
 				Type:   "transfer",
 				Account: &types.AccountIdentifier{
 					Address: "addr2",
@@ -115,7 +115,7 @@ func TestExpectedOperation(t *testing.T) {
 						Index: 2,
 					},
 				},
-				Status: "success",
+				Status: types.String("success"),
 				Type:   "transfer",
 				Account: &types.AccountIdentifier{
 					Address: "addr1",
@@ -148,7 +148,7 @@ func TestExpectedOperation(t *testing.T) {
 						Index: 2,
 					},
 				},
-				Status: "success",
+				Status: types.String("success"),
 				Type:   "reward",
 				Account: &types.AccountIdentifier{
 					Address: "addr1",
@@ -214,7 +214,7 @@ func TestExpectedOperations(t *testing.T) {
 					OperationIdentifier: &types.OperationIdentifier{
 						Index: 2,
 					},
-					Status: "success",
+					Status: types.String("success"),
 					Type:   "fee",
 					Account: &types.AccountIdentifier{
 						Address: "addr2",
@@ -232,7 +232,7 @@ func TestExpectedOperations(t *testing.T) {
 							Index: 2,
 						},
 					},
-					Status: "success",
+					Status: types.String("success"),
 					Type:   "transfer",
 					Account: &types.AccountIdentifier{
 						Address: "addr1",
@@ -334,7 +334,7 @@ func TestExpectedOperations(t *testing.T) {
 					OperationIdentifier: &types.OperationIdentifier{
 						Index: 2,
 					},
-					Status: "success",
+					Status: types.String("success"),
 					Type:   "fee",
 					Account: &types.AccountIdentifier{
 						Address: "addr2",
@@ -352,7 +352,7 @@ func TestExpectedOperations(t *testing.T) {
 							Index: 2,
 						},
 					},
-					Status: "success",
+					Status: types.String("success"),
 					Type:   "transfer",
 					Account: &types.AccountIdentifier{
 						Address: "addr1",
@@ -396,7 +396,7 @@ func TestExpectedOperations(t *testing.T) {
 					OperationIdentifier: &types.OperationIdentifier{
 						Index: 2,
 					},
-					Status: "success",
+					Status: types.String("success"),
 					Type:   "fee",
 					Account: &types.AccountIdentifier{
 						Address: "addr2",
@@ -414,7 +414,7 @@ func TestExpectedOperations(t *testing.T) {
 							Index: 2,
 						},
 					},
-					Status: "failure",
+					Status: types.String("failure"),
 					Type:   "transfer",
 					Account: &types.AccountIdentifier{
 						Address: "addr1",
@@ -447,7 +447,7 @@ func TestExpectedOperations(t *testing.T) {
 					OperationIdentifier: &types.OperationIdentifier{
 						Index: 2,
 					},
-					Status: "success",
+					Status: types.String("success"),
 					Type:   "fee",
 					Account: &types.AccountIdentifier{
 						Address: "addr2",
@@ -465,7 +465,7 @@ func TestExpectedOperations(t *testing.T) {
 							Index: 2,
 						},
 					},
-					Status: "success",
+					Status: types.String("success"),
 					Type:   "transfer",
 					Account: &types.AccountIdentifier{
 						Address: "addr1",
@@ -515,7 +515,7 @@ func TestExpectedOperations(t *testing.T) {
 							Index: 2,
 						},
 					},
-					Status: "success",
+					Status: types.String("success"),
 					Type:   "transfer",
 					Account: &types.AccountIdentifier{
 						Address: "addr1",
