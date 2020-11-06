@@ -1320,3 +1320,80 @@ func TestCallRequest(t *testing.T) {
 		})
 	}
 }
+
+func TestAccountCoinsRequest(t *testing.T) {
+	var tests = map[string]struct {
+		request      *types.AccountCoinsRequest
+		allowMempool bool
+		err          error
+	}{
+		"valid request": {
+			request: &types.AccountCoinsRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+				AccountIdentifier: validAccountIdentifier,
+			},
+			err: nil,
+		},
+		"invalid request wrong network": {
+			request: &types.AccountCoinsRequest{
+				NetworkIdentifier: wrongNetworkIdentifier,
+				AccountIdentifier: validAccountIdentifier,
+			},
+			err: fmt.Errorf(
+				"%w: %+v",
+				ErrRequestedNetworkNotSupported,
+				wrongNetworkIdentifier,
+			),
+		},
+		"nil request": {
+			request: nil,
+			err:     ErrAccountCoinsRequestIsNil,
+		},
+		"missing network": {
+			request: &types.AccountCoinsRequest{
+				AccountIdentifier: validAccountIdentifier,
+			},
+			err: ErrNetworkIdentifierIsNil,
+		},
+		"missing account": {
+			request: &types.AccountCoinsRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+			},
+			err: ErrAccountIsNil,
+		},
+		"valid mempool lookup request": {
+			request: &types.AccountCoinsRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+				AccountIdentifier: validAccountIdentifier,
+			},
+			allowMempool: true,
+			err:          nil,
+		},
+		"valid mempool lookup request when not enabled": {
+			request: &types.AccountCoinsRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+				AccountIdentifier: validAccountIdentifier,
+				IncludeMempool:    true,
+			},
+			allowMempool: false,
+			err:          ErrMempoolCoinsNotSupported,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			asserter, err := NewServer(
+				[]string{"PAYMENT"},
+				false,
+				[]*types.NetworkIdentifier{validNetworkIdentifier},
+				nil,
+				test.allowMempool,
+			)
+			assert.NotNil(t, asserter)
+			assert.NoError(t, err)
+
+			err = asserter.AccountCoinsRequest(test.request)
+			assert.Equal(t, test.err, err)
+		})
+	}
+}
