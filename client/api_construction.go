@@ -84,7 +84,16 @@ func (a *ConstructionAPIService) ConstructionCombine(
 		return nil, nil, err
 	}
 
-	if localVarHTTPResponse.StatusCode != _nethttp.StatusOK {
+	switch localVarHTTPResponse.StatusCode {
+	case _nethttp.StatusOK:
+		var v types.ConstructionCombineResponse
+		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+		if err != nil {
+			return nil, nil, err
+		}
+
+		return &v, nil, nil
+	case _nethttp.StatusInternalServerError:
 		var v types.Error
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
@@ -92,15 +101,22 @@ func (a *ConstructionAPIService) ConstructionCombine(
 		}
 
 		return nil, &v, fmt.Errorf("%+v", v)
+	case _nethttp.StatusBadGateway,
+		_nethttp.StatusServiceUnavailable,
+		_nethttp.StatusGatewayTimeout:
+		return nil, nil, fmt.Errorf(
+			"%w: code: %d body: %s",
+			ErrRetriable,
+			localVarHTTPResponse.StatusCode,
+			string(localVarBody),
+		)
+	default:
+		return nil, nil, fmt.Errorf(
+			"invalid status code: %d body: %s",
+			localVarHTTPResponse.StatusCode,
+			string(localVarBody),
+		)
 	}
-
-	var v types.ConstructionCombineResponse
-	err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return &v, nil, nil
 }
 
 // ConstructionDerive Derive returns the AccountIdentifier associated with a public key. Blockchains
@@ -153,7 +169,16 @@ func (a *ConstructionAPIService) ConstructionDerive(
 		return nil, nil, err
 	}
 
-	if localVarHTTPResponse.StatusCode != _nethttp.StatusOK {
+	switch localVarHTTPResponse.StatusCode {
+	case _nethttp.StatusOK:
+		var v types.ConstructionDeriveResponse
+		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+		if err != nil {
+			return nil, nil, err
+		}
+
+		return &v, nil, nil
+	case _nethttp.StatusInternalServerError:
 		var v types.Error
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
@@ -161,15 +186,22 @@ func (a *ConstructionAPIService) ConstructionDerive(
 		}
 
 		return nil, &v, fmt.Errorf("%+v", v)
+	case _nethttp.StatusBadGateway,
+		_nethttp.StatusServiceUnavailable,
+		_nethttp.StatusGatewayTimeout:
+		return nil, nil, fmt.Errorf(
+			"%w: code: %d body: %s",
+			ErrRetriable,
+			localVarHTTPResponse.StatusCode,
+			string(localVarBody),
+		)
+	default:
+		return nil, nil, fmt.Errorf(
+			"invalid status code: %d body: %s",
+			localVarHTTPResponse.StatusCode,
+			string(localVarBody),
+		)
 	}
-
-	var v types.ConstructionDeriveResponse
-	err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return &v, nil, nil
 }
 
 // ConstructionHash TransactionHash returns the network-specific transaction hash for a signed
@@ -222,7 +254,16 @@ func (a *ConstructionAPIService) ConstructionHash(
 		return nil, nil, err
 	}
 
-	if localVarHTTPResponse.StatusCode != _nethttp.StatusOK {
+	switch localVarHTTPResponse.StatusCode {
+	case _nethttp.StatusOK:
+		var v types.TransactionIdentifierResponse
+		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+		if err != nil {
+			return nil, nil, err
+		}
+
+		return &v, nil, nil
+	case _nethttp.StatusInternalServerError:
 		var v types.Error
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
@@ -230,15 +271,22 @@ func (a *ConstructionAPIService) ConstructionHash(
 		}
 
 		return nil, &v, fmt.Errorf("%+v", v)
+	case _nethttp.StatusBadGateway,
+		_nethttp.StatusServiceUnavailable,
+		_nethttp.StatusGatewayTimeout:
+		return nil, nil, fmt.Errorf(
+			"%w: code: %d body: %s",
+			ErrRetriable,
+			localVarHTTPResponse.StatusCode,
+			string(localVarBody),
+		)
+	default:
+		return nil, nil, fmt.Errorf(
+			"invalid status code: %d body: %s",
+			localVarHTTPResponse.StatusCode,
+			string(localVarBody),
+		)
 	}
-
-	var v types.TransactionIdentifierResponse
-	err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return &v, nil, nil
 }
 
 // ConstructionMetadata Get any information required to construct a transaction for a specific
@@ -298,7 +346,16 @@ func (a *ConstructionAPIService) ConstructionMetadata(
 		return nil, nil, err
 	}
 
-	if localVarHTTPResponse.StatusCode != _nethttp.StatusOK {
+	switch localVarHTTPResponse.StatusCode {
+	case _nethttp.StatusOK:
+		var v types.ConstructionMetadataResponse
+		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+		if err != nil {
+			return nil, nil, err
+		}
+
+		return &v, nil, nil
+	case _nethttp.StatusInternalServerError:
 		var v types.Error
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
@@ -306,15 +363,22 @@ func (a *ConstructionAPIService) ConstructionMetadata(
 		}
 
 		return nil, &v, fmt.Errorf("%+v", v)
+	case _nethttp.StatusBadGateway,
+		_nethttp.StatusServiceUnavailable,
+		_nethttp.StatusGatewayTimeout:
+		return nil, nil, fmt.Errorf(
+			"%w: code: %d body: %s",
+			ErrRetriable,
+			localVarHTTPResponse.StatusCode,
+			string(localVarBody),
+		)
+	default:
+		return nil, nil, fmt.Errorf(
+			"invalid status code: %d body: %s",
+			localVarHTTPResponse.StatusCode,
+			string(localVarBody),
+		)
 	}
-
-	var v types.ConstructionMetadataResponse
-	err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return &v, nil, nil
 }
 
 // ConstructionParse Parse is called on both unsigned and signed transactions to understand the
@@ -368,7 +432,16 @@ func (a *ConstructionAPIService) ConstructionParse(
 		return nil, nil, err
 	}
 
-	if localVarHTTPResponse.StatusCode != _nethttp.StatusOK {
+	switch localVarHTTPResponse.StatusCode {
+	case _nethttp.StatusOK:
+		var v types.ConstructionParseResponse
+		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+		if err != nil {
+			return nil, nil, err
+		}
+
+		return &v, nil, nil
+	case _nethttp.StatusInternalServerError:
 		var v types.Error
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
@@ -376,15 +449,22 @@ func (a *ConstructionAPIService) ConstructionParse(
 		}
 
 		return nil, &v, fmt.Errorf("%+v", v)
+	case _nethttp.StatusBadGateway,
+		_nethttp.StatusServiceUnavailable,
+		_nethttp.StatusGatewayTimeout:
+		return nil, nil, fmt.Errorf(
+			"%w: code: %d body: %s",
+			ErrRetriable,
+			localVarHTTPResponse.StatusCode,
+			string(localVarBody),
+		)
+	default:
+		return nil, nil, fmt.Errorf(
+			"invalid status code: %d body: %s",
+			localVarHTTPResponse.StatusCode,
+			string(localVarBody),
+		)
 	}
-
-	var v types.ConstructionParseResponse
-	err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return &v, nil, nil
 }
 
 // ConstructionPayloads Payloads is called with an array of operations and the response from
@@ -443,7 +523,16 @@ func (a *ConstructionAPIService) ConstructionPayloads(
 		return nil, nil, err
 	}
 
-	if localVarHTTPResponse.StatusCode != _nethttp.StatusOK {
+	switch localVarHTTPResponse.StatusCode {
+	case _nethttp.StatusOK:
+		var v types.ConstructionPayloadsResponse
+		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+		if err != nil {
+			return nil, nil, err
+		}
+
+		return &v, nil, nil
+	case _nethttp.StatusInternalServerError:
 		var v types.Error
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
@@ -451,15 +540,22 @@ func (a *ConstructionAPIService) ConstructionPayloads(
 		}
 
 		return nil, &v, fmt.Errorf("%+v", v)
+	case _nethttp.StatusBadGateway,
+		_nethttp.StatusServiceUnavailable,
+		_nethttp.StatusGatewayTimeout:
+		return nil, nil, fmt.Errorf(
+			"%w: code: %d body: %s",
+			ErrRetriable,
+			localVarHTTPResponse.StatusCode,
+			string(localVarBody),
+		)
+	default:
+		return nil, nil, fmt.Errorf(
+			"invalid status code: %d body: %s",
+			localVarHTTPResponse.StatusCode,
+			string(localVarBody),
+		)
 	}
-
-	var v types.ConstructionPayloadsResponse
-	err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return &v, nil, nil
 }
 
 // ConstructionPreprocess Preprocess is called prior to /construction/payloads to construct a
@@ -516,7 +612,16 @@ func (a *ConstructionAPIService) ConstructionPreprocess(
 		return nil, nil, err
 	}
 
-	if localVarHTTPResponse.StatusCode != _nethttp.StatusOK {
+	switch localVarHTTPResponse.StatusCode {
+	case _nethttp.StatusOK:
+		var v types.ConstructionPreprocessResponse
+		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+		if err != nil {
+			return nil, nil, err
+		}
+
+		return &v, nil, nil
+	case _nethttp.StatusInternalServerError:
 		var v types.Error
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
@@ -524,15 +629,22 @@ func (a *ConstructionAPIService) ConstructionPreprocess(
 		}
 
 		return nil, &v, fmt.Errorf("%+v", v)
+	case _nethttp.StatusBadGateway,
+		_nethttp.StatusServiceUnavailable,
+		_nethttp.StatusGatewayTimeout:
+		return nil, nil, fmt.Errorf(
+			"%w: code: %d body: %s",
+			ErrRetriable,
+			localVarHTTPResponse.StatusCode,
+			string(localVarBody),
+		)
+	default:
+		return nil, nil, fmt.Errorf(
+			"invalid status code: %d body: %s",
+			localVarHTTPResponse.StatusCode,
+			string(localVarBody),
+		)
 	}
-
-	var v types.ConstructionPreprocessResponse
-	err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return &v, nil, nil
 }
 
 // ConstructionSubmit Submit a pre-signed transaction to the node. This call should not block on the
@@ -588,7 +700,16 @@ func (a *ConstructionAPIService) ConstructionSubmit(
 		return nil, nil, err
 	}
 
-	if localVarHTTPResponse.StatusCode != _nethttp.StatusOK {
+	switch localVarHTTPResponse.StatusCode {
+	case _nethttp.StatusOK:
+		var v types.TransactionIdentifierResponse
+		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+		if err != nil {
+			return nil, nil, err
+		}
+
+		return &v, nil, nil
+	case _nethttp.StatusInternalServerError:
 		var v types.Error
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
@@ -596,13 +717,20 @@ func (a *ConstructionAPIService) ConstructionSubmit(
 		}
 
 		return nil, &v, fmt.Errorf("%+v", v)
+	case _nethttp.StatusBadGateway,
+		_nethttp.StatusServiceUnavailable,
+		_nethttp.StatusGatewayTimeout:
+		return nil, nil, fmt.Errorf(
+			"%w: code: %d body: %s",
+			ErrRetriable,
+			localVarHTTPResponse.StatusCode,
+			string(localVarBody),
+		)
+	default:
+		return nil, nil, fmt.Errorf(
+			"invalid status code: %d body: %s",
+			localVarHTTPResponse.StatusCode,
+			string(localVarBody),
+		)
 	}
-
-	var v types.TransactionIdentifierResponse
-	err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return &v, nil, nil
 }

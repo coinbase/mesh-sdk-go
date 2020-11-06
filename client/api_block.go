@@ -89,7 +89,16 @@ func (a *BlockAPIService) Block(
 		return nil, nil, err
 	}
 
-	if localVarHTTPResponse.StatusCode != _nethttp.StatusOK {
+	switch localVarHTTPResponse.StatusCode {
+	case _nethttp.StatusOK:
+		var v types.BlockResponse
+		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+		if err != nil {
+			return nil, nil, err
+		}
+
+		return &v, nil, nil
+	case _nethttp.StatusInternalServerError:
 		var v types.Error
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
@@ -97,15 +106,22 @@ func (a *BlockAPIService) Block(
 		}
 
 		return nil, &v, fmt.Errorf("%+v", v)
+	case _nethttp.StatusBadGateway,
+		_nethttp.StatusServiceUnavailable,
+		_nethttp.StatusGatewayTimeout:
+		return nil, nil, fmt.Errorf(
+			"%w: code: %d body: %s",
+			ErrRetriable,
+			localVarHTTPResponse.StatusCode,
+			string(localVarBody),
+		)
+	default:
+		return nil, nil, fmt.Errorf(
+			"invalid status code: %d body: %s",
+			localVarHTTPResponse.StatusCode,
+			string(localVarBody),
+		)
 	}
-
-	var v types.BlockResponse
-	err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return &v, nil, nil
 }
 
 // BlockTransaction Get a transaction in a block by its Transaction Identifier. This endpoint should
@@ -170,7 +186,16 @@ func (a *BlockAPIService) BlockTransaction(
 		return nil, nil, err
 	}
 
-	if localVarHTTPResponse.StatusCode != _nethttp.StatusOK {
+	switch localVarHTTPResponse.StatusCode {
+	case _nethttp.StatusOK:
+		var v types.BlockTransactionResponse
+		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+		if err != nil {
+			return nil, nil, err
+		}
+
+		return &v, nil, nil
+	case _nethttp.StatusInternalServerError:
 		var v types.Error
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
@@ -178,13 +203,20 @@ func (a *BlockAPIService) BlockTransaction(
 		}
 
 		return nil, &v, fmt.Errorf("%+v", v)
+	case _nethttp.StatusBadGateway,
+		_nethttp.StatusServiceUnavailable,
+		_nethttp.StatusGatewayTimeout:
+		return nil, nil, fmt.Errorf(
+			"%w: code: %d body: %s",
+			ErrRetriable,
+			localVarHTTPResponse.StatusCode,
+			string(localVarBody),
+		)
+	default:
+		return nil, nil, fmt.Errorf(
+			"invalid status code: %d body: %s",
+			localVarHTTPResponse.StatusCode,
+			string(localVarBody),
+		)
 	}
-
-	var v types.BlockTransactionResponse
-	err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return &v, nil, nil
 }
