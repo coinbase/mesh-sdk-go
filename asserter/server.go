@@ -93,6 +93,10 @@ func (a *Asserter) AccountBalanceRequest(request *types.AccountBalanceRequest) e
 		return err
 	}
 
+	if curr := ContainsDuplicateCurrency(request.Currencies); curr != nil {
+		return fmt.Errorf("%w: %s", ErrDuplicateCurrency, types.PrintStruct(curr))
+	}
+
 	if request.BlockIdentifier == nil {
 		return nil
 	}
@@ -459,6 +463,10 @@ func (a *Asserter) AccountCoinsRequest(request *types.AccountCoinsRequest) error
 		return ErrMempoolCoinsNotSupported
 	}
 
+	if curr := ContainsDuplicateCurrency(request.Currencies); curr != nil {
+		return fmt.Errorf("%w: %s", ErrDuplicateCurrency, types.PrintStruct(curr))
+	}
+
 	return nil
 }
 
@@ -469,7 +477,18 @@ func (a *Asserter) EventsBlocksRequest(request *types.EventsBlocksRequest) error
 		return ErrAsserterNotInitialized
 	}
 
-	// TODO: implement assertion
+	if request == nil {
+		return ErrEventsBlocksRequestIsNil
+	}
+
+	if request.Offset != nil && *request.Offset < 0 {
+		return ErrOffsetIsNegative
+	}
+
+	if request.Limit != nil && *request.Limit < 0 {
+		return ErrLimitIsNegative
+	}
+
 	return nil
 }
 
@@ -480,6 +499,71 @@ func (a *Asserter) SearchTransactionsRequest(request *types.SearchTransactionsRe
 		return ErrAsserterNotInitialized
 	}
 
-	// TODO: implement assertion
+	if request == nil {
+		return ErrSearchTransactionsRequestIsNil
+	}
+
+	if err := a.ValidSupportedNetwork(request.NetworkIdentifier); err != nil {
+		return err
+	}
+
+	switch request.Operator {
+	case types.AND, types.OR:
+	default:
+		return ErrOperatorInvalid
+	}
+
+	if request.MaxBlock != nil && *request.MaxBlock < 0 {
+		return ErrMaxBlockInvalid
+	}
+
+	if request.Offset != nil && *request.Offset < 0 {
+		return ErrOffsetIsNegative
+	}
+
+	if request.Limit != nil && *request.Limit < 0 {
+		return ErrLimitIsNegative
+	}
+
+	if request.TransactionIdentifier != nil {
+		if err := TransactionIdentifier(request.TransactionIdentifier); err != nil {
+			return err
+		}
+	}
+
+	if request.AccountIdentifier != nil {
+		if err := AccountIdentifier(request.AccountIdentifier); err != nil {
+			return err
+		}
+	}
+
+	if request.CoinIdentifier != nil {
+		if err := CoinIdentifier(request.CoinIdentifier); err != nil {
+			return err
+		}
+	}
+
+	if request.Currency != nil {
+		if err := Currency(request.Currency); err != nil {
+			return err
+		}
+	}
+
+	if request.Status != nil {
+		if err := a.OperationStatus(request.Status, false); err != nil {
+			return err
+		}
+	}
+
+	if request.Type != nil {
+		if err := a.OperationType(*request.Type); err != nil {
+			return err
+		}
+	}
+
+	if request.Address != nil && len(*request.Address) == 0 {
+		return ErrAccountAddrMissing
+	}
+
 	return nil
 }

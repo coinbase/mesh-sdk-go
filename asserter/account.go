@@ -20,6 +20,21 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
+// ContainsDuplicateCurrency retruns a boolean indicating
+// if an array of *types.Currency contains any duplicate currencies.
+func ContainsDuplicateCurrency(currencies []*types.Currency) *types.Currency {
+	seen := []*types.Currency{}
+	for _, curr := range currencies {
+		if ContainsCurrency(seen, curr) {
+			return curr
+		}
+
+		seen = append(seen, curr)
+	}
+
+	return nil
+}
+
 // ContainsCurrency returns a boolean indicating if a
 // *types.Currency is contained within a slice of
 // *types.Currency. The check for equality takes
