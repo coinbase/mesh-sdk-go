@@ -430,11 +430,13 @@ var (
 	ErrMaxSequenceInvalid    = errors.New("max sequence invalid")
 	ErrSequenceInvalid       = errors.New("sequence invalid")
 	ErrBlockEventTypeInvalid = errors.New("block event type invalid")
+	ErrSequenceOutOfOrder    = errors.New("sequence out of order")
 
 	EventsErrs = []error{
 		ErrMaxSequenceInvalid,
 		ErrSequenceInvalid,
 		ErrBlockEventTypeInvalid,
+		ErrSequenceOutOfOrder,
 	}
 
 	///////////////////

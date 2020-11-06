@@ -49,9 +49,18 @@ func EventsBlocksResponse(
 		return ErrMaxSequenceInvalid
 	}
 
-	for _, event := range response.Events {
+	seq := int64(-1)
+	for i, event := range response.Events {
 		if err := BlockEvent(event); err != nil {
 			return err
+		}
+
+		if seq == -1 {
+			seq = event.Sequence
+		}
+
+		if event.Sequence != seq+int64(i) {
+			return ErrSequenceOutOfOrder
 		}
 	}
 
