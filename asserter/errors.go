@@ -424,6 +424,30 @@ var (
 	}
 
 	///////////////////
+	/* EVENTS ERRORS */
+	///////////////////
+
+	ErrMaxSequenceInvalid    = errors.New("max sequence invalid")
+	ErrSequenceInvalid       = errors.New("sequence invalid")
+	ErrBlockEventTypeInvalid = errors.New("block event type invalid")
+
+	EventsErrs = []error{
+		ErrMaxSequenceInvalid,
+		ErrSequenceInvalid,
+		ErrBlockEventTypeInvalid,
+	}
+
+	///////////////////
+	/* SEARCH ERRORS */
+	///////////////////
+
+	ErrNextOffsetInvalid = errors.New("next offset invalid")
+
+	SearchErrs = []error{
+		ErrNextOffsetInvalid,
+	}
+
+	///////////////////
 	/* ERROR ERRORS */
 	///////////////////
 	ErrErrorIsNil           = errors.New("Error is nil")
@@ -460,6 +484,8 @@ func Err(err error) (bool, string) {
 		"construction error":    ConstructionErrs,
 		"network error":         NetworkErrs,
 		"server error":          ServerErrs,
+		"events error":          EventsErrs,
+		"search error":          SearchErrs,
 		"error error":           ErrorErrs,
 	}
 
