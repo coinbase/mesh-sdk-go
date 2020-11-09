@@ -20,7 +20,7 @@ package types
 // set of provided conditions in canonical blocks.
 type SearchTransactionsRequest struct {
 	NetworkIdentifier *NetworkIdentifier `json:"network_identifier"`
-	Operator          Operator           `json:"operator"`
+	Operator          *Operator          `json:"operator,omitempty"`
 	// max_block is the largest block index to consider when searching for transactions. If this
 	// field is not populated, the current block is considered the max_block. If you do not specify
 	// a max_block, it is possible a newly synced block will interfere with paginated transaction
