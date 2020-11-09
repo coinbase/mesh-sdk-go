@@ -16,7 +16,8 @@
 
 package types
 
-// Operator Operator is used by query-related endpoints to determine how to apply conditions.
+// Operator Operator is used by query-related endpoints to determine how to apply conditions. If
+// this field is not populated, the default `and` value will be used.
 type Operator string
 
 // List of Operator

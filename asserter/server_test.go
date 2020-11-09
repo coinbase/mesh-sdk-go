@@ -1525,17 +1525,23 @@ func TestSearchTransactionsRequest(t *testing.T) {
 		request *types.SearchTransactionsRequest
 		err     error
 	}{
+		"valid request no operator": {
+			request: &types.SearchTransactionsRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+			},
+			err: nil,
+		},
 		"valid request": {
 			request: &types.SearchTransactionsRequest{
 				NetworkIdentifier: validNetworkIdentifier,
-				Operator:          types.AND,
+				Operator:          types.OperatorP(types.AND),
 			},
 			err: nil,
 		},
 		"invalid request wrong network": {
 			request: &types.SearchTransactionsRequest{
 				NetworkIdentifier: wrongNetworkIdentifier,
-				Operator:          types.OR,
+				Operator:          types.OperatorP(types.OR),
 			},
 			err: fmt.Errorf(
 				"%w: %+v",
@@ -1550,7 +1556,7 @@ func TestSearchTransactionsRequest(t *testing.T) {
 		"negative max block": {
 			request: &types.SearchTransactionsRequest{
 				NetworkIdentifier: validNetworkIdentifier,
-				Operator:          types.OR,
+				Operator:          types.OperatorP(types.OR),
 				MaxBlock:          types.Int64(-1),
 			},
 			err: ErrMaxBlockInvalid,
@@ -1558,7 +1564,7 @@ func TestSearchTransactionsRequest(t *testing.T) {
 		"negative offset": {
 			request: &types.SearchTransactionsRequest{
 				NetworkIdentifier: validNetworkIdentifier,
-				Operator:          types.OR,
+				Operator:          types.OperatorP(types.OR),
 				Offset:            types.Int64(-1),
 			},
 			err: ErrOffsetIsNegative,
@@ -1566,7 +1572,7 @@ func TestSearchTransactionsRequest(t *testing.T) {
 		"negative limit": {
 			request: &types.SearchTransactionsRequest{
 				NetworkIdentifier: validNetworkIdentifier,
-				Operator:          types.OR,
+				Operator:          types.OperatorP(types.OR),
 				Limit:             types.Int64(-1),
 			},
 			err: ErrLimitIsNegative,
@@ -1574,7 +1580,7 @@ func TestSearchTransactionsRequest(t *testing.T) {
 		"invalid operator": {
 			request: &types.SearchTransactionsRequest{
 				NetworkIdentifier: validNetworkIdentifier,
-				Operator:          "NOR",
+				Operator:          types.OperatorP("NOR"),
 			},
 			err: ErrOperatorInvalid,
 		},

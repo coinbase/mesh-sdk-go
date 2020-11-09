@@ -297,3 +297,13 @@ func Int64(i int64) *int64 {
 func Bool(b bool) *bool {
 	return &b
 }
+
+// OperatorP returns a pointer to the
+// Operator passed as an argument.
+//
+// We can't just use Operator because
+// the types package already declares
+// the Operator type.
+func OperatorP(o Operator) *Operator {
+	return &o
+}
