@@ -32,7 +32,6 @@ import (
 var (
 	basicSearchTransactionsRequest = &types.SearchTransactionsRequest{
 		NetworkIdentifier: basicNetwork,
-		Operator:          types.AND,
 		TransactionIdentifier: &types.TransactionIdentifier{
 			Hash: "tx",
 		},
