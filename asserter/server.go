@@ -513,10 +513,12 @@ func (a *Asserter) SearchTransactionsRequest( // nolint:gocognit
 		return err
 	}
 
-	switch request.Operator {
-	case types.AND, types.OR:
-	default:
-		return ErrOperatorInvalid
+	if request.Operator != nil {
+		switch *request.Operator {
+		case types.AND, types.OR:
+		default:
+			return ErrOperatorInvalid
+		}
 	}
 
 	if request.MaxBlock != nil && *request.MaxBlock < 0 {
