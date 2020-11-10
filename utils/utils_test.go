@@ -270,23 +270,6 @@ var (
 		Currency: currency,
 	}
 
-	accountCoins = []*types.Coin{
-		{
-			CoinIdentifier: &types.CoinIdentifier{Identifier: "coin1"},
-			Amount: &types.Amount{
-				Value:    "30",
-				Currency: currency,
-			},
-		},
-		{
-			CoinIdentifier: &types.CoinIdentifier{Identifier: "coin2"},
-			Amount: &types.Amount{
-				Value:    "30",
-				Currency: currency,
-			},
-		},
-	}
-
 	accountBalance = &types.AccountIdentifier{
 		Address: "test2",
 	}
@@ -305,7 +288,6 @@ var (
 	accBalanceResp1 = &AccountBalance{
 		Account: accountCoin,
 		Amount:  amountCoins,
-		Coins:   accountCoins,
 		Block:   blockIdentifier,
 	}
 
@@ -333,10 +315,10 @@ func TestGetAccountBalances(t *testing.T) {
 		network,
 		accountCoin,
 		(*types.PartialBlockIdentifier)(nil),
+		[]*types.Currency{currency},
 	).Return(
 		blockIdentifier,
 		[]*types.Amount{amountCoins},
-		accountCoins,
 		nil,
 		nil,
 	).Once()
@@ -347,10 +329,10 @@ func TestGetAccountBalances(t *testing.T) {
 		network,
 		accountBalance,
 		(*types.PartialBlockIdentifier)(nil),
+		[]*types.Currency{currency},
 	).Return(
 		blockIdentifier,
 		[]*types.Amount{amountBalance},
-		nil,
 		nil,
 		nil,
 	).Once()
@@ -372,8 +354,8 @@ func TestGetAccountBalances(t *testing.T) {
 		network,
 		accountBalance,
 		(*types.PartialBlockIdentifier)(nil),
+		[]*types.Currency{currency},
 	).Return(
-		nil,
 		nil,
 		nil,
 		nil,
