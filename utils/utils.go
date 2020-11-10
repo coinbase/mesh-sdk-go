@@ -183,7 +183,8 @@ type FetcherHelper interface {
 		network *types.NetworkIdentifier,
 		account *types.AccountIdentifier,
 		block *types.PartialBlockIdentifier,
-	) (*types.BlockIdentifier, []*types.Amount, []*types.Coin, map[string]interface{}, *fetcher.Error)
+		currencies []*types.Currency,
+	) (*types.BlockIdentifier, []*types.Amount, map[string]interface{}, *fetcher.Error)
 }
 
 // CheckNetworkSupported checks if a Rosetta implementation supports a given
@@ -312,7 +313,7 @@ func CurrencyBalance(
 	account *types.AccountIdentifier,
 	currency *types.Currency,
 	index int64,
-) (*types.Amount, *types.BlockIdentifier, []*types.Coin, error) {
+) (*types.Amount, *types.BlockIdentifier, error) {
 	var lookupBlock *types.PartialBlockIdentifier
 	if index >= 0 {
 		lookupBlock = &types.PartialBlockIdentifier{
@@ -320,14 +321,15 @@ func CurrencyBalance(
 		}
 	}
 
-	liveBlock, liveBalances, liveCoins, _, fetchErr := helper.AccountBalanceRetry(
+	liveBlock, liveBalances, _, fetchErr := helper.AccountBalanceRetry(
 		ctx,
 		network,
 		account,
 		lookupBlock,
+		[]*types.Currency{currency},
 	)
 	if fetchErr != nil {
-		return nil, nil, nil, fetchErr.Err
+		return nil, nil, fetchErr.Err
 	}
 
 	liveAmount, err := types.ExtractAmount(liveBalances, currency)
@@ -339,10 +341,10 @@ func CurrencyBalance(
 			types.PrettyPrintStruct(account),
 		)
 
-		return nil, nil, nil, formattedError
+		return nil, nil, formattedError
 	}
 
-	return liveAmount, liveBlock, liveCoins, nil
+	return liveAmount, liveBlock, nil
 }
 
 // AccountBalanceRequest defines the required information
@@ -372,7 +374,7 @@ func GetAccountBalances(
 ) ([]*AccountBalance, error) {
 	var accountBalances []*AccountBalance
 	for _, balanceRequest := range balanceRequests {
-		amount, block, coins, err := CurrencyBalance(
+		amount, block, err := CurrencyBalance(
 			ctx,
 			balanceRequest.Network,
 			fetcher,
@@ -388,7 +390,6 @@ func GetAccountBalances(
 		accountBalance := &AccountBalance{
 			Account: balanceRequest.Account,
 			Amount:  amount,
-			Coins:   coins,
 			Block:   block,
 		}
 
