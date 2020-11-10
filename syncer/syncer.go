@@ -565,14 +565,13 @@ func (s *Syncer) Tip() *types.BlockIdentifier {
 }
 
 // Sync cycles endlessly until there is an error
-// or the requested range is synced.
+// or the requested range is synced. When the requested
+// range is synced, context is canceled.
 func (s *Syncer) Sync(
 	ctx context.Context,
 	startIndex int64,
 	endIndex int64,
 ) error {
-	defer s.cancel()
-
 	if err := s.setStart(ctx, startIndex); err != nil {
 		return fmt.Errorf("%w: %v", ErrSetStartIndexFailed, err)
 	}
@@ -615,6 +614,7 @@ func (s *Syncer) Sync(
 		startIndex = s.genesisBlock.Index
 	}
 
+	s.cancel()
 	log.Printf("Finished syncing %d-%d\n", startIndex, endIndex)
 	return nil
 }
