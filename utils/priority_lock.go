@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"fmt"
 	"sync"
 )
 
@@ -50,10 +49,6 @@ func (lock *PriorityPreferenceLock) Lock() {
 func (lock *PriorityPreferenceLock) HighPriorityLock() {
 	lock.m.Lock()
 
-	if len(lock.lowPrio) > 0 {
-		fmt.Println("enqueue", "high:", len(lock.highPrio), "low:", len(lock.lowPrio))
-	}
-
 	if !lock.l {
 		lock.l = true
 		lock.m.Unlock()
@@ -74,7 +69,6 @@ func (lock *PriorityPreferenceLock) Unlock() {
 	if len(lock.highPrio) > 0 {
 		c := lock.highPrio[0]
 		lock.highPrio = lock.highPrio[1:]
-		fmt.Println("dequeue", "high:", len(lock.highPrio), "low:", len(lock.lowPrio))
 		lock.m.Unlock()
 		close(c)
 		return
