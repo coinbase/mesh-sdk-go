@@ -314,7 +314,6 @@ type BadgerTransaction struct {
 func (b *BadgerStorage) NewDatabaseTransaction(
 	ctx context.Context,
 	write bool,
-	priority bool,
 ) DatabaseTransaction {
 	if write {
 		// To avoid database commit conflicts,
@@ -322,18 +321,28 @@ func (b *BadgerStorage) NewDatabaseTransaction(
 		//
 		// Because we process blocks serially,
 		// this doesn't lead to much lock contention.
-		if priority {
-			b.writer.HighPriorityLock()
-		} else {
-			b.writer.Lock()
-		}
+		b.writer.Lock()
 	}
 
 	return &BadgerTransaction{
 		db:               b,
 		txn:              b.db.NewTransaction(write),
 		holdsLock:        write,
-		priority:         priority,
+		priority:         false,
+		buffersToReclaim: []*bytes.Buffer{},
+	}
+}
+
+func (b *BadgerStorage) HighPriorityTransaction(
+	ctx context.Context,
+) DatabaseTransaction {
+	b.writer.HighPriorityLock()
+
+	return &BadgerTransaction{
+		db:               b,
+		txn:              b.db.NewTransaction(true),
+		holdsLock:        true,
+		priority:         true,
 		buffersToReclaim: []*bytes.Buffer{},
 	}
 }
@@ -564,7 +573,7 @@ func recompress(
 	onDiskSize := float64(0)
 	newSize := float64(0)
 
-	txn := badgerDb.NewDatabaseTransaction(ctx, false, false)
+	txn := badgerDb.NewDatabaseTransaction(ctx, false)
 	defer txn.Discard(ctx)
 	_, err := txn.Scan(
 		ctx,
@@ -638,7 +647,7 @@ func BadgerTrain(
 	totalUncompressedSize := float64(0)
 	totalDiskSize := float64(0)
 	entriesSeen := 0
-	txn := badgerDb.NewDatabaseTransaction(ctx, false, false)
+	txn := badgerDb.NewDatabaseTransaction(ctx, false)
 	defer txn.Discard(ctx)
 	_, err = txn.Scan(
 		ctx,
