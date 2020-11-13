@@ -80,7 +80,7 @@ type BadgerStorage struct {
 	encoder  *Encoder
 	compress bool
 
-	writer sync.Mutex
+	writer *utils.PriorityPreferenceLock
 
 	// Track the closed status to ensure we exit garbage
 	// collection when the db closes.
@@ -197,6 +197,7 @@ func NewBadgerStorage(
 		closed:        make(chan struct{}),
 		pool:          NewBufferPool(),
 		compress:      true,
+		writer:        utils.NewPriorityPreferenceLock(),
 	}
 	for _, opt := range storageOptions {
 		opt(b)
@@ -293,6 +294,7 @@ type BadgerTransaction struct {
 	rwLock sync.RWMutex
 
 	holdsLock bool
+	priority  bool
 
 	// We MUST wait to reclaim any memory until after
 	// the transaction is committed or discarded.
@@ -312,6 +314,7 @@ type BadgerTransaction struct {
 func (b *BadgerStorage) NewDatabaseTransaction(
 	ctx context.Context,
 	write bool,
+	priority bool,
 ) DatabaseTransaction {
 	if write {
 		// To avoid database commit conflicts,
@@ -319,13 +322,18 @@ func (b *BadgerStorage) NewDatabaseTransaction(
 		//
 		// Because we process blocks serially,
 		// this doesn't lead to much lock contention.
-		b.writer.Lock()
+		if priority {
+			b.writer.HighPriorityLock()
+		} else {
+			b.writer.Lock()
+		}
 	}
 
 	return &BadgerTransaction{
 		db:               b,
 		txn:              b.db.NewTransaction(write),
 		holdsLock:        write,
+		priority:         priority,
 		buffersToReclaim: []*bytes.Buffer{},
 	}
 }
@@ -348,7 +356,11 @@ func (b *BadgerTransaction) Commit(context.Context) error {
 	// In this case, we only unlock if we hold the lock to avoid a panic.
 	if b.holdsLock {
 		b.holdsLock = false
-		b.db.writer.Unlock()
+		if b.priority {
+			b.db.writer.HighPriorityUnlock()
+		} else {
+			b.db.writer.Unlock()
+		}
 	}
 
 	if err != nil {
@@ -374,7 +386,11 @@ func (b *BadgerTransaction) Discard(context.Context) {
 	b.reclaimLock.Unlock()
 
 	if b.holdsLock {
-		b.db.writer.Unlock()
+		if b.priority {
+			b.db.writer.HighPriorityUnlock()
+		} else {
+			b.db.writer.Unlock()
+		}
 	}
 }
 
@@ -548,7 +564,7 @@ func recompress(
 	onDiskSize := float64(0)
 	newSize := float64(0)
 
-	txn := badgerDb.NewDatabaseTransaction(ctx, false)
+	txn := badgerDb.NewDatabaseTransaction(ctx, false, false)
 	defer txn.Discard(ctx)
 	_, err := txn.Scan(
 		ctx,
@@ -622,7 +638,7 @@ func BadgerTrain(
 	totalUncompressedSize := float64(0)
 	totalDiskSize := float64(0)
 	entriesSeen := 0
-	txn := badgerDb.NewDatabaseTransaction(ctx, false)
+	txn := badgerDb.NewDatabaseTransaction(ctx, false, false)
 	defer txn.Discard(ctx)
 	_, err = txn.Scan(
 		ctx,

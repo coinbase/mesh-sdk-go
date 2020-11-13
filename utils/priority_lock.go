@@ -4,6 +4,8 @@ import (
 	"sync"
 )
 
+// https://github.com/platinummonkey/priority-lock
+
 // PriorityPreferenceLock implements a simple triple-mutex priority lock
 // patterns are like:
 //   Low Priority would do: lock lowPriorityMutex, wait for high priority groups, lock nextToAccess, lock dataMutex, unlock nextToAccess, do stuff, unlock dataMutex, unlock lowPriorityMutex
