@@ -137,9 +137,9 @@ func (c *Configuration) ServerURL(index int, variables map[string]string) (strin
 					variable.EnumValues,
 				)
 			}
-			url = strings.Replace(url, "{"+name+"}", value, -1)
+			url = strings.ReplaceAll(url, "{"+name+"}", value)
 		} else {
-			url = strings.Replace(url, "{"+name+"}", variable.DefaultValue, -1)
+			url = strings.ReplaceAll(url, "{"+name+"}", variable.DefaultValue)
 		}
 	}
 	return url, nil

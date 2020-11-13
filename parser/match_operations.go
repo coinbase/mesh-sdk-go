@@ -178,7 +178,7 @@ func metadataMatch(reqs []*MetadataDescription, metadata map[string]interface{})
 // accountMatch returns an error if a *types.AccountIdentifier does not meet
 // an *AccountDescription.
 func accountMatch(req *AccountDescription, account *types.AccountIdentifier) error {
-	if req == nil { //anything is ok
+	if req == nil { // anything is ok
 		return nil
 	}
 

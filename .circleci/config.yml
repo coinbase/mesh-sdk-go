@@ -16,7 +16,7 @@ version: 2.1
 executors:
   default:
     docker:
-      - image: circleci/golang:1.13
+      - image: circleci/golang:1.15
         user: root # go directory is owned by root
     working_directory: /go/src/github.com/coinbase/rosetta-sdk-go
     environment:
@@ -51,7 +51,7 @@ jobs:
       name: default
     steps:
       - *fast-checkout
-      - run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.27.0
+      - run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.32.2
       - run: make lint
   check-license:
     executor:
