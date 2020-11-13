@@ -20,12 +20,8 @@ import (
 	utils "github.com/coinbase/rosetta-sdk-go/errors"
 )
 
-// Named error types for Storage errors
+// Badger Storage Errors
 var (
-	////////////////////
-	/* BADGER STORAGE */
-	////////////////////
-
 	ErrDatabaseOpenFailed         = errors.New("unable to open database")
 	ErrCompressorLoadFailed       = errors.New("unable to load compressor")
 	ErrDBCloseFailed              = errors.New("unable to close database")
@@ -71,11 +67,10 @@ var (
 		ErrTrainZSTDFailed,
 		ErrWalkFilesFailed,
 	}
+)
 
-	///////////////////////
-	/* BROADCAST STORAGE */
-	///////////////////////
-
+// Broadcast Storage Errors
+var (
 	ErrBroadcastTxStale     = errors.New("unable to handle stale transaction")
 	ErrBroadcastTxConfirmed = errors.New(
 		"unable to handle confirmed transaction",
@@ -137,11 +132,10 @@ var (
 		ErrBroadcastCommitDeleteFailed,
 		ErrBroadcastPerformFailed,
 	}
+)
 
-	//////////////////
-	/* COIN STORAGE */
-	//////////////////
-
+// Coin Storage Errors
+var (
 	ErrCoinQueryFailed                  = errors.New("unable to query for coin")
 	ErrCoinDecodeFailed                 = errors.New("unable to decode coin")
 	ErrCoinGetFailed                    = errors.New("unable to get coin")
@@ -187,11 +181,10 @@ var (
 		ErrCoinParseFailed,
 		ErrCoinImportFailed,
 	}
+)
 
-	////////////////
-	/* COMPRESSOR */
-	////////////////
-
+// Compressor Errors
+var (
 	ErrLoadDictFailed      = errors.New("unable to load dictionary")
 	ErrObjectEncodeFailed  = errors.New("unable to encode object")
 	ErrRawCompressFailed   = errors.New("unable to compress raw bytes")
@@ -215,11 +208,10 @@ var (
 		ErrReaderCloseFailed,
 		ErrCopyBlockFailed,
 	}
+)
 
-	/////////////////
-	/* JOB STORAGE */
-	/////////////////
-
+// Job Storage Errors
+var (
 	ErrJobsGetAllFailed              = errors.New("unable to get all jobs")
 	ErrJobIdentifierDecodeFailed     = errors.New("unable to decode existing identifier")
 	ErrJobGetFailed                  = errors.New("unable to get job")
@@ -259,11 +251,10 @@ var (
 		ErrJobDoesNotExist,
 		ErrJobDecodeFailed,
 	}
+)
 
-	/////////////////
-	/* KEY STORAGE */
-	/////////////////
-
+// Key Storage Errors
+var (
 	// ErrAddrExists is returned when key storage already
 	// contains an address.
 	ErrAddrExists = errors.New("address already exists")
@@ -306,11 +297,10 @@ var (
 		ErrAddrImportFailed,
 		ErrPrefundedAcctStoreFailed,
 	}
+)
 
-	/////////////////////
-	/* BALANCE STORAGE */
-	/////////////////////
-
+// Balance Storage Errors
+var (
 	// ErrNegativeBalance is returned when an account
 	// balance goes negative as the result of an operation.
 	ErrNegativeBalance = errors.New("negative balance")
@@ -339,11 +329,10 @@ var (
 		ErrBlockNil,
 		ErrAccountMissing,
 	}
+)
 
-	///////////////////
-	/* BLOCK STORAGE */
-	///////////////////
-
+// Block Storage Errors
+var (
 	// ErrHeadBlockNotFound is returned when there is no
 	// head block found in BlockStorage.
 	ErrHeadBlockNotFound = errors.New("head block not found")

@@ -20,11 +20,8 @@ import (
 	utils "github.com/coinbase/rosetta-sdk-go/errors"
 )
 
-// Named error types for Parser errors
+// Intent Errors
 var (
-	///////////////////
-	/* INTENT ERRORS */
-	///////////////////
 	ErrExpectedOperationAccountMismatch = errors.New(
 		"intended account did not match observed account",
 	)
@@ -46,10 +43,10 @@ var (
 		ErrExpectedSignerUnexpectedSigner,
 		ErrExpectedSignerMissing,
 	}
+)
 
-	/////////////////////////////
-	/* MATCH OPERATIONS ERRORS */
-	/////////////////////////////
+// Match Operations Errors
+var (
 	ErrAccountMatchAccountMissing           = errors.New("account is missing")
 	ErrAccountMatchSubAccountMissing        = errors.New("SubAccountIdentifier.Address is missing")
 	ErrAccountMatchSubAccountPopulated      = errors.New("SubAccount is populated")

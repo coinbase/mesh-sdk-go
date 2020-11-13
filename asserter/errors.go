@@ -20,20 +20,14 @@ import (
 	utils "github.com/coinbase/rosetta-sdk-go/errors"
 )
 
-// Named error types for Asserter errors
 var (
-	/////////////////////
-	/* ASSERTER ERRORS */
-	/////////////////////
-
 	// ErrAsserterNotInitialized is returned when some call in the asserter
 	// package requires the asserter to be initialized first.
 	ErrAsserterNotInitialized = errors.New("asserter not initialized")
+)
 
-	//////////////////////////////////
-	/* ACCOUNT BALANCE QUERY ERRORS */
-	//////////////////////////////////
-
+// Account Balance Errors
+var (
 	ErrReturnedBlockHashMismatch = errors.New(
 		"request block hash does not match response block hash",
 	)
@@ -45,11 +39,10 @@ var (
 		ErrReturnedBlockHashMismatch,
 		ErrReturnedBlockIndexMismatch,
 	}
+)
 
-	//////////////////
-	/* BLOCK ERRORS */
-	//////////////////
-
+// Block Errors
+var (
 	ErrAmountValueMissing            = errors.New("Amount.Value is missing")
 	ErrAmountIsNotInt                = errors.New("Amount.Value is not an integer")
 	ErrAmountCurrencyIsNil           = errors.New("Amount.Currency is nil")
@@ -133,11 +126,10 @@ var (
 		ErrBlockHashEqualsParentBlockHash,
 		ErrBlockIndexPrecedesParentBlockIndex,
 	}
+)
 
-	/////////////////
-	/* COIN ERRORS */
-	/////////////////
-
+// Coin Errors
+var (
 	ErrCoinIsNil            = errors.New("coin cannot be nil")
 	ErrCoinDuplicate        = errors.New("duplicate coin identifier detected")
 	ErrCoinIdentifierIsNil  = errors.New("coin identifier cannot be nil")
@@ -153,11 +145,10 @@ var (
 		ErrCoinChangeIsNil,
 		ErrCoinActionInvalid,
 	}
+)
 
-	/////////////////////////
-	/* CONSTRUCTION ERRORS */
-	/////////////////////////
-
+// Construction Errors
+var (
 	ErrConstructionPreprocessResponseIsNil = errors.New(
 		"ConstructionPreprocessResponse cannot be nil",
 	)
@@ -250,11 +241,10 @@ var (
 		ErrSignatureBytesZero,
 		ErrSignatureTypeNotSupported,
 	}
+)
 
-	////////////////////
-	/* NETWORK ERRORS */
-	////////////////////
-
+// Network Errors
+var (
 	ErrSubNetworkIdentifierInvalid = errors.New(
 		"NetworkIdentifier.SubNetworkIdentifier.Network is missing",
 	)
@@ -318,11 +308,10 @@ var (
 		ErrBalanceExemptionNoHistoricalLookup,
 		ErrTimestampStartIndexInvalid,
 	}
+)
 
-	///////////////////
-	/* SERVER ERRORS */
-	///////////////////
-
+// Server Errors
+var (
 	ErrNoSupportedNetworks = errors.New(
 		"no supported networks",
 	)
@@ -422,11 +411,10 @@ var (
 		ErrMaxBlockInvalid,
 		ErrDuplicateCurrency,
 	}
+)
 
-	///////////////////
-	/* EVENTS ERRORS */
-	///////////////////
-
+// Events Errors
+var (
 	ErrMaxSequenceInvalid    = errors.New("max sequence invalid")
 	ErrSequenceInvalid       = errors.New("sequence invalid")
 	ErrBlockEventTypeInvalid = errors.New("block event type invalid")
@@ -438,20 +426,19 @@ var (
 		ErrBlockEventTypeInvalid,
 		ErrSequenceOutOfOrder,
 	}
+)
 
-	///////////////////
-	/* SEARCH ERRORS */
-	///////////////////
-
+// Search Errors
+var (
 	ErrNextOffsetInvalid = errors.New("next offset invalid")
 
 	SearchErrs = []error{
 		ErrNextOffsetInvalid,
 	}
+)
 
-	///////////////////
-	/* ERROR ERRORS */
-	///////////////////
+// Error Errors
+var (
 	ErrErrorIsNil           = errors.New("Error is nil")
 	ErrErrorCodeIsNeg       = errors.New("Error.Code is negative")
 	ErrErrorMessageMissing  = errors.New("Error.Message is missing")
