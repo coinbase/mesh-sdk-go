@@ -294,7 +294,6 @@ type BadgerTransaction struct {
 	rwLock sync.RWMutex
 
 	holdsLock bool
-	priority  bool
 
 	// We MUST wait to reclaim any memory until after
 	// the transaction is committed or discarded.
@@ -311,6 +310,8 @@ type BadgerTransaction struct {
 // If the transaction will not modify any values, pass
 // in false for the write parameter (this allows for
 // optimization within the Badger DB).
+//
+// TODO: change to DatabaseTransaction with a priority
 func (b *BadgerStorage) NewDatabaseTransaction(
 	ctx context.Context,
 	write bool,
@@ -328,7 +329,6 @@ func (b *BadgerStorage) NewDatabaseTransaction(
 		db:               b,
 		txn:              b.db.NewTransaction(write),
 		holdsLock:        write,
-		priority:         false,
 		buffersToReclaim: []*bytes.Buffer{},
 	}
 }
@@ -342,7 +342,6 @@ func (b *BadgerStorage) HighPriorityTransaction(
 		db:               b,
 		txn:              b.db.NewTransaction(true),
 		holdsLock:        true,
-		priority:         true,
 		buffersToReclaim: []*bytes.Buffer{},
 	}
 }
@@ -365,11 +364,7 @@ func (b *BadgerTransaction) Commit(context.Context) error {
 	// In this case, we only unlock if we hold the lock to avoid a panic.
 	if b.holdsLock {
 		b.holdsLock = false
-		if b.priority {
-			b.db.writer.HighPriorityUnlock()
-		} else {
-			b.db.writer.Unlock()
-		}
+		b.db.writer.Unlock()
 	}
 
 	if err != nil {
@@ -395,11 +390,7 @@ func (b *BadgerTransaction) Discard(context.Context) {
 	b.reclaimLock.Unlock()
 
 	if b.holdsLock {
-		if b.priority {
-			b.db.writer.HighPriorityUnlock()
-		} else {
-			b.db.writer.Unlock()
-		}
+		b.db.writer.Unlock()
 	}
 }
 
