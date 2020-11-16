@@ -44,6 +44,7 @@ func New(
 		highWaterMark:       -1,
 		seenAccounts:        map[string]struct{}{},
 		inactiveQueue:       []*InactiveEntry{},
+		inactiveQueueMutex:  utils.NewPriorityPreferenceLock(),
 		backlogSize:         defaultBacklogSize,
 		lastIndexChecked:    -1,
 		queueMap:            map[string]*utils.BST{},
@@ -98,7 +99,7 @@ func (r *Reconciler) wrappedInactiveEnqueue(
 	accountCurrency *types.AccountCurrency,
 	liveBlock *types.BlockIdentifier,
 ) {
-	if err := r.inactiveAccountQueue(true, accountCurrency, liveBlock); err != nil {
+	if err := r.inactiveAccountQueue(true, accountCurrency, liveBlock, false); err != nil {
 		log.Printf(
 			"%s: unable to queue account %s",
 			err.Error(),
@@ -163,6 +164,9 @@ func (r *Reconciler) QueueChanges(
 
 	r.queueMapMutex.HighPriorityLock()
 	defer r.queueMapMutex.Unlock()
+
+	r.inactiveQueueMutex.HighPriorityLock()
+	defer r.inactiveQueueMutex.Unlock()
 	for _, change := range balanceChanges {
 		// All changes will have the same block. Continue
 		// if we are too far behind to start reconciling.
@@ -185,7 +189,7 @@ func (r *Reconciler) QueueChanges(
 			Account:  change.Account,
 			Currency: change.Currency,
 		}
-		err := r.inactiveAccountQueue(false, acctCurrency, block)
+		err := r.inactiveAccountQueue(false, acctCurrency, block, true)
 		if err != nil {
 			return err
 		}
@@ -499,8 +503,12 @@ func (r *Reconciler) inactiveAccountQueue(
 	inactive bool,
 	accountCurrency *types.AccountCurrency,
 	liveBlock *types.BlockIdentifier,
+	hasLock bool,
 ) error {
-	r.inactiveQueueMutex.Lock()
+	if !hasLock {
+		r.inactiveQueueMutex.Lock()
+		defer r.inactiveQueueMutex.Unlock()
+	}
 
 	// Only enqueue the first time we see an account on an active reconciliation.
 	shouldEnqueueInactive := false
@@ -515,8 +523,6 @@ func (r *Reconciler) inactiveAccountQueue(
 			LastCheck: liveBlock,
 		})
 	}
-
-	r.inactiveQueueMutex.Unlock()
 
 	return nil
 }
@@ -872,7 +878,7 @@ func (r *Reconciler) reconcileInactiveAccounts( // nolint:gocognit
 			// Always re-enqueue accounts after they have been inactively
 			// reconciled. If we don't re-enqueue, we will never check
 			// these accounts again.
-			err = r.inactiveAccountQueue(true, nextAcct.Entry, block)
+			err = r.inactiveAccountQueue(true, nextAcct.Entry, block, false)
 			if err != nil {
 				return err
 			}

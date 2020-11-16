@@ -254,7 +254,7 @@ type Reconciler struct {
 
 	// inactiveQueueMutex needed because we can't peek at the tip
 	// of a channel to determine when it is ready to look at.
-	inactiveQueueMutex sync.Mutex
+	inactiveQueueMutex *utils.PriorityPreferenceLock
 
 	// lastIndexChecked is the last block index reconciled actively.
 	lastIndexMutex   sync.Mutex

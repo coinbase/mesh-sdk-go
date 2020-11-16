@@ -566,6 +566,7 @@ func TestInactiveAccountQueue(t *testing.T) {
 			false,
 			accountCurrency,
 			block,
+			false,
 		)
 		assert.Nil(t, err)
 		assertContainsAllAccounts(t, r.seenAccounts, []*types.AccountCurrency{accountCurrency})
@@ -582,6 +583,7 @@ func TestInactiveAccountQueue(t *testing.T) {
 			false,
 			accountCurrency2,
 			block2,
+			false,
 		)
 		assert.Nil(t, err)
 		assertContainsAllAccounts(
@@ -608,6 +610,7 @@ func TestInactiveAccountQueue(t *testing.T) {
 			false,
 			accountCurrency,
 			block,
+			false,
 		)
 		assert.Nil(t, err)
 		assertContainsAllAccounts(
@@ -623,6 +626,7 @@ func TestInactiveAccountQueue(t *testing.T) {
 			true,
 			accountCurrency,
 			block,
+			false,
 		)
 		assert.Nil(t, err)
 		assertContainsAllAccounts(
@@ -643,6 +647,7 @@ func TestInactiveAccountQueue(t *testing.T) {
 			true,
 			accountCurrency2,
 			block2,
+			false,
 		)
 		assert.Nil(t, err)
 		assertContainsAllAccounts(
