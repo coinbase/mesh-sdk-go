@@ -507,11 +507,23 @@ func (s *Syncer) syncRange(
 	}()
 
 	cache := make(map[int64]*blockResult)
+
+	currentWait := time.Now()
 	for b := range results {
 		cache[b.index] = b
 
+		beforeNextIndex := s.nextIndex
 		if err := s.processBlocks(ctx, cache, endIndex); err != nil {
 			return fmt.Errorf("%w: %v", ErrBlocksProcessMultipleFailed, err)
+		}
+
+		if s.nextIndex != beforeNextIndex {
+			dur := time.Since(currentWait)
+			s.totalTime += dur
+			runSize := s.nextIndex - beforeNextIndex
+			s.totalBlocks += runSize
+			fmt.Println("[SYNC WAIT]", "duration", dur, "run size", runSize, "avg", s.totalTime/time.Duration(s.totalBlocks))
+			currentWait = time.Now()
 		}
 
 		// Determine if concurrency should be adjusted.
