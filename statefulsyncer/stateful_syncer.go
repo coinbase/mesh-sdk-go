@@ -59,8 +59,9 @@ type StatefulSyncer struct {
 	pastBlockLimit int
 
 	// TODO: remove when done testing
-	totalTime  time.Duration
-	totalTimes int64
+	totalTime        time.Duration
+	totalCounterTime time.Duration
+	totalTimes       int64
 }
 
 // Logger is used by the statefulsyncer to
@@ -230,6 +231,7 @@ func (s *StatefulSyncer) BlockAdded(ctx context.Context, block *types.Block) err
 	}
 
 	// Update Counters
+	counterStart := time.Now()
 	_, _ = s.counterStorage.Update(ctx, storage.BlockCounter, big.NewInt(1))
 	_, _ = s.counterStorage.Update(
 		ctx,
@@ -241,6 +243,10 @@ func (s *StatefulSyncer) BlockAdded(ctx context.Context, block *types.Block) err
 		opCount += int64(len(txn.Operations))
 	}
 	_, _ = s.counterStorage.Update(ctx, storage.OperationCounter, big.NewInt(opCount))
+	counterDur := time.Since(counterStart)
+	s.totalCounterTime += counterDur
+
+	fmt.Println("[UPDATE BLOCK COUNTERS]", "duration", counterDur, "avg", s.totalCounterTime/time.Duration(s.totalTimes))
 
 	return nil
 }
