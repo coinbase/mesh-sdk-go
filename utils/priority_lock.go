@@ -16,6 +16,9 @@ type PriorityPreferenceLock struct {
 
 	m sync.Mutex
 	l bool
+
+	// TODO: add random choice of lowPrio to avoid
+	// starvation (if desired)
 }
 
 func NewPriorityPreferenceLock() *PriorityPreferenceLock {
