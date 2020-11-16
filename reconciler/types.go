@@ -265,5 +265,5 @@ type Reconciler struct {
 	// reconciled. It ensures we don't accidentally attempt to prune
 	// computed balances being used by other goroutines.
 	queueMap      map[string]*utils.BST
-	queueMapMutex sync.Mutex
+	queueMapMutex *utils.PriorityPreferenceLock
 }

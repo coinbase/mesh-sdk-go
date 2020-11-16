@@ -47,6 +47,7 @@ func New(
 		backlogSize:         defaultBacklogSize,
 		lastIndexChecked:    -1,
 		queueMap:            map[string]*utils.BST{},
+		queueMapMutex:       utils.NewPriorityPreferenceLock(),
 	}
 
 	for _, opt := range options {
@@ -160,6 +161,8 @@ func (r *Reconciler) QueueChanges(
 		})
 	}
 
+	r.queueMapMutex.HighPriorityLock()
+	defer r.queueMapMutex.Unlock()
 	for _, change := range balanceChanges {
 		// All changes will have the same block. Continue
 		// if we are too far behind to start reconciling.
@@ -189,9 +192,7 @@ func (r *Reconciler) QueueChanges(
 
 		// Add change to queueMap before enqueuing to ensure
 		// there is no possible race.
-		r.queueMapMutex.Lock()
 		r.addToQueueMap(acctCurrency, change.Block.Index)
-		r.queueMapMutex.Unlock()
 
 		// Add change to active queue
 		r.wrappedActiveEnqueue(ctx, change)
