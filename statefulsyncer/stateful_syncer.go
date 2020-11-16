@@ -232,9 +232,17 @@ func (s *StatefulSyncer) BlockAdded(ctx context.Context, block *types.Block) err
 
 	// Update Counters
 	counterStart := time.Now()
-	_, _ = s.counterStorage.Update(ctx, storage.BlockCounter, big.NewInt(1))
-	_, _ = s.counterStorage.Update(
+	// CREATE HIGH PRIORITY TX
+	tx := s.counterStorage.PriorityTransaction(ctx)
+	_, _ = s.counterStorage.UpdateTransactional(
 		ctx,
+		tx,
+		storage.BlockCounter,
+		big.NewInt(1),
+	)
+	_, _ = s.counterStorage.UpdateTransactional(
+		ctx,
+		tx,
 		storage.TransactionCounter,
 		big.NewInt(int64(len(block.Transactions))),
 	)
@@ -242,7 +250,15 @@ func (s *StatefulSyncer) BlockAdded(ctx context.Context, block *types.Block) err
 	for _, txn := range block.Transactions {
 		opCount += int64(len(txn.Operations))
 	}
-	_, _ = s.counterStorage.Update(ctx, storage.OperationCounter, big.NewInt(opCount))
+	_, _ = s.counterStorage.UpdateTransactional(
+		ctx,
+		tx,
+		storage.OperationCounter,
+		big.NewInt(opCount),
+	)
+	if err := tx.Commit(ctx); err != nil {
+		return nil
+	}
 	counterDur := time.Since(counterStart)
 	s.totalCounterTime += counterDur
 
@@ -271,6 +287,7 @@ func (s *StatefulSyncer) BlockRemoved(
 	}
 
 	// Update Counters
+	// CREATE HIGH PRIORITY TX
 	_, _ = s.counterStorage.Update(ctx, storage.OrphanCounter, big.NewInt(1))
 
 	return err

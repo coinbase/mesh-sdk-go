@@ -91,6 +91,11 @@ func NewCounterStorage(
 	}
 }
 
+// TODO: move out of this if we commit to this approach
+func (s *CounterStorage) PriorityTransaction(ctx context.Context) DatabaseTransaction {
+	return s.db.HighPriorityTransaction(ctx)
+}
+
 func getCounterKey(counter string) []byte {
 	return []byte(fmt.Sprintf("%s/%s", counterNamespace, counter))
 }
