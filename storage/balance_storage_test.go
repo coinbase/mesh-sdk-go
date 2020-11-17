@@ -1102,6 +1102,10 @@ func TestBalanceReconciliation(t *testing.T) {
 		coverage, err := storage.ReconciliationCoverage(ctx, 0)
 		assert.NoError(t, err)
 		assert.Equal(t, 0.0, coverage)
+
+		coverage, err = storage.EstimatedReconciliationCoverage(ctx)
+		assert.NoError(t, err)
+		assert.Equal(t, 0.0, coverage)
 	})
 
 	t.Run("set balance", func(t *testing.T) {
@@ -1121,6 +1125,10 @@ func TestBalanceReconciliation(t *testing.T) {
 		assert.NoError(t, txn.Commit(ctx))
 
 		coverage, err := storage.ReconciliationCoverage(ctx, 0)
+		assert.NoError(t, err)
+		assert.Equal(t, 0.0, coverage)
+
+		coverage, err = storage.EstimatedReconciliationCoverage(ctx)
 		assert.NoError(t, err)
 		assert.Equal(t, 0.0, coverage)
 	})
@@ -1151,6 +1159,10 @@ func TestBalanceReconciliation(t *testing.T) {
 		coverage, err = storage.ReconciliationCoverage(ctx, 1)
 		assert.NoError(t, err)
 		assert.Equal(t, 0.0, coverage)
+
+		coverage, err = storage.EstimatedReconciliationCoverage(ctx)
+		assert.NoError(t, err)
+		assert.Equal(t, 0.5, coverage)
 	})
 
 	t.Run("update reconciliation", func(t *testing.T) {
@@ -1178,6 +1190,10 @@ func TestBalanceReconciliation(t *testing.T) {
 		coverage, err = storage.ReconciliationCoverage(ctx, 1)
 		assert.NoError(t, err)
 		assert.Equal(t, 0.5, coverage)
+
+		coverage, err = storage.EstimatedReconciliationCoverage(ctx)
+		assert.NoError(t, err)
+		assert.Equal(t, 0.5, coverage)
 	})
 
 	t.Run("add unreconciled", func(t *testing.T) {
@@ -1197,6 +1213,10 @@ func TestBalanceReconciliation(t *testing.T) {
 		assert.NoError(t, txn.Commit(ctx))
 
 		coverage, err := storage.ReconciliationCoverage(ctx, 1)
+		assert.NoError(t, err)
+		assert.Equal(t, float64(1)/float64(3), coverage)
+
+		coverage, err = storage.EstimatedReconciliationCoverage(ctx)
 		assert.NoError(t, err)
 		assert.Equal(t, float64(1)/float64(3), coverage)
 	})

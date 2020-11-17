@@ -339,6 +339,10 @@ func (b *BalanceStorage) EstimatedReconciliationCoverage(
 		return -1, err
 	}
 
+	if reconciled.Int64() == 0 && totalSeen.Int64() == 0 {
+		return 0.0, nil
+	}
+
 	return float64(reconciled.Int64()) / float64(totalSeen.Int64()), nil
 }
 
@@ -608,10 +612,6 @@ func (b *BalanceStorage) UpdateBalance(
 		default:
 			storedValue = balance.Value
 		}
-	} else {
-		if err := b.IncrementCounter(ctx, dbTransaction, totalEntries); err != nil {
-			return err
-		}
 	}
 
 	// Find account existing value whether the account is new, has an
@@ -666,6 +666,10 @@ func (b *BalanceStorage) UpdateBalance(
 			return err
 		}
 		if err := dbTransaction.Set(ctx, key, serialAcc, true); err != nil {
+			return err
+		}
+
+		if err := b.IncrementCounter(ctx, dbTransaction, totalEntries); err != nil {
 			return err
 		}
 	}
