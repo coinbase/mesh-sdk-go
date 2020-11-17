@@ -1268,6 +1268,27 @@ func (b *BalanceStorage) IncrementCounter(
 	}
 
 	newVal := new(big.Int).Add(val, big.NewInt(1))
+
+	if counter == totalEntries {
+		actualSeen := 0
+		_, err = dbTx.Scan(
+			ctx,
+			[]byte(accountNamespace),
+			[]byte(accountNamespace),
+			func(k []byte, v []byte) error {
+				actualSeen++
+				return nil
+			},
+			false,
+			false,
+		)
+		if err != nil {
+			return fmt.Errorf("%w: database scan failed", err)
+		}
+
+		fmt.Println("estimated", newVal.Int64(), "calculated", actualSeen)
+	}
+
 	return dbTx.Set(ctx, getCounterKey(counter), newVal.Bytes(), true)
 }
 
