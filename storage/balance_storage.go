@@ -354,6 +354,8 @@ func (b *BalanceStorage) EstimatedReconciliationCoverage(
 		return 0.0, nil
 	}
 
+	fmt.Println("reconciled", reconciled.Int64(), "seen", totalSeen.Int64())
+
 	return float64(reconciled.Int64()) / float64(totalSeen.Int64()), nil
 }
 

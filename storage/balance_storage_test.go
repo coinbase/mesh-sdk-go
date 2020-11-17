@@ -198,6 +198,12 @@ func TestBalance(t *testing.T) {
 			Value:    "10",
 			Currency: currency,
 		}, amount)
+
+		txn := storage.db.NewDatabaseTransaction(ctx, false)
+		count, err := storage.GetCounter(ctx, txn, totalEntries)
+		assert.NoError(t, err)
+		assert.Equal(t, int64(1), count.Int64())
+		txn.Discard(ctx)
 	})
 
 	t.Run("Set and get genesis balance", func(t *testing.T) {
@@ -221,6 +227,12 @@ func TestBalance(t *testing.T) {
 			Value:    "100",
 			Currency: currency,
 		}, amount)
+
+		txn = storage.db.NewDatabaseTransaction(ctx, false)
+		count, err := storage.GetCounter(ctx, txn, totalEntries)
+		assert.NoError(t, err)
+		assert.Equal(t, int64(2), count.Int64())
+		txn.Discard(ctx)
 	})
 
 	t.Run("Set and get balance", func(t *testing.T) {
@@ -242,6 +254,12 @@ func TestBalance(t *testing.T) {
 		retrievedAmount, err = storage.GetOrSetBalance(ctx, account, currency, newBlock2)
 		assert.NoError(t, err)
 		assert.Equal(t, amount, retrievedAmount)
+
+		txn = storage.db.NewDatabaseTransaction(ctx, false)
+		count, err := storage.GetCounter(ctx, txn, totalEntries)
+		assert.NoError(t, err)
+		assert.Equal(t, int64(2), count.Int64())
+		txn.Discard(ctx)
 	})
 
 	t.Run("Set and get balance with storage helper", func(t *testing.T) {
@@ -266,6 +284,12 @@ func TestBalance(t *testing.T) {
 		assert.Equal(t, amountWithPrevious, retrievedAmount)
 
 		mockHelper.AccountBalanceAmount = ""
+
+		txn = storage.db.NewDatabaseTransaction(ctx, false)
+		count, err := storage.GetCounter(ctx, txn, totalEntries)
+		assert.NoError(t, err)
+		assert.Equal(t, int64(3), count.Int64())
+		txn.Discard(ctx)
 	})
 
 	t.Run("Set balance with nil currency", func(t *testing.T) {
@@ -400,6 +424,12 @@ func TestBalance(t *testing.T) {
 		)
 		assert.NoError(t, err)
 		assert.Equal(t, amount, retrievedAmount)
+
+		txn = storage.db.NewDatabaseTransaction(ctx, false)
+		count, err := storage.GetCounter(ctx, txn, totalEntries)
+		assert.NoError(t, err)
+		assert.Equal(t, int64(4), count.Int64())
+		txn.Discard(ctx)
 	})
 
 	t.Run("sub account metadata set and get balance", func(t *testing.T) {
@@ -426,6 +456,12 @@ func TestBalance(t *testing.T) {
 		)
 		assert.NoError(t, err)
 		assert.Equal(t, amount, retrievedAmount)
+
+		txn = storage.db.NewDatabaseTransaction(ctx, false)
+		count, err := storage.GetCounter(ctx, txn, totalEntries)
+		assert.NoError(t, err)
+		assert.Equal(t, int64(5), count.Int64())
+		txn.Discard(ctx)
 	})
 
 	t.Run("sub account unique metadata set and get balance", func(t *testing.T) {
@@ -443,6 +479,12 @@ func TestBalance(t *testing.T) {
 		)
 		assert.NoError(t, err)
 		assert.NoError(t, txn.Commit(ctx))
+
+		txn = storage.db.NewDatabaseTransaction(ctx, false)
+		count, err := storage.GetCounter(ctx, txn, totalEntries)
+		assert.NoError(t, err)
+		assert.Equal(t, int64(6), count.Int64())
+		txn.Discard(ctx)
 
 		retrievedAmount, err := storage.GetOrSetBalance(
 			ctx,
