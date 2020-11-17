@@ -173,15 +173,15 @@ func PerformanceBadgerOptions(dir string) badger.Options {
 	// This option will have a significant effect the memory. If the level is kept
 	// in-memory, read are faster but the tables will be kept in memory. By default,
 	// this is set to false.
-	opts.KeepL0InMemory = false
+	opts.KeepL0InMemory = true
 
 	// We don't compact L0 on close as this can greatly delay shutdown time.
 	opts.CompactL0OnClose = false
 
-	// LoadBloomsOnOpen=false will improve the db startup speed. This is also
+	// LoadBloomsOnOpen=true will improve the db startup speed. This is also
 	// a waste to enable with a limited index cache size (as many of the loaded bloom
 	// filters will be immediately discarded from the cache).
-	opts.LoadBloomsOnOpen = false
+	opts.LoadBloomsOnOpen = true
 
 	return opts
 }
