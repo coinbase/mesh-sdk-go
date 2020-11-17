@@ -56,11 +56,6 @@ type StatefulSyncer struct {
 	cacheSize      int
 	maxConcurrency int64
 	pastBlockLimit int
-
-	// TODO: remove when done testing
-	totalTime        time.Duration
-	totalCounterTime time.Duration
-	totalTimes       int64
 }
 
 // Logger is used by the statefulsyncer to
@@ -209,7 +204,6 @@ func (s *StatefulSyncer) Prune(ctx context.Context, helper PruneHelper) error {
 
 // BlockAdded is called by the syncer when a block is added.
 func (s *StatefulSyncer) BlockAdded(ctx context.Context, block *types.Block) error {
-	start := time.Now()
 	err := s.blockStorage.AddBlock(ctx, block)
 	if err != nil {
 		return fmt.Errorf(
@@ -219,11 +213,6 @@ func (s *StatefulSyncer) BlockAdded(ctx context.Context, block *types.Block) err
 			block.BlockIdentifier.Index,
 		)
 	}
-	dur := time.Since(start)
-	s.totalTime += dur
-	s.totalTimes++
-
-	fmt.Println("[ADD BLOCK]", "duration", dur, "avg", s.totalTime/time.Duration(s.totalTimes))
 
 	_ = s.logger.AddBlockStream(ctx, block)
 	return nil

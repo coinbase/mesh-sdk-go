@@ -152,8 +152,4 @@ type Syncer struct {
 	// when close to the end of syncing a range.
 	doneLoading     bool
 	doneLoadingLock sync.Mutex
-
-	// TODO: remove!
-	totalTime   time.Duration
-	totalBlocks int64 // we decrease average when we have long runs
 }
