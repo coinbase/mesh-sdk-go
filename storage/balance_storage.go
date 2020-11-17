@@ -629,6 +629,10 @@ func (b *BalanceStorage) UpdateBalance(
 		switch {
 		case errors.Is(err, ErrAccountMissing):
 			storedValue = "0"
+
+			if err := b.IncrementCounter(ctx, dbTransaction, totalEntries); err != nil {
+				return err
+			}
 		case err != nil:
 			return err
 		default:
