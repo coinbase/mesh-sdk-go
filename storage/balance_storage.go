@@ -249,6 +249,18 @@ func (b *BalanceStorage) SetBalance(
 		return err
 	}
 
+	key := GetAccountKey(accountNamespace, account, amount.Currency)
+	exists, _, err := dbTransaction.Get(ctx, key)
+	if err != nil {
+		return err
+	}
+
+	if !exists {
+		if err := b.IncrementCounter(ctx, dbTransaction, totalEntries); err != nil {
+			return err
+		}
+	}
+
 	serialAcc, err := b.db.Encoder().Encode(historicalBalanceNamespace, accountEntry{
 		Account:  account,
 		Currency: amount.Currency,
@@ -258,7 +270,6 @@ func (b *BalanceStorage) SetBalance(
 	}
 
 	// Set current record
-	key := GetAccountKey(accountNamespace, account, amount.Currency)
 	if err := dbTransaction.Set(ctx, key, serialAcc, true); err != nil {
 		return err
 	}
