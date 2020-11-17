@@ -354,7 +354,23 @@ func (b *BalanceStorage) EstimatedReconciliationCoverage(
 		return 0.0, nil
 	}
 
-	fmt.Println("reconciled", reconciled.Int64(), "seen", totalSeen.Int64())
+	actualSeen := 0
+	_, err = dbTx.Scan(
+		ctx,
+		[]byte(accountNamespace),
+		[]byte(accountNamespace),
+		func(k []byte, v []byte) error {
+			actualSeen++
+			return nil
+		},
+		false,
+		false,
+	)
+	if err != nil {
+		return -1, fmt.Errorf("%w: database scan failed", err)
+	}
+
+	fmt.Println("reconciled", reconciled.Int64(), "seen", totalSeen.Int64(), "actual", actualSeen)
 
 	return float64(reconciled.Int64()) / float64(totalSeen.Int64()), nil
 }
