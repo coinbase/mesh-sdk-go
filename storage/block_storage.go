@@ -183,7 +183,7 @@ func (b *BlockStorage) pruneBlock(
 	// we don't hit the database tx size maximum. As a result, it is possible
 	// that we prune a collection of blocks, encounter an error, and cannot
 	// rollback the pruning operations.
-	dbTx := b.db.NewDatabaseTransaction(ctx, true)
+	dbTx := b.db.PruneTransaction(ctx)
 	defer dbTx.Discard(ctx)
 
 	oldestIndex, err := b.GetOldestBlockIndexTransactional(ctx, dbTx)
