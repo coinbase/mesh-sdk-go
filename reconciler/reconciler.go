@@ -150,13 +150,16 @@ func (r *Reconciler) QueueChanges(
 }
 
 func (r *Reconciler) queueWorker(ctx context.Context) error {
-	for req := range r.processQueue {
-		if err := r.queueChanges(ctx, req.Block, req.Changes); err != nil {
-			return err
+	for {
+		select {
+		case req := <-r.processQueue:
+			if err := r.queueChanges(ctx, req.Block, req.Changes); err != nil {
+				return err
+			}
+		case <-ctx.Done():
+			return ctx.Err()
 		}
 	}
-
-	return ctx.Err()
 }
 
 func (r *Reconciler) queueChanges(
