@@ -21,6 +21,7 @@ import (
 	"log"
 	"math/big"
 	"strconv"
+	"sync"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
 	"github.com/coinbase/rosetta-sdk-go/parser"
@@ -121,9 +122,10 @@ type BalanceStorageHelper interface {
 // BalanceStorage implements block specific storage methods
 // on top of a Database and DatabaseTransaction interface.
 type BalanceStorage struct {
-	db      Database
-	helper  BalanceStorageHelper
-	handler BalanceStorageHandler
+	db              Database
+	helper          BalanceStorageHelper
+	handler         BalanceStorageHandler
+	atomicIncrement sync.Mutex
 
 	parser *parser.Parser
 }
@@ -257,12 +259,19 @@ func (b *BalanceStorage) SetBalance(
 		return err
 	}
 
-	if err := b.IncrementCounter(ctx, dbTransaction, totalEntries); err != nil {
+	key := GetAccountKey(accountNamespace, account, amount.Currency)
+	exists, _, err := dbTransaction.Get(ctx, key)
+	if err != nil {
 		return err
 	}
 
+	if !exists {
+		if err := b.IncrementCounter(ctx, dbTransaction, totalEntries); err != nil {
+			return err
+		}
+	}
+
 	// Set current record
-	key := GetAccountKey(accountNamespace, account, amount.Currency)
 	if err := dbTransaction.Set(ctx, key, serialAcc, true); err != nil {
 		return err
 	}
@@ -346,24 +355,6 @@ func (b *BalanceStorage) EstimatedReconciliationCoverage(
 	if reconciled.Int64() == 0 && totalSeen.Int64() == 0 {
 		return 0.0, nil
 	}
-
-	actualSeen := 0
-	_, err = dbTx.Scan(
-		ctx,
-		[]byte(accountNamespace),
-		[]byte(accountNamespace),
-		func(k []byte, v []byte) error {
-			actualSeen++
-			return nil
-		},
-		false,
-		false,
-	)
-	if err != nil {
-		return -1, fmt.Errorf("%w: database scan failed", err)
-	}
-
-	fmt.Println("reconciled", reconciled.Int64(), "seen", totalSeen.Int64(), "actual", actualSeen)
 
 	return float64(reconciled.Int64()) / float64(totalSeen.Int64()), nil
 }
@@ -629,10 +620,6 @@ func (b *BalanceStorage) UpdateBalance(
 		switch {
 		case errors.Is(err, ErrAccountMissing):
 			storedValue = "0"
-
-			if err := b.IncrementCounter(ctx, dbTransaction, totalEntries); err != nil {
-				return err
-			}
 		case err != nil:
 			return err
 		default:
@@ -1262,32 +1249,15 @@ func (b *BalanceStorage) IncrementCounter(
 	dbTx DatabaseTransaction,
 	counter string,
 ) error {
+	b.atomicIncrement.Lock()
+	defer b.atomicIncrement.Unlock()
+
 	val, err := transactionalGet(ctx, counter, dbTx)
 	if err != nil {
 		return err
 	}
 
 	newVal := new(big.Int).Add(val, big.NewInt(1))
-
-	if counter == totalEntries {
-		actualSeen := 0
-		_, err = dbTx.Scan(
-			ctx,
-			[]byte(accountNamespace),
-			[]byte(accountNamespace),
-			func(k []byte, v []byte) error {
-				actualSeen++
-				return nil
-			},
-			false,
-			false,
-		)
-		if err != nil {
-			return fmt.Errorf("%w: database scan failed", err)
-		}
-
-		fmt.Println("estimated", newVal.Int64(), "calculated", actualSeen)
-	}
 
 	return dbTx.Set(ctx, getCounterKey(counter), newVal.Bytes(), true)
 }
