@@ -211,6 +211,11 @@ type InactiveEntry struct {
 	LastCheck *types.BlockIdentifier
 }
 
+type blockRequest struct {
+	Block   *types.BlockIdentifier
+	Changes []*parser.BalanceChange
+}
+
 // Reconciler contains all logic to reconcile balances of
 // types.AccountIdentifiers returned in types.Operations
 // by a Rosetta Server.
@@ -218,6 +223,8 @@ type Reconciler struct {
 	helper  Helper
 	handler Handler
 	parser  *parser.Parser
+
+	processQueue chan *blockRequest
 
 	lookupBalanceByBlock bool
 	interestingAccounts  []*types.AccountCurrency

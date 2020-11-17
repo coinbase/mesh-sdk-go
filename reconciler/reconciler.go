@@ -38,6 +38,7 @@ func New(
 		helper:              helper,
 		handler:             handler,
 		parser:              p,
+		processQueue:        make(chan *blockRequest, 10000), // make this a constant
 		inactiveFrequency:   defaultInactiveFrequency,
 		ActiveConcurrency:   defaultReconcilerConcurrency,
 		InactiveConcurrency: defaultReconcilerConcurrency,
@@ -130,6 +131,35 @@ func (r *Reconciler) addToQueueMap(
 // QueueChanges enqueues a slice of *BalanceChanges
 // for reconciliation.
 func (r *Reconciler) QueueChanges(
+	ctx context.Context,
+	block *types.BlockIdentifier,
+	balanceChanges []*parser.BalanceChange,
+) error {
+	select {
+	case r.processQueue <- &blockRequest{
+		Block:   block,
+		Changes: balanceChanges,
+	}:
+	default:
+		r.debugLog(
+			"skipping process enqueue because backlog full",
+		)
+	}
+
+	return nil
+}
+
+func (r *Reconciler) queueWorker(ctx context.Context) error {
+	for req := range r.processQueue {
+		if err := r.queueChanges(ctx, req.Block, req.Changes); err != nil {
+			return err
+		}
+	}
+
+	return ctx.Err()
+}
+
+func (r *Reconciler) queueChanges(
 	ctx context.Context,
 	block *types.BlockIdentifier,
 	balanceChanges []*parser.BalanceChange,
@@ -899,6 +929,10 @@ func (r *Reconciler) reconcileInactiveAccounts( // nolint:gocognit
 // If any goroutine errors, the function will return an error.
 func (r *Reconciler) Reconcile(ctx context.Context) error {
 	g, ctx := errgroup.WithContext(ctx)
+	g.Go(func() error {
+		return r.queueWorker(ctx)
+	})
+
 	for j := 0; j < r.ActiveConcurrency; j++ {
 		g.Go(func() error {
 			return r.reconcileActiveAccounts(ctx)
