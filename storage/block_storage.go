@@ -555,7 +555,7 @@ func (b *BlockStorage) AddBlock(
 	ctx context.Context,
 	block *types.Block,
 ) error {
-	transaction := b.db.HighPriorityTransaction(ctx)
+	transaction := b.db.SyncTransaction(ctx)
 	defer transaction.Discard(ctx)
 
 	// Store all transactions in order and check for duplicates
@@ -666,7 +666,7 @@ func (b *BlockStorage) RemoveBlock(
 	ctx context.Context,
 	blockIdentifier *types.BlockIdentifier,
 ) error {
-	transaction := b.db.HighPriorityTransaction(ctx)
+	transaction := b.db.SyncTransaction(ctx)
 	defer transaction.Discard(ctx)
 
 	block, err := b.GetBlockTransactional(

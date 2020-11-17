@@ -19,7 +19,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"math/big"
 	"time"
 
 	"github.com/coinbase/rosetta-sdk-go/fetcher"
@@ -226,44 +225,7 @@ func (s *StatefulSyncer) BlockAdded(ctx context.Context, block *types.Block) err
 
 	fmt.Println("[ADD BLOCK]", "duration", dur, "avg", s.totalTime/time.Duration(s.totalTimes))
 
-	if err := s.logger.AddBlockStream(ctx, block); err != nil {
-		return nil
-	}
-
-	// Update Counters
-	counterStart := time.Now()
-	// CREATE HIGH PRIORITY TX
-	tx := s.counterStorage.PriorityTransaction(ctx)
-	_, _ = s.counterStorage.UpdateTransactional(
-		ctx,
-		tx,
-		storage.BlockCounter,
-		big.NewInt(1),
-	)
-	_, _ = s.counterStorage.UpdateTransactional(
-		ctx,
-		tx,
-		storage.TransactionCounter,
-		big.NewInt(int64(len(block.Transactions))),
-	)
-	opCount := int64(0)
-	for _, txn := range block.Transactions {
-		opCount += int64(len(txn.Operations))
-	}
-	_, _ = s.counterStorage.UpdateTransactional(
-		ctx,
-		tx,
-		storage.OperationCounter,
-		big.NewInt(opCount),
-	)
-	if err := tx.Commit(ctx); err != nil {
-		return nil
-	}
-	counterDur := time.Since(counterStart)
-	s.totalCounterTime += counterDur
-
-	fmt.Println("[UPDATE BLOCK COUNTERS]", "duration", counterDur, "avg", s.totalCounterTime/time.Duration(s.totalTimes))
-
+	_ = s.logger.AddBlockStream(ctx, block)
 	return nil
 }
 
@@ -281,16 +243,9 @@ func (s *StatefulSyncer) BlockRemoved(
 			blockIdentifier.Index,
 		)
 	}
+	_ = s.logger.RemoveBlockStream(ctx, blockIdentifier)
 
-	if err := s.logger.RemoveBlockStream(ctx, blockIdentifier); err != nil {
-		return nil
-	}
-
-	// Update Counters
-	// CREATE HIGH PRIORITY TX
-	_, _ = s.counterStorage.Update(ctx, storage.OrphanCounter, big.NewInt(1))
-
-	return err
+	return nil
 }
 
 // NetworkStatus is called by the syncer to get the current

@@ -21,8 +21,15 @@ import (
 // Database is an interface that provides transactional
 // access to a KV store.
 type Database interface {
+	// TODO: rename to remove NEW (claims all locks)
 	NewDatabaseTransaction(ctx context.Context, write bool) DatabaseTransaction
-	HighPriorityTransaction(ctx context.Context) DatabaseTransaction
+
+	// These special transaction types MUST not conflict with each other
+	// but can be executed concurrently.
+	SyncTransaction(ctx context.Context) DatabaseTransaction
+	PruneTransaction(ctx context.Context) DatabaseTransaction
+	ReconciliationTransaction(ctx context.Context) DatabaseTransaction // could eventually lock by hash(AccountIdentifier)
+
 	Close(context.Context) error
 	Encoder() *Encoder
 }

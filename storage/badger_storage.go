@@ -80,7 +80,9 @@ type BadgerStorage struct {
 	encoder  *Encoder
 	compress bool
 
-	writer *utils.PriorityPreferenceLock
+	syncWriter           sync.Mutex
+	pruneWriter          sync.Mutex
+	reconciliationWriter sync.Mutex
 
 	// Track the closed status to ensure we exit garbage
 	// collection when the db closes.
@@ -197,7 +199,6 @@ func NewBadgerStorage(
 		closed:        make(chan struct{}),
 		pool:          NewBufferPool(),
 		compress:      true,
-		writer:        utils.NewPriorityPreferenceLock(),
 	}
 	for _, opt := range storageOptions {
 		opt(b)
@@ -293,7 +294,9 @@ type BadgerTransaction struct {
 	txn    *badger.Txn
 	rwLock sync.RWMutex
 
-	holdsLock bool
+	holdSyncer    bool
+	holdPruner    bool
+	holdReconcile bool
 
 	// We MUST wait to reclaim any memory until after
 	// the transaction is committed or discarded.
@@ -316,32 +319,64 @@ func (b *BadgerStorage) NewDatabaseTransaction(
 	ctx context.Context,
 	write bool,
 ) DatabaseTransaction {
+	tx := &BadgerTransaction{
+		db:               b,
+		txn:              b.db.NewTransaction(write),
+		buffersToReclaim: []*bytes.Buffer{},
+	}
+
 	if write {
 		// To avoid database commit conflicts,
 		// we need to lock the writer.
 		//
 		// Because we process blocks serially,
 		// this doesn't lead to much lock contention.
-		b.writer.Lock()
+		b.syncWriter.Lock()
+		tx.holdSyncer = true
+		b.pruneWriter.Lock()
+		tx.holdPruner = true
+		b.reconciliationWriter.Lock()
+		tx.holdReconcile = true
 	}
 
-	return &BadgerTransaction{
-		db:               b,
-		txn:              b.db.NewTransaction(write),
-		holdsLock:        write,
-		buffersToReclaim: []*bytes.Buffer{},
-	}
+	return tx
 }
 
-func (b *BadgerStorage) HighPriorityTransaction(
+func (b *BadgerStorage) SyncTransaction(
 	ctx context.Context,
 ) DatabaseTransaction {
-	b.writer.HighPriorityLock()
+	b.syncWriter.Lock()
 
 	return &BadgerTransaction{
 		db:               b,
 		txn:              b.db.NewTransaction(true),
-		holdsLock:        true,
+		holdSyncer:       true,
+		buffersToReclaim: []*bytes.Buffer{},
+	}
+}
+
+func (b *BadgerStorage) PruneTransaction(
+	ctx context.Context,
+) DatabaseTransaction {
+	b.pruneWriter.Lock()
+
+	return &BadgerTransaction{
+		db:               b,
+		txn:              b.db.NewTransaction(true),
+		holdPruner:       true,
+		buffersToReclaim: []*bytes.Buffer{},
+	}
+}
+
+func (b *BadgerStorage) ReconciliationTransaction(
+	ctx context.Context,
+) DatabaseTransaction {
+	b.reconciliationWriter.Lock()
+
+	return &BadgerTransaction{
+		db:               b,
+		txn:              b.db.NewTransaction(true),
+		holdReconcile:    true,
 		buffersToReclaim: []*bytes.Buffer{},
 	}
 }
@@ -362,9 +397,17 @@ func (b *BadgerTransaction) Commit(context.Context) error {
 
 	// It is possible that we may accidentally call commit twice.
 	// In this case, we only unlock if we hold the lock to avoid a panic.
-	if b.holdsLock {
-		b.holdsLock = false
-		b.db.writer.Unlock()
+	if b.holdSyncer {
+		b.holdSyncer = false
+		b.db.syncWriter.Unlock()
+	}
+	if b.holdPruner {
+		b.holdPruner = false
+		b.db.pruneWriter.Unlock()
+	}
+	if b.holdReconcile {
+		b.holdReconcile = false
+		b.db.reconciliationWriter.Unlock()
 	}
 
 	if err != nil {
@@ -389,8 +432,17 @@ func (b *BadgerTransaction) Discard(context.Context) {
 	b.buffersToReclaim = nil
 	b.reclaimLock.Unlock()
 
-	if b.holdsLock {
-		b.db.writer.Unlock()
+	if b.holdSyncer {
+		b.holdSyncer = false
+		b.db.syncWriter.Unlock()
+	}
+	if b.holdPruner {
+		b.holdPruner = false
+		b.db.pruneWriter.Unlock()
+	}
+	if b.holdReconcile {
+		b.holdReconcile = false
+		b.db.reconciliationWriter.Unlock()
 	}
 }
 
