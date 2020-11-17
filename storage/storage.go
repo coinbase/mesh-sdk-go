@@ -26,7 +26,7 @@ type Database interface {
 
 	// These special transaction types MUST not conflict with each other
 	// but can be executed concurrently.
-	SyncTransaction(ctx context.Context) DatabaseTransaction
+	SyncTransaction(ctx context.Context, priority bool) DatabaseTransaction
 	PruneTransaction(ctx context.Context) DatabaseTransaction
 	ReconciliationTransaction(ctx context.Context) DatabaseTransaction // could eventually lock by hash(AccountIdentifier)
 

@@ -183,7 +183,7 @@ func (b *BlockStorage) pruneBlock(
 	// we don't hit the database tx size maximum. As a result, it is possible
 	// that we prune a collection of blocks, encounter an error, and cannot
 	// rollback the pruning operations.
-	dbTx := b.db.SyncTransaction(ctx)
+	dbTx := b.db.SyncTransaction(ctx, false)
 	defer dbTx.Discard(ctx)
 
 	oldestIndex, err := b.GetOldestBlockIndexTransactional(ctx, dbTx)
@@ -555,7 +555,7 @@ func (b *BlockStorage) AddBlock(
 	ctx context.Context,
 	block *types.Block,
 ) error {
-	transaction := b.db.SyncTransaction(ctx)
+	transaction := b.db.SyncTransaction(ctx, true)
 	defer transaction.Discard(ctx)
 
 	// Store all transactions in order and check for duplicates
@@ -666,7 +666,7 @@ func (b *BlockStorage) RemoveBlock(
 	ctx context.Context,
 	blockIdentifier *types.BlockIdentifier,
 ) error {
-	transaction := b.db.SyncTransaction(ctx)
+	transaction := b.db.SyncTransaction(ctx, true)
 	defer transaction.Discard(ctx)
 
 	block, err := b.GetBlockTransactional(

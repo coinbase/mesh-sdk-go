@@ -80,7 +80,7 @@ type BadgerStorage struct {
 	encoder  *Encoder
 	compress bool
 
-	syncWriter           sync.Mutex
+	syncWriter           *utils.PriorityPreferenceLock
 	pruneWriter          sync.Mutex
 	reconciliationWriter sync.Mutex
 
@@ -199,6 +199,7 @@ func NewBadgerStorage(
 		closed:        make(chan struct{}),
 		pool:          NewBufferPool(),
 		compress:      true,
+		syncWriter:    utils.NewPriorityPreferenceLock(),
 	}
 	for _, opt := range storageOptions {
 		opt(b)
@@ -344,8 +345,13 @@ func (b *BadgerStorage) NewDatabaseTransaction(
 
 func (b *BadgerStorage) SyncTransaction(
 	ctx context.Context,
+	priority bool,
 ) DatabaseTransaction {
-	b.syncWriter.Lock()
+	if priority {
+		b.syncWriter.HighPriorityLock()
+	} else {
+		b.syncWriter.Lock()
+	}
 
 	return &BadgerTransaction{
 		db:               b,
