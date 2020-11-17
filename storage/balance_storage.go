@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"log"
 	"math/big"
+	"strconv"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
 	"github.com/coinbase/rosetta-sdk-go/parser"
@@ -38,6 +39,10 @@ const (
 	// historicalBalanceNamespace is prepended to any stored
 	// historical balance.
 	historicalBalanceNamespace = "balance"
+
+	reconciliationNamespace = "account_reconciliation"
+
+	pruneNamespace = "account_prune"
 )
 
 var (
@@ -49,9 +54,9 @@ var (
 */
 
 // GetAccountKey returns a deterministic hash of a types.Account + types.Currency.
-func GetAccountKey(account *types.AccountIdentifier, currency *types.Currency) []byte {
+func GetAccountKey(namespace string, account *types.AccountIdentifier, currency *types.Currency) []byte {
 	return []byte(
-		fmt.Sprintf("%s/%s/%s", accountNamespace, types.Hash(account), types.Hash(currency)),
+		fmt.Sprintf("%s/%s/%s", namespace, types.Hash(account), types.Hash(currency)),
 	)
 }
 
@@ -211,10 +216,10 @@ func (b *BalanceStorage) RemovingBlock(
 }
 
 type accountEntry struct {
-	Account        *types.AccountIdentifier `json:"account"`
-	Currency       *types.Currency          `json:"currency"`
-	LastReconciled *types.BlockIdentifier   `json:"last_reconciled"`
-	LastPruned     *int64                   `json:"last_pruned"`
+	Account  *types.AccountIdentifier `json:"account"`
+	Currency *types.Currency          `json:"currency"`
+	// LastReconciled *types.BlockIdentifier   `json:"last_reconciled"`
+	// LastPruned     *int64                   `json:"last_pruned"`
 }
 
 // SetBalance allows a client to set the balance of an account in a database
@@ -248,7 +253,7 @@ func (b *BalanceStorage) SetBalance(
 	}
 
 	// Set current record
-	key := GetAccountKey(account, amount.Currency)
+	key := GetAccountKey(accountNamespace, account, amount.Currency)
 	if err := dbTransaction.Set(ctx, key, serialAcc, true); err != nil {
 		return err
 	}
@@ -271,28 +276,23 @@ func (b *BalanceStorage) Reconciled(
 	currency *types.Currency,
 	block *types.BlockIdentifier,
 ) error {
-	dbTx := b.db.NewDatabaseTransaction(ctx, true)
+	dbTx := b.db.ReconciliationTransaction(ctx)
 	defer dbTx.Discard(ctx)
 
-	err := b.updateAccountEntry(
-		ctx,
-		dbTx,
-		account,
-		currency,
-		func(accEntry accountEntry) *accountEntry {
-			// Don't update last reconciled if the most recent reconciliation was
-			// lower than the last reconciliation. This can occur when inactive
-			// reconciliation gets ahead of the active reconciliation backlog.
-			if accEntry.LastReconciled != nil && accEntry.LastReconciled.Index > block.Index {
-				return nil
-			}
-
-			accEntry.LastReconciled = block
-
-			return &accEntry
-		},
-	)
+	key := GetAccountKey(reconciliationNamespace, account, currency)
+	exists, lastPrunedRaw, err := dbTx.Get(ctx, key)
 	if err != nil {
+		return err
+	}
+
+	if exists {
+		lastPruned, _ := strconv.ParseInt(string(lastPrunedRaw), 10, 64)
+		if block.Index <= lastPruned {
+			return nil
+		}
+	}
+
+	if err := dbTx.Set(ctx, key, []byte(strconv.FormatInt(block.Index, 10)), true); err != nil {
 		return err
 	}
 
@@ -311,13 +311,13 @@ func (b *BalanceStorage) ReconciliationCoverage(
 ) (float64, error) {
 	seen := 0
 	validCoverage := 0
-	err := b.getAllAccountEntries(ctx, func(entry accountEntry) {
+	err := b.getAllReconciliationEntries(ctx, func(entry int64) {
 		seen++
-		if entry.LastReconciled == nil {
+		if entry == -1 {
 			return
 		}
 
-		if entry.LastReconciled.Index >= minimumIndex {
+		if entry >= minimumIndex {
 			validCoverage++
 		}
 	})
@@ -477,7 +477,8 @@ func (b *BalanceStorage) OrphanBalance(
 	)
 	switch {
 	case errors.Is(err, ErrAccountMissing):
-		key := GetAccountKey(account, currency)
+		// TODO delete last pruned index and last reconciled
+		key := GetAccountKey(accountNamespace, account, currency)
 		return dbTransaction.Delete(ctx, key)
 	case err != nil:
 		return err
@@ -496,7 +497,7 @@ func (b *BalanceStorage) PruneBalances(
 	currency *types.Currency,
 	index int64,
 ) error {
-	dbTx := b.db.NewDatabaseTransaction(ctx, true)
+	dbTx := b.db.PruneTransaction(ctx)
 	defer dbTx.Discard(ctx)
 
 	err := b.removeHistoricalBalances(
@@ -533,7 +534,7 @@ func (b *BalanceStorage) UpdateBalance(
 
 	// Get existing account key to determine if
 	// balance should be fetched.
-	key := GetAccountKey(change.Account, change.Currency)
+	key := GetAccountKey(accountNamespace, change.Account, change.Currency)
 	exists, _, err := dbTransaction.Get(ctx, key)
 	if err != nil {
 		return err
@@ -662,8 +663,8 @@ func (b *BalanceStorage) GetBalanceTransactional(
 	currency *types.Currency,
 	index int64,
 ) (*types.Amount, error) {
-	key := GetAccountKey(account, currency)
-	exists, acct, err := dbTx.Get(ctx, key)
+	key := GetAccountKey(accountNamespace, account, currency)
+	exists, _, err := dbTx.Get(ctx, key)
 	if err != nil {
 		return nil, err
 	}
@@ -672,21 +673,21 @@ func (b *BalanceStorage) GetBalanceTransactional(
 		return nil, ErrAccountMissing
 	}
 
-	var accEntry accountEntry
-	if err := b.db.Encoder().Decode(accountNamespace, acct, &accEntry, true); err != nil {
-		return nil, fmt.Errorf(
-			"%w: unable to parse balance entry for %s",
-			err,
-			string(acct),
-		)
+	pruneKey := GetAccountKey(pruneNamespace, account, currency)
+	exists, lastPrunedRaw, err := dbTx.Get(ctx, pruneKey)
+	if err != nil {
+		return nil, err
 	}
 
-	if accEntry.LastPruned != nil && *accEntry.LastPruned >= index {
-		return nil, fmt.Errorf(
-			"%w: last pruned %d",
-			ErrBalancePruned,
-			*accEntry.LastPruned,
-		)
+	if exists {
+		lastPruned, _ := strconv.ParseInt(string(lastPrunedRaw), 10, 64)
+		if lastPruned > index {
+			return nil, fmt.Errorf(
+				"%w: last pruned %d",
+				ErrBalancePruned,
+				lastPruned,
+			)
+		}
 	}
 
 	amount, err := b.getHistoricalBalance(
@@ -877,6 +878,54 @@ func (b *BalanceStorage) BootstrapBalances(
 	return nil
 }
 
+func (b *BalanceStorage) getAllReconciliationEntries(
+	ctx context.Context,
+	handler func(int64),
+) error {
+	txn := b.db.NewDatabaseTransaction(ctx, false)
+	defer txn.Discard(ctx)
+	_, err := txn.Scan(
+		ctx,
+		[]byte(accountNamespace),
+		[]byte(accountNamespace),
+		func(k []byte, v []byte) error {
+			var accEntry accountEntry
+			// We should not reclaim memory during a scan!!
+			err := b.db.Encoder().Decode(accountNamespace, v, &accEntry, false)
+			if err != nil {
+				return fmt.Errorf(
+					"%w: unable to parse balance entry for %s",
+					err,
+					string(v),
+				)
+			}
+
+			key := GetAccountKey(reconciliationNamespace, accEntry.Account, accEntry.Currency)
+			exists, lastPrunedRaw, err := txn.Get(ctx, key)
+			if err != nil {
+				return err
+			}
+
+			if exists {
+				lastPruned, _ := strconv.ParseInt(string(lastPrunedRaw), 10, 64)
+				handler(lastPruned)
+				return nil
+			}
+
+			handler(-1)
+
+			return nil
+		},
+		false,
+		false,
+	)
+	if err != nil {
+		return fmt.Errorf("%w: database scan failed", err)
+	}
+
+	return nil
+}
+
 func (b *BalanceStorage) getAllAccountEntries(
 	ctx context.Context,
 	handler func(accountEntry),
@@ -1020,7 +1069,7 @@ func (b *BalanceStorage) updateAccountEntry(
 	currency *types.Currency,
 	handler func(accountEntry) *accountEntry,
 ) error {
-	key := GetAccountKey(account, currency)
+	key := GetAccountKey(accountNamespace, account, currency)
 	exists, acc, err := dbTx.Get(ctx, key)
 	if err != nil {
 		return fmt.Errorf(
@@ -1103,24 +1152,20 @@ func (b *BalanceStorage) removeHistoricalBalances(
 
 	// Update the last pruned index
 	if !orphan {
-		err := b.updateAccountEntry(
-			ctx,
-			dbTx,
-			account,
-			currency,
-			func(accEntry accountEntry) *accountEntry {
-				// Don't update last pruned if the most recent pruning was
-				// lower than the last prune.
-				if accEntry.LastPruned != nil && *accEntry.LastPruned > index {
-					return nil
-				}
-
-				accEntry.LastPruned = &index
-
-				return &accEntry
-			},
-		)
+		key := GetAccountKey(reconciliationNamespace, account, currency)
+		exists, lastPrunedRaw, err := dbTx.Get(ctx, key)
 		if err != nil {
+			return err
+		}
+
+		if exists {
+			lastPruned, _ := strconv.ParseInt(string(lastPrunedRaw), 10, 64)
+			if index <= lastPruned {
+				return nil
+			}
+		}
+
+		if err := dbTx.Set(ctx, key, []byte(strconv.FormatInt(index, 10)), true); err != nil {
 			return err
 		}
 	}
