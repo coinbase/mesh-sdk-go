@@ -43,6 +43,11 @@ const (
 	reconciliationNamespace = "accrec"
 
 	pruneNamespace = "accprune"
+
+	totalEntries       = "totalaccounts"
+	accountsReconciled = "accountsreconciled"
+
+	// TODO: modify balance storage to count items using counter storage primitives
 )
 
 var (
@@ -300,6 +305,10 @@ func (b *BalanceStorage) Reconciled(
 		if block.Index <= lastPruned {
 			return nil
 		}
+	} else {
+		if err := b.IncrementCounter(ctx, dbTx, accountsReconciled); err != nil {
+			return err
+		}
 	}
 
 	if err := dbTx.Set(ctx, key, []byte(strconv.FormatInt(block.Index, 10)), true); err != nil {
@@ -311,6 +320,26 @@ func (b *BalanceStorage) Reconciled(
 	}
 
 	return nil
+}
+
+// TODO: make sure accurate on set account, orphans, etc
+func (b *BalanceStorage) EstimatedReconciliationCoverage(
+	ctx context.Context,
+) (float64, error) {
+	dbTx := b.db.NewDatabaseTransaction(ctx, false)
+	defer dbTx.Discard(ctx)
+
+	reconciled, err := b.GetCounter(ctx, dbTx, accountsReconciled)
+	if err != nil {
+		return -1, err
+	}
+
+	totalSeen, err := b.GetCounter(ctx, dbTx, totalEntries)
+	if err != nil {
+		return -1, err
+	}
+
+	return float64(reconciled.Int64()) / float64(totalSeen.Int64()), nil
 }
 
 // ReconciliationCoverage returns the proportion of accounts [0.0, 1.0] that
@@ -578,6 +607,10 @@ func (b *BalanceStorage) UpdateBalance(
 			return err
 		default:
 			storedValue = balance.Value
+		}
+	} else {
+		if err := b.IncrementCounter(ctx, dbTransaction, totalEntries); err != nil {
+			return err
 		}
 	}
 
@@ -1192,4 +1225,26 @@ func (b *BalanceStorage) removeHistoricalBalances(
 	}
 
 	return nil
+}
+
+func (b *BalanceStorage) IncrementCounter(
+	ctx context.Context,
+	dbTx DatabaseTransaction,
+	counter string,
+) error {
+	val, err := transactionalGet(ctx, counter, dbTx)
+	if err != nil {
+		return err
+	}
+
+	newVal := new(big.Int).Add(val, big.NewInt(1))
+	return dbTx.Set(ctx, getCounterKey(counter), newVal.Bytes(), true)
+}
+
+func (b *BalanceStorage) GetCounter(
+	ctx context.Context,
+	dbTx DatabaseTransaction,
+	counter string,
+) (*big.Int, error) {
+	return transactionalGet(ctx, counter, dbTx)
 }
