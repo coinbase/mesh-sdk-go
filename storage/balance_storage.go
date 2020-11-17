@@ -40,9 +40,9 @@ const (
 	// historical balance.
 	historicalBalanceNamespace = "balance"
 
-	reconciliationNamespace = "account_reconciliation"
+	reconciliationNamespace = "accrec"
 
-	pruneNamespace = "account_prune"
+	pruneNamespace = "accprune"
 )
 
 var (
@@ -279,7 +279,17 @@ func (b *BalanceStorage) Reconciled(
 	dbTx := b.db.ReconciliationTransaction(ctx)
 	defer dbTx.Discard(ctx)
 
-	key := GetAccountKey(reconciliationNamespace, account, currency)
+	key := GetAccountKey(accountNamespace, account, currency)
+	exists, _, err := dbTx.Get(ctx, key)
+	if err != nil {
+		return err
+	}
+
+	if !exists {
+		return ErrAccountMissing
+	}
+
+	key = GetAccountKey(reconciliationNamespace, account, currency)
 	exists, lastPrunedRaw, err := dbTx.Get(ctx, key)
 	if err != nil {
 		return err
@@ -477,9 +487,20 @@ func (b *BalanceStorage) OrphanBalance(
 	)
 	switch {
 	case errors.Is(err, ErrAccountMissing):
-		// TODO delete last pruned index and last reconciled
 		key := GetAccountKey(accountNamespace, account, currency)
-		return dbTransaction.Delete(ctx, key)
+		if err := dbTransaction.Delete(ctx, key); err != nil {
+			return err
+		}
+		key = GetAccountKey(pruneNamespace, account, currency)
+		if err := dbTransaction.Delete(ctx, key); err != nil {
+			return err
+		}
+		key = GetAccountKey(reconciliationNamespace, account, currency)
+		if err := dbTransaction.Delete(ctx, key); err != nil {
+			return err
+		}
+
+		return nil
 	case err != nil:
 		return err
 	default:
@@ -681,7 +702,7 @@ func (b *BalanceStorage) GetBalanceTransactional(
 
 	if exists {
 		lastPruned, _ := strconv.ParseInt(string(lastPrunedRaw), 10, 64)
-		if lastPruned > index {
+		if lastPruned >= index {
 			return nil, fmt.Errorf(
 				"%w: last pruned %d",
 				ErrBalancePruned,
@@ -1152,7 +1173,7 @@ func (b *BalanceStorage) removeHistoricalBalances(
 
 	// Update the last pruned index
 	if !orphan {
-		key := GetAccountKey(reconciliationNamespace, account, currency)
+		key := GetAccountKey(pruneNamespace, account, currency)
 		exists, lastPrunedRaw, err := dbTx.Get(ctx, key)
 		if err != nil {
 			return err
