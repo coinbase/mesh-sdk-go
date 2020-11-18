@@ -405,17 +405,16 @@ func (b *BadgerStorage) Transaction(
 	if !ok {
 		b.identifierMap[identifier] = []chan struct{}{}
 	} else {
-		c := make(chan struct{})
 		shouldWait = true
+		c = make(chan struct{})
 		b.identifierMap[identifier] = append(val, c)
 	}
 	b.identifierMutex.Unlock()
 
 	if shouldWait {
 		select {
-		case _, _ = <-c: // this should return if the channel is already closed
+		case <-c:
 		case <-ctx.Done():
-			// TODO: handle better so shutdown does not cause conflict
 		}
 	}
 
