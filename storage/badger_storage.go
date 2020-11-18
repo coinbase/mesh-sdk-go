@@ -397,18 +397,21 @@ func (b *BadgerStorage) Transaction(
 	ctx context.Context,
 	identifier string,
 ) DatabaseTransaction {
+	var c chan struct{}
+	var shouldWait bool
+
 	b.identifierMutex.Lock()
 	val, ok := b.identifierMap[identifier]
-	var c chan struct{}
 	if !ok {
 		b.identifierMap[identifier] = []chan struct{}{}
 	} else {
 		c := make(chan struct{})
+		shouldWait = true
 		b.identifierMap[identifier] = append(val, c)
 	}
 	b.identifierMutex.Unlock()
 
-	if c != nil {
+	if shouldWait {
 		fmt.Println("waiting for", identifier)
 		<-c
 	}
@@ -456,16 +459,18 @@ func (b *BadgerTransaction) Commit(context.Context) error {
 		b.db.identifierMutex.Lock()
 		val := b.db.identifierMap[b.identifier]
 		var c chan struct{}
+		var found bool
 		if len(val) == 0 {
 			delete(b.db.identifierMap, b.identifier)
 		} else {
 			c = val[0]
+			found = true
 			b.db.identifierMap[b.identifier] = val[1:]
 		}
 		b.db.identifierMutex.Unlock()
 		fmt.Println("identifier transaction complete", b.identifier)
 
-		if c != nil {
+		if found {
 			close(c)
 		}
 	}
@@ -509,15 +514,18 @@ func (b *BadgerTransaction) Discard(context.Context) {
 		b.db.identifierMutex.Lock()
 		val := b.db.identifierMap[b.identifier]
 		var c chan struct{}
+		var found bool
 		if len(val) == 0 {
 			delete(b.db.identifierMap, b.identifier)
 		} else {
 			c = val[0]
+			found = true
 			b.db.identifierMap[b.identifier] = val[1:]
 		}
 		b.db.identifierMutex.Unlock()
+		fmt.Println("identifier transaction complete", b.identifier)
 
-		if c != nil {
+		if found {
 			close(c)
 		}
 	}
