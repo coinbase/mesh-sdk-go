@@ -412,7 +412,11 @@ func (b *BadgerStorage) Transaction(
 	b.identifierMutex.Unlock()
 
 	if shouldWait {
-		<-c
+		select {
+		case <-c:
+		case <-ctx.Done():
+			// TODO: handle better so shutdown does not cause conflict
+		}
 	}
 
 	return &BadgerTransaction{
@@ -456,20 +460,13 @@ func (b *BadgerTransaction) Commit(context.Context) error {
 		b.holdIdentifier = false
 		b.db.identifierMutex.Lock()
 		val := b.db.identifierMap[b.identifier]
-		var c chan struct{}
-		var found bool
 		if len(val) == 0 {
 			delete(b.db.identifierMap, b.identifier)
 		} else {
-			c = val[0]
-			found = true
+			close(val[0])
 			b.db.identifierMap[b.identifier] = val[1:]
 		}
 		b.db.identifierMutex.Unlock()
-
-		if found {
-			close(c)
-		}
 	}
 
 	if err != nil {
@@ -510,20 +507,13 @@ func (b *BadgerTransaction) Discard(context.Context) {
 		b.holdIdentifier = false
 		b.db.identifierMutex.Lock()
 		val := b.db.identifierMap[b.identifier]
-		var c chan struct{}
-		var found bool
 		if len(val) == 0 {
 			delete(b.db.identifierMap, b.identifier)
 		} else {
-			c = val[0]
-			found = true
+			close(val[0])
 			b.db.identifierMap[b.identifier] = val[1:]
 		}
 		b.db.identifierMutex.Unlock()
-
-		if found {
-			close(c)
-		}
 	}
 }
 
