@@ -30,6 +30,9 @@ type Database interface {
 	PruneTransaction(ctx context.Context) DatabaseTransaction
 	ReconciliationTransaction(ctx context.Context) DatabaseTransaction // could eventually lock by hash(AccountIdentifier)
 
+	// Ensure that any conflicting transactions have the same identifier
+	Transaction(ctx context.Context, identifier string) DatabaseTransaction
+
 	Close(context.Context) error
 	Encoder() *Encoder
 }

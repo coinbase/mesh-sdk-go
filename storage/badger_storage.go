@@ -84,6 +84,9 @@ type BadgerStorage struct {
 	pruneWriter          sync.Mutex
 	reconciliationWriter sync.Mutex
 
+	identifierMap   map[string][]chan struct{}
+	identifierMutex sync.Mutex
+
 	// Track the closed status to ensure we exit garbage
 	// collection when the db closes.
 	closed chan struct{}
@@ -200,6 +203,7 @@ func NewBadgerStorage(
 		pool:          NewBufferPool(),
 		compress:      true,
 		syncWriter:    utils.NewPriorityPreferenceLock(),
+		identifierMap: map[string][]chan struct{}{},
 	}
 	for _, opt := range storageOptions {
 		opt(b)
@@ -295,9 +299,11 @@ type BadgerTransaction struct {
 	txn    *badger.Txn
 	rwLock sync.RWMutex
 
-	holdSyncer    bool
-	holdPruner    bool
-	holdReconcile bool
+	holdSyncer     bool
+	holdPruner     bool
+	holdReconcile  bool
+	holdIdentifier bool
+	identifier     string
 
 	// We MUST wait to reclaim any memory until after
 	// the transaction is committed or discarded.
@@ -387,6 +393,34 @@ func (b *BadgerStorage) ReconciliationTransaction(
 	}
 }
 
+func (b *BadgerStorage) Transaction(
+	ctx context.Context,
+	identifier string,
+) DatabaseTransaction {
+	b.identifierMutex.Lock()
+	val, ok := b.identifierMap[identifier]
+	var c chan struct{}
+	if !ok {
+		b.identifierMap[identifier] = []chan struct{}{}
+	} else {
+		c := make(chan struct{})
+		b.identifierMap[identifier] = append(val, c)
+	}
+	b.identifierMutex.Unlock()
+
+	if c != nil {
+		<-c
+	}
+
+	return &BadgerTransaction{
+		db:               b,
+		txn:              b.db.NewTransaction(true),
+		holdIdentifier:   true,
+		identifier:       identifier,
+		buffersToReclaim: []*bytes.Buffer{},
+	}
+}
+
 // Commit attempts to commit and discard the transaction.
 func (b *BadgerTransaction) Commit(context.Context) error {
 	err := b.txn.Commit()
@@ -414,6 +448,23 @@ func (b *BadgerTransaction) Commit(context.Context) error {
 	if b.holdReconcile {
 		b.holdReconcile = false
 		b.db.reconciliationWriter.Unlock()
+	}
+	if b.holdIdentifier {
+		b.holdIdentifier = false
+		b.db.identifierMutex.Lock()
+		val := b.db.identifierMap[b.identifier]
+		var c chan struct{}
+		if len(val) == 0 {
+			delete(b.db.identifierMap, b.identifier)
+		} else {
+			c = val[0]
+			b.db.identifierMap[b.identifier] = val[1:]
+		}
+		b.db.identifierMutex.Unlock()
+
+		if c != nil {
+			close(c)
+		}
 	}
 
 	if err != nil {
@@ -449,6 +500,23 @@ func (b *BadgerTransaction) Discard(context.Context) {
 	if b.holdReconcile {
 		b.holdReconcile = false
 		b.db.reconciliationWriter.Unlock()
+	}
+	if b.holdIdentifier {
+		b.holdIdentifier = false
+		b.db.identifierMutex.Lock()
+		val := b.db.identifierMap[b.identifier]
+		var c chan struct{}
+		if len(val) == 0 {
+			delete(b.db.identifierMap, b.identifier)
+		} else {
+			c = val[0]
+			b.db.identifierMap[b.identifier] = val[1:]
+		}
+		b.db.identifierMutex.Unlock()
+
+		if c != nil {
+			close(c)
+		}
 	}
 }
 
