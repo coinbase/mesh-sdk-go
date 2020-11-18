@@ -319,24 +319,25 @@ func (b *BalanceStorage) Reconciled(
 	dbTx := b.db.Transaction(ctx, string(recKey))
 	defer dbTx.Discard(ctx)
 
-	accKey := GetAccountKey(accountNamespace, account, currency)
-	exists, _, err := dbTx.Get(ctx, accKey)
-	if err != nil {
-		return err
-	}
+	// TODO: prevents us from needing to hold account key
+	// accKey := GetAccountKey(accountNamespace, account, currency)
+	// exists, _, err := dbTx.Get(ctx, accKey)
+	// if err != nil {
+	// 	return err
+	// }
 
-	if !exists {
-		return ErrAccountMissing
-	}
+	// if !exists {
+	// 	return ErrAccountMissing
+	// }
 
-	exists, lastPrunedRaw, err := dbTx.Get(ctx, recKey)
+	exists, lastReconciledRaw, err := dbTx.Get(ctx, recKey)
 	if err != nil {
 		return err
 	}
 
 	if exists {
-		lastPruned, _ := strconv.ParseInt(string(lastPrunedRaw), 10, 64)
-		if block.Index <= lastPruned {
+		lastReconciled, _ := strconv.ParseInt(string(lastReconciledRaw), 10, 64)
+		if block.Index <= lastReconciled {
 			return nil
 		}
 	} else {
