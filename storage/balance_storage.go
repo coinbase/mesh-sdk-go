@@ -319,16 +319,15 @@ func (b *BalanceStorage) Reconciled(
 	dbTx := b.db.Transaction(ctx, string(recKey))
 	defer dbTx.Discard(ctx)
 
-	// TODO: prevents us from needing to hold account key
-	// accKey := GetAccountKey(accountNamespace, account, currency)
-	// exists, _, err := dbTx.Get(ctx, accKey)
-	// if err != nil {
-	// 	return err
-	// }
+	accKey := GetAccountKey(accountNamespace, account, currency)
+	exists, _, err := dbTx.Get(ctx, accKey)
+	if err != nil {
+		return err
+	}
 
-	// if !exists {
-	// 	return ErrAccountMissing
-	// }
+	if !exists {
+		return ErrAccountMissing
+	}
 
 	exists, lastReconciledRaw, err := dbTx.Get(ctx, recKey)
 	if err != nil {
@@ -770,23 +769,22 @@ func (b *BalanceStorage) GetBalanceTransactional(
 		return nil, ErrAccountMissing
 	}
 
-	// TODO: causes DB conflict
-	// pruneKey := GetAccountKey(pruneNamespace, account, currency)
-	// exists, lastPrunedRaw, err := dbTx.Get(ctx, pruneKey)
-	// if err != nil {
-	// 	return nil, err
-	// }
+	pruneKey := GetAccountKey(pruneNamespace, account, currency)
+	exists, lastPrunedRaw, err := dbTx.Get(ctx, pruneKey)
+	if err != nil {
+		return nil, err
+	}
 
-	// if exists {
-	// 	lastPruned, _ := strconv.ParseInt(string(lastPrunedRaw), 10, 64)
-	// 	if lastPruned >= index {
-	// 		return nil, fmt.Errorf(
-	// 			"%w: last pruned %d",
-	// 			ErrBalancePruned,
-	// 			lastPruned,
-	// 		)
-	// 	}
-	// }
+	if exists {
+		lastPruned, _ := strconv.ParseInt(string(lastPrunedRaw), 10, 64)
+		if lastPruned >= index {
+			return nil, fmt.Errorf(
+				"%w: last pruned %d",
+				ErrBalancePruned,
+				lastPruned,
+			)
+		}
+	}
 
 	amount, err := b.getHistoricalBalance(
 		ctx,
