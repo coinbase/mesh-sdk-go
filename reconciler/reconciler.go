@@ -693,6 +693,8 @@ func (r *Reconciler) reconcileActiveAccounts(ctx context.Context) error { // nol
 				continue
 			}
 
+			start := time.Now()
+
 			amount, block, err := r.bestLiveBalance(
 				ctx,
 				balanceChange.Account,
@@ -755,6 +757,9 @@ func (r *Reconciler) reconcileActiveAccounts(ctx context.Context) error { // nol
 			}
 
 			r.updateLastChecked(balanceChange.Block.Index)
+
+			dur := time.Since(start)
+			fmt.Println("active reconciliation", dur)
 		}
 	}
 }
@@ -831,6 +836,8 @@ func (r *Reconciler) reconcileInactiveAccounts( // nolint:gocognit
 		}
 
 		if nextValidIndex <= head.Index {
+			start := time.Now()
+
 			r.inactiveQueue = r.inactiveQueue[1:]
 			r.inactiveQueueMutex.Unlock()
 
@@ -915,6 +922,9 @@ func (r *Reconciler) reconcileInactiveAccounts( // nolint:gocognit
 			if err != nil {
 				return err
 			}
+
+			dur := time.Since(start)
+			fmt.Println("inactive reconciliation", dur)
 		} else {
 			r.inactiveQueueMutex.Unlock()
 			r.queueMapMutex.Unlock()
