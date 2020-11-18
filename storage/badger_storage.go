@@ -412,6 +412,7 @@ func (b *BadgerStorage) Transaction(
 		fmt.Println("waiting for", identifier)
 		<-c
 	}
+	fmt.Println("identifier transaction", identifier)
 
 	return &BadgerTransaction{
 		db:               b,
@@ -462,6 +463,7 @@ func (b *BadgerTransaction) Commit(context.Context) error {
 			b.db.identifierMap[b.identifier] = val[1:]
 		}
 		b.db.identifierMutex.Unlock()
+		fmt.Println("identifier transaction complete", b.identifier)
 
 		if c != nil {
 			close(c)
