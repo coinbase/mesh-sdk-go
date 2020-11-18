@@ -58,3 +58,10 @@ func WithMaxConcurrency(concurrency int64) Option {
 		s.maxConcurrency = concurrency
 	}
 }
+
+// how often to attempt to increase concurrency
+func WithAdjustmentWindow(window int64) Option {
+	return func(s *Syncer) {
+		s.adjustmentWindow = window
+	}
+}

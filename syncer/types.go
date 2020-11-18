@@ -58,9 +58,9 @@ const (
 	// of block sizes to keep when adjusting concurrency.
 	defaultTrailingWindow = 1000
 
-	// defaultAdjustmentWindow is how frequently we will
+	// DefaultAdjustmentWindow is how frequently we will
 	// consider increasing our concurrency.
-	defaultAdjustmentWindow = 10
+	DefaultAdjustmentWindow = 10
 
 	// DefaultSizeMultiplier is used to pad our average size adjustment.
 	// This can be used to account for the overhead associated with processing
@@ -142,6 +142,7 @@ type Syncer struct {
 	cacheSize        int
 	sizeMultiplier   float64
 	maxConcurrency   int64
+	adjustmentWindow int64
 	concurrency      int64
 	goalConcurrency  int64
 	recentBlockSizes []int
