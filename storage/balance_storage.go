@@ -45,6 +45,11 @@ const (
 
 	pruneNamespace = "accprune"
 
+	// when pruning balances, we should not attempt
+	// to prune more than maxBalancePruneSize balances
+	// or we could surpass the max database transaction size.
+	maxBalancePruneSize = 1000
+
 	totalEntries       = "totalaccounts"
 	accountsReconciled = "accountsreconciled"
 
@@ -53,6 +58,7 @@ const (
 
 var (
 	errAccountFound = errors.New("account found")
+	errTooManyKeys  = errors.New("too many keys")
 )
 
 /*
@@ -1202,6 +1208,13 @@ func (b *BalanceStorage) removeHistoricalBalances(
 			copy(thisK, k)
 
 			foundKeys = append(foundKeys, thisK)
+
+			// If we are orphaning balances and surpass maxBalancePruneSize
+			// we should error if the tx is too large!
+			if !orphan && len(foundKeys) >= maxBalancePruneSize {
+				return errTooManyKeys
+			}
+
 			return nil
 		},
 		false,
@@ -1211,7 +1224,7 @@ func (b *BalanceStorage) removeHistoricalBalances(
 		// are pruning, we want to sort least to greatest.
 		!orphan,
 	)
-	if err != nil {
+	if err != nil && !errors.Is(err, errTooManyKeys) {
 		return fmt.Errorf("%w: database scan failed", err)
 	}
 
