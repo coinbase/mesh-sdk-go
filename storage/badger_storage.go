@@ -413,7 +413,7 @@ func (b *BadgerStorage) Transaction(
 
 	if shouldWait {
 		select {
-		case <-c:
+		case _, _ = <-c: // this should return if the channel is already closed
 		case <-ctx.Done():
 			// TODO: handle better so shutdown does not cause conflict
 		}
