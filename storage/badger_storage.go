@@ -409,6 +409,7 @@ func (b *BadgerStorage) Transaction(
 	b.identifierMutex.Unlock()
 
 	if c != nil {
+		fmt.Println("waiting for", identifier)
 		<-c
 	}
 
