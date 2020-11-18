@@ -34,6 +34,8 @@ const (
 	// connections.
 	connectionResetByPeer = "connection reset by peer"
 
+	connectionClosedByServer = "server closed idle connection"
+
 	// clientTimeout is returned when a request exceeds the set
 	// HTTP timeout setting.
 	clientTimeout = "Client.Timeout exceeded"
@@ -66,7 +68,8 @@ func transientError(err error) bool {
 	if errors.Is(err, client.ErrRetriable) ||
 		strings.Contains(err.Error(), io.EOF.Error()) ||
 		strings.Contains(err.Error(), connectionResetByPeer) ||
-		strings.Contains(err.Error(), clientTimeout) {
+		strings.Contains(err.Error(), clientTimeout) ||
+		strings.Contains(err.Error(), connectionClosedByServer) {
 		return true
 	}
 
