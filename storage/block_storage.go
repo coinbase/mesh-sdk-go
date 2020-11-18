@@ -179,16 +179,11 @@ func (b *BlockStorage) pruneBlock(
 	index int64,
 	minDepth int64,
 ) (int64, error) {
-	head, err := b.GetHeadBlockIdentifier(ctx)
-	if err != nil {
-		return -1, fmt.Errorf("%w: cannot get head block identifier", err)
-	}
-
 	// We create a separate transaction for each pruning attempt so that
 	// we don't hit the database tx size maximum. As a result, it is possible
 	// that we prune a collection of blocks, encounter an error, and cannot
 	// rollback the pruning operations.
-	dbTx := b.db.Transaction(ctx, "prune-block")
+	dbTx := b.db.SyncTransaction(ctx, false)
 	defer dbTx.Discard(ctx)
 
 	oldestIndex, err := b.GetOldestBlockIndexTransactional(ctx, dbTx)
@@ -198,6 +193,11 @@ func (b *BlockStorage) pruneBlock(
 
 	if index < oldestIndex {
 		return -1, ErrNothingToPrune
+	}
+
+	head, err := b.GetHeadBlockIdentifierTransactional(ctx, dbTx)
+	if err != nil {
+		return -1, fmt.Errorf("%w: cannot get head block identifier", err)
 	}
 
 	// Ensure we are only pruning blocks that could not be
