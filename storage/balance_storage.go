@@ -300,11 +300,12 @@ func (b *BalanceStorage) Reconciled(
 	currency *types.Currency,
 	block *types.BlockIdentifier,
 ) error {
-	dbTx := b.db.ReconciliationTransaction(ctx)
+	recKey := GetAccountKey(reconciliationNamespace, account, currency)
+	dbTx := b.db.Transaction(ctx, string(recKey))
 	defer dbTx.Discard(ctx)
 
-	key := GetAccountKey(accountNamespace, account, currency)
-	exists, _, err := dbTx.Get(ctx, key)
+	accKey := GetAccountKey(accountNamespace, account, currency)
+	exists, _, err := dbTx.Get(ctx, accKey)
 	if err != nil {
 		return err
 	}
@@ -313,8 +314,7 @@ func (b *BalanceStorage) Reconciled(
 		return ErrAccountMissing
 	}
 
-	key = GetAccountKey(reconciliationNamespace, account, currency)
-	exists, lastPrunedRaw, err := dbTx.Get(ctx, key)
+	exists, lastPrunedRaw, err := dbTx.Get(ctx, recKey)
 	if err != nil {
 		return err
 	}
@@ -330,7 +330,7 @@ func (b *BalanceStorage) Reconciled(
 		}
 	}
 
-	if err := dbTx.Set(ctx, key, []byte(strconv.FormatInt(block.Index, 10)), true); err != nil {
+	if err := dbTx.Set(ctx, recKey, []byte(strconv.FormatInt(block.Index, 10)), true); err != nil {
 		return err
 	}
 
@@ -570,7 +570,8 @@ func (b *BalanceStorage) PruneBalances(
 	currency *types.Currency,
 	index int64,
 ) error {
-	dbTx := b.db.PruneTransaction(ctx)
+	key := string(GetAccountKey(accountNamespace, account, currency)) + "_prune"
+	dbTx := b.db.Transaction(ctx, key)
 	defer dbTx.Discard(ctx)
 
 	err := b.removeHistoricalBalances(
