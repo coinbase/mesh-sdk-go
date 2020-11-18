@@ -46,16 +46,17 @@ const (
 // fully populated blocks during reorgs (not
 // provided by stateless syncer).
 type StatefulSyncer struct {
-	network        *types.NetworkIdentifier
-	fetcher        *fetcher.Fetcher
-	cancel         context.CancelFunc
-	blockStorage   *storage.BlockStorage
-	counterStorage *storage.CounterStorage
-	logger         Logger
-	workers        []storage.BlockWorker
-	cacheSize      int
-	maxConcurrency int64
-	pastBlockLimit int
+	network          *types.NetworkIdentifier
+	fetcher          *fetcher.Fetcher
+	cancel           context.CancelFunc
+	blockStorage     *storage.BlockStorage
+	counterStorage   *storage.CounterStorage
+	logger           Logger
+	workers          []storage.BlockWorker
+	cacheSize        int
+	maxConcurrency   int64
+	pastBlockLimit   int
+	adjustmentWindow int64
 }
 
 // Logger is used by the statefulsyncer to
@@ -89,18 +90,20 @@ func New(
 	cacheSize int,
 	maxConcurrency int64,
 	pastBlockLimit int,
+	adjustmentWindow int64,
 ) *StatefulSyncer {
 	return &StatefulSyncer{
-		network:        network,
-		fetcher:        fetcher,
-		cancel:         cancel,
-		blockStorage:   blockStorage,
-		counterStorage: counterStorage,
-		workers:        workers,
-		logger:         logger,
-		cacheSize:      cacheSize,
-		maxConcurrency: maxConcurrency,
-		pastBlockLimit: pastBlockLimit,
+		network:          network,
+		fetcher:          fetcher,
+		cancel:           cancel,
+		blockStorage:     blockStorage,
+		counterStorage:   counterStorage,
+		workers:          workers,
+		logger:           logger,
+		cacheSize:        cacheSize,
+		maxConcurrency:   maxConcurrency,
+		pastBlockLimit:   pastBlockLimit,
+		adjustmentWindow: adjustmentWindow,
 	}
 }
 
@@ -134,6 +137,7 @@ func (s *StatefulSyncer) Sync(ctx context.Context, startIndex int64, endIndex in
 		syncer.WithPastBlocks(pastBlocks),
 		syncer.WithCacheSize(s.cacheSize),
 		syncer.WithMaxConcurrency(s.maxConcurrency),
+		syncer.WithAdjustmentWindow(s.adjustmentWindow),
 	)
 
 	return syncer.Sync(ctx, startIndex, endIndex)
