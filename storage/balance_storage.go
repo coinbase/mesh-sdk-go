@@ -133,6 +133,9 @@ type BalanceStorage struct {
 	handler         BalanceStorageHandler
 	atomicIncrement sync.Mutex
 
+	recLock                *utils.PriorityPreferenceLock
+	pendingReconciliations int64
+
 	parser *parser.Parser
 }
 
@@ -141,7 +144,8 @@ func NewBalanceStorage(
 	db Database,
 ) *BalanceStorage {
 	return &BalanceStorage{
-		db: db,
+		db:      db,
+		recLock: utils.NewPriorityPreferenceLock(),
 	}
 }
 
@@ -183,6 +187,17 @@ func (b *BalanceStorage) AddingBlock(
 	}
 
 	if err := g.Wait(); err != nil {
+		return nil, err
+	}
+
+	// Update pending reconciliations
+	var pending int64
+	b.recLock.HighPriorityLock()
+	pending = b.pendingReconciliations
+	b.pendingReconciliations = 0
+	b.recLock.Unlock()
+
+	if err := b.IncrementCounter(ctx, transaction, accountsReconciled, pending); err != nil {
 		return nil, err
 	}
 
@@ -272,7 +287,7 @@ func (b *BalanceStorage) SetBalance(
 	}
 
 	if !exists {
-		if err := b.IncrementCounter(ctx, dbTransaction, totalEntries); err != nil {
+		if err := b.IncrementCounter(ctx, dbTransaction, totalEntries, 1); err != nil {
 			return err
 		}
 	}
@@ -325,9 +340,9 @@ func (b *BalanceStorage) Reconciled(
 			return nil
 		}
 	} else {
-		if err := b.IncrementCounter(ctx, dbTx, accountsReconciled); err != nil {
-			return err
-		}
+		b.recLock.Lock()
+		b.pendingReconciliations++
+		b.recLock.Unlock()
 	}
 
 	if err := dbTx.Set(ctx, recKey, []byte(strconv.FormatInt(block.Index, 10)), true); err != nil {
@@ -689,7 +704,7 @@ func (b *BalanceStorage) UpdateBalance(
 			return err
 		}
 
-		if err := b.IncrementCounter(ctx, dbTransaction, totalEntries); err != nil {
+		if err := b.IncrementCounter(ctx, dbTransaction, totalEntries, 1); err != nil {
 			return err
 		}
 	}
@@ -1262,7 +1277,12 @@ func (b *BalanceStorage) IncrementCounter(
 	ctx context.Context,
 	dbTx DatabaseTransaction,
 	counter string,
+	amount int64,
 ) error {
+	if amount <= 0 {
+		return nil
+	}
+
 	b.atomicIncrement.Lock()
 	defer b.atomicIncrement.Unlock()
 
@@ -1271,7 +1291,7 @@ func (b *BalanceStorage) IncrementCounter(
 		return err
 	}
 
-	newVal := new(big.Int).Add(val, big.NewInt(1))
+	newVal := new(big.Int).Add(val, big.NewInt(amount))
 
 	return dbTx.Set(ctx, getCounterKey(counter), newVal.Bytes(), true)
 }
