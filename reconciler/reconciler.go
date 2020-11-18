@@ -693,8 +693,6 @@ func (r *Reconciler) reconcileActiveAccounts(ctx context.Context) error { // nol
 				continue
 			}
 
-			start := time.Now()
-
 			amount, block, err := r.bestLiveBalance(
 				ctx,
 				balanceChange.Account,
@@ -723,7 +721,6 @@ func (r *Reconciler) reconcileActiveAccounts(ctx context.Context) error { // nol
 
 				return fmt.Errorf("%w: %v", ErrLiveBalanceLookupFailed, err)
 			}
-			liveFetchDur := time.Since(start)
 
 			err = r.accountReconciliation(
 				ctx,
@@ -743,8 +740,6 @@ func (r *Reconciler) reconcileActiveAccounts(ctx context.Context) error { // nol
 				return err
 			}
 
-			reconciliationDur := time.Since(start) - liveFetchDur
-
 			// Attempt to prune historical balances that will not be used
 			// anymore.
 			if err := r.updateQueueMap(
@@ -760,9 +755,6 @@ func (r *Reconciler) reconcileActiveAccounts(ctx context.Context) error { // nol
 			}
 
 			r.updateLastChecked(balanceChange.Block.Index)
-
-			dur := time.Since(start)
-			fmt.Println("active reconciliation total", dur, "live fetch", liveFetchDur, "reconciliation dur", reconciliationDur)
 		}
 	}
 }
@@ -839,8 +831,6 @@ func (r *Reconciler) reconcileInactiveAccounts( // nolint:gocognit
 		}
 
 		if nextValidIndex <= head.Index {
-			start := time.Now()
-
 			r.inactiveQueue = r.inactiveQueue[1:]
 			r.inactiveQueueMutex.Unlock()
 
@@ -925,9 +915,6 @@ func (r *Reconciler) reconcileInactiveAccounts( // nolint:gocognit
 			if err != nil {
 				return err
 			}
-
-			dur := time.Since(start)
-			fmt.Println("inactive reconciliation", dur)
 		} else {
 			r.inactiveQueueMutex.Unlock()
 			r.queueMapMutex.Unlock()
