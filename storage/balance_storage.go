@@ -586,8 +586,8 @@ func (b *BalanceStorage) PruneBalances(
 	currency *types.Currency,
 	index int64,
 ) error {
-	key := string(GetAccountKey(accountNamespace, account, currency)) + "_prune"
-	dbTx := b.db.Transaction(ctx, key)
+	key := GetAccountKey(accountNamespace, account, currency)
+	dbTx := b.db.Transaction(ctx, string(key))
 	defer dbTx.Discard(ctx)
 
 	err := b.removeHistoricalBalances(
