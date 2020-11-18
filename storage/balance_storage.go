@@ -586,6 +586,9 @@ func (b *BalanceStorage) PruneBalances(
 	currency *types.Currency,
 	index int64,
 ) error {
+	// TODO: temporarily don't prune
+	return nil
+
 	key := GetAccountKey(accountNamespace, account, currency)
 	dbTx := b.db.Transaction(ctx, string(key))
 	defer dbTx.Discard(ctx)
