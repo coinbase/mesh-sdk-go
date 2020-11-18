@@ -723,6 +723,7 @@ func (r *Reconciler) reconcileActiveAccounts(ctx context.Context) error { // nol
 
 				return fmt.Errorf("%w: %v", ErrLiveBalanceLookupFailed, err)
 			}
+			liveFetchDur := time.Since(start)
 
 			err = r.accountReconciliation(
 				ctx,
@@ -759,7 +760,7 @@ func (r *Reconciler) reconcileActiveAccounts(ctx context.Context) error { // nol
 			r.updateLastChecked(balanceChange.Block.Index)
 
 			dur := time.Since(start)
-			fmt.Println("active reconciliation", dur)
+			fmt.Println("active reconciliation total", dur, "live fetch", liveFetchDur)
 		}
 	}
 }
