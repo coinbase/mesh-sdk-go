@@ -743,6 +743,8 @@ func (r *Reconciler) reconcileActiveAccounts(ctx context.Context) error { // nol
 				return err
 			}
 
+			reconciliationDur := time.Since(start) - liveFetchDur
+
 			// Attempt to prune historical balances that will not be used
 			// anymore.
 			if err := r.updateQueueMap(
@@ -760,7 +762,7 @@ func (r *Reconciler) reconcileActiveAccounts(ctx context.Context) error { // nol
 			r.updateLastChecked(balanceChange.Block.Index)
 
 			dur := time.Since(start)
-			fmt.Println("active reconciliation total", dur, "live fetch", liveFetchDur)
+			fmt.Println("active reconciliation total", dur, "live fetch", liveFetchDur, "reconciliation dur", reconciliationDur)
 		}
 	}
 }
