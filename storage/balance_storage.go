@@ -767,22 +767,23 @@ func (b *BalanceStorage) GetBalanceTransactional(
 		return nil, ErrAccountMissing
 	}
 
-	pruneKey := GetAccountKey(pruneNamespace, account, currency)
-	exists, lastPrunedRaw, err := dbTx.Get(ctx, pruneKey)
-	if err != nil {
-		return nil, err
-	}
+	// TODO: causes DB conflict
+	// pruneKey := GetAccountKey(pruneNamespace, account, currency)
+	// exists, lastPrunedRaw, err := dbTx.Get(ctx, pruneKey)
+	// if err != nil {
+	// 	return nil, err
+	// }
 
-	if exists {
-		lastPruned, _ := strconv.ParseInt(string(lastPrunedRaw), 10, 64)
-		if lastPruned >= index {
-			return nil, fmt.Errorf(
-				"%w: last pruned %d",
-				ErrBalancePruned,
-				lastPruned,
-			)
-		}
-	}
+	// if exists {
+	// 	lastPruned, _ := strconv.ParseInt(string(lastPrunedRaw), 10, 64)
+	// 	if lastPruned >= index {
+	// 		return nil, fmt.Errorf(
+	// 			"%w: last pruned %d",
+	// 			ErrBalancePruned,
+	// 			lastPruned,
+	// 		)
+	// 	}
+	// }
 
 	amount, err := b.getHistoricalBalance(
 		ctx,
