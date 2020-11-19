@@ -634,6 +634,7 @@ func (r *Reconciler) updateQueueMap(
 ) error {
 	key := types.Hash(acctCurrency)
 
+	start := time.Now()
 	r.queueMapMutex.Lock()
 	existing := r.queueMap[key].Get(index)
 	existing.Value--
@@ -660,6 +661,8 @@ func (r *Reconciler) updateQueueMap(
 
 	// Unlock before pruning as this could take some time
 	r.queueMapMutex.Unlock()
+
+	fmt.Println("queue map update", time.Since(start))
 
 	// Attempt to prune historical balances that will not be used
 	// anymore.
