@@ -58,7 +58,7 @@ func New(
 	r.changeQueue = make(chan *parser.BalanceChange, r.backlogSize)
 
 	// Initialize Queue Map (TODO: remove to own package)
-	r.queueMapShards = r.ActiveConcurrency + r.InactiveConcurrency
+	r.queueMapShards = (r.ActiveConcurrency + r.InactiveConcurrency) * 8
 	r.queueMap = make([]*queueMapEntry, r.queueMapShards)
 	for i := 0; i < r.queueMapShards; i++ {
 		r.queueMap[i] = &queueMapEntry{
@@ -638,7 +638,6 @@ func (r *Reconciler) updateQueueMap(
 	key := types.Hash(acctCurrency)
 	e := r.queueMapIndex(key)
 
-	start := time.Now()
 	e.Lock.Lock()
 	existing := e.Map[key].Get(index)
 	existing.Value--
@@ -665,8 +664,6 @@ func (r *Reconciler) updateQueueMap(
 
 	// Unlock before pruning as this could take some time
 	e.Lock.Unlock()
-
-	fmt.Println("queue map update", time.Since(start))
 
 	// Attempt to prune historical balances that will not be used
 	// anymore.
