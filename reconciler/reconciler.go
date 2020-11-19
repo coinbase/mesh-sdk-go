@@ -48,8 +48,6 @@ func New(
 		inactiveQueueMutex:  utils.NewPriorityPreferenceLock(),
 		backlogSize:         defaultBacklogSize,
 		lastIndexChecked:    -1,
-		queueMap:            map[string]*utils.BST{},
-		queueMapMutex:       utils.NewPriorityPreferenceLock(),
 	}
 
 	for _, opt := range options {
@@ -59,7 +57,28 @@ func New(
 	// Create change queue
 	r.changeQueue = make(chan *parser.BalanceChange, r.backlogSize)
 
+	// Initialize Queue Map (TODO: remove to own package)
+	r.queueMapShards = r.ActiveConcurrency + r.InactiveConcurrency
+	r.queueMap = make([]*queueMapEntry, r.queueMapShards)
+	for i := 0; i < r.queueMapShards; i++ {
+		r.queueMap[i] = &queueMapEntry{
+			Lock: utils.NewPriorityPreferenceLock(),
+			Map:  map[string]*utils.BST{},
+		}
+	}
+
 	return r
+}
+
+func (r *Reconciler) queueMapIndex(key string) *queueMapEntry {
+	// temporary: https://github.com/orcaman/concurrent-map/blob/8c72a8bb44f6cfcff2abae8ebcbaaaf883331363/concurrent_map.go#L305-L313
+	hash := uint32(2166136261)
+	const prime32 = uint32(16777619)
+	for i := 0; i < len(key); i++ {
+		hash *= prime32
+		hash ^= uint32(key[i])
+	}
+	return r.queueMap[int(hash%uint32(r.queueMapShards))]
 }
 
 // TODO: replace with structured logging
@@ -106,25 +125,6 @@ func (r *Reconciler) wrappedInactiveEnqueue(
 			err.Error(),
 			types.PrintStruct(accountCurrency),
 		)
-	}
-}
-
-// addToQueueMap adds a *types.AccountCurrency
-// to the prune map at the provided index.
-func (r *Reconciler) addToQueueMap(
-	acctCurrency *types.AccountCurrency,
-	index int64,
-) {
-	key := types.Hash(acctCurrency)
-	if _, ok := r.queueMap[key]; !ok {
-		r.queueMap[key] = &utils.BST{}
-	}
-
-	existing := r.queueMap[key].Get(index)
-	if existing == nil {
-		r.queueMap[key].Set(index, 1)
-	} else {
-		existing.Value++
 	}
 }
 
@@ -195,11 +195,6 @@ func (r *Reconciler) queueChanges(
 		})
 	}
 
-	r.queueMapMutex.HighPriorityLock()
-	defer r.queueMapMutex.Unlock()
-
-	r.inactiveQueueMutex.HighPriorityLock()
-	defer r.inactiveQueueMutex.Unlock()
 	for _, change := range balanceChanges {
 		// All changes will have the same block. Continue
 		// if we are too far behind to start reconciling.
@@ -222,14 +217,22 @@ func (r *Reconciler) queueChanges(
 			Account:  change.Account,
 			Currency: change.Currency,
 		}
+		r.inactiveQueueMutex.HighPriorityLock()
 		err := r.inactiveAccountQueue(false, acctCurrency, block, true)
 		if err != nil {
+			r.inactiveQueueMutex.Unlock()
 			return err
 		}
+		r.inactiveQueueMutex.Unlock()
 
 		// Add change to queueMap before enqueuing to ensure
 		// there is no possible race.
-		r.addToQueueMap(acctCurrency, change.Block.Index)
+
+		// TODO: don't hash twice
+		e := r.queueMapIndex(types.Hash(acctCurrency))
+		e.Lock.HighPriorityLock()
+		e.addToQueueMap(acctCurrency, change.Block.Index)
+		e.Lock.Unlock()
 
 		// Add change to active queue
 		r.wrappedActiveEnqueue(ctx, change)
@@ -633,34 +636,35 @@ func (r *Reconciler) updateQueueMap(
 	prune bool,
 ) error {
 	key := types.Hash(acctCurrency)
+	e := r.queueMapIndex(key)
 
 	start := time.Now()
-	r.queueMapMutex.Lock()
-	existing := r.queueMap[key].Get(index)
+	e.Lock.Lock()
+	existing := e.Map[key].Get(index)
 	existing.Value--
 	if existing.Value > 0 {
-		r.queueMapMutex.Unlock()
+		e.Lock.Unlock()
 		return nil
 	}
 
 	// Cleanup indexes when we don't need them anymore
-	r.queueMap[key].Delete(index)
+	e.Map[key].Delete(index)
 
 	// Don't prune if there are items for this AccountCurrency
 	// less than this change.
-	if !r.queueMap[key].Empty() &&
-		index >= r.queueMap[key].Min().Key {
-		r.queueMapMutex.Unlock()
+	if !e.Map[key].Empty() &&
+		index >= e.Map[key].Min().Key {
+		e.Lock.Unlock()
 		return nil
 	}
 
 	// Cleanup keys when we don't need them anymore
-	if r.queueMap[key].Empty() {
-		delete(r.queueMap, key)
+	if e.Map[key].Empty() {
+		delete(e.Map, key)
 	}
 
 	// Unlock before pruning as this could take some time
-	r.queueMapMutex.Unlock()
+	e.Lock.Unlock()
 
 	fmt.Println("queue map update", time.Since(start))
 
@@ -802,24 +806,10 @@ func (r *Reconciler) reconcileInactiveAccounts( // nolint:gocognit
 			return ctx.Err()
 		}
 
-		// Lock BST while determining if we should attempt reconciliation
-		// to ensure we don't allow any accounts to be pruned at retrieved
-		// head index. Although this appears to be a long time to hold
-		// this mutex, this lookup takes less than a millisecond.
-		r.queueMapMutex.Lock()
-
-		shouldAttempt, head := r.shouldAttemptInactiveReconciliation(ctx)
-		if !shouldAttempt {
-			r.queueMapMutex.Unlock()
-			time.Sleep(inactiveReconciliationSleep)
-			continue
-		}
-
 		r.inactiveQueueMutex.Lock()
 		queueLen := len(r.inactiveQueue)
 		if queueLen == 0 {
 			r.inactiveQueueMutex.Unlock()
-			r.queueMapMutex.Unlock()
 			r.debugLog(
 				"no accounts ready for inactive reconciliation (0 accounts in queue)",
 			)
@@ -828,6 +818,22 @@ func (r *Reconciler) reconcileInactiveAccounts( // nolint:gocognit
 		}
 
 		nextAcct := r.inactiveQueue[0]
+		e := r.queueMapIndex(types.Hash(nextAcct.Entry))
+
+		// Lock BST while determining if we should attempt reconciliation
+		// to ensure we don't allow any accounts to be pruned at retrieved
+		// head index. Although this appears to be a long time to hold
+		// this mutex, this lookup takes less than a millisecond.
+		e.Lock.Lock()
+
+		shouldAttempt, head := r.shouldAttemptInactiveReconciliation(ctx)
+		if !shouldAttempt {
+			e.Lock.Unlock()
+			r.inactiveQueueMutex.Unlock()
+			time.Sleep(inactiveReconciliationSleep)
+			continue
+		}
+
 		nextValidIndex := int64(-1)
 		if nextAcct.LastCheck != nil { // block is set to nil when loaded from previous run
 			nextValidIndex = nextAcct.LastCheck.Index + r.inactiveFrequency
@@ -839,8 +845,8 @@ func (r *Reconciler) reconcileInactiveAccounts( // nolint:gocognit
 
 			// Add nextAcct to queueMap before returning
 			// queueMapMutex lock.
-			r.addToQueueMap(nextAcct.Entry, head.Index)
-			r.queueMapMutex.Unlock()
+			e.addToQueueMap(nextAcct.Entry, head.Index)
+			e.Lock.Unlock()
 
 			amount, block, err := r.bestLiveBalance(
 				ctx,
@@ -920,7 +926,7 @@ func (r *Reconciler) reconcileInactiveAccounts( // nolint:gocognit
 			}
 		} else {
 			r.inactiveQueueMutex.Unlock()
-			r.queueMapMutex.Unlock()
+			e.Lock.Unlock()
 			r.debugLog(
 				"no accounts ready for inactive reconciliation (%d accounts in queue, will reconcile next account at index %d)",
 				queueLen,

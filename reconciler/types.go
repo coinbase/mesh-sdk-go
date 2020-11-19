@@ -271,6 +271,30 @@ type Reconciler struct {
 	// in the active reconciliation queue and being actively
 	// reconciled. It ensures we don't accidentally attempt to prune
 	// computed balances being used by other goroutines.
-	queueMap      map[string]*utils.BST
-	queueMapMutex *utils.PriorityPreferenceLock
+	queueMap       []*queueMapEntry
+	queueMapShards int
+}
+
+type queueMapEntry struct {
+	Lock *utils.PriorityPreferenceLock
+	Map  map[string]*utils.BST
+}
+
+// addToQueueMap adds a *types.AccountCurrency
+// to the prune map at the provided index.
+func (e *queueMapEntry) addToQueueMap(
+	acctCurrency *types.AccountCurrency,
+	index int64,
+) {
+	key := types.Hash(acctCurrency)
+	if _, ok := e.Map[key]; !ok {
+		e.Map[key] = &utils.BST{}
+	}
+
+	existing := e.Map[key].Get(index)
+	if existing == nil {
+		e.Map[key].Set(index, 1)
+	} else {
+		existing.Value++
+	}
 }
