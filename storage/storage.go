@@ -31,6 +31,8 @@ type Database interface {
 	ReconciliationTransaction(ctx context.Context) DatabaseTransaction // could eventually lock by hash(AccountIdentifier)
 
 	// Ensure that any conflicting transactions have the same identifier
+	// TODO: Add priority so that we can remove other specific txs
+	// TODO: is there a way to do a global tx lock? do we want that? (could do a RWMutex where all txs get R and global gets W)
 	Transaction(ctx context.Context, identifier string) DatabaseTransaction
 
 	Close(context.Context) error
