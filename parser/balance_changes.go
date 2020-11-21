@@ -18,7 +18,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/coinbase/rosetta-sdk-go/types"
+	"github.com/syscoin/rosetta-sdk-go/types"
 )
 
 // BalanceChange represents a balance change that affected

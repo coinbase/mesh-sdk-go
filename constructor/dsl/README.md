@@ -261,4 +261,4 @@ using a double slash (`//`).
 The Rosetta Constructor DSL should be considered `ALPHA` and may
 include breaking changes in later releases. If you have any ideas on how to improve
 the language, please
-[open an issue in `rosetta-sdk-go`](https://github.com/coinbase/rosetta-sdk-go/issues)!
+[open an issue in `rosetta-sdk-go`](https://github.com/syscoin/rosetta-sdk-go/issues)!

@@ -20,9 +20,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/coinbase/rosetta-sdk-go/asserter"
-	"github.com/coinbase/rosetta-sdk-go/client"
-	"github.com/coinbase/rosetta-sdk-go/types"
+	"github.com/syscoin/rosetta-sdk-go/asserter"
+	"github.com/syscoin/rosetta-sdk-go/client"
+	"github.com/syscoin/rosetta-sdk-go/types"
 )
 
 const (

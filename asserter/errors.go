@@ -17,7 +17,7 @@ package asserter
 import (
 	"errors"
 
-	utils "github.com/coinbase/rosetta-sdk-go/errors"
+	utils "github.com/syscoin/rosetta-sdk-go/errors"
 )
 
 var (

@@ -27,11 +27,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/coinbase/rosetta-sdk-go/constructor/job"
-	mocks "github.com/coinbase/rosetta-sdk-go/mocks/constructor/worker"
-	"github.com/coinbase/rosetta-sdk-go/storage"
-	"github.com/coinbase/rosetta-sdk-go/types"
-	"github.com/coinbase/rosetta-sdk-go/utils"
+	"github.com/syscoin/rosetta-sdk-go/constructor/job"
+	mocks "github.com/syscoin/rosetta-sdk-go/mocks/constructor/worker"
+	"github.com/syscoin/rosetta-sdk-go/storage"
+	"github.com/syscoin/rosetta-sdk-go/types"
+	"github.com/syscoin/rosetta-sdk-go/utils"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"

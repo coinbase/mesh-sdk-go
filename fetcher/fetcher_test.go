@@ -23,8 +23,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/coinbase/rosetta-sdk-go/asserter"
-	"github.com/coinbase/rosetta-sdk-go/types"
+	"github.com/syscoin/rosetta-sdk-go/asserter"
+	"github.com/syscoin/rosetta-sdk-go/types"
 
 	"github.com/stretchr/testify/assert"
 )

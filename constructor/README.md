@@ -1,6 +1,6 @@
 # Constructor
 
-[![GoDoc](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=shield)](https://pkg.go.dev/github.com/coinbase/rosetta-sdk-go/constructor?tab=doc)
+[![GoDoc](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=shield)](https://pkg.go.dev/github.com/syscoin/rosetta-sdk-go/constructor?tab=doc)
 
 The `constructor` package is used for coordinating the construction
 and broadcast of transactions on any blockchain that implements the
@@ -31,10 +31,10 @@ in other `Scenarios`. The syntax for accessing this shared state can be found
 
 `Actions` are discrete operations that can be performed in the context of a
 `Scenario`.  A full list of all `Actions` that can be performed can be found
-[here](https://pkg.go.dev/github.com/coinbase/rosetta-sdk-go/constructor/job#ActionType).
+[here](https://pkg.go.dev/github.com/syscoin/rosetta-sdk-go/constructor/job#ActionType).
 
 If you have suggestions for more actions, please
-[open an issue in `rosetta-sdk-go`](https://github.com/coinbase/rosetta-sdk-go/issues)!
+[open an issue in `rosetta-sdk-go`](https://github.com/syscoin/rosetta-sdk-go/issues)!
 
 ### Broadcast Invocation
 If you'd like to broadcast a transaction at the end of a `Scenario`,

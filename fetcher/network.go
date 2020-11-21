@@ -18,9 +18,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/coinbase/rosetta-sdk-go/asserter"
+	"github.com/syscoin/rosetta-sdk-go/asserter"
 
-	"github.com/coinbase/rosetta-sdk-go/types"
+	"github.com/syscoin/rosetta-sdk-go/types"
 )
 
 // NetworkStatus returns the validated response

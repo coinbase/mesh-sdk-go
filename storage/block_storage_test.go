@@ -20,8 +20,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/coinbase/rosetta-sdk-go/types"
-	"github.com/coinbase/rosetta-sdk-go/utils"
+	"github.com/syscoin/rosetta-sdk-go/types"
+	"github.com/syscoin/rosetta-sdk-go/utils"
 
 	"github.com/stretchr/testify/assert"
 )

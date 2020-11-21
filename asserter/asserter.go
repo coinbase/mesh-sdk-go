@@ -20,7 +20,7 @@ import (
 	"io/ioutil"
 	"path"
 
-	"github.com/coinbase/rosetta-sdk-go/types"
+	"github.com/syscoin/rosetta-sdk-go/types"
 )
 
 // Asserter contains all logic to perform static

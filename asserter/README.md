@@ -1,6 +1,6 @@
 # Asserter
 
-[![GoDoc](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=shield)](https://pkg.go.dev/github.com/coinbase/rosetta-sdk-go/asserter?tab=doc)
+[![GoDoc](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=shield)](https://pkg.go.dev/github.com/syscoin/rosetta-sdk-go/asserter?tab=doc)
 
 The Asserter package is used to validate the correctness of Rosetta types. It is
 important to note that this validation only ensures that required fields are
@@ -13,5 +13,5 @@ If you want more intensive validation, try running the
 ## Installation
 
 ```shell
-go get github.com/coinbase/rosetta-sdk-go/asserter
+go get github.com/syscoin/rosetta-sdk-go/asserter
 ```

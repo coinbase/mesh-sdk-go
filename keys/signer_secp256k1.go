@@ -17,8 +17,8 @@ package keys
 import (
 	"fmt"
 
-	"github.com/coinbase/rosetta-sdk-go/asserter"
-	"github.com/coinbase/rosetta-sdk-go/types"
+	"github.com/syscoin/rosetta-sdk-go/asserter"
+	"github.com/syscoin/rosetta-sdk-go/types"
 
 	"github.com/ethereum/go-ethereum/crypto/secp256k1"
 )
