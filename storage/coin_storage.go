@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"math/big"
 	"strings"
-
+	"log"
 	"github.com/sidhujag/rosetta-sdk-go/asserter"
 	"github.com/sidhujag/rosetta-sdk-go/types"
 	"github.com/sidhujag/rosetta-sdk-go/utils"
@@ -279,17 +279,21 @@ func (c *CoinStorage) updateCoins( // nolint:gocognit
 ) error {
 	addCoins := map[string]*types.Operation{}
 	removeCoins := map[string]*types.Operation{}
-
+	log.Printf("updateCoins\n")
 	for _, txn := range block.Transactions {
+		log.Printf("updateCoins tx\n")
 		for _, operation := range txn.Operations {
+			log.Printf("updateCoins operation\n")
 			skip, err := c.skipOperation(operation)
 			if err != nil {
 				return fmt.Errorf("%w: %v", ErrUnableToDetermineIfSkipOperation, err)
 			}
+			log.Printf("updateCoins1\n")
 			if skip {
+				log.Printf("updateCoins2\n")
 				continue
 			}
-
+			log.Printf("updateCoins3\n")
 			coinChange := operation.CoinChange
 			identifier := coinChange.CoinIdentifier.Identifier
 			coinDict := removeCoins
@@ -297,26 +301,29 @@ func (c *CoinStorage) updateCoins( // nolint:gocognit
 				!addCoinCreated && coinChange.CoinAction == types.CoinSpent {
 				coinDict = addCoins
 			}
-
+			log.Printf("updateCoins4\n")
 			if _, ok := coinDict[identifier]; ok {
 				return fmt.Errorf("%w %s", ErrDuplicateCoinFound, identifier)
 			}
-
+			log.Printf("updateCoins5\n")
 			coinDict[identifier] = operation
 		}
 	}
-
+	log.Printf("updateCoins6\n")
 	g, gctx := errgroup.WithContext(ctx)
 	for identifier, val := range addCoins {
+		log.Printf("updateCoins7\n")
 		if _, ok := removeCoins[identifier]; ok {
+			log.Printf("updateCoins8\n")
 			continue
 		}
-
+		log.Printf("updateCoins9\n")
 		// We need to set variable before calling goroutine
 		// to avoid getting an updated pointer as loop iteration
 		// continues.
 		op := val
 		g.Go(func() error {
+			log.Printf("updateCoins10\n")
 			if err := c.addCoin(
 				gctx,
 				op.Account,
@@ -332,17 +339,20 @@ func (c *CoinStorage) updateCoins( // nolint:gocognit
 			return nil
 		})
 	}
-
+	log.Printf("updateCoins11\n")
 	for identifier, val := range removeCoins {
+		log.Printf("updateCoins12\n")
 		if _, ok := addCoins[identifier]; ok {
+			log.Printf("updateCoins13\n")
 			continue
 		}
-
+		log.Printf("updateCoins14\n")
 		// We need to set variable before calling goroutine
 		// to avoid getting an updated pointer as loop iteration
 		// continues.
 		op := val
 		g.Go(func() error {
+			log.Printf("updateCoins15\n")
 			if err := c.removeCoin(
 				gctx,
 				op.Account,
@@ -355,7 +365,7 @@ func (c *CoinStorage) updateCoins( // nolint:gocognit
 			return nil
 		})
 	}
-
+	log.Printf("updateCoins16\n")
 	return g.Wait()
 }
 
@@ -365,6 +375,7 @@ func (c *CoinStorage) AddingBlock(
 	block *types.Block,
 	transaction DatabaseTransaction,
 ) (CommitWorker, error) {
+	log.Printf("AddingBlock\n")
 	return nil, c.updateCoins(ctx, block, true, transaction)
 }
 
