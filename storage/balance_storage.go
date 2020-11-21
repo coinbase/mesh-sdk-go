@@ -178,7 +178,6 @@ func (b *BalanceStorage) AddingBlock(
 		log.Printf("BalanceStorage::AddingBlock5a\n")
 		return b.handler.BlockAdded(ctx, block, changes)
 	}, nil
-	log.Printf("BalanceStorage::AddingBlock6\n")
 }
 
 // RemovingBlock is called by BlockStorage when removing a block from storage.
