@@ -20,7 +20,7 @@ import (
 	"path"
 	"testing"
 
-	"github.com/syscoin/rosetta-sdk-go/constructor/job"
+	"github.com/sidhujag/rosetta-sdk-go/constructor/job"
 
 	"github.com/stretchr/testify/assert"
 )

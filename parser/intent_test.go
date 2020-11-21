@@ -17,7 +17,7 @@ package parser
 import (
 	"testing"
 
-	"github.com/syscoin/rosetta-sdk-go/types"
+	"github.com/sidhujag/rosetta-sdk-go/types"
 	"github.com/stretchr/testify/assert"
 )
 

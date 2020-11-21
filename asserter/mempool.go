@@ -15,7 +15,7 @@
 package asserter
 
 import (
-	"github.com/syscoin/rosetta-sdk-go/types"
+	"github.com/sidhujag/rosetta-sdk-go/types"
 )
 
 // MempoolTransactions returns an error if any

@@ -19,7 +19,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/syscoin/rosetta-sdk-go/types"
+	"github.com/sidhujag/rosetta-sdk-go/types"
 )
 
 const (

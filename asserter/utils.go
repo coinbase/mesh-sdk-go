@@ -18,7 +18,7 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/syscoin/rosetta-sdk-go/types"
+	"github.com/sidhujag/rosetta-sdk-go/types"
 )
 
 // StringArray ensures all strings in an array

@@ -17,7 +17,7 @@ package reconciler
 import (
 	"errors"
 
-	utils "github.com/syscoin/rosetta-sdk-go/errors"
+	utils "github.com/sidhujag/rosetta-sdk-go/errors"
 )
 
 // Named error types for Reconciler errors

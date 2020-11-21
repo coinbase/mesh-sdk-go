@@ -20,8 +20,8 @@ import (
 	"fmt"
 	"log"
 
-	utils "github.com/syscoin/rosetta-sdk-go/errors"
-	"github.com/syscoin/rosetta-sdk-go/types"
+	utils "github.com/sidhujag/rosetta-sdk-go/errors"
+	"github.com/sidhujag/rosetta-sdk-go/types"
 )
 
 // Error wraps the two possible types of error responses returned

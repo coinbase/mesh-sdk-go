@@ -24,7 +24,7 @@ import (
 	"path"
 	"strconv"
 
-	"github.com/syscoin/rosetta-sdk-go/types"
+	"github.com/sidhujag/rosetta-sdk-go/types"
 
 	"github.com/DataDog/zstd"
 	msgpack "github.com/vmihailenco/msgpack/v5"

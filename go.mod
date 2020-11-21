@@ -1,4 +1,4 @@
-module github.com/syscoin/rosetta-sdk-go
+module github.com/sidhujag/rosetta-sdk-go
 
 go 1.13
 

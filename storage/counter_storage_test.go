@@ -19,7 +19,7 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/syscoin/rosetta-sdk-go/utils"
+	"github.com/sidhujag/rosetta-sdk-go/utils"
 
 	"github.com/stretchr/testify/assert"
 )

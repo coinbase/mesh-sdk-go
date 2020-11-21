@@ -17,8 +17,8 @@ package job
 import (
 	"net/http"
 
-	"github.com/syscoin/rosetta-sdk-go/keys"
-	"github.com/syscoin/rosetta-sdk-go/types"
+	"github.com/sidhujag/rosetta-sdk-go/keys"
+	"github.com/sidhujag/rosetta-sdk-go/types"
 )
 
 const (

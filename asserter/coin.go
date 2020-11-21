@@ -17,7 +17,7 @@ package asserter
 import (
 	"fmt"
 
-	"github.com/syscoin/rosetta-sdk-go/types"
+	"github.com/sidhujag/rosetta-sdk-go/types"
 )
 
 // Coin returns an error if the provided *types.Coin is invalid.

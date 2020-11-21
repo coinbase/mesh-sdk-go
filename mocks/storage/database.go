@@ -5,7 +5,7 @@ package storage
 import (
 	context "context"
 
-	storage "github.com/syscoin/rosetta-sdk-go/storage"
+	storage "github.com/sidhujag/rosetta-sdk-go/storage"
 	mock "github.com/stretchr/testify/mock"
 )
 

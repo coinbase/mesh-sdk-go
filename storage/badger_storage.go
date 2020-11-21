@@ -28,8 +28,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/syscoin/rosetta-sdk-go/types"
-	"github.com/syscoin/rosetta-sdk-go/utils"
+	"github.com/sidhujag/rosetta-sdk-go/types"
+	"github.com/sidhujag/rosetta-sdk-go/utils"
 
 	"github.com/dgraph-io/badger/v2"
 	"github.com/dgraph-io/badger/v2/options"

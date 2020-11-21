@@ -17,8 +17,8 @@ package fetcher
 import (
 	"time"
 
-	"github.com/syscoin/rosetta-sdk-go/asserter"
-	"github.com/syscoin/rosetta-sdk-go/client"
+	"github.com/sidhujag/rosetta-sdk-go/asserter"
+	"github.com/sidhujag/rosetta-sdk-go/client"
 )
 
 // Option is used to overwrite default values in

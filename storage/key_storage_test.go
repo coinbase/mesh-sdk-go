@@ -18,9 +18,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/syscoin/rosetta-sdk-go/keys"
-	"github.com/syscoin/rosetta-sdk-go/types"
-	"github.com/syscoin/rosetta-sdk-go/utils"
+	"github.com/sidhujag/rosetta-sdk-go/keys"
+	"github.com/sidhujag/rosetta-sdk-go/types"
+	"github.com/sidhujag/rosetta-sdk-go/utils"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/assert"

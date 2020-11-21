@@ -21,8 +21,8 @@ import (
 	"testing"
 	"time"
 
-	mocks "github.com/syscoin/rosetta-sdk-go/mocks/syncer"
-	"github.com/syscoin/rosetta-sdk-go/types"
+	mocks "github.com/sidhujag/rosetta-sdk-go/mocks/syncer"
+	"github.com/sidhujag/rosetta-sdk-go/types"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"

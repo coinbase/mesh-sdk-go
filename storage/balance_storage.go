@@ -21,10 +21,10 @@ import (
 	"log"
 	"math/big"
 
-	"github.com/syscoin/rosetta-sdk-go/asserter"
-	"github.com/syscoin/rosetta-sdk-go/parser"
-	"github.com/syscoin/rosetta-sdk-go/types"
-	"github.com/syscoin/rosetta-sdk-go/utils"
+	"github.com/sidhujag/rosetta-sdk-go/asserter"
+	"github.com/sidhujag/rosetta-sdk-go/parser"
+	"github.com/sidhujag/rosetta-sdk-go/types"
+	"github.com/sidhujag/rosetta-sdk-go/utils"
 
 	"golang.org/x/sync/errgroup"
 )

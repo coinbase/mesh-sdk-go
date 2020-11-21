@@ -22,7 +22,7 @@ import (
 	"os"
 	"path"
 
-	"github.com/syscoin/rosetta-sdk-go/constructor/job"
+	"github.com/sidhujag/rosetta-sdk-go/constructor/job"
 )
 
 const (

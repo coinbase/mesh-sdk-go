@@ -18,9 +18,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/syscoin/rosetta-sdk-go/asserter"
+	"github.com/sidhujag/rosetta-sdk-go/asserter"
 
-	"github.com/syscoin/rosetta-sdk-go/types"
+	"github.com/sidhujag/rosetta-sdk-go/types"
 )
 
 // NetworkStatus returns the validated response

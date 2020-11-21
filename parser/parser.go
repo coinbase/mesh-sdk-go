@@ -15,8 +15,8 @@
 package parser
 
 import (
-	"github.com/syscoin/rosetta-sdk-go/asserter"
-	"github.com/syscoin/rosetta-sdk-go/types"
+	"github.com/sidhujag/rosetta-sdk-go/asserter"
+	"github.com/sidhujag/rosetta-sdk-go/types"
 )
 
 // Parser provides support for parsing Rosetta blocks.

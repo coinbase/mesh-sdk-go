@@ -26,12 +26,12 @@ import (
 	"os"
 	"time"
 
-	"github.com/syscoin/rosetta-sdk-go/asserter"
-	"github.com/syscoin/rosetta-sdk-go/constructor/job"
-	"github.com/syscoin/rosetta-sdk-go/keys"
-	"github.com/syscoin/rosetta-sdk-go/storage"
-	"github.com/syscoin/rosetta-sdk-go/types"
-	"github.com/syscoin/rosetta-sdk-go/utils"
+	"github.com/sidhujag/rosetta-sdk-go/asserter"
+	"github.com/sidhujag/rosetta-sdk-go/constructor/job"
+	"github.com/sidhujag/rosetta-sdk-go/keys"
+	"github.com/sidhujag/rosetta-sdk-go/storage"
+	"github.com/sidhujag/rosetta-sdk-go/types"
+	"github.com/sidhujag/rosetta-sdk-go/utils"
 
 	"github.com/lucasjones/reggen"
 	"github.com/tidwall/sjson"

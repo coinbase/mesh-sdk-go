@@ -17,7 +17,7 @@ package storage
 import (
 	"errors"
 
-	utils "github.com/syscoin/rosetta-sdk-go/errors"
+	utils "github.com/sidhujag/rosetta-sdk-go/errors"
 )
 
 // Badger Storage Errors

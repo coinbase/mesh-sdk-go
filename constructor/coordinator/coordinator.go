@@ -21,12 +21,12 @@ import (
 	"log"
 	"time"
 
-	"github.com/syscoin/rosetta-sdk-go/constructor/job"
-	"github.com/syscoin/rosetta-sdk-go/constructor/worker"
-	"github.com/syscoin/rosetta-sdk-go/parser"
-	"github.com/syscoin/rosetta-sdk-go/storage"
-	"github.com/syscoin/rosetta-sdk-go/types"
-	"github.com/syscoin/rosetta-sdk-go/utils"
+	"github.com/sidhujag/rosetta-sdk-go/constructor/job"
+	"github.com/sidhujag/rosetta-sdk-go/constructor/worker"
+	"github.com/sidhujag/rosetta-sdk-go/parser"
+	"github.com/sidhujag/rosetta-sdk-go/storage"
+	"github.com/sidhujag/rosetta-sdk-go/types"
+	"github.com/sidhujag/rosetta-sdk-go/utils"
 
 	"github.com/fatih/color"
 )

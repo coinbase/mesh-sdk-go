@@ -19,8 +19,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/syscoin/rosetta-sdk-go/server"
-	"github.com/syscoin/rosetta-sdk-go/types"
+	"github.com/sidhujag/rosetta-sdk-go/server"
+	"github.com/sidhujag/rosetta-sdk-go/types"
 )
 
 // BlockAPIService implements the server.BlockAPIServicer interface.

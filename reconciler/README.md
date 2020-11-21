@@ -1,6 +1,6 @@
 # Reconciler
 
-[![GoDoc](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=shield)](https://pkg.go.dev/github.com/syscoin/rosetta-sdk-go/reconciler?tab=doc)
+[![GoDoc](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=shield)](https://pkg.go.dev/github.com/sidhujag/rosetta-sdk-go/reconciler?tab=doc)
 
 The Reconciler package is used to ensure that balance changes derived from
 parsing Rosetta blocks are equivalent to the balance changes computed by the
@@ -18,7 +18,7 @@ debugging)
 ## Installation
 
 ```shell
-go get github.com/syscoin/rosetta-sdk-go/reconciler
+go get github.com/sidhujag/rosetta-sdk-go/reconciler
 ```
 
 ## Reconciliation Strategies

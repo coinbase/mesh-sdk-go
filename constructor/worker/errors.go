@@ -19,8 +19,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/syscoin/rosetta-sdk-go/constructor/job"
-	"github.com/syscoin/rosetta-sdk-go/types"
+	"github.com/sidhujag/rosetta-sdk-go/constructor/job"
+	"github.com/sidhujag/rosetta-sdk-go/types"
 
 	"github.com/fatih/color"
 )

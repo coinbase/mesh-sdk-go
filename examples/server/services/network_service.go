@@ -17,8 +17,8 @@ package services
 import (
 	"context"
 
-	"github.com/syscoin/rosetta-sdk-go/server"
-	"github.com/syscoin/rosetta-sdk-go/types"
+	"github.com/sidhujag/rosetta-sdk-go/server"
+	"github.com/sidhujag/rosetta-sdk-go/types"
 )
 
 // NetworkAPIService implements the server.NetworkAPIServicer interface.

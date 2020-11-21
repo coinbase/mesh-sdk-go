@@ -23,10 +23,10 @@ import (
 	"path"
 	"testing"
 
-	"github.com/syscoin/rosetta-sdk-go/asserter"
-	"github.com/syscoin/rosetta-sdk-go/fetcher"
-	mocks "github.com/syscoin/rosetta-sdk-go/mocks/utils"
-	"github.com/syscoin/rosetta-sdk-go/types"
+	"github.com/sidhujag/rosetta-sdk-go/asserter"
+	"github.com/sidhujag/rosetta-sdk-go/fetcher"
+	mocks "github.com/sidhujag/rosetta-sdk-go/mocks/utils"
+	"github.com/sidhujag/rosetta-sdk-go/types"
 
 	"github.com/stretchr/testify/assert"
 )

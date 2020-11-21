@@ -18,8 +18,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/syscoin/rosetta-sdk-go/constructor/job"
-	"github.com/syscoin/rosetta-sdk-go/utils"
+	"github.com/sidhujag/rosetta-sdk-go/constructor/job"
+	"github.com/sidhujag/rosetta-sdk-go/utils"
 
 	"github.com/stretchr/testify/assert"
 )

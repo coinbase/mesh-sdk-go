@@ -18,7 +18,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 
-	"github.com/syscoin/rosetta-sdk-go/types"
+	"github.com/sidhujag/rosetta-sdk-go/types"
 )
 
 // KeyPair contains a PrivateKey and its associated PublicKey

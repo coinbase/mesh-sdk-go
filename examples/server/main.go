@@ -19,10 +19,10 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/syscoin/rosetta-sdk-go/asserter"
-	"github.com/syscoin/rosetta-sdk-go/examples/server/services"
-	"github.com/syscoin/rosetta-sdk-go/server"
-	"github.com/syscoin/rosetta-sdk-go/types"
+	"github.com/sidhujag/rosetta-sdk-go/asserter"
+	"github.com/sidhujag/rosetta-sdk-go/examples/server/services"
+	"github.com/sidhujag/rosetta-sdk-go/server"
+	"github.com/sidhujag/rosetta-sdk-go/types"
 )
 
 const (

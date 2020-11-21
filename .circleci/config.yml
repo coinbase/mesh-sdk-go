@@ -18,7 +18,7 @@ executors:
     docker:
       - image: circleci/golang:1.15
         user: root # go directory is owned by root
-    working_directory: /go/src/github.com/syscoin/rosetta-sdk-go
+    working_directory: /go/src/github.com/sidhujag/rosetta-sdk-go
     environment:
       - GO111MODULE: "on"
 

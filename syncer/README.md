@@ -1,6 +1,6 @@
 # Syncer
 
-[![GoDoc](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=shield)](https://pkg.go.dev/github.com/syscoin/rosetta-sdk-go/syncer?tab=doc)
+[![GoDoc](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=shield)](https://pkg.go.dev/github.com/sidhujag/rosetta-sdk-go/syncer?tab=doc)
 
 The Syncer package provides support for syncing blocks from any Rosetta Data API
 implementation. If you want to see an example of how to use this package, take
@@ -15,7 +15,7 @@ processed blocks to a db or print our balance changes)
 ## Installation
 
 ```shell
-go get github.com/syscoin/rosetta-sdk-go/syncer
+go get github.com/sidhujag/rosetta-sdk-go/syncer
 ```
 
 ## Future Work

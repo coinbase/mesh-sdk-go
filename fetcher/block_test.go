@@ -23,8 +23,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/syscoin/rosetta-sdk-go/asserter"
-	"github.com/syscoin/rosetta-sdk-go/types"
+	"github.com/sidhujag/rosetta-sdk-go/asserter"
+	"github.com/sidhujag/rosetta-sdk-go/types"
 
 	"github.com/stretchr/testify/assert"
 )

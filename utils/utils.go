@@ -29,8 +29,8 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/syscoin/rosetta-sdk-go/fetcher"
-	"github.com/syscoin/rosetta-sdk-go/types"
+	"github.com/sidhujag/rosetta-sdk-go/fetcher"
+	"github.com/sidhujag/rosetta-sdk-go/types"
 
 	"github.com/fatih/color"
 )
