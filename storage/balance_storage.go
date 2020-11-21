@@ -1014,6 +1014,7 @@ func (b *BalanceStorage) getHistoricalBalance(
 	currency *types.Currency,
 	index int64,
 ) (*types.Amount, error) {
+	log.Printf("getHistoricalBalance\n")
 	var foundValue string
 	_, err := dbTx.Scan(
 		ctx,
@@ -1026,16 +1027,20 @@ func (b *BalanceStorage) getHistoricalBalance(
 		false,
 		true,
 	)
+	log.Printf("getHistoricalBalance1\n")
 	if errors.Is(err, errAccountFound) {
+		log.Printf("getHistoricalBalance2 %s\n", foundValue)
 		return &types.Amount{
 			Value:    foundValue,
 			Currency: currency,
 		}, nil
 	}
+	log.Printf("getHistoricalBalance3\n")
 	if err != nil {
+		log.Printf("getHistoricalBalance3a\n")
 		return nil, fmt.Errorf("%w: database scan failed", err)
 	}
-
+	log.Printf("getHistoricalBalance4\n")
 	return nil, ErrAccountMissing
 }
 
