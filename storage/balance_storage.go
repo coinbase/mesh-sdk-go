@@ -534,20 +534,25 @@ func (b *BalanceStorage) UpdateBalance(
 	change *parser.BalanceChange,
 	parentBlock *types.BlockIdentifier,
 ) error {
+	log.Printf("BalanceStorage::UpdateBalance\n")
 	if change.Currency == nil {
 		return errors.New("invalid currency")
 	}
-
+	log.Printf("BalanceStorage::UpdateBalance1\n")
 	// Get existing account key to determine if
 	// balance should be fetched.
 	key := GetAccountKey(change.Account, change.Currency)
+	log.Printf("BalanceStorage::UpdateBalance2\n")
 	exists, _, err := dbTransaction.Get(ctx, key)
+	log.Printf("BalanceStorage::UpdateBalance3\n")
 	if err != nil {
+		log.Printf("BalanceStorage::UpdateBalance3a\n")
 		return err
 	}
-
+	log.Printf("BalanceStorage::UpdateBalance4\n")
 	var storedValue string
 	if exists {
+		log.Printf("BalanceStorage::UpdateBalance4a\n")
 		// Get most recent historical balance
 		balance, err := b.getHistoricalBalance(
 			ctx,
@@ -556,6 +561,7 @@ func (b *BalanceStorage) UpdateBalance(
 			change.Currency,
 			change.Block.Index,
 		)
+		log.Printf("BalanceStorage::UpdateBalance4b\n")
 		switch {
 		case errors.Is(err, ErrAccountMissing):
 			storedValue = "0"
@@ -565,6 +571,7 @@ func (b *BalanceStorage) UpdateBalance(
 			storedValue = balance.Value
 		}
 	}
+	log.Printf("BalanceStorage::UpdateBalance5\n")
 
 	// Find account existing value whether the account is new, has an
 	// existing balance, or is subject to additional accounting from
@@ -575,15 +582,18 @@ func (b *BalanceStorage) UpdateBalance(
 		parentBlock,
 		storedValue,
 	)
+	log.Printf("BalanceStorage::UpdateBalance6\n")
 	if err != nil {
+		log.Printf("BalanceStorage::UpdateBalance6a\n")
 		return err
 	}
-
+	log.Printf("BalanceStorage::UpdateBalance7\n")
 	newVal, err := types.AddValues(change.Difference, existingValue)
 	if err != nil {
 		return err
+		log.Printf("BalanceStorage::UpdateBalance7a\n")
 	}
-
+	log.Printf("BalanceStorage::UpdateBalance8\n")
 	// If any exemptions apply, the returned new value will
 	// reflect the live balance for the *types.AccountIdentifier
 	// and *types.Currency.
@@ -591,13 +601,14 @@ func (b *BalanceStorage) UpdateBalance(
 	if err != nil {
 		return err
 	}
-
+	log.Printf("BalanceStorage::UpdateBalance9\n")
 	bigNewVal, ok := new(big.Int).SetString(newVal, 10)
 	if !ok {
 		return fmt.Errorf("%s is not an integer", newVal)
 	}
-
+	log.Printf("BalanceStorage::UpdateBalance10\n")
 	if bigNewVal.Sign() == -1 {
+		log.Printf("BalanceStorage::UpdateBalance10a\n")
 		return fmt.Errorf(
 			"%w %s:%+v for %+v at %+v",
 			ErrNegativeBalance,
@@ -607,31 +618,39 @@ func (b *BalanceStorage) UpdateBalance(
 			change.Block,
 		)
 	}
-
+	log.Printf("BalanceStorage::UpdateBalance11\n")
 	// Add account entry if doesn't exist
 	if !exists {
+		log.Printf("BalanceStorage::UpdateBalance11a\n")
 		serialAcc, err := b.db.Encoder().Encode(accountNamespace, accountEntry{
 			Account:  change.Account,
 			Currency: change.Currency,
 		})
+		log.Printf("BalanceStorage::UpdateBalance11b\n")
 		if err != nil {
+			log.Printf("BalanceStorage::UpdateBalance11ba\n")
 			return err
 		}
+		log.Printf("BalanceStorage::UpdateBalance11c\n")
 		if err := dbTransaction.Set(ctx, key, serialAcc, true); err != nil {
+			log.Printf("BalanceStorage::UpdateBalance11ca\n")
 			return err
 		}
+		log.Printf("BalanceStorage::UpdateBalance11d\n")
 	}
-
+	log.Printf("BalanceStorage::UpdateBalance12\n")
 	// Add a new historical record for the balance.
 	historicalKey := GetHistoricalBalanceKey(
 		change.Account,
 		change.Currency,
 		change.Block.Index,
 	)
+	log.Printf("BalanceStorage::UpdateBalance13\n")
 	if err := dbTransaction.Set(ctx, historicalKey, []byte(newVal), true); err != nil {
+		log.Printf("BalanceStorage::UpdateBalance13a\n")
 		return err
 	}
-
+	log.Printf("BalanceStorage::UpdateBalance14\n")
 	return nil
 }
 
