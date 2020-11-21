@@ -40,7 +40,7 @@ const (
 	DefaultBlockCacheSize = 0
 
 	// DefaultIndexCacheSize is 2 GB.
-	DefaultIndexCacheSize = 2000 << 20
+	DefaultIndexCacheSize = 256 << 20
 
 	// TinyIndexCacheSize is 10 MB.
 	TinyIndexCacheSize = 10 << 20
@@ -49,10 +49,10 @@ const (
 	// this value is, the larger database transactions
 	// storage can handle (~15% of the max table size
 	// == max commit size).
-	DefaultMaxTableSize = 1024 << 20
+	DefaultMaxTableSize = 256 << 20
 
 	// DefaultLogValueSize is 64 MB.
-	DefaultLogValueSize = 256 << 20
+	DefaultLogValueSize = 64 << 20
 
 	// DefaultCompressionMode is the default block
 	// compression setting.
@@ -471,7 +471,7 @@ func (b *BadgerTransaction) Scan(
 			log.Printf("scanned %d entries for %s\n", entries, string(prefix))
 		}
 	}
-
+	
 	return entries, nil
 }
 
