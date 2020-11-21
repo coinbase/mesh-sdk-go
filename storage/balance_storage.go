@@ -1214,6 +1214,27 @@ func (b *BalanceStorage) removeHistoricalBalances(
 	index int64,
 	orphan bool,
 ) error {
+	// TODO: make configurable
+	// only attempt pruning for !orphan if lastPrune < X
+	// blocks from index
+	lastPruned := int64(-1)
+	key := GetAccountKey(pruneNamespace, account, currency)
+	if !orphan {
+		exists, lastPrunedRaw, err := dbTx.Get(ctx, key)
+		if err != nil {
+			return err
+		}
+
+		if exists {
+			lastPruned, _ = strconv.ParseInt(string(lastPrunedRaw), 10, 64)
+
+			// With this setting, we will batch our balance pruning
+			if index-10000 <= lastPruned {
+				return nil
+			}
+		}
+	}
+
 	foundKeys := [][]byte{}
 	_, err := dbTx.Scan(
 		ctx,
@@ -1250,21 +1271,8 @@ func (b *BalanceStorage) removeHistoricalBalances(
 		}
 	}
 
-	// Update the last pruned index
+	// Update the last pruned index, if pruning
 	if !orphan {
-		key := GetAccountKey(pruneNamespace, account, currency)
-		exists, lastPrunedRaw, err := dbTx.Get(ctx, key)
-		if err != nil {
-			return err
-		}
-
-		if exists {
-			lastPruned, _ := strconv.ParseInt(string(lastPrunedRaw), 10, 64)
-			if index <= lastPruned {
-				return nil
-			}
-		}
-
 		if err := dbTx.Set(ctx, key, []byte(strconv.FormatInt(index, 10)), true); err != nil {
 			return err
 		}
