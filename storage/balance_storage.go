@@ -148,7 +148,6 @@ func (b *BalanceStorage) AddingBlock(
 	block *types.Block,
 	transaction DatabaseTransaction,
 ) (CommitWorker, error) {
-	log.Printf("BalanceStorage::AddingBlock number %d\n", block.BlockIdentifier.Index)
 	changes, err := b.parser.BalanceChanges(ctx, block, false)
 	if err != nil {
 		return nil, fmt.Errorf("%w: unable to calculate balance changes", err)
@@ -584,7 +583,6 @@ func (b *BalanceStorage) UpdateBalance(
 		return fmt.Errorf("%s is not an integer", newVal)
 	}
 	if bigNewVal.Sign() == -1 {
-		log.Printf("BalanceStorage::UpdateBalance10a\n")
 		return fmt.Errorf(
 			"%w %s:%+v for %+v at %+v",
 			ErrNegativeBalance,
@@ -992,7 +990,6 @@ func (b *BalanceStorage) getHistoricalBalance(
 		true,
 	)
 	if errors.Is(err, errAccountFound) {
-		log.Printf("getHistoricalBalance2 index %d address %s %s\n", index, account.Address, foundValue)
 		return &types.Amount{
 			Value:    foundValue,
 			Currency: currency,

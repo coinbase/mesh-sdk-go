@@ -40,7 +40,7 @@ const (
 	DefaultBlockCacheSize = 0
 
 	// DefaultIndexCacheSize is 2 GB.
-	DefaultIndexCacheSize = 256 << 20
+	DefaultIndexCacheSize = 4000 << 20
 
 	// TinyIndexCacheSize is 10 MB.
 	TinyIndexCacheSize = 10 << 20
@@ -49,10 +49,10 @@ const (
 	// this value is, the larger database transactions
 	// storage can handle (~15% of the max table size
 	// == max commit size).
-	DefaultMaxTableSize = 256 << 20
+	DefaultMaxTableSize = 2048 << 20
 
 	// DefaultLogValueSize is 64 MB.
-	DefaultLogValueSize = 64 << 20
+	DefaultLogValueSize = 512 << 20
 
 	// DefaultCompressionMode is the default block
 	// compression setting.

@@ -709,43 +709,31 @@ func (b *BlockStorage) callWorkersAndCommit(
 	adding bool,
 ) error {
 	commitWorkers := make([]CommitWorker, len(b.workers))
-	log.Printf("callWorkersAndCommit\n")
 	for i, w := range b.workers {
 		var cw CommitWorker
 		var err error
 		if adding {
-			log.Printf("callWorkersAndCommit1 %d\n", i)
 			cw, err = w.AddingBlock(ctx, block, txn)
-			log.Printf("callWorkersAndCommit1a %d\n", i)
 		} else {
-			log.Printf("callWorkersAndCommit2\n")
 			cw, err = w.RemovingBlock(ctx, block, txn)
-			log.Printf("callWorkersAndCommit2a\n")
 		}
 		if err != nil {
-			log.Printf("callWorkersAndCommit3 %d\n", i)
 			return err
 		}
 
 		commitWorkers[i] = cw
 	}
-	log.Printf("callWorkersAndCommit3\n")
 	if err := txn.Commit(ctx); err != nil {
 		return err
 	}
-	log.Printf("callWorkersAndCommit4\n")
 	for _, cw := range commitWorkers {
 		if cw == nil {
-			log.Printf("callWorkersAndCommit4a\n")
 			continue
 		}
-		log.Printf("callWorkersAndCommit5\n")
 		if err := cw(ctx); err != nil {
 			return err
 		}
-		log.Printf("callWorkersAndCommit6\n")
 	}
-	log.Printf("callWorkersAndCommit7\n")
 	return nil
 }
 
