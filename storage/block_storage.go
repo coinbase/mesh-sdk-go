@@ -555,13 +555,16 @@ func (b *BlockStorage) AddBlock(
 	ctx context.Context,
 	block *types.Block,
 ) error {
+	log.Printf("AddBlock sdk\n")
 	transaction := b.db.NewDatabaseTransaction(ctx, true)
+	log.Printf("AddBlock sdk1\n")
 	defer transaction.Discard(ctx)
-
+	log.Printf("AddBlock sdk2\n")
 	// Store all transactions in order and check for duplicates
 	identifiers := make([]*types.TransactionIdentifier, len(block.Transactions))
 	identiferSet := map[string]struct{}{}
 	for i, txn := range block.Transactions {
+		log.Printf("AddBlock sdk3\n")
 		if _, exists := identiferSet[txn.TransactionIdentifier.Hash]; exists {
 			return fmt.Errorf(
 				"%w: duplicate transaction %s found in block %s:%d",
@@ -571,16 +574,18 @@ func (b *BlockStorage) AddBlock(
 				block.BlockIdentifier.Index,
 			)
 		}
+		log.Printf("AddBlock sdk4\n")
 
 		identiferSet[txn.TransactionIdentifier.Hash] = struct{}{}
 		identifiers[i] = txn.TransactionIdentifier
 	}
-
+	log.Printf("AddBlock sdk5\n")
 	// Make copy of block and remove all transactions
 	var copyBlock types.Block
 	if err := copyStruct(block, &copyBlock); err != nil {
 		return fmt.Errorf("%w: %v", ErrBlockCopyFailed, err)
 	}
+	log.Printf("AddBlock sdk6\n")
 
 	copyBlock.Transactions = nil
 
@@ -595,9 +600,10 @@ func (b *BlockStorage) AddBlock(
 	if err != nil {
 		return fmt.Errorf("%w: %v", ErrBlockStoreFailed, err)
 	}
-
+	log.Printf("AddBlock sdk7\n")
 	g, gctx := errgroup.WithContext(ctx)
 	for i := range block.Transactions {
+		log.Printf("AddBlock sdk8\n")
 		// We need to set variable before calling goroutine
 		// to avoid getting an updated pointer as loop iteration
 		// continues.
@@ -616,10 +622,11 @@ func (b *BlockStorage) AddBlock(
 			return nil
 		})
 	}
+	log.Printf("AddBlock sdk9\n")
 	if err := g.Wait(); err != nil {
 		return err
 	}
-
+	log.Printf("AddBlock sdk10\n")
 	return b.callWorkersAndCommit(ctx, block, transaction, true)
 }
 
