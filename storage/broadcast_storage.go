@@ -214,6 +214,7 @@ func (b *BroadcastStorage) AddingBlock(
 	block *types.Block,
 	transaction DatabaseTransaction,
 ) (CommitWorker, error) {
+	log.Printf("BroadcastStorage::AddingBlock\n")
 	broadcasts, err := b.GetAllBroadcasts(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("%w: unable to get all broadcasts", err)

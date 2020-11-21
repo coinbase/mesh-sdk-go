@@ -725,15 +725,16 @@ func (b *BlockStorage) callWorkersAndCommit(
 		var cw CommitWorker
 		var err error
 		if adding {
-			log.Printf("callWorkersAndCommit1\n")
+			log.Printf("callWorkersAndCommit1 %d\n", i)
 			cw, err = w.AddingBlock(ctx, block, txn)
-			log.Printf("callWorkersAndCommit1a\n")
+			log.Printf("callWorkersAndCommit1a %d\n", i)
 		} else {
 			log.Printf("callWorkersAndCommit2\n")
 			cw, err = w.RemovingBlock(ctx, block, txn)
 			log.Printf("callWorkersAndCommit2a\n")
 		}
 		if err != nil {
+			log.Printf("callWorkersAndCommit3 %d\n", i)
 			return err
 		}
 

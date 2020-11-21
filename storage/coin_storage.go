@@ -323,7 +323,6 @@ func (c *CoinStorage) updateCoins( // nolint:gocognit
 		// continues.
 		op := val
 		g.Go(func() error {
-			log.Printf("updateCoins10\n")
 			if err := c.addCoin(
 				gctx,
 				op.Account,
@@ -352,7 +351,6 @@ func (c *CoinStorage) updateCoins( // nolint:gocognit
 		// continues.
 		op := val
 		g.Go(func() error {
-			log.Printf("updateCoins15\n")
 			if err := c.removeCoin(
 				gctx,
 				op.Account,
@@ -375,7 +373,7 @@ func (c *CoinStorage) AddingBlock(
 	block *types.Block,
 	transaction DatabaseTransaction,
 ) (CommitWorker, error) {
-	log.Printf("AddingBlock\n")
+	log.Printf("CoinStorage::AddingBlock\n")
 	return nil, c.updateCoins(ctx, block, true, transaction)
 }
 
