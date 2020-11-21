@@ -49,10 +49,10 @@ const (
 	// this value is, the larger database transactions
 	// storage can handle (~15% of the max table size
 	// == max commit size).
-	DefaultMaxTableSize = 256 << 20
+	DefaultMaxTableSize = 1024 << 20
 
 	// DefaultLogValueSize is 64 MB.
-	DefaultLogValueSize = 64 << 20
+	DefaultLogValueSize = 256 << 20
 
 	// DefaultCompressionMode is the default block
 	// compression setting.
