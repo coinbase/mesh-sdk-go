@@ -33,7 +33,8 @@ var _ syncer.Helper = (*StatefulSyncer)(nil)
 const (
 	// pruneSleepTime is how long we sleep between
 	// pruning attempts.
-	pruneSleepTime = 10 * time.Second
+	// TODO: make configurable
+	pruneSleepTime = 1 * time.Hour
 
 	// pruneBuffer is the cushion we apply to pastBlockLimit
 	// when pruning.
@@ -150,60 +151,61 @@ func (s *StatefulSyncer) Sync(ctx context.Context, startIndex int64, endIndex in
 // in the initializer because the caller may wish to change
 // pruning strategies during syncing.
 func (s *StatefulSyncer) Prune(ctx context.Context, helper PruneHelper) error {
-	for ctx.Err() == nil {
-		headBlock, err := s.blockStorage.GetHeadBlockIdentifier(ctx)
-		if headBlock == nil && errors.Is(err, storage.ErrHeadBlockNotFound) {
-			// this will occur when we are waiting for the first block to be synced
-			time.Sleep(pruneSleepTime)
-			continue
-		}
-		if err != nil {
-			return err
-		}
+	tc := time.NewTicker(pruneSleepTime)
+	defer tc.Stop()
 
-		oldestIndex, err := s.blockStorage.GetOldestBlockIndex(ctx)
-		if oldestIndex == -1 && errors.Is(err, storage.ErrOldestIndexMissing) {
-			// this will occur when we have yet to store the oldest index
-			time.Sleep(pruneSleepTime)
-			continue
-		}
-		if err != nil {
-			return err
-		}
-
-		pruneableIndex, err := helper.PruneableIndex(ctx, headBlock.Index)
-		if err != nil {
-			return fmt.Errorf("%w: could not determine pruneable index", err)
-		}
-
-		if pruneableIndex < oldestIndex {
-			time.Sleep(pruneSleepTime)
-			continue
-		}
-
-		firstPruned, lastPruned, err := s.blockStorage.Prune(
-			ctx,
-			pruneableIndex,
-			int64(s.pastBlockLimit)*pruneBuffer, // we should be very cautious about pruning
-		)
-		if err != nil {
-			return err
-		}
-
-		// firstPruned and lastPruned are -1 if there is nothing to prune
-		if firstPruned != -1 && lastPruned != -1 {
-			pruneMessage := fmt.Sprintf("pruned blocks %d-%d", firstPruned, lastPruned)
-			if firstPruned == lastPruned {
-				pruneMessage = fmt.Sprintf("pruned block %d", firstPruned)
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-tc.C:
+			headBlock, err := s.blockStorage.GetHeadBlockIdentifier(ctx)
+			if headBlock == nil && errors.Is(err, storage.ErrHeadBlockNotFound) {
+				// this will occur when we are waiting for the first block to be synced
+				continue
+			}
+			if err != nil {
+				return err
 			}
 
-			log.Println(pruneMessage)
+			oldestIndex, err := s.blockStorage.GetOldestBlockIndex(ctx)
+			if oldestIndex == -1 && errors.Is(err, storage.ErrOldestIndexMissing) {
+				// this will occur when we have yet to store the oldest index
+				continue
+			}
+			if err != nil {
+				return err
+			}
+
+			pruneableIndex, err := helper.PruneableIndex(ctx, headBlock.Index)
+			if err != nil {
+				return fmt.Errorf("%w: could not determine pruneable index", err)
+			}
+
+			if pruneableIndex < oldestIndex {
+				continue
+			}
+
+			firstPruned, lastPruned, err := s.blockStorage.Prune(
+				ctx,
+				pruneableIndex,
+				int64(s.pastBlockLimit)*pruneBuffer, // we should be very cautious about pruning
+			)
+			if err != nil {
+				return err
+			}
+
+			// firstPruned and lastPruned are -1 if there is nothing to prune
+			if firstPruned != -1 && lastPruned != -1 {
+				pruneMessage := fmt.Sprintf("pruned blocks %d-%d", firstPruned, lastPruned)
+				if firstPruned == lastPruned {
+					pruneMessage = fmt.Sprintf("pruned block %d", firstPruned)
+				}
+
+				log.Println(pruneMessage)
+			}
 		}
-
-		time.Sleep(pruneSleepTime)
 	}
-
-	return ctx.Err()
 }
 
 // BlockAdded is called by the syncer when a block is added.
