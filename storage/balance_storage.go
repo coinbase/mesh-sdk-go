@@ -642,7 +642,7 @@ func (b *BalanceStorage) UpdateBalances(
 			exists: existsAccount_,
 		}
 		if existsAccount_ {
-			existsHistoricalBalance_, _value, err := dbTransaction.Get(ctx, historicalKey)
+			existsHistoricalBalance_, _value, err := dbTransaction.Get(ctx, _key)
 			if err != nil {
 				return err
 			}
@@ -652,7 +652,7 @@ func (b *BalanceStorage) UpdateBalances(
 			historicalBalances = append(historicalBalances,  &HistoricalBalance{value: _value})
 		}
 	}
-	countHistoricalBalances = 0
+	countHistoricalBalances := 0
 	for i := range changes {
 		change := changes[i]
 		var storedValue string
