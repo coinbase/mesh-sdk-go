@@ -522,6 +522,7 @@ func (b *BalanceStorage) UpdateBalance(
 	change *parser.BalanceChange,
 	parentBlock *types.BlockIdentifier,
 ) error {
+	log.Printf("BalanceStorage:UpdateBalance %s\n", change.Account.Address)
 	if change.Currency == nil {
 		return errors.New("invalid currency")
 	}
@@ -532,6 +533,7 @@ func (b *BalanceStorage) UpdateBalance(
 	if err != nil {
 		return err
 	}
+	log.Printf("BalanceStorage:getHistoricalBalance %s\n", change.Account.Address)
 	var storedValue string
 	if exists {
 		// Get most recent historical balance
@@ -551,7 +553,7 @@ func (b *BalanceStorage) UpdateBalance(
 			storedValue = balance.Value
 		}
 	}
-
+	log.Printf("BalanceStorage:getHistoricalBalance %s storedValue %s\n", change.Account.Address, storedValue)
 	// Find account existing value whether the account is new, has an
 	// existing balance, or is subject to additional accounting from
 	// a balance exemption.
@@ -561,6 +563,7 @@ func (b *BalanceStorage) UpdateBalance(
 		parentBlock,
 		storedValue,
 	)
+	log.Printf("BalanceStorage:getHistoricalBalance1 %s storedValue %s\n", change.Account.Address, storedValue)
 	if err != nil {
 		return err
 	}
@@ -589,6 +592,7 @@ func (b *BalanceStorage) UpdateBalance(
 			change.Block,
 		)
 	}
+	log.Printf("BalanceStorage:getHistoricalBalance2 %s storedValue %s\n", change.Account.Address, storedValue)
 	// Add account entry if doesn't exist
 	if !exists {
 		serialAcc, err := b.db.Encoder().Encode(accountNamespace, accountEntry{
@@ -602,6 +606,7 @@ func (b *BalanceStorage) UpdateBalance(
 			return err
 		}
 	}
+	log.Printf("BalanceStorage:getHistoricalBalance3 %s storedValue %s\n", change.Account.Address, storedValue)
 	// Add a new historical record for the balance.
 	historicalKey := GetHistoricalBalanceKey(
 		change.Account,
@@ -611,6 +616,7 @@ func (b *BalanceStorage) UpdateBalance(
 	if err := dbTransaction.Set(ctx, historicalKey, []byte(newVal), true); err != nil {
 		return err
 	}
+	log.Printf("BalanceStorage:getHistoricalBalance4 %s storedValue %s\n", change.Account.Address, storedValue)
 	return nil
 }
 
