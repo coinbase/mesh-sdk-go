@@ -639,11 +639,11 @@ func (b *BalanceStorage) UpdateBalances(
 		// Get existing account key to determine if
 		// balance should be fetched.
 		_key := GetAccountKey(change.Account, change.Currency)
-		existsAccount, _, err := dbTransaction.Get(ctx, _key)
+		existsAccount_, _, err := dbTransaction.Get(ctx, _key)
 		if err != nil {
 			return err
 		}
-		existsAccount[i] = &AccountExists{key: _key, exists: existsAccount}
+		existsAccount[i] = &AccountExists{key: _key, exists: existsAccount_}
 
 		// Add a new historical record for the balance.
 		historicalKey := GetHistoricalBalanceKey(
