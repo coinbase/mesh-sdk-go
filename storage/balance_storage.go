@@ -635,6 +635,7 @@ func (b *BalanceStorage) UpdateBalances(
 	existsAccount := make([]*AccountExists, len(changes))
 	historicalBalances := make([]*HistoricalBalance, len(changes))
 	for i := range changes {
+		log.Printf("BalanceStorage:UpdateBalances fetching %d\n", i)
 		change := changes[i]
 		// Get existing account key to determine if
 		// balance should be fetched.
@@ -660,7 +661,9 @@ func (b *BalanceStorage) UpdateBalances(
 		}
 		historicalBalances[i] = &HistoricalBalance{key: historicalKey, value: _value}
 	}
+	log.Printf("BalanceStorage:UpdateBalances fetched\n")
 	for i := range changes {
+		log.Printf("BalanceStorage:UpdateBalances applying change %d\n", i)
 		change := changes[i]
 		// Find account existing value whether the account is new, has an
 		// existing balance, or is subject to additional accounting from
