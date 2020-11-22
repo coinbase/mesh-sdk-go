@@ -612,7 +612,6 @@ func (b *BalanceStorage) UpdateBalances(
 ) error {
 	for i := range changes {
 		change := changes[i]
-		var err error
 		if change.Currency == nil {
 			return errors.New("invalid currency")
 		}
@@ -630,9 +629,12 @@ func (b *BalanceStorage) UpdateBalances(
 			change.Block.Index,
 		)
 		if existsAccount {
-			_, storedValue, err = dbTransaction.Get(ctx, historicalBalanceKey)
+			existsHistoricalBalance_, storedValueBytes, err := dbTransaction.Get(ctx, historicalBalanceKey)
 			if err != nil {
 				return err
+			}
+			if existsHistoricalBalance_ {
+				storedValue = string(storedValueBytes)
 			}
 		}
 		
