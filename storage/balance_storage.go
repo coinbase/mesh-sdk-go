@@ -147,17 +147,14 @@ func (b *BalanceStorage) AddingBlock(
 	block *types.Block,
 	transaction DatabaseTransaction,
 ) (CommitWorker, error) {
-	log.Printf("BalanceStorage::AddingBlock\n")
 	changes, err := b.parser.BalanceChanges(ctx, block, false)
 	if err != nil {
 		return nil, fmt.Errorf("%w: unable to calculate balance changes", err)
 	}
-	log.Printf("BalanceStorage::AddingBlock changes %d\n", len(changes))
 	err = b.UpdateBalances(ctx, transaction, changes, block.ParentBlockIdentifier)
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("BalanceStorage::AddingBlock done\n")
 	return func(ctx context.Context) error {
 		return b.handler.BlockAdded(ctx, block, changes)
 	}, nil
@@ -516,7 +513,6 @@ func (b *BalanceStorage) UpdateBalance(
 	change *parser.BalanceChange,
 	parentBlock *types.BlockIdentifier,
 ) error {
-	log.Printf("BalanceStorage:UpdateBalance %s\n", change.Account.Address)
 	if change.Currency == nil {
 		return errors.New("invalid currency")
 	}
@@ -614,7 +610,6 @@ func (b *BalanceStorage) UpdateBalances(
 	changes []*parser.BalanceChange,
 	parentBlock *types.BlockIdentifier,
 ) error {
-	log.Printf("BalanceStorage:UpdateBalances\n")
 	type AccountExists struct {
 		key []byte
 		exists bool
@@ -712,7 +707,6 @@ func (b *BalanceStorage) UpdateBalances(
 			return err
 		}
 	}
-	log.Printf("BalanceStorage:UpdateBalances done\n")
 	return nil
 }
 // GetBalance returns the balance of a types.AccountIdentifier

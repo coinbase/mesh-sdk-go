@@ -356,7 +356,6 @@ func (c *CoinStorage) AddingBlock(
 	block *types.Block,
 	transaction DatabaseTransaction,
 ) (CommitWorker, error) {
-	log.Printf("CoinStorage::AddingBlock\n")
 	return nil, c.updateCoins(ctx, block, true, transaction)
 }
 
