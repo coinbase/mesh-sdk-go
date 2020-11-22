@@ -486,7 +486,7 @@ func (b *BadgerTransaction) ScanMulti(
 ) ([]*string) {
 	b.rwLock.RLock()
 	defer b.rwLock.RUnlock()	
-	iterate := func(txn *badger.Txn, opts *badger.Options, wg *sync.WaitGroup, prefix []byte, seekStart []byte, worker func([]byte, []byte) error, logEntries bool, reverse bool) ([]byte]) {
+	iterate := func(txn *badger.Txn, opts *badger.Options, wg *sync.WaitGroup, prefix []byte, seekStart []byte, worker func([]byte, []byte) error, logEntries bool, reverse bool) []byte {
 		defer wg.Done()
 		it := txn.NewIterator(opts)
 		defer it.Close()
