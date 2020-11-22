@@ -486,16 +486,16 @@ func (b *BadgerTransaction) ScanMulti(
 ) ([]*string) {
 	b.rwLock.RLock()
 	defer b.rwLock.RUnlock()	
-	iterate := func(txn *Txn, opts *Options, wg *sync.WaitGroup, prefix []byte, seekStart []byte, worker func([]byte, []byte) error, logEntries bool, reverse bool) (string) {
+	iterate := func(txn *badger.Txn, opts *badger.Options, wg *sync.WaitGroup, prefix []byte, seekStart []byte, worker func([]byte, []byte) error, logEntries bool, reverse bool) ([]byte]) {
 		defer wg.Done()
 		it := txn.NewIterator(opts)
 		defer it.Close()
-		value := "0"
+		value := []byte("0")
 		for it.Seek(seekStart); it.ValidForPrefix(prefix); it.Next() {
 			item := it.Item()
 			k := item.Key()
 			err := item.Value(func(v []byte) error {
-				value = string(v)
+				value = v
 				return nil
 			})
 			break
@@ -507,14 +507,14 @@ func (b *BadgerTransaction) ScanMulti(
 	opts.Reverse = reverse
 	var wg sync.WaitGroup
 	wg.Add(len(changes))
-	balances := make(string, len(changes))
+	balances := make([]byte, len(changes))
 	for i := range changes {
-		change := &changes[i]
+		change := changes[i]
 		currency := change.Currency
 		if currency == nil {
 			currency = ""
 		}
-		balances[i] = iterate(&b.txn, &wg, GetHistoricalBalancePrefix(change.Account, currency), GetHistoricalBalanceKey(change.Account, currency, change.Block.Index), logEntries, reverse)
+		balances[i] = string(iterate(&b.txn, &wg, GetHistoricalBalancePrefix(change.Account, currency), GetHistoricalBalanceKey(change.Account, currency, change.Block.Index), logEntries, reverse))
 	}
 	wg.Wait()
 	return balances
