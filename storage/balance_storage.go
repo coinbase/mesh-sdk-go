@@ -626,6 +626,13 @@ func (b *BalanceStorage) UpdateBalances(
 	}
 	for i := range changes {
 		change := changes[i]
+		// Get existing account key to determine if
+		// balance should be fetched.
+		key := GetAccountKey(change.Account, change.Currency)
+		exists, _, err := dbTransaction.Get(ctx, key)
+		if err != nil {
+			return err
+		}
 		// Find account existing value whether the account is new, has an
 		// existing balance, or is subject to additional accounting from
 		// a balance exemption.

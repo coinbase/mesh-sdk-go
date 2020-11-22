@@ -486,7 +486,7 @@ func (b *BadgerTransaction) ScanMulti(
 ) ([]string) {
 	b.rwLock.RLock()
 	defer b.rwLock.RUnlock()	
-	iterate := func(txn *badger.Txn, opts *badger.Options, wg *sync.WaitGroup, prefix []byte, seekStart []byte, logEntries bool, reverse bool) []byte {
+	iterate := func(txn *badger.Txn, opts *badger.IteratorOptions, wg *sync.WaitGroup, prefix []byte, seekStart []byte, logEntries bool, reverse bool) []byte {
 		defer wg.Done()
 		it := txn.NewIterator(*opts)
 		defer it.Close()
@@ -507,7 +507,7 @@ func (b *BadgerTransaction) ScanMulti(
 	opts.Reverse = reverse
 	var wg sync.WaitGroup
 	wg.Add(len(changes))
-	balances := make([]byte, len(changes))
+	balances := make([]string, len(changes))
 	for i := range changes {
 		change := changes[i]
 		if change.Currency == nil {
