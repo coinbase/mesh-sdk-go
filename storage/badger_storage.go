@@ -493,11 +493,6 @@ func (b *BadgerTransaction) ScanMulti(
 		value := []byte("0")
 		for it.Seek(seekStart); it.ValidForPrefix(prefix); it.Next() {
 			item := it.Item()
-			k := item.Key()
-			err := item.Value(func(v []byte) error {
-				value = v
-				return nil
-			})
 			break
 		}
 		it.Close() // Double close.
