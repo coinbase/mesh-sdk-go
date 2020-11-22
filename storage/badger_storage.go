@@ -514,7 +514,7 @@ func (b *BadgerTransaction) ScanMulti(
 		if currency == nil {
 			currency = ""
 		}
-		balances[i] := go iterate(&b.txn, &wg, GetHistoricalBalancePrefix(change.Account, currency), GetHistoricalBalanceKey(change.Account, currency, change.Block.Index), logEntries, reverse)
+		balances[i] = iterate(&b.txn, &wg, GetHistoricalBalancePrefix(change.Account, currency), GetHistoricalBalanceKey(change.Account, currency, change.Block.Index), logEntries, reverse)
 	}
 	wg.Wait()
 	return balances
