@@ -535,21 +535,23 @@ func (b *BalanceStorage) UpdateBalance(
 	if err != nil {
 		return err
 	}
-	historicalKey := GetHistoricalBalanceKey(
-		change.Account,
-		change.Currency,
-		change.Block.Index,
-	)
 	var storedValue string
 	if exists {
-		existsHistoricalBalance, balance, err := dbTransaction.Get(ctx, historicalKey)
-		if err != nil {
-			return err
-		}
-		if !existsHistoricalBalance {
+		// Get most recent historical balance
+		balance, err := b.getHistoricalBalance(
+			ctx,
+			dbTransaction,
+			change.Account,
+			change.Currency,
+			change.Block.Index,
+		)
+		switch {
+		case errors.Is(err, ErrAccountMissing):
 			storedValue = "0"
-		} else {
-			storedValue = string(balance)
+		case err != nil:
+			return err
+		default:
+			storedValue = balance.Value
 		}
 	}
 
@@ -604,6 +606,11 @@ func (b *BalanceStorage) UpdateBalance(
 		}
 	}
 	// Add a new historical record for the balance.
+	historicalKey := GetHistoricalBalanceKey(
+		change.Account,
+		change.Currency,
+		change.Block.Index,
+	)
 	if err := dbTransaction.Set(ctx, historicalKey, []byte(newVal), true); err != nil {
 		return err
 	}
