@@ -616,17 +616,17 @@ func (b *BalanceStorage) UpdateBalances(
 ) error {
 	log.Printf("BalanceStorage:UpdateBalances\n")
 	// Get most recent historical balance
-	balances, err := b.getHistoricalBalances(
+	balances := b.getHistoricalBalances(
 		ctx,
 		dbTransaction,
 		changes,
 	)
+	if balances == nil {
+		return errors.New("could not fetch historical balances")
+	}
 	for i := range changes {
 		storedValue := &balances[i]
 		change := &changes[i]
-		if change.Currency == nil {
-			return errors.New("invalid currency")
-		}
 		// Find account existing value whether the account is new, has an
 		// existing balance, or is subject to additional accounting from
 		// a balance exemption.
@@ -1078,7 +1078,7 @@ func (b *BalanceStorage) getHistoricalBalances(
 	ctx context.Context,
 	dbTx DatabaseTransaction,
 	changes []*parser.BalanceChange,
-) ([]*string, error) {
+) ([]string) {
 	return dbTx.ScanMulti(
 		ctx,
 		changes,
