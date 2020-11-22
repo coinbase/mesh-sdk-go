@@ -651,9 +651,12 @@ func (b *BalanceStorage) UpdateBalances(
 			change.Currency,
 			change.Block.Index,
 		)
-		_, _value, err := dbTransaction.Get(ctx, historicalKey)
+		existsHistoricalBalance_, _value, err := dbTransaction.Get(ctx, historicalKey)
 		if err != nil {
 			return err
+		}
+		if !existsHistoricalBalance_ {
+			_value = []byte("0")
 		}
 		historicalBalances[i] = &HistoricalBalance{key: historicalKey, value: _value}
 	}
