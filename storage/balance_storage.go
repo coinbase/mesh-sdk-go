@@ -43,6 +43,7 @@ const (
 var (
 	errAccountFound = errors.New("account found")
 )
+
 /*
   Key Construction
 */
@@ -151,8 +152,18 @@ func (b *BalanceStorage) AddingBlock(
 	if err != nil {
 		return nil, fmt.Errorf("%w: unable to calculate balance changes", err)
 	}
-	err = b.UpdateBalances(ctx, transaction, changes, block.ParentBlockIdentifier)
-	if err != nil {
+	g, gctx := errgroup.WithContext(ctx)
+	for i := range changes {
+		// We need to set variable before calling goroutine
+		// to avoid getting an updated pointer as loop iteration
+		// continues.
+		change := changes[i]
+		g.Go(func() error {
+			return b.UpdateBalance(gctx, transaction, change, block.ParentBlockIdentifier)
+		})
+	}
+
+	if err := g.Wait(); err != nil {
 		return nil, err
 	}
 	return func(ctx context.Context) error {
@@ -504,6 +515,7 @@ func (b *BalanceStorage) PruneBalances(
 
 	return nil
 }
+
 // UpdateBalance updates a types.AccountIdentifer
 // by a types.Amount and sets the account's most
 // recent accessed block.
@@ -523,25 +535,24 @@ func (b *BalanceStorage) UpdateBalance(
 	if err != nil {
 		return err
 	}
+	historicalKey := GetHistoricalBalanceKey(
+		change.Account,
+		change.Currency,
+		change.Block.Index,
+	)
 	var storedValue string
 	if exists {
-		// Get most recent historical balance
-		balance, err := b.getHistoricalBalance(
-			ctx,
-			dbTransaction,
-			change.Account,
-			change.Currency,
-			change.Block.Index,
-		)
-		switch {
-		case errors.Is(err, ErrAccountMissing):
-			storedValue = "0"
-		case err != nil:
+		existsHistoricalBalance, balance, err := dbTransaction.Get(ctx, historicalKey)
+		if err != nil {
 			return err
-		default:
-			storedValue = balance.Value
+		}
+		if !existsHistoricalBalance {
+			storedValue = "0"
+		} else {
+			storedValue = string(balance)
 		}
 	}
+
 	// Find account existing value whether the account is new, has an
 	// existing balance, or is subject to additional accounting from
 	// a balance exemption.
@@ -593,107 +604,12 @@ func (b *BalanceStorage) UpdateBalance(
 		}
 	}
 	// Add a new historical record for the balance.
-	historicalKey := GetHistoricalBalanceKey(
-		change.Account,
-		change.Currency,
-		change.Block.Index,
-	)
 	if err := dbTransaction.Set(ctx, historicalKey, []byte(newVal), true); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (b *BalanceStorage) UpdateBalances(
-	ctx context.Context,
-	dbTransaction DatabaseTransaction,
-	changes []*parser.BalanceChange,
-	parentBlock *types.BlockIdentifier,
-) error {
-	for i := range changes {
-		change := changes[i]
-		if change.Currency == nil {
-			return errors.New("invalid currency")
-		}
-		// Get existing account key to determine if
-		// balance should be fetched.
-		_key := GetAccountKey(change.Account, change.Currency)
-		storedValue := "0"
-		existsAccount, _, err := dbTransaction.Get(ctx, _key)
-		if err != nil {
-			return err
-		}
-		historicalBalanceKey := GetHistoricalBalanceKey(
-			change.Account,
-			change.Currency,
-			change.Block.Index,
-		)
-		if existsAccount {
-			existsHistoricalBalance_, storedValueBytes, err := dbTransaction.Get(ctx, historicalBalanceKey)
-			if err != nil {
-				return err
-			}
-			if existsHistoricalBalance_ {
-				storedValue = string(storedValueBytes)
-			}
-		}
-		
-		// Find account existing value whether the account is new, has an
-		// existing balance, or is subject to additional accounting from
-		// a balance exemption.
-		existingValue, err := b.existingValue(
-			ctx,
-			change,
-			parentBlock,
-			storedValue,
-		)
-		if err != nil {
-			return err
-		}
-		newVal, err := types.AddValues(change.Difference, existingValue)
-		if err != nil {
-			return err
-		}
-		// If any exemptions apply, the returned new value will
-		// reflect the live balance for the *types.AccountIdentifier
-		// and *types.Currency.
-		newVal, err = b.applyExemptions(ctx, change, newVal)
-		if err != nil {
-			return err
-		}
-		bigNewVal, ok := new(big.Int).SetString(newVal, 10)
-		if !ok {
-			return fmt.Errorf("%s is not an integer", newVal)
-		}
-		if bigNewVal.Sign() == -1 {
-			return fmt.Errorf(
-				"%w %s:%+v for %+v at %+v",
-				ErrNegativeBalance,
-				newVal,
-				change.Currency,
-				change.Account,
-				change.Block,
-			)
-		}
-		// Add account entry if doesn't exist
-		if !existsAccount {
-			serialAcc, err := b.db.Encoder().Encode(accountNamespace, accountEntry{
-				Account:  change.Account,
-				Currency: change.Currency,
-			})
-			if err != nil {
-				return err
-			}
-			if err := dbTransaction.Set(ctx, _key, serialAcc, true); err != nil {
-				return err
-			}
-		}
-		if err := dbTransaction.Set(ctx, historicalBalanceKey, []byte(newVal), true); err != nil {
-			return err
-		}
-	}
-	return nil
-}
 // GetBalance returns the balance of a types.AccountIdentifier
 // at the canonical block of a certain index.
 func (b *BalanceStorage) GetBalance(
@@ -1076,20 +992,6 @@ func (b *BalanceStorage) getHistoricalBalance(
 		return nil, fmt.Errorf("%w: database scan failed", err)
 	}
 	return nil, ErrAccountMissing
-}
-
-func (b *BalanceStorage) getHistoricalBalances(
-	ctx context.Context,
-	dbTx DatabaseTransaction,
-	changes []*parser.BalanceChange,
-) ([]string) {
-	return dbTx.ScanMulti(
-		ctx,
-		changes,
-		false,
-		true,
-		GetHistoricalBalancePrefix,
-		GetHistoricalBalanceKey)
 }
 
 func (b *BalanceStorage) updateAccountEntry(
