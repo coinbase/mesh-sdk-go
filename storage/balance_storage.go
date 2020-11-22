@@ -626,8 +626,12 @@ func (b *BalanceStorage) UpdateBalances(
 	existsAccount := make([]*AccountExists, len(changes))
 	historicalBalances := make([]*HistoricalBalance, len(changes))
 	for i := range changes {
+		
 		log.Printf("BalanceStorage:UpdateBalances fetching %d\n", i)
 		change := changes[i]
+		if change.Currency == nil {
+			return errors.New("invalid currency")
+		}
 		// Get existing account key to determine if
 		// balance should be fetched.
 		_key := GetAccountKey(change.Account, change.Currency)
