@@ -630,7 +630,7 @@ func (b *BalanceStorage) UpdateBalances(
 	}
 	type HistoricalBalance struct {
 		key []byte
-		value string
+		value []byte]
 	}
 	existsAccount := make([]*AccountExists, len(changes))
 	historicalBalances := make([]*HistoricalBalance, len(changes))
@@ -639,11 +639,11 @@ func (b *BalanceStorage) UpdateBalances(
 		// Get existing account key to determine if
 		// balance should be fetched.
 		_key := GetAccountKey(change.Account, change.Currency)
-		_existsAccount, _, err := dbTransaction.Get(ctx, key)
+		_existsAccount, _, err := dbTransaction.Get(ctx, _key)
 		if err != nil {
 			return err
 		}
-		existsAccount[i] = &AccountExists{key: key, existsAccount:_existsAccount}
+		existsAccount[i] = &AccountExists{key: _key, existsAccount:_existsAccount}
 
 		// Add a new historical record for the balance.
 		historicalKey := GetHistoricalBalanceKey(
@@ -671,7 +671,7 @@ func (b *BalanceStorage) UpdateBalances(
 		if err != nil {
 			return err
 		}
-		newVal, err := types.AddValues(change.Difference, historicalBalances[i].value)
+		newVal, err := types.AddValues(change.Difference, string(historicalBalances[i].value))
 		if err != nil {
 			return err
 		}
