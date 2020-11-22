@@ -610,16 +610,6 @@ func (b *BalanceStorage) UpdateBalances(
 	changes []*parser.BalanceChange,
 	parentBlock *types.BlockIdentifier,
 ) error {
-	type AccountExists struct {
-		accountKey []byte
-		historicalBalanceKey []byte
-		exists bool
-	}
-	type HistoricalBalance struct {
-		value []byte
-	}
-	existsAccount := make([]*AccountExists, len(changes))
-	historicalBalances := make([]*HistoricalBalance, 0)
 	for i := range changes {
 		change := changes[i]
 		if change.Currency == nil {
@@ -628,38 +618,23 @@ func (b *BalanceStorage) UpdateBalances(
 		// Get existing account key to determine if
 		// balance should be fetched.
 		_key := GetAccountKey(change.Account, change.Currency)
-		existsAccount_, _, err := dbTransaction.Get(ctx, _key)
+		storedValue := "0"
+		existsAccount, _, err := dbTransaction.Get(ctx, _key)
 		if err != nil {
 			return err
 		}
-		existsAccount[i] = &AccountExists{
-			accountKey: _key, 
-			historicalBalanceKey: GetHistoricalBalanceKey(
-				change.Account,
-				change.Currency,
-				change.Block.Index,
-			),
-			exists: existsAccount_,
-		}
-		if existsAccount_ {
-			existsHistoricalBalance_, _value, err := dbTransaction.Get(ctx, existsAccount[i].historicalBalanceKey)
+		historicalBalanceKey := GetHistoricalBalanceKey(
+			change.Account,
+			change.Currency,
+			change.Block.Index,
+		)
+		if existsAccount {
+			existsHistoricalBalance_, storedValue, err := dbTransaction.Get(ctx, historicalBalanceKey)
 			if err != nil {
 				return err
 			}
-			if !existsHistoricalBalance_ {
-				_value = []byte("0")
-			}
-			historicalBalances = append(historicalBalances,  &HistoricalBalance{value: _value})
 		}
-	}
-	countHistoricalBalances := 0
-	for i := range changes {
-		change := changes[i]
-		storedValue := "0"
-		if existsAccount[i].exists {
-			storedValue = string(historicalBalances[countHistoricalBalances].value)
-			countHistoricalBalances += 1
-		}
+		
 		// Find account existing value whether the account is new, has an
 		// existing balance, or is subject to additional accounting from
 		// a balance exemption.
@@ -698,7 +673,7 @@ func (b *BalanceStorage) UpdateBalances(
 			)
 		}
 		// Add account entry if doesn't exist
-		if !existsAccount[i].exists {
+		if !existsAccount {
 			serialAcc, err := b.db.Encoder().Encode(accountNamespace, accountEntry{
 				Account:  change.Account,
 				Currency: change.Currency,
@@ -706,11 +681,11 @@ func (b *BalanceStorage) UpdateBalances(
 			if err != nil {
 				return err
 			}
-			if err := dbTransaction.Set(ctx, existsAccount[i].accountKey, serialAcc, true); err != nil {
+			if err := dbTransaction.Set(ctx, _key, serialAcc, true); err != nil {
 				return err
 			}
 		}
-		if err := dbTransaction.Set(ctx, existsAccount[i].historicalBalanceKey, []byte(newVal), true); err != nil {
+		if err := dbTransaction.Set(ctx, historicalBalanceKey, []byte(newVal), true); err != nil {
 			return err
 		}
 	}
