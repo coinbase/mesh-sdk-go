@@ -30,7 +30,7 @@ import (
 
 	"github.com/sidhujag/rosetta-sdk-go/types"
 	"github.com/sidhujag/rosetta-sdk-go/utils"
-
+	"github.com/sidhujag/rosetta-sdk-go/parser"
 	"github.com/dgraph-io/badger/v2"
 	"github.com/dgraph-io/badger/v2/options"
 )
@@ -474,7 +474,51 @@ func (b *BadgerTransaction) Scan(
 	
 	return entries, nil
 }
-
+// Scan calls a worker for each item in a scan instead
+// of reading all items into memory.
+func (b *BadgerTransaction) ScanMulti(
+	ctx context.Context,
+	changes []*parser.BalanceChange,
+	logEntries bool,
+	reverse bool, // reverse == true means greatest to least
+	GetHistoricalBalancePrefix func(account *types.AccountIdentifier, currency *types.Currency) []byte,
+	GetHistoricalBalanceKey func(account *types.AccountIdentifier,currency *types.Currency,blockIndex int64) []byte,
+) ([]*string) {
+	b.rwLock.RLock()
+	defer b.rwLock.RUnlock()	
+	iterate := func(txn *Txn, opts *Options, wg *sync.WaitGroup, prefix []byte, seekStart []byte, worker func([]byte, []byte) error, logEntries bool, reverse bool) (string) {
+		defer wg.Done()
+		it := txn.NewIterator(opts)
+		defer it.Close()
+		value := "0"
+		for it.Seek(seekStart); it.ValidForPrefix(prefix); it.Next() {
+			item := it.Item()
+			k := item.Key()
+			err := item.Value(func(v []byte) error {
+				value = string(v)
+				return nil
+			})
+			break
+		}
+		it.Close() // Double close.
+		return value
+	}
+	opts := badger.DefaultIteratorOptions
+	opts.Reverse = reverse
+	var wg sync.WaitGroup
+	wg.Add(len(changes))
+	balances := make(string, len(changes))
+	for i := range changes {
+		change := &changes[i]
+		currency := change.Currency
+		if currency == nil {
+			currency = ""
+		}
+		balances[i] := go iterate(&b.txn, &wg, GetHistoricalBalancePrefix(change.Account, currency), GetHistoricalBalanceKey(change.Account, currency, change.Block.Index), logEntries, reverse)
+	}
+	wg.Wait()
+	return balances
+}
 func decompressAndSave(
 	encoder *Encoder,
 	namespace string,

@@ -43,7 +43,6 @@ const (
 var (
 	errAccountFound = errors.New("account found")
 )
-var countblock int = 0
 /*
   Key Construction
 */
@@ -154,17 +153,11 @@ func (b *BalanceStorage) AddingBlock(
 		return nil, fmt.Errorf("%w: unable to calculate balance changes", err)
 	}
 	log.Printf("BalanceStorage::AddingBlock changes %d\n", len(changes))
-	for i := range changes {
-		// We need to set variable before calling goroutine
-		// to avoid getting an updated pointer as loop iteration
-		// continues.
-		err = b.UpdateBalance(ctx, transaction, changes[i], block.ParentBlockIdentifier)
-		if err != nil {
-			return nil, err
-		}
+	err = b.UpdateBalances(ctx, transaction, changes, block.ParentBlockIdentifier)
+	if err != nil {
+		return nil, err
 	}
 	log.Printf("BalanceStorage::AddingBlock done\n")
-	countblock = 0
 	return func(ctx context.Context) error {
 		return b.handler.BlockAdded(ctx, block, changes)
 	}, nil
@@ -523,8 +516,7 @@ func (b *BalanceStorage) UpdateBalance(
 	change *parser.BalanceChange,
 	parentBlock *types.BlockIdentifier,
 ) error {
-	countblock++
-	log.Printf("BalanceStorage:UpdateBalance %s\n", change.Account.Address, countblock)
+	log.Printf("BalanceStorage:UpdateBalance %s\n", change.Account.Address)
 	if change.Currency == nil {
 		return errors.New("invalid currency")
 	}
@@ -616,6 +608,88 @@ func (b *BalanceStorage) UpdateBalance(
 	return nil
 }
 
+func (b *BalanceStorage) UpdateBalances(
+	ctx context.Context,
+	dbTransaction DatabaseTransaction,
+	changes []*parser.BalanceChange,
+	parentBlock *types.BlockIdentifier,
+) error {
+	log.Printf("BalanceStorage:UpdateBalances\n")
+	// Get most recent historical balance
+	balances, err := b.getHistoricalBalances(
+		ctx,
+		dbTransaction,
+		changes,
+	)
+	for i := range changes {
+		storedValue := &balances[i]
+		change := &changes[i]
+		if change.Currency == nil {
+			return errors.New("invalid currency")
+		}
+		// Find account existing value whether the account is new, has an
+		// existing balance, or is subject to additional accounting from
+		// a balance exemption.
+		existingValue, err := b.existingValue(
+			ctx,
+			change,
+			parentBlock,
+			storedValue,
+		)
+		if err != nil {
+			return err
+		}
+		newVal, err := types.AddValues(change.Difference, existingValue)
+		if err != nil {
+			return err
+		}
+		// If any exemptions apply, the returned new value will
+		// reflect the live balance for the *types.AccountIdentifier
+		// and *types.Currency.
+		newVal, err = b.applyExemptions(ctx, change, newVal)
+		if err != nil {
+			return err
+		}
+		bigNewVal, ok := new(big.Int).SetString(newVal, 10)
+		if !ok {
+			return fmt.Errorf("%s is not an integer", newVal)
+		}
+		if bigNewVal.Sign() == -1 {
+			return fmt.Errorf(
+				"%w %s:%+v for %+v at %+v",
+				ErrNegativeBalance,
+				newVal,
+				change.Currency,
+				change.Account,
+				change.Block,
+			)
+		}
+		// Add account entry if doesn't exist
+		if !exists {
+			serialAcc, err := b.db.Encoder().Encode(accountNamespace, accountEntry{
+				Account:  change.Account,
+				Currency: change.Currency,
+			})
+			if err != nil {
+				return err
+			}
+			if err := dbTransaction.Set(ctx, key, serialAcc, true); err != nil {
+				return err
+			}
+		}
+		// Add a new historical record for the balance.
+		historicalKey := GetHistoricalBalanceKey(
+			change.Account,
+			change.Currency,
+			change.Block.Index,
+		)
+		if err := dbTransaction.Set(ctx, historicalKey, []byte(newVal), true); err != nil {
+			return err
+		}
+	}
+	log.Printf("BalanceStorage:UpdateBalances done\n")
+	return nil
+}
 // GetBalance returns the balance of a types.AccountIdentifier
 // at the canonical block of a certain index.
 func (b *BalanceStorage) GetBalance(
@@ -998,6 +1072,20 @@ func (b *BalanceStorage) getHistoricalBalance(
 		return nil, fmt.Errorf("%w: database scan failed", err)
 	}
 	return nil, ErrAccountMissing
+}
+
+func (b *BalanceStorage) getHistoricalBalances(
+	ctx context.Context,
+	dbTx DatabaseTransaction,
+	changes []*parser.BalanceChange,
+) ([]*string, error) {
+	return dbTx.ScanMulti(
+		ctx,
+		changes,
+		false,
+		true,
+		GetHistoricalBalancePrefix,
+		GetHistoricalBalanceKey)
 }
 
 func (b *BalanceStorage) updateAccountEntry(
