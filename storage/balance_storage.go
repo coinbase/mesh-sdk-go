@@ -615,15 +615,6 @@ func (b *BalanceStorage) UpdateBalances(
 	parentBlock *types.BlockIdentifier,
 ) error {
 	log.Printf("BalanceStorage:UpdateBalances\n")
-	// Get most recent historical balance
-	balances := b.getHistoricalBalances(
-		ctx,
-		dbTransaction,
-		changes,
-	)
-	if balances == nil {
-		return errors.New("could not fetch historical balances")
-	}
 	type AccountExists struct {
 		key []byte
 		exists bool
