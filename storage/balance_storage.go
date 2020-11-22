@@ -651,7 +651,7 @@ func (b *BalanceStorage) UpdateBalances(
 			change.Currency,
 			change.Block.Index,
 		)
-		existsBalance, _value, err := dbTransaction.Get(ctx, historicalKey)
+		_, _value, err := dbTransaction.Get(ctx, historicalKey)
 		if err != nil {
 			return err
 		}
@@ -666,12 +666,12 @@ func (b *BalanceStorage) UpdateBalances(
 			ctx,
 			change,
 			parentBlock,
-			balances[i],
+			string(historicalBalances[i].value),
 		)
 		if err != nil {
 			return err
 		}
-		newVal, err := types.AddValues(change.Difference, string(historicalBalances[i].value))
+		newVal, err := types.AddValues(change.Difference, existingValue)
 		if err != nil {
 			return err
 		}

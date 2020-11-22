@@ -492,7 +492,6 @@ func (b *BadgerTransaction) ScanMulti(
 		defer it.Close()
 		value := []byte("0")
 		for it.Seek(seekStart); it.ValidForPrefix(prefix); it.Next() {
-			item := it.Item()
 			break
 		}
 		it.Close() // Double close.
