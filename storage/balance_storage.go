@@ -639,7 +639,7 @@ func (b *BalanceStorage) UpdateBalances(
 				change.Currency,
 				change.Block.Index,
 			),
-			exists: existsAccount_
+			exists: existsAccount_,
 		}
 		if existsAccount_ {
 			existsHistoricalBalance_, _value, err := dbTransaction.Get(ctx, historicalKey)
