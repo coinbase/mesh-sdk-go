@@ -148,24 +148,21 @@ func (b *BalanceStorage) AddingBlock(
 	block *types.Block,
 	transaction DatabaseTransaction,
 ) (CommitWorker, error) {
+	log.Printf("BalanceStorage::AddingBlock\n")
 	changes, err := b.parser.BalanceChanges(ctx, block, false)
 	if err != nil {
 		return nil, fmt.Errorf("%w: unable to calculate balance changes", err)
 	}
-	g, gctx := errgroup.WithContext(ctx)
 	for i := range changes {
 		// We need to set variable before calling goroutine
 		// to avoid getting an updated pointer as loop iteration
 		// continues.
-		change := changes[i]
-		g.Go(func() error {
-			return b.UpdateBalance(gctx, transaction, change, block.ParentBlockIdentifier)
-		})
+		err = b.UpdateBalance(ctx, transaction, changes[i], block.ParentBlockIdentifier)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	if err := g.Wait(); err != nil {
-		return nil, err
-	}
 	return func(ctx context.Context) error {
 		return b.handler.BlockAdded(ctx, block, changes)
 	}, nil

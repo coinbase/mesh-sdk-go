@@ -698,7 +698,7 @@ func (b *BlockStorage) RemoveBlock(
 	if err := b.deleteBlock(ctx, transaction, block); err != nil {
 		return fmt.Errorf("%w: %v", ErrBlockDeleteFailed, err)
 	}
-
+	log.Printf("callWorkersAndCommit\n")
 	return b.callWorkersAndCommit(ctx, block, transaction, false)
 }
 
@@ -713,9 +713,13 @@ func (b *BlockStorage) callWorkersAndCommit(
 		var cw CommitWorker
 		var err error
 		if adding {
+			log.Printf("callWorkersAndCommit:AddingBlock\n")
 			cw, err = w.AddingBlock(ctx, block, txn)
+			log.Printf("callWorkersAndCommit:AddingBlock done\n")
 		} else {
+			log.Printf("callWorkersAndCommit:RemovingBlock\n")
 			cw, err = w.RemovingBlock(ctx, block, txn)
+			log.Printf("callWorkersAndCommit:RemovingBlock done\n")
 		}
 		if err != nil {
 			return err
@@ -723,16 +727,20 @@ func (b *BlockStorage) callWorkersAndCommit(
 
 		commitWorkers[i] = cw
 	}
+	log.Printf("callWorkersAndCommit:Commit\n")
 	if err := txn.Commit(ctx); err != nil {
 		return err
 	}
+	log.Printf("callWorkersAndCommit:Commit Done\n")
 	for _, cw := range commitWorkers {
 		if cw == nil {
 			continue
 		}
+		log.Printf("callWorkersAndCommit:commitWorkers cw\n")
 		if err := cw(ctx); err != nil {
 			return err
 		}
+		log.Printf("callWorkersAndCommit:commitWorkers cw done\n")
 	}
 	return nil
 }
