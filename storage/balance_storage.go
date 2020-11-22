@@ -630,7 +630,7 @@ func (b *BalanceStorage) UpdateBalances(
 	}
 	type HistoricalBalance struct {
 		key []byte
-		value []byte]
+		value []byte
 	}
 	existsAccount := make([]*AccountExists, len(changes))
 	historicalBalances := make([]*HistoricalBalance, len(changes))
