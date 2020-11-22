@@ -624,11 +624,11 @@ func (b *BalanceStorage) UpdateBalances(
 	if balances == nil {
 		return errors.New("could not fetch historical balances")
 	}
-	type AccountExists {
+	type AccountExists struct {
 		key string
 		exists bool
 	}
-	type HistoricalBalance {
+	type HistoricalBalance struct {
 		key []byte
 		value string
 	}
