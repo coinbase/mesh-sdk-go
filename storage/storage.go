@@ -53,8 +53,8 @@ type DatabaseTransaction interface {
 		[]*parser.BalanceChange,
 		bool, // log entries
 		bool, // reverse == true means greatest to least
-		func(*types.AccountIdentifier, currency *types.Currency) []byte,
-		func(*types.AccountIdentifier, currency *types.Currency, int64) []byte,
+		func(*types.AccountIdentifier, *types.Currency) []byte,
+		func(*types.AccountIdentifier, *types.Currency, int64) []byte,
 	) ([]string)
 	Commit(context.Context) error
 	Discard(context.Context)
