@@ -611,17 +611,16 @@ func (b *BalanceStorage) UpdateBalances(
 	parentBlock *types.BlockIdentifier,
 ) error {
 	type AccountExists struct {
-		key []byte
+		accountKey []byte
+		historicalBalanceKey []byte
 		exists bool
 	}
 	type HistoricalBalance struct {
-		key []byte
 		value []byte
 	}
 	existsAccount := make([]*AccountExists, len(changes))
-	historicalBalances := make([]*HistoricalBalance, len(changes))
+	historicalBalances := make([]*HistoricalBalance, 0)
 	for i := range changes {
-		
 		change := changes[i]
 		if change.Currency == nil {
 			return errors.New("invalid currency")
@@ -633,25 +632,35 @@ func (b *BalanceStorage) UpdateBalances(
 		if err != nil {
 			return err
 		}
-		existsAccount[i] = &AccountExists{key: _key, exists: existsAccount_}
-
-		// Add a new historical record for the balance.
-		historicalKey := GetHistoricalBalanceKey(
-			change.Account,
-			change.Currency,
-			change.Block.Index,
-		)
-		existsHistoricalBalance_, _value, err := dbTransaction.Get(ctx, historicalKey)
-		if err != nil {
-			return err
+		existsAccount[i] = &AccountExists{
+			accountKey: _key, 
+			historicalBalanceKey: GetHistoricalBalanceKey(
+				change.Account,
+				change.Currency,
+				change.Block.Index,
+			),
+			exists: existsAccount_
 		}
-		if !existsHistoricalBalance_ {
-			_value = []byte("0")
+		if existsAccount_ {
+			existsHistoricalBalance_, _value, err := dbTransaction.Get(ctx, historicalKey)
+			if err != nil {
+				return err
+			}
+			if !existsHistoricalBalance_ {
+				_value = []byte("0")
+			}
+			historicalBalances = append(historicalBalances,  &HistoricalBalance{value: _value})
 		}
-		historicalBalances[i] = &HistoricalBalance{key: historicalKey, value: _value}
 	}
+	countHistoricalBalances = 0
 	for i := range changes {
 		change := changes[i]
+		var storedValue string
+		var historicalBalance *HistoricalBalance
+		if existsAccount[i].exists {
+			storedValue = string(historicalBalances[countHistoricalBalances].value)
+			countHistoricalBalances += 1
+		}
 		// Find account existing value whether the account is new, has an
 		// existing balance, or is subject to additional accounting from
 		// a balance exemption.
@@ -659,7 +668,7 @@ func (b *BalanceStorage) UpdateBalances(
 			ctx,
 			change,
 			parentBlock,
-			string(historicalBalances[i].value),
+			storedValue,
 		)
 		if err != nil {
 			return err
@@ -698,12 +707,11 @@ func (b *BalanceStorage) UpdateBalances(
 			if err != nil {
 				return err
 			}
-			if err := dbTransaction.Set(ctx, existsAccount[i].key, serialAcc, true); err != nil {
+			if err := dbTransaction.Set(ctx, existsAccount[i].accountKey, serialAcc, true); err != nil {
 				return err
 			}
 		}
-
-		if err := dbTransaction.Set(ctx, historicalBalances[i].key, []byte(newVal), true); err != nil {
+		if err := dbTransaction.Set(ctx, existsAccount[i].historicalBalanceKey, []byte(newVal), true); err != nil {
 			return err
 		}
 	}
