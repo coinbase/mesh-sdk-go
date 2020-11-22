@@ -655,7 +655,7 @@ func (b *BalanceStorage) UpdateBalances(
 	countHistoricalBalances := 0
 	for i := range changes {
 		change := changes[i]
-		var storedValue string
+		storedValue := "0"
 		if existsAccount[i].exists {
 			storedValue = string(historicalBalances[countHistoricalBalances].value)
 			countHistoricalBalances += 1
