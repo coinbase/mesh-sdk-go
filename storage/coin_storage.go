@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"math/big"
 	"strings"
-	"log"
 	"github.com/sidhujag/rosetta-sdk-go/asserter"
 	"github.com/sidhujag/rosetta-sdk-go/types"
 	"github.com/sidhujag/rosetta-sdk-go/utils"
