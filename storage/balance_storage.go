@@ -625,8 +625,7 @@ func (b *BalanceStorage) UpdateBalances(
 		return errors.New("could not fetch historical balances")
 	}
 	for i := range changes {
-		storedValue := &balances[i]
-		change := &changes[i]
+		change := changes[i]
 		// Find account existing value whether the account is new, has an
 		// existing balance, or is subject to additional accounting from
 		// a balance exemption.
@@ -634,7 +633,7 @@ func (b *BalanceStorage) UpdateBalances(
 			ctx,
 			change,
 			parentBlock,
-			storedValue,
+			balances[i],
 		)
 		if err != nil {
 			return err
