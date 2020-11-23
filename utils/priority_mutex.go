@@ -35,14 +35,6 @@ type PriorityMutex struct {
 	l bool
 }
 
-// NewPriorityMutex returns a new *PriorityMutex.
-func NewPriorityMutex() *PriorityMutex {
-	return &PriorityMutex{
-		high: []chan struct{}{},
-		low:  []chan struct{}{},
-	}
-}
-
 // Lock attempts to acquire either a high or low
 // priority mutex. When priority is true, a lock
 // will be granted before other low priority callers.
