@@ -58,3 +58,10 @@ func WithMaxConcurrency(concurrency int64) Option {
 		s.maxConcurrency = concurrency
 	}
 }
+
+// WithAdjustmentWindow overrides the default adjustment window.
+func WithAdjustmentWindow(adjustmentWindow int64) Option {
+	return func(s *Syncer) {
+		s.adjustmentWindow = adjustmentWindow
+	}
+}
