@@ -31,19 +31,19 @@ type PriorityMutex struct {
 	high []chan struct{}
 	low  []chan struct{}
 
-	m sync.Mutex
-	l bool
+	mutex sync.Mutex
+	lock  bool
 }
 
 // Lock attempts to acquire either a high or low
 // priority mutex. When priority is true, a lock
 // will be granted before other low priority callers.
 func (m *PriorityMutex) Lock(priority bool) {
-	m.m.Lock()
+	m.mutex.Lock()
 
-	if !m.l {
-		m.l = true
-		m.m.Unlock()
+	if !m.lock {
+		m.lock = true
+		m.mutex.Unlock()
 		return
 	}
 
@@ -54,16 +54,16 @@ func (m *PriorityMutex) Lock(priority bool) {
 		m.low = append(m.low, c)
 	}
 
-	m.m.Unlock()
+	m.mutex.Unlock()
 	<-c
 }
 
 // Unlock selects the next highest priority lock
 // to grant. If there are no locks to grant, it
-// sets the value of m.l to false.
+// sets the value of m.lock to false.
 func (m *PriorityMutex) Unlock() {
-	m.m.Lock()
-	defer m.m.Unlock()
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
 
 	if len(m.high) > 0 {
 		c := m.high[0]
@@ -79,8 +79,8 @@ func (m *PriorityMutex) Unlock() {
 		return
 	}
 
-	// We only set m.l to false when there are
+	// We only set m.lock to false when there are
 	// no items to unlock because it could cause
 	// lock contention for the next lock to fetch it.
-	m.l = false
+	m.lock = false
 }
