@@ -19,7 +19,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"math/big"
 	"time"
 
 	"github.com/coinbase/rosetta-sdk-go/fetcher"
@@ -215,23 +214,7 @@ func (s *StatefulSyncer) BlockAdded(ctx context.Context, block *types.Block) err
 		)
 	}
 
-	if err := s.logger.AddBlockStream(ctx, block); err != nil {
-		return nil
-	}
-
-	// Update Counters
-	_, _ = s.counterStorage.Update(ctx, storage.BlockCounter, big.NewInt(1))
-	_, _ = s.counterStorage.Update(
-		ctx,
-		storage.TransactionCounter,
-		big.NewInt(int64(len(block.Transactions))),
-	)
-	opCount := int64(0)
-	for _, txn := range block.Transactions {
-		opCount += int64(len(txn.Operations))
-	}
-	_, _ = s.counterStorage.Update(ctx, storage.OperationCounter, big.NewInt(opCount))
-
+	_ = s.logger.AddBlockStream(ctx, block)
 	return nil
 }
 
@@ -250,14 +233,8 @@ func (s *StatefulSyncer) BlockRemoved(
 		)
 	}
 
-	if err := s.logger.RemoveBlockStream(ctx, blockIdentifier); err != nil {
-		return nil
-	}
-
-	// Update Counters
-	_, _ = s.counterStorage.Update(ctx, storage.OrphanCounter, big.NewInt(1))
-
-	return err
+	_ = s.logger.RemoveBlockStream(ctx, blockIdentifier)
+	return nil
 }
 
 // NetworkStatus is called by the syncer to get the current
