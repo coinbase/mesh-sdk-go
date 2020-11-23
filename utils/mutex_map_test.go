@@ -25,7 +25,7 @@ import (
 
 func TestMutexMap(t *testing.T) {
 	arr := []string{}
-	m := NewMutexMap()
+	m := NewMutexMap(DefaultShards)
 	g, _ := errgroup.WithContext(context.Background())
 
 	// Lock while adding all locks
@@ -47,7 +47,8 @@ func TestMutexMap(t *testing.T) {
 
 	g.Go(func() error {
 		m.Lock("a", false)
-		assert.Equal(t, m.entries["a"].count, 1)
+		entry := m.entries.shards[m.entries.shardIndex("a")].entries["a"].(*mutexMapEntry)
+		assert.Equal(t, entry.count, 1)
 		<-a
 		arr = append(arr, "a")
 		close(b)
@@ -57,7 +58,8 @@ func TestMutexMap(t *testing.T) {
 
 	g.Go(func() error {
 		m.Lock("b", false)
-		assert.Equal(t, m.entries["b"].count, 1)
+		entry := m.entries.shards[m.entries.shardIndex("b")].entries["b"].(*mutexMapEntry)
+		assert.Equal(t, entry.count, 1)
 		close(a)
 		<-b
 		arr = append(arr, "b")
@@ -68,7 +70,9 @@ func TestMutexMap(t *testing.T) {
 	time.Sleep(1 * time.Second)
 
 	// Ensure number of expected locks is correct
-	assert.Len(t, m.entries, 0)
+	totalKeys := len(m.entries.shards[m.entries.shardIndex("a")].entries) +
+		len(m.entries.shards[m.entries.shardIndex("b")].entries)
+	assert.Equal(t, totalKeys, 0)
 	arr = append(arr, "global-a")
 	m.GUnlock()
 	assert.NoError(t, g.Wait())
@@ -83,5 +87,7 @@ func TestMutexMap(t *testing.T) {
 	}, arr)
 
 	// Ensure lock is no longer occupied
-	assert.Len(t, m.entries, 0)
+	totalKeys = len(m.entries.shards[m.entries.shardIndex("a")].entries) +
+		len(m.entries.shards[m.entries.shardIndex("b")].entries)
+	assert.Equal(t, totalKeys, 0)
 }

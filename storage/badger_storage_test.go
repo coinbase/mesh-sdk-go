@@ -309,7 +309,7 @@ func TestBadgerTrain_Limit(t *testing.T) {
 		namespace,
 		newDir,
 		dictionaryPath,
-		10,
+		50,
 		[]*CompressorEntry{},
 	)
 	assert.NoError(t, err)
