@@ -64,6 +64,10 @@ func TestPriorityMutex(t *testing.T) {
 	l.Unlock()
 	assert.NoError(t, g.Wait())
 
-	// Check array for all high prio, remaining low prio
+	// Check results array to ensure all of the high priority items processed first,
+	// followed by all of the low priority items.
 	assert.Equal(t, expected, arr)
+
+	// Ensure lock is no longer occupied
+	assert.False(t, l.l)
 }
