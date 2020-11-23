@@ -16,8 +16,6 @@ package storage
 
 import (
 	"context"
-	"github.com/coinbase/rosetta-sdk-go/types"
-	"github.com/coinbase/rosetta-sdk-go/parser"
 )
 
 // Database is an interface that provides transactional
@@ -48,14 +46,6 @@ type DatabaseTransaction interface {
 		bool, // log entries
 		bool, // reverse == true means greatest to least
 	) (int, error)
-	ScanMulti(
-		context.Context,
-		[]*parser.BalanceChange,
-		bool, // log entries
-		bool, // reverse == true means greatest to least
-		func(*types.AccountIdentifier, *types.Currency) []byte,
-		func(*types.AccountIdentifier, *types.Currency, int64) []byte,
-	) ([]string)
 	Commit(context.Context) error
 	Discard(context.Context)
 }
