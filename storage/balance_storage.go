@@ -520,20 +520,33 @@ func (b *BalanceStorage) UpdateBalance(
 	if change.Currency == nil {
 		return errors.New("invalid currency")
 	}
+
 	// Get existing account key to determine if
 	// balance should be fetched.
 	key := GetAccountKey(change.Account, change.Currency)
-	exists, acc, err := dbTransaction.Get(ctx, key)
+	exists, _, err := dbTransaction.Get(ctx, key)
 	if err != nil {
 		return err
 	}
-	var accEntry accountEntry
+
 	var storedValue string
 	if exists {
-		if err := b.db.Encoder().Decode(accountNamespace, acc, &accEntry, true); err != nil {
-			return fmt.Errorf("%w: unable to decode account entry", err)
+		// Get most recent historical balance
+		balance, err := b.getHistoricalBalance(
+			ctx,
+			dbTransaction,
+			change.Account,
+			change.Currency,
+			change.Block.Index,
+		)
+		switch {
+		case errors.Is(err, ErrAccountMissing):
+			storedValue = "0"
+		case err != nil:
+			return err
+		default:
+			storedValue = balance.Value
 		}
-		storedValue = accEntry.Value
 	}
 
 	// Find account existing value whether the account is new, has an
@@ -548,10 +561,12 @@ func (b *BalanceStorage) UpdateBalance(
 	if err != nil {
 		return err
 	}
+
 	newVal, err := types.AddValues(change.Difference, existingValue)
 	if err != nil {
 		return err
 	}
+
 	// If any exemptions apply, the returned new value will
 	// reflect the live balance for the *types.AccountIdentifier
 	// and *types.Currency.
@@ -559,10 +574,12 @@ func (b *BalanceStorage) UpdateBalance(
 	if err != nil {
 		return err
 	}
+
 	bigNewVal, ok := new(big.Int).SetString(newVal, 10)
 	if !ok {
 		return fmt.Errorf("%s is not an integer", newVal)
 	}
+
 	if bigNewVal.Sign() == -1 {
 		return fmt.Errorf(
 			"%w %s:%+v for %+v at %+v",
@@ -573,28 +590,31 @@ func (b *BalanceStorage) UpdateBalance(
 			change.Block,
 		)
 	}
-	// update balance or create a new account if doesn't exist
-	serialAcc, err := b.db.Encoder().Encode(accountNamespace, accountEntry{
-		Account:  change.Account,
-		Currency: change.Currency,
-		Value: newVal,
-	})
-	if err != nil {
-		return err
+
+	// Add account entry if doesn't exist
+	if !exists {
+		serialAcc, err := b.db.Encoder().Encode(accountNamespace, accountEntry{
+			Account:  change.Account,
+			Currency: change.Currency,
+		})
+		if err != nil {
+			return err
+		}
+		if err := dbTransaction.Set(ctx, key, serialAcc, true); err != nil {
+			return err
+		}
 	}
-	if err := dbTransaction.Set(ctx, key, serialAcc, true); err != nil {
-		return err
-	}
-	
+
+	// Add a new historical record for the balance.
 	historicalKey := GetHistoricalBalanceKey(
 		change.Account,
 		change.Currency,
 		change.Block.Index,
 	)
-	// Add a new historical record for the balance.
 	if err := dbTransaction.Set(ctx, historicalKey, []byte(newVal), true); err != nil {
 		return err
 	}
+
 	return nil
 }
 
