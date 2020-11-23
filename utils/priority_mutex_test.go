@@ -69,5 +69,5 @@ func TestPriorityMutex(t *testing.T) {
 	assert.Equal(t, expected, arr)
 
 	// Ensure lock is no longer occupied
-	assert.False(t, l.l)
+	assert.False(t, l.lock)
 }
