@@ -27,8 +27,7 @@ func TestPriorityMutex(t *testing.T) {
 	arr := []bool{}
 	expected := make([]bool, 60)
 	l := NewPriorityMutex()
-	ctx := context.Background()
-	g, ctx := errgroup.WithContext(ctx)
+	g, _ := errgroup.WithContext(context.Background())
 
 	// Lock while adding all locks
 	l.Lock(true)
