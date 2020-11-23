@@ -1,13 +1,22 @@
+// Copyright 2020 Coinbase, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package utils
 
 import (
 	"sync"
 )
-
-type mutexMapEntry struct {
-	l     *PriorityMutex
-	count int
-}
 
 // MutexMap is a struct that allows for
 // acquiring a *PriorityMutex via a string identifier
@@ -17,16 +26,22 @@ type mutexMapEntry struct {
 // This is useful for coordinating concurrent, non-overlapping
 // writes in the storage package.
 type MutexMap struct {
-	table map[string]*mutexMapEntry
-	m     sync.Mutex
-
+	entries     map[string]*mutexMapEntry
+	mutex       sync.Mutex
 	globalMutex sync.RWMutex
+}
+
+// mutexMapEntry is the primitive used
+// to track claimed *PriorityMutex.
+type mutexMapEntry struct {
+	lock  *PriorityMutex
+	count int
 }
 
 // NewMutexMap returns a new *MutexMap.
 func NewMutexMap() *MutexMap {
 	return &MutexMap{
-		table: map[string]*mutexMapEntry{},
+		entries: map[string]*mutexMapEntry{},
 	}
 }
 
@@ -55,20 +70,20 @@ func (m *MutexMap) Lock(identifier string, priority bool) {
 	// We acquire m when adding items to m.table
 	// so that we don't accidentally overwrite
 	// lock created by another goroutine.
-	m.m.Lock()
-	l, ok := m.table[identifier]
+	m.mutex.Lock()
+	l, ok := m.entries[identifier]
 	if !ok {
 		l = &mutexMapEntry{
-			l: new(PriorityMutex),
+			lock: new(PriorityMutex),
 		}
-		m.table[identifier] = l
+		m.entries[identifier] = l
 	}
 	l.count++
-	m.m.Unlock()
+	m.mutex.Unlock()
 
 	// Once we have a m.globalMutex.RLock, it is
 	// safe to acquire an identifier lock.
-	l.l.Lock(priority)
+	l.lock.Lock(priority)
 }
 
 // Unlock releases a lock held for a particular identifier.
@@ -77,15 +92,15 @@ func (m *MutexMap) Unlock(identifier string) {
 	// exist by the time we unlock, otherwise
 	// it would not have been possible to get
 	// the lock to begin with.
-	m.m.Lock()
-	entry := m.table[identifier]
+	m.mutex.Lock()
+	entry := m.entries[identifier]
 	if entry.count <= 1 { // this should never be < 0
-		delete(m.table, identifier)
+		delete(m.entries, identifier)
 	} else {
 		entry.count--
-		entry.l.Unlock()
+		entry.lock.Unlock()
 	}
-	m.m.Unlock()
+	m.mutex.Unlock()
 
 	// We release the globalMutex after unlocking
 	// the identifier lock, otherwise it would be possible
