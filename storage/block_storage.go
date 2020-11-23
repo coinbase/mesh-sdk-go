@@ -557,6 +557,7 @@ func (b *BlockStorage) AddBlock(
 ) error {
 	transaction := b.db.NewDatabaseTransaction(ctx, true)
 	defer transaction.Discard(ctx)
+
 	// Store all transactions in order and check for duplicates
 	identifiers := make([]*types.TransactionIdentifier, len(block.Transactions))
 	identiferSet := map[string]struct{}{}
@@ -574,6 +575,7 @@ func (b *BlockStorage) AddBlock(
 		identiferSet[txn.TransactionIdentifier.Hash] = struct{}{}
 		identifiers[i] = txn.TransactionIdentifier
 	}
+
 	// Make copy of block and remove all transactions
 	var copyBlock types.Block
 	if err := copyStruct(block, &copyBlock); err != nil {
@@ -593,6 +595,7 @@ func (b *BlockStorage) AddBlock(
 	if err != nil {
 		return fmt.Errorf("%w: %v", ErrBlockStoreFailed, err)
 	}
+
 	g, gctx := errgroup.WithContext(ctx)
 	for i := range block.Transactions {
 		// We need to set variable before calling goroutine
@@ -616,6 +619,7 @@ func (b *BlockStorage) AddBlock(
 	if err := g.Wait(); err != nil {
 		return err
 	}
+
 	return b.callWorkersAndCommit(ctx, block, transaction, true)
 }
 
@@ -698,6 +702,7 @@ func (b *BlockStorage) RemoveBlock(
 	if err := b.deleteBlock(ctx, transaction, block); err != nil {
 		return fmt.Errorf("%w: %v", ErrBlockDeleteFailed, err)
 	}
+
 	return b.callWorkersAndCommit(ctx, block, transaction, false)
 }
 
@@ -722,17 +727,21 @@ func (b *BlockStorage) callWorkersAndCommit(
 
 		commitWorkers[i] = cw
 	}
+
 	if err := txn.Commit(ctx); err != nil {
 		return err
 	}
+
 	for _, cw := range commitWorkers {
 		if cw == nil {
 			continue
 		}
+
 		if err := cw(ctx); err != nil {
 			return err
 		}
 	}
+
 	return nil
 }
 

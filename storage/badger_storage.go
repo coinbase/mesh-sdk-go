@@ -30,7 +30,7 @@ import (
 
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/coinbase/rosetta-sdk-go/utils"
-	"github.com/coinbase/rosetta-sdk-go/parser"
+
 	"github.com/dgraph-io/badger/v2"
 	"github.com/dgraph-io/badger/v2/options"
 )
@@ -471,9 +471,10 @@ func (b *BadgerTransaction) Scan(
 			log.Printf("scanned %d entries for %s\n", entries, string(prefix))
 		}
 	}
-	
+
 	return entries, nil
 }
+
 func decompressAndSave(
 	encoder *Encoder,
 	namespace string,

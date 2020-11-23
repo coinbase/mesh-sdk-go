@@ -46,6 +46,7 @@ type DatabaseTransaction interface {
 		bool, // log entries
 		bool, // reverse == true means greatest to least
 	) (int, error)
+
 	Commit(context.Context) error
 	Discard(context.Context)
 }

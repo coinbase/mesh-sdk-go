@@ -565,14 +565,12 @@ func (b *BalanceStorage) UpdateBalance(
 	}
 	if bigNewVal.Sign() == -1 {
 		return fmt.Errorf(
-			"%w %s:%+v for %+v at %+v storedValue %s existingValue %s",
+			"%w %s:%+v for %+v at %+v",
 			ErrNegativeBalance,
 			newVal,
 			change.Currency,
 			change.Account,
 			change.Block,
-			storedValue,
-			existingValue,
 		)
 	}
 	// update balance or create a new account if doesn't exist

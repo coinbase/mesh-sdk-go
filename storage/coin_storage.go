@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"math/big"
 	"strings"
+
 	"github.com/coinbase/rosetta-sdk-go/asserter"
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/coinbase/rosetta-sdk-go/utils"
@@ -278,6 +279,7 @@ func (c *CoinStorage) updateCoins( // nolint:gocognit
 ) error {
 	addCoins := map[string]*types.Operation{}
 	removeCoins := map[string]*types.Operation{}
+
 	for _, txn := range block.Transactions {
 		for _, operation := range txn.Operations {
 			skip, err := c.skipOperation(operation)
@@ -287,6 +289,7 @@ func (c *CoinStorage) updateCoins( // nolint:gocognit
 			if skip {
 				continue
 			}
+
 			coinChange := operation.CoinChange
 			identifier := coinChange.CoinIdentifier.Identifier
 			coinDict := removeCoins
@@ -294,17 +297,21 @@ func (c *CoinStorage) updateCoins( // nolint:gocognit
 				!addCoinCreated && coinChange.CoinAction == types.CoinSpent {
 				coinDict = addCoins
 			}
+
 			if _, ok := coinDict[identifier]; ok {
 				return fmt.Errorf("%w %s", ErrDuplicateCoinFound, identifier)
 			}
+
 			coinDict[identifier] = operation
 		}
 	}
+
 	g, gctx := errgroup.WithContext(ctx)
 	for identifier, val := range addCoins {
 		if _, ok := removeCoins[identifier]; ok {
 			continue
 		}
+
 		// We need to set variable before calling goroutine
 		// to avoid getting an updated pointer as loop iteration
 		// continues.
@@ -325,10 +332,12 @@ func (c *CoinStorage) updateCoins( // nolint:gocognit
 			return nil
 		})
 	}
+
 	for identifier, val := range removeCoins {
 		if _, ok := addCoins[identifier]; ok {
 			continue
 		}
+
 		// We need to set variable before calling goroutine
 		// to avoid getting an updated pointer as loop iteration
 		// continues.
@@ -346,6 +355,7 @@ func (c *CoinStorage) updateCoins( // nolint:gocognit
 			return nil
 		})
 	}
+
 	return g.Wait()
 }
 
