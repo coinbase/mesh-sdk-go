@@ -133,7 +133,7 @@ func (p *Parser) BalanceChanges(
 	count := 0
 	for _, change := range balanceChanges {
 		allChanges[count] = change
-		count += 1
+		count++
 	}
 
 	return allChanges, nil
