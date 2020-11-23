@@ -538,12 +538,11 @@ func (b *BalanceStorage) UpdateBalance(
 		return err
 	}
 	var accEntry accountEntry
-	if err := b.db.Encoder().Decode(accountNamespace, acc, &accEntry, true); err != nil {
-		return fmt.Errorf("%w: unable to decode account entry", err)
-	}
-
 	var storedValue string
 	if exists {
+		if err := b.db.Encoder().Decode(accountNamespace, acc, &accEntry, true); err != nil {
+			return fmt.Errorf("%w: unable to decode account entry", err)
+		}
 		storedValue = accEntry.Value
 	}
 
