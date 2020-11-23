@@ -30,6 +30,10 @@ import (
 	msgpack "github.com/vmihailenco/msgpack/v5"
 )
 
+const (
+	jsonTag = "json"
+)
+
 // Encoder handles the encoding/decoding of structs and the
 // compression/decompression of data using zstd. Optionally,
 // the caller can provide a map of dicts on initialization that
@@ -84,7 +88,7 @@ func NewEncoder(
 
 func getEncoder(w io.Writer) *msgpack.Encoder {
 	enc := msgpack.NewEncoder(w)
-	enc.UseJSONTag(true)
+	enc.SetCustomStructTag(jsonTag)
 
 	return enc
 }
@@ -119,7 +123,7 @@ func (e *Encoder) EncodeRaw(namespace string, input []byte) ([]byte, error) {
 
 func getDecoder(r io.Reader) *msgpack.Decoder {
 	dec := msgpack.NewDecoder(r)
-	dec.UseJSONTag(true)
+	dec.SetCustomStructTag(jsonTag)
 
 	return dec
 }
