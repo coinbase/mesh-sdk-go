@@ -58,9 +58,9 @@ const (
 	// of block sizes to keep when adjusting concurrency.
 	defaultTrailingWindow = 1000
 
-	// defaultAdjustmentWindow is how frequently we will
+	// DefaultAdjustmentWindow is how frequently we will
 	// consider increasing our concurrency.
-	defaultAdjustmentWindow = 10
+	DefaultAdjustmentWindow = 5
 
 	// DefaultSizeMultiplier is used to pad our average size adjustment.
 	// This can be used to account for the overhead associated with processing
@@ -146,6 +146,7 @@ type Syncer struct {
 	goalConcurrency  int64
 	recentBlockSizes []int
 	lastAdjustment   int64
+	adjustmentWindow int64
 	concurrencyLock  sync.Mutex
 
 	// doneLoading is used to coordinate adding goroutines
