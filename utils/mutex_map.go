@@ -18,6 +18,10 @@ import (
 	"sync"
 )
 
+const (
+	unlockPriority = true
+)
+
 // MutexMap is a struct that allows for
 // acquiring a *PriorityMutex via a string identifier
 // or for acquiring a global mutex that blocks
@@ -26,8 +30,7 @@ import (
 // This is useful for coordinating concurrent, non-overlapping
 // writes in the storage package.
 type MutexMap struct {
-	entries     map[string]*mutexMapEntry
-	mutex       sync.Mutex
+	entries     *ShardedMap
 	globalMutex sync.RWMutex
 }
 
@@ -39,9 +42,9 @@ type mutexMapEntry struct {
 }
 
 // NewMutexMap returns a new *MutexMap.
-func NewMutexMap() *MutexMap {
+func NewMutexMap(shards int) *MutexMap {
 	return &MutexMap{
-		entries: map[string]*mutexMapEntry{},
+		entries: NewShardedMap(shards),
 	}
 }
 
@@ -70,20 +73,23 @@ func (m *MutexMap) Lock(identifier string, priority bool) {
 	// We acquire m when adding items to m.table
 	// so that we don't accidentally overwrite
 	// lock created by another goroutine.
-	m.mutex.Lock()
-	l, ok := m.entries[identifier]
+	data := m.entries.Lock(identifier, priority)
+	raw, ok := data[identifier]
+	var entry *mutexMapEntry
 	if !ok {
-		l = &mutexMapEntry{
+		entry = &mutexMapEntry{
 			lock: new(PriorityMutex),
 		}
-		m.entries[identifier] = l
+		data[identifier] = entry
+	} else {
+		entry = raw.(*mutexMapEntry)
 	}
-	l.count++
-	m.mutex.Unlock()
+	entry.count++
+	m.entries.Unlock(identifier)
 
 	// Once we have a m.globalMutex.RLock, it is
 	// safe to acquire an identifier lock.
-	l.lock.Lock(priority)
+	entry.lock.Lock(priority)
 }
 
 // Unlock releases a lock held for a particular identifier.
@@ -92,15 +98,15 @@ func (m *MutexMap) Unlock(identifier string) {
 	// exist by the time we unlock, otherwise
 	// it would not have been possible to get
 	// the lock to begin with.
-	m.mutex.Lock()
-	entry := m.entries[identifier]
+	data := m.entries.Lock(identifier, unlockPriority)
+	entry := data[identifier].(*mutexMapEntry)
 	if entry.count <= 1 { // this should never be < 0
-		delete(m.entries, identifier)
+		delete(data, identifier)
 	} else {
 		entry.count--
 		entry.lock.Unlock()
 	}
-	m.mutex.Unlock()
+	m.entries.Unlock(identifier)
 
 	// We release the globalMutex after unlocking
 	// the identifier lock, otherwise it would be possible
