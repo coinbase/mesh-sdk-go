@@ -606,15 +606,6 @@ func (b *BalanceStorage) UpdateBalances(
 	changes []*parser.BalanceChange,
 	parentBlock *types.BlockIdentifier,
 ) error {
-	// Get most recent historical balance
-	balances := b.getHistoricalBalances(
-		ctx,
-		dbTransaction,
-		changes,
-	)
-	if balances == nil {
-		return errors.New("could not fetch historical balances")
-	}
 	type AccountExists struct {
 		key []byte
 		value string
@@ -690,7 +681,7 @@ func (b *BalanceStorage) UpdateBalances(
 		if err != nil {
 			return err
 		}
-		if err := dbTransaction.Set(ctx, key, serialAcc, true); err != nil {
+		if err := dbTransaction.Set(ctx, existsAccount[i].key, serialAcc, true); err != nil {
 			return err
 		}
 		historicalKey := GetHistoricalBalanceKey(
@@ -698,7 +689,7 @@ func (b *BalanceStorage) UpdateBalances(
 			change.Currency,
 			change.Block.Index,
 		)
-		if err := dbTransaction.Set(ctx, historicalBalances[i].key, []byte(newVal), true); err != nil {
+		if err := dbTransaction.Set(ctx, existsAccount[i].key, []byte(newVal), true); err != nil {
 			return err
 		}
 	}
