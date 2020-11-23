@@ -689,7 +689,7 @@ func (b *BalanceStorage) UpdateBalances(
 			change.Currency,
 			change.Block.Index,
 		)
-		if err := dbTransaction.Set(ctx, existsAccount[i].key, []byte(newVal), true); err != nil {
+		if err := dbTransaction.Set(ctx, historicalKey, []byte(newVal), true); err != nil {
 			return err
 		}
 	}
