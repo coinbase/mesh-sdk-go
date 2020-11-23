@@ -213,6 +213,7 @@ type accountEntry struct {
 	Currency       *types.Currency          `json:"currency"`
 	LastReconciled *types.BlockIdentifier   `json:"last_reconciled"`
 	LastPruned     *int64                   `json:"last_pruned"`
+	Value		   string				    `json:"value"`
 }
 
 // SetBalance allows a client to set the balance of an account in a database
@@ -237,9 +238,10 @@ func (b *BalanceStorage) SetBalance(
 		return err
 	}
 
-	serialAcc, err := b.db.Encoder().Encode(historicalBalanceNamespace, accountEntry{
+	serialAcc, err := b.db.Encoder().Encode(accountNamespace, accountEntry{
 		Account:  account,
 		Currency: amount.Currency,
+		Value: amount.Value,
 	})
 	if err != nil {
 		return err
@@ -531,26 +533,18 @@ func (b *BalanceStorage) UpdateBalance(
 	// Get existing account key to determine if
 	// balance should be fetched.
 	key := GetAccountKey(change.Account, change.Currency)
-	exists, _, err := dbTransaction.Get(ctx, key)
+	exists, acc, err := dbTransaction.Get(ctx, key)
 	if err != nil {
 		return err
 	}
-	historicalKey := GetHistoricalBalanceKey(
-		change.Account,
-		change.Currency,
-		change.Block.Index,
-	)
+	var accEntry accountEntry
+	if err := b.db.Encoder().Decode(accountNamespace, acc, &accEntry, true); err != nil {
+		return fmt.Errorf("%w: unable to decode account entry", err)
+	}
+
 	var storedValue string
 	if exists {
-		existsHistoricalBalance, balance, err := dbTransaction.Get(ctx, historicalKey)
-		if err != nil {
-			return err
-		}
-		if !existsHistoricalBalance {
-			storedValue = "0"
-		} else {
-			storedValue = string(balance)
-		}
+		storageValue = accEntry.Value
 	}
 
 	// Find account existing value whether the account is new, has an
@@ -582,27 +576,34 @@ func (b *BalanceStorage) UpdateBalance(
 	}
 	if bigNewVal.Sign() == -1 {
 		return fmt.Errorf(
-			"%w %s:%+v for %+v at %+v",
+			"%w %s:%+v for %+v at %+v storedValue %s existingValue %s",
 			ErrNegativeBalance,
 			newVal,
 			change.Currency,
 			change.Account,
 			change.Block,
+			storedValue,
+			existingValue,
 		)
 	}
-	// Add account entry if doesn't exist
-	if !exists {
-		serialAcc, err := b.db.Encoder().Encode(accountNamespace, accountEntry{
-			Account:  change.Account,
-			Currency: change.Currency,
-		})
-		if err != nil {
-			return err
-		}
-		if err := dbTransaction.Set(ctx, key, serialAcc, true); err != nil {
-			return err
-		}
+	// update balance or create a new account if doesn't exist
+	serialAcc, err := b.db.Encoder().Encode(accountNamespace, accountEntry{
+		Account:  change.Account,
+		Currency: change.Currency,
+		Amount: newVal,
+	})
+	if err != nil {
+		return err
 	}
+	if err := dbTransaction.Set(ctx, key, serialAcc, true); err != nil {
+		return err
+	}
+	
+	historicalKey := GetHistoricalBalanceKey(
+		change.Account,
+		change.Currency,
+		change.Block.Index,
+	)
 	// Add a new historical record for the balance.
 	if err := dbTransaction.Set(ctx, historicalKey, []byte(newVal), true); err != nil {
 		return err
@@ -671,29 +672,7 @@ func (b *BalanceStorage) GetBalanceTransactional(
 		)
 	}
 
-	amount, err := b.getHistoricalBalance(
-		ctx,
-		dbTx,
-		account,
-		currency,
-		index,
-	)
-	// If account record exists but we don't
-	// find any records for the index, we assume
-	// the balance to be 0 (i.e. before any balance
-	// changes applied). If syncing starts after
-	// genesis, this behavior could cause issues.
-	if errors.Is(err, ErrAccountMissing) {
-		return &types.Amount{
-			Value:    "0",
-			Currency: currency,
-		}, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	return amount, nil
+	return accEntry.Value, nil
 }
 
 func (b *BalanceStorage) fetchAndSetBalance(
