@@ -20,7 +20,7 @@ import (
 	"path"
 	"testing"
 
-	"github.com/sidhujag/rosetta-sdk-go/utils"
+	"github.com/coinbase/rosetta-sdk-go/utils"
 
 	"github.com/lucasjones/reggen"
 	"github.com/stretchr/testify/assert"

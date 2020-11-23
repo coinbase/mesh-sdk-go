@@ -16,8 +16,8 @@ package storage
 
 import (
 	"context"
-	"github.com/sidhujag/rosetta-sdk-go/types"
-	"github.com/sidhujag/rosetta-sdk-go/parser"
+	"github.com/coinbase/rosetta-sdk-go/types"
+	"github.com/coinbase/rosetta-sdk-go/parser"
 )
 
 // Database is an interface that provides transactional

@@ -1,6 +1,6 @@
 # Client
 
-[![GoDoc](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=shield)](https://pkg.go.dev/github.com/sidhujag/rosetta-sdk-go/client?tab=doc)
+[![GoDoc](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=shield)](https://pkg.go.dev/github.com/coinbase/rosetta-sdk-go/client?tab=doc)
 
 The Client package reduces the work required to communicate with a Rosetta server.
 
@@ -10,7 +10,7 @@ are correct, check out the [Fetcher](/fetcher).
 ## Installation
 
 ```shell
-go get github.com/sidhujag/rosetta-sdk-go/client
+go get github.com/coinbase/rosetta-sdk-go/client
 ```
 
 ## Examples

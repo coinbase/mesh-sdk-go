@@ -1,4 +1,4 @@
-module github.com/sidhujag/rosetta-sdk-go
+module github.com/coinbase/rosetta-sdk-go
 
 go 1.13
 

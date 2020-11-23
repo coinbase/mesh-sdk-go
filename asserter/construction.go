@@ -17,7 +17,7 @@ package asserter
 import (
 	"fmt"
 
-	"github.com/sidhujag/rosetta-sdk-go/types"
+	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
 // ConstructionPreprocessResponse returns an error if

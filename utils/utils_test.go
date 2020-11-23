@@ -23,10 +23,10 @@ import (
 	"path"
 	"testing"
 
-	"github.com/sidhujag/rosetta-sdk-go/asserter"
-	"github.com/sidhujag/rosetta-sdk-go/fetcher"
-	mocks "github.com/sidhujag/rosetta-sdk-go/mocks/utils"
-	"github.com/sidhujag/rosetta-sdk-go/types"
+	"github.com/coinbase/rosetta-sdk-go/asserter"
+	"github.com/coinbase/rosetta-sdk-go/fetcher"
+	mocks "github.com/coinbase/rosetta-sdk-go/mocks/utils"
+	"github.com/coinbase/rosetta-sdk-go/types"
 
 	"github.com/stretchr/testify/assert"
 )

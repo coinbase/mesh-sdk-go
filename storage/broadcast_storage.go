@@ -20,7 +20,7 @@ import (
 	"log"
 	"sync"
 
-	"github.com/sidhujag/rosetta-sdk-go/types"
+	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
 var _ BlockWorker = (*BroadcastStorage)(nil)

@@ -21,10 +21,10 @@ import (
 	"testing"
 	"time"
 
-	mocks "github.com/sidhujag/rosetta-sdk-go/mocks/reconciler"
-	mockStorage "github.com/sidhujag/rosetta-sdk-go/mocks/storage"
-	"github.com/sidhujag/rosetta-sdk-go/parser"
-	"github.com/sidhujag/rosetta-sdk-go/types"
+	mocks "github.com/coinbase/rosetta-sdk-go/mocks/reconciler"
+	mockStorage "github.com/coinbase/rosetta-sdk-go/mocks/storage"
+	"github.com/coinbase/rosetta-sdk-go/parser"
+	"github.com/coinbase/rosetta-sdk-go/types"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"

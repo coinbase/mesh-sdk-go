@@ -18,12 +18,12 @@ import (
 	"context"
 	"time"
 
-	"github.com/sidhujag/rosetta-sdk-go/constructor/job"
-	"github.com/sidhujag/rosetta-sdk-go/constructor/worker"
-	"github.com/sidhujag/rosetta-sdk-go/keys"
-	"github.com/sidhujag/rosetta-sdk-go/parser"
-	"github.com/sidhujag/rosetta-sdk-go/storage"
-	"github.com/sidhujag/rosetta-sdk-go/types"
+	"github.com/coinbase/rosetta-sdk-go/constructor/job"
+	"github.com/coinbase/rosetta-sdk-go/constructor/worker"
+	"github.com/coinbase/rosetta-sdk-go/keys"
+	"github.com/coinbase/rosetta-sdk-go/parser"
+	"github.com/coinbase/rosetta-sdk-go/storage"
+	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
 const (

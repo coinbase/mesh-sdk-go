@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/sidhujag/rosetta-sdk-go/types"
+	"github.com/coinbase/rosetta-sdk-go/types"
 
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"

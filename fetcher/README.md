@@ -1,6 +1,6 @@
 # Fetcher
 
-[![GoDoc](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=shield)](https://pkg.go.dev/github.com/sidhujag/rosetta-sdk-go/fetcher?tab=doc)
+[![GoDoc](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=shield)](https://pkg.go.dev/github.com/coinbase/rosetta-sdk-go/fetcher?tab=doc)
 
 The Fetcher package provides a simplified client interface to communicate
 with a Rosetta server. It also provides automatic retries and concurrent block
@@ -12,7 +12,7 @@ check out the [Client](/client).
 ## Installation
 
 ```shell
-go get github.com/sidhujag/rosetta-sdk-go/fetcher
+go get github.com/coinbase/rosetta-sdk-go/fetcher
 ```
 
 ## Create a Fetcher

@@ -17,7 +17,7 @@ package parser
 import (
 	"math/big"
 
-	"github.com/sidhujag/rosetta-sdk-go/types"
+	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
 // FindExemptions returns all matching *types.BalanceExemption

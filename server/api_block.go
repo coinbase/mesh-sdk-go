@@ -21,8 +21,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/sidhujag/rosetta-sdk-go/asserter"
-	"github.com/sidhujag/rosetta-sdk-go/types"
+	"github.com/coinbase/rosetta-sdk-go/asserter"
+	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
 // A BlockAPIController binds http requests to an api service and writes the service results to the

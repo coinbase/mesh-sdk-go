@@ -20,9 +20,9 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/sidhujag/rosetta-sdk-go/keys"
-	"github.com/sidhujag/rosetta-sdk-go/types"
-	"github.com/sidhujag/rosetta-sdk-go/utils"
+	"github.com/coinbase/rosetta-sdk-go/keys"
+	"github.com/coinbase/rosetta-sdk-go/types"
+	"github.com/coinbase/rosetta-sdk-go/utils"
 )
 
 // WARNING: KEY STORAGE USING THIS PACKAGE IS NOT SECURE!!!! ONLY USE

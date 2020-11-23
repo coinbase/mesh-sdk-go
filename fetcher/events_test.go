@@ -23,7 +23,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sidhujag/rosetta-sdk-go/types"
+	"github.com/coinbase/rosetta-sdk-go/types"
 
 	"github.com/stretchr/testify/assert"
 )

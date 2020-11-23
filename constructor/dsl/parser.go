@@ -23,7 +23,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/sidhujag/rosetta-sdk-go/constructor/job"
+	"github.com/coinbase/rosetta-sdk-go/constructor/job"
 )
 
 const (

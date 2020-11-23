@@ -22,7 +22,7 @@ import (
 	_ioutil "io/ioutil"
 	_nethttp "net/http"
 
-	"github.com/sidhujag/rosetta-sdk-go/types"
+	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
 // Linger please

@@ -18,9 +18,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/sidhujag/rosetta-sdk-go/asserter"
+	"github.com/coinbase/rosetta-sdk-go/asserter"
 
-	"github.com/sidhujag/rosetta-sdk-go/types"
+	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
 // ConstructionCombine creates a network-specific transaction from an unsigned

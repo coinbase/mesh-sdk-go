@@ -18,8 +18,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/sidhujag/rosetta-sdk-go/asserter"
-	"github.com/sidhujag/rosetta-sdk-go/types"
+	"github.com/coinbase/rosetta-sdk-go/asserter"
+	"github.com/coinbase/rosetta-sdk-go/types"
 
 	"golang.org/x/sync/errgroup"
 )

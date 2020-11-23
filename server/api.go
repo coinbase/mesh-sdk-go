@@ -20,7 +20,7 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/sidhujag/rosetta-sdk-go/types"
+	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
 // AccountAPIRouter defines the required methods for binding the api requests to a responses for the

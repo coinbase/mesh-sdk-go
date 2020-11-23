@@ -19,7 +19,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sidhujag/rosetta-sdk-go/types"
+	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/stretchr/testify/assert"
 )
 

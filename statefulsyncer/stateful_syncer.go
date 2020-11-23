@@ -22,10 +22,10 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/sidhujag/rosetta-sdk-go/fetcher"
-	"github.com/sidhujag/rosetta-sdk-go/storage"
-	"github.com/sidhujag/rosetta-sdk-go/syncer"
-	"github.com/sidhujag/rosetta-sdk-go/types"
+	"github.com/coinbase/rosetta-sdk-go/fetcher"
+	"github.com/coinbase/rosetta-sdk-go/storage"
+	"github.com/coinbase/rosetta-sdk-go/syncer"
+	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
 var _ syncer.Handler = (*StatefulSyncer)(nil)

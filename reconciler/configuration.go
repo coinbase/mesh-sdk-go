@@ -17,7 +17,7 @@ package reconciler
 import (
 	"fmt"
 
-	"github.com/sidhujag/rosetta-sdk-go/types"
+	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
 // Option is used to overwrite default values in

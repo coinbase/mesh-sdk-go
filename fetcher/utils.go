@@ -22,8 +22,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sidhujag/rosetta-sdk-go/client"
-	"github.com/sidhujag/rosetta-sdk-go/types"
+	"github.com/coinbase/rosetta-sdk-go/client"
+	"github.com/coinbase/rosetta-sdk-go/types"
 
 	"github.com/cenkalti/backoff"
 )
