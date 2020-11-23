@@ -23,51 +23,65 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-func TestPriorityMutex(t *testing.T) {
-	arr := []bool{}
-	expected := make([]bool, 60)
-	l := new(PriorityMutex)
+func TestMutexMap(t *testing.T) {
+	arr := []string{}
+	m := NewMutexMap()
 	g, _ := errgroup.WithContext(context.Background())
 
 	// Lock while adding all locks
-	l.Lock(true)
+	m.GLock()
 
-	// Add a bunch of low prio items
-	for i := 0; i < 50; i++ {
-		expected[i+10] = false
-		g.Go(func() error {
-			l.Lock(false)
-			arr = append(arr, false)
-			l.Unlock()
-			return nil
-		})
-	}
+	// Add another GLock
+	g.Go(func() error {
+		m.GLock()
+		arr = append(arr, "global-b")
+		m.GUnlock()
+		return nil
+	})
 
-	// Add a few high prio items
-	for i := 0; i < 10; i++ {
-		expected[i] = true
-		g.Go(func() error {
-			l.Lock(true)
-			arr = append(arr, true)
-			l.Unlock()
-			return nil
-		})
-	}
+	// To test locking, we use channels
+	// that will cause deadlock if not executed
+	// concurrently.
+	a := make(chan struct{})
+	b := make(chan struct{})
 
-	// Wait for all goroutines to ask for lock
+	g.Go(func() error {
+		m.Lock("a", false)
+		assert.Equal(t, m.entries["a"].count, 1)
+		<-a
+		arr = append(arr, "a")
+		close(b)
+		m.Unlock("a")
+		return nil
+	})
+
+	g.Go(func() error {
+		m.Lock("b", false)
+		assert.Equal(t, m.entries["b"].count, 1)
+		close(a)
+		<-b
+		arr = append(arr, "b")
+		m.Unlock("b")
+		return nil
+	})
+
 	time.Sleep(1 * time.Second)
 
 	// Ensure number of expected locks is correct
-	assert.Len(t, l.high, 10)
-	assert.Len(t, l.low, 50)
-
-	l.Unlock()
+	assert.Len(t, m.entries, 0)
+	arr = append(arr, "global-a")
+	m.GUnlock()
 	assert.NoError(t, g.Wait())
 
 	// Check results array to ensure all of the high priority items processed first,
 	// followed by all of the low priority items.
-	assert.Equal(t, expected, arr)
+	assert.Equal(t, []string{
+		"global-a",
+		"a",
+		"b",
+		"global-b", // must wait until all other locks complete
+	}, arr)
 
 	// Ensure lock is no longer occupied
-	assert.False(t, l.lock)
+	assert.Len(t, m.entries, 0)
 }
