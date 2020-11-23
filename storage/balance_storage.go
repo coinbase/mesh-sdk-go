@@ -544,7 +544,7 @@ func (b *BalanceStorage) UpdateBalance(
 
 	var storedValue string
 	if exists {
-		storageValue = accEntry.Value
+		storedValue = accEntry.Value
 	}
 
 	// Find account existing value whether the account is new, has an
@@ -590,7 +590,7 @@ func (b *BalanceStorage) UpdateBalance(
 	serialAcc, err := b.db.Encoder().Encode(accountNamespace, accountEntry{
 		Account:  change.Account,
 		Currency: change.Currency,
-		Amount: newVal,
+		Value: newVal,
 	})
 	if err != nil {
 		return err
@@ -672,7 +672,10 @@ func (b *BalanceStorage) GetBalanceTransactional(
 		)
 	}
 
-	return accEntry.Value, nil
+	return &types.Amount{
+		Value:    accEntry.Value,
+		Currency: currency,
+	}, nil
 }
 
 func (b *BalanceStorage) fetchAndSetBalance(
