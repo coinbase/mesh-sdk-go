@@ -774,10 +774,29 @@ func (b *BalanceStorage) GetBalanceTransactional(
 		)
 	}
 
-	return &types.Amount{
-		Value:    accEntry.Value,
-		Currency: currency,
-	}, nil
+	amount, err := b.getHistoricalBalance(
+		ctx,
+		dbTx,
+		account,
+		currency,
+		index,
+	)
+	// If account record exists but we don't
+	// find any records for the index, we assume
+	// the balance to be 0 (i.e. before any balance
+	// changes applied). If syncing starts after
+	// genesis, this behavior could cause issues.
+	if errors.Is(err, ErrAccountMissing) {
+		return &types.Amount{
+			Value:    "0",
+			Currency: currency,
+		}, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return amount, nil
 }
 
 func (b *BalanceStorage) fetchAndSetBalance(
