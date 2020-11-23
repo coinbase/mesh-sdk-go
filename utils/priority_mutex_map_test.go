@@ -34,7 +34,7 @@ func TestMutexMap(t *testing.T) {
 	// Add another GLock
 	g.Go(func() error {
 		m.GLock()
-		arr = append(arr, "global")
+		arr = append(arr, "global-b")
 		m.GUnlock()
 		return nil
 	})
@@ -69,17 +69,17 @@ func TestMutexMap(t *testing.T) {
 
 	// Ensure number of expected locks is correct
 	assert.Len(t, m.entries, 0)
-	arr = append(arr, "global")
+	arr = append(arr, "global-a")
 	m.GUnlock()
 	assert.NoError(t, g.Wait())
 
 	// Check results array to ensure all of the high priority items processed first,
 	// followed by all of the low priority items.
 	assert.Equal(t, []string{
-		"global",
+		"global-a",
 		"a",
 		"b",
-		"global", // must wait until all other locks complete
+		"global-b", // must wait until all other locks complete
 	}, arr)
 
 	// Ensure lock is no longer occupied
