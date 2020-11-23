@@ -72,7 +72,11 @@ func TestMutexMap(t *testing.T) {
 	// Ensure number of expected locks is correct
 	assert.Equal(
 		t,
-		len(m.entries.shards[m.entries.shardIndex("a")].entries)+len(m.entries.shards[m.entries.shardIndex("b")].entries),
+		len(
+			m.entries.shards[m.entries.shardIndex("a")].entries,
+		)+len(
+			m.entries.shards[m.entries.shardIndex("b")].entries,
+		),
 		0,
 	)
 	arr = append(arr, "global-a")
@@ -91,7 +95,11 @@ func TestMutexMap(t *testing.T) {
 	// Ensure lock is no longer occupied
 	assert.Equal(
 		t,
-		len(m.entries.shards[m.entries.shardIndex("a")].entries)+len(m.entries.shards[m.entries.shardIndex("b")].entries),
+		len(
+			m.entries.shards[m.entries.shardIndex("a")].entries,
+		)+len(
+			m.entries.shards[m.entries.shardIndex("b")].entries,
+		),
 		0,
 	)
 }
