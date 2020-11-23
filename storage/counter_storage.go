@@ -18,6 +18,8 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+
+	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
 const (
@@ -75,6 +77,8 @@ const (
 	// counterNamespace is preprended to any counter.
 	counterNamespace = "counter"
 )
+
+var _ BlockWorker = (*CounterStorage)(nil)
 
 // CounterStorage implements counter-specific storage methods
 // on top of a Database and DatabaseTransaction interface.
@@ -161,4 +165,57 @@ func (c *CounterStorage) Get(ctx context.Context, counter string) (*big.Int, err
 	defer transaction.Discard(ctx)
 
 	return transactionalGet(ctx, counter, transaction)
+}
+
+// AddingBlock is called by BlockStorage when adding a block.
+func (c *CounterStorage) AddingBlock(
+	ctx context.Context,
+	block *types.Block,
+	transaction DatabaseTransaction,
+) (CommitWorker, error) {
+	_, err := c.UpdateTransactional(
+		ctx,
+		transaction,
+		BlockCounter,
+		big.NewInt(1),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = c.UpdateTransactional(
+		ctx,
+		transaction,
+		TransactionCounter,
+		big.NewInt(int64(len(block.Transactions))),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	opCount := int64(0)
+	for _, txn := range block.Transactions {
+		opCount += int64(len(txn.Operations))
+	}
+	_, err = c.UpdateTransactional(
+		ctx,
+		transaction,
+		OperationCounter,
+		big.NewInt(opCount),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+// RemovingBlock is called by BlockStorage when removing a block.
+func (c *CounterStorage) RemovingBlock(
+	ctx context.Context,
+	block *types.Block,
+	transaction DatabaseTransaction,
+) (CommitWorker, error) {
+	_, err := c.UpdateTransactional(ctx, transaction, OrphanCounter, big.NewInt(1))
+	return nil, err
 }
