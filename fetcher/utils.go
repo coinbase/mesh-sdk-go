@@ -37,6 +37,11 @@ const (
 	// clientTimeout is returned when a request exceeds the set
 	// HTTP timeout setting.
 	clientTimeout = "Client.Timeout exceeded"
+
+	// serverClosedIdleConnection is returned when the client
+	// attempts to make a request on a connection that was closed
+	// by the server.
+	serverClosedIdleConnection = "server closed idle connection"
 )
 
 // Backoff wraps backoff.BackOff so we can
@@ -66,6 +71,7 @@ func transientError(err error) bool {
 	if errors.Is(err, client.ErrRetriable) ||
 		strings.Contains(err.Error(), io.EOF.Error()) ||
 		strings.Contains(err.Error(), connectionResetByPeer) ||
+		strings.Contains(err.Error(), serverClosedIdleConnection) ||
 		strings.Contains(err.Error(), clientTimeout) {
 		return true
 	}
