@@ -12,56 +12,48 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package syncer
+package statefulsyncer
 
 import (
-	"github.com/coinbase/rosetta-sdk-go/types"
+	"time"
 )
 
 // Option is used to overwrite default values in
-// Syncer construction. Any Option not provided
+// StatefulSyncer construction. Any Option not provided
 // falls back to the default value.
-type Option func(s *Syncer)
+type Option func(s *StatefulSyncer)
 
 // WithCacheSize overrides the default cache size.
 func WithCacheSize(cacheSize int) Option {
-	return func(s *Syncer) {
+	return func(s *StatefulSyncer) {
 		s.cacheSize = cacheSize
-	}
-}
-
-// WithSizeMultiplier overrides the default size multiplier.
-func WithSizeMultiplier(sizeMultiplier float64) Option {
-	return func(s *Syncer) {
-		s.sizeMultiplier = sizeMultiplier
-	}
-}
-
-// WithPastBlocks provides the syncer with a cache
-// of previously processed blocks to handle reorgs.
-func WithPastBlocks(blocks []*types.BlockIdentifier) Option {
-	return func(s *Syncer) {
-		s.pastBlocks = blocks
 	}
 }
 
 // WithPastBlockLimit overrides the default past block limit
 func WithPastBlockLimit(blocks int) Option {
-	return func(s *Syncer) {
+	return func(s *StatefulSyncer) {
 		s.pastBlockLimit = blocks
 	}
 }
 
 // WithMaxConcurrency overrides the default max concurrency.
 func WithMaxConcurrency(concurrency int64) Option {
-	return func(s *Syncer) {
+	return func(s *StatefulSyncer) {
 		s.maxConcurrency = concurrency
 	}
 }
 
 // WithAdjustmentWindow overrides the default adjustment window.
 func WithAdjustmentWindow(adjustmentWindow int64) Option {
-	return func(s *Syncer) {
+	return func(s *StatefulSyncer) {
 		s.adjustmentWindow = adjustmentWindow
+	}
+}
+
+// WithPruneSleepTime overrides the default prune sleep time.
+func WithPruneSleepTime(sleepTime int) Option {
+	return func(s *StatefulSyncer) {
+		s.pruneSleepTime = time.Duration(sleepTime) * time.Second
 	}
 }

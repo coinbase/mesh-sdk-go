@@ -37,16 +37,17 @@ func New(
 	options ...Option,
 ) *Syncer {
 	s := &Syncer{
-		network:        network,
-		helper:         helper,
-		handler:        handler,
-		concurrency:    DefaultConcurrency,
-		cacheSize:      DefaultCacheSize,
-		maxConcurrency: DefaultMaxConcurrency,
-		sizeMultiplier: DefaultSizeMultiplier,
-		cancel:         cancel,
-		pastBlocks:     []*types.BlockIdentifier{},
-		pastBlockLimit: DefaultPastBlockLimit,
+		network:          network,
+		helper:           helper,
+		handler:          handler,
+		concurrency:      DefaultConcurrency,
+		cacheSize:        DefaultCacheSize,
+		maxConcurrency:   DefaultMaxConcurrency,
+		sizeMultiplier:   DefaultSizeMultiplier,
+		cancel:           cancel,
+		pastBlocks:       []*types.BlockIdentifier{},
+		pastBlockLimit:   DefaultPastBlockLimit,
+		adjustmentWindow: DefaultAdjustmentWindow,
 	}
 
 	// Override defaults with any provided options
@@ -408,7 +409,7 @@ func (s *Syncer) adjustWorkers() bool {
 	shouldCreate := false
 	if estimatedMaxCache+max < float64(s.cacheSize) &&
 		s.concurrency < s.maxConcurrency &&
-		s.lastAdjustment > defaultAdjustmentWindow {
+		s.lastAdjustment > s.adjustmentWindow {
 		s.goalConcurrency++
 		s.concurrency++
 		s.lastAdjustment = 0

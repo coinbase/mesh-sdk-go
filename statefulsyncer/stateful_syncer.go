@@ -19,22 +19,22 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"math/big"
 	"time"
 
 	"github.com/coinbase/rosetta-sdk-go/fetcher"
 	"github.com/coinbase/rosetta-sdk-go/storage"
 	"github.com/coinbase/rosetta-sdk-go/syncer"
 	"github.com/coinbase/rosetta-sdk-go/types"
+	"github.com/coinbase/rosetta-sdk-go/utils"
 )
 
 var _ syncer.Handler = (*StatefulSyncer)(nil)
 var _ syncer.Helper = (*StatefulSyncer)(nil)
 
 const (
-	// pruneSleepTime is how long we sleep between
+	// DefaultPruneSleepTime is how long we sleep between
 	// pruning attempts.
-	pruneSleepTime = 10 * time.Second
+	DefaultPruneSleepTime = 30 * time.Minute
 
 	// pruneBuffer is the cushion we apply to pastBlockLimit
 	// when pruning.
@@ -54,9 +54,12 @@ type StatefulSyncer struct {
 	counterStorage *storage.CounterStorage
 	logger         Logger
 	workers        []storage.BlockWorker
-	cacheSize      int
-	maxConcurrency int64
-	pastBlockLimit int
+
+	cacheSize        int
+	maxConcurrency   int64
+	pastBlockLimit   int
+	adjustmentWindow int64
+	pruneSleepTime   time.Duration
 }
 
 // Logger is used by the statefulsyncer to
@@ -87,11 +90,9 @@ func New(
 	logger Logger,
 	cancel context.CancelFunc,
 	workers []storage.BlockWorker,
-	cacheSize int,
-	maxConcurrency int64,
-	pastBlockLimit int,
+	options ...Option,
 ) *StatefulSyncer {
-	return &StatefulSyncer{
+	s := &StatefulSyncer{
 		network:        network,
 		fetcher:        fetcher,
 		cancel:         cancel,
@@ -99,10 +100,21 @@ func New(
 		counterStorage: counterStorage,
 		workers:        workers,
 		logger:         logger,
-		cacheSize:      cacheSize,
-		maxConcurrency: maxConcurrency,
-		pastBlockLimit: pastBlockLimit,
+
+		// Optional args
+		cacheSize:        syncer.DefaultCacheSize,
+		maxConcurrency:   syncer.DefaultMaxConcurrency,
+		pastBlockLimit:   syncer.DefaultPastBlockLimit,
+		adjustmentWindow: syncer.DefaultAdjustmentWindow,
+		pruneSleepTime:   DefaultPruneSleepTime,
 	}
+
+	// Override defaults with any provided options
+	for _, opt := range options {
+		opt(s)
+	}
+
+	return s
 }
 
 // Sync starts a new sync run after properly initializing blockStorage.
@@ -135,6 +147,7 @@ func (s *StatefulSyncer) Sync(ctx context.Context, startIndex int64, endIndex in
 		syncer.WithPastBlocks(pastBlocks),
 		syncer.WithCacheSize(s.cacheSize),
 		syncer.WithMaxConcurrency(s.maxConcurrency),
+		syncer.WithAdjustmentWindow(s.adjustmentWindow),
 	)
 
 	return syncer.Sync(ctx, startIndex, endIndex)
@@ -148,10 +161,16 @@ func (s *StatefulSyncer) Sync(ctx context.Context, startIndex int64, endIndex in
 // pruning strategies during syncing.
 func (s *StatefulSyncer) Prune(ctx context.Context, helper PruneHelper) error {
 	for ctx.Err() == nil {
+		// We don't use a timer pattern because s.pruneSleepTime is defined
+		// as the time between pruning runs. Using a timer would only guarantee
+		// that the difference between starts of each pruning run are s.pruneSleepTime.
+		if err := utils.ContextSleep(ctx, s.pruneSleepTime); err != nil {
+			return err
+		}
+
 		headBlock, err := s.blockStorage.GetHeadBlockIdentifier(ctx)
 		if headBlock == nil && errors.Is(err, storage.ErrHeadBlockNotFound) {
 			// this will occur when we are waiting for the first block to be synced
-			time.Sleep(pruneSleepTime)
 			continue
 		}
 		if err != nil {
@@ -161,7 +180,6 @@ func (s *StatefulSyncer) Prune(ctx context.Context, helper PruneHelper) error {
 		oldestIndex, err := s.blockStorage.GetOldestBlockIndex(ctx)
 		if oldestIndex == -1 && errors.Is(err, storage.ErrOldestIndexMissing) {
 			// this will occur when we have yet to store the oldest index
-			time.Sleep(pruneSleepTime)
 			continue
 		}
 		if err != nil {
@@ -174,7 +192,6 @@ func (s *StatefulSyncer) Prune(ctx context.Context, helper PruneHelper) error {
 		}
 
 		if pruneableIndex < oldestIndex {
-			time.Sleep(pruneSleepTime)
 			continue
 		}
 
@@ -196,8 +213,6 @@ func (s *StatefulSyncer) Prune(ctx context.Context, helper PruneHelper) error {
 
 			log.Println(pruneMessage)
 		}
-
-		time.Sleep(pruneSleepTime)
 	}
 
 	return ctx.Err()
@@ -215,23 +230,7 @@ func (s *StatefulSyncer) BlockAdded(ctx context.Context, block *types.Block) err
 		)
 	}
 
-	if err := s.logger.AddBlockStream(ctx, block); err != nil {
-		return nil
-	}
-
-	// Update Counters
-	_, _ = s.counterStorage.Update(ctx, storage.BlockCounter, big.NewInt(1))
-	_, _ = s.counterStorage.Update(
-		ctx,
-		storage.TransactionCounter,
-		big.NewInt(int64(len(block.Transactions))),
-	)
-	opCount := int64(0)
-	for _, txn := range block.Transactions {
-		opCount += int64(len(txn.Operations))
-	}
-	_, _ = s.counterStorage.Update(ctx, storage.OperationCounter, big.NewInt(opCount))
-
+	_ = s.logger.AddBlockStream(ctx, block)
 	return nil
 }
 
@@ -250,14 +249,8 @@ func (s *StatefulSyncer) BlockRemoved(
 		)
 	}
 
-	if err := s.logger.RemoveBlockStream(ctx, blockIdentifier); err != nil {
-		return nil
-	}
-
-	// Update Counters
-	_, _ = s.counterStorage.Update(ctx, storage.OrphanCounter, big.NewInt(1))
-
-	return err
+	_ = s.logger.RemoveBlockStream(ctx, blockIdentifier)
+	return nil
 }
 
 // NetworkStatus is called by the syncer to get the current
