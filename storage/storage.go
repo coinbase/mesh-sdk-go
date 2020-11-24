@@ -21,7 +21,10 @@ import (
 // Database is an interface that provides transactional
 // access to a KV store.
 type Database interface {
-	NewDatabaseTransaction(context.Context, bool) DatabaseTransaction
+	GTransaction(context.Context) DatabaseTransaction
+	RTransaction(context.Context) DatabaseTransaction
+	WTransaction(ctx context.Context, identifier string, priority bool) DatabaseTransaction
+
 	Close(context.Context) error
 	Encoder() *Encoder
 }

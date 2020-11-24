@@ -80,7 +80,7 @@ type BadgerStorage struct {
 	encoder  *Encoder
 	compress bool
 
-	writer sync.Mutex
+	writer *utils.MutexMap
 
 	// Track the closed status to ensure we exit garbage
 	// collection when the db closes.
@@ -292,7 +292,8 @@ type BadgerTransaction struct {
 	txn    *badger.Txn
 	rwLock sync.RWMutex
 
-	holdsLock bool
+	holdGlobal bool
+	identifier string
 
 	// We MUST wait to reclaim any memory until after
 	// the transaction is committed or discarded.
@@ -305,28 +306,55 @@ type BadgerTransaction struct {
 	buffersToReclaim []*bytes.Buffer
 }
 
-// NewDatabaseTransaction creates a new BadgerTransaction.
-// If the transaction will not modify any values, pass
-// in false for the write parameter (this allows for
-// optimization within the Badger DB).
-func (b *BadgerStorage) NewDatabaseTransaction(
+// GTransaction creates a new exclusive write BadgerTransaction.
+func (b *BadgerStorage) GTransaction(
 	ctx context.Context,
-	write bool,
 ) DatabaseTransaction {
-	if write {
-		// To avoid database commit conflicts,
-		// we need to lock the writer.
-		//
-		// Because we process blocks serially,
-		// this doesn't lead to much lock contention.
-		b.writer.Lock()
-	}
+	b.writer.GLock()
 
 	return &BadgerTransaction{
 		db:               b,
-		txn:              b.db.NewTransaction(write),
-		holdsLock:        write,
+		txn:              b.db.NewTransaction(true),
+		holdGlobal:       true,
 		buffersToReclaim: []*bytes.Buffer{},
+	}
+}
+
+// RTransaction creates a new read BadgerTransaction.
+func (b *BadgerStorage) RTransaction(
+	ctx context.Context,
+) DatabaseTransaction {
+	return &BadgerTransaction{
+		db:               b,
+		txn:              b.db.NewTransaction(false),
+		buffersToReclaim: []*bytes.Buffer{},
+	}
+}
+
+// WTransaction creates a new write BadgerTransaction.
+func (b *BadgerStorage) WTransaction(
+	ctx context.Context,
+	identifier string,
+	priority bool,
+) DatabaseTransaction {
+	b.writer.Lock(identifier, priority)
+
+	return &BadgerTransaction{
+		db:               b,
+		txn:              b.db.NewTransaction(true),
+		identifier:       identifier,
+		buffersToReclaim: []*bytes.Buffer{},
+	}
+}
+
+func (b *BadgerTransaction) releaseLocks() {
+	if b.holdGlobal {
+		b.holdGlobal = false
+		b.db.writer.GUnlock()
+	}
+	if len(b.identifier) > 0 {
+		b.db.writer.Unlock(b.identifier)
+		b.identifier = ""
 	}
 }
 
@@ -346,10 +374,7 @@ func (b *BadgerTransaction) Commit(context.Context) error {
 
 	// It is possible that we may accidentally call commit twice.
 	// In this case, we only unlock if we hold the lock to avoid a panic.
-	if b.holdsLock {
-		b.holdsLock = false
-		b.db.writer.Unlock()
-	}
+	b.releaseLocks()
 
 	if err != nil {
 		return fmt.Errorf("%w: %v", ErrCommitFailed, err)
@@ -373,9 +398,7 @@ func (b *BadgerTransaction) Discard(context.Context) {
 	b.buffersToReclaim = nil
 	b.reclaimLock.Unlock()
 
-	if b.holdsLock {
-		b.db.writer.Unlock()
-	}
+	b.releaseLocks()
 }
 
 // Set changes the value of the key to the value within a transaction.
@@ -548,7 +571,7 @@ func recompress(
 	onDiskSize := float64(0)
 	newSize := float64(0)
 
-	txn := badgerDb.NewDatabaseTransaction(ctx, false)
+	txn := badgerDb.RTransaction(ctx)
 	defer txn.Discard(ctx)
 	_, err := txn.Scan(
 		ctx,
@@ -622,7 +645,7 @@ func BadgerTrain(
 	totalUncompressedSize := float64(0)
 	totalDiskSize := float64(0)
 	entriesSeen := 0
-	txn := badgerDb.NewDatabaseTransaction(ctx, false)
+	txn := badgerDb.RTransaction(ctx)
 	defer txn.Discard(ctx)
 	_, err = txn.Scan(
 		ctx,
