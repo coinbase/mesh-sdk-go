@@ -144,7 +144,7 @@ func (c *CounterStorage) Update(
 	counter string,
 	amount *big.Int,
 ) (*big.Int, error) {
-	dbTx := c.db.NewDatabaseTransaction(ctx, true)
+	dbTx := c.db.Transaction(ctx)
 	defer dbTx.Discard(ctx)
 
 	newVal, err := c.UpdateTransactional(ctx, dbTx, counter, amount)
@@ -161,7 +161,7 @@ func (c *CounterStorage) Update(
 
 // Get returns the current value of a counter.
 func (c *CounterStorage) Get(ctx context.Context, counter string) (*big.Int, error) {
-	transaction := c.db.NewDatabaseTransaction(ctx, false)
+	transaction := c.db.ReadTransaction(ctx)
 	defer transaction.Discard(ctx)
 
 	return transactionalGet(ctx, counter, transaction)

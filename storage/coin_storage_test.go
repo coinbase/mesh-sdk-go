@@ -495,7 +495,7 @@ func TestCoinStorage(t *testing.T) {
 	})
 
 	t.Run("add block", func(t *testing.T) {
-		tx := c.db.NewDatabaseTransaction(ctx, true)
+		tx := c.db.Transaction(ctx)
 		commitFunc, err := c.AddingBlock(ctx, coinBlock, tx)
 		assert.Nil(t, commitFunc)
 		assert.NoError(t, err)
@@ -508,7 +508,7 @@ func TestCoinStorage(t *testing.T) {
 	})
 
 	t.Run("add duplicate coin", func(t *testing.T) {
-		tx := c.db.NewDatabaseTransaction(ctx, true)
+		tx := c.db.Transaction(ctx)
 		commitFunc, err := c.AddingBlock(ctx, coinBlock, tx)
 		assert.Nil(t, commitFunc)
 		assert.Error(t, err)
@@ -521,7 +521,7 @@ func TestCoinStorage(t *testing.T) {
 	})
 
 	t.Run("add duplicate coin in same block", func(t *testing.T) {
-		tx := c.db.NewDatabaseTransaction(ctx, true)
+		tx := c.db.Transaction(ctx)
 		commitFunc, err := c.AddingBlock(ctx, coinBlockRepeat, tx)
 		assert.Nil(t, commitFunc)
 		assert.Error(t, err)
@@ -534,7 +534,7 @@ func TestCoinStorage(t *testing.T) {
 	})
 
 	t.Run("remove block", func(t *testing.T) {
-		tx := c.db.NewDatabaseTransaction(ctx, true)
+		tx := c.db.Transaction(ctx)
 		commitFunc, err := c.RemovingBlock(ctx, coinBlock, tx)
 		assert.Nil(t, commitFunc)
 		assert.NoError(t, err)
@@ -552,7 +552,7 @@ func TestCoinStorage(t *testing.T) {
 	})
 
 	t.Run("spend coin", func(t *testing.T) {
-		tx := c.db.NewDatabaseTransaction(ctx, true)
+		tx := c.db.Transaction(ctx)
 		commitFunc, err := c.AddingBlock(ctx, coinBlock, tx)
 		assert.Nil(t, commitFunc)
 		assert.NoError(t, err)
@@ -563,7 +563,7 @@ func TestCoinStorage(t *testing.T) {
 		assert.Equal(t, accountCoins, coins)
 		assert.Equal(t, blockIdentifier, block)
 
-		tx = c.db.NewDatabaseTransaction(ctx, true)
+		tx = c.db.Transaction(ctx)
 		commitFunc, err = c.AddingBlock(ctx, coinBlock2, tx)
 		assert.Nil(t, commitFunc)
 		assert.NoError(t, err)
@@ -581,7 +581,7 @@ func TestCoinStorage(t *testing.T) {
 	})
 
 	t.Run("add block with multiple outputs for 1 account", func(t *testing.T) {
-		tx := c.db.NewDatabaseTransaction(ctx, true)
+		tx := c.db.Transaction(ctx)
 		commitFunc, err := c.AddingBlock(ctx, coinBlock3, tx)
 		assert.Nil(t, commitFunc)
 		assert.NoError(t, err)
@@ -611,13 +611,13 @@ func TestCoinStorage(t *testing.T) {
 	})
 
 	t.Run("remove block that creates and spends single coin", func(t *testing.T) {
-		tx := c.db.NewDatabaseTransaction(ctx, true)
+		tx := c.db.Transaction(ctx)
 		commitFunc, err := c.RemovingBlock(ctx, coinBlock3, tx)
 		assert.Nil(t, commitFunc)
 		assert.NoError(t, err)
 		assert.NoError(t, tx.Commit(ctx))
 
-		tx = c.db.NewDatabaseTransaction(ctx, true)
+		tx = c.db.Transaction(ctx)
 		commitFunc, err = c.AddingBlock(ctx, coinBlock3, tx)
 		assert.Nil(t, commitFunc)
 		assert.NoError(t, err)

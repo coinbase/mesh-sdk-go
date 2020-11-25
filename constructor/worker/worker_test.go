@@ -963,7 +963,7 @@ func TestFindBalanceWorker(t *testing.T) {
 			assert.NotNil(t, db)
 			defer db.Close(ctx)
 
-			dbTx := db.NewDatabaseTransaction(ctx, true)
+			dbTx := db.Transaction(ctx)
 			defer dbTx.Discard(ctx)
 
 			worker := New(test.mockHelper)
@@ -1125,7 +1125,7 @@ func TestJob_ComplicatedTransfer(t *testing.T) {
 	assert.NotNil(t, db)
 	defer db.Close(ctx)
 
-	dbTx := db.NewDatabaseTransaction(ctx, true)
+	dbTx := db.Transaction(ctx)
 
 	network := &types.NetworkIdentifier{
 		Blockchain: "Bitcoin",
@@ -1643,7 +1643,7 @@ func TestJob_Failures(t *testing.T) {
 			assert.NotNil(t, db)
 			defer db.Close(ctx)
 
-			dbTx := db.NewDatabaseTransaction(ctx, true)
+			dbTx := db.Transaction(ctx)
 
 			assert.False(t, j.CheckComplete())
 
