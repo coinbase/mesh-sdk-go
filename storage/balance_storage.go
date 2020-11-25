@@ -271,7 +271,7 @@ func (b *BalanceStorage) Reconciled(
 	currency *types.Currency,
 	block *types.BlockIdentifier,
 ) error {
-	dbTx := b.db.NewDatabaseTransaction(ctx, true)
+	dbTx := b.db.Transaction(ctx)
 	defer dbTx.Discard(ctx)
 
 	err := b.updateAccountEntry(
@@ -496,7 +496,7 @@ func (b *BalanceStorage) PruneBalances(
 	currency *types.Currency,
 	index int64,
 ) error {
-	dbTx := b.db.NewDatabaseTransaction(ctx, true)
+	dbTx := b.db.Transaction(ctx)
 	defer dbTx.Discard(ctx)
 
 	err := b.removeHistoricalBalances(
@@ -636,7 +636,7 @@ func (b *BalanceStorage) GetBalance(
 	currency *types.Currency,
 	index int64,
 ) (*types.Amount, error) {
-	dbTx := b.db.NewDatabaseTransaction(ctx, false)
+	dbTx := b.db.ReadTransaction(ctx)
 	defer dbTx.Discard(ctx)
 
 	amount, err := b.GetBalanceTransactional(
@@ -749,7 +749,7 @@ func (b *BalanceStorage) GetOrSetBalance(
 	currency *types.Currency,
 	block *types.BlockIdentifier,
 ) (*types.Amount, error) {
-	dbTx := b.db.NewDatabaseTransaction(ctx, true)
+	dbTx := b.db.Transaction(ctx)
 	defer dbTx.Discard(ctx)
 
 	amount, err := b.GetOrSetBalanceTransactional(
@@ -832,7 +832,7 @@ func (b *BalanceStorage) BootstrapBalances(
 	}
 
 	// Update balances in database
-	dbTransaction := b.db.NewDatabaseTransaction(ctx, true)
+	dbTransaction := b.db.Transaction(ctx)
 	defer dbTransaction.Discard(ctx)
 
 	for _, balance := range balances {
@@ -881,7 +881,7 @@ func (b *BalanceStorage) getAllAccountEntries(
 	ctx context.Context,
 	handler func(accountEntry),
 ) error {
-	txn := b.db.NewDatabaseTransaction(ctx, false)
+	txn := b.db.ReadTransaction(ctx)
 	defer txn.Discard(ctx)
 	_, err := txn.Scan(
 		ctx,
@@ -948,7 +948,7 @@ func (b *BalanceStorage) SetBalanceImported(
 	accountBalances []*utils.AccountBalance,
 ) error {
 	// Update balances in database
-	transaction := b.db.NewDatabaseTransaction(ctx, true)
+	transaction := b.db.Transaction(ctx)
 	defer transaction.Discard(ctx)
 
 	for _, accountBalance := range accountBalances {

@@ -166,7 +166,7 @@ func (b *BlockStorage) GetOldestBlockIndexTransactional(
 func (b *BlockStorage) GetOldestBlockIndex(
 	ctx context.Context,
 ) (int64, error) {
-	dbTx := b.db.NewDatabaseTransaction(ctx, false)
+	dbTx := b.db.ReadTransaction(ctx)
 	defer dbTx.Discard(ctx)
 
 	return b.GetOldestBlockIndexTransactional(ctx, dbTx)
@@ -183,7 +183,7 @@ func (b *BlockStorage) pruneBlock(
 	// we don't hit the database tx size maximum. As a result, it is possible
 	// that we prune a collection of blocks, encounter an error, and cannot
 	// rollback the pruning operations.
-	dbTx := b.db.NewDatabaseTransaction(ctx, true)
+	dbTx := b.db.Transaction(ctx)
 	defer dbTx.Discard(ctx)
 
 	oldestIndex, err := b.GetOldestBlockIndexTransactional(ctx, dbTx)
@@ -290,7 +290,7 @@ func (b *BlockStorage) Prune(
 func (b *BlockStorage) GetHeadBlockIdentifier(
 	ctx context.Context,
 ) (*types.BlockIdentifier, error) {
-	transaction := b.db.NewDatabaseTransaction(ctx, false)
+	transaction := b.db.ReadTransaction(ctx)
 	defer transaction.Discard(ctx)
 
 	return b.GetHeadBlockIdentifierTransactional(ctx, transaction)
@@ -406,7 +406,7 @@ func (b *BlockStorage) GetBlockLazy(
 	ctx context.Context,
 	blockIdentifier *types.PartialBlockIdentifier,
 ) (*types.BlockResponse, error) {
-	transaction := b.db.NewDatabaseTransaction(ctx, false)
+	transaction := b.db.ReadTransaction(ctx)
 	defer transaction.Discard(ctx)
 
 	return b.GetBlockLazyTransactional(ctx, blockIdentifier, transaction)
@@ -420,7 +420,7 @@ func (b *BlockStorage) CanonicalBlock(
 	ctx context.Context,
 	blockIdentifier *types.BlockIdentifier,
 ) (bool, error) {
-	dbTx := b.db.NewDatabaseTransaction(ctx, false)
+	dbTx := b.db.ReadTransaction(ctx)
 	defer dbTx.Discard(ctx)
 
 	return b.CanonicalBlockTransactional(ctx, blockIdentifier, dbTx)
@@ -507,7 +507,7 @@ func (b *BlockStorage) GetBlock(
 	ctx context.Context,
 	blockIdentifier *types.PartialBlockIdentifier,
 ) (*types.Block, error) {
-	transaction := b.db.NewDatabaseTransaction(ctx, false)
+	transaction := b.db.ReadTransaction(ctx)
 	defer transaction.Discard(ctx)
 
 	return b.GetBlockTransactional(ctx, transaction, blockIdentifier)
@@ -555,7 +555,7 @@ func (b *BlockStorage) AddBlock(
 	ctx context.Context,
 	block *types.Block,
 ) error {
-	transaction := b.db.NewDatabaseTransaction(ctx, true)
+	transaction := b.db.Transaction(ctx)
 	defer transaction.Discard(ctx)
 
 	// Store all transactions in order and check for duplicates
@@ -666,7 +666,7 @@ func (b *BlockStorage) RemoveBlock(
 	ctx context.Context,
 	blockIdentifier *types.BlockIdentifier,
 ) error {
-	transaction := b.db.NewDatabaseTransaction(ctx, true)
+	transaction := b.db.Transaction(ctx)
 	defer transaction.Discard(ctx)
 
 	block, err := b.GetBlockTransactional(
@@ -770,7 +770,7 @@ func (b *BlockStorage) SetNewStartIndex(
 
 	// Ensure we do not set a new start index less
 	// than the oldest block.
-	dbTx := b.db.NewDatabaseTransaction(ctx, false)
+	dbTx := b.db.ReadTransaction(ctx)
 	oldestIndex, err := b.GetOldestBlockIndexTransactional(ctx, dbTx)
 	dbTx.Discard(ctx)
 	if err != nil {
@@ -1035,7 +1035,7 @@ func (b *BlockStorage) GetBlockTransaction(
 	blockIdentifier *types.BlockIdentifier,
 	transactionIdentifier *types.TransactionIdentifier,
 ) (*types.Transaction, error) {
-	transaction := b.db.NewDatabaseTransaction(ctx, false)
+	transaction := b.db.ReadTransaction(ctx)
 	defer transaction.Discard(ctx)
 
 	return b.findBlockTransaction(ctx, blockIdentifier, transactionIdentifier, transaction)
@@ -1073,7 +1073,7 @@ func (b *BlockStorage) AtTip(
 	ctx context.Context,
 	tipDelay int64,
 ) (bool, *types.BlockIdentifier, error) {
-	transaction := b.db.NewDatabaseTransaction(ctx, false)
+	transaction := b.db.ReadTransaction(ctx)
 	defer transaction.Discard(ctx)
 
 	return b.AtTipTransactional(ctx, tipDelay, transaction)
@@ -1089,7 +1089,7 @@ func (b *BlockStorage) IndexAtTip(
 	tipDelay int64,
 	index int64,
 ) (bool, error) {
-	transaction := b.db.NewDatabaseTransaction(ctx, false)
+	transaction := b.db.ReadTransaction(ctx)
 	defer transaction.Discard(ctx)
 	headBlockResponse, err := b.GetBlockLazyTransactional(ctx, nil, transaction)
 	if errors.Is(err, ErrHeadBlockNotFound) {
