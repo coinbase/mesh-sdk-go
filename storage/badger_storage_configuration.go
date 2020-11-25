@@ -56,3 +56,13 @@ func WithCustomSettings(settings badger.Options) BadgerOption {
 		b.badgerOptions = settings
 	}
 }
+
+// WithWriterShards overrides the default shards used
+// in the writer utils.MutexMap. It is recommended
+// to set this value to your write concurrency to prevent
+// lock contention.
+func WithWriterShards(shards int) BadgerOption {
+	return func(b *BadgerStorage) {
+		b.writerShards = shards
+	}
+}
