@@ -197,6 +197,7 @@ func NewBadgerStorage(
 		closed:        make(chan struct{}),
 		pool:          NewBufferPool(),
 		compress:      true,
+		writer:        utils.NewMutexMap(utils.DefaultShards),
 	}
 	for _, opt := range storageOptions {
 		opt(b)
