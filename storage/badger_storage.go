@@ -80,7 +80,8 @@ type BadgerStorage struct {
 	encoder  *Encoder
 	compress bool
 
-	writer *utils.MutexMap
+	writer       *utils.MutexMap
+	writerShards int
 
 	// Track the closed status to ensure we exit garbage
 	// collection when the db closes.
@@ -197,11 +198,15 @@ func NewBadgerStorage(
 		closed:        make(chan struct{}),
 		pool:          NewBufferPool(),
 		compress:      true,
-		writer:        utils.NewMutexMap(utils.DefaultShards),
+		writerShards:  utils.DefaultShards,
 	}
 	for _, opt := range storageOptions {
 		opt(b)
 	}
+
+	// Initialize utis.MutexMap used to track granular
+	// write transactions.
+	b.writer = utils.NewMutexMap(b.writerShards)
 
 	db, err := badger.Open(b.badgerOptions)
 	if err != nil {
