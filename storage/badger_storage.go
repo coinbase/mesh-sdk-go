@@ -306,8 +306,8 @@ type BadgerTransaction struct {
 	buffersToReclaim []*bytes.Buffer
 }
 
-// GTransaction creates a new exclusive write BadgerTransaction.
-func (b *BadgerStorage) GTransaction(
+// Transaction creates a new exclusive write BadgerTransaction.
+func (b *BadgerStorage) Transaction(
 	ctx context.Context,
 ) DatabaseTransaction {
 	b.writer.GLock()
@@ -320,8 +320,8 @@ func (b *BadgerStorage) GTransaction(
 	}
 }
 
-// RTransaction creates a new read BadgerTransaction.
-func (b *BadgerStorage) RTransaction(
+// ReadTransaction creates a new read BadgerTransaction.
+func (b *BadgerStorage) ReadTransaction(
 	ctx context.Context,
 ) DatabaseTransaction {
 	return &BadgerTransaction{
@@ -331,8 +331,9 @@ func (b *BadgerStorage) RTransaction(
 	}
 }
 
-// WTransaction creates a new write BadgerTransaction.
-func (b *BadgerStorage) WTransaction(
+// WriteTransaction creates a new write BadgerTransaction
+// for a particular identifier.
+func (b *BadgerStorage) WriteTransaction(
 	ctx context.Context,
 	identifier string,
 	priority bool,
@@ -571,7 +572,7 @@ func recompress(
 	onDiskSize := float64(0)
 	newSize := float64(0)
 
-	txn := badgerDb.RTransaction(ctx)
+	txn := badgerDb.ReadTransaction(ctx)
 	defer txn.Discard(ctx)
 	_, err := txn.Scan(
 		ctx,
@@ -645,7 +646,7 @@ func BadgerTrain(
 	totalUncompressedSize := float64(0)
 	totalDiskSize := float64(0)
 	entriesSeen := 0
-	txn := badgerDb.RTransaction(ctx)
+	txn := badgerDb.ReadTransaction(ctx)
 	defer txn.Discard(ctx)
 	_, err = txn.Scan(
 		ctx,
