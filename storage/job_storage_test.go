@@ -38,7 +38,7 @@ func TestJobStorage(t *testing.T) {
 	storage := NewJobStorage(database)
 
 	t.Run("get non-existent job", func(t *testing.T) {
-		dbTx := database.NewDatabaseTransaction(ctx, false)
+		dbTx := database.ReadTransaction(ctx)
 		defer dbTx.Discard(ctx)
 
 		job, err := storage.Get(ctx, dbTx, "job1")
@@ -71,7 +71,7 @@ func TestJobStorage(t *testing.T) {
 		Status:   job.Broadcasting,
 	}
 	t.Run("add job", func(t *testing.T) {
-		dbTx := database.NewDatabaseTransaction(ctx, true)
+		dbTx := database.Transaction(ctx)
 		defer dbTx.Discard(ctx)
 
 		jobIdentifier, err := storage.Update(ctx, dbTx, newJob)
@@ -118,7 +118,7 @@ func TestJobStorage(t *testing.T) {
 		Status:   job.Ready,
 	}
 	t.Run("add another job", func(t *testing.T) {
-		dbTx := database.NewDatabaseTransaction(ctx, true)
+		dbTx := database.Transaction(ctx)
 		defer dbTx.Discard(ctx)
 
 		jobIdentifier, err := storage.Update(ctx, dbTx, newJob2)
@@ -165,7 +165,7 @@ func TestJobStorage(t *testing.T) {
 		Status:   job.Completed,
 	}
 	t.Run("add another job", func(t *testing.T) {
-		dbTx := database.NewDatabaseTransaction(ctx, true)
+		dbTx := database.Transaction(ctx)
 		defer dbTx.Discard(ctx)
 
 		jobIdentifier, err := storage.Update(ctx, dbTx, newJob3)
@@ -212,7 +212,7 @@ func TestJobStorage(t *testing.T) {
 	})
 
 	t.Run("update job 1", func(t *testing.T) {
-		dbTx := database.NewDatabaseTransaction(ctx, true)
+		dbTx := database.Transaction(ctx)
 		defer dbTx.Discard(ctx)
 
 		newJob.Status = job.Completed
@@ -262,7 +262,7 @@ func TestJobStorage(t *testing.T) {
 	})
 
 	t.Run("fail job 2", func(t *testing.T) {
-		dbTx := database.NewDatabaseTransaction(ctx, true)
+		dbTx := database.Transaction(ctx)
 		defer dbTx.Discard(ctx)
 
 		newJob2.Status = job.Failed
@@ -320,7 +320,7 @@ func TestJobStorage(t *testing.T) {
 	})
 
 	t.Run("attempt to update job 2", func(t *testing.T) {
-		dbTx := database.NewDatabaseTransaction(ctx, true)
+		dbTx := database.Transaction(ctx)
 		defer dbTx.Discard(ctx)
 
 		newJob2.Status = job.Completed

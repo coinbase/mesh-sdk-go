@@ -127,7 +127,7 @@ func (c *CoinStorage) AddCoins(
 	ctx context.Context,
 	accountCoins []*AccountCoin,
 ) error {
-	dbTransaction := c.db.NewDatabaseTransaction(ctx, true)
+	dbTransaction := c.db.Transaction(ctx)
 	defer dbTransaction.Discard(ctx)
 
 	for _, accountCoin := range accountCoins {
@@ -419,7 +419,7 @@ func (c *CoinStorage) GetCoins(
 	ctx context.Context,
 	accountIdentifier *types.AccountIdentifier,
 ) ([]*types.Coin, *types.BlockIdentifier, error) {
-	dbTx := c.db.NewDatabaseTransaction(ctx, false)
+	dbTx := c.db.ReadTransaction(ctx)
 	defer dbTx.Discard(ctx)
 
 	return c.GetCoinsTransactional(ctx, dbTx, accountIdentifier)
@@ -449,7 +449,7 @@ func (c *CoinStorage) GetCoin(
 	ctx context.Context,
 	coinIdentifier *types.CoinIdentifier,
 ) (*types.Coin, *types.AccountIdentifier, error) {
-	dbTx := c.db.NewDatabaseTransaction(ctx, false)
+	dbTx := c.db.ReadTransaction(ctx)
 	defer dbTx.Discard(ctx)
 
 	return c.GetCoinTransactional(ctx, dbTx, coinIdentifier)

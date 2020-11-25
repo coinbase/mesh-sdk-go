@@ -61,7 +61,7 @@ func TestHeadBlockIdentifier(t *testing.T) {
 	})
 
 	t.Run("Set and get head block", func(t *testing.T) {
-		txn := storage.db.NewDatabaseTransaction(ctx, true)
+		txn := storage.db.Transaction(ctx)
 		assert.NoError(t, storage.StoreHeadBlockIdentifier(ctx, txn, newBlockIdentifier))
 		assert.NoError(t, txn.Commit(ctx))
 
@@ -71,7 +71,7 @@ func TestHeadBlockIdentifier(t *testing.T) {
 	})
 
 	t.Run("Discard head block update", func(t *testing.T) {
-		txn := storage.db.NewDatabaseTransaction(ctx, true)
+		txn := storage.db.Transaction(ctx)
 		assert.NoError(t, storage.StoreHeadBlockIdentifier(ctx, txn,
 			&types.BlockIdentifier{
 				Hash:  "no blah",
@@ -86,7 +86,7 @@ func TestHeadBlockIdentifier(t *testing.T) {
 	})
 
 	t.Run("Multiple updates to head block", func(t *testing.T) {
-		txn := storage.db.NewDatabaseTransaction(ctx, true)
+		txn := storage.db.Transaction(ctx)
 		assert.NoError(t, storage.StoreHeadBlockIdentifier(ctx, txn, newBlockIdentifier2))
 		assert.NoError(t, txn.Commit(ctx))
 
@@ -288,7 +288,7 @@ func findTransactionWithDbTransaction(
 	storage *BlockStorage,
 	transactionIdentifier *types.TransactionIdentifier,
 ) (*types.BlockIdentifier, *types.Transaction, error) {
-	txn := storage.db.NewDatabaseTransaction(ctx, false)
+	txn := storage.db.ReadTransaction(ctx)
 	defer txn.Discard(ctx)
 
 	return storage.FindTransaction(

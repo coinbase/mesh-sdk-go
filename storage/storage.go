@@ -21,8 +21,30 @@ import (
 // Database is an interface that provides transactional
 // access to a KV store.
 type Database interface {
-	NewDatabaseTransaction(context.Context, bool) DatabaseTransaction
+	// Transaction acquires an exclusive write lock on the database.
+	// This ensures all other calls to Transaction and WriteTransaction
+	// will block until the returned DatabaseTransaction is committed or
+	// discarded. This is useful for making changes across
+	// multiple prefixes but incurs a large performance overhead.
+	Transaction(context.Context) DatabaseTransaction
+
+	// ReadTransaction allows for consistent, read-only access
+	// to the database. This does not acquire any lock
+	// on the database.
+	ReadTransaction(context.Context) DatabaseTransaction
+
+	// WriteTransaction acquires a granular write lock for a particular
+	// identifier. All subsequent calls to WriteTransaction with the same
+	// identifier will block until the DatabaseTransaction returned is either
+	// committed or discarded.
+	WriteTransaction(ctx context.Context, identifier string, priority bool) DatabaseTransaction
+
+	// Close shuts down the database.
 	Close(context.Context) error
+
+	// Encoder returns the *Encoder used to store/read data
+	// in the database. This *Encoder often performs some
+	// form of compression on data.
 	Encoder() *Encoder
 }
 

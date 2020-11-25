@@ -125,7 +125,7 @@ func (j *JobStorage) Processing(
 
 // AllProcessing gets all processing *job.Jobs.
 func (j *JobStorage) AllProcessing(ctx context.Context) ([]*job.Job, error) {
-	dbTx := j.db.NewDatabaseTransaction(ctx, false)
+	dbTx := j.db.ReadTransaction(ctx)
 	defer dbTx.Discard(ctx)
 
 	return j.getAllJobs(ctx, dbTx, getJobMetadataKey(processingKey))
@@ -133,7 +133,7 @@ func (j *JobStorage) AllProcessing(ctx context.Context) ([]*job.Job, error) {
 
 // Failed returns all failed *job.Job of a certain workflow.
 func (j *JobStorage) Failed(ctx context.Context, workflow string) ([]*job.Job, error) {
-	dbTx := j.db.NewDatabaseTransaction(ctx, false)
+	dbTx := j.db.ReadTransaction(ctx)
 	defer dbTx.Discard(ctx)
 
 	return j.getAllJobs(ctx, dbTx, getJobMetadataKey(getJobFailedKey(workflow)))
@@ -141,7 +141,7 @@ func (j *JobStorage) Failed(ctx context.Context, workflow string) ([]*job.Job, e
 
 // AllFailed returns all failed *job.Jobs.
 func (j *JobStorage) AllFailed(ctx context.Context) ([]*job.Job, error) {
-	dbTx := j.db.NewDatabaseTransaction(ctx, false)
+	dbTx := j.db.ReadTransaction(ctx)
 	defer dbTx.Discard(ctx)
 
 	return j.getAllJobs(ctx, dbTx, getJobMetadataKey(failedKey))
@@ -149,7 +149,7 @@ func (j *JobStorage) AllFailed(ctx context.Context) ([]*job.Job, error) {
 
 // Completed gets all successfully completed *job.Job of a certain workflow.
 func (j *JobStorage) Completed(ctx context.Context, workflow string) ([]*job.Job, error) {
-	dbTx := j.db.NewDatabaseTransaction(ctx, false)
+	dbTx := j.db.ReadTransaction(ctx)
 	defer dbTx.Discard(ctx)
 
 	return j.getAllJobs(ctx, dbTx, getJobMetadataKey(getJobCompletedKey(workflow)))
@@ -157,7 +157,7 @@ func (j *JobStorage) Completed(ctx context.Context, workflow string) ([]*job.Job
 
 // AllCompleted gets all successfully completed *job.Jobs.
 func (j *JobStorage) AllCompleted(ctx context.Context) ([]*job.Job, error) {
-	dbTx := j.db.NewDatabaseTransaction(ctx, false)
+	dbTx := j.db.ReadTransaction(ctx)
 	defer dbTx.Discard(ctx)
 
 	return j.getAllJobs(ctx, dbTx, getJobMetadataKey(completedKey))

@@ -382,7 +382,7 @@ func (b *BroadcastStorage) getAllBroadcasts(
 
 // GetAllBroadcasts returns all currently in-process broadcasts.
 func (b *BroadcastStorage) GetAllBroadcasts(ctx context.Context) ([]*Broadcast, error) {
-	dbTx := b.db.NewDatabaseTransaction(ctx, false)
+	dbTx := b.db.ReadTransaction(ctx)
 	defer dbTx.Discard(ctx)
 
 	return b.getAllBroadcasts(ctx, dbTx)
@@ -399,7 +399,7 @@ func (b *BroadcastStorage) performBroadcast(
 		return fmt.Errorf("%w: %v", ErrBroadcastEncodeFailed, err)
 	}
 
-	txn := b.db.NewDatabaseTransaction(ctx, true)
+	txn := b.db.Transaction(ctx)
 	defer txn.Discard(ctx)
 
 	if err := txn.Set(ctx, key, bytes, true); err != nil {
@@ -485,7 +485,7 @@ func (b *BroadcastStorage) BroadcastAll(ctx context.Context, onlyEligible bool) 
 		}
 
 		if broadcast.Broadcasts >= b.broadcastLimit {
-			txn := b.db.NewDatabaseTransaction(ctx, true)
+			txn := b.db.Transaction(ctx)
 			defer txn.Discard(ctx)
 
 			_, key := getBroadcastKey(broadcast.TransactionIdentifier)
@@ -573,7 +573,7 @@ func (b *BroadcastStorage) ClearBroadcasts(ctx context.Context) ([]*Broadcast, e
 		return nil, fmt.Errorf("%w: %v", ErrBroadcastGetAllFailed, err)
 	}
 
-	txn := b.db.NewDatabaseTransaction(ctx, true)
+	txn := b.db.Transaction(ctx)
 	for _, broadcast := range broadcasts {
 		_, key := getBroadcastKey(broadcast.TransactionIdentifier)
 		if err := txn.Delete(ctx, key); err != nil {
