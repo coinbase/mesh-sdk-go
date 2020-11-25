@@ -201,7 +201,7 @@ func TestBalance(t *testing.T) {
 	})
 
 	t.Run("Set and get genesis balance", func(t *testing.T) {
-		txn := storage.db.NewDatabaseTransaction(ctx, true)
+		txn := storage.db.Transaction(ctx)
 		err := storage.SetBalance(
 			ctx,
 			txn,
@@ -224,7 +224,7 @@ func TestBalance(t *testing.T) {
 	})
 
 	t.Run("Set and get balance", func(t *testing.T) {
-		txn := storage.db.NewDatabaseTransaction(ctx, true)
+		txn := storage.db.Transaction(ctx)
 		err := storage.SetBalance(
 			ctx,
 			txn,
@@ -246,7 +246,7 @@ func TestBalance(t *testing.T) {
 
 	t.Run("Set and get balance with storage helper", func(t *testing.T) {
 		mockHelper.AccountBalanceAmount = "10"
-		txn := storage.db.NewDatabaseTransaction(ctx, true)
+		txn := storage.db.Transaction(ctx)
 		err := storage.UpdateBalance(
 			ctx,
 			txn,
@@ -269,7 +269,7 @@ func TestBalance(t *testing.T) {
 	})
 
 	t.Run("Set balance with nil currency", func(t *testing.T) {
-		txn := storage.db.NewDatabaseTransaction(ctx, true)
+		txn := storage.db.Transaction(ctx)
 		err := storage.UpdateBalance(
 			ctx,
 			txn,
@@ -290,7 +290,7 @@ func TestBalance(t *testing.T) {
 	})
 
 	t.Run("Modify existing balance", func(t *testing.T) {
-		txn := storage.db.NewDatabaseTransaction(ctx, true)
+		txn := storage.db.Transaction(ctx)
 		err = storage.UpdateBalance(
 			ctx,
 			txn,
@@ -311,7 +311,7 @@ func TestBalance(t *testing.T) {
 	})
 
 	t.Run("Discard transaction", func(t *testing.T) {
-		txn := storage.db.NewDatabaseTransaction(ctx, true)
+		txn := storage.db.Transaction(ctx)
 		err := storage.UpdateBalance(
 			ctx,
 			txn,
@@ -326,7 +326,7 @@ func TestBalance(t *testing.T) {
 		assert.NoError(t, err)
 
 		// Get balance during transaction
-		readTx := storage.db.NewDatabaseTransaction(ctx, false)
+		readTx := storage.db.ReadTransaction(ctx)
 		defer readTx.Discard(ctx)
 		retrievedAmount, err := storage.GetBalanceTransactional(
 			ctx,
@@ -342,7 +342,7 @@ func TestBalance(t *testing.T) {
 	})
 
 	t.Run("Attempt modification to push balance negative on existing account", func(t *testing.T) {
-		txn := storage.db.NewDatabaseTransaction(ctx, true)
+		txn := storage.db.Transaction(ctx)
 		err := storage.UpdateBalance(
 			ctx,
 			txn,
@@ -359,7 +359,7 @@ func TestBalance(t *testing.T) {
 	})
 
 	t.Run("Attempt modification to push balance negative on new acct", func(t *testing.T) {
-		txn := storage.db.NewDatabaseTransaction(ctx, true)
+		txn := storage.db.Transaction(ctx)
 		err := storage.UpdateBalance(
 			ctx,
 			txn,
@@ -377,7 +377,7 @@ func TestBalance(t *testing.T) {
 	})
 
 	t.Run("sub account set and get balance", func(t *testing.T) {
-		txn := storage.db.NewDatabaseTransaction(ctx, true)
+		txn := storage.db.Transaction(ctx)
 		err := storage.UpdateBalance(
 			ctx,
 			txn,
@@ -403,7 +403,7 @@ func TestBalance(t *testing.T) {
 	})
 
 	t.Run("sub account metadata set and get balance", func(t *testing.T) {
-		txn := storage.db.NewDatabaseTransaction(ctx, true)
+		txn := storage.db.Transaction(ctx)
 		err := storage.UpdateBalance(
 			ctx,
 			txn,
@@ -429,7 +429,7 @@ func TestBalance(t *testing.T) {
 	})
 
 	t.Run("sub account unique metadata set and get balance", func(t *testing.T) {
-		txn := storage.db.NewDatabaseTransaction(ctx, true)
+		txn := storage.db.Transaction(ctx)
 		err := storage.UpdateBalance(
 			ctx,
 			txn,
@@ -455,7 +455,7 @@ func TestBalance(t *testing.T) {
 	})
 
 	t.Run("balance exemption update", func(t *testing.T) {
-		txn := storage.db.NewDatabaseTransaction(ctx, true)
+		txn := storage.db.Transaction(ctx)
 		err := storage.SetBalance(
 			ctx,
 			txn,
@@ -471,7 +471,7 @@ func TestBalance(t *testing.T) {
 
 		// Successful (balance > computed and negative intermediate value)
 		mockHelper.AccountBalanceAmount = "150"
-		txn = storage.db.NewDatabaseTransaction(ctx, true)
+		txn = storage.db.Transaction(ctx)
 		err = storage.UpdateBalance(
 			ctx,
 			txn,
@@ -497,7 +497,7 @@ func TestBalance(t *testing.T) {
 
 		// Successful (balance == computed)
 		mockHelper.AccountBalanceAmount = "200"
-		txn = storage.db.NewDatabaseTransaction(ctx, true)
+		txn = storage.db.Transaction(ctx)
 		err = storage.UpdateBalance(
 			ctx,
 			txn,
@@ -523,7 +523,7 @@ func TestBalance(t *testing.T) {
 
 		// Unsuccessful (balance < computed)
 		mockHelper.AccountBalanceAmount = "10"
-		txn = storage.db.NewDatabaseTransaction(ctx, true)
+		txn = storage.db.Transaction(ctx)
 		err = storage.UpdateBalance(
 			ctx,
 			txn,
@@ -629,7 +629,7 @@ func TestBalance(t *testing.T) {
 	})
 
 	t.Run("update existing balance", func(t *testing.T) {
-		txn := storage.db.NewDatabaseTransaction(ctx, true)
+		txn := storage.db.Transaction(ctx)
 		orphanValue, _ := new(big.Int).SetString(largeDeduction.Value, 10)
 		err := storage.UpdateBalance(
 			ctx,
@@ -683,7 +683,7 @@ func TestBalance(t *testing.T) {
 			Currency: largeDeduction.Currency,
 		}, retrievedAmount)
 
-		txn := storage.db.NewDatabaseTransaction(ctx, true)
+		txn := storage.db.Transaction(ctx)
 		err = storage.OrphanBalance(
 			ctx,
 			txn,
@@ -938,7 +938,7 @@ func TestBootstrapBalances(t *testing.T) {
 		assert.NoError(t, err)
 
 		// Attempt to update balance
-		txn := storage.db.NewDatabaseTransaction(ctx, true)
+		txn := storage.db.Transaction(ctx)
 		err = storage.UpdateBalance(
 			ctx,
 			txn,
@@ -1105,7 +1105,7 @@ func TestBalanceReconciliation(t *testing.T) {
 	})
 
 	t.Run("set balance", func(t *testing.T) {
-		txn := storage.db.NewDatabaseTransaction(ctx, true)
+		txn := storage.db.Transaction(ctx)
 		err := storage.UpdateBalance(
 			ctx,
 			txn,
@@ -1129,7 +1129,7 @@ func TestBalanceReconciliation(t *testing.T) {
 		err := storage.Reconciled(ctx, account, currency, genesisBlock)
 		assert.NoError(t, err)
 
-		txn := storage.db.NewDatabaseTransaction(ctx, true)
+		txn := storage.db.Transaction(ctx)
 		err = storage.UpdateBalance(
 			ctx,
 			txn,
@@ -1181,7 +1181,7 @@ func TestBalanceReconciliation(t *testing.T) {
 	})
 
 	t.Run("add unreconciled", func(t *testing.T) {
-		txn := storage.db.NewDatabaseTransaction(ctx, true)
+		txn := storage.db.Transaction(ctx)
 		err = storage.UpdateBalance(
 			ctx,
 			txn,
@@ -1380,7 +1380,7 @@ func TestBlockSyncing(t *testing.T) {
 	}
 
 	t.Run("add genesis block", func(t *testing.T) {
-		dbTx := database.NewDatabaseTransaction(ctx, true)
+		dbTx := database.Transaction(ctx)
 		_, err = storage.AddingBlock(ctx, b0, dbTx)
 		assert.NoError(t, err)
 		assert.NoError(t, dbTx.Commit(ctx))
@@ -1394,7 +1394,7 @@ func TestBlockSyncing(t *testing.T) {
 	})
 
 	t.Run("add block 1", func(t *testing.T) {
-		dbTx := database.NewDatabaseTransaction(ctx, true)
+		dbTx := database.Transaction(ctx)
 		_, err = storage.AddingBlock(ctx, b1, dbTx)
 		assert.NoError(t, err)
 		assert.NoError(t, dbTx.Commit(ctx))
@@ -1417,7 +1417,7 @@ func TestBlockSyncing(t *testing.T) {
 	})
 
 	t.Run("add block 2", func(t *testing.T) {
-		dbTx := database.NewDatabaseTransaction(ctx, true)
+		dbTx := database.Transaction(ctx)
 		_, err = storage.AddingBlock(ctx, b2, dbTx)
 		assert.NoError(t, err)
 		assert.NoError(t, dbTx.Commit(ctx))
@@ -1455,7 +1455,7 @@ func TestBlockSyncing(t *testing.T) {
 	})
 
 	t.Run("orphan block 2", func(t *testing.T) {
-		dbTx := database.NewDatabaseTransaction(ctx, true)
+		dbTx := database.Transaction(ctx)
 		_, err = storage.RemovingBlock(ctx, b2, dbTx)
 		assert.NoError(t, err)
 		assert.NoError(t, dbTx.Commit(ctx))
@@ -1487,7 +1487,7 @@ func TestBlockSyncing(t *testing.T) {
 	})
 
 	t.Run("orphan block 1", func(t *testing.T) {
-		dbTx := database.NewDatabaseTransaction(ctx, true)
+		dbTx := database.Transaction(ctx)
 		_, err = storage.RemovingBlock(ctx, b1, dbTx)
 		assert.NoError(t, err)
 		assert.NoError(t, dbTx.Commit(ctx))
@@ -1513,7 +1513,7 @@ func TestBlockSyncing(t *testing.T) {
 	})
 
 	t.Run("add block 1", func(t *testing.T) {
-		dbTx := database.NewDatabaseTransaction(ctx, true)
+		dbTx := database.Transaction(ctx)
 		_, err = storage.AddingBlock(ctx, b1, dbTx)
 		assert.NoError(t, err)
 		assert.NoError(t, dbTx.Commit(ctx))
@@ -1545,7 +1545,7 @@ func TestBlockSyncing(t *testing.T) {
 	})
 
 	t.Run("add block 2a", func(t *testing.T) {
-		dbTx := database.NewDatabaseTransaction(ctx, true)
+		dbTx := database.Transaction(ctx)
 		_, err = storage.AddingBlock(ctx, b2a, dbTx)
 		assert.NoError(t, err)
 		assert.NoError(t, dbTx.Commit(ctx))

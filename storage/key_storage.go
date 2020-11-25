@@ -112,7 +112,7 @@ func (k *KeyStorage) Store(
 	account *types.AccountIdentifier,
 	keyPair *keys.KeyPair,
 ) error {
-	dbTx := k.db.NewDatabaseTransaction(ctx, true)
+	dbTx := k.db.Transaction(ctx)
 	defer dbTx.Discard(ctx)
 
 	if err := k.StoreTransactional(ctx, account, keyPair, dbTx); err != nil {
@@ -155,7 +155,7 @@ func (k *KeyStorage) Get(
 	ctx context.Context,
 	account *types.AccountIdentifier,
 ) (*keys.KeyPair, error) {
-	transaction := k.db.NewDatabaseTransaction(ctx, false)
+	transaction := k.db.ReadTransaction(ctx)
 	defer transaction.Discard(ctx)
 
 	return k.GetTransactional(ctx, transaction, account)
@@ -193,7 +193,7 @@ func (k *KeyStorage) GetAllAccountsTransactional(
 
 // GetAllAccounts returns all AccountIdentifiers in key storage.
 func (k *KeyStorage) GetAllAccounts(ctx context.Context) ([]*types.AccountIdentifier, error) {
-	dbTx := k.db.NewDatabaseTransaction(ctx, false)
+	dbTx := k.db.ReadTransaction(ctx)
 	defer dbTx.Discard(ctx)
 
 	return k.GetAllAccountsTransactional(ctx, dbTx)

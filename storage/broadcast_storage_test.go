@@ -107,7 +107,7 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 	mockHelper.AtSyncTip = true
 
 	t.Run("broadcast send 1 before block exists", func(t *testing.T) {
-		dbTx := database.NewDatabaseTransaction(ctx, true)
+		dbTx := database.Transaction(ctx)
 		defer dbTx.Discard(ctx)
 
 		err := storage.Broadcast(
@@ -150,7 +150,7 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 	t.Run("add block 0", func(t *testing.T) {
 		block := blocks[0]
 
-		txn := storage.db.NewDatabaseTransaction(ctx, true)
+		txn := storage.db.Transaction(ctx)
 		commitWorker, err := storage.AddingBlock(ctx, block, txn)
 		assert.NoError(t, err)
 		err = txn.Commit(ctx)
@@ -189,7 +189,7 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 	t.Run("add block 1", func(t *testing.T) {
 		block := blocks[1]
 
-		txn := storage.db.NewDatabaseTransaction(ctx, true)
+		txn := storage.db.Transaction(ctx)
 		commitWorker, err := storage.AddingBlock(ctx, block, txn)
 		assert.NoError(t, err)
 		err = txn.Commit(ctx)
@@ -226,7 +226,7 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 	})
 
 	t.Run("broadcast send 2 after adding a block", func(t *testing.T) {
-		dbTx := database.NewDatabaseTransaction(ctx, true)
+		dbTx := database.Transaction(ctx)
 		defer dbTx.Discard(ctx)
 
 		err := storage.Broadcast(
@@ -282,7 +282,7 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 	t.Run("add block 2", func(t *testing.T) {
 		block := blocks[2]
 
-		txn := storage.db.NewDatabaseTransaction(ctx, true)
+		txn := storage.db.Transaction(ctx)
 		commitWorker, err := storage.AddingBlock(ctx, block, txn)
 		assert.NoError(t, err)
 
@@ -356,7 +356,7 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 		block := blocks[3]
 		block.Transactions = []*types.Transaction{tx1}
 
-		txn := storage.db.NewDatabaseTransaction(ctx, true)
+		txn := storage.db.Transaction(ctx)
 		commitWorker, err := storage.AddingBlock(ctx, block, txn)
 		assert.NoError(t, err)
 		err = txn.Commit(ctx)
@@ -412,7 +412,7 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 		block := blocks[4]
 		block.Transactions = []*types.Transaction{tx2}
 
-		txn := storage.db.NewDatabaseTransaction(ctx, true)
+		txn := storage.db.Transaction(ctx)
 		commitWorker, err := storage.AddingBlock(ctx, block, txn)
 		assert.NoError(t, err)
 
@@ -462,7 +462,7 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 	t.Run("add block 5", func(t *testing.T) {
 		block := blocks[5]
 
-		txn := storage.db.NewDatabaseTransaction(ctx, true)
+		txn := storage.db.Transaction(ctx)
 		commitWorker, err := storage.AddingBlock(ctx, block, txn)
 		assert.NoError(t, err)
 
@@ -527,7 +527,7 @@ func TestBroadcastStorageBroadcastFailure(t *testing.T) {
 	storage.Initialize(mockHelper, mockHandler)
 
 	t.Run("locked addresses with no broadcasts", func(t *testing.T) {
-		dbTx := database.NewDatabaseTransaction(ctx, false)
+		dbTx := database.ReadTransaction(ctx)
 		defer dbTx.Discard(ctx)
 
 		accounts, err := storage.LockedAccounts(ctx, dbTx)
@@ -549,7 +549,7 @@ func TestBroadcastStorageBroadcastFailure(t *testing.T) {
 	send2 := opFiller("addr 2", 13)
 	network := &types.NetworkIdentifier{Blockchain: "Bitcoin", Network: "Testnet3"}
 	t.Run("broadcast", func(t *testing.T) {
-		dbTx := database.NewDatabaseTransaction(ctx, true)
+		dbTx := database.Transaction(ctx)
 		defer dbTx.Discard(ctx)
 
 		err := storage.Broadcast(
@@ -619,7 +619,7 @@ func TestBroadcastStorageBroadcastFailure(t *testing.T) {
 		blocks := blockFiller(0, 10)
 		mockHelper.AtSyncTip = true
 		for _, block := range blocks {
-			txn := storage.db.NewDatabaseTransaction(ctx, true)
+			txn := storage.db.Transaction(ctx)
 			commitWorker, err := storage.AddingBlock(ctx, block, txn)
 			assert.NoError(t, err)
 			err = txn.Commit(ctx)
@@ -630,7 +630,7 @@ func TestBroadcastStorageBroadcastFailure(t *testing.T) {
 			assert.NoError(t, err)
 		}
 
-		dbTx := database.NewDatabaseTransaction(ctx, false)
+		dbTx := database.ReadTransaction(ctx)
 		defer dbTx.Discard(ctx)
 
 		accounts, err := storage.LockedAccounts(ctx, dbTx)
@@ -693,7 +693,7 @@ func TestBroadcastStorageBehindTip(t *testing.T) {
 	send2 := opFiller("addr 2", 1)
 	network := &types.NetworkIdentifier{Blockchain: "Bitcoin", Network: "Testnet3"}
 	t.Run("broadcast", func(t *testing.T) {
-		dbTx := database.NewDatabaseTransaction(ctx, true)
+		dbTx := database.Transaction(ctx)
 		defer dbTx.Discard(ctx)
 
 		err := storage.Broadcast(
@@ -762,7 +762,7 @@ func TestBroadcastStorageBehindTip(t *testing.T) {
 
 	t.Run("add blocks behind tip", func(t *testing.T) {
 		for _, block := range blocks[:60] {
-			txn := storage.db.NewDatabaseTransaction(ctx, true)
+			txn := storage.db.Transaction(ctx)
 			commitWorker, err := storage.AddingBlock(ctx, block, txn)
 			assert.NoError(t, err)
 			err = txn.Commit(ctx)
@@ -773,7 +773,7 @@ func TestBroadcastStorageBehindTip(t *testing.T) {
 			assert.NoError(t, err)
 		}
 
-		dbTx := database.NewDatabaseTransaction(ctx, false)
+		dbTx := database.ReadTransaction(ctx)
 		defer dbTx.Discard(ctx)
 
 		accounts, err := storage.LockedAccounts(ctx, dbTx)
@@ -812,7 +812,7 @@ func TestBroadcastStorageBehindTip(t *testing.T) {
 	mockHelper.AtSyncTip = true
 	t.Run("add blocks close to tip", func(t *testing.T) {
 		for _, block := range blocks[60:71] {
-			txn := storage.db.NewDatabaseTransaction(ctx, true)
+			txn := storage.db.Transaction(ctx)
 			commitWorker, err := storage.AddingBlock(ctx, block, txn)
 			assert.NoError(t, err)
 			err = txn.Commit(ctx)
@@ -823,7 +823,7 @@ func TestBroadcastStorageBehindTip(t *testing.T) {
 			assert.NoError(t, err)
 		}
 
-		dbTx := database.NewDatabaseTransaction(ctx, false)
+		dbTx := database.ReadTransaction(ctx)
 		defer dbTx.Discard(ctx)
 
 		accounts, err := storage.LockedAccounts(ctx, dbTx)
@@ -889,7 +889,7 @@ func TestBroadcastStorageClearBroadcasts(t *testing.T) {
 
 	network := &types.NetworkIdentifier{Blockchain: "Bitcoin", Network: "Testnet3"}
 	t.Run("locked addresses with no broadcasts", func(t *testing.T) {
-		dbTx := database.NewDatabaseTransaction(ctx, false)
+		dbTx := database.ReadTransaction(ctx)
 		defer dbTx.Discard(ctx)
 
 		accounts, err := storage.LockedAccounts(ctx, dbTx)
@@ -901,7 +901,7 @@ func TestBroadcastStorageClearBroadcasts(t *testing.T) {
 	send1 := opFiller("addr 1", 11)
 	send2 := opFiller("addr 2", 13)
 	t.Run("broadcast", func(t *testing.T) {
-		dbTx := database.NewDatabaseTransaction(ctx, true)
+		dbTx := database.Transaction(ctx)
 		defer dbTx.Discard(ctx)
 
 		err := storage.Broadcast(
@@ -983,7 +983,7 @@ func TestBroadcastStorageClearBroadcasts(t *testing.T) {
 			},
 		}, broadcasts)
 
-		dbTx := database.NewDatabaseTransaction(ctx, false)
+		dbTx := database.ReadTransaction(ctx)
 		defer dbTx.Discard(ctx)
 
 		accounts, err := storage.LockedAccounts(ctx, dbTx)
