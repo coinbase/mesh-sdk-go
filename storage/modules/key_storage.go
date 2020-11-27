@@ -21,6 +21,8 @@ import (
 	"math/big"
 
 	"github.com/coinbase/rosetta-sdk-go/keys"
+	"github.com/coinbase/rosetta-sdk-go/storage/database"
+	storageErrs "github.com/coinbase/rosetta-sdk-go/storage/errors"
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/coinbase/rosetta-sdk-go/utils"
 )
@@ -47,14 +49,14 @@ func getAccountKey(account *types.AccountIdentifier) []byte {
 }
 
 // KeyStorage implements key storage methods
-// on top of a Database and DatabaseTransaction interface.
+// on top of a database.Database and database.Transaction interface.
 type KeyStorage struct {
-	db Database
+	db database.Database
 }
 
 // NewKeyStorage returns a new KeyStorage.
 func NewKeyStorage(
-	db Database,
+	db database.Database,
 ) *KeyStorage {
 	return &KeyStorage{
 		db: db,
@@ -74,17 +76,17 @@ func (k *KeyStorage) StoreTransactional(
 	ctx context.Context,
 	account *types.AccountIdentifier,
 	keyPair *keys.KeyPair,
-	dbTx DatabaseTransaction,
+	dbTx database.Transaction,
 ) error {
 	exists, _, err := dbTx.Get(ctx, getAccountKey(account))
 	if err != nil {
-		return fmt.Errorf("%w: %s %v", ErrAddrCheckIfExistsFailed, types.PrintStruct(account), err)
+		return fmt.Errorf("%w: %s %v", storageErrs.ErrAddrCheckIfExistsFailed, types.PrintStruct(account), err)
 	}
 
 	if exists {
 		return fmt.Errorf(
 			"%w: account %s already exists",
-			ErrAddrExists,
+			storageErrs.ErrAddrExists,
 			types.PrintStruct(account),
 		)
 	}
@@ -94,12 +96,12 @@ func (k *KeyStorage) StoreTransactional(
 		KeyPair: keyPair,
 	})
 	if err != nil {
-		return fmt.Errorf("%w: %v", ErrSerializeKeyFailed, err)
+		return fmt.Errorf("%w: %v", storageErrs.ErrSerializeKeyFailed, err)
 	}
 
 	err = dbTx.Set(ctx, getAccountKey(account), val, true)
 	if err != nil {
-		return fmt.Errorf("%w: %v", ErrStoreKeyFailed, err)
+		return fmt.Errorf("%w: %v", storageErrs.ErrStoreKeyFailed, err)
 	}
 
 	return nil
@@ -120,31 +122,31 @@ func (k *KeyStorage) Store(
 	}
 
 	if err := dbTx.Commit(ctx); err != nil {
-		return fmt.Errorf("%w: %v", ErrCommitKeyFailed, err)
+		return fmt.Errorf("%w: %v", storageErrs.ErrCommitKeyFailed, err)
 	}
 
 	return nil
 }
 
 // GetTransactional returns a *keys.KeyPair for an AccountIdentifier in a
-// DatabaseTransaction, if it exists.
+// database.Transaction, if it exists.
 func (k *KeyStorage) GetTransactional(
 	ctx context.Context,
-	dbTx DatabaseTransaction,
+	dbTx database.Transaction,
 	account *types.AccountIdentifier,
 ) (*keys.KeyPair, error) {
 	exists, rawKey, err := dbTx.Get(ctx, getAccountKey(account))
 	if err != nil {
-		return nil, fmt.Errorf("%w: %s %v", ErrAddrGetFailed, types.PrintStruct(account), err)
+		return nil, fmt.Errorf("%w: %s %v", storageErrs.ErrAddrGetFailed, types.PrintStruct(account), err)
 	}
 
 	if !exists {
-		return nil, fmt.Errorf("%w: %s", ErrAddrNotFound, types.PrintStruct(account))
+		return nil, fmt.Errorf("%w: %s", storageErrs.ErrAddrNotFound, types.PrintStruct(account))
 	}
 
 	var kp Key
 	if err := k.db.Encoder().Decode("", rawKey, &kp, true); err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrParseSavedKeyFailed, err)
+		return nil, fmt.Errorf("%w: %v", storageErrs.ErrParseSavedKeyFailed, err)
 	}
 
 	return kp.KeyPair, nil
@@ -164,7 +166,7 @@ func (k *KeyStorage) Get(
 // GetAllAccountsTransactional returns all AccountIdentifiers in key storage.
 func (k *KeyStorage) GetAllAccountsTransactional(
 	ctx context.Context,
-	dbTx DatabaseTransaction,
+	dbTx database.Transaction,
 ) ([]*types.AccountIdentifier, error) {
 	accounts := []*types.AccountIdentifier{}
 	_, err := dbTx.Scan(
@@ -175,7 +177,7 @@ func (k *KeyStorage) GetAllAccountsTransactional(
 			var kp Key
 			// We should not reclaim memory during a scan!!
 			if err := k.db.Encoder().Decode("", v, &kp, false); err != nil {
-				return fmt.Errorf("%w: %v", ErrKeyScanFailed, err)
+				return fmt.Errorf("%w: %v", storageErrs.ErrKeyScanFailed, err)
 			}
 
 			accounts = append(accounts, kp.Account)
@@ -185,7 +187,7 @@ func (k *KeyStorage) GetAllAccountsTransactional(
 		false,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrKeyScanFailed, err)
+		return nil, fmt.Errorf("%w: %v", storageErrs.ErrKeyScanFailed, err)
 	}
 
 	return accounts, nil
@@ -210,7 +212,7 @@ func (k *KeyStorage) Sign(
 		if err != nil {
 			return nil, fmt.Errorf(
 				"%w for %s: %v",
-				ErrKeyGetFailed,
+				storageErrs.ErrKeyGetFailed,
 				types.PrintStruct(payload.AccountIdentifier),
 				err,
 			)
@@ -218,16 +220,16 @@ func (k *KeyStorage) Sign(
 
 		signer, err := keyPair.Signer()
 		if err != nil {
-			return nil, fmt.Errorf("%w: %v", ErrSignerCreateFailed, err)
+			return nil, fmt.Errorf("%w: %v", storageErrs.ErrSignerCreateFailed, err)
 		}
 
 		if len(payload.SignatureType) == 0 {
-			return nil, fmt.Errorf("%w %d", ErrDetermineSigTypeFailed, i)
+			return nil, fmt.Errorf("%w %d", storageErrs.ErrDetermineSigTypeFailed, i)
 		}
 
 		signature, err := signer.Sign(payload, payload.SignatureType)
 		if err != nil {
-			return nil, fmt.Errorf("%w for %d: %v", ErrSignPayloadFailed, i, err)
+			return nil, fmt.Errorf("%w for %d: %v", storageErrs.ErrSignPayloadFailed, i, err)
 		}
 
 		signatures[i] = signature
@@ -240,11 +242,11 @@ func (k *KeyStorage) Sign(
 func (k *KeyStorage) RandomAccount(ctx context.Context) (*types.AccountIdentifier, error) {
 	accounts, err := k.GetAllAccounts(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrAddrsGetAllFailed, err)
+		return nil, fmt.Errorf("%w: %v", storageErrs.ErrAddrsGetAllFailed, err)
 	}
 
 	if len(accounts) == 0 {
-		return nil, ErrNoAddrAvailable
+		return nil, storageErrs.ErrNoAddrAvailable
 	}
 
 	randomNumber := utils.RandomNumber(big.NewInt(0), big.NewInt(int64(len(accounts))))
@@ -256,16 +258,16 @@ func (k *KeyStorage) ImportAccounts(ctx context.Context, accounts []*PrefundedAc
 	for _, acc := range accounts {
 		keyPair, err := keys.ImportPrivateKey(acc.PrivateKeyHex, acc.CurveType)
 		if err != nil {
-			return fmt.Errorf("%w: %v", ErrAddrImportFailed, err)
+			return fmt.Errorf("%w: %v", storageErrs.ErrAddrImportFailed, err)
 		}
 
 		// Skip if key already exists
 		err = k.Store(ctx, acc.AccountIdentifier, keyPair)
-		if errors.Is(err, ErrAddrExists) {
+		if errors.Is(err, storageErrs.ErrAddrExists) {
 			continue
 		}
 		if err != nil {
-			return fmt.Errorf("%w: %v", ErrPrefundedAcctStoreFailed, err)
+			return fmt.Errorf("%w: %v", storageErrs.ErrPrefundedAcctStoreFailed, err)
 		}
 	}
 	return nil
