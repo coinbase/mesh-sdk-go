@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package storage
+package modules
 
 import (
 	"context"
@@ -353,7 +353,7 @@ func (c *CoinStorage) AddingBlock(
 	ctx context.Context,
 	block *types.Block,
 	transaction database.Transaction,
-) (CommitWorker, error) {
+) (database.CommitWorker, error) {
 	return nil, c.updateCoins(ctx, block, true, transaction)
 }
 
@@ -362,7 +362,7 @@ func (c *CoinStorage) RemovingBlock(
 	ctx context.Context,
 	block *types.Block,
 	transaction database.Transaction,
-) (CommitWorker, error) {
+) (database.CommitWorker, error) {
 	return nil, c.updateCoins(ctx, block, false, transaction)
 }
 

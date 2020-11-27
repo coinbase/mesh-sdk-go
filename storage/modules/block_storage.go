@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package storage
+package modules
 
 import (
 	"context"
@@ -82,14 +82,9 @@ func getTransactionHashKey(transactionIdentifier *types.TransactionIdentifier) (
 // to be done while a block is added/removed from storage
 // in the same database transaction as the change.
 type BlockWorker interface {
-	AddingBlock(context.Context, *types.Block, database.Transaction) (CommitWorker, error)
-	RemovingBlock(context.Context, *types.Block, database.Transaction) (CommitWorker, error)
+	AddingBlock(context.Context, *types.Block, database.Transaction) (database.CommitWorker, error)
+	RemovingBlock(context.Context, *types.Block, database.Transaction) (database.CommitWorker, error)
 }
-
-// CommitWorker is returned by a BlockWorker to be called after
-// changes have been committed. It is common to put logging activities
-// in here (that shouldn't be printed until the block is committed).
-type CommitWorker func(context.Context) error
 
 // BlockStorage implements block specific storage methods
 // on top of a database.Database and database.Transaction interface.
@@ -715,9 +710,9 @@ func (b *BlockStorage) callWorkersAndCommit(
 	txn database.Transaction,
 	adding bool,
 ) error {
-	commitWorkers := make([]CommitWorker, len(b.workers))
+	commitWorkers := make([]database.CommitWorker, len(b.workers))
 	for i, w := range b.workers {
-		var cw CommitWorker
+		var cw database.CommitWorker
 		var err error
 		if adding {
 			cw, err = w.AddingBlock(ctx, block, txn)

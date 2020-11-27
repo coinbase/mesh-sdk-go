@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package storage
+package modules
 
 import (
 	"context"
@@ -149,7 +149,7 @@ func (b *BalanceStorage) AddingBlock(
 	ctx context.Context,
 	block *types.Block,
 	transaction database.Transaction,
-) (CommitWorker, error) {
+) (database.CommitWorker, error) {
 	changes, err := b.parser.BalanceChanges(ctx, block, false)
 	if err != nil {
 		return nil, fmt.Errorf("%w: unable to calculate balance changes", err)
@@ -180,7 +180,7 @@ func (b *BalanceStorage) RemovingBlock(
 	ctx context.Context,
 	block *types.Block,
 	transaction database.Transaction,
-) (CommitWorker, error) {
+) (database.CommitWorker, error) {
 	changes, err := b.parser.BalanceChanges(ctx, block, true)
 	if err != nil {
 		return nil, fmt.Errorf("%w: unable to calculate balance changes", err)
