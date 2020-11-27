@@ -23,6 +23,8 @@ import (
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
 	"github.com/coinbase/rosetta-sdk-go/parser"
+	"github.com/coinbase/rosetta-sdk-go/storage/database"
+	storageErrs "github.com/coinbase/rosetta-sdk-go/storage/errors"
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/coinbase/rosetta-sdk-go/utils"
 
@@ -109,9 +111,9 @@ type BalanceStorageHelper interface {
 }
 
 // BalanceStorage implements block specific storage methods
-// on top of a Database and DatabaseTransaction interface.
+// on top of a database.Database and database.Transaction interface.
 type BalanceStorage struct {
-	db      Database
+	db      database.Database
 	helper  BalanceStorageHelper
 	handler BalanceStorageHandler
 
@@ -120,7 +122,7 @@ type BalanceStorage struct {
 
 // NewBalanceStorage returns a new BalanceStorage.
 func NewBalanceStorage(
-	db Database,
+	db database.Database,
 ) *BalanceStorage {
 	return &BalanceStorage{
 		db: db,
@@ -146,7 +148,7 @@ func (b *BalanceStorage) Initialize(
 func (b *BalanceStorage) AddingBlock(
 	ctx context.Context,
 	block *types.Block,
-	transaction DatabaseTransaction,
+	transaction database.Transaction,
 ) (CommitWorker, error) {
 	changes, err := b.parser.BalanceChanges(ctx, block, false)
 	if err != nil {
@@ -177,7 +179,7 @@ func (b *BalanceStorage) AddingBlock(
 func (b *BalanceStorage) RemovingBlock(
 	ctx context.Context,
 	block *types.Block,
-	transaction DatabaseTransaction,
+	transaction database.Transaction,
 ) (CommitWorker, error) {
 	changes, err := b.parser.BalanceChanges(ctx, block, true)
 	if err != nil {
@@ -222,7 +224,7 @@ type accountEntry struct {
 // for bootstrapping balances.
 func (b *BalanceStorage) SetBalance(
 	ctx context.Context,
-	dbTransaction DatabaseTransaction,
+	dbTransaction database.Transaction,
 	account *types.AccountIdentifier,
 	amount *types.Amount,
 	block *types.BlockIdentifier,
@@ -434,7 +436,7 @@ func (b *BalanceStorage) applyExemptions(
 	if exemption == nil {
 		return "", fmt.Errorf(
 			"%w: account %s balance difference (live - computed) %s at %s is not allowed by any balance exemption",
-			ErrInvalidLiveBalance,
+			storageErrs.ErrInvalidLiveBalance,
 			types.PrintStruct(change.Account),
 			difference,
 			types.PrintStruct(change.Block),
@@ -449,7 +451,7 @@ func (b *BalanceStorage) applyExemptions(
 // at blocks >= the provided block.
 func (b *BalanceStorage) OrphanBalance(
 	ctx context.Context,
-	dbTransaction DatabaseTransaction,
+	dbTransaction database.Transaction,
 	account *types.AccountIdentifier,
 	currency *types.Currency,
 	block *types.BlockIdentifier,
@@ -476,7 +478,7 @@ func (b *BalanceStorage) OrphanBalance(
 		block.Index,
 	)
 	switch {
-	case errors.Is(err, ErrAccountMissing):
+	case errors.Is(err, storageErrs.ErrAccountMissing):
 		key := GetAccountKey(account, currency)
 		return dbTransaction.Delete(ctx, key)
 	case err != nil:
@@ -523,7 +525,7 @@ func (b *BalanceStorage) PruneBalances(
 // recent accessed block.
 func (b *BalanceStorage) UpdateBalance(
 	ctx context.Context,
-	dbTransaction DatabaseTransaction,
+	dbTransaction database.Transaction,
 	change *parser.BalanceChange,
 	parentBlock *types.BlockIdentifier,
 ) error {
@@ -550,7 +552,7 @@ func (b *BalanceStorage) UpdateBalance(
 			change.Block.Index,
 		)
 		switch {
-		case errors.Is(err, ErrAccountMissing):
+		case errors.Is(err, storageErrs.ErrAccountMissing):
 			storedValue = "0"
 		case err != nil:
 			return err
@@ -593,7 +595,7 @@ func (b *BalanceStorage) UpdateBalance(
 	if bigNewVal.Sign() == -1 {
 		return fmt.Errorf(
 			"%w %s:%+v for %+v at %+v",
-			ErrNegativeBalance,
+			storageErrs.ErrNegativeBalance,
 			newVal,
 			change.Currency,
 			change.Account,
@@ -657,7 +659,7 @@ func (b *BalanceStorage) GetBalance(
 // and the types.BlockIdentifier it was last updated at in a database transaction.
 func (b *BalanceStorage) GetBalanceTransactional(
 	ctx context.Context,
-	dbTx DatabaseTransaction,
+	dbTx database.Transaction,
 	account *types.AccountIdentifier,
 	currency *types.Currency,
 	index int64,
@@ -669,7 +671,7 @@ func (b *BalanceStorage) GetBalanceTransactional(
 	}
 
 	if !exists {
-		return nil, ErrAccountMissing
+		return nil, storageErrs.ErrAccountMissing
 	}
 
 	var accEntry accountEntry
@@ -684,7 +686,7 @@ func (b *BalanceStorage) GetBalanceTransactional(
 	if accEntry.LastPruned != nil && *accEntry.LastPruned >= index {
 		return nil, fmt.Errorf(
 			"%w: last pruned %d",
-			ErrBalancePruned,
+			storageErrs.ErrBalancePruned,
 			*accEntry.LastPruned,
 		)
 	}
@@ -701,7 +703,7 @@ func (b *BalanceStorage) GetBalanceTransactional(
 	// the balance to be 0 (i.e. before any balance
 	// changes applied). If syncing starts after
 	// genesis, this behavior could cause issues.
-	if errors.Is(err, ErrAccountMissing) {
+	if errors.Is(err, storageErrs.ErrAccountMissing) {
 		return &types.Amount{
 			Value:    "0",
 			Currency: currency,
@@ -716,7 +718,7 @@ func (b *BalanceStorage) GetBalanceTransactional(
 
 func (b *BalanceStorage) fetchAndSetBalance(
 	ctx context.Context,
-	dbTx DatabaseTransaction,
+	dbTx database.Transaction,
 	account *types.AccountIdentifier,
 	currency *types.Currency,
 	block *types.BlockIdentifier,
@@ -776,13 +778,13 @@ func (b *BalanceStorage) GetOrSetBalance(
 // doesn't exist.
 func (b *BalanceStorage) GetOrSetBalanceTransactional(
 	ctx context.Context,
-	dbTx DatabaseTransaction,
+	dbTx database.Transaction,
 	account *types.AccountIdentifier,
 	currency *types.Currency,
 	block *types.BlockIdentifier,
 ) (*types.Amount, error) {
 	if block == nil {
-		return nil, ErrBlockNil
+		return nil, storageErrs.ErrBlockNil
 	}
 
 	amount, err := b.GetBalanceTransactional(
@@ -792,7 +794,7 @@ func (b *BalanceStorage) GetOrSetBalanceTransactional(
 		currency,
 		block.Index,
 	)
-	if errors.Is(err, ErrAccountMissing) {
+	if errors.Is(err, storageErrs.ErrAccountMissing) {
 		amount, err = b.fetchAndSetBalance(ctx, dbTx, account, currency, block)
 		if err != nil {
 			return nil, fmt.Errorf("%w: unable to set balance", err)
@@ -983,7 +985,7 @@ func (b *BalanceStorage) SetBalanceImported(
 // at a particular *types.BlockIdentifier.
 func (b *BalanceStorage) getHistoricalBalance(
 	ctx context.Context,
-	dbTx DatabaseTransaction,
+	dbTx database.Transaction,
 	account *types.AccountIdentifier,
 	currency *types.Currency,
 	index int64,
@@ -1010,12 +1012,12 @@ func (b *BalanceStorage) getHistoricalBalance(
 		return nil, fmt.Errorf("%w: database scan failed", err)
 	}
 
-	return nil, ErrAccountMissing
+	return nil, storageErrs.ErrAccountMissing
 }
 
 func (b *BalanceStorage) updateAccountEntry(
 	ctx context.Context,
-	dbTx DatabaseTransaction,
+	dbTx database.Transaction,
 	account *types.AccountIdentifier,
 	currency *types.Currency,
 	handler func(accountEntry) *accountEntry,
@@ -1066,7 +1068,7 @@ func (b *BalanceStorage) updateAccountEntry(
 // index.
 func (b *BalanceStorage) removeHistoricalBalances(
 	ctx context.Context,
-	dbTx DatabaseTransaction,
+	dbTx database.Transaction,
 	account *types.AccountIdentifier,
 	currency *types.Currency,
 	index int64,

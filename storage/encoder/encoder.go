@@ -206,7 +206,9 @@ func (e *Encoder) decode(b []byte, zstdDict []byte) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func copyStruct(input interface{}, output interface{}) error {
+// CopyStruct performs a deep copy of an entire struct
+// using its JSON representation.
+func CopyStruct(input interface{}, output interface{}) error {
 	inputString := types.PrintStruct(input)
 	if err := json.Unmarshal([]byte(inputString), &output); err != nil {
 		return fmt.Errorf("%w: %v", errors.ErrCopyBlockFailed, err)

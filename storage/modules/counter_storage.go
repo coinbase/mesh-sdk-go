@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/coinbase/rosetta-sdk-go/storage/database"
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
@@ -81,14 +82,14 @@ const (
 var _ BlockWorker = (*CounterStorage)(nil)
 
 // CounterStorage implements counter-specific storage methods
-// on top of a Database and DatabaseTransaction interface.
+// on top of a database.Database and database.Transaction interface.
 type CounterStorage struct {
-	db Database
+	db database.Database
 }
 
 // NewCounterStorage returns a new CounterStorage.
 func NewCounterStorage(
-	db Database,
+	db database.Database,
 ) *CounterStorage {
 	return &CounterStorage{
 		db: db,
@@ -102,7 +103,7 @@ func getCounterKey(counter string) []byte {
 func transactionalGet(
 	ctx context.Context,
 	counter string,
-	txn DatabaseTransaction,
+	txn database.Transaction,
 ) (*big.Int, error) {
 	exists, val, err := txn.Get(ctx, getCounterKey(counter))
 	if err != nil {
@@ -120,7 +121,7 @@ func transactionalGet(
 // value in a transaction.
 func (c *CounterStorage) UpdateTransactional(
 	ctx context.Context,
-	dbTx DatabaseTransaction,
+	dbTx database.Transaction,
 	counter string,
 	amount *big.Int,
 ) (*big.Int, error) {
@@ -171,7 +172,7 @@ func (c *CounterStorage) Get(ctx context.Context, counter string) (*big.Int, err
 func (c *CounterStorage) AddingBlock(
 	ctx context.Context,
 	block *types.Block,
-	transaction DatabaseTransaction,
+	transaction database.Transaction,
 ) (CommitWorker, error) {
 	_, err := c.UpdateTransactional(
 		ctx,
@@ -214,7 +215,7 @@ func (c *CounterStorage) AddingBlock(
 func (c *CounterStorage) RemovingBlock(
 	ctx context.Context,
 	block *types.Block,
-	transaction DatabaseTransaction,
+	transaction database.Transaction,
 ) (CommitWorker, error) {
 	_, err := c.UpdateTransactional(ctx, transaction, OrphanCounter, big.NewInt(1))
 	return nil, err

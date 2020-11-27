@@ -20,6 +20,8 @@ import (
 	"strconv"
 
 	"github.com/coinbase/rosetta-sdk-go/constructor/job"
+	"github.com/coinbase/rosetta-sdk-go/storage/database"
+	"github.com/coinbase/rosetta-sdk-go/storage/errors"
 )
 
 const (
@@ -60,22 +62,22 @@ func getJobCompletedKey(workflow string) string {
 // JobStorage implements storage methods for managing
 // jobs.
 type JobStorage struct {
-	db Database
+	db database.Database
 }
 
 // NewJobStorage returns a new instance of *JobStorage.
-func NewJobStorage(db Database) *JobStorage {
+func NewJobStorage(db database.Database) *JobStorage {
 	return &JobStorage{db: db}
 }
 
 func (j *JobStorage) getAllJobs(
 	ctx context.Context,
-	dbTx DatabaseTransaction,
+	dbTx database.Transaction,
 	k []byte,
 ) ([]*job.Job, error) {
 	exists, v, err := dbTx.Get(ctx, k)
 	if err != nil {
-		return nil, fmt.Errorf("%w by %s: %v", ErrJobsGetAllFailed, string(k), err)
+		return nil, fmt.Errorf("%w by %s: %v", errors.ErrJobsGetAllFailed, string(k), err)
 	}
 
 	jobs := []*job.Job{}
@@ -86,13 +88,13 @@ func (j *JobStorage) getAllJobs(
 	var identifiers map[string]struct{}
 	err = j.db.Encoder().Decode("", v, &identifiers, true)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrJobIdentifierDecodeFailed, err)
+		return nil, fmt.Errorf("%w: %v", errors.ErrJobIdentifierDecodeFailed, err)
 	}
 
 	for identifier := range identifiers {
 		v, err := j.Get(ctx, dbTx, identifier)
 		if err != nil {
-			return nil, fmt.Errorf("%w %s: %v", ErrJobGetFailed, identifier, err)
+			return nil, fmt.Errorf("%w %s: %v", errors.ErrJobGetFailed, identifier, err)
 		}
 
 		jobs = append(jobs, v)
@@ -102,14 +104,14 @@ func (j *JobStorage) getAllJobs(
 }
 
 // Ready returns all ready *job.Job.
-func (j *JobStorage) Ready(ctx context.Context, dbTx DatabaseTransaction) ([]*job.Job, error) {
+func (j *JobStorage) Ready(ctx context.Context, dbTx database.Transaction) ([]*job.Job, error) {
 	return j.getAllJobs(ctx, dbTx, getJobMetadataKey(readyKey))
 }
 
 // Broadcasting returns all broadcasting *job.Job.
 func (j *JobStorage) Broadcasting(
 	ctx context.Context,
-	dbTx DatabaseTransaction,
+	dbTx database.Transaction,
 ) ([]*job.Job, error) {
 	return j.getAllJobs(ctx, dbTx, getJobMetadataKey(broadcastingKey))
 }
@@ -117,7 +119,7 @@ func (j *JobStorage) Broadcasting(
 // Processing gets all processing *job.Job of a certain workflow.
 func (j *JobStorage) Processing(
 	ctx context.Context,
-	dbTx DatabaseTransaction,
+	dbTx database.Transaction,
 	workflow string,
 ) ([]*job.Job, error) {
 	return j.getAllJobs(ctx, dbTx, getJobMetadataKey(getJobProcessingKey(workflow)))
@@ -165,12 +167,12 @@ func (j *JobStorage) AllCompleted(ctx context.Context) ([]*job.Job, error) {
 
 func (j *JobStorage) getNextIdentifier(
 	ctx context.Context,
-	dbTx DatabaseTransaction,
+	dbTx database.Transaction,
 ) (string, error) {
 	k := getJobMetadataKey("identifier")
 	exists, v, err := dbTx.Get(ctx, k)
 	if err != nil {
-		return "", fmt.Errorf("%w: %v", ErrJobGetFailed, err)
+		return "", fmt.Errorf("%w: %v", errors.ErrJobGetFailed, err)
 	}
 
 	// Get existing identifier
@@ -178,7 +180,7 @@ func (j *JobStorage) getNextIdentifier(
 	if exists {
 		err = j.db.Encoder().Decode("", v, &nextIdentifier, true)
 		if err != nil {
-			return "", fmt.Errorf("%w: %v", ErrJobIdentifierDecodeFailed, err)
+			return "", fmt.Errorf("%w: %v", errors.ErrJobIdentifierDecodeFailed, err)
 		}
 	} else {
 		nextIdentifier = 0
@@ -187,11 +189,11 @@ func (j *JobStorage) getNextIdentifier(
 	// Increment and save
 	encoded, err := j.db.Encoder().Encode("", nextIdentifier+1)
 	if err != nil {
-		return "", fmt.Errorf("%w: %v", ErrJobIdentifierEncodeFailed, err)
+		return "", fmt.Errorf("%w: %v", errors.ErrJobIdentifierEncodeFailed, err)
 	}
 
 	if err := dbTx.Set(ctx, k, encoded, true); err != nil {
-		return "", fmt.Errorf("%w: %v", ErrJobIdentifierUpdateFailed, err)
+		return "", fmt.Errorf("%w: %v", errors.ErrJobIdentifierUpdateFailed, err)
 	}
 
 	return strconv.Itoa(nextIdentifier), nil
@@ -199,17 +201,17 @@ func (j *JobStorage) getNextIdentifier(
 
 func (j *JobStorage) updateIdentifiers(
 	ctx context.Context,
-	dbTx DatabaseTransaction,
+	dbTx database.Transaction,
 	k []byte,
 	identifiers map[string]struct{},
 ) error {
 	encoded, err := j.db.Encoder().Encode("", identifiers)
 	if err != nil {
-		return fmt.Errorf("%w: %v", ErrJobIdentifiersEncodeAllFailed, err)
+		return fmt.Errorf("%w: %v", errors.ErrJobIdentifiersEncodeAllFailed, err)
 	}
 
 	if err := dbTx.Set(ctx, k, encoded, true); err != nil {
-		return fmt.Errorf("%w: %v", ErrJobIdentifiersSetAllFailed, err)
+		return fmt.Errorf("%w: %v", errors.ErrJobIdentifiersSetAllFailed, err)
 	}
 
 	return nil
@@ -217,20 +219,20 @@ func (j *JobStorage) updateIdentifiers(
 
 func (j *JobStorage) addJob(
 	ctx context.Context,
-	dbTx DatabaseTransaction,
+	dbTx database.Transaction,
 	k []byte,
 	identifier string,
 ) error {
 	exists, v, err := dbTx.Get(ctx, k)
 	if err != nil {
-		return fmt.Errorf("%w by %s: %v", ErrJobsGetAllFailed, string(k), err)
+		return fmt.Errorf("%w by %s: %v", errors.ErrJobsGetAllFailed, string(k), err)
 	}
 
 	var identifiers map[string]struct{}
 	if exists {
 		err = j.db.Encoder().Decode("", v, &identifiers, true)
 		if err != nil {
-			return fmt.Errorf("%w: %v", ErrJobIdentifierDecodeFailed, err)
+			return fmt.Errorf("%w: %v", errors.ErrJobIdentifierDecodeFailed, err)
 		}
 	} else {
 		identifiers = map[string]struct{}{}
@@ -243,18 +245,18 @@ func (j *JobStorage) addJob(
 
 func (j *JobStorage) removeJob(
 	ctx context.Context,
-	dbTx DatabaseTransaction,
+	dbTx database.Transaction,
 	k []byte,
 	identifier string,
 ) error {
 	exists, v, err := dbTx.Get(ctx, k)
 	if err != nil {
-		return fmt.Errorf("%w by %s: %v", ErrJobsGetAllFailed, string(k), err)
+		return fmt.Errorf("%w by %s: %v", errors.ErrJobsGetAllFailed, string(k), err)
 	}
 
 	var identifiers map[string]struct{}
 	if !exists {
-		return fmt.Errorf("%w %s from %s", ErrJobIdentifierRemoveFailed, identifier, string(k))
+		return fmt.Errorf("%w %s from %s", errors.ErrJobIdentifierRemoveFailed, identifier, string(k))
 	}
 
 	err = j.db.Encoder().Decode("", v, &identifiers, true)
@@ -263,7 +265,7 @@ func (j *JobStorage) removeJob(
 	}
 
 	if _, ok := identifiers[identifier]; !ok {
-		return fmt.Errorf("%w: %s is not in %s", ErrJobIdentifierNotFound, identifier, string(k))
+		return fmt.Errorf("%w: %s is not in %s", errors.ErrJobIdentifierNotFound, identifier, string(k))
 	}
 
 	delete(identifiers, identifier)
@@ -302,21 +304,21 @@ func getAssociatedKeys(j *job.Job) [][]byte {
 
 func (j *JobStorage) updateMetadata(
 	ctx context.Context,
-	dbTx DatabaseTransaction,
+	dbTx database.Transaction,
 	oldJob *job.Job,
 	newJob *job.Job,
 ) error {
 	removedKeys := getAssociatedKeys(oldJob)
 	for _, key := range removedKeys {
 		if err := j.removeJob(ctx, dbTx, key, oldJob.Identifier); err != nil {
-			return fmt.Errorf("%w %s: %v", ErrJobRemoveFailed, oldJob.Identifier, err)
+			return fmt.Errorf("%w %s: %v", errors.ErrJobRemoveFailed, oldJob.Identifier, err)
 		}
 	}
 
 	addedKeys := getAssociatedKeys(newJob)
 	for _, key := range addedKeys {
 		if err := j.addJob(ctx, dbTx, key, newJob.Identifier); err != nil {
-			return fmt.Errorf("%w %s: %v", ErrJobAddFailed, newJob.Identifier, err)
+			return fmt.Errorf("%w %s: %v", errors.ErrJobAddFailed, newJob.Identifier, err)
 		}
 	}
 
@@ -326,14 +328,14 @@ func (j *JobStorage) updateMetadata(
 // Update overwrites an existing *job.Job or creates a new one (and assigns an identifier).
 func (j *JobStorage) Update(
 	ctx context.Context,
-	dbTx DatabaseTransaction,
+	dbTx database.Transaction,
 	v *job.Job,
 ) (string, error) {
 	var oldJob *job.Job
 	if len(v.Identifier) == 0 {
 		newIdentifier, err := j.getNextIdentifier(ctx, dbTx)
 		if err != nil {
-			return "", fmt.Errorf("%w: %v", ErrJobIdentifierGetFailed, err)
+			return "", fmt.Errorf("%w: %v", errors.ErrJobIdentifierGetFailed, err)
 		}
 
 		v.Identifier = newIdentifier
@@ -341,26 +343,26 @@ func (j *JobStorage) Update(
 		var err error
 		oldJob, err = j.Get(ctx, dbTx, v.Identifier)
 		if err != nil {
-			return "", fmt.Errorf("%w %s: %v", ErrJobGetFailed, v.Identifier, err)
+			return "", fmt.Errorf("%w %s: %v", errors.ErrJobGetFailed, v.Identifier, err)
 		}
 	}
 
 	if oldJob != nil && (oldJob.Status == job.Completed || oldJob.Status == job.Failed) {
-		return "", fmt.Errorf("%w %s", ErrJobUpdateOldFailed, v.Identifier)
+		return "", fmt.Errorf("%w %s", errors.ErrJobUpdateOldFailed, v.Identifier)
 	}
 
 	k := getJobKey(v.Identifier)
 	encoded, err := j.db.Encoder().Encode("", v)
 	if err != nil {
-		return "", fmt.Errorf("%w: %v", ErrJobEncodeFailed, err)
+		return "", fmt.Errorf("%w: %v", errors.ErrJobEncodeFailed, err)
 	}
 
 	if err := dbTx.Set(ctx, k, encoded, true); err != nil {
-		return "", fmt.Errorf("%w: %v", ErrJobUpdateFailed, err)
+		return "", fmt.Errorf("%w: %v", errors.ErrJobUpdateFailed, err)
 	}
 
 	if err := j.updateMetadata(ctx, dbTx, oldJob, v); err != nil {
-		return "", fmt.Errorf("%w: %v", ErrJobMetadataUpdateFailed, err)
+		return "", fmt.Errorf("%w: %v", errors.ErrJobMetadataUpdateFailed, err)
 	}
 
 	return v.Identifier, nil
@@ -369,23 +371,23 @@ func (j *JobStorage) Update(
 // Get returns a *job.Job by its identifier.
 func (j *JobStorage) Get(
 	ctx context.Context,
-	dbTx DatabaseTransaction,
+	dbTx database.Transaction,
 	identifier string,
 ) (*job.Job, error) {
 	k := getJobKey(identifier)
 
 	exists, v, err := dbTx.Get(ctx, k)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrJobGetFailed, err)
+		return nil, fmt.Errorf("%w: %v", errors.ErrJobGetFailed, err)
 	}
 	if !exists {
-		return nil, fmt.Errorf("%w: %v", ErrJobDoesNotExist, err)
+		return nil, fmt.Errorf("%w: %v", errors.ErrJobDoesNotExist, err)
 	}
 
 	var output job.Job
 	err = j.db.Encoder().Decode("", v, &output, true)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrJobDecodeFailed, err)
+		return nil, fmt.Errorf("%w: %v", errors.ErrJobDecodeFailed, err)
 	}
 
 	return &output, nil
