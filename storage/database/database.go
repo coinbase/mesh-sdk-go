@@ -28,18 +28,18 @@ type Database interface {
 	// will block until the returned DatabaseTransaction is committed or
 	// discarded. This is useful for making changes across
 	// multiple prefixes but incurs a large performance overhead.
-	Transaction(context.Context) DatabaseTransaction
+	Transaction(context.Context) Transaction
 
 	// ReadTransaction allows for consistent, read-only access
 	// to the database. This does not acquire any lock
 	// on the database.
-	ReadTransaction(context.Context) DatabaseTransaction
+	ReadTransaction(context.Context) Transaction
 
 	// WriteTransaction acquires a granular write lock for a particular
 	// identifier. All subsequent calls to WriteTransaction with the same
 	// identifier will block until the DatabaseTransaction returned is either
 	// committed or discarded.
-	WriteTransaction(ctx context.Context, identifier string, priority bool) DatabaseTransaction
+	WriteTransaction(ctx context.Context, identifier string, priority bool) Transaction
 
 	// Close shuts down the database.
 	Close(context.Context) error
@@ -50,14 +50,14 @@ type Database interface {
 	Encoder() *encoder.Encoder
 }
 
-// DatabaseTransaction is an interface that provides
+// Transaction is an interface that provides
 // access to a KV store within some transaction
 // context provided by a Database.
 //
-// When a DatabaseTransaction is committed or discarded,
+// When a Transaction is committed or discarded,
 // all memory utilized is reclaimed. If you want to persist
 // any data retrieved, make sure to make a copy!
-type DatabaseTransaction interface {
+type Transaction interface {
 	Set(context.Context, []byte, []byte, bool) error
 	Get(context.Context, []byte) (bool, []byte, error)
 	Delete(context.Context, []byte) error

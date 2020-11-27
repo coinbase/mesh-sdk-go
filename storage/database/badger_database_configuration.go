@@ -21,14 +21,14 @@ import (
 )
 
 // BadgerOption is used to overwrite default values in
-// BadgerStorage construction. Any Option not provided
+// BadgerDatabase construction. Any Option not provided
 // falls back to the default value.
-type BadgerOption func(b *BadgerStorage)
+type BadgerOption func(b *BadgerDatabase)
 
 // WithCompressorEntries provides zstd dictionaries
 // for given namespaces.
 func WithCompressorEntries(entries []*encoder.CompressorEntry) BadgerOption {
-	return func(b *BadgerStorage) {
+	return func(b *BadgerDatabase) {
 		b.compress = true
 		b.compressorEntries = entries
 	}
@@ -36,7 +36,7 @@ func WithCompressorEntries(entries []*encoder.CompressorEntry) BadgerOption {
 
 // WithoutCompression disables zstd compression.
 func WithoutCompression() BadgerOption {
-	return func(b *BadgerStorage) {
+	return func(b *BadgerDatabase) {
 		b.compress = false
 	}
 }
@@ -46,7 +46,7 @@ func WithoutCompression() BadgerOption {
 // If you provide custom BadgerDB settings, do not use this
 // config as it will be overridden by your custom settings.
 func WithIndexCacheSize(size int64) BadgerOption {
-	return func(b *BadgerStorage) {
+	return func(b *BadgerDatabase) {
 		b.badgerOptions.IndexCacheSize = size
 	}
 }
@@ -54,7 +54,7 @@ func WithIndexCacheSize(size int64) BadgerOption {
 // WithCustomSettings allows for overriding all default BadgerDB
 // options with custom settings.
 func WithCustomSettings(settings badger.Options) BadgerOption {
-	return func(b *BadgerStorage) {
+	return func(b *BadgerDatabase) {
 		b.badgerOptions = settings
 	}
 }
@@ -64,7 +64,7 @@ func WithCustomSettings(settings badger.Options) BadgerOption {
 // to set this value to your write concurrency to prevent
 // lock contention.
 func WithWriterShards(shards int) BadgerOption {
-	return func(b *BadgerStorage) {
+	return func(b *BadgerDatabase) {
 		b.writerShards = shards
 	}
 }

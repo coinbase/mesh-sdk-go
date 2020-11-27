@@ -71,9 +71,9 @@ const (
 	defaultGCSleep        = 10 * time.Second
 )
 
-// BadgerStorage is a wrapper around Badger DB
+// BadgerDatabase is a wrapper around Badger DB
 // that implements the Database interface.
-type BadgerStorage struct {
+type BadgerDatabase struct {
 	badgerOptions     badger.Options
 	compressorEntries []*encoder.CompressorEntry
 
@@ -187,15 +187,15 @@ func PerformanceBadgerOptions(dir string) badger.Options {
 	return opts
 }
 
-// NewBadgerStorage creates a new BadgerStorage.
-func NewBadgerStorage(
+// NewBadgerDatabase creates a new BadgerDatabase.
+func NewBadgerDatabase(
 	ctx context.Context,
 	dir string,
 	storageOptions ...BadgerOption,
 ) (Database, error) {
 	dir = path.Clean(dir)
 
-	b := &BadgerStorage{
+	b := &BadgerDatabase{
 		badgerOptions: DefaultBadgerOptions(dir),
 		closed:        make(chan struct{}),
 		pool:          encoder.NewBufferPool(),
@@ -231,7 +231,7 @@ func NewBadgerStorage(
 
 // Close closes the database to prevent corruption.
 // The caller should defer this in main.
-func (b *BadgerStorage) Close(ctx context.Context) error {
+func (b *BadgerDatabase) Close(ctx context.Context) error {
 	// Trigger shutdown for the garabage collector
 	close(b.closed)
 
@@ -247,7 +247,7 @@ func (b *BadgerStorage) Close(ctx context.Context) error {
 //
 // Inspired by:
 // https://github.com/ipfs/go-ds-badger/blob/a69f1020ba3954680900097e0c9d0181b88930ad/datastore.go#L173-L199
-func (b *BadgerStorage) periodicGC(ctx context.Context) {
+func (b *BadgerDatabase) periodicGC(ctx context.Context) {
 	// We start the timeout with the default sleep to aggressively check
 	// for space to reclaim on startup.
 	gcTimeout := time.NewTimer(defaultGCSleep)
@@ -287,8 +287,8 @@ func (b *BadgerStorage) periodicGC(ctx context.Context) {
 	}
 }
 
-// Encoder returns the BadgerStorage encoder.
-func (b *BadgerStorage) Encoder() *encoder.Encoder {
+// Encoder returns the BadgerDatabase encoder.
+func (b *BadgerDatabase) Encoder() *encoder.Encoder {
 	return b.encoder
 }
 
@@ -296,7 +296,7 @@ func (b *BadgerStorage) Encoder() *encoder.Encoder {
 // DB transaction that implements the DatabaseTransaction
 // interface.
 type BadgerTransaction struct {
-	db     *BadgerStorage
+	db     *BadgerDatabase
 	txn    *badger.Txn
 	rwLock sync.RWMutex
 
@@ -315,9 +315,9 @@ type BadgerTransaction struct {
 }
 
 // Transaction creates a new exclusive write BadgerTransaction.
-func (b *BadgerStorage) Transaction(
+func (b *BadgerDatabase) Transaction(
 	ctx context.Context,
-) DatabaseTransaction {
+) Transaction {
 	b.writer.GLock()
 
 	return &BadgerTransaction{
@@ -329,9 +329,9 @@ func (b *BadgerStorage) Transaction(
 }
 
 // ReadTransaction creates a new read BadgerTransaction.
-func (b *BadgerStorage) ReadTransaction(
+func (b *BadgerDatabase) ReadTransaction(
 	ctx context.Context,
-) DatabaseTransaction {
+) Transaction {
 	return &BadgerTransaction{
 		db:               b,
 		txn:              b.db.NewTransaction(false),
@@ -341,11 +341,11 @@ func (b *BadgerStorage) ReadTransaction(
 
 // WriteTransaction creates a new write BadgerTransaction
 // for a particular identifier.
-func (b *BadgerStorage) WriteTransaction(
+func (b *BadgerDatabase) WriteTransaction(
 	ctx context.Context,
 	identifier string,
 	priority bool,
-) DatabaseTransaction {
+) Transaction {
 	b.writer.Lock(identifier, priority)
 
 	return &BadgerTransaction{
@@ -619,7 +619,7 @@ func recompress(
 	return onDiskSize, newSize, nil
 }
 
-// BadgerTrain creates a zstd dictionary for a given BadgerStorage DB namespace.
+// BadgerTrain creates a zstd dictionary for a given BadgerDatabase DB namespace.
 // Optionally, you can specify the maximum number of entries to load into
 // storage (if -1 is provided, then all possible are loaded).
 func BadgerTrain(
@@ -630,7 +630,7 @@ func BadgerTrain(
 	maxEntries int,
 	compressorEntries []*encoder.CompressorEntry,
 ) (float64, float64, error) {
-	badgerDb, err := NewBadgerStorage(
+	badgerDb, err := NewBadgerDatabase(
 		ctx,
 		path.Clean(db),
 		WithCompressorEntries(compressorEntries),
