@@ -16,6 +16,8 @@ package storage
 
 import (
 	"context"
+
+	"github.com/coinbase/rosetta-sdk-go/storage/encoder"
 )
 
 // Database is an interface that provides transactional
@@ -45,7 +47,7 @@ type Database interface {
 	// Encoder returns the *Encoder used to store/read data
 	// in the database. This *Encoder often performs some
 	// form of compression on data.
-	Encoder() *Encoder
+	Encoder() *encoder.Encoder
 }
 
 // DatabaseTransaction is an interface that provides
