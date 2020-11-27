@@ -12,9 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package storage
+package database
 
 import (
+	"github.com/coinbase/rosetta-sdk-go/storage/encoder"
+
 	"github.com/dgraph-io/badger/v2"
 )
 
@@ -25,7 +27,7 @@ type BadgerOption func(b *BadgerStorage)
 
 // WithCompressorEntries provides zstd dictionaries
 // for given namespaces.
-func WithCompressorEntries(entries []*CompressorEntry) BadgerOption {
+func WithCompressorEntries(entries []*encoder.CompressorEntry) BadgerOption {
 	return func(b *BadgerStorage) {
 		b.compress = true
 		b.compressorEntries = entries

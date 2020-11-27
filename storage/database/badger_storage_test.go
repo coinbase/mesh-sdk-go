@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package storage
+package database
 
 import (
 	"context"
@@ -20,6 +20,7 @@ import (
 	"path"
 	"testing"
 
+	"github.com/coinbase/rosetta-sdk-go/storage/encoder"
 	"github.com/coinbase/rosetta-sdk-go/utils"
 
 	"github.com/lucasjones/reggen"
@@ -264,7 +265,7 @@ func TestBadgerTrain_NoLimit(t *testing.T) {
 		newDir,
 		path.Join(newDir, "bogus_dict"),
 		-1,
-		[]*CompressorEntry{},
+		[]*encoder.CompressorEntry{},
 	)
 	assert.NoError(t, err)
 	assert.True(t, normalSize > dictSize)
@@ -310,7 +311,7 @@ func TestBadgerTrain_Limit(t *testing.T) {
 		newDir,
 		dictionaryPath,
 		50,
-		[]*CompressorEntry{},
+		[]*encoder.CompressorEntry{},
 	)
 	assert.NoError(t, err)
 	assert.True(t, oldSize > newSize)
@@ -320,7 +321,7 @@ func TestBadgerTrain_Limit(t *testing.T) {
 	assert.NoError(t, err)
 	defer utils.RemoveTempDir(newDir2)
 
-	entries := []*CompressorEntry{
+	entries := []*encoder.CompressorEntry{
 		{
 			Namespace:      namespace,
 			DictionaryPath: dictionaryPath,
