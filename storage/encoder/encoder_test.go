@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package storage
+package encoder
 
 import (
 	"context"
@@ -81,7 +81,7 @@ func TestEncoder(t *testing.T) {
 }
 
 var (
-	benchmarkCoin = &AccountCoin{
+	benchmarkCoin = &types.AccountCoin{
 		Account: &types.AccountIdentifier{
 			Address: "hello",
 		},
@@ -99,7 +99,7 @@ var (
 		},
 	}
 
-	complexCoin = &AccountCoin{
+	complexCoin = &types.AccountCoin{
 		Account: &types.AccountIdentifier{
 			Address: "hello",
 			SubAccount: &types.SubAccountIdentifier{
@@ -135,7 +135,7 @@ func BenchmarkAccountCoinStandard(b *testing.B) {
 		compressedResult, _ := e.Encode("", benchmarkCoin)
 
 		// decode
-		var decoded AccountCoin
+		var decoded types.AccountCoin
 		_ = e.Decode("", compressedResult, &decoded, true)
 	}
 }
@@ -148,7 +148,7 @@ func BenchmarkComplexAccountCoinStandard(b *testing.B) {
 		compressedResult, _ := e.Encode("", complexCoin)
 
 		// decode
-		var decoded AccountCoin
+		var decoded types.AccountCoin
 		_ = e.Decode("", compressedResult, &decoded, true)
 	}
 }
@@ -161,7 +161,7 @@ func BenchmarkAccountCoinOptimized(b *testing.B) {
 		manualResult, _ := e.EncodeAccountCoin(benchmarkCoin)
 
 		// decode
-		var decoded AccountCoin
+		var decoded types.AccountCoin
 		_ = e.DecodeAccountCoin(manualResult, &decoded, true)
 	}
 }
@@ -173,20 +173,20 @@ func BenchmarkComplexAccountCoinOptimized(b *testing.B) {
 		manualResult, _ := e.EncodeAccountCoin(complexCoin)
 
 		// decode
-		var decoded AccountCoin
+		var decoded types.AccountCoin
 		_ = e.DecodeAccountCoin(manualResult, &decoded, true)
 	}
 }
 
 func TestEncodeDecodeAccountCoin(t *testing.T) {
 	tests := map[string]struct {
-		accountCoin *AccountCoin
+		accountCoin *types.AccountCoin
 	}{
 		"simple": {
 			accountCoin: benchmarkCoin,
 		},
 		"sub account info": {
-			accountCoin: &AccountCoin{
+			accountCoin: &types.AccountCoin{
 				Account: &types.AccountIdentifier{
 					Address: "hello",
 					SubAccount: &types.SubAccountIdentifier{
@@ -211,7 +211,7 @@ func TestEncodeDecodeAccountCoin(t *testing.T) {
 			},
 		},
 		"currency metadata": {
-			accountCoin: &AccountCoin{
+			accountCoin: &types.AccountCoin{
 				Account: &types.AccountIdentifier{
 					Address: "hello",
 				},
@@ -250,7 +250,7 @@ func TestEncodeDecodeAccountCoin(t *testing.T) {
 				len(optimizedResult),
 			)
 
-			var decoded AccountCoin
+			var decoded types.AccountCoin
 			assert.NoError(t, e.DecodeAccountCoin(optimizedResult, &decoded, true))
 
 			assert.Equal(t, test.accountCoin, &decoded)

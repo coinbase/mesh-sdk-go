@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package storage
+package encoder
 
 import (
 	"bytes"
@@ -24,6 +24,7 @@ import (
 	"path"
 	"strconv"
 
+	"github.com/coinbase/rosetta-sdk-go/storage/errors"
 	"github.com/coinbase/rosetta-sdk-go/types"
 
 	"github.com/DataDog/zstd"
@@ -69,7 +70,7 @@ func NewEncoder(
 		if err != nil {
 			return nil, fmt.Errorf(
 				"%w from %s: %v",
-				ErrLoadDictFailed,
+				errors.ErrLoadDictFailed,
 				entry.DictionaryPath,
 				err,
 			)
@@ -99,7 +100,7 @@ func (e *Encoder) Encode(namespace string, object interface{}) ([]byte, error) {
 	buf := e.pool.Get()
 	err := getEncoder(buf).Encode(object)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrObjectEncodeFailed, err)
+		return nil, fmt.Errorf("%w: %v", errors.ErrObjectEncodeFailed, err)
 	}
 
 	if !e.compress {
@@ -108,7 +109,7 @@ func (e *Encoder) Encode(namespace string, object interface{}) ([]byte, error) {
 
 	output, err := e.EncodeRaw(namespace, buf.Bytes())
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrRawCompressFailed, err)
+		return nil, fmt.Errorf("%w: %v", errors.ErrRawCompressFailed, err)
 	}
 
 	e.pool.Put(buf)
@@ -139,17 +140,17 @@ func (e *Encoder) Decode(
 	if e.compress {
 		decompressed, err := e.DecodeRaw(namespace, input)
 		if err != nil {
-			return fmt.Errorf("%w: %v", ErrRawDecompressFailed, err)
+			return fmt.Errorf("%w: %v", errors.ErrRawDecompressFailed, err)
 		}
 
 		if err := getDecoder(bytes.NewReader(decompressed)).Decode(&object); err != nil {
-			return fmt.Errorf("%w: %v", ErrRawDecodeFailed, err)
+			return fmt.Errorf("%w: %v", errors.ErrRawDecodeFailed, err)
 		}
 
 		e.pool.PutByteSlice(decompressed)
 	} else { // nolint:gocritic
 		if err := getDecoder(bytes.NewReader(input)).Decode(&object); err != nil {
-			return fmt.Errorf("%w: %v", ErrRawDecodeFailed, err)
+			return fmt.Errorf("%w: %v", errors.ErrRawDecodeFailed, err)
 		}
 	}
 
@@ -175,11 +176,11 @@ func (e *Encoder) encode(input []byte, zstdDict []byte) ([]byte, error) {
 		writer = zstd.NewWriter(buf)
 	}
 	if _, err := writer.Write(input); err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrBufferWriteFailed, err)
+		return nil, fmt.Errorf("%w: %v", errors.ErrBufferWriteFailed, err)
 	}
 
 	if err := writer.Close(); err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrWriterCloseFailed, err)
+		return nil, fmt.Errorf("%w: %v", errors.ErrWriterCloseFailed, err)
 	}
 
 	return buf.Bytes(), nil
@@ -195,11 +196,11 @@ func (e *Encoder) decode(b []byte, zstdDict []byte) ([]byte, error) {
 	}
 
 	if _, err := buf.ReadFrom(reader); err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrObjectDecodeFailed, err)
+		return nil, fmt.Errorf("%w: %v", errors.ErrObjectDecodeFailed, err)
 	}
 
 	if err := reader.Close(); err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrReaderCloseFailed, err)
+		return nil, fmt.Errorf("%w: %v", errors.ErrReaderCloseFailed, err)
 	}
 
 	return buf.Bytes(), nil
@@ -208,7 +209,7 @@ func (e *Encoder) decode(b []byte, zstdDict []byte) ([]byte, error) {
 func copyStruct(input interface{}, output interface{}) error {
 	inputString := types.PrintStruct(input)
 	if err := json.Unmarshal([]byte(inputString), &output); err != nil {
-		return fmt.Errorf("%w: %v", ErrCopyBlockFailed, err)
+		return fmt.Errorf("%w: %v", errors.ErrCopyBlockFailed, err)
 	}
 
 	return nil
@@ -238,11 +239,11 @@ func (e *Encoder) encodeAndWrite(output *bytes.Buffer, object interface{}) error
 	buf := e.pool.Get()
 	err := getEncoder(buf).Encode(object)
 	if err != nil {
-		return fmt.Errorf("%w: %v", ErrObjectEncodeFailed, err)
+		return fmt.Errorf("%w: %v", errors.ErrObjectEncodeFailed, err)
 	}
 
 	if _, err := output.Write(buf.Bytes()); err != nil {
-		return fmt.Errorf("%w: %v", ErrObjectEncodeFailed, err)
+		return fmt.Errorf("%w: %v", errors.ErrObjectEncodeFailed, err)
 	}
 
 	e.pool.Put(buf)
@@ -252,7 +253,7 @@ func (e *Encoder) encodeAndWrite(output *bytes.Buffer, object interface{}) error
 func (e *Encoder) decodeMap(input []byte) (map[string]interface{}, error) {
 	var m map[string]interface{}
 	if err := getDecoder(bytes.NewReader(input)).Decode(&m); err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrRawDecodeFailed, err)
+		return nil, fmt.Errorf("%w: %v", errors.ErrRawDecodeFailed, err)
 	}
 
 	return m, nil
@@ -269,37 +270,37 @@ func (e *Encoder) decodeMap(input []byte) (map[string]interface{}, error) {
 //
 // In both cases, the | character is represented by the unicodeRecordSeparator rune.
 func (e *Encoder) EncodeAccountCoin( // nolint:gocognit
-	accountCoin *AccountCoin,
+	accountCoin *types.AccountCoin,
 ) ([]byte, error) {
 	output := e.pool.Get()
 	if _, err := output.WriteString(accountCoin.Account.Address); err != nil {
-		return nil, fmt.Errorf("%w: %s", ErrObjectEncodeFailed, err.Error())
+		return nil, fmt.Errorf("%w: %s", errors.ErrObjectEncodeFailed, err.Error())
 	}
 	if _, err := output.WriteRune(unicodeRecordSeparator); err != nil {
-		return nil, fmt.Errorf("%w: %s", ErrObjectEncodeFailed, err.Error())
+		return nil, fmt.Errorf("%w: %s", errors.ErrObjectEncodeFailed, err.Error())
 	}
 	if _, err := output.WriteString(accountCoin.Coin.CoinIdentifier.Identifier); err != nil {
-		return nil, fmt.Errorf("%w: %s", ErrObjectEncodeFailed, err.Error())
+		return nil, fmt.Errorf("%w: %s", errors.ErrObjectEncodeFailed, err.Error())
 	}
 	if _, err := output.WriteRune(unicodeRecordSeparator); err != nil {
-		return nil, fmt.Errorf("%w: %s", ErrObjectEncodeFailed, err.Error())
+		return nil, fmt.Errorf("%w: %s", errors.ErrObjectEncodeFailed, err.Error())
 	}
 	if _, err := output.WriteString(accountCoin.Coin.Amount.Value); err != nil {
-		return nil, fmt.Errorf("%w: %s", ErrObjectEncodeFailed, err.Error())
+		return nil, fmt.Errorf("%w: %s", errors.ErrObjectEncodeFailed, err.Error())
 	}
 	if _, err := output.WriteRune(unicodeRecordSeparator); err != nil {
-		return nil, fmt.Errorf("%w: %s", ErrObjectEncodeFailed, err.Error())
+		return nil, fmt.Errorf("%w: %s", errors.ErrObjectEncodeFailed, err.Error())
 	}
 	if _, err := output.WriteString(accountCoin.Coin.Amount.Currency.Symbol); err != nil {
-		return nil, fmt.Errorf("%w: %s", ErrObjectEncodeFailed, err.Error())
+		return nil, fmt.Errorf("%w: %s", errors.ErrObjectEncodeFailed, err.Error())
 	}
 	if _, err := output.WriteRune(unicodeRecordSeparator); err != nil {
-		return nil, fmt.Errorf("%w: %s", ErrObjectEncodeFailed, err.Error())
+		return nil, fmt.Errorf("%w: %s", errors.ErrObjectEncodeFailed, err.Error())
 	}
 	if _, err := output.WriteString(
 		strconv.FormatInt(int64(accountCoin.Coin.Amount.Currency.Decimals), 10),
 	); err != nil {
-		return nil, fmt.Errorf("%w: %s", ErrObjectEncodeFailed, err.Error())
+		return nil, fmt.Errorf("%w: %s", errors.ErrObjectEncodeFailed, err.Error())
 	}
 
 	// Exit early if we don't have any complex data to record (this helps
@@ -312,46 +313,46 @@ func (e *Encoder) EncodeAccountCoin( // nolint:gocognit
 	}
 
 	if _, err := output.WriteRune(unicodeRecordSeparator); err != nil {
-		return nil, fmt.Errorf("%w: %s", ErrObjectEncodeFailed, err.Error())
+		return nil, fmt.Errorf("%w: %s", errors.ErrObjectEncodeFailed, err.Error())
 	}
 	if accountCoin.Account.Metadata != nil {
 		if err := e.encodeAndWrite(output, accountCoin.Account.Metadata); err != nil {
-			return nil, fmt.Errorf("%w: %s", ErrObjectEncodeFailed, err.Error())
+			return nil, fmt.Errorf("%w: %s", errors.ErrObjectEncodeFailed, err.Error())
 		}
 	}
 	if _, err := output.WriteRune(unicodeRecordSeparator); err != nil {
-		return nil, fmt.Errorf("%w: %s", ErrObjectEncodeFailed, err.Error())
+		return nil, fmt.Errorf("%w: %s", errors.ErrObjectEncodeFailed, err.Error())
 	}
 
 	if accountCoin.Account.SubAccount != nil {
 		if _, err := output.WriteString(accountCoin.Account.SubAccount.Address); err != nil {
-			return nil, fmt.Errorf("%w: %s", ErrObjectEncodeFailed, err.Error())
+			return nil, fmt.Errorf("%w: %s", errors.ErrObjectEncodeFailed, err.Error())
 		}
 	}
 	if _, err := output.WriteRune(unicodeRecordSeparator); err != nil {
-		return nil, fmt.Errorf("%w: %s", ErrObjectEncodeFailed, err.Error())
+		return nil, fmt.Errorf("%w: %s", errors.ErrObjectEncodeFailed, err.Error())
 	}
 
 	if accountCoin.Account.SubAccount != nil && accountCoin.Account.SubAccount.Metadata != nil {
 		if err := e.encodeAndWrite(output, accountCoin.Account.SubAccount.Metadata); err != nil {
-			return nil, fmt.Errorf("%w: %s", ErrObjectEncodeFailed, err.Error())
+			return nil, fmt.Errorf("%w: %s", errors.ErrObjectEncodeFailed, err.Error())
 		}
 	}
 	if _, err := output.WriteRune(unicodeRecordSeparator); err != nil {
-		return nil, fmt.Errorf("%w: %s", ErrObjectEncodeFailed, err.Error())
+		return nil, fmt.Errorf("%w: %s", errors.ErrObjectEncodeFailed, err.Error())
 	}
 
 	if accountCoin.Coin.Amount.Metadata != nil {
 		if err := e.encodeAndWrite(output, accountCoin.Coin.Amount.Metadata); err != nil {
-			return nil, fmt.Errorf("%w: %s", ErrObjectEncodeFailed, err.Error())
+			return nil, fmt.Errorf("%w: %s", errors.ErrObjectEncodeFailed, err.Error())
 		}
 	}
 	if _, err := output.WriteRune(unicodeRecordSeparator); err != nil {
-		return nil, fmt.Errorf("%w: %s", ErrObjectEncodeFailed, err.Error())
+		return nil, fmt.Errorf("%w: %s", errors.ErrObjectEncodeFailed, err.Error())
 	}
 	if accountCoin.Coin.Amount.Currency.Metadata != nil {
 		if err := e.encodeAndWrite(output, accountCoin.Coin.Amount.Currency.Metadata); err != nil {
-			return nil, fmt.Errorf("%w: %s", ErrObjectEncodeFailed, err.Error())
+			return nil, fmt.Errorf("%w: %s", errors.ErrObjectEncodeFailed, err.Error())
 		}
 	}
 
@@ -362,7 +363,7 @@ func (e *Encoder) EncodeAccountCoin( // nolint:gocognit
 // reclaims the memory associated with the input.
 func (e *Encoder) DecodeAccountCoin( // nolint:gocognit
 	b []byte,
-	accountCoin *AccountCoin,
+	accountCoin *types.AccountCoin,
 	reclaimInput bool,
 ) error {
 	count := 0
@@ -371,7 +372,7 @@ func (e *Encoder) DecodeAccountCoin( // nolint:gocognit
 		nextRune := bytes.IndexRune(currentBytes, unicodeRecordSeparator)
 		if nextRune == -1 {
 			if count != amountCurrencyDecimals && count != currencyMetadata {
-				return fmt.Errorf("%w: next rune is -1 at %d", ErrRawDecodeFailed, count)
+				return fmt.Errorf("%w: next rune is -1 at %d", errors.ErrRawDecodeFailed, count)
 			}
 
 			nextRune = len(currentBytes)
@@ -404,14 +405,14 @@ func (e *Encoder) DecodeAccountCoin( // nolint:gocognit
 		case amountCurrencyDecimals:
 			i, err := strconv.ParseInt(string(val), 10, 32)
 			if err != nil {
-				return fmt.Errorf("%w: %s", ErrRawDecodeFailed, err.Error())
+				return fmt.Errorf("%w: %s", errors.ErrRawDecodeFailed, err.Error())
 			}
 
 			accountCoin.Coin.Amount.Currency.Decimals = int32(i)
 		case accountMetadata:
 			m, err := e.decodeMap(val)
 			if err != nil {
-				return fmt.Errorf("%w: account metadata %s", ErrRawDecodeFailed, err.Error())
+				return fmt.Errorf("%w: account metadata %s", errors.ErrRawDecodeFailed, err.Error())
 			}
 
 			accountCoin.Account.Metadata = m
@@ -421,31 +422,31 @@ func (e *Encoder) DecodeAccountCoin( // nolint:gocognit
 			}
 		case subAccountMetadata:
 			if accountCoin.Account.SubAccount == nil {
-				return ErrRawDecodeFailed // must have address
+				return errors.ErrRawDecodeFailed // must have address
 			}
 
 			m, err := e.decodeMap(val)
 			if err != nil {
-				return fmt.Errorf("%w: subaccount metadata %s", ErrRawDecodeFailed, err.Error())
+				return fmt.Errorf("%w: subaccount metadata %s", errors.ErrRawDecodeFailed, err.Error())
 			}
 
 			accountCoin.Account.SubAccount.Metadata = m
 		case amountMetadata:
 			m, err := e.decodeMap(val)
 			if err != nil {
-				return fmt.Errorf("%w: amount metadata %s", ErrRawDecodeFailed, err.Error())
+				return fmt.Errorf("%w: amount metadata %s", errors.ErrRawDecodeFailed, err.Error())
 			}
 
 			accountCoin.Coin.Amount.Metadata = m
 		case currencyMetadata:
 			m, err := e.decodeMap(val)
 			if err != nil {
-				return fmt.Errorf("%w: currency metadata %s", ErrRawDecodeFailed, err.Error())
+				return fmt.Errorf("%w: currency metadata %s", errors.ErrRawDecodeFailed, err.Error())
 			}
 
 			accountCoin.Coin.Amount.Currency.Metadata = m
 		default:
-			return fmt.Errorf("%w: count %d > end", ErrRawDecodeFailed, count)
+			return fmt.Errorf("%w: count %d > end", errors.ErrRawDecodeFailed, count)
 		}
 
 	handleNext:
