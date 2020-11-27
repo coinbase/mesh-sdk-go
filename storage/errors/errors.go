@@ -158,6 +158,7 @@ var (
 	ErrUTXOBalanceGetFailed         = errors.New("unable to get utxo balance")
 	ErrCoinParseFailed              = errors.New("unable to parse amount for coin")
 	ErrCoinImportFailed             = errors.New("unable to import coins")
+	ErrCoinNotFound                 = errors.New("coin not found")
 
 	CoinStorageErrs = []error{
 		ErrCoinQueryFailed,
@@ -180,6 +181,7 @@ var (
 		ErrUTXOBalanceGetFailed,
 		ErrCoinParseFailed,
 		ErrCoinImportFailed,
+		ErrCoinNotFound,
 	}
 )
 

@@ -21,6 +21,9 @@ import (
 	"log"
 	"strconv"
 
+	"github.com/coinbase/rosetta-sdk-go/storage/database"
+	"github.com/coinbase/rosetta-sdk-go/storage/encoder"
+	storageErrs "github.com/coinbase/rosetta-sdk-go/storage/errors"
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/coinbase/rosetta-sdk-go/utils"
 
@@ -79,8 +82,8 @@ func getTransactionHashKey(transactionIdentifier *types.TransactionIdentifier) (
 // to be done while a block is added/removed from storage
 // in the same database transaction as the change.
 type BlockWorker interface {
-	AddingBlock(context.Context, *types.Block, DatabaseTransaction) (CommitWorker, error)
-	RemovingBlock(context.Context, *types.Block, DatabaseTransaction) (CommitWorker, error)
+	AddingBlock(context.Context, *types.Block, database.Transaction) (CommitWorker, error)
+	RemovingBlock(context.Context, *types.Block, database.Transaction) (CommitWorker, error)
 }
 
 // CommitWorker is returned by a BlockWorker to be called after
@@ -89,16 +92,16 @@ type BlockWorker interface {
 type CommitWorker func(context.Context) error
 
 // BlockStorage implements block specific storage methods
-// on top of a Database and DatabaseTransaction interface.
+// on top of a database.Database and database.Transaction interface.
 type BlockStorage struct {
-	db Database
+	db database.Database
 
 	workers []BlockWorker
 }
 
 // NewBlockStorage returns a new BlockStorage.
 func NewBlockStorage(
-	db Database,
+	db database.Database,
 ) *BlockStorage {
 	return &BlockStorage{
 		db: db,
@@ -116,7 +119,7 @@ func (b *BlockStorage) Initialize(workers []BlockWorker) {
 
 func (b *BlockStorage) setOldestBlockIndex(
 	ctx context.Context,
-	dbTx DatabaseTransaction,
+	dbTx database.Transaction,
 	update bool,
 	index int64,
 ) error {
@@ -131,7 +134,7 @@ func (b *BlockStorage) setOldestBlockIndex(
 	}
 
 	err := storeUniqueKey(ctx, dbTx, key, value, true)
-	if err == nil || errors.Is(err, ErrDuplicateKey) {
+	if err == nil || errors.Is(err, storageErrs.ErrDuplicateKey) {
 		return nil
 	}
 
@@ -142,7 +145,7 @@ func (b *BlockStorage) setOldestBlockIndex(
 // available in BlockStorage in a single database transaction.
 func (b *BlockStorage) GetOldestBlockIndexTransactional(
 	ctx context.Context,
-	dbTx DatabaseTransaction,
+	dbTx database.Transaction,
 ) (int64, error) {
 	exists, rawIndex, err := dbTx.Get(ctx, getOldestBlockIndexKey())
 	if err != nil {
@@ -150,7 +153,7 @@ func (b *BlockStorage) GetOldestBlockIndexTransactional(
 	}
 
 	if !exists {
-		return -1, ErrOldestIndexMissing
+		return -1, storageErrs.ErrOldestIndexMissing
 	}
 
 	index, err := strconv.ParseInt(string(rawIndex), 10, 64)
@@ -188,11 +191,11 @@ func (b *BlockStorage) pruneBlock(
 
 	oldestIndex, err := b.GetOldestBlockIndexTransactional(ctx, dbTx)
 	if err != nil {
-		return -1, fmt.Errorf("%w: %v", ErrOldestIndexRead, err)
+		return -1, fmt.Errorf("%w: %v", storageErrs.ErrOldestIndexRead, err)
 	}
 
 	if index < oldestIndex {
-		return -1, ErrNothingToPrune
+		return -1, storageErrs.ErrNothingToPrune
 	}
 
 	head, err := b.GetHeadBlockIdentifierTransactional(ctx, dbTx)
@@ -203,7 +206,7 @@ func (b *BlockStorage) pruneBlock(
 	// Ensure we are only pruning blocks that could not be
 	// accessed later in a reorg.
 	if oldestIndex > head.Index-minDepth {
-		return -1, ErrNothingToPrune
+		return -1, storageErrs.ErrNothingToPrune
 	}
 
 	blockResponse, err := b.GetBlockLazyTransactional(
@@ -211,7 +214,7 @@ func (b *BlockStorage) pruneBlock(
 		&types.PartialBlockIdentifier{Index: &oldestIndex},
 		dbTx,
 	)
-	if err != nil && !errors.Is(err, ErrBlockNotFound) {
+	if err != nil && !errors.Is(err, storageErrs.ErrBlockNotFound) {
 		return -1, err
 	}
 
@@ -223,7 +226,7 @@ func (b *BlockStorage) pruneBlock(
 
 		for _, tx := range blockResponse.OtherTransactions {
 			if err := b.pruneTransaction(ctx, dbTx, blockIdentifier, tx); err != nil {
-				return -1, fmt.Errorf("%w: %v", ErrCannotPruneTransaction, err)
+				return -1, fmt.Errorf("%w: %v", storageErrs.ErrCannotPruneTransaction, err)
 			}
 		}
 
@@ -235,7 +238,7 @@ func (b *BlockStorage) pruneBlock(
 
 	// Update prune index
 	if err := b.setOldestBlockIndex(ctx, dbTx, true, oldestIndex+1); err != nil {
-		return -1, fmt.Errorf("%w: %v", ErrOldestIndexUpdateFailed, err)
+		return -1, fmt.Errorf("%w: %v", storageErrs.ErrOldestIndexUpdateFailed, err)
 	}
 
 	// Commit tx
@@ -266,11 +269,11 @@ func (b *BlockStorage) Prune(
 
 	for ctx.Err() == nil {
 		prunedBlock, err := b.pruneBlock(ctx, index, minDepth)
-		if errors.Is(err, ErrNothingToPrune) {
+		if errors.Is(err, storageErrs.ErrNothingToPrune) {
 			return firstPruned, lastPruned, nil
 		}
 		if err != nil {
-			return -1, -1, fmt.Errorf("%w: %v", ErrPruningFailed, err)
+			return -1, -1, fmt.Errorf("%w: %v", storageErrs.ErrPruningFailed, err)
 		}
 
 		if firstPruned == -1 {
@@ -297,10 +300,10 @@ func (b *BlockStorage) GetHeadBlockIdentifier(
 }
 
 // GetHeadBlockIdentifierTransactional returns the head block identifier,
-// if it exists, in the context of a DatabaseTransaction.
+// if it exists, in the context of a database.Transaction.
 func (b *BlockStorage) GetHeadBlockIdentifierTransactional(
 	ctx context.Context,
-	transaction DatabaseTransaction,
+	transaction database.Transaction,
 ) (*types.BlockIdentifier, error) {
 	exists, block, err := transaction.Get(ctx, getHeadBlockKey())
 	if err != nil {
@@ -308,7 +311,7 @@ func (b *BlockStorage) GetHeadBlockIdentifierTransactional(
 	}
 
 	if !exists {
-		return nil, ErrHeadBlockNotFound
+		return nil, storageErrs.ErrHeadBlockNotFound
 	}
 
 	var blockIdentifier types.BlockIdentifier
@@ -324,7 +327,7 @@ func (b *BlockStorage) GetHeadBlockIdentifierTransactional(
 // or returns an error.
 func (b *BlockStorage) StoreHeadBlockIdentifier(
 	ctx context.Context,
-	transaction DatabaseTransaction,
+	transaction database.Transaction,
 	blockIdentifier *types.BlockIdentifier,
 ) error {
 	buf, err := b.db.Encoder().Encode("", blockIdentifier)
@@ -346,7 +349,7 @@ func (b *BlockStorage) StoreHeadBlockIdentifier(
 func (b *BlockStorage) GetBlockLazyTransactional(
 	ctx context.Context,
 	blockIdentifier *types.PartialBlockIdentifier,
-	transaction DatabaseTransaction,
+	transaction database.Transaction,
 ) (*types.BlockResponse, error) {
 	var namespace string
 	var key []byte
@@ -378,15 +381,15 @@ func (b *BlockStorage) GetBlockLazyTransactional(
 		}
 	}
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrBlockGetFailed, err)
+		return nil, fmt.Errorf("%w: %v", storageErrs.ErrBlockGetFailed, err)
 	}
 
 	if !exists {
-		return nil, fmt.Errorf("%w: %s", ErrBlockNotFound, types.PrintStruct(blockIdentifier))
+		return nil, fmt.Errorf("%w: %s", storageErrs.ErrBlockNotFound, types.PrintStruct(blockIdentifier))
 	}
 
 	if len(blockResponse) == 0 {
-		return nil, ErrCannotAccessPrunedData
+		return nil, storageErrs.ErrCannotAccessPrunedData
 	}
 
 	var rosettaBlockResponse types.BlockResponse
@@ -429,21 +432,21 @@ func (b *BlockStorage) CanonicalBlock(
 // CanonicalBlockTransactional returns a boolean indicating if
 // a block with the provided *types.BlockIdentifier
 // is in the canonical chain (regardless if it has
-// been pruned) in a single storage.DatabaseTransaction.
+// been pruned) in a single storage.database.Transaction.
 func (b *BlockStorage) CanonicalBlockTransactional(
 	ctx context.Context,
 	blockIdentifier *types.BlockIdentifier,
-	dbTx DatabaseTransaction,
+	dbTx database.Transaction,
 ) (bool, error) {
 	block, err := b.GetBlockLazyTransactional(
 		ctx,
 		types.ConstructPartialBlockIdentifier(blockIdentifier),
 		dbTx,
 	)
-	if errors.Is(err, ErrCannotAccessPrunedData) {
+	if errors.Is(err, storageErrs.ErrCannotAccessPrunedData) {
 		return true, nil
 	}
-	if errors.Is(err, ErrBlockNotFound) {
+	if errors.Is(err, storageErrs.ErrBlockNotFound) {
 		return false, nil
 	}
 	if err != nil {
@@ -461,7 +464,7 @@ func (b *BlockStorage) CanonicalBlockTransactional(
 // transaction.
 func (b *BlockStorage) GetBlockTransactional(
 	ctx context.Context,
-	dbTx DatabaseTransaction,
+	dbTx database.Transaction,
 	blockIdentifier *types.PartialBlockIdentifier,
 ) (*types.Block, error) {
 	blockResponse, err := b.GetBlockLazyTransactional(ctx, blockIdentifier, dbTx)
@@ -486,7 +489,7 @@ func (b *BlockStorage) GetBlockTransactional(
 		if err != nil {
 			return nil, fmt.Errorf(
 				"%w %s: %v",
-				ErrTransactionGetFailed,
+				storageErrs.ErrTransactionGetFailed,
 				transactionIdentifier.Hash,
 				err,
 			)
@@ -515,18 +518,18 @@ func (b *BlockStorage) GetBlock(
 
 func (b *BlockStorage) storeBlock(
 	ctx context.Context,
-	transaction DatabaseTransaction,
+	transaction database.Transaction,
 	blockResponse *types.BlockResponse,
 ) error {
 	blockIdentifier := blockResponse.Block.BlockIdentifier
 	namespace, key := getBlockHashKey(blockIdentifier.Hash)
 	buf, err := b.db.Encoder().Encode(namespace, blockResponse)
 	if err != nil {
-		return fmt.Errorf("%w: %v", ErrBlockEncodeFailed, err)
+		return fmt.Errorf("%w: %v", storageErrs.ErrBlockEncodeFailed, err)
 	}
 
 	if err := storeUniqueKey(ctx, transaction, key, buf, true); err != nil {
-		return fmt.Errorf("%w: %v", ErrBlockStoreFailed, err)
+		return fmt.Errorf("%w: %v", storageErrs.ErrBlockStoreFailed, err)
 	}
 
 	if err := storeUniqueKey(
@@ -536,15 +539,15 @@ func (b *BlockStorage) storeBlock(
 		key,
 		false,
 	); err != nil {
-		return fmt.Errorf("%w: %v", ErrBlockIndexStoreFailed, err)
+		return fmt.Errorf("%w: %v", storageErrs.ErrBlockIndexStoreFailed, err)
 	}
 
 	if err := b.StoreHeadBlockIdentifier(ctx, transaction, blockIdentifier); err != nil {
-		return fmt.Errorf("%w: %v", ErrBlockIdentifierUpdateFailed, err)
+		return fmt.Errorf("%w: %v", storageErrs.ErrBlockIdentifierUpdateFailed, err)
 	}
 
 	if err := b.setOldestBlockIndex(ctx, transaction, false, blockIdentifier.Index); err != nil {
-		return fmt.Errorf("%w: %v", ErrOldestIndexUpdateFailed, err)
+		return fmt.Errorf("%w: %v", storageErrs.ErrOldestIndexUpdateFailed, err)
 	}
 
 	return nil
@@ -565,7 +568,7 @@ func (b *BlockStorage) AddBlock(
 		if _, exists := identiferSet[txn.TransactionIdentifier.Hash]; exists {
 			return fmt.Errorf(
 				"%w: duplicate transaction %s found in block %s:%d",
-				ErrDuplicateTransactionHash,
+				storageErrs.ErrDuplicateTransactionHash,
 				txn.TransactionIdentifier.Hash,
 				block.BlockIdentifier.Hash,
 				block.BlockIdentifier.Index,
@@ -578,8 +581,8 @@ func (b *BlockStorage) AddBlock(
 
 	// Make copy of block and remove all transactions
 	var copyBlock types.Block
-	if err := copyStruct(block, &copyBlock); err != nil {
-		return fmt.Errorf("%w: %v", ErrBlockCopyFailed, err)
+	if err := encoder.CopyStruct(block, &copyBlock); err != nil {
+		return fmt.Errorf("%w: %v", storageErrs.ErrBlockCopyFailed, err)
 	}
 
 	copyBlock.Transactions = nil
@@ -593,7 +596,7 @@ func (b *BlockStorage) AddBlock(
 	// Store block
 	err := b.storeBlock(ctx, transaction, blockWithoutTransactions)
 	if err != nil {
-		return fmt.Errorf("%w: %v", ErrBlockStoreFailed, err)
+		return fmt.Errorf("%w: %v", storageErrs.ErrBlockStoreFailed, err)
 	}
 
 	g, gctx := errgroup.WithContext(ctx)
@@ -610,7 +613,7 @@ func (b *BlockStorage) AddBlock(
 				txn,
 			)
 			if err != nil {
-				return fmt.Errorf("%w: %v", ErrTransactionHashStoreFailed, err)
+				return fmt.Errorf("%w: %v", storageErrs.ErrTransactionHashStoreFailed, err)
 			}
 
 			return nil
@@ -625,7 +628,7 @@ func (b *BlockStorage) AddBlock(
 
 func (b *BlockStorage) deleteBlock(
 	ctx context.Context,
-	transaction DatabaseTransaction,
+	transaction database.Transaction,
 	block *types.Block,
 ) error {
 	blockIdentifier := block.BlockIdentifier
@@ -635,24 +638,24 @@ func (b *BlockStorage) deleteBlock(
 	// further block removals would involve decoding pruned blocks.
 	oldestIndex, err := b.GetOldestBlockIndexTransactional(ctx, transaction)
 	if err != nil {
-		return fmt.Errorf("%w: %v", ErrOldestIndexRead, err)
+		return fmt.Errorf("%w: %v", storageErrs.ErrOldestIndexRead, err)
 	}
 
 	if blockIdentifier.Index <= oldestIndex {
-		return ErrCannotRemoveOldest
+		return storageErrs.ErrCannotRemoveOldest
 	}
 
 	_, key := getBlockHashKey(blockIdentifier.Hash)
 	if err := transaction.Delete(ctx, key); err != nil {
-		return fmt.Errorf("%w: %v", ErrBlockDeleteFailed, err)
+		return fmt.Errorf("%w: %v", storageErrs.ErrBlockDeleteFailed, err)
 	}
 
 	if err := transaction.Delete(ctx, getBlockIndexKey(blockIdentifier.Index)); err != nil {
-		return fmt.Errorf("%w: %v", ErrBlockIndexDeleteFailed, err)
+		return fmt.Errorf("%w: %v", storageErrs.ErrBlockIndexDeleteFailed, err)
 	}
 
 	if err := b.StoreHeadBlockIdentifier(ctx, transaction, block.ParentBlockIdentifier); err != nil {
-		return fmt.Errorf("%w: %v", ErrHeadBlockIdentifierUpdateFailed, err)
+		return fmt.Errorf("%w: %v", storageErrs.ErrHeadBlockIdentifierUpdateFailed, err)
 	}
 
 	return nil
@@ -700,7 +703,7 @@ func (b *BlockStorage) RemoveBlock(
 
 	// Delete block
 	if err := b.deleteBlock(ctx, transaction, block); err != nil {
-		return fmt.Errorf("%w: %v", ErrBlockDeleteFailed, err)
+		return fmt.Errorf("%w: %v", storageErrs.ErrBlockDeleteFailed, err)
 	}
 
 	return b.callWorkersAndCommit(ctx, block, transaction, false)
@@ -709,7 +712,7 @@ func (b *BlockStorage) RemoveBlock(
 func (b *BlockStorage) callWorkersAndCommit(
 	ctx context.Context,
 	block *types.Block,
-	txn DatabaseTransaction,
+	txn database.Transaction,
 	adding bool,
 ) error {
 	commitWorkers := make([]CommitWorker, len(b.workers))
@@ -752,7 +755,7 @@ func (b *BlockStorage) SetNewStartIndex(
 	startIndex int64,
 ) error {
 	head, err := b.GetHeadBlockIdentifier(ctx)
-	if errors.Is(err, ErrHeadBlockNotFound) {
+	if errors.Is(err, storageErrs.ErrHeadBlockNotFound) {
 		return nil
 	}
 	if err != nil {
@@ -762,7 +765,7 @@ func (b *BlockStorage) SetNewStartIndex(
 	if head.Index < startIndex {
 		return fmt.Errorf(
 			"%w: block index is %d but start index is %d",
-			ErrLastProcessedBlockPrecedesStart,
+			storageErrs.ErrLastProcessedBlockPrecedesStart,
 			head.Index,
 			startIndex,
 		)
@@ -774,13 +777,13 @@ func (b *BlockStorage) SetNewStartIndex(
 	oldestIndex, err := b.GetOldestBlockIndexTransactional(ctx, dbTx)
 	dbTx.Discard(ctx)
 	if err != nil {
-		return fmt.Errorf("%w: %v", ErrOldestIndexRead, err)
+		return fmt.Errorf("%w: %v", storageErrs.ErrOldestIndexRead, err)
 	}
 
 	if oldestIndex > startIndex {
 		return fmt.Errorf(
 			"%w: oldest block index is %d but start index is %d",
-			ErrCannotAccessPrunedData,
+			storageErrs.ErrCannotAccessPrunedData,
 			oldestIndex,
 			startIndex,
 		)
@@ -835,14 +838,14 @@ func (b *BlockStorage) CreateBlockCache(ctx context.Context, blocks int) []*type
 
 func (b *BlockStorage) updateTransaction(
 	ctx context.Context,
-	dbTx DatabaseTransaction,
+	dbTx database.Transaction,
 	hashKey []byte,
 	namespace string,
 	blocks map[string]*blockTransaction,
 ) error {
 	encodedResult, err := b.db.Encoder().Encode(namespace, blocks)
 	if err != nil {
-		return fmt.Errorf("%w: %v", ErrTransactionDataEncodeFailed, err)
+		return fmt.Errorf("%w: %v", storageErrs.ErrTransactionDataEncodeFailed, err)
 	}
 
 	if err := dbTx.Set(ctx, hashKey, encodedResult, true); err != nil {
@@ -854,7 +857,7 @@ func (b *BlockStorage) updateTransaction(
 
 func (b *BlockStorage) storeTransaction(
 	ctx context.Context,
-	transaction DatabaseTransaction,
+	transaction database.Transaction,
 	blockIdentifier *types.BlockIdentifier,
 	tx *types.Transaction,
 ) error {
@@ -885,7 +888,7 @@ func (b *BlockStorage) storeTransaction(
 
 func (b *BlockStorage) pruneTransaction(
 	ctx context.Context,
-	transaction DatabaseTransaction,
+	transaction database.Transaction,
 	blockIdentifier *types.BlockIdentifier,
 	txIdentifier *types.TransactionIdentifier,
 ) error {
@@ -895,7 +898,7 @@ func (b *BlockStorage) pruneTransaction(
 		return err
 	}
 	if !exists {
-		return ErrTransactionNotFound
+		return storageErrs.ErrTransactionNotFound
 	}
 
 	var blocks map[string]*blockTransaction
@@ -912,7 +915,7 @@ func (b *BlockStorage) pruneTransaction(
 
 func (b *BlockStorage) removeTransaction(
 	ctx context.Context,
-	transaction DatabaseTransaction,
+	transaction database.Transaction,
 	blockIdentifier *types.BlockIdentifier,
 	transactionIdentifier *types.TransactionIdentifier,
 ) error {
@@ -923,7 +926,7 @@ func (b *BlockStorage) removeTransaction(
 	}
 
 	if !exists {
-		return fmt.Errorf("%w %s", ErrTransactionDeleteFailed, transactionIdentifier.Hash)
+		return fmt.Errorf("%w %s", storageErrs.ErrTransactionDeleteFailed, transactionIdentifier.Hash)
 	}
 
 	var blocks map[string]*blockTransaction
@@ -932,7 +935,7 @@ func (b *BlockStorage) removeTransaction(
 	}
 
 	if _, exists := blocks[blockIdentifier.Hash]; !exists {
-		return fmt.Errorf("%w %s", ErrTransactionHashNotFound, blockIdentifier.Hash)
+		return fmt.Errorf("%w %s", storageErrs.ErrTransactionHashNotFound, blockIdentifier.Hash)
 	}
 
 	delete(blocks, blockIdentifier.Hash)
@@ -949,12 +952,12 @@ func (b *BlockStorage) removeTransaction(
 func (b *BlockStorage) FindTransaction(
 	ctx context.Context,
 	transactionIdentifier *types.TransactionIdentifier,
-	txn DatabaseTransaction,
+	txn database.Transaction,
 ) (*types.BlockIdentifier, *types.Transaction, error) {
 	namespace, key := getTransactionHashKey(transactionIdentifier)
 	txExists, tx, err := txn.Get(ctx, key)
 	if err != nil {
-		return nil, nil, fmt.Errorf("%w: %v", ErrTransactionDBQueryFailed, err)
+		return nil, nil, fmt.Errorf("%w: %v", storageErrs.ErrTransactionDBQueryFailed, err)
 	}
 
 	if !txExists {
@@ -978,7 +981,7 @@ func (b *BlockStorage) FindTransaction(
 
 	// If the transaction has been pruned, it will be nil.
 	if newestTransaction == nil {
-		return nil, nil, ErrCannotAccessPrunedData
+		return nil, nil, storageErrs.ErrCannotAccessPrunedData
 	}
 
 	return newestBlock, newestTransaction, nil
@@ -988,25 +991,25 @@ func (b *BlockStorage) findBlockTransaction(
 	ctx context.Context,
 	blockIdentifier *types.BlockIdentifier,
 	transactionIdentifier *types.TransactionIdentifier,
-	txn DatabaseTransaction,
+	txn database.Transaction,
 ) (*types.Transaction, error) {
 	oldestIndex, err := b.GetOldestBlockIndexTransactional(ctx, txn)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrOldestIndexRead, err)
+		return nil, fmt.Errorf("%w: %v", storageErrs.ErrOldestIndexRead, err)
 	}
 
 	if blockIdentifier.Index < oldestIndex {
-		return nil, ErrCannotAccessPrunedData
+		return nil, storageErrs.ErrCannotAccessPrunedData
 	}
 
 	namespace, key := getTransactionHashKey(transactionIdentifier)
 	txExists, tx, err := txn.Get(ctx, key)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrTransactionDBQueryFailed, err)
+		return nil, fmt.Errorf("%w: %v", storageErrs.ErrTransactionDBQueryFailed, err)
 	}
 
 	if !txExists {
-		return nil, fmt.Errorf("%w %s", ErrTransactionNotFound, transactionIdentifier.Hash)
+		return nil, fmt.Errorf("%w %s", storageErrs.ErrTransactionNotFound, transactionIdentifier.Hash)
 	}
 
 	var blocks map[string]*blockTransaction
@@ -1018,7 +1021,7 @@ func (b *BlockStorage) findBlockTransaction(
 	if !ok {
 		return nil, fmt.Errorf(
 			"%w: did not find transaction %s in block %s",
-			ErrTransactionDoesNotExistInBlock,
+			storageErrs.ErrTransactionDoesNotExistInBlock,
 			transactionIdentifier.Hash,
 			blockIdentifier.Hash,
 		)
@@ -1047,14 +1050,14 @@ func (b *BlockStorage) GetBlockTransaction(
 func (b *BlockStorage) AtTipTransactional(
 	ctx context.Context,
 	tipDelay int64,
-	txn DatabaseTransaction,
+	txn database.Transaction,
 ) (bool, *types.BlockIdentifier, error) {
 	blockResponse, err := b.GetBlockLazyTransactional(ctx, nil, txn)
-	if errors.Is(err, ErrHeadBlockNotFound) {
+	if errors.Is(err, storageErrs.ErrHeadBlockNotFound) {
 		return false, nil, nil
 	}
 	if err != nil {
-		return false, nil, fmt.Errorf("%w: %v", ErrHeadBlockGetFailed, err)
+		return false, nil, fmt.Errorf("%w: %v", storageErrs.ErrHeadBlockGetFailed, err)
 	}
 	block := blockResponse.Block
 
@@ -1092,7 +1095,7 @@ func (b *BlockStorage) IndexAtTip(
 	transaction := b.db.ReadTransaction(ctx)
 	defer transaction.Discard(ctx)
 	headBlockResponse, err := b.GetBlockLazyTransactional(ctx, nil, transaction)
-	if errors.Is(err, ErrHeadBlockNotFound) {
+	if errors.Is(err, storageErrs.ErrHeadBlockNotFound) {
 		return false, nil
 	}
 	if err != nil {
