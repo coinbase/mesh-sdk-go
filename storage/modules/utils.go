@@ -17,11 +17,14 @@ package storage
 import (
 	"context"
 	"fmt"
+
+	"github.com/coinbase/rosetta-sdk-go/storage/database"
+	"github.com/coinbase/rosetta-sdk-go/storage/errors"
 )
 
 func storeUniqueKey(
 	ctx context.Context,
-	transaction DatabaseTransaction,
+	transaction database.Transaction,
 	key []byte,
 	value []byte,
 	reclaimValue bool,
@@ -34,7 +37,7 @@ func storeUniqueKey(
 	if exists {
 		return fmt.Errorf(
 			"%w: duplicate key %s found",
-			ErrDuplicateKey,
+			errors.ErrDuplicateKey,
 			string(key),
 		)
 	}
