@@ -5,9 +5,8 @@ package reconciler
 import (
 	context "context"
 
+	database "github.com/coinbase/rosetta-sdk-go/storage/database"
 	mock "github.com/stretchr/testify/mock"
-
-	storage "github.com/coinbase/rosetta-sdk-go/storage"
 
 	types "github.com/coinbase/rosetta-sdk-go/types"
 )
@@ -18,18 +17,18 @@ type Helper struct {
 }
 
 // CanonicalBlock provides a mock function with given fields: ctx, dbTx, block
-func (_m *Helper) CanonicalBlock(ctx context.Context, dbTx storage.DatabaseTransaction, block *types.BlockIdentifier) (bool, error) {
+func (_m *Helper) CanonicalBlock(ctx context.Context, dbTx database.Transaction, block *types.BlockIdentifier) (bool, error) {
 	ret := _m.Called(ctx, dbTx, block)
 
 	var r0 bool
-	if rf, ok := ret.Get(0).(func(context.Context, storage.DatabaseTransaction, *types.BlockIdentifier) bool); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, database.Transaction, *types.BlockIdentifier) bool); ok {
 		r0 = rf(ctx, dbTx, block)
 	} else {
 		r0 = ret.Get(0).(bool)
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, storage.DatabaseTransaction, *types.BlockIdentifier) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, database.Transaction, *types.BlockIdentifier) error); ok {
 		r1 = rf(ctx, dbTx, block)
 	} else {
 		r1 = ret.Error(1)
@@ -39,11 +38,11 @@ func (_m *Helper) CanonicalBlock(ctx context.Context, dbTx storage.DatabaseTrans
 }
 
 // ComputedBalance provides a mock function with given fields: ctx, dbTx, account, currency, index
-func (_m *Helper) ComputedBalance(ctx context.Context, dbTx storage.DatabaseTransaction, account *types.AccountIdentifier, currency *types.Currency, index int64) (*types.Amount, error) {
+func (_m *Helper) ComputedBalance(ctx context.Context, dbTx database.Transaction, account *types.AccountIdentifier, currency *types.Currency, index int64) (*types.Amount, error) {
 	ret := _m.Called(ctx, dbTx, account, currency, index)
 
 	var r0 *types.Amount
-	if rf, ok := ret.Get(0).(func(context.Context, storage.DatabaseTransaction, *types.AccountIdentifier, *types.Currency, int64) *types.Amount); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, database.Transaction, *types.AccountIdentifier, *types.Currency, int64) *types.Amount); ok {
 		r0 = rf(ctx, dbTx, account, currency, index)
 	} else {
 		if ret.Get(0) != nil {
@@ -52,7 +51,7 @@ func (_m *Helper) ComputedBalance(ctx context.Context, dbTx storage.DatabaseTran
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, storage.DatabaseTransaction, *types.AccountIdentifier, *types.Currency, int64) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, database.Transaction, *types.AccountIdentifier, *types.Currency, int64) error); ok {
 		r1 = rf(ctx, dbTx, account, currency, index)
 	} else {
 		r1 = ret.Error(1)
@@ -62,11 +61,11 @@ func (_m *Helper) ComputedBalance(ctx context.Context, dbTx storage.DatabaseTran
 }
 
 // CurrentBlock provides a mock function with given fields: ctx, dbTx
-func (_m *Helper) CurrentBlock(ctx context.Context, dbTx storage.DatabaseTransaction) (*types.BlockIdentifier, error) {
+func (_m *Helper) CurrentBlock(ctx context.Context, dbTx database.Transaction) (*types.BlockIdentifier, error) {
 	ret := _m.Called(ctx, dbTx)
 
 	var r0 *types.BlockIdentifier
-	if rf, ok := ret.Get(0).(func(context.Context, storage.DatabaseTransaction) *types.BlockIdentifier); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, database.Transaction) *types.BlockIdentifier); ok {
 		r0 = rf(ctx, dbTx)
 	} else {
 		if ret.Get(0) != nil {
@@ -75,7 +74,7 @@ func (_m *Helper) CurrentBlock(ctx context.Context, dbTx storage.DatabaseTransac
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, storage.DatabaseTransaction) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, database.Transaction) error); ok {
 		r1 = rf(ctx, dbTx)
 	} else {
 		r1 = ret.Error(1)
@@ -85,15 +84,15 @@ func (_m *Helper) CurrentBlock(ctx context.Context, dbTx storage.DatabaseTransac
 }
 
 // DatabaseTransaction provides a mock function with given fields: ctx
-func (_m *Helper) DatabaseTransaction(ctx context.Context) storage.DatabaseTransaction {
+func (_m *Helper) DatabaseTransaction(ctx context.Context) database.Transaction {
 	ret := _m.Called(ctx)
 
-	var r0 storage.DatabaseTransaction
-	if rf, ok := ret.Get(0).(func(context.Context) storage.DatabaseTransaction); ok {
+	var r0 database.Transaction
+	if rf, ok := ret.Get(0).(func(context.Context) database.Transaction); ok {
 		r0 = rf(ctx)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(storage.DatabaseTransaction)
+			r0 = ret.Get(0).(database.Transaction)
 		}
 	}
 

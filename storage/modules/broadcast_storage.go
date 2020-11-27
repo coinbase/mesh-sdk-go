@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package storage
+package modules
 
 import (
 	"context"
@@ -215,7 +215,7 @@ func (b *BroadcastStorage) AddingBlock(
 	ctx context.Context,
 	block *types.Block,
 	transaction database.Transaction,
-) (CommitWorker, error) {
+) (database.CommitWorker, error) {
 	broadcasts, err := b.GetAllBroadcasts(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("%w: unable to get all broadcasts", err)
@@ -305,7 +305,7 @@ func (b *BroadcastStorage) RemovingBlock(
 	ctx context.Context,
 	block *types.Block,
 	transaction database.Transaction,
-) (CommitWorker, error) {
+) (database.CommitWorker, error) {
 	return nil, nil
 }
 

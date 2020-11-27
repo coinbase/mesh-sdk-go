@@ -74,3 +74,8 @@ type Transaction interface {
 	Commit(context.Context) error
 	Discard(context.Context)
 }
+
+// CommitWorker is returned by a module to be called after
+// changes have been committed. It is common to put logging activities
+// in here (that shouldn't be printed until the block is committed).
+type CommitWorker func(context.Context) error

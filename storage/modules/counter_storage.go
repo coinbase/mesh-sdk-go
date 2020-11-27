@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package storage
+package modules
 
 import (
 	"context"
@@ -173,7 +173,7 @@ func (c *CounterStorage) AddingBlock(
 	ctx context.Context,
 	block *types.Block,
 	transaction database.Transaction,
-) (CommitWorker, error) {
+) (database.CommitWorker, error) {
 	_, err := c.UpdateTransactional(
 		ctx,
 		transaction,
@@ -216,7 +216,7 @@ func (c *CounterStorage) RemovingBlock(
 	ctx context.Context,
 	block *types.Block,
 	transaction database.Transaction,
-) (CommitWorker, error) {
+) (database.CommitWorker, error) {
 	_, err := c.UpdateTransactional(ctx, transaction, OrphanCounter, big.NewInt(1))
 	return nil, err
 }
