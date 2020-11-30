@@ -669,6 +669,10 @@ func (b *BalanceStorage) OrphanBalance(
 	// Update current balance
 	key := GetAccountKey(balanceNamespace, change.Account, change.Currency)
 	exists, lastBalance, err := BigIntGet(ctx, key, dbTransaction)
+	if err != nil {
+		return false, err
+	}
+
 	if !exists {
 		return false, storageErrs.ErrAccountMissing
 	}
