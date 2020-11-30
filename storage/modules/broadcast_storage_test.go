@@ -25,7 +25,7 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/utils"
 
 	"github.com/stretchr/testify/assert"
-	// "github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/mock"
 )
 
 const (
@@ -105,6 +105,7 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 	// 	"payload 2": {Hash: "tx 2"},
 	// }
 	// mockHelper.AtSyncTip = true
+	mockHelper.On("AtTip", ctx, mock.Anything).Return(true, nil)
 	network := &types.NetworkIdentifier{Blockchain: "Bitcoin", Network: "Testnet3"}
 
 	t.Run("broadcast send 1 before block exists", func(t *testing.T) {
@@ -158,7 +159,8 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 		assert.NoError(t, err)
 
 		// mockHelper.SyncedBlockIdentifier = block.BlockIdentifier
-		mockHelper.On("CurrentBlockIdentifier", ctx).Return(block.BlockIdentifier, nil).Once()
+		mockHelper.On("CurrentBlockIdentifier", ctx).Return(block.BlockIdentifier, nil)
+		mockHelper.On("BroadcastTransaction", ctx, network, "payload 1").Return(&types.TransactionIdentifier{Hash: "tx 1"}, nil).Once()
 		// mockHelper.On("AtTip", ctx, int64(0)).Return(false, nil).Once()
 		// mockHelper.On("AtTip", ctx, int64(0)).Return(false, nil).Once()
 		// mockHelper.On("AtTip", ctx, block.BlockIdentifier.Index).Return(true, nil).Once()
@@ -197,12 +199,14 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 		block := blocks[1]
 
 		txn := storage.db.Transaction(ctx)
+		mockHelper.On("FindTransaction", ctx, &types.TransactionIdentifier{Hash: "tx 1"}, txn).Return(nil, nil, nil).Once()
 		commitWorker, err := storage.AddingBlock(ctx, block, txn)
 		assert.NoError(t, err)
 		err = txn.Commit(ctx)
 		assert.NoError(t, err)
 
 		// mockHelper.SyncedBlockIdentifier = block.BlockIdentifier
+		mockHelper.On("CurrentBlockIdentifier", ctx).Return(block.BlockIdentifier, nil)
 		err = commitWorker(ctx)
 		assert.NoError(t, err)
 
@@ -257,10 +261,12 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 			{Address: "addr 2"},
 		}, accounts)
 
+		mockHelper.On("BroadcastTransaction", ctx, network, "payload 2").Return(&types.TransactionIdentifier{Hash: "tx 2"}, nil).Once()
 		assert.NoError(t, dbTx.Commit(ctx))
 		assert.NoError(t, storage.BroadcastAll(ctx, true))
 
 		broadcasts, err := storage.GetAllBroadcasts(ctx)
+		fmt.Println(len(broadcasts))
 		assert.NoError(t, err)
 		assert.ElementsMatch(t, []*Broadcast{
 			{
