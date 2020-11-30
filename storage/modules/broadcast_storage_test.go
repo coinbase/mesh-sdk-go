@@ -16,7 +16,7 @@ package modules
 
 import (
 	"context"
-	// "errors"
+	"errors"
 	"fmt"
 	"testing"
 
@@ -605,11 +605,11 @@ func TestBroadcastStorageBroadcastFailure(t *testing.T) {
 		broadcastBehindTip,
 		blockBroadcastLimit,
 	)
-	mockHelper := &mocks.BroadcastStorageHelper{}
-	mockHandler := &mocks.BroadcastStorageHandler{}
-	storage.Initialize(mockHelper, mockHandler)
-
 	t.Run("locked addresses with no broadcasts", func(t *testing.T) {
+		mockHelper := &mocks.BroadcastStorageHelper{}
+		mockHandler := &mocks.BroadcastStorageHandler{}
+		storage.Initialize(mockHelper, mockHandler)
+
 		dbTx := database.ReadTransaction(ctx)
 		defer dbTx.Discard(ctx)
 
@@ -617,6 +617,9 @@ func TestBroadcastStorageBroadcastFailure(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Len(t, accounts, 0)
 		assert.ElementsMatch(t, []*types.AccountIdentifier{}, accounts)
+
+		mockHelper.AssertExpectations(t)
+		mockHandler.AssertExpectations(t)
 	})
 
 	send1 := opFiller("addr 1", 11)
@@ -632,6 +635,11 @@ func TestBroadcastStorageBroadcastFailure(t *testing.T) {
 	send2 := opFiller("addr 2", 13)
 	network := &types.NetworkIdentifier{Blockchain: "Bitcoin", Network: "Testnet3"}
 	t.Run("broadcast", func(t *testing.T) {
+		mockHelper := &mocks.BroadcastStorageHelper{}
+		mockHandler := &mocks.BroadcastStorageHandler{}
+		storage.Initialize(mockHelper, mockHandler)
+		mockHelper.On("CurrentBlockIdentifier", ctx).Return(nil, nil)
+
 		dbTx := database.Transaction(ctx)
 		defer dbTx.Discard(ctx)
 
@@ -692,16 +700,35 @@ func TestBroadcastStorageBroadcastFailure(t *testing.T) {
 				ConfirmationDepth:     confirmationDepth,
 			},
 		}, broadcasts)
+
+		mockHelper.AssertExpectations(t)
+		mockHandler.AssertExpectations(t)
 	})
 
 	t.Run("add blocks and expire", func(t *testing.T) {
+		mockHelper := &mocks.BroadcastStorageHelper{}
+		mockHandler := &mocks.BroadcastStorageHandler{}
+		storage.Initialize(mockHelper, mockHandler)
+
 		// mockHelper.Transactions = map[string]*types.TransactionIdentifier{
 		// 	"payload 1": {Hash: "tx 1"},
 		// 	// payload 2 will fail
 		// }
 		blocks := blockFiller(0, 10)
 		// mockHelper.AtSyncTip = true
+		mockHelper.On("AtTip", ctx, mock.Anything).Return(true, nil)
+		mockHelper.On("BroadcastTransaction", ctx, network, "payload 1").Return(&types.TransactionIdentifier{Hash: "tx 1"}, nil).Times(3)
+		mockHandler.On("TransactionStale", ctx, mock.Anything, "broadcast 1", &types.TransactionIdentifier{Hash: "tx 1"}).Return(nil).Times(3)
+		mockHandler.On("BroadcastFailed", ctx, mock.Anything, "broadcast 1", &types.TransactionIdentifier{Hash: "tx 1"}, send1).Return(nil).Once()
+		mockHelper.On("BroadcastTransaction", ctx, network, "payload 2").Return(nil, errors.New("broadcast error")).Times(3)
+		mockHandler.On("TransactionStale", ctx, mock.Anything, "broadcast 2", &types.TransactionIdentifier{Hash: "tx 2"}).Return(nil).Times(3)
+		mockHandler.On("BroadcastFailed", ctx, mock.Anything, "broadcast 2", &types.TransactionIdentifier{Hash: "tx 2"}, send2).Return(nil).Once()
+
+		// Never find in block
+		mockHelper.On("FindTransaction", ctx, &types.TransactionIdentifier{Hash: "tx 1"}, mock.Anything).Return(nil, nil, nil)
+		mockHelper.On("FindTransaction", ctx, &types.TransactionIdentifier{Hash: "tx 2"}, mock.Anything).Return(nil, nil, nil)
 		for _, block := range blocks {
+			mockHelper.On("CurrentBlockIdentifier", ctx).Return(block.BlockIdentifier, nil).Once()
 			txn := storage.db.Transaction(ctx)
 			commitWorker, err := storage.AddingBlock(ctx, block, txn)
 			assert.NoError(t, err)
@@ -725,6 +752,9 @@ func TestBroadcastStorageBroadcastFailure(t *testing.T) {
 		assert.NoError(t, err)
 		assert.ElementsMatch(t, []*Broadcast{}, broadcasts)
 
+		mockHelper.AssertExpectations(t)
+		mockHandler.AssertExpectations(t)
+
 		// assert.ElementsMatch(t, []*types.TransactionIdentifier{
 		// 	{Hash: "tx 1"},
 		// 	{Hash: "tx 1"},
@@ -747,9 +777,6 @@ func TestBroadcastStorageBroadcastFailure(t *testing.T) {
 
 		// assert.ElementsMatch(t, []*confirmedTx{}, mockHandler.Confirmed)
 	})
-
-	mockHelper.AssertExpectations(t)
-	mockHandler.AssertExpectations(t)
 }
 
 func TestBroadcastStorageBehindTip(t *testing.T) {
