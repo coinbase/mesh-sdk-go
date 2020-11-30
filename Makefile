@@ -22,10 +22,13 @@ deps:
 	go get ./...
 
 gen:
-	./codegen.sh
+	./codegen.sh;
 
 check-gen: | gen
 	git diff --exit-code
+
+fix-imports:
+	./imports.sh;
 
 check-comments:
 	${GOLINT_CMD} -set_exit_status ${GO_FOLDERS} .
@@ -43,8 +46,8 @@ format:
 	${GOIMPORTS_CMD} -w .
 
 check-format:
-	! gofmt -s -l . | read
-	! ${GOIMPORTS_CMD} -l . | read
+	! gofmt -s -l . | read;
+	! ${GOIMPORTS_CMD} -l . | read;
 
 test:
 	${TEST_SCRIPT}

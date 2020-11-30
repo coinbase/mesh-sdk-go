@@ -203,7 +203,8 @@ done
 
 # Format client generated code
 FORMAT_GEN="gofmt -w /local/types; gofmt -w /local/client; gofmt -w /local/server"
+FIX_IMPORTS="go get github.com/incu6us/goimports-reviser@v2.3.0; make fix-imports;"
 GOLANG_VERSION=1.13
 docker run --rm -v "${PWD}":/local \
   golang:${GOLANG_VERSION} sh -c \
-  "cd /local; make deps; ${FORMAT_GEN}; make add-license; make shorten-lines; go mod tidy;"
+  "cd /local; make deps; ${FORMAT_GEN}; make add-license; make shorten-lines; ${FIX_IMPORTS}; go mod tidy;"
