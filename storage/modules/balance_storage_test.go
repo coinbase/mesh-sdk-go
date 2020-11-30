@@ -31,6 +31,7 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/utils"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 func baseAsserter() *asserter.Asserter {
@@ -876,6 +877,9 @@ func TestSetBalanceImported(t *testing.T) {
 	storage := NewBalanceStorage(database)
 	mockHelper := &mocks.BalanceStorageHelper{}
 	mockHandler := &mocks.BalanceStorageHandler{}
+	mockHelper.On("Asserter").Return(baseAsserter())
+	mockHelper.On("ExemptFunc").Return(exemptFunc())
+	mockHelper.On("BalanceExemptions").Return([]*types.BalanceExemption{})
 	storage.Initialize(mockHelper, mockHandler)
 
 	t.Run("Set balance successfully", func(t *testing.T) {
@@ -939,6 +943,9 @@ func TestBootstrapBalances(t *testing.T) {
 	storage := NewBalanceStorage(database)
 	mockHelper := &mocks.BalanceStorageHelper{}
 	mockHandler := &mocks.BalanceStorageHandler{}
+	mockHelper.On("Asserter").Return(baseAsserter())
+	mockHelper.On("ExemptFunc").Return(exemptFunc())
+	mockHelper.On("BalanceExemptions").Return([]*types.BalanceExemption{})
 	storage.Initialize(mockHelper, mockHandler)
 	bootstrapBalancesFile := path.Join(newDir, "balances.csv")
 
@@ -1152,6 +1159,9 @@ func TestBalanceReconciliation(t *testing.T) {
 	storage := NewBalanceStorage(database)
 	mockHelper := &mocks.BalanceStorageHelper{}
 	mockHandler := &mocks.BalanceStorageHandler{}
+	mockHelper.On("Asserter").Return(baseAsserter())
+	mockHelper.On("ExemptFunc").Return(exemptFunc())
+	mockHelper.On("BalanceExemptions").Return([]*types.BalanceExemption{})
 	storage.Initialize(mockHelper, mockHandler)
 
 	t.Run("attempt to store reconciliation for non-existent account", func(t *testing.T) {
@@ -1283,6 +1293,9 @@ func TestBlockSyncing(t *testing.T) {
 	storage := NewBalanceStorage(database)
 	mockHelper := &mocks.BalanceStorageHelper{}
 	mockHandler := &mocks.BalanceStorageHandler{}
+	mockHelper.On("Asserter").Return(baseAsserter())
+	mockHelper.On("ExemptFunc").Return(exemptFunc())
+	mockHelper.On("BalanceExemptions").Return([]*types.BalanceExemption{})
 	storage.Initialize(mockHelper, mockHandler)
 
 	// Genesis block with no transactions
@@ -1459,6 +1472,7 @@ func TestBlockSyncing(t *testing.T) {
 
 	t.Run("add block 1", func(t *testing.T) {
 		dbTx := database.Transaction(ctx)
+		mockHelper.On("AccountBalance", mock.Anything, addr1, curr, b0.BlockIdentifier).Return(&types.Amount{Value: "1", Currency: curr}, nil).Once()
 		_, err = storage.AddingBlock(ctx, b1, dbTx)
 		assert.NoError(t, err)
 		assert.NoError(t, dbTx.Commit(ctx))
@@ -1482,6 +1496,7 @@ func TestBlockSyncing(t *testing.T) {
 
 	t.Run("add block 2", func(t *testing.T) {
 		dbTx := database.Transaction(ctx)
+		mockHelper.On("AccountBalance", mock.Anything, addr2, curr, b1.BlockIdentifier).Return(&types.Amount{Value: "0", Currency: curr}, nil).Once()
 		_, err = storage.AddingBlock(ctx, b2, dbTx)
 		assert.NoError(t, err)
 		assert.NoError(t, dbTx.Commit(ctx))
@@ -1578,6 +1593,7 @@ func TestBlockSyncing(t *testing.T) {
 
 	t.Run("add block 1", func(t *testing.T) {
 		dbTx := database.Transaction(ctx)
+		mockHelper.On("AccountBalance", mock.Anything, addr1, curr, b0.BlockIdentifier).Return(&types.Amount{Value: "1", Currency: curr}, nil).Once()
 		_, err = storage.AddingBlock(ctx, b1, dbTx)
 		assert.NoError(t, err)
 		assert.NoError(t, dbTx.Commit(ctx))
@@ -1610,6 +1626,7 @@ func TestBlockSyncing(t *testing.T) {
 
 	t.Run("add block 2a", func(t *testing.T) {
 		dbTx := database.Transaction(ctx)
+		mockHelper.On("AccountBalance", mock.Anything, addr2, curr, b1.BlockIdentifier).Return(&types.Amount{Value: "0", Currency: curr}, nil).Once()
 		_, err = storage.AddingBlock(ctx, b2a, dbTx)
 		assert.NoError(t, err)
 		assert.NoError(t, dbTx.Commit(ctx))
