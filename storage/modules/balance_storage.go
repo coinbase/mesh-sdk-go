@@ -505,12 +505,11 @@ func (b *BalanceStorage) ReconciliationCoverage(
 // we update the passed in existing value.
 func (b *BalanceStorage) existingValue(
 	ctx context.Context,
+	exists bool,
 	change *parser.BalanceChange,
 	parentBlock *types.BlockIdentifier,
 	existingValue string,
 ) (string, error) {
-	exists := len(existingValue) > 0
-
 	if exists {
 		return existingValue, nil
 	}
@@ -743,7 +742,6 @@ func (b *BalanceStorage) UpdateBalance(
 	// If the balance key does not exist, the account
 	// does not exist.
 	key := GetAccountKey(balanceNamespace, change.Account, change.Currency)
-
 	exists, currentBalance, err := BigIntGet(ctx, key, dbTransaction)
 	if err != nil {
 		return false, err
@@ -757,6 +755,7 @@ func (b *BalanceStorage) UpdateBalance(
 	// so we don't need to apply any conditional logic here.
 	existingValue, err := b.existingValue(
 		ctx,
+		exists,
 		change,
 		parentBlock,
 		currentBalance.String(),
