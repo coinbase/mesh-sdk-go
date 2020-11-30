@@ -21,13 +21,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+
 	mocks "github.com/coinbase/rosetta-sdk-go/mocks/reconciler"
 	mockDatabase "github.com/coinbase/rosetta-sdk-go/mocks/storage/database"
 	"github.com/coinbase/rosetta-sdk-go/parser"
 	"github.com/coinbase/rosetta-sdk-go/types"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 )
 
 func TestNewReconciler(t *testing.T) {

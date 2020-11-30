@@ -21,14 +21,14 @@ import (
 	"log"
 	"math/big"
 
+	"golang.org/x/sync/errgroup"
+
 	"github.com/coinbase/rosetta-sdk-go/asserter"
 	"github.com/coinbase/rosetta-sdk-go/parser"
 	"github.com/coinbase/rosetta-sdk-go/storage/database"
 	storageErrs "github.com/coinbase/rosetta-sdk-go/storage/errors"
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/coinbase/rosetta-sdk-go/utils"
-
-	"golang.org/x/sync/errgroup"
 )
 
 var _ BlockWorker = (*BalanceStorage)(nil)

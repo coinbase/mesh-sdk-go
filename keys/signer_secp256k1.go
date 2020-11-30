@@ -17,10 +17,10 @@ package keys
 import (
 	"fmt"
 
+	"github.com/ethereum/go-ethereum/crypto/secp256k1"
+
 	"github.com/coinbase/rosetta-sdk-go/asserter"
 	"github.com/coinbase/rosetta-sdk-go/types"
-
-	"github.com/ethereum/go-ethereum/crypto/secp256k1"
 )
 
 // SignerSecp256k1 is initialized from a keypair

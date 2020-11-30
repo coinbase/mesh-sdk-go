@@ -19,9 +19,9 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/coinbase/rosetta-sdk-go/utils"
-
 	"github.com/stretchr/testify/assert"
+
+	"github.com/coinbase/rosetta-sdk-go/utils"
 )
 
 func TestCounterStorage(t *testing.T) {

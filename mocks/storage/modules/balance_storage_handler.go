@@ -8,7 +8,6 @@ import (
 	mock "github.com/stretchr/testify/mock"
 
 	parser "github.com/coinbase/rosetta-sdk-go/parser"
-
 	types "github.com/coinbase/rosetta-sdk-go/types"
 )
 

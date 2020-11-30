@@ -5,12 +5,10 @@ package modules
 import (
 	context "context"
 
-	asserter "github.com/coinbase/rosetta-sdk-go/asserter"
-
 	mock "github.com/stretchr/testify/mock"
 
+	asserter "github.com/coinbase/rosetta-sdk-go/asserter"
 	parser "github.com/coinbase/rosetta-sdk-go/parser"
-
 	types "github.com/coinbase/rosetta-sdk-go/types"
 )
 
