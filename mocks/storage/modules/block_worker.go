@@ -5,9 +5,9 @@ package modules
 import (
 	context "context"
 
-	database "github.com/coinbase/rosetta-sdk-go/storage/database"
 	mock "github.com/stretchr/testify/mock"
 
+	database "github.com/coinbase/rosetta-sdk-go/storage/database"
 	types "github.com/coinbase/rosetta-sdk-go/types"
 )
 
