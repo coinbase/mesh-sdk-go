@@ -819,7 +819,7 @@ func TestBalance(t *testing.T) {
 			&parser.BalanceChange{
 				Account:  account,
 				Currency: largeDeduction.Currency,
-				Block:    newBlock2,
+				Block:    newBlock,
 			},
 		)
 		assert.True(t, shouldRemove)
@@ -830,11 +830,11 @@ func TestBalance(t *testing.T) {
 			ctx,
 			account,
 			largeDeduction.Currency,
-			newBlock3,
+			newBlock,
 		)
 		assert.NoError(t, err)
 		assert.Equal(t, &types.Amount{
-			Value:    "100",
+			Value:    "0",
 			Currency: largeDeduction.Currency,
 		}, retrievedAmount)
 	})
@@ -1245,7 +1245,7 @@ func TestBalanceReconciliation(t *testing.T) {
 
 	t.Run("attempt to store reconciliation for non-existent account", func(t *testing.T) {
 		err := storage.Reconciled(ctx, account, currency, genesisBlock)
-		assert.Error(t, err)
+		assert.NoError(t, err)
 
 		coverage, err := storage.ReconciliationCoverage(ctx, 0)
 		assert.NoError(t, err)
