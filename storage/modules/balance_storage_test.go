@@ -224,6 +224,7 @@ func TestBalance(t *testing.T) {
 			&types.Amount{Value: "10", Currency: currency},
 			nil,
 		).Once()
+		mockHandler.On("NewAccountsSeen", ctx, mock.Anything, 1).Return(nil).Once()
 		amount, err := storage.GetOrSetBalance(ctx, account, currency, newBlock)
 		assert.NoError(t, err)
 		assert.Equal(t, &types.Amount{
@@ -241,6 +242,7 @@ func TestBalance(t *testing.T) {
 
 	t.Run("Set and get genesis balance", func(t *testing.T) {
 		txn := storage.db.Transaction(ctx)
+		mockHandler.On("NewAccountsSeen", ctx, txn, 1).Return(nil).Once()
 		err := storage.SetBalance(
 			ctx,
 			txn,
@@ -264,6 +266,7 @@ func TestBalance(t *testing.T) {
 
 	t.Run("Set and get balance", func(t *testing.T) {
 		txn := storage.db.Transaction(ctx)
+		mockHandler.On("NewAccountsSeen", ctx, txn, 1).Return(nil).Once()
 		err := storage.SetBalance(
 			ctx,
 			txn,
@@ -551,6 +554,7 @@ func TestBalance(t *testing.T) {
 
 	t.Run("balance exemption update", func(t *testing.T) {
 		txn := storage.db.Transaction(ctx)
+		mockHandler.On("NewAccountsSeen", ctx, txn, 1).Return(nil).Once()
 		err := storage.SetBalance(
 			ctx,
 			txn,
@@ -960,6 +964,7 @@ func TestSetBalanceImported(t *testing.T) {
 	storage.Initialize(mockHelper, mockHandler)
 
 	t.Run("Set balance successfully", func(t *testing.T) {
+		mockHandler.On("NewAccountsSeen", ctx, mock.Anything, 1).Return(nil).Twice()
 		err = storage.SetBalanceImported(
 			ctx,
 			nil,
@@ -1058,6 +1063,7 @@ func TestBootstrapBalances(t *testing.T) {
 			ioutil.WriteFile(bootstrapBalancesFile, file, utils.DefaultFilePermissions),
 		)
 
+		mockHandler.On("NewAccountsSeen", ctx, mock.Anything, 1).Return(nil).Once()
 		err = storage.BootstrapBalances(
 			ctx,
 			bootstrapBalancesFile,
