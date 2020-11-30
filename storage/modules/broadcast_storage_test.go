@@ -94,21 +94,20 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 		broadcastBehindTip,
 		blockBroadcastLimit,
 	)
-	mockHelper := &mocks.BroadcastStorageHelper{}
-	mockHandler := &mocks.BroadcastStorageHandler{}
-	storage.Initialize(mockHelper, mockHandler)
-
-	send1 := opFiller("addr 1", 11)
-	send2 := opFiller("addr 2", 13)
+	send1 := opFiller("addr 1", 1) // 11)
+	send2 := opFiller("addr 2", 1) // 13)
 	// mockHelper.Transactions = map[string]*types.TransactionIdentifier{
 	// 	"payload 1": {Hash: "tx 1"},
 	// 	"payload 2": {Hash: "tx 2"},
 	// }
 	// mockHelper.AtSyncTip = true
-	mockHelper.On("AtTip", ctx, mock.Anything).Return(true, nil)
 	network := &types.NetworkIdentifier{Blockchain: "Bitcoin", Network: "Testnet3"}
 
 	t.Run("broadcast send 1 before block exists", func(t *testing.T) {
+		mockHelper := &mocks.BroadcastStorageHelper{}
+		mockHandler := &mocks.BroadcastStorageHandler{}
+		storage.Initialize(mockHelper, mockHandler)
+
 		dbTx := database.Transaction(ctx)
 		defer dbTx.Discard(ctx)
 
@@ -146,10 +145,17 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 				ConfirmationDepth:     confirmationDepth,
 			},
 		}, broadcasts)
+
+		mockHelper.AssertExpectations(t)
+		mockHandler.AssertExpectations(t)
 	})
 
 	blocks := blockFiller(0, 6)
 	t.Run("add block 0", func(t *testing.T) {
+		mockHelper := &mocks.BroadcastStorageHelper{}
+		mockHandler := &mocks.BroadcastStorageHandler{}
+		storage.Initialize(mockHelper, mockHandler)
+		mockHelper.On("AtTip", ctx, mock.Anything).Return(true, nil)
 		block := blocks[0]
 
 		txn := storage.db.Transaction(ctx)
@@ -191,11 +197,17 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 			},
 		}, broadcasts)
 
+		mockHelper.AssertExpectations(t)
+		mockHandler.AssertExpectations(t)
 		// assert.ElementsMatch(t, []*types.TransactionIdentifier{}, mockHandler.Stale)
 		// assert.ElementsMatch(t, []*failedTx{}, mockHandler.Failed)
 	})
 
 	t.Run("add block 1", func(t *testing.T) {
+		mockHelper := &mocks.BroadcastStorageHelper{}
+		mockHandler := &mocks.BroadcastStorageHandler{}
+		storage.Initialize(mockHelper, mockHandler)
+		mockHelper.On("AtTip", ctx, mock.Anything).Return(true, nil)
 		block := blocks[1]
 
 		txn := storage.db.Transaction(ctx)
@@ -231,12 +243,20 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 				ConfirmationDepth:     confirmationDepth,
 			},
 		}, broadcasts)
+		mockHelper.AssertExpectations(t)
+		mockHandler.AssertExpectations(t)
 
 		// assert.ElementsMatch(t, []*types.TransactionIdentifier{}, mockHandler.Stale)
 		// assert.ElementsMatch(t, []*failedTx{}, mockHandler.Failed)
 	})
 
 	t.Run("broadcast send 2 after adding a block", func(t *testing.T) {
+		mockHelper := &mocks.BroadcastStorageHelper{}
+		mockHandler := &mocks.BroadcastStorageHandler{}
+		storage.Initialize(mockHelper, mockHandler)
+		mockHelper.On("AtTip", ctx, mock.Anything).Return(true, nil)
+		mockHelper.On("CurrentBlockIdentifier", ctx).Return(blocks[1].BlockIdentifier, nil)
+
 		dbTx := database.Transaction(ctx)
 		defer dbTx.Discard(ctx)
 
@@ -266,7 +286,6 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 		assert.NoError(t, storage.BroadcastAll(ctx, true))
 
 		broadcasts, err := storage.GetAllBroadcasts(ctx)
-		fmt.Println(len(broadcasts))
 		assert.NoError(t, err)
 		assert.ElementsMatch(t, []*Broadcast{
 			{
@@ -290,6 +309,9 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 				ConfirmationDepth:     confirmationDepth,
 			},
 		}, broadcasts)
+
+		mockHelper.AssertExpectations(t)
+		mockHandler.AssertExpectations(t)
 	})
 
 	t.Run("add block 2", func(t *testing.T) {
@@ -514,9 +536,6 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 		// 	},
 		// }, mockHandler.Confirmed)
 	})
-
-	mockHelper.AssertExpectations(t)
-	mockHandler.AssertExpectations(t)
 }
 
 func TestBroadcastStorageBroadcastFailure(t *testing.T) {
