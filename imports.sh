@@ -13,7 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+go get github.com/incu6us/goimports-reviser/v2;
+
 while IFS= read -r -d '' FILE 
 do
-  go run github.com/incu6us/goimports-reviser/v2 -file-path "${FILE}" -local github.com/coinbase/rosetta-sdk-go/
+  goimports-reviser -file-path "${FILE}" -local github.com/coinbase/rosetta-sdk-go/
 done < <(find . -type f -name "*.go" -print0)
