@@ -328,6 +328,10 @@ var (
 	// cannot be parsed.
 	ErrInvalidChangeValue = errors.New("invalid change value")
 
+	// ErrInvalidValue is returned when the value we are trying
+	// to save cannot be parsed.
+	ErrInvalidValue = errors.New("invalid value")
+
 	BalanceStorageErrs = []error{
 		ErrNegativeBalance,
 		ErrInvalidLiveBalance,
@@ -335,6 +339,7 @@ var (
 		ErrBlockNil,
 		ErrAccountMissing,
 		ErrInvalidChangeValue,
+		ErrInvalidValue,
 	}
 )
 
