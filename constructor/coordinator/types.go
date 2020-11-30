@@ -22,7 +22,7 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/constructor/worker"
 	"github.com/coinbase/rosetta-sdk-go/keys"
 	"github.com/coinbase/rosetta-sdk-go/parser"
-	"github.com/coinbase/rosetta-sdk-go/storage"
+	"github.com/coinbase/rosetta-sdk-go/storage/database"
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
@@ -45,15 +45,15 @@ type Helper interface {
 	// has been synced by BlockStorage.
 	HeadBlockExists(context.Context) bool
 
-	// DatabaseTransaction returns a new storage.DatabaseTransaction.
+	// DatabaseTransaction returns a new database.Transaction.
 	// This is used to update jobs and enque them for broadcast atomically.
-	DatabaseTransaction(context.Context) storage.DatabaseTransaction
+	DatabaseTransaction(context.Context) database.Transaction
 
 	// StoreKey is called to persist a
 	// *types.AccountIdentifier + KeyPair.
 	StoreKey(
 		context.Context,
-		storage.DatabaseTransaction,
+		database.Transaction,
 		*types.AccountIdentifier,
 		*keys.KeyPair,
 	) error
@@ -62,28 +62,28 @@ type Helper interface {
 	// associated with an address.
 	GetKey(
 		context.Context,
-		storage.DatabaseTransaction,
+		database.Transaction,
 		*types.AccountIdentifier,
 	) (*keys.KeyPair, error)
 
 	// AllAccounts returns a slice of all known *types.AccountIdentifier.
 	AllAccounts(
 		context.Context,
-		storage.DatabaseTransaction,
+		database.Transaction,
 	) ([]*types.AccountIdentifier, error)
 
 	// LockedAccounts is a slice of all *types.AccountIdentifier currently sending or receiving
 	// funds.
 	LockedAccounts(
 		context.Context,
-		storage.DatabaseTransaction,
+		database.Transaction,
 	) ([]*types.AccountIdentifier, error)
 
 	// Balance returns the balance
 	// for a provided address.
 	Balance(
 		context.Context,
-		storage.DatabaseTransaction,
+		database.Transaction,
 		*types.AccountIdentifier,
 		*types.Currency,
 	) (*types.Amount, error)
@@ -91,7 +91,7 @@ type Helper interface {
 	// Coins returns all *types.Coin owned by an address.
 	Coins(
 		context.Context,
-		storage.DatabaseTransaction,
+		database.Transaction,
 		*types.AccountIdentifier,
 		*types.Currency,
 	) ([]*types.Coin, error)
@@ -103,7 +103,7 @@ type Helper interface {
 	// Broadcast enqueues a particular intent for broadcast.
 	Broadcast(
 		context.Context,
-		storage.DatabaseTransaction,
+		database.Transaction,
 		string, // Job.Identifier
 		*types.NetworkIdentifier,
 		[]*types.Operation,
@@ -217,29 +217,29 @@ type JobStorage interface {
 	// Ready returns the jobs that are ready to be processed.
 	Ready(
 		context.Context,
-		storage.DatabaseTransaction,
+		database.Transaction,
 	) ([]*job.Job, error)
 
 	// Broadcasting returns all jobs that are broadcasting.
 	Broadcasting(
 		context.Context,
-		storage.DatabaseTransaction,
+		database.Transaction,
 	) ([]*job.Job, error)
 
 	// Processing returns the number of jobs processing
 	// for a particular workflow.
 	Processing(
 		context.Context,
-		storage.DatabaseTransaction,
+		database.Transaction,
 		string,
 	) ([]*job.Job, error)
 
 	// Update stores an updated *Job in storage
 	// and returns its UUID (which won't exist
 	// on first update).
-	Update(context.Context, storage.DatabaseTransaction, *job.Job) (string, error)
+	Update(context.Context, database.Transaction, *job.Job) (string, error)
 
 	// Get fetches a *Job by Identifier. It returns an error
 	// if the identifier doesn't exist.
-	Get(context.Context, storage.DatabaseTransaction, string) (*job.Job, error)
+	Get(context.Context, database.Transaction, string) (*job.Job, error)
 }

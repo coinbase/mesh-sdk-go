@@ -5,11 +5,10 @@ package worker
 import (
 	context "context"
 
-	keys "github.com/coinbase/rosetta-sdk-go/keys"
 	mock "github.com/stretchr/testify/mock"
 
-	storage "github.com/coinbase/rosetta-sdk-go/storage"
-
+	keys "github.com/coinbase/rosetta-sdk-go/keys"
+	database "github.com/coinbase/rosetta-sdk-go/storage/database"
 	types "github.com/coinbase/rosetta-sdk-go/types"
 )
 
@@ -19,11 +18,11 @@ type Helper struct {
 }
 
 // AllAccounts provides a mock function with given fields: _a0, _a1
-func (_m *Helper) AllAccounts(_a0 context.Context, _a1 storage.DatabaseTransaction) ([]*types.AccountIdentifier, error) {
+func (_m *Helper) AllAccounts(_a0 context.Context, _a1 database.Transaction) ([]*types.AccountIdentifier, error) {
 	ret := _m.Called(_a0, _a1)
 
 	var r0 []*types.AccountIdentifier
-	if rf, ok := ret.Get(0).(func(context.Context, storage.DatabaseTransaction) []*types.AccountIdentifier); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, database.Transaction) []*types.AccountIdentifier); ok {
 		r0 = rf(_a0, _a1)
 	} else {
 		if ret.Get(0) != nil {
@@ -32,7 +31,7 @@ func (_m *Helper) AllAccounts(_a0 context.Context, _a1 storage.DatabaseTransacti
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, storage.DatabaseTransaction) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, database.Transaction) error); ok {
 		r1 = rf(_a0, _a1)
 	} else {
 		r1 = ret.Error(1)
@@ -42,11 +41,11 @@ func (_m *Helper) AllAccounts(_a0 context.Context, _a1 storage.DatabaseTransacti
 }
 
 // Balance provides a mock function with given fields: _a0, _a1, _a2, _a3
-func (_m *Helper) Balance(_a0 context.Context, _a1 storage.DatabaseTransaction, _a2 *types.AccountIdentifier, _a3 *types.Currency) (*types.Amount, error) {
+func (_m *Helper) Balance(_a0 context.Context, _a1 database.Transaction, _a2 *types.AccountIdentifier, _a3 *types.Currency) (*types.Amount, error) {
 	ret := _m.Called(_a0, _a1, _a2, _a3)
 
 	var r0 *types.Amount
-	if rf, ok := ret.Get(0).(func(context.Context, storage.DatabaseTransaction, *types.AccountIdentifier, *types.Currency) *types.Amount); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, database.Transaction, *types.AccountIdentifier, *types.Currency) *types.Amount); ok {
 		r0 = rf(_a0, _a1, _a2, _a3)
 	} else {
 		if ret.Get(0) != nil {
@@ -55,7 +54,7 @@ func (_m *Helper) Balance(_a0 context.Context, _a1 storage.DatabaseTransaction, 
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, storage.DatabaseTransaction, *types.AccountIdentifier, *types.Currency) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, database.Transaction, *types.AccountIdentifier, *types.Currency) error); ok {
 		r1 = rf(_a0, _a1, _a2, _a3)
 	} else {
 		r1 = ret.Error(1)
@@ -65,11 +64,11 @@ func (_m *Helper) Balance(_a0 context.Context, _a1 storage.DatabaseTransaction, 
 }
 
 // Coins provides a mock function with given fields: _a0, _a1, _a2, _a3
-func (_m *Helper) Coins(_a0 context.Context, _a1 storage.DatabaseTransaction, _a2 *types.AccountIdentifier, _a3 *types.Currency) ([]*types.Coin, error) {
+func (_m *Helper) Coins(_a0 context.Context, _a1 database.Transaction, _a2 *types.AccountIdentifier, _a3 *types.Currency) ([]*types.Coin, error) {
 	ret := _m.Called(_a0, _a1, _a2, _a3)
 
 	var r0 []*types.Coin
-	if rf, ok := ret.Get(0).(func(context.Context, storage.DatabaseTransaction, *types.AccountIdentifier, *types.Currency) []*types.Coin); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, database.Transaction, *types.AccountIdentifier, *types.Currency) []*types.Coin); ok {
 		r0 = rf(_a0, _a1, _a2, _a3)
 	} else {
 		if ret.Get(0) != nil {
@@ -78,7 +77,7 @@ func (_m *Helper) Coins(_a0 context.Context, _a1 storage.DatabaseTransaction, _a
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, storage.DatabaseTransaction, *types.AccountIdentifier, *types.Currency) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, database.Transaction, *types.AccountIdentifier, *types.Currency) error); ok {
 		r1 = rf(_a0, _a1, _a2, _a3)
 	} else {
 		r1 = ret.Error(1)
@@ -120,11 +119,11 @@ func (_m *Helper) Derive(_a0 context.Context, _a1 *types.NetworkIdentifier, _a2 
 }
 
 // LockedAccounts provides a mock function with given fields: _a0, _a1
-func (_m *Helper) LockedAccounts(_a0 context.Context, _a1 storage.DatabaseTransaction) ([]*types.AccountIdentifier, error) {
+func (_m *Helper) LockedAccounts(_a0 context.Context, _a1 database.Transaction) ([]*types.AccountIdentifier, error) {
 	ret := _m.Called(_a0, _a1)
 
 	var r0 []*types.AccountIdentifier
-	if rf, ok := ret.Get(0).(func(context.Context, storage.DatabaseTransaction) []*types.AccountIdentifier); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, database.Transaction) []*types.AccountIdentifier); ok {
 		r0 = rf(_a0, _a1)
 	} else {
 		if ret.Get(0) != nil {
@@ -133,7 +132,7 @@ func (_m *Helper) LockedAccounts(_a0 context.Context, _a1 storage.DatabaseTransa
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, storage.DatabaseTransaction) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, database.Transaction) error); ok {
 		r1 = rf(_a0, _a1)
 	} else {
 		r1 = ret.Error(1)
@@ -143,11 +142,11 @@ func (_m *Helper) LockedAccounts(_a0 context.Context, _a1 storage.DatabaseTransa
 }
 
 // StoreKey provides a mock function with given fields: _a0, _a1, _a2, _a3
-func (_m *Helper) StoreKey(_a0 context.Context, _a1 storage.DatabaseTransaction, _a2 *types.AccountIdentifier, _a3 *keys.KeyPair) error {
+func (_m *Helper) StoreKey(_a0 context.Context, _a1 database.Transaction, _a2 *types.AccountIdentifier, _a3 *keys.KeyPair) error {
 	ret := _m.Called(_a0, _a1, _a2, _a3)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, storage.DatabaseTransaction, *types.AccountIdentifier, *keys.KeyPair) error); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, database.Transaction, *types.AccountIdentifier, *keys.KeyPair) error); ok {
 		r0 = rf(_a0, _a1, _a2, _a3)
 	} else {
 		r0 = ret.Error(0)

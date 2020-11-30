@@ -21,14 +21,14 @@ import (
 	"log"
 	"time"
 
+	"github.com/fatih/color"
+
 	"github.com/coinbase/rosetta-sdk-go/constructor/job"
 	"github.com/coinbase/rosetta-sdk-go/constructor/worker"
 	"github.com/coinbase/rosetta-sdk-go/parser"
-	"github.com/coinbase/rosetta-sdk-go/storage"
+	"github.com/coinbase/rosetta-sdk-go/storage/database"
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/coinbase/rosetta-sdk-go/utils"
-
-	"github.com/fatih/color"
 )
 
 // New parses a slice of input Workflows
@@ -106,7 +106,7 @@ func New(
 
 func (c *Coordinator) findJob(
 	ctx context.Context,
-	dbTx storage.DatabaseTransaction,
+	dbTx database.Transaction,
 	returnFunds bool,
 ) (*job.Job, error) {
 	// Look for any jobs ready for processing. If one is found,
@@ -220,7 +220,7 @@ func (c *Coordinator) findJob(
 // createTransaction constructs and signs a transaction with the provided intent.
 func (c *Coordinator) createTransaction(
 	ctx context.Context,
-	dbTx storage.DatabaseTransaction,
+	dbTx database.Transaction,
 	broadcast *job.Broadcast,
 ) (*types.TransactionIdentifier, string, []*types.Amount, error) {
 	metadataRequest, requiredPublicKeys, err := c.helper.Preprocess(
@@ -353,7 +353,7 @@ func (c *Coordinator) createTransaction(
 // is nil, then the transaction did not succeed.
 func (c *Coordinator) BroadcastComplete(
 	ctx context.Context,
-	dbTx storage.DatabaseTransaction,
+	dbTx database.Transaction,
 	jobIdentifier string,
 	transaction *types.Transaction,
 ) error {
