@@ -32,7 +32,7 @@ esac
 # Remove existing client generated code
 mkdir -p tmp;
 DIRS=( types client server )
-IGNORED_FILES=( README.md utils.go utils_test.go marshal_test.go account_currency.go )
+IGNORED_FILES=( README.md utils.go utils_test.go marshal_test.go account_currency.go account_coin.go )
 
 for dir in "${DIRS[@]}"
 do
@@ -203,7 +203,7 @@ done
 
 # Format client generated code
 FORMAT_GEN="gofmt -w /local/types; gofmt -w /local/client; gofmt -w /local/server"
-GOLANG_VERSION=1.13
+GOLANG_VERSION=1.15
 docker run --rm -v "${PWD}":/local \
   golang:${GOLANG_VERSION} sh -c \
-  "cd /local; make deps; ${FORMAT_GEN}; make add-license; make shorten-lines; go mod tidy;"
+  "cd /local; make deps; ${FORMAT_GEN}; make add-license; make shorten-lines; make fix-imports; go mod tidy;"

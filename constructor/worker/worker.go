@@ -26,15 +26,15 @@ import (
 	"os"
 	"time"
 
+	"github.com/lucasjones/reggen"
+	"github.com/tidwall/sjson"
+
 	"github.com/coinbase/rosetta-sdk-go/asserter"
 	"github.com/coinbase/rosetta-sdk-go/constructor/job"
 	"github.com/coinbase/rosetta-sdk-go/keys"
-	"github.com/coinbase/rosetta-sdk-go/storage"
+	"github.com/coinbase/rosetta-sdk-go/storage/database"
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/coinbase/rosetta-sdk-go/utils"
-
-	"github.com/lucasjones/reggen"
-	"github.com/tidwall/sjson"
 )
 
 // New returns a new *Worker.
@@ -48,7 +48,7 @@ func marshalString(value string) string {
 
 func (w *Worker) invokeWorker(
 	ctx context.Context,
-	dbTx storage.DatabaseTransaction,
+	dbTx database.Transaction,
 	action job.ActionType,
 	input string,
 ) (string, error) {
@@ -87,7 +87,7 @@ func (w *Worker) invokeWorker(
 
 func (w *Worker) actions(
 	ctx context.Context,
-	dbTx storage.DatabaseTransaction,
+	dbTx database.Transaction,
 	state string,
 	actions []*job.Action,
 ) (string, *Error) {
@@ -139,7 +139,7 @@ func (w *Worker) actions(
 // scenario.
 func (w *Worker) ProcessNextScenario(
 	ctx context.Context,
-	dbTx storage.DatabaseTransaction,
+	dbTx database.Transaction,
 	j *job.Job,
 ) *Error {
 	scenario := j.Scenarios[j.Index]
@@ -164,7 +164,7 @@ func (w *Worker) ProcessNextScenario(
 // are remaining, this will return an error.
 func (w *Worker) Process(
 	ctx context.Context,
-	dbTx storage.DatabaseTransaction,
+	dbTx database.Transaction,
 	j *job.Job,
 ) (*job.Broadcast, *Error) {
 	if j.CheckComplete() {
@@ -244,7 +244,7 @@ func GenerateKeyWorker(rawInput string) (string, error) {
 // in KeyStorage.
 func (w *Worker) SaveAccountWorker(
 	ctx context.Context,
-	dbTx storage.DatabaseTransaction,
+	dbTx database.Transaction,
 	rawInput string,
 ) error {
 	var input job.SaveAccountInput
@@ -392,7 +392,7 @@ func balanceMessage(input *job.FindBalanceInput) string {
 
 func (w *Worker) checkAccountCoins(
 	ctx context.Context,
-	dbTx storage.DatabaseTransaction,
+	dbTx database.Transaction,
 	input *job.FindBalanceInput,
 	account *types.AccountIdentifier,
 ) (string, error) {
@@ -437,7 +437,7 @@ func (w *Worker) checkAccountCoins(
 
 func (w *Worker) checkAccountBalance(
 	ctx context.Context,
-	dbTx storage.DatabaseTransaction,
+	dbTx database.Transaction,
 	input *job.FindBalanceInput,
 	account *types.AccountIdentifier,
 ) (string, error) {
@@ -469,7 +469,7 @@ func (w *Worker) checkAccountBalance(
 
 func (w *Worker) availableAccounts(
 	ctx context.Context,
-	dbTx storage.DatabaseTransaction,
+	dbTx database.Transaction,
 ) ([]*types.AccountIdentifier, []*types.AccountIdentifier, error) {
 	accounts, err := w.helper.AllAccounts(ctx, dbTx)
 	if err != nil {
@@ -600,7 +600,7 @@ func skipAccount(input job.FindBalanceInput, account *types.AccountIdentifier) b
 // balance in a particular currency.
 func (w *Worker) FindBalanceWorker(
 	ctx context.Context,
-	dbTx storage.DatabaseTransaction,
+	dbTx database.Transaction,
 	rawInput string,
 ) (string, error) {
 	var input job.FindBalanceInput

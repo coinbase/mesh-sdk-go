@@ -29,10 +29,10 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/fatih/color"
+
 	"github.com/coinbase/rosetta-sdk-go/fetcher"
 	"github.com/coinbase/rosetta-sdk-go/types"
-
-	"github.com/fatih/color"
 )
 
 const (

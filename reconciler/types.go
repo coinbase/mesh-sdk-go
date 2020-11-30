@@ -20,7 +20,7 @@ import (
 	"time"
 
 	"github.com/coinbase/rosetta-sdk-go/parser"
-	"github.com/coinbase/rosetta-sdk-go/storage"
+	"github.com/coinbase/rosetta-sdk-go/storage/database"
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/coinbase/rosetta-sdk-go/utils"
 )
@@ -116,11 +116,11 @@ const (
 // what sort of storage layer they want to use to provide the required
 // information.
 type Helper interface {
-	DatabaseTransaction(ctx context.Context) storage.DatabaseTransaction
+	DatabaseTransaction(ctx context.Context) database.Transaction
 
 	CurrentBlock(
 		ctx context.Context,
-		dbTx storage.DatabaseTransaction,
+		dbTx database.Transaction,
 	) (*types.BlockIdentifier, error)
 
 	IndexAtTip(
@@ -130,13 +130,13 @@ type Helper interface {
 
 	CanonicalBlock(
 		ctx context.Context,
-		dbTx storage.DatabaseTransaction,
+		dbTx database.Transaction,
 		block *types.BlockIdentifier,
 	) (bool, error)
 
 	ComputedBalance(
 		ctx context.Context,
-		dbTx storage.DatabaseTransaction,
+		dbTx database.Transaction,
 		account *types.AccountIdentifier,
 		currency *types.Currency,
 		index int64,

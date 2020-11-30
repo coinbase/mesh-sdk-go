@@ -22,10 +22,13 @@ deps:
 	go get ./...
 
 gen:
-	./codegen.sh
+	./codegen.sh;
 
 check-gen: | gen
 	git diff --exit-code
+
+fix-imports:
+	./imports.sh;
 
 check-comments:
 	${GOLINT_CMD} -set_exit_status ${GO_FOLDERS} .
@@ -43,8 +46,8 @@ format:
 	${GOIMPORTS_CMD} -w .
 
 check-format:
-	! gofmt -s -l . | read
-	! ${GOIMPORTS_CMD} -l . | read
+	! gofmt -s -l . | read;
+	! ${GOIMPORTS_CMD} -l . | read;
 
 test:
 	${TEST_SCRIPT}
@@ -76,6 +79,7 @@ mocks:
 	mockery --dir constructor/worker --all --case underscore --outpkg worker --output mocks/constructor/worker;
 	mockery --dir constructor/coordinator --all --case underscore --outpkg coordinator --output mocks/constructor/coordinator;
 	mockery --dir utils --all --case underscore --outpkg utils --output mocks/utils;
-	mockery --dir storage --all --case underscore --outpkg storage --output mocks/storage;
+	mockery --dir storage/database --all --case underscore --outpkg database --output mocks/storage/database;
+	mockery --dir storage/modules --all --case underscore --outpkg modules --output mocks/storage/modules;
 
 	${ADDLICENCE_SCRIPT} .;

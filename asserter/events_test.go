@@ -17,9 +17,9 @@ package asserter
 import (
 	"testing"
 
-	"github.com/coinbase/rosetta-sdk-go/types"
-
 	"github.com/stretchr/testify/assert"
+
+	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
 func TestEventsBlocksResponse(t *testing.T) {

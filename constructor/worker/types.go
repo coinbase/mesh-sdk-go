@@ -18,7 +18,7 @@ import (
 	"context"
 
 	"github.com/coinbase/rosetta-sdk-go/keys"
-	"github.com/coinbase/rosetta-sdk-go/storage"
+	"github.com/coinbase/rosetta-sdk-go/storage/database"
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
@@ -28,7 +28,7 @@ type Helper interface {
 	// *types.AccountIdentifier + KeyPair.
 	StoreKey(
 		context.Context,
-		storage.DatabaseTransaction,
+		database.Transaction,
 		*types.AccountIdentifier,
 		*keys.KeyPair,
 	) error
@@ -36,21 +36,21 @@ type Helper interface {
 	// AllAccounts returns a slice of all known *types.AccountIdentifier.
 	AllAccounts(
 		context.Context,
-		storage.DatabaseTransaction,
+		database.Transaction,
 	) ([]*types.AccountIdentifier, error)
 
 	// LockedAccounts is a slice of all *types.AccountIdentifier currently sending or receiving
 	// funds.
 	LockedAccounts(
 		context.Context,
-		storage.DatabaseTransaction,
+		database.Transaction,
 	) ([]*types.AccountIdentifier, error)
 
 	// Balance returns the balance
 	// for a provided address and currency.
 	Balance(
 		context.Context,
-		storage.DatabaseTransaction,
+		database.Transaction,
 		*types.AccountIdentifier,
 		*types.Currency,
 	) (*types.Amount, error)
@@ -58,7 +58,7 @@ type Helper interface {
 	// Coins returns all *types.Coin owned by an address.
 	Coins(
 		context.Context,
-		storage.DatabaseTransaction,
+		database.Transaction,
 		*types.AccountIdentifier,
 		*types.Currency,
 	) ([]*types.Coin, error)

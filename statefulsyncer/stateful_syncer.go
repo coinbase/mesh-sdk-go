@@ -22,7 +22,8 @@ import (
 	"time"
 
 	"github.com/coinbase/rosetta-sdk-go/fetcher"
-	"github.com/coinbase/rosetta-sdk-go/storage"
+	storageErrs "github.com/coinbase/rosetta-sdk-go/storage/errors"
+	"github.com/coinbase/rosetta-sdk-go/storage/modules"
 	"github.com/coinbase/rosetta-sdk-go/syncer"
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/coinbase/rosetta-sdk-go/utils"
@@ -50,10 +51,10 @@ type StatefulSyncer struct {
 	network        *types.NetworkIdentifier
 	fetcher        *fetcher.Fetcher
 	cancel         context.CancelFunc
-	blockStorage   *storage.BlockStorage
-	counterStorage *storage.CounterStorage
+	blockStorage   *modules.BlockStorage
+	counterStorage *modules.CounterStorage
 	logger         Logger
-	workers        []storage.BlockWorker
+	workers        []modules.BlockWorker
 
 	cacheSize        int
 	maxConcurrency   int64
@@ -85,11 +86,11 @@ func New(
 	ctx context.Context,
 	network *types.NetworkIdentifier,
 	fetcher *fetcher.Fetcher,
-	blockStorage *storage.BlockStorage,
-	counterStorage *storage.CounterStorage,
+	blockStorage *modules.BlockStorage,
+	counterStorage *modules.CounterStorage,
 	logger Logger,
 	cancel context.CancelFunc,
-	workers []storage.BlockWorker,
+	workers []modules.BlockWorker,
 	options ...Option,
 ) *StatefulSyncer {
 	s := &StatefulSyncer{
@@ -169,7 +170,7 @@ func (s *StatefulSyncer) Prune(ctx context.Context, helper PruneHelper) error {
 		}
 
 		headBlock, err := s.blockStorage.GetHeadBlockIdentifier(ctx)
-		if headBlock == nil && errors.Is(err, storage.ErrHeadBlockNotFound) {
+		if headBlock == nil && errors.Is(err, storageErrs.ErrHeadBlockNotFound) {
 			// this will occur when we are waiting for the first block to be synced
 			continue
 		}
@@ -178,7 +179,7 @@ func (s *StatefulSyncer) Prune(ctx context.Context, helper PruneHelper) error {
 		}
 
 		oldestIndex, err := s.blockStorage.GetOldestBlockIndex(ctx)
-		if oldestIndex == -1 && errors.Is(err, storage.ErrOldestIndexMissing) {
+		if oldestIndex == -1 && errors.Is(err, storageErrs.ErrOldestIndexMissing) {
 			// this will occur when we have yet to store the oldest index
 			continue
 		}

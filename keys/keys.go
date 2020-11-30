@@ -19,10 +19,10 @@ import (
 	"encoding/hex"
 	"fmt"
 
+	"github.com/btcsuite/btcd/btcec"
+
 	"github.com/coinbase/rosetta-sdk-go/asserter"
 	"github.com/coinbase/rosetta-sdk-go/types"
-
-	"github.com/btcsuite/btcd/btcec"
 )
 
 // PrivKeyBytesLen are 32-bytes for all supported curvetypes

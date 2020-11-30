@@ -19,8 +19,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
 func TestNetworkIdentifier(t *testing.T) {

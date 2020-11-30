@@ -21,13 +21,13 @@ import (
 	"testing"
 	"time"
 
-	mocks "github.com/coinbase/rosetta-sdk-go/mocks/reconciler"
-	mockStorage "github.com/coinbase/rosetta-sdk-go/mocks/storage"
-	"github.com/coinbase/rosetta-sdk-go/parser"
-	"github.com/coinbase/rosetta-sdk-go/types"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+
+	mocks "github.com/coinbase/rosetta-sdk-go/mocks/reconciler"
+	mockDatabase "github.com/coinbase/rosetta-sdk-go/mocks/storage/database"
+	"github.com/coinbase/rosetta-sdk-go/parser"
+	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
 func TestNewReconciler(t *testing.T) {
@@ -298,7 +298,7 @@ func TestCompareBalance(t *testing.T) {
 	)
 
 	t.Run("No head block yet", func(t *testing.T) {
-		mtxn := &mockStorage.DatabaseTransaction{}
+		mtxn := &mockDatabase.Transaction{}
 		mtxn.On("Discard", ctx).Once()
 		mh.On("DatabaseTransaction", ctx).Return(mtxn).Once()
 		mh.On("CurrentBlock", ctx, mtxn).Return(nil, errors.New("no head block")).Once()
@@ -317,7 +317,7 @@ func TestCompareBalance(t *testing.T) {
 	})
 
 	t.Run("Live block is ahead of head block", func(t *testing.T) {
-		mtxn := &mockStorage.DatabaseTransaction{}
+		mtxn := &mockDatabase.Transaction{}
 		mtxn.On("Discard", ctx).Once()
 		mh.On("DatabaseTransaction", ctx).Return(mtxn).Once()
 		mh.On("CurrentBlock", ctx, mtxn).Return(block0, nil).Once()
@@ -341,7 +341,7 @@ func TestCompareBalance(t *testing.T) {
 	})
 
 	t.Run("Live block is not in store", func(t *testing.T) {
-		mtxn := &mockStorage.DatabaseTransaction{}
+		mtxn := &mockDatabase.Transaction{}
 		mtxn.On("Discard", ctx).Once()
 		mh.On("DatabaseTransaction", ctx).Return(mtxn).Once()
 		mh.On("CurrentBlock", ctx, mtxn).Return(block2, nil).Once()
@@ -361,7 +361,7 @@ func TestCompareBalance(t *testing.T) {
 	})
 
 	t.Run("Account updated after live block", func(t *testing.T) {
-		mtxn := &mockStorage.DatabaseTransaction{}
+		mtxn := &mockDatabase.Transaction{}
 		mtxn.On("Discard", ctx).Once()
 		mh.On("DatabaseTransaction", ctx).Return(mtxn).Once()
 		mh.On("CurrentBlock", ctx, mtxn).Return(block2, nil).Once()
@@ -392,7 +392,7 @@ func TestCompareBalance(t *testing.T) {
 	})
 
 	t.Run("Account balance matches", func(t *testing.T) {
-		mtxn := &mockStorage.DatabaseTransaction{}
+		mtxn := &mockDatabase.Transaction{}
 		mtxn.On("Discard", ctx).Once()
 		mh.On("DatabaseTransaction", ctx).Return(mtxn).Once()
 		mh.On("CurrentBlock", ctx, mtxn).Return(block2, nil).Once()
@@ -423,7 +423,7 @@ func TestCompareBalance(t *testing.T) {
 	})
 
 	t.Run("Account balance matches later live block", func(t *testing.T) {
-		mtxn := &mockStorage.DatabaseTransaction{}
+		mtxn := &mockDatabase.Transaction{}
 		mtxn.On("Discard", ctx).Once()
 		mh.On("DatabaseTransaction", ctx).Return(mtxn).Once()
 		mh.On("CurrentBlock", ctx, mtxn).Return(block2, nil).Once()
@@ -454,7 +454,7 @@ func TestCompareBalance(t *testing.T) {
 	})
 
 	t.Run("Balances are not equal", func(t *testing.T) {
-		mtxn := &mockStorage.DatabaseTransaction{}
+		mtxn := &mockDatabase.Transaction{}
 		mtxn.On("Discard", ctx).Once()
 		mh.On("DatabaseTransaction", ctx).Return(mtxn).Once()
 		mh.On("CurrentBlock", ctx, mtxn).Return(block2, nil).Once()
@@ -485,7 +485,7 @@ func TestCompareBalance(t *testing.T) {
 	})
 
 	t.Run("Compare balance for non-existent account", func(t *testing.T) {
-		mtxn := &mockStorage.DatabaseTransaction{}
+		mtxn := &mockDatabase.Transaction{}
 		mtxn.On("Discard", ctx).Once()
 		mh.On("DatabaseTransaction", ctx).Return(mtxn).Once()
 		mh.On("CurrentBlock", ctx, mtxn).Return(block2, nil).Once()
@@ -666,7 +666,7 @@ func TestInactiveAccountQueue(t *testing.T) {
 func mockReconcilerCalls(
 	mockHelper *mocks.Helper,
 	mockHandler *mocks.Handler,
-	mtxn *mockStorage.DatabaseTransaction,
+	mtxn *mockDatabase.Transaction,
 	lookupBalanceByBlock bool,
 	accountCurrency *types.AccountCurrency,
 	liveValue string,
@@ -822,7 +822,7 @@ func TestReconcile_SuccessOnlyActive(t *testing.T) {
 			).Return(
 				nil,
 			).Once()
-			mtxn := &mockStorage.DatabaseTransaction{}
+			mtxn := &mockDatabase.Transaction{}
 			mtxn.On("Discard", mock.Anything).Once()
 			mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn).Once()
 			mockReconcilerCalls(
@@ -851,7 +851,7 @@ func TestReconcile_SuccessOnlyActive(t *testing.T) {
 			).Return(
 				nil,
 			).Once()
-			mtxn2 := &mockStorage.DatabaseTransaction{}
+			mtxn2 := &mockDatabase.Transaction{}
 			mtxn2.On("Discard", mock.Anything).Once()
 			mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn2).Once()
 			mockReconcilerCalls(
@@ -880,7 +880,7 @@ func TestReconcile_SuccessOnlyActive(t *testing.T) {
 			).Return(
 				nil,
 			).Once()
-			mtxn3 := &mockStorage.DatabaseTransaction{}
+			mtxn3 := &mockDatabase.Transaction{}
 			mtxn3.On("Discard", mock.Anything).Once()
 			mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn3).Once()
 			mockReconcilerCalls(
@@ -986,7 +986,7 @@ func TestReconcile_HighWaterMark(t *testing.T) {
 	ctx, cancel := context.WithCancel(ctx)
 
 	// First call to QueueChanges
-	mtxn := &mockStorage.DatabaseTransaction{}
+	mtxn := &mockDatabase.Transaction{}
 	mtxn.On("Discard", mock.Anything).Once()
 	mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn).Once()
 	mockHelper.On("CurrentBlock", mock.Anything, mtxn).Return(block, nil).Once()
@@ -1003,7 +1003,7 @@ func TestReconcile_HighWaterMark(t *testing.T) {
 	).Once()
 
 	// Second call to QueueChanges
-	mtxn2 := &mockStorage.DatabaseTransaction{}
+	mtxn2 := &mockDatabase.Transaction{}
 	mtxn2.On("Discard", mock.Anything).Once()
 	mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn2).Once()
 	mockReconcilerCalls(
@@ -1022,7 +1022,7 @@ func TestReconcile_HighWaterMark(t *testing.T) {
 		false,
 		false,
 	)
-	mtxn3 := &mockStorage.DatabaseTransaction{}
+	mtxn3 := &mockDatabase.Transaction{}
 	mtxn3.On("Discard", mock.Anything).Once()
 	mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn3).Once()
 	mockReconcilerCalls(
@@ -1137,7 +1137,7 @@ func TestReconcile_Orphan(t *testing.T) {
 		block,
 		nil,
 	).Once()
-	mtxn := &mockStorage.DatabaseTransaction{}
+	mtxn := &mockDatabase.Transaction{}
 	mtxn.On("Discard", mock.Anything).Once()
 	mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn).Once()
 	mockHelper.On("CurrentBlock", mock.Anything, mtxn).Return(&types.BlockIdentifier{
@@ -1217,7 +1217,7 @@ func TestReconcile_FailureOnlyActive(t *testing.T) {
 			)
 			ctx := context.Background()
 
-			mtxn := &mockStorage.DatabaseTransaction{}
+			mtxn := &mockDatabase.Transaction{}
 			mtxn.On("Discard", mock.Anything).Once()
 			mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn).Once()
 			mockReconcilerCalls(
@@ -1310,7 +1310,7 @@ func TestReconcile_ExemptOnlyActive(t *testing.T) {
 				opts...,
 			)
 			ctx := context.Background()
-			mtxn := &mockStorage.DatabaseTransaction{}
+			mtxn := &mockDatabase.Transaction{}
 			mtxn.On("Discard", mock.Anything).Once()
 			mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn).Once()
 			mockReconcilerCalls(
@@ -1406,7 +1406,7 @@ func TestReconcile_ExemptAddressOnlyActive(t *testing.T) {
 			)
 			ctx := context.Background()
 
-			mtxn := &mockStorage.DatabaseTransaction{}
+			mtxn := &mockDatabase.Transaction{}
 			mtxn.On("Discard", mock.Anything).Once()
 			mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn).Once()
 			mockReconcilerCalls(
@@ -1501,7 +1501,7 @@ func TestReconcile_ExemptAddressDynamicActive(t *testing.T) {
 			)
 			ctx := context.Background()
 
-			mtxn := &mockStorage.DatabaseTransaction{}
+			mtxn := &mockDatabase.Transaction{}
 			mtxn.On("Discard", mock.Anything).Once()
 			mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn).Once()
 			mockReconcilerCalls(
@@ -1596,7 +1596,7 @@ func TestReconcile_ExemptAddressDynamicActiveThrow(t *testing.T) {
 			)
 			ctx := context.Background()
 
-			mtxn := &mockStorage.DatabaseTransaction{}
+			mtxn := &mockDatabase.Transaction{}
 			mtxn.On("Discard", mock.Anything).Once()
 			mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn).Once()
 			mockReconcilerCalls(
@@ -1688,7 +1688,7 @@ func TestReconcile_NotExemptOnlyActive(t *testing.T) {
 			)
 			ctx := context.Background()
 
-			mtxn := &mockStorage.DatabaseTransaction{}
+			mtxn := &mockDatabase.Transaction{}
 			mtxn.On("Discard", mock.Anything).Once()
 			mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn).Once()
 			mockReconcilerCalls(
@@ -1781,7 +1781,7 @@ func TestReconcile_NotExemptAddressOnlyActive(t *testing.T) {
 			)
 			ctx := context.Background()
 
-			mtxn := &mockStorage.DatabaseTransaction{}
+			mtxn := &mockDatabase.Transaction{}
 			mtxn.On("Discard", mock.Anything).Once()
 			mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn).Once()
 			mockReconcilerCalls(
@@ -1878,7 +1878,7 @@ func TestReconcile_NotExemptWrongAddressOnlyActive(t *testing.T) {
 			)
 			ctx := context.Background()
 
-			mtxn := &mockStorage.DatabaseTransaction{}
+			mtxn := &mockDatabase.Transaction{}
 			mtxn.On("Discard", mock.Anything).Once()
 			mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn).Once()
 			mockReconcilerCalls(
@@ -1968,11 +1968,11 @@ func TestReconcile_SuccessOnlyInactive(t *testing.T) {
 			ctx := context.Background()
 			ctx, cancel := context.WithCancel(ctx)
 
-			mtxn := &mockStorage.DatabaseTransaction{}
+			mtxn := &mockDatabase.Transaction{}
 			mtxn.On("Discard", mock.Anything).Once()
 			mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn).Once()
 			mockHelper.On("CurrentBlock", mock.Anything, mtxn).Return(block, nil).Once()
-			mtxn2 := &mockStorage.DatabaseTransaction{}
+			mtxn2 := &mockDatabase.Transaction{}
 			mtxn2.On(
 				"Discard",
 				mock.Anything,
@@ -2009,11 +2009,11 @@ func TestReconcile_SuccessOnlyInactive(t *testing.T) {
 			ctx = context.Background()
 			ctx, cancel = context.WithCancel(ctx)
 
-			mtxn3 := &mockStorage.DatabaseTransaction{}
+			mtxn3 := &mockDatabase.Transaction{}
 			mtxn3.On("Discard", mock.Anything).Once()
 			mockHelper2.On("DatabaseTransaction", mock.Anything).Return(mtxn3).Once()
 			mockHelper2.On("CurrentBlock", mock.Anything, mtxn3).Return(block2, nil).Once()
-			mtxn4 := &mockStorage.DatabaseTransaction{}
+			mtxn4 := &mockDatabase.Transaction{}
 			mtxn4.On("Discard", mock.Anything).Run(
 				func(args mock.Arguments) {
 					cancel()
@@ -2094,11 +2094,11 @@ func TestReconcile_FailureOnlyInactive(t *testing.T) {
 			ctx := context.Background()
 			ctx, cancel := context.WithCancel(ctx)
 
-			mtxn := &mockStorage.DatabaseTransaction{}
+			mtxn := &mockDatabase.Transaction{}
 			mtxn.On("Discard", mock.Anything).Once()
 			mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn).Once()
 			mockHelper.On("CurrentBlock", mock.Anything, mtxn).Return(block, nil).Once()
-			mtxn2 := &mockStorage.DatabaseTransaction{}
+			mtxn2 := &mockDatabase.Transaction{}
 			mtxn2.On(
 				"Discard",
 				mock.Anything,
@@ -2443,7 +2443,7 @@ func TestReconcile_FailureIndexAtTipInactive(t *testing.T) {
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
 
-	mtxn := &mockStorage.DatabaseTransaction{}
+	mtxn := &mockDatabase.Transaction{}
 	mtxn.On("Discard", mock.Anything).Once()
 	mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn).Once()
 	mockHelper.On("CurrentBlock", mock.Anything, mtxn).Return(block, nil).Once()
@@ -2519,7 +2519,7 @@ func TestReconcile_FailureNotIndexAtTipInactive(t *testing.T) {
 	)
 	ctx := context.Background()
 
-	mtxn := &mockStorage.DatabaseTransaction{}
+	mtxn := &mockDatabase.Transaction{}
 	mtxn.On("Discard", mock.Anything).Once()
 	mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn).Once()
 	mockHelper.On("CurrentBlock", mock.Anything, mtxn).Return(block, nil).Once()
@@ -2583,7 +2583,7 @@ func TestReconcile_FailureErrorIndexAtTipInactive(t *testing.T) {
 	)
 	ctx := context.Background()
 
-	mtxn := &mockStorage.DatabaseTransaction{}
+	mtxn := &mockDatabase.Transaction{}
 	mtxn.On("Discard", mock.Anything).Once()
 	mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn).Once()
 	mockHelper.On("CurrentBlock", mock.Anything, mtxn).Return(block, nil).Once()
@@ -2730,7 +2730,7 @@ func TestPruningRaceCondition(t *testing.T) {
 	).Return(
 		nil,
 	).Once()
-	mtxn := &mockStorage.DatabaseTransaction{}
+	mtxn := &mockDatabase.Transaction{}
 	mtxn.On("Discard", mock.Anything).Once()
 	mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn).Once()
 	mockReconcilerCallsDelay(
@@ -2753,7 +2753,7 @@ func TestPruningRaceCondition(t *testing.T) {
 	).Return(
 		nil,
 	).Once()
-	mtxn2 := &mockStorage.DatabaseTransaction{}
+	mtxn2 := &mockDatabase.Transaction{}
 	mtxn2.On("Discard", mock.Anything).Once()
 	mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn2).Once()
 	mockReconcilerCalls(
@@ -2773,7 +2773,7 @@ func TestPruningRaceCondition(t *testing.T) {
 		false,
 	)
 
-	mtxn3 := &mockStorage.DatabaseTransaction{}
+	mtxn3 := &mockDatabase.Transaction{}
 	mtxn3.On("Discard", mock.Anything).Once()
 	mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn3).Once()
 	mockReconcilerCalls(
@@ -2881,7 +2881,7 @@ func TestPruningHappyPath(t *testing.T) {
 	).Return(
 		nil,
 	).Once()
-	mtxn := &mockStorage.DatabaseTransaction{}
+	mtxn := &mockDatabase.Transaction{}
 	mtxn.On("Discard", mock.Anything).Once()
 	mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn).Once()
 	mockReconcilerCallsDelay(
@@ -2908,7 +2908,7 @@ func TestPruningHappyPath(t *testing.T) {
 	).Return(
 		nil,
 	).Once()
-	mtxn2 := &mockStorage.DatabaseTransaction{}
+	mtxn2 := &mockDatabase.Transaction{}
 	mtxn2.On("Discard", mock.Anything).Once()
 	mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn2).Once()
 	mockReconcilerCallsDelay(
@@ -2995,7 +2995,7 @@ func TestPruningReorg(t *testing.T) {
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
 
-	mtxn := &mockStorage.DatabaseTransaction{}
+	mtxn := &mockDatabase.Transaction{}
 	mtxn.On("Discard", mock.Anything).Once()
 	mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn).Once()
 	mockReconcilerCallsDelay(
@@ -3022,7 +3022,7 @@ func TestPruningReorg(t *testing.T) {
 	).Return(
 		nil,
 	).Once()
-	mtxn2 := &mockStorage.DatabaseTransaction{}
+	mtxn2 := &mockDatabase.Transaction{}
 	mtxn2.On("Discard", mock.Anything).Once()
 	mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn2).Once()
 	mockReconcilerCallsDelay(
@@ -3113,7 +3113,7 @@ func TestPruningRaceConditionInactive(t *testing.T) {
 	c := make(chan struct{})
 
 	// Start inactive fetch
-	mtxn := &mockStorage.DatabaseTransaction{}
+	mtxn := &mockDatabase.Transaction{}
 	mtxn.On("Discard", mock.Anything).Once()
 	mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn).Once()
 	mockHelper.On(
@@ -3123,7 +3123,7 @@ func TestPruningRaceConditionInactive(t *testing.T) {
 	).Return(blockOld, nil).Once()
 
 	// Hang on live balance fetch for inactive
-	mtxn3 := &mockStorage.DatabaseTransaction{}
+	mtxn3 := &mockDatabase.Transaction{}
 	mockHelper.On(
 		"LiveBalance",
 		mock.Anything,
@@ -3171,7 +3171,7 @@ func TestPruningRaceConditionInactive(t *testing.T) {
 
 	<-b
 	// Active balance fetch
-	mtxn2 := &mockStorage.DatabaseTransaction{}
+	mtxn2 := &mockDatabase.Transaction{}
 	mtxn2.On(
 		"Discard",
 		mock.Anything,
