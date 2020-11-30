@@ -19,7 +19,6 @@ import (
 	"fmt"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
-
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 

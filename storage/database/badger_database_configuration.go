@@ -15,9 +15,9 @@
 package database
 
 import (
-	"github.com/coinbase/rosetta-sdk-go/storage/encoder"
-
 	"github.com/dgraph-io/badger/v2"
+
+	"github.com/coinbase/rosetta-sdk-go/storage/encoder"
 )
 
 // BadgerOption is used to overwrite default values in

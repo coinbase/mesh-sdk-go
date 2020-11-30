@@ -22,11 +22,11 @@ import (
 	"net/http"
 	"time"
 
+	"golang.org/x/sync/semaphore"
+
 	"github.com/coinbase/rosetta-sdk-go/asserter"
 	"github.com/coinbase/rosetta-sdk-go/client"
 	"github.com/coinbase/rosetta-sdk-go/types"
-
-	"golang.org/x/sync/semaphore"
 )
 
 const (

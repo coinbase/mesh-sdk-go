@@ -21,10 +21,11 @@ import (
 	"log"
 	"time"
 
+	"golang.org/x/sync/errgroup"
+
 	"github.com/coinbase/rosetta-sdk-go/parser"
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/coinbase/rosetta-sdk-go/utils"
-	"golang.org/x/sync/errgroup"
 )
 
 // New creates a new Reconciler.
