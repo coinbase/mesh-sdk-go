@@ -160,7 +160,15 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 		assert.NoError(t, err)
 
 		mockHelper.On("CurrentBlockIdentifier", ctx).Return(block.BlockIdentifier, nil)
-		mockHelper.On("BroadcastTransaction", ctx, network, "payload 1").Return(&types.TransactionIdentifier{Hash: "tx 1"}, nil).Once()
+		mockHelper.On(
+			"BroadcastTransaction",
+			ctx,
+			network,
+			"payload 1",
+		).Return(
+			&types.TransactionIdentifier{Hash: "tx 1"},
+			nil,
+		).Once()
 		err = commitWorker(ctx)
 		assert.NoError(t, err)
 
@@ -198,7 +206,16 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 		block := blocks[1]
 
 		txn := storage.db.Transaction(ctx)
-		mockHelper.On("FindTransaction", ctx, &types.TransactionIdentifier{Hash: "tx 1"}, txn).Return(nil, nil, nil).Once()
+		mockHelper.On(
+			"FindTransaction",
+			ctx,
+			&types.TransactionIdentifier{Hash: "tx 1"},
+			txn,
+		).Return(
+			nil,
+			nil,
+			nil,
+		).Once()
 		commitWorker, err := storage.AddingBlock(ctx, block, txn)
 		assert.NoError(t, err)
 		err = txn.Commit(ctx)
@@ -264,7 +281,15 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 			{Address: "addr 2"},
 		}, accounts)
 
-		mockHelper.On("BroadcastTransaction", ctx, network, "payload 2").Return(&types.TransactionIdentifier{Hash: "tx 2"}, nil).Once()
+		mockHelper.On(
+			"BroadcastTransaction",
+			ctx,
+			network,
+			"payload 2",
+		).Return(
+			&types.TransactionIdentifier{Hash: "tx 2"},
+			nil,
+		).Once()
 		assert.NoError(t, dbTx.Commit(ctx))
 		assert.NoError(t, storage.BroadcastAll(ctx, true))
 
@@ -307,10 +332,44 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 		mockHelper.On("AtTip", ctx, mock.Anything).Return(true, nil)
 
 		txn := storage.db.Transaction(ctx)
-		mockHelper.On("FindTransaction", ctx, &types.TransactionIdentifier{Hash: "tx 1"}, txn).Return(nil, nil, nil).Once()
-		mockHelper.On("FindTransaction", ctx, &types.TransactionIdentifier{Hash: "tx 2"}, txn).Return(nil, nil, nil).Once()
-		mockHandler.On("TransactionStale", ctx, txn, "broadcast 1", &types.TransactionIdentifier{Hash: "tx 1"}).Return(nil).Once()
-		mockHelper.On("BroadcastTransaction", ctx, network, "payload 1").Return(&types.TransactionIdentifier{Hash: "tx 1"}, nil).Once()
+		mockHelper.On(
+			"FindTransaction",
+			ctx,
+			&types.TransactionIdentifier{Hash: "tx 1"},
+			txn,
+		).Return(
+			nil,
+			nil,
+			nil,
+		).Once()
+		mockHelper.On(
+			"FindTransaction",
+			ctx,
+			&types.TransactionIdentifier{Hash: "tx 2"},
+			txn,
+		).Return(
+			nil,
+			nil,
+			nil,
+		).Once()
+		mockHandler.On(
+			"TransactionStale",
+			ctx,
+			txn,
+			"broadcast 1",
+			&types.TransactionIdentifier{Hash: "tx 1"},
+		).Return(
+			nil,
+		).Once()
+		mockHelper.On(
+			"BroadcastTransaction",
+			ctx,
+			network,
+			"payload 1",
+		).Return(
+			&types.TransactionIdentifier{Hash: "tx 1"},
+			nil,
+		).Once()
 		commitWorker, err := storage.AddingBlock(ctx, block, txn)
 		assert.NoError(t, err)
 
@@ -376,10 +435,44 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 		block.Transactions = []*types.Transaction{tx1}
 
 		txn := storage.db.Transaction(ctx)
-		mockHelper.On("FindTransaction", ctx, &types.TransactionIdentifier{Hash: "tx 1"}, txn).Return(blocks[3].BlockIdentifier, tx1, nil).Once()
-		mockHelper.On("FindTransaction", ctx, &types.TransactionIdentifier{Hash: "tx 2"}, txn).Return(nil, nil, nil).Once()
-		mockHandler.On("TransactionStale", ctx, txn, "broadcast 2", &types.TransactionIdentifier{Hash: "tx 2"}).Return(nil).Once()
-		mockHelper.On("BroadcastTransaction", ctx, network, "payload 2").Return(&types.TransactionIdentifier{Hash: "tx 2"}, nil).Once()
+		mockHelper.On(
+			"FindTransaction",
+			ctx,
+			&types.TransactionIdentifier{Hash: "tx 1"},
+			txn,
+		).Return(
+			blocks[3].BlockIdentifier,
+			tx1,
+			nil,
+		).Once()
+		mockHelper.On(
+			"FindTransaction",
+			ctx,
+			&types.TransactionIdentifier{Hash: "tx 2"},
+			txn,
+		).Return(
+			nil,
+			nil,
+			nil,
+		).Once()
+		mockHandler.On(
+			"TransactionStale",
+			ctx,
+			txn,
+			"broadcast 2",
+			&types.TransactionIdentifier{Hash: "tx 2"},
+		).Return(
+			nil,
+		).Once()
+		mockHelper.On(
+			"BroadcastTransaction",
+			ctx,
+			network,
+			"payload 2",
+		).Return(
+			&types.TransactionIdentifier{Hash: "tx 2"},
+			nil,
+		).Once()
 		commitWorker, err := storage.AddingBlock(ctx, block, txn)
 		assert.NoError(t, err)
 
@@ -437,9 +530,37 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 		block.Transactions = []*types.Transaction{tx2}
 
 		txn := storage.db.Transaction(ctx)
-		mockHelper.On("FindTransaction", ctx, &types.TransactionIdentifier{Hash: "tx 1"}, txn).Return(blocks[3].BlockIdentifier, tx1, nil).Once()
-		mockHelper.On("FindTransaction", ctx, &types.TransactionIdentifier{Hash: "tx 2"}, txn).Return(blocks[4].BlockIdentifier, tx2, nil).Once()
-		mockHandler.On("TransactionConfirmed", ctx, txn, "broadcast 1", blocks[3].BlockIdentifier, tx1, send1).Return(nil).Once()
+		mockHelper.On(
+			"FindTransaction",
+			ctx,
+			&types.TransactionIdentifier{Hash: "tx 1"},
+			txn,
+		).Return(
+			blocks[3].BlockIdentifier,
+			tx1,
+			nil,
+		).Once()
+		mockHelper.On(
+			"FindTransaction",
+			ctx,
+			&types.TransactionIdentifier{Hash: "tx 2"},
+			txn,
+		).Return(
+			blocks[4].BlockIdentifier,
+			tx2,
+			nil,
+		).Once()
+		mockHandler.On(
+			"TransactionConfirmed",
+			ctx,
+			txn,
+			"broadcast 1",
+			blocks[3].BlockIdentifier,
+			tx1,
+			send1,
+		).Return(
+			nil,
+		).Once()
 		commitWorker, err := storage.AddingBlock(ctx, block, txn)
 		assert.NoError(t, err)
 
@@ -485,8 +606,27 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 		block := blocks[5]
 
 		txn := storage.db.Transaction(ctx)
-		mockHelper.On("FindTransaction", ctx, &types.TransactionIdentifier{Hash: "tx 2"}, txn).Return(blocks[4].BlockIdentifier, tx2, nil).Once()
-		mockHandler.On("TransactionConfirmed", ctx, txn, "broadcast 2", blocks[4].BlockIdentifier, tx2, send2).Return(nil).Once()
+		mockHelper.On(
+			"FindTransaction",
+			ctx,
+			&types.TransactionIdentifier{Hash: "tx 2"},
+			txn,
+		).Return(
+			blocks[4].BlockIdentifier,
+			tx2,
+			nil,
+		).Once()
+		mockHandler.On(
+			"TransactionConfirmed",
+			ctx,
+			txn,
+			"broadcast 2",
+			blocks[4].BlockIdentifier,
+			tx2,
+			send2,
+		).Return(
+			nil,
+		).Once()
 		commitWorker, err := storage.AddingBlock(ctx, block, txn)
 		assert.NoError(t, err)
 
@@ -637,16 +777,92 @@ func TestBroadcastStorageBroadcastFailure(t *testing.T) {
 
 		blocks := blockFiller(0, 10)
 		mockHelper.On("AtTip", ctx, mock.Anything).Return(true, nil)
-		mockHelper.On("BroadcastTransaction", ctx, network, "payload 1").Return(&types.TransactionIdentifier{Hash: "tx 1"}, nil).Times(3)
-		mockHandler.On("TransactionStale", ctx, mock.Anything, "broadcast 1", &types.TransactionIdentifier{Hash: "tx 1"}).Return(nil).Times(3)
-		mockHandler.On("BroadcastFailed", ctx, mock.Anything, "broadcast 1", &types.TransactionIdentifier{Hash: "tx 1"}, send1).Return(nil).Once()
-		mockHelper.On("BroadcastTransaction", ctx, network, "payload 2").Return(nil, errors.New("broadcast error")).Times(3)
-		mockHandler.On("TransactionStale", ctx, mock.Anything, "broadcast 2", &types.TransactionIdentifier{Hash: "tx 2"}).Return(nil).Times(3)
-		mockHandler.On("BroadcastFailed", ctx, mock.Anything, "broadcast 2", &types.TransactionIdentifier{Hash: "tx 2"}, send2).Return(nil).Once()
+		mockHelper.On(
+			"BroadcastTransaction",
+			ctx,
+			network,
+			"payload 1",
+		).Return(
+			&types.TransactionIdentifier{Hash: "tx 1"},
+			nil,
+		).Times(
+			3,
+		)
+		mockHandler.On(
+			"TransactionStale",
+			ctx,
+			mock.Anything,
+			"broadcast 1",
+			&types.TransactionIdentifier{Hash: "tx 1"},
+		).Return(
+			nil,
+		).Times(
+			3,
+		)
+		mockHandler.On(
+			"BroadcastFailed",
+			ctx,
+			mock.Anything,
+			"broadcast 1",
+			&types.TransactionIdentifier{Hash: "tx 1"},
+			send1,
+		).Return(
+			nil,
+		).Once()
+		mockHelper.On(
+			"BroadcastTransaction",
+			ctx,
+			network,
+			"payload 2",
+		).Return(
+			nil,
+			errors.New("broadcast error"),
+		).Times(
+			3,
+		)
+		mockHandler.On(
+			"TransactionStale",
+			ctx,
+			mock.Anything,
+			"broadcast 2",
+			&types.TransactionIdentifier{Hash: "tx 2"},
+		).Return(
+			nil,
+		).Times(
+			3,
+		)
+		mockHandler.On(
+			"BroadcastFailed",
+			ctx,
+			mock.Anything,
+			"broadcast 2",
+			&types.TransactionIdentifier{Hash: "tx 2"},
+			send2,
+		).Return(
+			nil,
+		).Once()
 
 		// Never find in block
-		mockHelper.On("FindTransaction", ctx, &types.TransactionIdentifier{Hash: "tx 1"}, mock.Anything).Return(nil, nil, nil)
-		mockHelper.On("FindTransaction", ctx, &types.TransactionIdentifier{Hash: "tx 2"}, mock.Anything).Return(nil, nil, nil)
+		mockHelper.On(
+			"FindTransaction",
+			ctx,
+			&types.TransactionIdentifier{Hash: "tx 1"},
+			mock.Anything,
+		).Return(
+			nil,
+			nil,
+			nil,
+		)
+		mockHelper.On(
+			"FindTransaction",
+			ctx,
+			&types.TransactionIdentifier{Hash: "tx 2"},
+			mock.Anything,
+		).Return(
+			nil,
+			nil,
+			nil,
+		)
 		for _, block := range blocks {
 			mockHelper.On("CurrentBlockIdentifier", ctx).Return(block.BlockIdentifier, nil).Once()
 			txn := storage.db.Transaction(ctx)
@@ -828,11 +1044,45 @@ func TestBroadcastStorageBehindTip(t *testing.T) {
 		storage.Initialize(mockHelper, mockHandler)
 		mockHelper.On("AtTip", ctx, mock.Anything).Return(true, nil)
 
-		mockHelper.On("BroadcastTransaction", ctx, network, "payload 1").Return(&types.TransactionIdentifier{Hash: "tx 1"}, nil).Once()
-		mockHelper.On("BroadcastTransaction", ctx, network, "payload 2").Return(&types.TransactionIdentifier{Hash: "tx 2"}, nil).Once()
+		mockHelper.On(
+			"BroadcastTransaction",
+			ctx,
+			network,
+			"payload 1",
+		).Return(
+			&types.TransactionIdentifier{Hash: "tx 1"},
+			nil,
+		).Once()
+		mockHelper.On(
+			"BroadcastTransaction",
+			ctx,
+			network,
+			"payload 2",
+		).Return(
+			&types.TransactionIdentifier{Hash: "tx 2"},
+			nil,
+		).Once()
 		// Never find in block
-		mockHelper.On("FindTransaction", ctx, &types.TransactionIdentifier{Hash: "tx 1"}, mock.Anything).Return(nil, nil, nil)
-		mockHelper.On("FindTransaction", ctx, &types.TransactionIdentifier{Hash: "tx 2"}, mock.Anything).Return(nil, nil, nil)
+		mockHelper.On(
+			"FindTransaction",
+			ctx,
+			&types.TransactionIdentifier{Hash: "tx 1"},
+			mock.Anything,
+		).Return(
+			nil,
+			nil,
+			nil,
+		)
+		mockHelper.On(
+			"FindTransaction",
+			ctx,
+			&types.TransactionIdentifier{Hash: "tx 2"},
+			mock.Anything,
+		).Return(
+			nil,
+			nil,
+			nil,
+		)
 		for _, block := range blocks[60:71] {
 			mockHelper.On("CurrentBlockIdentifier", ctx).Return(block.BlockIdentifier, nil).Once()
 			txn := storage.db.Transaction(ctx)
@@ -884,7 +1134,6 @@ func TestBroadcastStorageBehindTip(t *testing.T) {
 		mockHelper.AssertExpectations(t)
 		mockHandler.AssertExpectations(t)
 	})
-
 }
 
 func TestBroadcastStorageClearBroadcasts(t *testing.T) {
@@ -998,8 +1247,26 @@ func TestBroadcastStorageClearBroadcasts(t *testing.T) {
 		mockHandler := &mocks.BroadcastStorageHandler{}
 		storage.Initialize(mockHelper, mockHandler)
 
-		mockHandler.On("BroadcastFailed", ctx, mock.Anything, "broadcast 1", &types.TransactionIdentifier{Hash: "tx 1"}, send1).Return(nil).Once()
-		mockHandler.On("BroadcastFailed", ctx, mock.Anything, "broadcast 2", &types.TransactionIdentifier{Hash: "tx 2"}, send2).Return(nil).Once()
+		mockHandler.On(
+			"BroadcastFailed",
+			ctx,
+			mock.Anything,
+			"broadcast 1",
+			&types.TransactionIdentifier{Hash: "tx 1"},
+			send1,
+		).Return(
+			nil,
+		).Once()
+		mockHandler.On(
+			"BroadcastFailed",
+			ctx,
+			mock.Anything,
+			"broadcast 2",
+			&types.TransactionIdentifier{Hash: "tx 2"},
+			send2,
+		).Return(
+			nil,
+		).Once()
 
 		broadcasts, err := storage.ClearBroadcasts(ctx)
 		assert.NoError(t, err)
