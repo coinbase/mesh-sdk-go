@@ -315,9 +315,19 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 	})
 
 	t.Run("add block 2", func(t *testing.T) {
+		mockHelper := &mocks.BroadcastStorageHelper{}
+		mockHandler := &mocks.BroadcastStorageHandler{}
+		storage.Initialize(mockHelper, mockHandler)
+
 		block := blocks[2]
+		mockHelper.On("CurrentBlockIdentifier", ctx).Return(block.BlockIdentifier, nil)
+		mockHelper.On("AtTip", ctx, mock.Anything).Return(true, nil)
 
 		txn := storage.db.Transaction(ctx)
+		mockHelper.On("FindTransaction", ctx, &types.TransactionIdentifier{Hash: "tx 1"}, txn).Return(nil, nil, nil).Once()
+		mockHelper.On("FindTransaction", ctx, &types.TransactionIdentifier{Hash: "tx 2"}, txn).Return(nil, nil, nil).Once()
+		mockHandler.On("TransactionStale", ctx, txn, "broadcast 1", &types.TransactionIdentifier{Hash: "tx 1"}).Return(nil).Once()
+		mockHelper.On("BroadcastTransaction", ctx, network, "payload 1").Return(&types.TransactionIdentifier{Hash: "tx 1"}, nil).Once()
 		commitWorker, err := storage.AddingBlock(ctx, block, txn)
 		assert.NoError(t, err)
 
@@ -367,6 +377,8 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 		// 	},
 		// }, mockHandler.Stale)
 		// assert.ElementsMatch(t, []*failedTx{}, mockHandler.Failed)
+		mockHelper.AssertExpectations(t)
+		mockHandler.AssertExpectations(t)
 	})
 
 	tx1 := &types.Transaction{
