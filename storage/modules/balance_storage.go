@@ -438,7 +438,7 @@ func (b *BalanceStorage) Reconciled(
 		b.pendingReconciliationMutex.Unlock()
 	}
 
-	if err := dbTx.Set(ctx, key, new(big.Int).Add(lastReconciled, big.NewInt(1)).Bytes(), true); err != nil {
+	if err := dbTx.Set(ctx, key, new(big.Int).SetInt64(block.Index).Bytes(), true); err != nil {
 		return err
 	}
 
@@ -465,6 +465,10 @@ func (b *BalanceStorage) EstimatedReconciliationCoverage(ctx context.Context) (f
 	accounts, err := b.helper.AccountsSeen(ctx, dbTx)
 	if err != nil {
 		return -1, err
+	}
+
+	if accounts.Sign() == 0 {
+		return 0, nil
 	}
 
 	return float64(reconciled.Int64()) / float64(accounts.Int64()), nil
