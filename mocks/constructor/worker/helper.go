@@ -5,10 +5,11 @@ package worker
 import (
 	context "context"
 
-	mock "github.com/stretchr/testify/mock"
-
 	keys "github.com/coinbase/rosetta-sdk-go/keys"
 	database "github.com/coinbase/rosetta-sdk-go/storage/database"
+
+	mock "github.com/stretchr/testify/mock"
+
 	types "github.com/coinbase/rosetta-sdk-go/types"
 )
 
