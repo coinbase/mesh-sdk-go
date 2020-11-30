@@ -25,7 +25,7 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/keys"
 	mocks "github.com/coinbase/rosetta-sdk-go/mocks/constructor/coordinator"
 	"github.com/coinbase/rosetta-sdk-go/parser"
-	"github.com/coinbase/rosetta-sdk-go/storage"
+	"github.com/coinbase/rosetta-sdk-go/storage/database"
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/coinbase/rosetta-sdk-go/utils"
 
@@ -227,10 +227,10 @@ func TestProcess(t *testing.T) {
 	dir, err := utils.CreateTempDir()
 	assert.NoError(t, err)
 
-	db, err := storage.NewBadgerStorage(
+	db, err := database.NewBadgerDatabase(
 		ctx,
 		dir,
-		storage.WithIndexCacheSize(storage.TinyIndexCacheSize),
+		database.WithIndexCacheSize(database.TinyIndexCacheSize),
 	)
 	assert.NoError(t, err)
 	assert.NotNil(t, db)
@@ -867,10 +867,10 @@ func TestProcess_Failed(t *testing.T) {
 	dir, err := utils.CreateTempDir()
 	assert.NoError(t, err)
 
-	db, err := storage.NewBadgerStorage(
+	db, err := database.NewBadgerDatabase(
 		ctx,
 		dir,
-		storage.WithIndexCacheSize(storage.TinyIndexCacheSize),
+		database.WithIndexCacheSize(database.TinyIndexCacheSize),
 	)
 	assert.NoError(t, err)
 	assert.NotNil(t, db)
@@ -1387,10 +1387,10 @@ func TestProcess_DryRun(t *testing.T) {
 	dir, err := utils.CreateTempDir()
 	assert.NoError(t, err)
 
-	db, err := storage.NewBadgerStorage(
+	db, err := database.NewBadgerDatabase(
 		ctx,
 		dir,
-		storage.WithIndexCacheSize(storage.TinyIndexCacheSize),
+		database.WithIndexCacheSize(database.TinyIndexCacheSize),
 	)
 	assert.NoError(t, err)
 	assert.NotNil(t, db)
@@ -1670,10 +1670,10 @@ func TestReturnFunds_NoBalance(t *testing.T) {
 	dir, err := utils.CreateTempDir()
 	assert.NoError(t, err)
 
-	db, err := storage.NewBadgerStorage(
+	db, err := database.NewBadgerDatabase(
 		ctx,
 		dir,
-		storage.WithIndexCacheSize(storage.TinyIndexCacheSize),
+		database.WithIndexCacheSize(database.TinyIndexCacheSize),
 	)
 	assert.NoError(t, err)
 	assert.NotNil(t, db)
@@ -1844,10 +1844,10 @@ func TestReturnFunds_NoWorkflow(t *testing.T) {
 	dir, err := utils.CreateTempDir()
 	assert.NoError(t, err)
 
-	db, err := storage.NewBadgerStorage(
+	db, err := database.NewBadgerDatabase(
 		ctx,
 		dir,
-		storage.WithIndexCacheSize(storage.TinyIndexCacheSize),
+		database.WithIndexCacheSize(database.TinyIndexCacheSize),
 	)
 	assert.NoError(t, err)
 	assert.NotNil(t, db)
@@ -2002,10 +2002,10 @@ func TestReturnFunds(t *testing.T) {
 	dir, err := utils.CreateTempDir()
 	assert.NoError(t, err)
 
-	db, err := storage.NewBadgerStorage(
+	db, err := database.NewBadgerDatabase(
 		ctx,
 		dir,
-		storage.WithIndexCacheSize(storage.TinyIndexCacheSize),
+		database.WithIndexCacheSize(database.TinyIndexCacheSize),
 	)
 	assert.NoError(t, err)
 	assert.NotNil(t, db)
@@ -2429,10 +2429,10 @@ func TestNoReservedWorkflows(t *testing.T) {
 	dir, err := utils.CreateTempDir()
 	assert.NoError(t, err)
 
-	db, err := storage.NewBadgerStorage(
+	db, err := database.NewBadgerDatabase(
 		ctx,
 		dir,
-		storage.WithIndexCacheSize(storage.TinyIndexCacheSize),
+		database.WithIndexCacheSize(database.TinyIndexCacheSize),
 	)
 	assert.NoError(t, err)
 	assert.NotNil(t, db)

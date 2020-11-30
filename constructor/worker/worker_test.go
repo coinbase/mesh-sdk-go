@@ -29,7 +29,7 @@ import (
 
 	"github.com/coinbase/rosetta-sdk-go/constructor/job"
 	mocks "github.com/coinbase/rosetta-sdk-go/mocks/constructor/worker"
-	"github.com/coinbase/rosetta-sdk-go/storage"
+	"github.com/coinbase/rosetta-sdk-go/storage/database"
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/coinbase/rosetta-sdk-go/utils"
 
@@ -954,10 +954,10 @@ func TestFindBalanceWorker(t *testing.T) {
 			assert.NoError(t, err)
 			defer utils.RemoveTempDir(dir)
 
-			db, err := storage.NewBadgerStorage(
+			db, err := database.NewBadgerDatabase(
 				ctx,
 				dir,
-				storage.WithIndexCacheSize(storage.TinyIndexCacheSize),
+				database.WithIndexCacheSize(database.TinyIndexCacheSize),
 			)
 			assert.NoError(t, err)
 			assert.NotNil(t, db)
@@ -1116,10 +1116,10 @@ func TestJob_ComplicatedTransfer(t *testing.T) {
 	assert.NoError(t, err)
 	defer utils.RemoveTempDir(dir)
 
-	db, err := storage.NewBadgerStorage(
+	db, err := database.NewBadgerDatabase(
 		ctx,
 		dir,
-		storage.WithIndexCacheSize(storage.TinyIndexCacheSize),
+		database.WithIndexCacheSize(database.TinyIndexCacheSize),
 	)
 	assert.NoError(t, err)
 	assert.NotNil(t, db)
@@ -1634,10 +1634,10 @@ func TestJob_Failures(t *testing.T) {
 			assert.NoError(t, err)
 			defer utils.RemoveTempDir(dir)
 
-			db, err := storage.NewBadgerStorage(
+			db, err := database.NewBadgerDatabase(
 				ctx,
 				dir,
-				storage.WithIndexCacheSize(storage.TinyIndexCacheSize),
+				database.WithIndexCacheSize(database.TinyIndexCacheSize),
 			)
 			assert.NoError(t, err)
 			assert.NotNil(t, db)
