@@ -3,18 +3,14 @@
 package modules
 
 import (
-	big "math/big"
-
-	asserter "github.com/coinbase/rosetta-sdk-go/asserter"
-
 	context "context"
-
-	database "github.com/coinbase/rosetta-sdk-go/storage/database"
+	big "math/big"
 
 	mock "github.com/stretchr/testify/mock"
 
+	asserter "github.com/coinbase/rosetta-sdk-go/asserter"
 	parser "github.com/coinbase/rosetta-sdk-go/parser"
-
+	database "github.com/coinbase/rosetta-sdk-go/storage/database"
 	types "github.com/coinbase/rosetta-sdk-go/types"
 )
 

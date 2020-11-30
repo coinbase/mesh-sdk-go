@@ -201,7 +201,12 @@ func (b *BalanceStorage) AddingBlock(
 		// continues.
 		change := changes[i]
 		g.Go(func() error {
-			newAccount, err := b.UpdateBalance(gctx, transaction, change, block.ParentBlockIdentifier)
+			newAccount, err := b.UpdateBalance(
+				gctx,
+				transaction,
+				change,
+				block.ParentBlockIdentifier,
+			)
 			if err != nil {
 				return err
 			}
