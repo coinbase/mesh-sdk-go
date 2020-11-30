@@ -24,8 +24,8 @@ import (
 	"testing"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
-	mocks "github.com/coinbase/rosetta-sdk-go/mocks/storage/modules"
 	"github.com/coinbase/rosetta-sdk-go/parser"
+	storageErrs "github.com/coinbase/rosetta-sdk-go/storage/errors"
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/coinbase/rosetta-sdk-go/utils"
 
@@ -164,7 +164,7 @@ func TestBalance(t *testing.T) {
 	assert.NoError(t, err)
 	defer utils.RemoveTempDir(newDir)
 
-	database, err := newTestBadgerStorage(ctx, newDir)
+	database, err := newTestBadgerDatabase(ctx, newDir)
 	assert.NoError(t, err)
 	defer database.Close(ctx)
 
@@ -173,13 +173,13 @@ func TestBalance(t *testing.T) {
 
 	t.Run("Get balance at nil block", func(t *testing.T) {
 		amount, err := storage.GetOrSetBalance(ctx, account, currency, nil)
-		assert.True(t, errors.Is(err, ErrBlockNil))
+		assert.True(t, errors.Is(err, storageErrs.ErrBlockNil))
 		assert.Nil(t, amount)
 	})
 
 	t.Run("Get unset balance", func(t *testing.T) {
 		amount, err := storage.GetBalance(ctx, account, currency, newBlock.Index)
-		assert.True(t, errors.Is(err, ErrAccountMissing))
+		assert.True(t, errors.Is(err, storageErrs.ErrAccountMissing))
 		assert.Nil(t, amount)
 	})
 
@@ -355,7 +355,7 @@ func TestBalance(t *testing.T) {
 			},
 			nil,
 		)
-		assert.True(t, errors.Is(err, ErrNegativeBalance))
+		assert.True(t, errors.Is(err, storageErrs.ErrNegativeBalance))
 		txn.Discard(ctx)
 	})
 
@@ -373,7 +373,7 @@ func TestBalance(t *testing.T) {
 			nil,
 		)
 		assert.Error(t, err)
-		assert.True(t, errors.Is(err, ErrNegativeBalance))
+		assert.True(t, errors.Is(err, storageErrs.ErrNegativeBalance))
 		txn.Discard(ctx)
 	})
 
@@ -745,7 +745,7 @@ func TestBalance(t *testing.T) {
 			largeDeduction.Currency,
 			newBlock,
 		)
-		assert.True(t, errors.Is(err, ErrBalancePruned))
+		assert.True(t, errors.Is(err, storageErrs.ErrBalancePruned))
 		assert.Nil(t, retrievedAmount)
 	})
 }
@@ -822,7 +822,7 @@ func TestSetBalanceImported(t *testing.T) {
 	assert.NoError(t, err)
 	defer utils.RemoveTempDir(newDir)
 
-	database, err := newTestBadgerStorage(ctx, newDir)
+	database, err := newTestBadgerDatabase(ctx, newDir)
 	assert.NoError(t, err)
 	defer database.Close(ctx)
 
@@ -880,7 +880,7 @@ func TestBootstrapBalances(t *testing.T) {
 	assert.NoError(t, err)
 	defer utils.RemoveTempDir(newDir)
 
-	database, err := newTestBadgerStorage(ctx, newDir)
+	database, err := newTestBadgerDatabase(ctx, newDir)
 	assert.NoError(t, err)
 	defer database.Close(ctx)
 
@@ -1089,7 +1089,7 @@ func TestBalanceReconciliation(t *testing.T) {
 	assert.NoError(t, err)
 	defer utils.RemoveTempDir(newDir)
 
-	database, err := newTestBadgerStorage(ctx, newDir)
+	database, err := newTestBadgerDatabase(ctx, newDir)
 	assert.NoError(t, err)
 	defer database.Close(ctx)
 
@@ -1210,7 +1210,7 @@ func TestBlockSyncing(t *testing.T) {
 	assert.NoError(t, err)
 	defer utils.RemoveTempDir(newDir)
 
-	database, err := newTestBadgerStorage(ctx, newDir)
+	database, err := newTestBadgerDatabase(ctx, newDir)
 	assert.NoError(t, err)
 	defer database.Close(ctx)
 
@@ -1387,10 +1387,10 @@ func TestBlockSyncing(t *testing.T) {
 		assert.NoError(t, dbTx.Commit(ctx))
 
 		amount, err := storage.GetBalance(ctx, addr1, curr, b0.BlockIdentifier.Index)
-		assert.True(t, errors.Is(err, ErrAccountMissing))
+		assert.True(t, errors.Is(err, storageErrs.ErrAccountMissing))
 		assert.Nil(t, amount)
 		amount, err = storage.GetBalance(ctx, addr2, curr, b0.BlockIdentifier.Index)
-		assert.True(t, errors.Is(err, ErrAccountMissing))
+		assert.True(t, errors.Is(err, storageErrs.ErrAccountMissing))
 		assert.Nil(t, amount)
 	})
 
@@ -1413,7 +1413,7 @@ func TestBlockSyncing(t *testing.T) {
 			Currency: curr,
 		}, amount)
 		amount, err = storage.GetBalance(ctx, addr2, curr, b1.BlockIdentifier.Index)
-		assert.True(t, errors.Is(err, ErrAccountMissing))
+		assert.True(t, errors.Is(err, storageErrs.ErrAccountMissing))
 		assert.Nil(t, amount)
 	})
 
@@ -1474,7 +1474,7 @@ func TestBlockSyncing(t *testing.T) {
 			Currency: curr,
 		}, amount)
 		amount, err = storage.GetBalance(ctx, addr2, curr, b1.BlockIdentifier.Index)
-		assert.True(t, errors.Is(err, ErrAccountMissing))
+		assert.True(t, errors.Is(err, storageErrs.ErrAccountMissing))
 		assert.Nil(t, amount)
 		amount, err = storage.GetBalance(ctx, addr1, curr, b2.BlockIdentifier.Index)
 		assert.NoError(t, err)
@@ -1483,7 +1483,7 @@ func TestBlockSyncing(t *testing.T) {
 			Currency: curr,
 		}, amount)
 		amount, err = storage.GetBalance(ctx, addr2, curr, b2.BlockIdentifier.Index)
-		assert.True(t, errors.Is(err, ErrAccountMissing))
+		assert.True(t, errors.Is(err, storageErrs.ErrAccountMissing))
 		assert.Nil(t, amount)
 	})
 
@@ -1494,22 +1494,22 @@ func TestBlockSyncing(t *testing.T) {
 		assert.NoError(t, dbTx.Commit(ctx))
 
 		amount, err := storage.GetBalance(ctx, addr1, curr, b0.BlockIdentifier.Index)
-		assert.True(t, errors.Is(err, ErrAccountMissing))
+		assert.True(t, errors.Is(err, storageErrs.ErrAccountMissing))
 		assert.Nil(t, amount)
 		amount, err = storage.GetBalance(ctx, addr2, curr, b0.BlockIdentifier.Index)
-		assert.True(t, errors.Is(err, ErrAccountMissing))
+		assert.True(t, errors.Is(err, storageErrs.ErrAccountMissing))
 		assert.Nil(t, amount)
 		amount, err = storage.GetBalance(ctx, addr1, curr, b1.BlockIdentifier.Index)
-		assert.True(t, errors.Is(err, ErrAccountMissing))
+		assert.True(t, errors.Is(err, storageErrs.ErrAccountMissing))
 		assert.Nil(t, amount)
 		amount, err = storage.GetBalance(ctx, addr2, curr, b1.BlockIdentifier.Index)
-		assert.True(t, errors.Is(err, ErrAccountMissing))
+		assert.True(t, errors.Is(err, storageErrs.ErrAccountMissing))
 		assert.Nil(t, amount)
 		amount, err = storage.GetBalance(ctx, addr1, curr, b2.BlockIdentifier.Index)
-		assert.True(t, errors.Is(err, ErrAccountMissing))
+		assert.True(t, errors.Is(err, storageErrs.ErrAccountMissing))
 		assert.Nil(t, amount)
 		amount, err = storage.GetBalance(ctx, addr2, curr, b2.BlockIdentifier.Index)
-		assert.True(t, errors.Is(err, ErrAccountMissing))
+		assert.True(t, errors.Is(err, storageErrs.ErrAccountMissing))
 		assert.Nil(t, amount)
 	})
 
@@ -1532,7 +1532,7 @@ func TestBlockSyncing(t *testing.T) {
 			Currency: curr,
 		}, amount)
 		amount, err = storage.GetBalance(ctx, addr2, curr, b1.BlockIdentifier.Index)
-		assert.True(t, errors.Is(err, ErrAccountMissing))
+		assert.True(t, errors.Is(err, storageErrs.ErrAccountMissing))
 		assert.Nil(t, amount)
 		amount, err = storage.GetBalance(ctx, addr1, curr, b2.BlockIdentifier.Index)
 		assert.NoError(t, err)
@@ -1541,7 +1541,7 @@ func TestBlockSyncing(t *testing.T) {
 			Currency: curr,
 		}, amount)
 		amount, err = storage.GetBalance(ctx, addr2, curr, b2.BlockIdentifier.Index)
-		assert.True(t, errors.Is(err, ErrAccountMissing))
+		assert.True(t, errors.Is(err, storageErrs.ErrAccountMissing))
 		assert.Nil(t, amount)
 	})
 

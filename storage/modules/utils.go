@@ -44,3 +44,13 @@ func storeUniqueKey(
 
 	return transaction.Set(ctx, key, value, reclaimValue)
 }
+
+// newTestBadgerDatabase creates a new Badger Database at the following directory. This is
+// used extensively in module tests.
+func newTestBadgerDatabase(ctx context.Context, dir string) (database.Database, error) {
+	return database.NewBadgerDatabase(
+		ctx,
+		dir,
+		database.WithIndexCacheSize(database.TinyIndexCacheSize),
+	)
+}

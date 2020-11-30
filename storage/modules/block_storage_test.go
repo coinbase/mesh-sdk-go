@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"testing"
 
+	storageErrs "github.com/coinbase/rosetta-sdk-go/storage/errors"
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/coinbase/rosetta-sdk-go/utils"
 
@@ -48,7 +49,7 @@ func TestHeadBlockIdentifier(t *testing.T) {
 	assert.NoError(t, err)
 	defer utils.RemoveTempDir(newDir)
 
-	database, err := newTestBadgerStorage(ctx, newDir)
+	database, err := newTestBadgerDatabase(ctx, newDir)
 	assert.NoError(t, err)
 	defer database.Close(ctx)
 
@@ -56,7 +57,7 @@ func TestHeadBlockIdentifier(t *testing.T) {
 
 	t.Run("No head block set", func(t *testing.T) {
 		blockIdentifier, err := storage.GetHeadBlockIdentifier(ctx)
-		assert.EqualError(t, err, ErrHeadBlockNotFound.Error())
+		assert.EqualError(t, err, storageErrs.ErrHeadBlockNotFound.Error())
 		assert.Nil(t, blockIdentifier)
 	})
 
@@ -305,7 +306,7 @@ func TestBlock(t *testing.T) {
 	assert.NoError(t, err)
 	defer utils.RemoveTempDir(newDir)
 
-	database, err := newTestBadgerStorage(ctx, newDir)
+	database, err := newTestBadgerDatabase(ctx, newDir)
 	assert.NoError(t, err)
 	defer database.Close(ctx)
 
@@ -326,13 +327,13 @@ func TestBlock(t *testing.T) {
 		firstPruned, lastPruned, err := storage.Prune(ctx, 2, minPruningDepth)
 		assert.Equal(t, int64(-1), firstPruned)
 		assert.Equal(t, int64(-1), lastPruned)
-		assert.True(t, errors.Is(err, ErrPruningFailed))
+		assert.True(t, errors.Is(err, storageErrs.ErrPruningFailed))
 	})
 
 	t.Run("Set genesis block", func(t *testing.T) {
 		oldestIndex, err := storage.GetOldestBlockIndex(ctx)
 		assert.Equal(t, int64(-1), oldestIndex)
-		assert.Error(t, ErrOldestIndexMissing, err)
+		assert.Error(t, storageErrs.ErrOldestIndexMissing, err)
 
 		err = storage.AddBlock(ctx, genesisBlock)
 		assert.NoError(t, err)
@@ -343,8 +344,8 @@ func TestBlock(t *testing.T) {
 
 		// Ensure we error if trying to remove genesis
 		err = storage.RemoveBlock(ctx, genesisBlock.BlockIdentifier)
-		assert.Contains(t, err.Error(), ErrCannotRemoveOldest.Error())
-		assert.True(t, errors.Is(err, ErrBlockDeleteFailed))
+		assert.Contains(t, err.Error(), storageErrs.ErrCannotRemoveOldest.Error())
+		assert.True(t, errors.Is(err, storageErrs.ErrBlockDeleteFailed))
 	})
 
 	t.Run("Set and get block", func(t *testing.T) {
@@ -392,7 +393,7 @@ func TestBlock(t *testing.T) {
 		block, err := storage.GetBlock(ctx, identifier)
 		assert.True(
 			t,
-			errors.Is(err, ErrBlockNotFound),
+			errors.Is(err, storageErrs.ErrBlockNotFound),
 		)
 		assert.Nil(t, block)
 
@@ -407,14 +408,14 @@ func TestBlock(t *testing.T) {
 		block, err := storage.GetBlock(ctx, identifier)
 		assert.True(
 			t,
-			errors.Is(err, ErrBlockNotFound),
+			errors.Is(err, storageErrs.ErrBlockNotFound),
 		)
 		assert.Nil(t, block)
 	})
 
 	t.Run("Set duplicate block hash", func(t *testing.T) {
 		err = storage.AddBlock(ctx, newBlock)
-		assert.Contains(t, err.Error(), ErrDuplicateKey.Error())
+		assert.Contains(t, err.Error(), storageErrs.ErrDuplicateKey.Error())
 	})
 
 	t.Run("Set duplicate transaction hash (from prior block)", func(t *testing.T) {
@@ -533,7 +534,7 @@ func TestBlock(t *testing.T) {
 
 	t.Run("Set duplicate transaction hash (same block)", func(t *testing.T) {
 		err = storage.AddBlock(ctx, duplicateTxBlock)
-		assert.Contains(t, err.Error(), ErrDuplicateTransactionHash.Error())
+		assert.Contains(t, err.Error(), storageErrs.ErrDuplicateTransactionHash.Error())
 
 		head, err := storage.GetHeadBlockIdentifier(ctx)
 		assert.NoError(t, err)
@@ -636,7 +637,7 @@ func TestBlock(t *testing.T) {
 			ctx,
 			types.ConstructPartialBlockIdentifier(newBlock.BlockIdentifier),
 		)
-		assert.True(t, errors.Is(err, ErrCannotAccessPrunedData))
+		assert.True(t, errors.Is(err, storageErrs.ErrCannotAccessPrunedData))
 		assert.Nil(t, block)
 
 		canonical, err := storage.CanonicalBlock(
@@ -651,7 +652,7 @@ func TestBlock(t *testing.T) {
 			newBlock2.BlockIdentifier,
 			newBlock2.Transactions[0].TransactionIdentifier,
 		)
-		assert.True(t, errors.Is(err, ErrCannotAccessPrunedData))
+		assert.True(t, errors.Is(err, storageErrs.ErrCannotAccessPrunedData))
 		assert.Nil(t, blockTransaction)
 
 		newestBlock, transaction, err := findTransactionWithDbTransaction(
@@ -659,7 +660,7 @@ func TestBlock(t *testing.T) {
 			storage,
 			newBlock.Transactions[0].TransactionIdentifier,
 		)
-		assert.True(t, errors.Is(err, ErrCannotAccessPrunedData))
+		assert.True(t, errors.Is(err, storageErrs.ErrCannotAccessPrunedData))
 		assert.Nil(t, newestBlock)
 		assert.Nil(t, transaction)
 	})
@@ -672,7 +673,7 @@ func TestManyBlocks(t *testing.T) {
 	assert.NoError(t, err)
 	defer utils.RemoveTempDir(newDir)
 
-	database, err := newTestBadgerStorage(ctx, newDir)
+	database, err := newTestBadgerDatabase(ctx, newDir)
 	assert.NoError(t, err)
 	defer database.Close(ctx)
 
@@ -714,7 +715,7 @@ func TestManyBlocks(t *testing.T) {
 
 	// Attempt to set new start index in pruned territory
 	err = storage.SetNewStartIndex(ctx, 1000)
-	assert.True(t, errors.Is(err, ErrCannotAccessPrunedData))
+	assert.True(t, errors.Is(err, storageErrs.ErrCannotAccessPrunedData))
 }
 
 func TestCreateBlockCache(t *testing.T) {
@@ -724,7 +725,7 @@ func TestCreateBlockCache(t *testing.T) {
 	assert.NoError(t, err)
 	defer utils.RemoveTempDir(newDir)
 
-	database, err := newTestBadgerStorage(ctx, newDir)
+	database, err := newTestBadgerDatabase(ctx, newDir)
 	assert.NoError(t, err)
 	defer database.Close(ctx)
 
@@ -784,7 +785,7 @@ func TestAtTip(t *testing.T) {
 	assert.NoError(t, err)
 	defer utils.RemoveTempDir(newDir)
 
-	database, err := newTestBadgerStorage(ctx, newDir)
+	database, err := newTestBadgerDatabase(ctx, newDir)
 	assert.NoError(t, err)
 	defer database.Close(ctx)
 
