@@ -410,6 +410,17 @@ func (b *BalanceStorage) Reconciled(
 	dbTx := b.db.WriteTransaction(ctx, string(key), false)
 	defer dbTx.Discard(ctx)
 
+	// Return nil if account record does not exist (could have
+	// occured during a reorg at tip
+	acctKey := GetAccountKey(accountNamespace, account, currency)
+	acctExists, _, err := dbTx.Get(ctx, acctKey)
+	if err != nil {
+		return err
+	}
+	if !acctExists {
+		return nil
+	}
+
 	exists, lastReconciled, err := BigIntGet(ctx, key, dbTx)
 	if err != nil {
 		return err
