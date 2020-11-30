@@ -181,12 +181,6 @@ func TestBalance(t *testing.T) {
 			Value:    "-1000",
 			Currency: currency,
 		}
-		// mockHelper = &MockBalanceStorageHelper{
-		// 	AccountBalances: map[string]string{
-		// 		"genesis": "100",
-		// 	},
-		// 	BalExemptions: exemptions,
-		// }
 	)
 
 	ctx := context.Background()
@@ -220,8 +214,16 @@ func TestBalance(t *testing.T) {
 	})
 
 	t.Run("Get unset balance and set", func(t *testing.T) {
-		// mockHelper.AccountBalanceAmount = "10"
-		mockHelper.On("AccountBalance", ctx, account, currency, newBlock).Return(&types.Amount{Value: "10", Currency: currency}, nil).Once()
+		mockHelper.On(
+			"AccountBalance",
+			ctx,
+			account,
+			currency,
+			newBlock,
+		).Return(
+			&types.Amount{Value: "10", Currency: currency},
+			nil,
+		).Once()
 		amount, err := storage.GetOrSetBalance(ctx, account, currency, newBlock)
 		assert.NoError(t, err)
 		assert.Equal(t, &types.Amount{
@@ -229,7 +231,6 @@ func TestBalance(t *testing.T) {
 			Currency: currency,
 		}, amount)
 
-		// mockHelper.AccountBalanceAmount = ""
 		amount, err = storage.GetOrSetBalance(ctx, account, currency, newBlock)
 		assert.NoError(t, err)
 		assert.Equal(t, &types.Amount{
@@ -283,8 +284,16 @@ func TestBalance(t *testing.T) {
 	})
 
 	t.Run("Set and get balance with storage helper", func(t *testing.T) {
-		// mockHelper.AccountBalanceAmount = "10"
-		mockHelper.On("AccountBalance", ctx, account3, currency, (*types.BlockIdentifier)(nil)).Return(&types.Amount{Value: "10", Currency: currency}, nil).Once()
+		mockHelper.On(
+			"AccountBalance",
+			ctx,
+			account3,
+			currency,
+			(*types.BlockIdentifier)(nil),
+		).Return(
+			&types.Amount{Value: "10", Currency: currency},
+			nil,
+		).Once()
 		txn := storage.db.Transaction(ctx)
 		err := storage.UpdateBalance(
 			ctx,
@@ -303,8 +312,6 @@ func TestBalance(t *testing.T) {
 		retrievedAmount, err := storage.GetOrSetBalance(ctx, account3, currency, newBlock)
 		assert.NoError(t, err)
 		assert.Equal(t, amountWithPrevious, retrievedAmount)
-
-		// mockHelper.AccountBalanceAmount = ""
 	})
 
 	t.Run("Set balance with nil currency", func(t *testing.T) {
@@ -399,7 +406,16 @@ func TestBalance(t *testing.T) {
 
 	t.Run("Attempt modification to push balance negative on new acct", func(t *testing.T) {
 		txn := storage.db.Transaction(ctx)
-		mockHelper.On("AccountBalance", ctx, account2, largeDeduction.Currency, (*types.BlockIdentifier)(nil)).Return(&types.Amount{Value: "0", Currency: largeDeduction.Currency}, nil).Once()
+		mockHelper.On(
+			"AccountBalance",
+			ctx,
+			account2,
+			largeDeduction.Currency,
+			(*types.BlockIdentifier)(nil),
+		).Return(
+			&types.Amount{Value: "0", Currency: largeDeduction.Currency},
+			nil,
+		).Once()
 		err := storage.UpdateBalance(
 			ctx,
 			txn,
@@ -418,7 +434,16 @@ func TestBalance(t *testing.T) {
 
 	t.Run("sub account set and get balance", func(t *testing.T) {
 		txn := storage.db.Transaction(ctx)
-		mockHelper.On("AccountBalance", ctx, subAccount, amount.Currency, (*types.BlockIdentifier)(nil)).Return(&types.Amount{Value: "0", Currency: amount.Currency}, nil).Once()
+		mockHelper.On(
+			"AccountBalance",
+			ctx,
+			subAccount,
+			amount.Currency,
+			(*types.BlockIdentifier)(nil),
+		).Return(
+			&types.Amount{Value: "0", Currency: amount.Currency},
+			nil,
+		).Once()
 		err := storage.UpdateBalance(
 			ctx,
 			txn,
@@ -445,7 +470,16 @@ func TestBalance(t *testing.T) {
 
 	t.Run("sub account metadata set and get balance", func(t *testing.T) {
 		txn := storage.db.Transaction(ctx)
-		mockHelper.On("AccountBalance", ctx, subAccountMetadata, amount.Currency, (*types.BlockIdentifier)(nil)).Return(&types.Amount{Value: "0", Currency: amount.Currency}, nil).Once()
+		mockHelper.On(
+			"AccountBalance",
+			ctx,
+			subAccountMetadata,
+			amount.Currency,
+			(*types.BlockIdentifier)(nil),
+		).Return(
+			&types.Amount{Value: "0", Currency: amount.Currency},
+			nil,
+		).Once()
 		err := storage.UpdateBalance(
 			ctx,
 			txn,
@@ -472,7 +506,16 @@ func TestBalance(t *testing.T) {
 
 	t.Run("sub account unique metadata set and get balance", func(t *testing.T) {
 		txn := storage.db.Transaction(ctx)
-		mockHelper.On("AccountBalance", ctx, subAccountMetadata2, amount.Currency, (*types.BlockIdentifier)(nil)).Return(&types.Amount{Value: "0", Currency: amount.Currency}, nil).Once()
+		mockHelper.On(
+			"AccountBalance",
+			ctx,
+			subAccountMetadata2,
+			amount.Currency,
+			(*types.BlockIdentifier)(nil),
+		).Return(
+			&types.Amount{Value: "0", Currency: amount.Currency},
+			nil,
+		).Once()
 		err := storage.UpdateBalance(
 			ctx,
 			txn,
@@ -513,8 +556,16 @@ func TestBalance(t *testing.T) {
 		assert.NoError(t, txn.Commit(ctx))
 
 		// Successful (balance > computed and negative intermediate value)
-		// mockHelper.AccountBalanceAmount = "150"
-		mockHelper.On("AccountBalance", ctx, exemptionAccount, exemptionCurrency, newBlock).Return(&types.Amount{Value: "150", Currency: exemptionCurrency}, nil).Once()
+		mockHelper.On(
+			"AccountBalance",
+			ctx,
+			exemptionAccount,
+			exemptionCurrency,
+			newBlock,
+		).Return(
+			&types.Amount{Value: "150", Currency: exemptionCurrency},
+			nil,
+		).Once()
 		txn = storage.db.Transaction(ctx)
 		err = storage.UpdateBalance(
 			ctx,
@@ -540,8 +591,16 @@ func TestBalance(t *testing.T) {
 		assert.Equal(t, "150", retrievedAmount.Value)
 
 		// Successful (balance == computed)
-		// mockHelper.AccountBalanceAmount = "200"
-		mockHelper.On("AccountBalance", ctx, exemptionAccount, exemptionCurrency, newBlock3).Return(&types.Amount{Value: "200", Currency: exemptionCurrency}, nil).Once()
+		mockHelper.On(
+			"AccountBalance",
+			ctx,
+			exemptionAccount,
+			exemptionCurrency,
+			newBlock3,
+		).Return(
+			&types.Amount{Value: "200", Currency: exemptionCurrency},
+			nil,
+		).Once()
 		txn = storage.db.Transaction(ctx)
 		err = storage.UpdateBalance(
 			ctx,
@@ -567,8 +626,16 @@ func TestBalance(t *testing.T) {
 		assert.Equal(t, "200", retrievedAmount.Value)
 
 		// Unsuccessful (balance < computed)
-		// mockHelper.AccountBalanceAmount = "10"
-		mockHelper.On("AccountBalance", ctx, exemptionAccount, exemptionCurrency, newBlock4).Return(&types.Amount{Value: "10", Currency: exemptionCurrency}, nil).Once()
+		mockHelper.On(
+			"AccountBalance",
+			ctx,
+			exemptionAccount,
+			exemptionCurrency,
+			newBlock4,
+		).Return(
+			&types.Amount{Value: "10", Currency: exemptionCurrency},
+			nil,
+		).Once()
 		txn = storage.db.Transaction(ctx)
 		err = storage.UpdateBalance(
 			ctx,
@@ -592,7 +659,6 @@ func TestBalance(t *testing.T) {
 		)
 		assert.NoError(t, err)
 		assert.Equal(t, "200", retrievedAmount.Value)
-		// mockHelper.AccountBalanceAmount = ""
 	})
 
 	t.Run("get all set AccountCurrency", func(t *testing.T) {
@@ -857,11 +923,6 @@ func TestSetBalanceImported(t *testing.T) {
 			Amount:  amountBalance,
 			Block:   blockIdentifier,
 		}
-		// mockHelper = &MockBalanceStorageHelper{
-		// 	AccountBalances: map[string]string{
-		// 		"genesis": "100",
-		// 	},
-		// }
 	)
 
 	ctx := context.Background()
@@ -1139,11 +1200,6 @@ func TestBalanceReconciliation(t *testing.T) {
 			Hash:  "kdasdj",
 			Index: 123890,
 		}
-		// mockHelper = &MockBalanceStorageHelper{
-		// 	AccountBalances: map[string]string{
-		// 		"genesis": "100",
-		// 	},
-		// }
 	)
 
 	ctx := context.Background()
@@ -1285,11 +1341,6 @@ func TestBlockSyncing(t *testing.T) {
 	assert.NoError(t, err)
 	defer database.Close(ctx)
 
-	// mockHelper := &MockBalanceStorageHelper{
-	// 	AccountBalances: map[string]string{
-	// 		"addr1": "1",
-	// 	},
-	// }
 	storage := NewBalanceStorage(database)
 	mockHelper := &mocks.BalanceStorageHelper{}
 	mockHandler := &mocks.BalanceStorageHandler{}
@@ -1472,7 +1523,16 @@ func TestBlockSyncing(t *testing.T) {
 
 	t.Run("add block 1", func(t *testing.T) {
 		dbTx := database.Transaction(ctx)
-		mockHelper.On("AccountBalance", mock.Anything, addr1, curr, b0.BlockIdentifier).Return(&types.Amount{Value: "1", Currency: curr}, nil).Once()
+		mockHelper.On(
+			"AccountBalance",
+			mock.Anything,
+			addr1,
+			curr,
+			b0.BlockIdentifier,
+		).Return(
+			&types.Amount{Value: "1", Currency: curr},
+			nil,
+		).Once()
 		_, err = storage.AddingBlock(ctx, b1, dbTx)
 		assert.NoError(t, err)
 		assert.NoError(t, dbTx.Commit(ctx))
@@ -1496,7 +1556,16 @@ func TestBlockSyncing(t *testing.T) {
 
 	t.Run("add block 2", func(t *testing.T) {
 		dbTx := database.Transaction(ctx)
-		mockHelper.On("AccountBalance", mock.Anything, addr2, curr, b1.BlockIdentifier).Return(&types.Amount{Value: "0", Currency: curr}, nil).Once()
+		mockHelper.On(
+			"AccountBalance",
+			mock.Anything,
+			addr2,
+			curr,
+			b1.BlockIdentifier,
+		).Return(
+			&types.Amount{Value: "0", Currency: curr},
+			nil,
+		).Once()
 		_, err = storage.AddingBlock(ctx, b2, dbTx)
 		assert.NoError(t, err)
 		assert.NoError(t, dbTx.Commit(ctx))
@@ -1593,7 +1662,16 @@ func TestBlockSyncing(t *testing.T) {
 
 	t.Run("add block 1", func(t *testing.T) {
 		dbTx := database.Transaction(ctx)
-		mockHelper.On("AccountBalance", mock.Anything, addr1, curr, b0.BlockIdentifier).Return(&types.Amount{Value: "1", Currency: curr}, nil).Once()
+		mockHelper.On(
+			"AccountBalance",
+			mock.Anything,
+			addr1,
+			curr,
+			b0.BlockIdentifier,
+		).Return(
+			&types.Amount{Value: "1", Currency: curr},
+			nil,
+		).Once()
 		_, err = storage.AddingBlock(ctx, b1, dbTx)
 		assert.NoError(t, err)
 		assert.NoError(t, dbTx.Commit(ctx))
@@ -1626,7 +1704,16 @@ func TestBlockSyncing(t *testing.T) {
 
 	t.Run("add block 2a", func(t *testing.T) {
 		dbTx := database.Transaction(ctx)
-		mockHelper.On("AccountBalance", mock.Anything, addr2, curr, b1.BlockIdentifier).Return(&types.Amount{Value: "0", Currency: curr}, nil).Once()
+		mockHelper.On(
+			"AccountBalance",
+			mock.Anything,
+			addr2,
+			curr,
+			b1.BlockIdentifier,
+		).Return(
+			&types.Amount{Value: "0", Currency: curr},
+			nil,
+		).Once()
 		_, err = storage.AddingBlock(ctx, b2a, dbTx)
 		assert.NoError(t, err)
 		assert.NoError(t, dbTx.Commit(ctx))
