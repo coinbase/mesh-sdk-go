@@ -94,13 +94,8 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 		broadcastBehindTip,
 		blockBroadcastLimit,
 	)
-	send1 := opFiller("addr 1", 1) // 11)
-	send2 := opFiller("addr 2", 1) // 13)
-	// mockHelper.Transactions = map[string]*types.TransactionIdentifier{
-	// 	"payload 1": {Hash: "tx 1"},
-	// 	"payload 2": {Hash: "tx 2"},
-	// }
-	// mockHelper.AtSyncTip = true
+	send1 := opFiller("addr 1", 11)
+	send2 := opFiller("addr 2", 13)
 	network := &types.NetworkIdentifier{Blockchain: "Bitcoin", Network: "Testnet3"}
 
 	t.Run("broadcast send 1 before block exists", func(t *testing.T) {
@@ -164,14 +159,8 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 		err = txn.Commit(ctx)
 		assert.NoError(t, err)
 
-		// mockHelper.SyncedBlockIdentifier = block.BlockIdentifier
 		mockHelper.On("CurrentBlockIdentifier", ctx).Return(block.BlockIdentifier, nil)
 		mockHelper.On("BroadcastTransaction", ctx, network, "payload 1").Return(&types.TransactionIdentifier{Hash: "tx 1"}, nil).Once()
-		// mockHelper.On("AtTip", ctx, int64(0)).Return(false, nil).Once()
-		// mockHelper.On("AtTip", ctx, int64(0)).Return(false, nil).Once()
-		// mockHelper.On("AtTip", ctx, block.BlockIdentifier.Index).Return(true, nil).Once()
-		// mockHelper.On("AtTip", ctx, block.BlockIdentifier.Index).Return(true, nil).Once()
-		// mockHelper.On("AtTip", ctx, block.BlockIdentifier.Index).Return(true, nil).Once()
 		err = commitWorker(ctx)
 		assert.NoError(t, err)
 
@@ -199,8 +188,6 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 
 		mockHelper.AssertExpectations(t)
 		mockHandler.AssertExpectations(t)
-		// assert.ElementsMatch(t, []*types.TransactionIdentifier{}, mockHandler.Stale)
-		// assert.ElementsMatch(t, []*failedTx{}, mockHandler.Failed)
 	})
 
 	t.Run("add block 1", func(t *testing.T) {
@@ -217,7 +204,6 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 		err = txn.Commit(ctx)
 		assert.NoError(t, err)
 
-		// mockHelper.SyncedBlockIdentifier = block.BlockIdentifier
 		mockHelper.On("CurrentBlockIdentifier", ctx).Return(block.BlockIdentifier, nil)
 		err = commitWorker(ctx)
 		assert.NoError(t, err)
@@ -245,9 +231,6 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 		}, broadcasts)
 		mockHelper.AssertExpectations(t)
 		mockHandler.AssertExpectations(t)
-
-		// assert.ElementsMatch(t, []*types.TransactionIdentifier{}, mockHandler.Stale)
-		// assert.ElementsMatch(t, []*failedTx{}, mockHandler.Failed)
 	})
 
 	t.Run("broadcast send 2 after adding a block", func(t *testing.T) {
@@ -342,7 +325,6 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 		err = txn.Commit(ctx)
 		assert.NoError(t, err)
 
-		// mockHelper.SyncedBlockIdentifier = block.BlockIdentifier
 		err = commitWorker(ctx)
 		assert.NoError(t, err)
 
@@ -371,12 +353,6 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 			},
 		}, broadcasts)
 
-		// assert.ElementsMatch(t, []*types.TransactionIdentifier{
-		// 	{
-		// 		Hash: "tx 1",
-		// 	},
-		// }, mockHandler.Stale)
-		// assert.ElementsMatch(t, []*failedTx{}, mockHandler.Failed)
 		mockHelper.AssertExpectations(t)
 		mockHandler.AssertExpectations(t)
 	})
@@ -389,16 +365,7 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 		TransactionIdentifier: &types.TransactionIdentifier{Hash: "tx 2"},
 		Operations:            send2,
 	}
-	// mockHelper.FindTransactions = map[string]*findTx{
-	// 	tx1.TransactionIdentifier.Hash: {
-	// 		blockIdentifier: blocks[3].BlockIdentifier,
-	// 		transaction:     tx1,
-	// 	},
-	// 	tx2.TransactionIdentifier.Hash: {
-	// 		blockIdentifier: blocks[4].BlockIdentifier,
-	// 		transaction:     tx2,
-	// 	},
-	// }
+
 	t.Run("add block 3", func(t *testing.T) {
 		mockHelper := &mocks.BroadcastStorageHelper{}
 		mockHandler := &mocks.BroadcastStorageHandler{}
@@ -427,7 +394,6 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 		err = txn.Commit(ctx)
 		assert.NoError(t, err)
 
-		// mockHelper.SyncedBlockIdentifier = block.BlockIdentifier
 		mockHelper.On("CurrentBlockIdentifier", ctx).Return(block.BlockIdentifier, nil)
 		err = commitWorker(ctx)
 		assert.NoError(t, err)
@@ -456,16 +422,9 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 				ConfirmationDepth:     confirmationDepth,
 			},
 		}, broadcasts)
+
 		mockHelper.AssertExpectations(t)
 		mockHandler.AssertExpectations(t)
-
-		// assert.ElementsMatch(t, []*types.TransactionIdentifier{
-		// 	{
-		// 		Hash: "tx 1",
-		// 	},
-		// }, mockHandler.Stale)
-		// assert.ElementsMatch(t, []*failedTx{}, mockHandler.Failed)
-		// assert.ElementsMatch(t, []*confirmedTx{}, mockHandler.Confirmed)
 	})
 
 	t.Run("add block 4", func(t *testing.T) {
@@ -494,7 +453,6 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 		err = txn.Commit(ctx)
 		assert.NoError(t, err)
 
-		// mockHelper.SyncedBlockIdentifier = block.BlockIdentifier
 		mockHelper.On("CurrentBlockIdentifier", ctx).Return(block.BlockIdentifier, nil)
 		err = commitWorker(ctx)
 		assert.NoError(t, err)
@@ -516,19 +474,6 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 
 		mockHelper.AssertExpectations(t)
 		mockHandler.AssertExpectations(t)
-		// assert.ElementsMatch(t, []*types.TransactionIdentifier{
-		// 	{
-		// 		Hash: "tx 1",
-		// 	},
-		// }, mockHandler.Stale)
-		// assert.ElementsMatch(t, []*failedTx{}, mockHandler.Failed)
-		// assert.ElementsMatch(t, []*confirmedTx{
-		// 	{
-		// 		blockIdentifier: blocks[3].BlockIdentifier,
-		// 		transaction:     tx1,
-		// 		intent:          send1,
-		// 	},
-		// }, mockHandler.Confirmed)
 	})
 
 	t.Run("add block 5", func(t *testing.T) {
@@ -553,7 +498,6 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 		err = txn.Commit(ctx)
 		assert.NoError(t, err)
 
-		// mockHelper.SyncedBlockIdentifier = block.BlockIdentifier
 		mockHelper.On("CurrentBlockIdentifier", ctx).Return(block.BlockIdentifier, nil)
 		err = commitWorker(ctx)
 		assert.NoError(t, err)
@@ -564,25 +508,6 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 
 		mockHelper.AssertExpectations(t)
 		mockHandler.AssertExpectations(t)
-
-		// assert.ElementsMatch(t, []*types.TransactionIdentifier{
-		// 	{
-		// 		Hash: "tx 1",
-		// 	},
-		// }, mockHandler.Stale)
-		// assert.ElementsMatch(t, []*failedTx{}, mockHandler.Failed)
-		// assert.ElementsMatch(t, []*confirmedTx{
-		// 	{
-		// 		blockIdentifier: blocks[3].BlockIdentifier,
-		// 		transaction:     tx1,
-		// 		intent:          send1,
-		// 	},
-		// 	{
-		// 		blockIdentifier: blocks[4].BlockIdentifier,
-		// 		transaction:     tx2,
-		// 		intent:          send2,
-		// 	},
-		// }, mockHandler.Confirmed)
 	})
 }
 
@@ -710,12 +635,7 @@ func TestBroadcastStorageBroadcastFailure(t *testing.T) {
 		mockHandler := &mocks.BroadcastStorageHandler{}
 		storage.Initialize(mockHelper, mockHandler)
 
-		// mockHelper.Transactions = map[string]*types.TransactionIdentifier{
-		// 	"payload 1": {Hash: "tx 1"},
-		// 	// payload 2 will fail
-		// }
 		blocks := blockFiller(0, 10)
-		// mockHelper.AtSyncTip = true
 		mockHelper.On("AtTip", ctx, mock.Anything).Return(true, nil)
 		mockHelper.On("BroadcastTransaction", ctx, network, "payload 1").Return(&types.TransactionIdentifier{Hash: "tx 1"}, nil).Times(3)
 		mockHandler.On("TransactionStale", ctx, mock.Anything, "broadcast 1", &types.TransactionIdentifier{Hash: "tx 1"}).Return(nil).Times(3)
@@ -735,7 +655,6 @@ func TestBroadcastStorageBroadcastFailure(t *testing.T) {
 			err = txn.Commit(ctx)
 			assert.NoError(t, err)
 
-			// mockHelper.SyncedBlockIdentifier = block.BlockIdentifier
 			err = commitWorker(ctx)
 			assert.NoError(t, err)
 		}
@@ -754,28 +673,6 @@ func TestBroadcastStorageBroadcastFailure(t *testing.T) {
 
 		mockHelper.AssertExpectations(t)
 		mockHandler.AssertExpectations(t)
-
-		// assert.ElementsMatch(t, []*types.TransactionIdentifier{
-		// 	{Hash: "tx 1"},
-		// 	{Hash: "tx 1"},
-		// 	{Hash: "tx 1"},
-		// 	{Hash: "tx 2"},
-		// 	{Hash: "tx 2"},
-		// 	{Hash: "tx 2"},
-		// }, mockHandler.Stale)
-
-		// assert.ElementsMatch(t, []*failedTx{
-		// 	{
-		// 		transaction: &types.TransactionIdentifier{Hash: "tx 1"},
-		// 		intent:      send1,
-		// 	},
-		// 	{
-		// 		transaction: &types.TransactionIdentifier{Hash: "tx 2"},
-		// 		intent:      send2,
-		// 	},
-		// }, mockHandler.Failed)
-
-		// assert.ElementsMatch(t, []*confirmedTx{}, mockHandler.Confirmed)
 	})
 }
 
@@ -870,11 +767,6 @@ func TestBroadcastStorageBehindTip(t *testing.T) {
 	})
 
 	blocks := blockFiller(0, 81)
-	// mockHelper.AtSyncTip = false
-	// mockHelper.Transactions = map[string]*types.TransactionIdentifier{
-	// 	"payload 1": {Hash: "tx 1"},
-	// 	"payload 2": {Hash: "tx 2"},
-	// }
 
 	t.Run("add blocks behind tip", func(t *testing.T) {
 		mockHelper := &mocks.BroadcastStorageHelper{}
@@ -890,7 +782,6 @@ func TestBroadcastStorageBehindTip(t *testing.T) {
 			err = txn.Commit(ctx)
 			assert.NoError(t, err)
 
-			// mockHelper.SyncedBlockIdentifier = block.BlockIdentifier
 			err = commitWorker(ctx)
 			assert.NoError(t, err)
 		}
@@ -929,12 +820,8 @@ func TestBroadcastStorageBehindTip(t *testing.T) {
 
 		mockHelper.AssertExpectations(t)
 		mockHandler.AssertExpectations(t)
-		// assert.ElementsMatch(t, []*types.TransactionIdentifier{}, mockHandler.Stale)
-		// assert.ElementsMatch(t, []*failedTx{}, mockHandler.Failed)
-		// assert.ElementsMatch(t, []*confirmedTx{}, mockHandler.Confirmed)
 	})
 
-	// mockHelper.AtSyncTip = true
 	t.Run("add blocks close to tip", func(t *testing.T) {
 		mockHelper := &mocks.BroadcastStorageHelper{}
 		mockHandler := &mocks.BroadcastStorageHandler{}
@@ -954,7 +841,6 @@ func TestBroadcastStorageBehindTip(t *testing.T) {
 			err = txn.Commit(ctx)
 			assert.NoError(t, err)
 
-			// mockHelper.SyncedBlockIdentifier = block.BlockIdentifier
 			err = commitWorker(ctx)
 			assert.NoError(t, err)
 		}
@@ -997,9 +883,6 @@ func TestBroadcastStorageBehindTip(t *testing.T) {
 
 		mockHelper.AssertExpectations(t)
 		mockHandler.AssertExpectations(t)
-		// assert.ElementsMatch(t, []*types.TransactionIdentifier{}, mockHandler.Stale)
-		// assert.ElementsMatch(t, []*failedTx{}, mockHandler.Failed)
-		// assert.ElementsMatch(t, []*confirmedTx{}, mockHandler.Confirmed)
 	})
 
 }
