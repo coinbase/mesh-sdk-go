@@ -5,9 +5,9 @@ package utils
 import (
 	context "context"
 
+	fetcher "github.com/coinbase/rosetta-sdk-go/fetcher"
 	mock "github.com/stretchr/testify/mock"
 
-	fetcher "github.com/coinbase/rosetta-sdk-go/fetcher"
 	types "github.com/coinbase/rosetta-sdk-go/types"
 )
 

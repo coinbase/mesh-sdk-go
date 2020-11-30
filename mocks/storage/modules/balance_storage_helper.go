@@ -3,12 +3,18 @@
 package modules
 
 import (
+	big "math/big"
+
+	asserter "github.com/coinbase/rosetta-sdk-go/asserter"
+
 	context "context"
+
+	database "github.com/coinbase/rosetta-sdk-go/storage/database"
 
 	mock "github.com/stretchr/testify/mock"
 
-	asserter "github.com/coinbase/rosetta-sdk-go/asserter"
 	parser "github.com/coinbase/rosetta-sdk-go/parser"
+
 	types "github.com/coinbase/rosetta-sdk-go/types"
 )
 
@@ -33,6 +39,52 @@ func (_m *BalanceStorageHelper) AccountBalance(ctx context.Context, account *typ
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, *types.AccountIdentifier, *types.Currency, *types.BlockIdentifier) error); ok {
 		r1 = rf(ctx, account, currency, block)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// AccountsReconciled provides a mock function with given fields: ctx, dbTx
+func (_m *BalanceStorageHelper) AccountsReconciled(ctx context.Context, dbTx database.Transaction) (*big.Int, error) {
+	ret := _m.Called(ctx, dbTx)
+
+	var r0 *big.Int
+	if rf, ok := ret.Get(0).(func(context.Context, database.Transaction) *big.Int); ok {
+		r0 = rf(ctx, dbTx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*big.Int)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, database.Transaction) error); ok {
+		r1 = rf(ctx, dbTx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// AccountsSeen provides a mock function with given fields: ctx, dbTx
+func (_m *BalanceStorageHelper) AccountsSeen(ctx context.Context, dbTx database.Transaction) (*big.Int, error) {
+	ret := _m.Called(ctx, dbTx)
+
+	var r0 *big.Int
+	if rf, ok := ret.Get(0).(func(context.Context, database.Transaction) *big.Int); ok {
+		r0 = rf(ctx, dbTx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*big.Int)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, database.Transaction) error); ok {
+		r1 = rf(ctx, dbTx)
 	} else {
 		r1 = ret.Error(1)
 	}

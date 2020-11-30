@@ -324,12 +324,17 @@ var (
 	// account does not exist.
 	ErrAccountMissing = errors.New("block nil")
 
+	// ErrInvalidChangeValue is returned when the change value
+	// cannot be parsed.
+	ErrInvalidChangeValue = errors.New("invalid change value")
+
 	BalanceStorageErrs = []error{
 		ErrNegativeBalance,
 		ErrInvalidLiveBalance,
 		ErrBalancePruned,
 		ErrBlockNil,
 		ErrAccountMissing,
+		ErrInvalidChangeValue,
 	}
 )
 
