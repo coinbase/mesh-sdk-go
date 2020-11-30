@@ -15,5 +15,5 @@
 
 while IFS= read -r -d '' FILE 
 do
-  goimports-reviser -file-path "${FILE}" -local github.com/coinbase/rosetta-sdk-go/
+  go run github.com/incu6us/goimports-reviser/v2 -file-path "${FILE}" -local github.com/coinbase/rosetta-sdk-go/
 done < <(find . -type f -name "*.go" -print0)
