@@ -378,7 +378,12 @@ func (b *BalanceStorage) SetBalance(
 
 	// Set current balance
 	key = GetAccountKey(balanceNamespace, account, amount.Currency)
-	valueBytes := []byte(amount.Value)
+	value, ok := new(big.Int).SetString(amount.Value, 10)
+	if !ok {
+		return storageErrs.ErrInvalidValue
+	}
+
+	valueBytes := value.Bytes()
 	if err := dbTransaction.Set(ctx, key, valueBytes, false); err != nil {
 		return err
 	}
@@ -1185,7 +1190,7 @@ func (b *BalanceStorage) getHistoricalBalance(
 		GetHistoricalBalancePrefix(account, currency),
 		GetHistoricalBalanceKey(account, currency, index),
 		func(k []byte, v []byte) error {
-			foundValue = string(v)
+			foundValue = new(big.Int).SetBytes(v).String()
 			return errAccountFound
 		},
 		false,
