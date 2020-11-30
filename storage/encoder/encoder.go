@@ -429,7 +429,11 @@ func (e *Encoder) DecodeAccountCoin( // nolint:gocognit
 
 			m, err := e.decodeMap(val)
 			if err != nil {
-				return fmt.Errorf("%w: subaccount metadata %s", errors.ErrRawDecodeFailed, err.Error())
+				return fmt.Errorf(
+					"%w: subaccount metadata %s",
+					errors.ErrRawDecodeFailed,
+					err.Error(),
+				)
 			}
 
 			accountCoin.Account.SubAccount.Metadata = m
@@ -443,7 +447,11 @@ func (e *Encoder) DecodeAccountCoin( // nolint:gocognit
 		case currencyMetadata:
 			m, err := e.decodeMap(val)
 			if err != nil {
-				return fmt.Errorf("%w: currency metadata %s", errors.ErrRawDecodeFailed, err.Error())
+				return fmt.Errorf(
+					"%w: currency metadata %s",
+					errors.ErrRawDecodeFailed,
+					err.Error(),
+				)
 			}
 
 			accountCoin.Coin.Amount.Currency.Metadata = m

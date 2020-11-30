@@ -256,7 +256,12 @@ func (j *JobStorage) removeJob(
 
 	var identifiers map[string]struct{}
 	if !exists {
-		return fmt.Errorf("%w %s from %s", errors.ErrJobIdentifierRemoveFailed, identifier, string(k))
+		return fmt.Errorf(
+			"%w %s from %s",
+			errors.ErrJobIdentifierRemoveFailed,
+			identifier,
+			string(k),
+		)
 	}
 
 	err = j.db.Encoder().Decode("", v, &identifiers, true)
@@ -265,7 +270,12 @@ func (j *JobStorage) removeJob(
 	}
 
 	if _, ok := identifiers[identifier]; !ok {
-		return fmt.Errorf("%w: %s is not in %s", errors.ErrJobIdentifierNotFound, identifier, string(k))
+		return fmt.Errorf(
+			"%w: %s is not in %s",
+			errors.ErrJobIdentifierNotFound,
+			identifier,
+			string(k),
+		)
 	}
 
 	delete(identifiers, identifier)
