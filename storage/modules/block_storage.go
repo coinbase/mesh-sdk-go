@@ -83,7 +83,11 @@ func getTransactionHashKey(transactionIdentifier *types.TransactionIdentifier) (
 // in the same database transaction as the change.
 type BlockWorker interface {
 	AddingBlock(context.Context, *types.Block, database.Transaction) (database.CommitWorker, error)
-	RemovingBlock(context.Context, *types.Block, database.Transaction) (database.CommitWorker, error)
+	RemovingBlock(
+		context.Context,
+		*types.Block,
+		database.Transaction,
+	) (database.CommitWorker, error)
 }
 
 // BlockStorage implements block specific storage methods
@@ -380,7 +384,11 @@ func (b *BlockStorage) GetBlockLazyTransactional(
 	}
 
 	if !exists {
-		return nil, fmt.Errorf("%w: %s", storageErrs.ErrBlockNotFound, types.PrintStruct(blockIdentifier))
+		return nil, fmt.Errorf(
+			"%w: %s",
+			storageErrs.ErrBlockNotFound,
+			types.PrintStruct(blockIdentifier),
+		)
 	}
 
 	if len(blockResponse) == 0 {
@@ -921,7 +929,11 @@ func (b *BlockStorage) removeTransaction(
 	}
 
 	if !exists {
-		return fmt.Errorf("%w %s", storageErrs.ErrTransactionDeleteFailed, transactionIdentifier.Hash)
+		return fmt.Errorf(
+			"%w %s",
+			storageErrs.ErrTransactionDeleteFailed,
+			transactionIdentifier.Hash,
+		)
 	}
 
 	var blocks map[string]*blockTransaction
@@ -1004,7 +1016,11 @@ func (b *BlockStorage) findBlockTransaction(
 	}
 
 	if !txExists {
-		return nil, fmt.Errorf("%w %s", storageErrs.ErrTransactionNotFound, transactionIdentifier.Hash)
+		return nil, fmt.Errorf(
+			"%w %s",
+			storageErrs.ErrTransactionNotFound,
+			transactionIdentifier.Hash,
+		)
 	}
 
 	var blocks map[string]*blockTransaction

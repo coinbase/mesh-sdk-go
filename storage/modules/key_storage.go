@@ -80,7 +80,12 @@ func (k *KeyStorage) StoreTransactional(
 ) error {
 	exists, _, err := dbTx.Get(ctx, getAccountKey(account))
 	if err != nil {
-		return fmt.Errorf("%w: %s %v", storageErrs.ErrAddrCheckIfExistsFailed, types.PrintStruct(account), err)
+		return fmt.Errorf(
+			"%w: %s %v",
+			storageErrs.ErrAddrCheckIfExistsFailed,
+			types.PrintStruct(account),
+			err,
+		)
 	}
 
 	if exists {
@@ -137,7 +142,12 @@ func (k *KeyStorage) GetTransactional(
 ) (*keys.KeyPair, error) {
 	exists, rawKey, err := dbTx.Get(ctx, getAccountKey(account))
 	if err != nil {
-		return nil, fmt.Errorf("%w: %s %v", storageErrs.ErrAddrGetFailed, types.PrintStruct(account), err)
+		return nil, fmt.Errorf(
+			"%w: %s %v",
+			storageErrs.ErrAddrGetFailed,
+			types.PrintStruct(account),
+			err,
+		)
 	}
 
 	if !exists {

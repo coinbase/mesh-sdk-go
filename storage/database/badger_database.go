@@ -540,7 +540,12 @@ func decompressAndEncode(
 ) (float64, float64, float64, error) {
 	decompressed, err := ioutil.ReadFile(path) // #nosec G304
 	if err != nil {
-		return -1, -1, -1, fmt.Errorf("%w for file %s: %v", storageErrs.ErrLoadFileUnsuccessful, path, err)
+		return -1, -1, -1, fmt.Errorf(
+			"%w for file %s: %v",
+			storageErrs.ErrLoadFileUnsuccessful,
+			path,
+			err,
+		)
 	}
 
 	normalCompress, err := encoder.EncodeRaw("", decompressed)
