@@ -798,14 +798,14 @@ func TestBroadcastStorageBehindTip(t *testing.T) {
 		broadcastBehindTip,
 		blockBroadcastLimit,
 	)
-	mockHelper := &mocks.BroadcastStorageHelper{}
-	mockHandler := &mocks.BroadcastStorageHandler{}
-	storage.Initialize(mockHelper, mockHandler)
-
 	send1 := opFiller("addr 1", 1)
 	send2 := opFiller("addr 2", 1)
 	network := &types.NetworkIdentifier{Blockchain: "Bitcoin", Network: "Testnet3"}
 	t.Run("broadcast", func(t *testing.T) {
+		mockHelper := &mocks.BroadcastStorageHelper{}
+		mockHandler := &mocks.BroadcastStorageHandler{}
+		storage.Initialize(mockHelper, mockHandler)
+
 		dbTx := database.Transaction(ctx)
 		defer dbTx.Discard(ctx)
 
@@ -864,6 +864,9 @@ func TestBroadcastStorageBehindTip(t *testing.T) {
 				ConfirmationDepth:     confirmationDepth,
 			},
 		}, broadcasts)
+
+		mockHelper.AssertExpectations(t)
+		mockHandler.AssertExpectations(t)
 	})
 
 	blocks := blockFiller(0, 81)
@@ -874,7 +877,13 @@ func TestBroadcastStorageBehindTip(t *testing.T) {
 	// }
 
 	t.Run("add blocks behind tip", func(t *testing.T) {
+		mockHelper := &mocks.BroadcastStorageHelper{}
+		mockHandler := &mocks.BroadcastStorageHandler{}
+		storage.Initialize(mockHelper, mockHandler)
+		mockHelper.On("AtTip", ctx, mock.Anything).Return(false, nil)
+
 		for _, block := range blocks[:60] {
+			mockHelper.On("CurrentBlockIdentifier", ctx).Return(block.BlockIdentifier, nil).Once()
 			txn := storage.db.Transaction(ctx)
 			commitWorker, err := storage.AddingBlock(ctx, block, txn)
 			assert.NoError(t, err)
@@ -917,6 +926,9 @@ func TestBroadcastStorageBehindTip(t *testing.T) {
 				ConfirmationDepth:     confirmationDepth,
 			},
 		}, broadcasts)
+
+		mockHelper.AssertExpectations(t)
+		mockHandler.AssertExpectations(t)
 		// assert.ElementsMatch(t, []*types.TransactionIdentifier{}, mockHandler.Stale)
 		// assert.ElementsMatch(t, []*failedTx{}, mockHandler.Failed)
 		// assert.ElementsMatch(t, []*confirmedTx{}, mockHandler.Confirmed)
@@ -924,7 +936,18 @@ func TestBroadcastStorageBehindTip(t *testing.T) {
 
 	// mockHelper.AtSyncTip = true
 	t.Run("add blocks close to tip", func(t *testing.T) {
+		mockHelper := &mocks.BroadcastStorageHelper{}
+		mockHandler := &mocks.BroadcastStorageHandler{}
+		storage.Initialize(mockHelper, mockHandler)
+		mockHelper.On("AtTip", ctx, mock.Anything).Return(true, nil)
+
+		mockHelper.On("BroadcastTransaction", ctx, network, "payload 1").Return(&types.TransactionIdentifier{Hash: "tx 1"}, nil).Once()
+		mockHelper.On("BroadcastTransaction", ctx, network, "payload 2").Return(&types.TransactionIdentifier{Hash: "tx 2"}, nil).Once()
+		// Never find in block
+		mockHelper.On("FindTransaction", ctx, &types.TransactionIdentifier{Hash: "tx 1"}, mock.Anything).Return(nil, nil, nil)
+		mockHelper.On("FindTransaction", ctx, &types.TransactionIdentifier{Hash: "tx 2"}, mock.Anything).Return(nil, nil, nil)
 		for _, block := range blocks[60:71] {
+			mockHelper.On("CurrentBlockIdentifier", ctx).Return(block.BlockIdentifier, nil).Once()
 			txn := storage.db.Transaction(ctx)
 			commitWorker, err := storage.AddingBlock(ctx, block, txn)
 			assert.NoError(t, err)
@@ -976,8 +999,6 @@ func TestBroadcastStorageBehindTip(t *testing.T) {
 		// assert.ElementsMatch(t, []*confirmedTx{}, mockHandler.Confirmed)
 	})
 
-	mockHelper.AssertExpectations(t)
-	mockHandler.AssertExpectations(t)
 }
 
 func TestBroadcastStorageClearBroadcasts(t *testing.T) {
