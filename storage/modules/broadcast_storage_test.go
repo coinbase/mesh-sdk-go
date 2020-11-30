@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/coinbase/rosetta-sdk-go/storage/database"
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/coinbase/rosetta-sdk-go/utils"
 
@@ -80,7 +81,7 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 	assert.NoError(t, err)
 	defer utils.RemoveTempDir(newDir)
 
-	database, err := newTestBadgerStorage(ctx, newDir)
+	database, err := newTestBadgerDatabase(ctx, newDir)
 	assert.NoError(t, err)
 	defer database.Close(ctx)
 
@@ -510,7 +511,7 @@ func TestBroadcastStorageBroadcastFailure(t *testing.T) {
 	assert.NoError(t, err)
 	defer utils.RemoveTempDir(newDir)
 
-	database, err := newTestBadgerStorage(ctx, newDir)
+	database, err := newTestBadgerDatabase(ctx, newDir)
 	assert.NoError(t, err)
 	defer database.Close(ctx)
 
@@ -673,7 +674,7 @@ func TestBroadcastStorageBehindTip(t *testing.T) {
 	assert.NoError(t, err)
 	defer utils.RemoveTempDir(newDir)
 
-	database, err := newTestBadgerStorage(ctx, newDir)
+	database, err := newTestBadgerDatabase(ctx, newDir)
 	assert.NoError(t, err)
 	defer database.Close(ctx)
 
@@ -871,7 +872,7 @@ func TestBroadcastStorageClearBroadcasts(t *testing.T) {
 	assert.NoError(t, err)
 	defer utils.RemoveTempDir(newDir)
 
-	database, err := newTestBadgerStorage(ctx, newDir)
+	database, err := newTestBadgerDatabase(ctx, newDir)
 	assert.NoError(t, err)
 	defer database.Close(ctx)
 
@@ -1023,7 +1024,7 @@ func (m *MockBroadcastStorageHelper) CurrentBlockIdentifier(
 func (m *MockBroadcastStorageHelper) FindTransaction(
 	ctx context.Context,
 	transactionIdentifier *types.TransactionIdentifier,
-	txn DatabaseTransaction,
+	txn database.Transaction,
 ) (*types.BlockIdentifier, *types.Transaction, error) {
 	val, exists := m.FindTransactions[transactionIdentifier.Hash]
 	if !exists {
@@ -1067,7 +1068,7 @@ type MockBroadcastStorageHandler struct {
 
 func (m *MockBroadcastStorageHandler) TransactionConfirmed(
 	ctx context.Context,
-	dbTx DatabaseTransaction,
+	dbTx database.Transaction,
 	identifier string,
 	blockIdentifier *types.BlockIdentifier,
 	transaction *types.Transaction,
@@ -1088,7 +1089,7 @@ func (m *MockBroadcastStorageHandler) TransactionConfirmed(
 
 func (m *MockBroadcastStorageHandler) TransactionStale(
 	ctx context.Context,
-	dbTx DatabaseTransaction,
+	dbTx database.Transaction,
 	identifier string,
 	transactionIdentifier *types.TransactionIdentifier,
 ) error {
@@ -1103,7 +1104,7 @@ func (m *MockBroadcastStorageHandler) TransactionStale(
 
 func (m *MockBroadcastStorageHandler) BroadcastFailed(
 	ctx context.Context,
-	dbTx DatabaseTransaction,
+	dbTx database.Transaction,
 	identifier string,
 	transactionIdentifier *types.TransactionIdentifier,
 	intent []*types.Operation,

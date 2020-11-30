@@ -21,6 +21,8 @@ import (
 	"testing"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
+	"github.com/coinbase/rosetta-sdk-go/storage/database"
+	storageErrs "github.com/coinbase/rosetta-sdk-go/storage/errors"
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/coinbase/rosetta-sdk-go/utils"
 
@@ -391,7 +393,7 @@ func TestCoinStorage(t *testing.T) {
 	assert.NoError(t, err)
 	defer utils.RemoveTempDir(newDir)
 
-	database, err := newTestBadgerStorage(ctx, newDir)
+	database, err := newTestBadgerDatabase(ctx, newDir)
 	assert.NoError(t, err)
 	defer database.Close(ctx)
 
@@ -428,11 +430,11 @@ func TestCoinStorage(t *testing.T) {
 	t.Run("AddCoins before blocks", func(t *testing.T) {
 		// Ensure correct status is thrown when can't get coin
 		coin, owner, err := c.GetCoin(ctx, coins5.CoinIdentifier)
-		assert.True(t, errors.Is(err, ErrCoinNotFound))
+		assert.True(t, errors.Is(err, storageErrs.ErrCoinNotFound))
 		assert.Nil(t, coin)
 		assert.Nil(t, owner)
 
-		accountCoins := []*AccountCoin{
+		accountCoins := []*types.AccountCoin{
 			{
 				Account: account4,
 				Coin:    coins4,
@@ -647,7 +649,7 @@ func TestCoinStorage(t *testing.T) {
 	})
 
 	t.Run("AddCoins after block", func(t *testing.T) {
-		accountCoins := []*AccountCoin{
+		accountCoins := []*types.AccountCoin{
 			{
 				Account: account,
 				Coin:    coins1,
@@ -732,10 +734,10 @@ var _ CoinStorageHelper = (*MockCoinStorageHelper)(nil)
 
 func (h *MockCoinStorageHelper) CurrentBlockIdentifier(
 	ctx context.Context,
-	transaction DatabaseTransaction,
+	transaction database.Transaction,
 ) (*types.BlockIdentifier, error) {
 	if h.BlockIdentifier == nil {
-		return nil, ErrHeadBlockNotFound
+		return nil, storageErrs.ErrHeadBlockNotFound
 	}
 	return blockIdentifier, nil
 }

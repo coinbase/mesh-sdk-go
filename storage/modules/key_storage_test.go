@@ -38,7 +38,7 @@ func TestKeyStorage(t *testing.T) {
 	assert.NoError(t, err)
 	defer utils.RemoveTempDir(newDir)
 
-	database, err := newTestBadgerStorage(ctx, newDir)
+	database, err := newTestBadgerDatabase(ctx, newDir)
 	assert.NoError(t, err)
 	defer database.Close(ctx)
 
