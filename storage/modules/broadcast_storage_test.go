@@ -994,6 +994,9 @@ func TestBroadcastStorageBehindTip(t *testing.T) {
 				ConfirmationDepth:     confirmationDepth,
 			},
 		}, broadcasts)
+
+		mockHelper.AssertExpectations(t)
+		mockHandler.AssertExpectations(t)
 		// assert.ElementsMatch(t, []*types.TransactionIdentifier{}, mockHandler.Stale)
 		// assert.ElementsMatch(t, []*failedTx{}, mockHandler.Failed)
 		// assert.ElementsMatch(t, []*confirmedTx{}, mockHandler.Confirmed)
@@ -1020,12 +1023,12 @@ func TestBroadcastStorageClearBroadcasts(t *testing.T) {
 		broadcastBehindTip,
 		blockBroadcastLimit,
 	)
-	mockHelper := &mocks.BroadcastStorageHelper{}
-	mockHandler := &mocks.BroadcastStorageHandler{}
-	storage.Initialize(mockHelper, mockHandler)
-
 	network := &types.NetworkIdentifier{Blockchain: "Bitcoin", Network: "Testnet3"}
 	t.Run("locked addresses with no broadcasts", func(t *testing.T) {
+		mockHelper := &mocks.BroadcastStorageHelper{}
+		mockHandler := &mocks.BroadcastStorageHandler{}
+		storage.Initialize(mockHelper, mockHandler)
+
 		dbTx := database.ReadTransaction(ctx)
 		defer dbTx.Discard(ctx)
 
@@ -1033,11 +1036,17 @@ func TestBroadcastStorageClearBroadcasts(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Len(t, accounts, 0)
 		assert.ElementsMatch(t, []*types.AccountIdentifier{}, accounts)
+		mockHelper.AssertExpectations(t)
+		mockHandler.AssertExpectations(t)
 	})
 
 	send1 := opFiller("addr 1", 11)
 	send2 := opFiller("addr 2", 13)
 	t.Run("broadcast", func(t *testing.T) {
+		mockHelper := &mocks.BroadcastStorageHelper{}
+		mockHandler := &mocks.BroadcastStorageHandler{}
+		storage.Initialize(mockHelper, mockHandler)
+
 		dbTx := database.Transaction(ctx)
 		defer dbTx.Discard(ctx)
 
@@ -1096,9 +1105,19 @@ func TestBroadcastStorageClearBroadcasts(t *testing.T) {
 				ConfirmationDepth:     confirmationDepth,
 			},
 		}, broadcasts)
+
+		mockHelper.AssertExpectations(t)
+		mockHandler.AssertExpectations(t)
 	})
 
 	t.Run("clear broadcasts", func(t *testing.T) {
+		mockHelper := &mocks.BroadcastStorageHelper{}
+		mockHandler := &mocks.BroadcastStorageHandler{}
+		storage.Initialize(mockHelper, mockHandler)
+
+		mockHandler.On("BroadcastFailed", ctx, mock.Anything, "broadcast 1", &types.TransactionIdentifier{Hash: "tx 1"}, send1).Return(nil).Once()
+		mockHandler.On("BroadcastFailed", ctx, mock.Anything, "broadcast 2", &types.TransactionIdentifier{Hash: "tx 2"}, send2).Return(nil).Once()
+
 		broadcasts, err := storage.ClearBroadcasts(ctx)
 		assert.NoError(t, err)
 		assert.ElementsMatch(t, []*Broadcast{
@@ -1127,8 +1146,8 @@ func TestBroadcastStorageClearBroadcasts(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Len(t, accounts, 0)
 		assert.ElementsMatch(t, []*types.AccountIdentifier{}, accounts)
-	})
 
-	mockHelper.AssertExpectations(t)
-	mockHandler.AssertExpectations(t)
+		mockHelper.AssertExpectations(t)
+		mockHandler.AssertExpectations(t)
+	})
 }
