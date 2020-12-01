@@ -771,11 +771,11 @@ func shardsEmpty(m *utils.ShardedMap, keys []string) bool {
 		s := m.Lock(k, false)
 		m.Unlock(k)
 		if len(s) > 0 {
-			return true
+			return false
 		}
 	}
 
-	return false
+	return true
 }
 
 func TestReconcile_SuccessOnlyActive(t *testing.T) {
