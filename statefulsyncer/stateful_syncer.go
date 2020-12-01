@@ -35,7 +35,7 @@ var _ syncer.Helper = (*StatefulSyncer)(nil)
 const (
 	// DefaultPruneSleepTime is how long we sleep between
 	// pruning attempts.
-	DefaultPruneSleepTime = 30 * time.Minute
+	DefaultPruneSleepTime = 10 * time.Minute
 
 	// pruneBuffer is the cushion we apply to pastBlockLimit
 	// when pruning.

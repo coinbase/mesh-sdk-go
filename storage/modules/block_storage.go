@@ -19,9 +19,10 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"runtime"
 	"strconv"
 
-	"golang.org/x/sync/errgroup"
+	"github.com/neilotoole/errgroup"
 
 	"github.com/coinbase/rosetta-sdk-go/storage/database"
 	"github.com/coinbase/rosetta-sdk-go/storage/encoder"
@@ -49,6 +50,10 @@ const (
 	// transactionNamespace is prepended to any stored
 	// transaction.
 	transactionNamespace = "transaction"
+
+	// blockSyncIdentifier is the identifier used to acquire
+	// a database lock.
+	blockSyncIdentifier = "blockSyncIdentifier"
 )
 
 type blockTransaction struct {
@@ -93,7 +98,8 @@ type BlockWorker interface {
 // BlockStorage implements block specific storage methods
 // on top of a database.Database and database.Transaction interface.
 type BlockStorage struct {
-	db database.Database
+	db     database.Database
+	numCPU int
 
 	workers []BlockWorker
 }
@@ -103,7 +109,8 @@ func NewBlockStorage(
 	db database.Database,
 ) *BlockStorage {
 	return &BlockStorage{
-		db: db,
+		db:     db,
+		numCPU: runtime.NumCPU(),
 	}
 }
 
@@ -185,7 +192,7 @@ func (b *BlockStorage) pruneBlock(
 	// we don't hit the database tx size maximum. As a result, it is possible
 	// that we prune a collection of blocks, encounter an error, and cannot
 	// rollback the pruning operations.
-	dbTx := b.db.Transaction(ctx)
+	dbTx := b.db.WriteTransaction(ctx, blockSyncIdentifier, false)
 	defer dbTx.Discard(ctx)
 
 	oldestIndex, err := b.GetOldestBlockIndexTransactional(ctx, dbTx)
@@ -561,7 +568,7 @@ func (b *BlockStorage) AddBlock(
 	ctx context.Context,
 	block *types.Block,
 ) error {
-	transaction := b.db.Transaction(ctx)
+	transaction := b.db.WriteTransaction(ctx, blockSyncIdentifier, true)
 	defer transaction.Discard(ctx)
 
 	// Store all transactions in order and check for duplicates
@@ -602,7 +609,7 @@ func (b *BlockStorage) AddBlock(
 		return fmt.Errorf("%w: %v", storageErrs.ErrBlockStoreFailed, err)
 	}
 
-	g, gctx := errgroup.WithContext(ctx)
+	g, gctx := errgroup.WithContextN(ctx, b.numCPU, b.numCPU)
 	for i := range block.Transactions {
 		// We need to set variable before calling goroutine
 		// to avoid getting an updated pointer as loop iteration
@@ -672,7 +679,7 @@ func (b *BlockStorage) RemoveBlock(
 	ctx context.Context,
 	blockIdentifier *types.BlockIdentifier,
 ) error {
-	transaction := b.db.Transaction(ctx)
+	transaction := b.db.WriteTransaction(ctx, blockSyncIdentifier, true)
 	defer transaction.Discard(ctx)
 
 	block, err := b.GetBlockTransactional(
@@ -685,7 +692,7 @@ func (b *BlockStorage) RemoveBlock(
 	}
 
 	// Remove all transaction hashes
-	g, gctx := errgroup.WithContext(ctx)
+	g, gctx := errgroup.WithContextN(ctx, b.numCPU, b.numCPU)
 	for i := range block.Transactions {
 		// We need to set variable before calling goroutine
 		// to avoid getting an updated pointer as loop iteration

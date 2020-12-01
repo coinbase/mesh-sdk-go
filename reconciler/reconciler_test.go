@@ -28,6 +28,7 @@ import (
 	mockDatabase "github.com/coinbase/rosetta-sdk-go/mocks/storage/database"
 	"github.com/coinbase/rosetta-sdk-go/parser"
 	"github.com/coinbase/rosetta-sdk-go/types"
+	"github.com/coinbase/rosetta-sdk-go/utils"
 )
 
 func TestNewReconciler(t *testing.T) {
@@ -566,6 +567,7 @@ func TestInactiveAccountQueue(t *testing.T) {
 			false,
 			accountCurrency,
 			block,
+			false,
 		)
 		assert.Nil(t, err)
 		assertContainsAllAccounts(t, r.seenAccounts, []*types.AccountCurrency{accountCurrency})
@@ -582,6 +584,7 @@ func TestInactiveAccountQueue(t *testing.T) {
 			false,
 			accountCurrency2,
 			block2,
+			false,
 		)
 		assert.Nil(t, err)
 		assertContainsAllAccounts(
@@ -608,6 +611,7 @@ func TestInactiveAccountQueue(t *testing.T) {
 			false,
 			accountCurrency,
 			block,
+			false,
 		)
 		assert.Nil(t, err)
 		assertContainsAllAccounts(
@@ -623,6 +627,7 @@ func TestInactiveAccountQueue(t *testing.T) {
 			true,
 			accountCurrency,
 			block,
+			false,
 		)
 		assert.Nil(t, err)
 		assertContainsAllAccounts(
@@ -643,6 +648,7 @@ func TestInactiveAccountQueue(t *testing.T) {
 			true,
 			accountCurrency2,
 			block2,
+			false,
 		)
 		assert.Nil(t, err)
 		assertContainsAllAccounts(
@@ -758,6 +764,18 @@ func mockReconcilerCalls(
 			}
 		}
 	}
+}
+
+func shardsEmpty(m *utils.ShardedMap, keys []string) bool {
+	for _, k := range keys {
+		s := m.Lock(k, false)
+		m.Unlock(k)
+		if len(s) > 0 {
+			return false
+		}
+	}
+
+	return true
 }
 
 func TestReconcile_SuccessOnlyActive(t *testing.T) {
@@ -930,7 +948,13 @@ func TestReconcile_SuccessOnlyActive(t *testing.T) {
 			assert.Equal(t, block2.Index, r.LastIndexReconciled())
 			mockHelper.AssertExpectations(t)
 			mockHandler.AssertExpectations(t)
-			assert.Equal(t, 0, len(r.queueMap))
+			assert.True(t, shardsEmpty(
+				r.queueMap,
+				[]string{
+					types.Hash(accountCurrency),
+					types.Hash(accountCurrency2),
+				},
+			))
 			mtxn.AssertExpectations(t)
 			mtxn2.AssertExpectations(t)
 			mtxn3.AssertExpectations(t)
@@ -1076,7 +1100,8 @@ func TestReconcile_HighWaterMark(t *testing.T) {
 		},
 	})
 	assert.NoError(t, err)
-	assert.Equal(t, r.QueueSize(), 4) // includes interesting accounts
+	assert.Equal(t, 2, len(r.processQueue))
+	assert.Equal(t, 0, r.QueueSize()) // queue size is 0 before starting worker
 
 	go func() {
 		err := r.Reconcile(ctx)
@@ -1085,6 +1110,9 @@ func TestReconcile_HighWaterMark(t *testing.T) {
 
 	time.Sleep(1 * time.Second)
 	cancel()
+
+	assert.Equal(t, 0, len(r.processQueue))
+	assert.Equal(t, 0, r.QueueSize())
 
 	mockHelper.AssertExpectations(t)
 	mockHandler.AssertExpectations(t)
@@ -1246,7 +1274,8 @@ func TestReconcile_FailureOnlyActive(t *testing.T) {
 				},
 			})
 			assert.NoError(t, err)
-			assert.Equal(t, r.QueueSize(), 1)
+			assert.Equal(t, 1, len(r.processQueue))
+			assert.Equal(t, 0, r.QueueSize()) // queue size is 0 before starting worker
 
 			go func() {
 				err := r.Reconcile(ctx)
@@ -1255,6 +1284,8 @@ func TestReconcile_FailureOnlyActive(t *testing.T) {
 			}()
 
 			time.Sleep(1 * time.Second)
+			assert.Equal(t, 0, len(r.processQueue))
+			assert.Equal(t, 0, r.QueueSize())
 
 			mockHelper.AssertExpectations(t)
 			mockHandler.AssertExpectations(t)
@@ -2092,8 +2123,6 @@ func TestReconcile_FailureOnlyInactive(t *testing.T) {
 				opts...,
 			)
 			ctx := context.Background()
-			ctx, cancel := context.WithCancel(ctx)
-
 			mtxn := &mockDatabase.Transaction{}
 			mtxn.On("Discard", mock.Anything).Once()
 			mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn).Once()
@@ -2102,10 +2131,6 @@ func TestReconcile_FailureOnlyInactive(t *testing.T) {
 			mtxn2.On(
 				"Discard",
 				mock.Anything,
-			).Run(
-				func(args mock.Arguments) {
-					cancel()
-				},
 			).Once()
 			mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn2).Once()
 			mockReconcilerCalls(
@@ -2191,7 +2216,8 @@ func TestReconcile_EnqueueCancel(t *testing.T) {
 		change,
 	})
 	assert.NoError(t, err)
-	assert.Equal(t, r.QueueSize(), 1)
+	assert.Equal(t, 1, len(r.processQueue))
+	assert.Equal(t, 0, r.QueueSize()) // queue size is 0 before starting worker
 
 	go func() {
 		err := r.Reconcile(ctx)
@@ -2826,7 +2852,13 @@ func TestPruningRaceCondition(t *testing.T) {
 
 	<-d
 	assert.Equal(t, block2.Index, r.LastIndexReconciled())
-	assert.Equal(t, 0, len(r.queueMap))
+	assert.True(t, shardsEmpty(
+		r.queueMap,
+		[]string{
+			types.Hash(accountCurrency),
+			types.Hash(accountCurrency2),
+		},
+	))
 	mockHelper.AssertExpectations(t)
 	mockHandler.AssertExpectations(t)
 	mtxn.AssertExpectations(t)
@@ -2950,7 +2982,12 @@ func TestPruningHappyPath(t *testing.T) {
 
 	<-d
 	assert.Equal(t, block2.Index, r.LastIndexReconciled())
-	assert.Equal(t, 0, len(r.queueMap))
+	assert.True(t, shardsEmpty(
+		r.queueMap,
+		[]string{
+			types.Hash(accountCurrency),
+		},
+	))
 	mockHelper.AssertExpectations(t)
 	mockHandler.AssertExpectations(t)
 	mtxn.AssertExpectations(t)
@@ -3064,7 +3101,12 @@ func TestPruningReorg(t *testing.T) {
 
 	<-d
 	assert.Equal(t, blockB.Index, r.LastIndexReconciled())
-	assert.Equal(t, 0, len(r.queueMap))
+	assert.True(t, shardsEmpty(
+		r.queueMap,
+		[]string{
+			types.Hash(accountCurrency),
+		},
+	))
 	mockHelper.AssertExpectations(t)
 	mockHandler.AssertExpectations(t)
 	mtxn.AssertExpectations(t)
@@ -3213,7 +3255,12 @@ func TestPruningRaceConditionInactive(t *testing.T) {
 
 	<-d
 	assert.Equal(t, block.Index, r.LastIndexReconciled())
-	assert.Equal(t, 0, len(r.queueMap))
+	assert.True(t, shardsEmpty(
+		r.queueMap,
+		[]string{
+			types.Hash(accountCurrency),
+		},
+	))
 	mockHelper.AssertExpectations(t)
 	mockHandler.AssertExpectations(t)
 	mtxn.AssertExpectations(t)
