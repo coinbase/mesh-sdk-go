@@ -940,8 +940,9 @@ func (b *BalanceStorage) GetBalanceTransactional(
 
 	if exists && lastPruned.Int64() >= index {
 		return nil, fmt.Errorf(
-			"%w: last pruned %d",
+			"%w: desired %d last pruned %d",
 			storageErrs.ErrBalancePruned,
+			index,
 			lastPruned.Int64(),
 		)
 	}
