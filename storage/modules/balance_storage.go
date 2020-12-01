@@ -22,7 +22,7 @@ import (
 	"math/big"
 	"sync"
 
-	"golang.org/x/sync/errgroup"
+	"github.com/neilotoole/errgroup"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
 	"github.com/coinbase/rosetta-sdk-go/parser"
@@ -194,7 +194,8 @@ func (b *BalanceStorage) AddingBlock(
 	var newAccounts int
 	var newAccountsLock sync.Mutex
 
-	g, gctx := errgroup.WithContext(ctx)
+	// Concurrent execution limited to runtime.NumCPU
+	g, gctx := errgroup.WithContextN(ctx, 0, 0)
 	for i := range changes {
 		// We need to set variable before calling goroutine
 		// to avoid getting an updated pointer as loop iteration
@@ -268,7 +269,8 @@ func (b *BalanceStorage) RemovingBlock(
 	staleAccounts := []*types.AccountCurrency{}
 	var staleAccountsMutex sync.Mutex
 
-	g, gctx := errgroup.WithContext(ctx)
+	// Concurrent execution limited to runtime.NumCPU
+	g, gctx := errgroup.WithContextN(ctx, 0, 0)
 	for i := range changes {
 		// We need to set variable before calling goroutine
 		// to avoid getting an updated pointer as loop iteration
