@@ -114,8 +114,8 @@ type BalanceStorageHandler interface {
 	BlockAdded(ctx context.Context, block *types.Block, changes []*parser.BalanceChange) error
 	BlockRemoved(ctx context.Context, block *types.Block, changes []*parser.BalanceChange) error
 
-	NewAccountsReconciled(ctx context.Context, dbTx database.Transaction, count int) error
-	NewAccountsSeen(ctx context.Context, dbTx database.Transaction, count int) error
+	AccountsReconciled(ctx context.Context, dbTx database.Transaction, count int) error
+	AccountsSeen(ctx context.Context, dbTx database.Transaction, count int) error
 }
 
 // BalanceStorageHelper functions are used by BalanceStorage to process balances. Defining an
@@ -133,8 +133,8 @@ type BalanceStorageHelper interface {
 	BalanceExemptions() []*types.BalanceExemption
 	Asserter() *asserter.Asserter
 
-	AccountsSeen(ctx context.Context, dbTx database.Transaction) (*big.Int, error)
 	AccountsReconciled(ctx context.Context, dbTx database.Transaction) (*big.Int, error)
+	AccountsSeen(ctx context.Context, dbTx database.Transaction) (*big.Int, error)
 }
 
 // BalanceStorage implements block specific storage methods
@@ -229,7 +229,7 @@ func (b *BalanceStorage) AddingBlock(
 
 	// Update accounts seen
 	if newAccounts > 0 {
-		if err := b.handler.NewAccountsSeen(ctx, transaction, newAccounts); err != nil {
+		if err := b.handler.AccountsSeen(ctx, transaction, newAccounts); err != nil {
 			return nil, err
 		}
 	}
@@ -242,7 +242,7 @@ func (b *BalanceStorage) AddingBlock(
 	b.pendingReconciliationMutex.Unlock()
 
 	if pending > 0 {
-		if err := b.handler.NewAccountsReconciled(ctx, transaction, pending); err != nil {
+		if err := b.handler.AccountsReconciled(ctx, transaction, pending); err != nil {
 			return nil, err
 		}
 	}
@@ -362,7 +362,7 @@ func (b *BalanceStorage) SetBalance(
 	}
 
 	// Mark as new account seen
-	if err := b.handler.NewAccountsSeen(ctx, dbTransaction, 1); err != nil {
+	if err := b.handler.AccountsSeen(ctx, dbTransaction, 1); err != nil {
 		return err
 	}
 
@@ -639,6 +639,12 @@ func (b *BalanceStorage) deleteAccountRecords(
 	account *types.AccountIdentifier,
 	currency *types.Currency,
 ) error {
+	// Determine if we should decrement the accounts
+	// seen counter
+	if err := b.handler.AccountsSeen(ctx, dbTx, -1); err != nil {
+		return err
+	}
+
 	for _, namespace := range []string{
 		accountNamespace,
 		reconciliationNamepace,
@@ -646,6 +652,22 @@ func (b *BalanceStorage) deleteAccountRecords(
 		balanceNamespace,
 	} {
 		key := GetAccountKey(namespace, account, currency)
+
+		// Determine if we should decrement the reconciled
+		// accounts counter
+		if namespace == reconciliationNamepace {
+			exists, _, err := dbTx.Get(ctx, key)
+			if err != nil {
+				return err
+			}
+
+			if exists {
+				if err := b.handler.AccountsReconciled(ctx, dbTx, -1); err != nil {
+					return err
+				}
+			}
+		}
+
 		if err := dbTx.Delete(ctx, key); err != nil {
 			return err
 		}
