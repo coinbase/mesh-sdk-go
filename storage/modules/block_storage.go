@@ -19,9 +19,10 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"runtime"
 	"strconv"
 
-	"golang.org/x/sync/errgroup"
+	"github.com/neilotoole/errgroup"
 
 	"github.com/coinbase/rosetta-sdk-go/storage/database"
 	"github.com/coinbase/rosetta-sdk-go/storage/encoder"
@@ -97,7 +98,8 @@ type BlockWorker interface {
 // BlockStorage implements block specific storage methods
 // on top of a database.Database and database.Transaction interface.
 type BlockStorage struct {
-	db database.Database
+	db     database.Database
+	numCPU int
 
 	workers []BlockWorker
 }
@@ -107,7 +109,8 @@ func NewBlockStorage(
 	db database.Database,
 ) *BlockStorage {
 	return &BlockStorage{
-		db: db,
+		db:     db,
+		numCPU: runtime.NumCPU(),
 	}
 }
 
@@ -606,7 +609,7 @@ func (b *BlockStorage) AddBlock(
 		return fmt.Errorf("%w: %v", storageErrs.ErrBlockStoreFailed, err)
 	}
 
-	g, gctx := errgroup.WithContext(ctx)
+	g, gctx := errgroup.WithContextN(ctx, b.numCPU, b.numCPU)
 	for i := range block.Transactions {
 		// We need to set variable before calling goroutine
 		// to avoid getting an updated pointer as loop iteration
@@ -689,7 +692,7 @@ func (b *BlockStorage) RemoveBlock(
 	}
 
 	// Remove all transaction hashes
-	g, gctx := errgroup.WithContext(ctx)
+	g, gctx := errgroup.WithContextN(ctx, b.numCPU, b.numCPU)
 	for i := range block.Transactions {
 		// We need to set variable before calling goroutine
 		// to avoid getting an updated pointer as loop iteration
