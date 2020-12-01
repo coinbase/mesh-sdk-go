@@ -1637,6 +1637,7 @@ func TestBlockSyncing(t *testing.T) {
 	})
 
 	t.Run("orphan block 2", func(t *testing.T) {
+		// TODO: decrement accounts seen
 		dbTx := database.Transaction(ctx)
 		commitWorker, err := storage.RemovingBlock(ctx, b2, dbTx)
 		assert.NoError(t, err)
@@ -1671,7 +1672,7 @@ func TestBlockSyncing(t *testing.T) {
 	})
 
 	t.Run("orphan block 1", func(t *testing.T) {
-		// TODO: decrement reconciled
+		// TODO: decrement reconciled + accounts seen
 		dbTx := database.Transaction(ctx)
 		commitWorker, err := storage.RemovingBlock(ctx, b1, dbTx)
 		assert.NoError(t, err)
