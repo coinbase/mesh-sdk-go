@@ -763,10 +763,6 @@ func (b *BalanceStorage) PruneBalances(
 	currency *types.Currency,
 	index int64,
 ) error {
-	if index < 0 {
-		return nil
-	}
-
 	key := GetAccountKey(pruneNamespace, account, currency)
 	dbTx := b.db.WriteTransaction(ctx, string(key), false)
 	defer dbTx.Discard(ctx)
@@ -1315,6 +1311,7 @@ func (b *BalanceStorage) removeHistoricalBalances(
 	}
 
 	for _, k := range foundKeys {
+		fmt.Println("deleting", string(k), "index", index)
 		if err := dbTx.Delete(ctx, k); err != nil {
 			return err
 		}
