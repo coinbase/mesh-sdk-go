@@ -405,6 +405,21 @@ func TestOperation(t *testing.T) {
 			construction: true,
 			err:          nil,
 		},
+		"valid construction operation (empty status)": {
+			operation: &types.Operation{
+				OperationIdentifier: &types.OperationIdentifier{
+					Index: int64(1),
+				},
+				Type:    "PAYMENT",
+				Status:  types.String(""),
+				Account: validAccount,
+				Amount:  validAmount,
+			},
+			index:        int64(1),
+			successful:   false,
+			construction: true,
+			err:          nil,
+		},
 		"invalid construction operation": {
 			operation: &types.Operation{
 				OperationIdentifier: &types.OperationIdentifier{
