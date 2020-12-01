@@ -344,19 +344,7 @@ func (b *BalanceStorage) SetBalance(
 	amount *types.Amount,
 	block *types.BlockIdentifier,
 ) error {
-	// Remove all historical records
-	if err := b.removeHistoricalBalances(
-		ctx,
-		dbTransaction,
-		account,
-		amount.Currency,
-		-1,
-		true, // We want everything >= -1
-	); err != nil {
-		return err
-	}
-
-	// Remove all account keys
+	// Remove all account-related items
 	if err := b.deleteAccountRecords(
 		ctx,
 		dbTransaction,
@@ -647,6 +635,19 @@ func (b *BalanceStorage) deleteAccountRecords(
 	account *types.AccountIdentifier,
 	currency *types.Currency,
 ) error {
+	// Remove historical balance records
+	if err := b.removeHistoricalBalances(
+		ctx,
+		dbTx,
+		account,
+		currency,
+		-1,
+		true, // We want everything >= -1
+	); err != nil {
+		return err
+	}
+
+	// Remove single key records
 	for _, namespace := range []string{
 		accountNamespace,
 		reconciliationNamepace,
@@ -940,8 +941,9 @@ func (b *BalanceStorage) GetBalanceTransactional(
 
 	if exists && lastPruned.Int64() >= index {
 		return nil, fmt.Errorf(
-			"%w: last pruned %d",
+			"%w: desired %d last pruned %d",
 			storageErrs.ErrBalancePruned,
+			index,
 			lastPruned.Int64(),
 		)
 	}
@@ -1315,7 +1317,9 @@ func (b *BalanceStorage) removeHistoricalBalances(
 		}
 	}
 
-	if orphan {
+	// We don't update the pruned value when index is less
+	// than 0 because big.Int conversion doesn't support signed values.
+	if orphan || index < 0 {
 		return nil
 	}
 

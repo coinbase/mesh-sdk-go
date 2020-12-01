@@ -187,6 +187,16 @@ func (c *CounterStorage) Get(ctx context.Context, counter string) (*big.Int, err
 	return value, err
 }
 
+// GetTransactional returns the current value of a counter in a database.Transaction.
+func (c *CounterStorage) GetTransactional(
+	ctx context.Context,
+	dbTx database.Transaction,
+	counter string,
+) (*big.Int, error) {
+	_, value, err := BigIntGet(ctx, getCounterKey(counter), dbTx)
+	return value, err
+}
+
 // AddingBlock is called by BlockStorage when adding a block.
 func (c *CounterStorage) AddingBlock(
 	ctx context.Context,

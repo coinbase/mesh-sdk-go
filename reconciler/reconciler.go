@@ -563,8 +563,6 @@ func (r *Reconciler) inactiveAccountQueue(
 		})
 	}
 
-	r.inactiveQueueMutex.Unlock()
-
 	return nil
 }
 
