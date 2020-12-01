@@ -233,8 +233,8 @@ func TestBalanceChanges(t *testing.T) {
 					},
 					Currency: currency,
 					Block: &types.BlockIdentifier{
-						Hash:  "0",
-						Index: 0,
+						Hash:  "1",
+						Index: 1,
 					},
 					Difference: "-250",
 				},
@@ -244,8 +244,8 @@ func TestBalanceChanges(t *testing.T) {
 					},
 					Currency: currency,
 					Block: &types.BlockIdentifier{
-						Hash:  "0",
-						Index: 0,
+						Hash:  "1",
+						Index: 1,
 					},
 					Difference: "-150",
 				},
