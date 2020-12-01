@@ -29,6 +29,10 @@ import (
 )
 
 const (
+	// shardBuffer is multiplied by inactive concurrency +
+	// active concurrency to determine how many shards should
+	// be created in the queueMap. The more shards created,
+	// the less lock contention we will encounter.
 	shardBuffer = 2
 )
 
