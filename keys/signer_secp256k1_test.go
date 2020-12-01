@@ -54,6 +54,7 @@ func TestSignSecp256k1(t *testing.T) {
 			true,
 			ErrSignUnsupportedSignatureType,
 		},
+		{mockPayload(hash("hello1234"), types.Schnorr1), types.Schnorr1, 64, false, nil},
 	}
 
 	for _, test := range payloadTests {
@@ -105,8 +106,14 @@ func TestVerifySecp256k1(t *testing.T) {
 		Bytes:             hash("hello"),
 		SignatureType:     types.EcdsaRecovery,
 	}
+	payloadSchnorr1 := &types.SigningPayload{
+		AccountIdentifier: &types.AccountIdentifier{Address: "test"},
+		Bytes:             hash("hello"),
+		SignatureType:     types.Schnorr1,
+	}
 	testSignatureEcdsa, _ := signerSecp256k1.Sign(payloadEcdsa, types.Ecdsa)
 	testSignatureEcdsaRecovery, _ := signerSecp256k1.Sign(payloadEcdsaRecovery, types.EcdsaRecovery)
+	testSignatureSchnorr1, _ := signerSecp256k1.Sign(payloadSchnorr1, types.Schnorr1)
 
 	simpleBytes := make([]byte, 33)
 	copy(simpleBytes, "hello")
@@ -119,6 +126,11 @@ func TestVerifySecp256k1(t *testing.T) {
 			simpleBytes), ErrVerifyUnsupportedSignatureType},
 		{mockSecpSignature(
 			types.Ecdsa,
+			signerSecp256k1.PublicKey(),
+			hash("hello"),
+			simpleBytes), ErrVerifyFailed},
+		{mockSecpSignature(
+			types.Schnorr1,
 			signerSecp256k1.PublicKey(),
 			hash("hello"),
 			simpleBytes), ErrVerifyFailed},
@@ -139,6 +151,12 @@ func TestVerifySecp256k1(t *testing.T) {
 		signerSecp256k1.PublicKey(),
 		hash("hello"),
 		testSignatureEcdsaRecovery.Bytes)
+	goodSchnorr1Signature := mockSecpSignature(
+		types.Schnorr1,
+		signerSecp256k1.PublicKey(),
+		hash("hello"),
+		testSignatureSchnorr1.Bytes)
 	assert.Equal(t, nil, signerSecp256k1.Verify(goodEcdsaSignature))
 	assert.Equal(t, nil, signerSecp256k1.Verify(goodEcdsaRecoverySignature))
+	assert.Equal(t, nil, signerSecp256k1.Verify(goodSchnorr1Signature))
 }
