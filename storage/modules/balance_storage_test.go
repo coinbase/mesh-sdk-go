@@ -723,7 +723,7 @@ func TestBalance(t *testing.T) {
 			ctx,
 			account,
 			largeDeduction.Currency,
-			-1,
+			-1238900,
 		)
 		assert.NoError(t, err)
 
