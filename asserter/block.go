@@ -143,7 +143,12 @@ func (a *Asserter) OperationStatus(status *string, construction bool) error {
 		return ErrAsserterNotInitialized
 	}
 
-	if status == nil {
+	// As of rosetta-specifications@v1.4.7, populating
+	// the Operation.Status field is deprecated for construction,
+	// however, many implementations may still do this. Therefore,
+	// we need to handle a populated but empty Operation.Status
+	// field gracefully.
+	if status == nil || len(*status) == 0 {
 		if construction {
 			return nil
 		}
@@ -153,10 +158,6 @@ func (a *Asserter) OperationStatus(status *string, construction bool) error {
 
 	if construction {
 		return ErrOperationStatusNotEmptyForConstruction
-	}
-
-	if len(*status) == 0 {
-		return ErrOperationStatusMissing
 	}
 
 	if _, ok := a.operationStatusMap[*status]; !ok {
