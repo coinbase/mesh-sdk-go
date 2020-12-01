@@ -1316,10 +1316,7 @@ func (b *BalanceStorage) removeHistoricalBalances(
 		}
 	}
 
-	// We only update the last pruned index
-	// if we are not orphaning and we actually
-	// deleted some key.
-	if orphan || len(foundKeys) == 0 {
+	if orphan {
 		return nil
 	}
 
