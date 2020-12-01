@@ -266,6 +266,7 @@ func TestBalance(t *testing.T) {
 
 	t.Run("Set and get balance", func(t *testing.T) {
 		txn := storage.db.Transaction(ctx)
+		mockHandler.On("AccountsSeen", ctx, txn, -1).Return(nil).Once()
 		mockHandler.On("AccountsSeen", ctx, txn, 1).Return(nil).Once()
 		err := storage.SetBalance(
 			ctx,
