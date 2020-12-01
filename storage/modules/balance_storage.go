@@ -416,7 +416,7 @@ func (b *BalanceStorage) Reconciled(
 	defer dbTx.Discard(ctx)
 
 	// Return nil if account record does not exist (could have
-	// occured during a reorg at tip
+	// occurred during a reorg at tip
 	acctKey := GetAccountKey(accountNamespace, account, currency)
 	acctExists, _, err := dbTx.Get(ctx, acctKey)
 	if err != nil {
