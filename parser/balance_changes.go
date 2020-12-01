@@ -99,7 +99,6 @@ func (p *Parser) BalanceChanges(
 					return nil, err
 				}
 				amountValue = negatedValue
-				blockIdentifier = block.ParentBlockIdentifier
 			}
 
 			// Merge values by account and currency
