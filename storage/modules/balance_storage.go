@@ -228,8 +228,10 @@ func (b *BalanceStorage) AddingBlock(
 	}
 
 	// Update accounts seen
-	if err := b.handler.NewAccountsSeen(ctx, transaction, newAccounts); err != nil {
-		return nil, err
+	if newAccounts > 0 {
+		if err := b.handler.NewAccountsSeen(ctx, transaction, newAccounts); err != nil {
+			return nil, err
+		}
 	}
 
 	// Update accounts reconciled
@@ -238,8 +240,11 @@ func (b *BalanceStorage) AddingBlock(
 	pending = b.pendingReconciliations
 	b.pendingReconciliations = 0
 	b.pendingReconciliationMutex.Unlock()
-	if err := b.handler.NewAccountsReconciled(ctx, transaction, pending); err != nil {
-		return nil, err
+
+	if pending > 0 {
+		if err := b.handler.NewAccountsReconciled(ctx, transaction, pending); err != nil {
+			return nil, err
+		}
 	}
 
 	return func(ctx context.Context) error {

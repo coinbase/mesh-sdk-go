@@ -1560,6 +1560,7 @@ func TestBlockSyncing(t *testing.T) {
 			&types.Amount{Value: "1", Currency: curr},
 			nil,
 		).Once()
+		mockHandler.On("NewAccountsSeen", ctx, dbTx, 1).Return(nil).Once()
 		_, err = storage.AddingBlock(ctx, b1, dbTx)
 		assert.NoError(t, err)
 		assert.NoError(t, dbTx.Commit(ctx))
@@ -1582,6 +1583,10 @@ func TestBlockSyncing(t *testing.T) {
 	})
 
 	t.Run("add block 2", func(t *testing.T) {
+		// Reconcile a previously seen account
+		err := storage.Reconciled(ctx, addr1, curr, b1.BlockIdentifier)
+		assert.NoError(t, err)
+
 		dbTx := database.Transaction(ctx)
 		mockHelper.On(
 			"AccountBalance",
@@ -1593,6 +1598,8 @@ func TestBlockSyncing(t *testing.T) {
 			&types.Amount{Value: "0", Currency: curr},
 			nil,
 		).Once()
+		mockHandler.On("NewAccountsSeen", ctx, dbTx, 1).Return(nil).Once()
+		mockHandler.On("NewAccountsReconciled", ctx, dbTx, 1).Return(nil).Once()
 		_, err = storage.AddingBlock(ctx, b2, dbTx)
 		assert.NoError(t, err)
 		assert.NoError(t, dbTx.Commit(ctx))
