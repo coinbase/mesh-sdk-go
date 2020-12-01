@@ -705,6 +705,7 @@ func (b *BalanceStorage) OrphanBalance(
 	if !ok {
 		return false, storageErrs.ErrInvalidChangeValue
 	}
+
 	newBalance := new(big.Int).Add(lastBalance, difference)
 	if err := dbTransaction.Set(ctx, key, newBalance.Bytes(), true); err != nil {
 		return false, err
