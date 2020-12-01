@@ -266,8 +266,13 @@ func TestBalance(t *testing.T) {
 
 	t.Run("Set and get balance", func(t *testing.T) {
 		txn := storage.db.Transaction(ctx)
+
+		// When deleting records, we decrement the account seen count.
 		mockHandler.On("AccountsSeen", ctx, txn, -1).Return(nil).Once()
+
+		// When adding the account, we increment the account seen count.
 		mockHandler.On("AccountsSeen", ctx, txn, 1).Return(nil).Once()
+
 		err := storage.SetBalance(
 			ctx,
 			txn,
