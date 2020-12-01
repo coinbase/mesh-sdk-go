@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"log"
 	"math/big"
+	"runtime"
 	"sync"
 
 	"github.com/neilotoole/errgroup"
@@ -143,6 +144,7 @@ type BalanceStorage struct {
 	db      database.Database
 	helper  BalanceStorageHelper
 	handler BalanceStorageHandler
+	numCPU  int
 
 	// To scale up write concurrency on reconciliation,
 	// we don't update the global reconciliation counter
@@ -159,6 +161,7 @@ func NewBalanceStorage(
 ) *BalanceStorage {
 	return &BalanceStorage{
 		db:                         db,
+		numCPU:                     runtime.NumCPU(),
 		pendingReconciliationMutex: new(utils.PriorityMutex),
 	}
 }
@@ -195,7 +198,7 @@ func (b *BalanceStorage) AddingBlock(
 	var newAccountsLock sync.Mutex
 
 	// Concurrent execution limited to runtime.NumCPU
-	g, gctx := errgroup.WithContextN(ctx, 0, 0)
+	g, gctx := errgroup.WithContextN(ctx, b.numCPU, b.numCPU)
 	for i := range changes {
 		// We need to set variable before calling goroutine
 		// to avoid getting an updated pointer as loop iteration
@@ -270,7 +273,7 @@ func (b *BalanceStorage) RemovingBlock(
 	var staleAccountsMutex sync.Mutex
 
 	// Concurrent execution limited to runtime.NumCPU
-	g, gctx := errgroup.WithContextN(ctx, 0, 0)
+	g, gctx := errgroup.WithContextN(ctx, b.numCPU, b.numCPU)
 	for i := range changes {
 		// We need to set variable before calling goroutine
 		// to avoid getting an updated pointer as loop iteration
