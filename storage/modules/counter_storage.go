@@ -21,6 +21,7 @@ import (
 
 	"github.com/coinbase/rosetta-sdk-go/storage/database"
 	"github.com/coinbase/rosetta-sdk-go/types"
+	"github.com/coinbase/rosetta-sdk-go/utils"
 )
 
 const (
@@ -75,6 +76,12 @@ const (
 	// or the block where an account was updated has been orphaned.
 	SkippedReconciliationsCounter = "skipped_reconciliations"
 
+	// SeenAccounts is the total number of accounts seen.
+	SeenAccounts = "seen_accounts"
+
+	// ReconciledAccounts is the total number of accounts seen.
+	ReconciledAccounts = "reconciled_accounts"
+
 	// counterNamespace is preprended to any counter.
 	counterNamespace = "counter"
 )
@@ -85,6 +92,8 @@ var _ BlockWorker = (*CounterStorage)(nil)
 // on top of a database.Database and database.Transaction interface.
 type CounterStorage struct {
 	db database.Database
+
+	m *utils.MutexMap
 }
 
 // NewCounterStorage returns a new CounterStorage.
@@ -93,6 +102,7 @@ func NewCounterStorage(
 ) *CounterStorage {
 	return &CounterStorage{
 		db: db,
+		m:  utils.NewMutexMap(utils.DefaultShards),
 	}
 }
 
@@ -100,21 +110,21 @@ func getCounterKey(counter string) []byte {
 	return []byte(fmt.Sprintf("%s/%s", counterNamespace, counter))
 }
 
-func transactionalGet(
+func BigIntGet(
 	ctx context.Context,
-	counter string,
+	key []byte,
 	txn database.Transaction,
-) (*big.Int, error) {
-	exists, val, err := txn.Get(ctx, getCounterKey(counter))
+) (bool, *big.Int, error) {
+	exists, val, err := txn.Get(ctx, key)
 	if err != nil {
-		return nil, err
+		return false, nil, err
 	}
 
 	if !exists {
-		return big.NewInt(0), nil
+		return false, big.NewInt(0), nil
 	}
 
-	return new(big.Int).SetBytes(val), nil
+	return true, new(big.Int).SetBytes(val), nil
 }
 
 // UpdateTransactional updates the value of a counter by amount and returns the new
@@ -125,7 +135,13 @@ func (c *CounterStorage) UpdateTransactional(
 	counter string,
 	amount *big.Int,
 ) (*big.Int, error) {
-	val, err := transactionalGet(ctx, counter, dbTx)
+	// Ensure that same counter is not incremented
+	// concurrently. This is necessary because we concurrently
+	// store account balances.
+	c.m.Lock(counter, false)
+	defer c.m.Unlock(counter)
+
+	_, val, err := BigIntGet(ctx, getCounterKey(counter), dbTx)
 	if err != nil {
 		return nil, err
 	}
@@ -165,7 +181,8 @@ func (c *CounterStorage) Get(ctx context.Context, counter string) (*big.Int, err
 	transaction := c.db.ReadTransaction(ctx)
 	defer transaction.Discard(ctx)
 
-	return transactionalGet(ctx, counter, transaction)
+	_, value, err := BigIntGet(ctx, getCounterKey(counter), transaction)
+	return value, err
 }
 
 // AddingBlock is called by BlockStorage when adding a block.
