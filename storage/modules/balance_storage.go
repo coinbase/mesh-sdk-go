@@ -1317,7 +1317,9 @@ func (b *BalanceStorage) removeHistoricalBalances(
 		}
 	}
 
-	if orphan {
+	// We don't update the pruned value when index is less
+	// than 0 because big.Int conversion doesn't support signed values.
+	if orphan || index < 0 {
 		return nil
 	}
 
