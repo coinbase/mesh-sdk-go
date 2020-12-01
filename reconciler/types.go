@@ -254,7 +254,7 @@ type Reconciler struct {
 
 	// inactiveQueueMutex needed because we can't peek at the tip
 	// of a channel to determine when it is ready to look at.
-	inactiveQueueMutex sync.Mutex
+	inactiveQueueMutex *utils.PriorityMutex
 
 	// lastIndexChecked is the last block index reconciled actively.
 	lastIndexMutex   sync.Mutex
@@ -264,6 +264,7 @@ type Reconciler struct {
 	// in the active reconciliation queue and being actively
 	// reconciled. It ensures we don't accidentally attempt to prune
 	// computed balances being used by other goroutines.
-	queueMap      map[string]*utils.BST
-	queueMapMutex sync.Mutex
+	queueMap *utils.ShardedMap
+	// queueMap      map[string]*utils.BST
+	// queueMapMutex sync.Mutex
 }
