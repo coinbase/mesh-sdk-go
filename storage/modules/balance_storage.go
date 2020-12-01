@@ -344,19 +344,7 @@ func (b *BalanceStorage) SetBalance(
 	amount *types.Amount,
 	block *types.BlockIdentifier,
 ) error {
-	// Remove all historical records
-	if err := b.removeHistoricalBalances(
-		ctx,
-		dbTransaction,
-		account,
-		amount.Currency,
-		-1,
-		true, // We want everything >= -1
-	); err != nil {
-		return err
-	}
-
-	// Remove all account keys
+	// Remove all account-related items
 	if err := b.deleteAccountRecords(
 		ctx,
 		dbTransaction,
@@ -647,6 +635,19 @@ func (b *BalanceStorage) deleteAccountRecords(
 	account *types.AccountIdentifier,
 	currency *types.Currency,
 ) error {
+	// Remove historical balance records
+	if err := b.removeHistoricalBalances(
+		ctx,
+		dbTx,
+		account,
+		currency,
+		-1,
+		true, // We want everything >= -1
+	); err != nil {
+		return err
+	}
+
+	// Remove single key records
 	for _, namespace := range []string{
 		accountNamespace,
 		reconciliationNamepace,
