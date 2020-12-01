@@ -633,6 +633,9 @@ func (b *BalanceStorage) applyExemptions(
 // all traces of an account. This method should be called
 // within a global write transaction as it could contend with
 // other database.Transactions.
+//
+// WARNING: DO NOT RUN THIS CONCURRENTLY! IT CAN LEAD TO COUNTER
+// CORRUPTION!
 func (b *BalanceStorage) deleteAccountRecords(
 	ctx context.Context,
 	dbTx database.Transaction,
