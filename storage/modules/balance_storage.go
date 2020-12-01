@@ -1311,7 +1311,6 @@ func (b *BalanceStorage) removeHistoricalBalances(
 	}
 
 	for _, k := range foundKeys {
-		fmt.Println("deleting", string(k), "index", index)
 		if err := dbTx.Delete(ctx, k); err != nil {
 			return err
 		}
