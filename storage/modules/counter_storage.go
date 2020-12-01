@@ -163,7 +163,7 @@ func (c *CounterStorage) Update(
 	counter string,
 	amount *big.Int,
 ) (*big.Int, error) {
-	dbTx := c.db.Transaction(ctx)
+	dbTx := c.db.WriteTransaction(ctx, counter, false)
 	defer dbTx.Discard(ctx)
 
 	newVal, err := c.UpdateTransactional(ctx, dbTx, counter, amount)
