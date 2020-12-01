@@ -1638,9 +1638,11 @@ func TestBlockSyncing(t *testing.T) {
 
 	t.Run("orphan block 2", func(t *testing.T) {
 		dbTx := database.Transaction(ctx)
-		_, err = storage.RemovingBlock(ctx, b2, dbTx)
+		commitWorker, err := storage.RemovingBlock(ctx, b2, dbTx)
 		assert.NoError(t, err)
 		assert.NoError(t, dbTx.Commit(ctx))
+		mockHandler.On("BlockRemoved", ctx, b2, mock.Anything).Return(nil).Once()
+		assert.NoError(t, commitWorker(ctx))
 
 		amount, err := storage.GetBalance(ctx, addr1, curr, b0.BlockIdentifier.Index)
 		assert.NoError(t, err)
@@ -1669,10 +1671,13 @@ func TestBlockSyncing(t *testing.T) {
 	})
 
 	t.Run("orphan block 1", func(t *testing.T) {
+		// TODO: decrement reconciled
 		dbTx := database.Transaction(ctx)
-		_, err = storage.RemovingBlock(ctx, b1, dbTx)
+		commitWorker, err := storage.RemovingBlock(ctx, b1, dbTx)
 		assert.NoError(t, err)
 		assert.NoError(t, dbTx.Commit(ctx))
+		mockHandler.On("BlockRemoved", ctx, b1, mock.Anything).Return(nil).Once()
+		assert.NoError(t, commitWorker(ctx))
 
 		amount, err := storage.GetBalance(ctx, addr1, curr, b0.BlockIdentifier.Index)
 		assert.True(t, errors.Is(err, storageErrs.ErrAccountMissing))
@@ -1706,6 +1711,7 @@ func TestBlockSyncing(t *testing.T) {
 			&types.Amount{Value: "1", Currency: curr},
 			nil,
 		).Once()
+		mockHandler.On("NewAccountsSeen", ctx, dbTx, 1).Return(nil).Once()
 		_, err = storage.AddingBlock(ctx, b1, dbTx)
 		assert.NoError(t, err)
 		assert.NoError(t, dbTx.Commit(ctx))
@@ -1748,6 +1754,7 @@ func TestBlockSyncing(t *testing.T) {
 			&types.Amount{Value: "0", Currency: curr},
 			nil,
 		).Once()
+		mockHandler.On("NewAccountsSeen", ctx, dbTx, 1).Return(nil).Once()
 		_, err = storage.AddingBlock(ctx, b2a, dbTx)
 		assert.NoError(t, err)
 		assert.NoError(t, dbTx.Commit(ctx))
