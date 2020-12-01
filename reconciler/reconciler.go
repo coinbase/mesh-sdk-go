@@ -28,14 +28,6 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/utils"
 )
 
-const (
-	// shardBuffer is multiplied by inactive concurrency +
-	// active concurrency to determine how many shards should
-	// be created in the queueMap. The more shards created,
-	// the less lock contention we will encounter.
-	shardBuffer = 2
-)
-
 // New creates a new Reconciler.
 func New(
 	helper Helper,
@@ -56,6 +48,7 @@ func New(
 		inactiveQueueMutex:  new(utils.PriorityMutex),
 		backlogSize:         defaultBacklogSize,
 		lastIndexChecked:    -1,
+		processQueue:        make(chan *blockRequest, processQueueBacklog),
 	}
 
 	for _, opt := range options {
@@ -142,6 +135,42 @@ func (r *Reconciler) addToQueueMap(
 // QueueChanges enqueues a slice of *BalanceChanges
 // for reconciliation.
 func (r *Reconciler) QueueChanges(
+	ctx context.Context,
+	block *types.BlockIdentifier,
+	balanceChanges []*parser.BalanceChange,
+) error {
+	// If the processQueue fills up, we block
+	// until some items are dequeued.
+	select {
+	case r.processQueue <- &blockRequest{
+		Block:   block,
+		Changes: balanceChanges,
+	}:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+// queueWorker processes items from the processQueue.
+func (r *Reconciler) queueWorker(ctx context.Context) error {
+	for {
+		select {
+		case req := <-r.processQueue:
+			if err := r.queueChanges(ctx, req.Block, req.Changes); err != nil {
+				return err
+			}
+		case <-ctx.Done():
+			// We return nil here instead of ctx.Err because
+			// we don't want to swallow any errors returned by the
+			// reconciliation threads.
+			return nil
+		}
+	}
+}
+
+// queueChanges processes a block for reconciliation.
+func (r *Reconciler) queueChanges(
 	ctx context.Context,
 	block *types.BlockIdentifier,
 	balanceChanges []*parser.BalanceChange,
@@ -916,6 +945,10 @@ func (r *Reconciler) reconcileInactiveAccounts( // nolint:gocognit
 // If any goroutine errors, the function will return an error.
 func (r *Reconciler) Reconcile(ctx context.Context) error {
 	g, ctx := errgroup.WithContext(ctx)
+	g.Go(func() error {
+		return r.queueWorker(ctx)
+	})
+
 	for j := 0; j < r.ActiveConcurrency; j++ {
 		g.Go(func() error {
 			return r.reconcileActiveAccounts(ctx)

@@ -1100,7 +1100,8 @@ func TestReconcile_HighWaterMark(t *testing.T) {
 		},
 	})
 	assert.NoError(t, err)
-	assert.Equal(t, r.QueueSize(), 4) // includes interesting accounts
+	assert.Equal(t, 2, len(r.processQueue))
+	assert.Equal(t, 0, r.QueueSize()) // queue size is 0 before starting worker
 
 	go func() {
 		err := r.Reconcile(ctx)
@@ -1109,6 +1110,9 @@ func TestReconcile_HighWaterMark(t *testing.T) {
 
 	time.Sleep(1 * time.Second)
 	cancel()
+
+	assert.Equal(t, 0, len(r.processQueue))
+	assert.Equal(t, 0, r.QueueSize())
 
 	mockHelper.AssertExpectations(t)
 	mockHandler.AssertExpectations(t)
@@ -1270,7 +1274,8 @@ func TestReconcile_FailureOnlyActive(t *testing.T) {
 				},
 			})
 			assert.NoError(t, err)
-			assert.Equal(t, r.QueueSize(), 1)
+			assert.Equal(t, 1, len(r.processQueue))
+			assert.Equal(t, 0, r.QueueSize()) // queue size is 0 before starting worker
 
 			go func() {
 				err := r.Reconcile(ctx)
@@ -1279,6 +1284,8 @@ func TestReconcile_FailureOnlyActive(t *testing.T) {
 			}()
 
 			time.Sleep(1 * time.Second)
+			assert.Equal(t, 0, len(r.processQueue))
+			assert.Equal(t, 0, r.QueueSize())
 
 			mockHelper.AssertExpectations(t)
 			mockHandler.AssertExpectations(t)
@@ -2215,7 +2222,8 @@ func TestReconcile_EnqueueCancel(t *testing.T) {
 		change,
 	})
 	assert.NoError(t, err)
-	assert.Equal(t, r.QueueSize(), 1)
+	assert.Equal(t, 1, len(r.processQueue))
+	assert.Equal(t, 0, r.QueueSize()) // queue size is 0 before starting worker
 
 	go func() {
 		err := r.Reconcile(ctx)
