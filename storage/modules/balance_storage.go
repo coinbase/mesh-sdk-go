@@ -642,12 +642,6 @@ func (b *BalanceStorage) deleteAccountRecords(
 	account *types.AccountIdentifier,
 	currency *types.Currency,
 ) error {
-	// Determine if we should decrement the accounts
-	// seen counter
-	if err := b.handler.AccountsSeen(ctx, dbTx, -1); err != nil {
-		return err
-	}
-
 	for _, namespace := range []string{
 		accountNamespace,
 		reconciliationNamepace,
@@ -655,6 +649,21 @@ func (b *BalanceStorage) deleteAccountRecords(
 		balanceNamespace,
 	} {
 		key := GetAccountKey(namespace, account, currency)
+
+		// Determine if we should decrement the accounts
+		// seen counter
+		if namespace == accountNamespace {
+			exists, _, err := dbTx.Get(ctx, key)
+			if err != nil {
+				return err
+			}
+
+			if exists {
+				if err := b.handler.AccountsSeen(ctx, dbTx, -1); err != nil {
+					return err
+				}
+			}
+		}
 
 		// Determine if we should decrement the reconciled
 		// accounts counter
