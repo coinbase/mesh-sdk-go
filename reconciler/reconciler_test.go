@@ -2123,8 +2123,6 @@ func TestReconcile_FailureOnlyInactive(t *testing.T) {
 				opts...,
 			)
 			ctx := context.Background()
-			ctx, cancel := context.WithCancel(ctx)
-
 			mtxn := &mockDatabase.Transaction{}
 			mtxn.On("Discard", mock.Anything).Once()
 			mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn).Once()
@@ -2133,10 +2131,6 @@ func TestReconcile_FailureOnlyInactive(t *testing.T) {
 			mtxn2.On(
 				"Discard",
 				mock.Anything,
-			).Run(
-				func(args mock.Arguments) {
-					cancel()
-				},
 			).Once()
 			mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn2).Once()
 			mockReconcilerCalls(

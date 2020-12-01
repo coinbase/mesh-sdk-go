@@ -110,6 +110,8 @@ func getCounterKey(counter string) []byte {
 	return []byte(fmt.Sprintf("%s/%s", counterNamespace, counter))
 }
 
+// BigIntGet attempts to fetch a *big.Int
+// from a given key in a database.Transaction.
 func BigIntGet(
 	ctx context.Context,
 	key []byte,
