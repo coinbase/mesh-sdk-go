@@ -161,10 +161,7 @@ func (r *Reconciler) queueWorker(ctx context.Context) error {
 				return err
 			}
 		case <-ctx.Done():
-			// We return nil here instead of ctx.Err because
-			// we don't want to swallow any errors returned by the
-			// reconciliation threads.
-			return nil
+			return ctx.Err()
 		}
 	}
 }
@@ -806,11 +803,7 @@ func (r *Reconciler) shouldAttemptInactiveReconciliation(
 func (r *Reconciler) reconcileInactiveAccounts( // nolint:gocognit
 	ctx context.Context,
 ) error {
-	for {
-		if ctx.Err() != nil {
-			return ctx.Err()
-		}
-
+	for ctx.Err() == nil {
 		r.inactiveQueueMutex.Lock(false)
 		queueLen := len(r.inactiveQueue)
 		if queueLen == 0 {
@@ -939,6 +932,8 @@ func (r *Reconciler) reconcileInactiveAccounts( // nolint:gocognit
 			time.Sleep(inactiveReconciliationSleep)
 		}
 	}
+
+	return ctx.Err()
 }
 
 // Reconcile starts the active and inactive Reconciler goroutines.
