@@ -108,6 +108,16 @@ const (
 	// change that we consider safe to prune. We are very conservative
 	// here to prevent removing balances we may need in a reorg.
 	safeBalancePruneDepth = int64(500) // nolint:gomnd
+
+	// shardBuffer is multiplied by inactive concurrency +
+	// active concurrency to determine how many shards should
+	// be created in the queueMap. The more shards created,
+	// the less lock contention we will encounter.
+	shardBuffer = 2
+
+	// processQueueBacklog is the maximum number of blocks
+	// we can get behind the syncing loop without blocking.
+	processQueueBacklog = 1000
 )
 
 // Helper functions are used by Reconciler to compare
@@ -211,6 +221,13 @@ type InactiveEntry struct {
 	LastCheck *types.BlockIdentifier
 }
 
+// blockRequest is used to enqueue processed
+// blocks for reconciliation.
+type blockRequest struct {
+	Block   *types.BlockIdentifier
+	Changes []*parser.BalanceChange
+}
+
 // Reconciler contains all logic to reconcile balances of
 // types.AccountIdentifiers returned in types.Operations
 // by a Rosetta Server.
@@ -254,7 +271,7 @@ type Reconciler struct {
 
 	// inactiveQueueMutex needed because we can't peek at the tip
 	// of a channel to determine when it is ready to look at.
-	inactiveQueueMutex sync.Mutex
+	inactiveQueueMutex *utils.PriorityMutex
 
 	// lastIndexChecked is the last block index reconciled actively.
 	lastIndexMutex   sync.Mutex
@@ -264,6 +281,11 @@ type Reconciler struct {
 	// in the active reconciliation queue and being actively
 	// reconciled. It ensures we don't accidentally attempt to prune
 	// computed balances being used by other goroutines.
-	queueMap      map[string]*utils.BST
-	queueMapMutex sync.Mutex
+	queueMap *utils.ShardedMap
+
+	// processQueue is a buffered channel of recently processed
+	// blocks that must be parsed for reconciliation. We enqueue
+	// blocks asynchronously so that we don't slow down the sync
+	// loop.
+	processQueue chan *blockRequest
 }

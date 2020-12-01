@@ -18,9 +18,10 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"runtime"
 	"strings"
 
-	"golang.org/x/sync/errgroup"
+	"github.com/neilotoole/errgroup"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
 	"github.com/coinbase/rosetta-sdk-go/storage/database"
@@ -39,7 +40,8 @@ var _ BlockWorker = (*CoinStorage)(nil)
 // CoinStorage implements storage methods for storing
 // UTXOs.
 type CoinStorage struct {
-	db database.Database
+	db     database.Database
+	numCPU int
 
 	helper   CoinStorageHelper
 	asserter *asserter.Asserter
@@ -65,6 +67,7 @@ func NewCoinStorage(
 ) *CoinStorage {
 	return &CoinStorage{
 		db:       db,
+		numCPU:   runtime.NumCPU(),
 		helper:   helper,
 		asserter: asserter,
 	}
@@ -295,7 +298,7 @@ func (c *CoinStorage) updateCoins( // nolint:gocognit
 		}
 	}
 
-	g, gctx := errgroup.WithContext(ctx)
+	g, gctx := errgroup.WithContextN(ctx, c.numCPU, c.numCPU)
 	for identifier, val := range addCoins {
 		if _, ok := removeCoins[identifier]; ok {
 			continue
