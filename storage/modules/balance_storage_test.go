@@ -1347,10 +1347,25 @@ func TestBalanceReconciliation(t *testing.T) {
 		assert.NoError(t, err)
 		assert.NoError(t, txn.Commit(ctx))
 
-		// TODO: test estimated
 		coverage, err := storage.ReconciliationCoverage(ctx, 1)
 		assert.NoError(t, err)
 		assert.Equal(t, float64(1)/float64(3), coverage)
+	})
+
+	t.Run("test estimated no reconciliations", func(t *testing.T) {
+		mockHelper.On("AccountsReconciled", ctx, mock.Anything).Return(big.NewInt(0), nil).Once()
+		mockHelper.On("AccountsSeen", ctx, mock.Anything).Return(big.NewInt(0), nil).Once()
+		coverage, err := storage.EstimatedReconciliationCoverage(ctx)
+		assert.Equal(t, float64(0), coverage)
+		assert.NoError(t, err)
+	})
+
+	t.Run("test estimated some reconciliations", func(t *testing.T) {
+		mockHelper.On("AccountsReconciled", ctx, mock.Anything).Return(big.NewInt(1), nil).Once()
+		mockHelper.On("AccountsSeen", ctx, mock.Anything).Return(big.NewInt(2), nil).Once()
+		coverage, err := storage.EstimatedReconciliationCoverage(ctx)
+		assert.Equal(t, float64(0.5), coverage)
+		assert.NoError(t, err)
 	})
 
 	mockHelper.AssertExpectations(t)
