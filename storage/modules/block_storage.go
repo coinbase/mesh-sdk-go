@@ -879,25 +879,6 @@ func (b *BlockStorage) CreateBlockCache(ctx context.Context, blocks int) []*type
 	return cache
 }
 
-func (b *BlockStorage) updateTransaction(
-	ctx context.Context,
-	dbTx database.Transaction,
-	hashKey []byte,
-	namespace string,
-	blockTransaction *blockTransaction,
-) error {
-	encodedResult, err := b.db.Encoder().Encode(namespace, blockTransaction)
-	if err != nil {
-		return fmt.Errorf("%w: %v", storageErrs.ErrTransactionDataEncodeFailed, err)
-	}
-
-	if err := dbTx.Set(ctx, hashKey, encodedResult, true); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func (b *BlockStorage) storeTransaction(
 	ctx context.Context,
 	transaction database.Transaction,
@@ -905,15 +886,17 @@ func (b *BlockStorage) storeTransaction(
 	tx *types.Transaction,
 ) error {
 	namespace, hashKey := getTransactionHashKey(tx.TransactionIdentifier, blockIdentifier)
-
-	// We check for duplicates before storing transaction,
-	// so this must be a new key.
 	bt := &blockTransaction{
 		Transaction: tx,
 		BlockIndex:  blockIdentifier.Index,
 	}
 
-	return b.updateTransaction(ctx, transaction, hashKey, namespace, bt)
+	encodedResult, err := b.db.Encoder().Encode(namespace, bt)
+	if err != nil {
+		return fmt.Errorf("%w: %v", storageErrs.ErrTransactionDataEncodeFailed, err)
+	}
+
+	return storeUniqueKey(ctx, transaction, hashKey, encodedResult, true)
 }
 
 func (b *BlockStorage) pruneTransaction(
@@ -927,7 +910,12 @@ func (b *BlockStorage) pruneTransaction(
 		BlockIndex: blockIdentifier.Index,
 	}
 
-	return b.updateTransaction(ctx, transaction, hashKey, namespace, bt)
+	encodedResult, err := b.db.Encoder().Encode(namespace, bt)
+	if err != nil {
+		return fmt.Errorf("%w: %v", storageErrs.ErrTransactionDataEncodeFailed, err)
+	}
+
+	return transaction.Set(ctx, hashKey, encodedResult, true)
 }
 
 func (b *BlockStorage) removeTransaction(
@@ -937,6 +925,7 @@ func (b *BlockStorage) removeTransaction(
 	transactionIdentifier *types.TransactionIdentifier,
 ) error {
 	_, hashKey := getTransactionHashKey(transactionIdentifier, blockIdentifier)
+
 	return transaction.Delete(ctx, hashKey)
 }
 
