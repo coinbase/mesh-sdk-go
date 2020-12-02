@@ -78,9 +78,9 @@ func getBlockIndexKey(index int64) []byte {
 	return []byte(fmt.Sprintf("%s/%d", blockIndexNamespace, index))
 }
 
-func getTransactionHashKey(
-	transactionIdentifier *types.TransactionIdentifier,
+func getTransactionKey(
 	blockIdentifier *types.BlockIdentifier,
+	transactionIdentifier *types.TransactionIdentifier,
 ) (string, []byte) {
 	return transactionNamespace, []byte(
 		fmt.Sprintf(
@@ -92,7 +92,9 @@ func getTransactionHashKey(
 	)
 }
 
-func getTransactionHashPrefix(transactionIdentifier *types.TransactionIdentifier) []byte {
+func getTransactionPrefix(
+	transactionIdentifier *types.TransactionIdentifier,
+) []byte {
 	return []byte(
 		fmt.Sprintf(
 			"%s/%s/",
@@ -885,7 +887,7 @@ func (b *BlockStorage) storeTransaction(
 	blockIdentifier *types.BlockIdentifier,
 	tx *types.Transaction,
 ) error {
-	namespace, hashKey := getTransactionHashKey(tx.TransactionIdentifier, blockIdentifier)
+	namespace, hashKey := getTransactionKey(blockIdentifier, tx.TransactionIdentifier)
 	bt := &blockTransaction{
 		Transaction: tx,
 		BlockIndex:  blockIdentifier.Index,
@@ -905,7 +907,7 @@ func (b *BlockStorage) pruneTransaction(
 	blockIdentifier *types.BlockIdentifier,
 	txIdentifier *types.TransactionIdentifier,
 ) error {
-	namespace, hashKey := getTransactionHashKey(txIdentifier, blockIdentifier)
+	namespace, hashKey := getTransactionKey(blockIdentifier, txIdentifier)
 	bt := &blockTransaction{
 		BlockIndex: blockIdentifier.Index,
 	}
@@ -924,7 +926,7 @@ func (b *BlockStorage) removeTransaction(
 	blockIdentifier *types.BlockIdentifier,
 	transactionIdentifier *types.TransactionIdentifier,
 ) error {
-	_, hashKey := getTransactionHashKey(transactionIdentifier, blockIdentifier)
+	_, hashKey := getTransactionKey(blockIdentifier, transactionIdentifier)
 
 	return transaction.Delete(ctx, hashKey)
 }
@@ -937,8 +939,8 @@ func (b *BlockStorage) getAllTransactionsByIdentifier(
 	blockTransactions := []*types.BlockTransaction{}
 	_, err := txn.Scan(
 		ctx,
-		getTransactionHashPrefix(transactionIdentifier),
-		getTransactionHashPrefix(transactionIdentifier),
+		getTransactionPrefix(transactionIdentifier),
+		getTransactionPrefix(transactionIdentifier),
 		func(k []byte, v []byte) error {
 			// Decode blockTransaction
 			var bt blockTransaction
@@ -1017,7 +1019,7 @@ func (b *BlockStorage) findBlockTransaction(
 		return nil, storageErrs.ErrCannotAccessPrunedData
 	}
 
-	namespace, key := getTransactionHashKey(transactionIdentifier, blockIdentifier)
+	namespace, key := getTransactionKey(blockIdentifier, transactionIdentifier)
 	txExists, tx, err := txn.Get(ctx, key)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", storageErrs.ErrTransactionDBQueryFailed, err)
