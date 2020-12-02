@@ -960,7 +960,7 @@ func (b *BlockStorage) getAllTransactionsByIdentifier(
 			return nil
 		},
 		false,
-		true,
+		false,
 	)
 	if err != nil {
 		return nil, err
