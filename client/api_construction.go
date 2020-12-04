@@ -103,7 +103,8 @@ func (a *ConstructionAPIService) ConstructionCombine(
 		return nil, &v, fmt.Errorf("%+v", v)
 	case _nethttp.StatusBadGateway,
 		_nethttp.StatusServiceUnavailable,
-		_nethttp.StatusGatewayTimeout:
+		_nethttp.StatusGatewayTimeout,
+		_nethttp.StatusRequestTimeout:
 		return nil, nil, fmt.Errorf(
 			"%w: code: %d body: %s",
 			ErrRetriable,
@@ -188,7 +189,8 @@ func (a *ConstructionAPIService) ConstructionDerive(
 		return nil, &v, fmt.Errorf("%+v", v)
 	case _nethttp.StatusBadGateway,
 		_nethttp.StatusServiceUnavailable,
-		_nethttp.StatusGatewayTimeout:
+		_nethttp.StatusGatewayTimeout,
+		_nethttp.StatusRequestTimeout:
 		return nil, nil, fmt.Errorf(
 			"%w: code: %d body: %s",
 			ErrRetriable,
@@ -273,7 +275,8 @@ func (a *ConstructionAPIService) ConstructionHash(
 		return nil, &v, fmt.Errorf("%+v", v)
 	case _nethttp.StatusBadGateway,
 		_nethttp.StatusServiceUnavailable,
-		_nethttp.StatusGatewayTimeout:
+		_nethttp.StatusGatewayTimeout,
+		_nethttp.StatusRequestTimeout:
 		return nil, nil, fmt.Errorf(
 			"%w: code: %d body: %s",
 			ErrRetriable,
@@ -365,7 +368,8 @@ func (a *ConstructionAPIService) ConstructionMetadata(
 		return nil, &v, fmt.Errorf("%+v", v)
 	case _nethttp.StatusBadGateway,
 		_nethttp.StatusServiceUnavailable,
-		_nethttp.StatusGatewayTimeout:
+		_nethttp.StatusGatewayTimeout,
+		_nethttp.StatusRequestTimeout:
 		return nil, nil, fmt.Errorf(
 			"%w: code: %d body: %s",
 			ErrRetriable,
@@ -451,7 +455,8 @@ func (a *ConstructionAPIService) ConstructionParse(
 		return nil, &v, fmt.Errorf("%+v", v)
 	case _nethttp.StatusBadGateway,
 		_nethttp.StatusServiceUnavailable,
-		_nethttp.StatusGatewayTimeout:
+		_nethttp.StatusGatewayTimeout,
+		_nethttp.StatusRequestTimeout:
 		return nil, nil, fmt.Errorf(
 			"%w: code: %d body: %s",
 			ErrRetriable,
@@ -542,7 +547,8 @@ func (a *ConstructionAPIService) ConstructionPayloads(
 		return nil, &v, fmt.Errorf("%+v", v)
 	case _nethttp.StatusBadGateway,
 		_nethttp.StatusServiceUnavailable,
-		_nethttp.StatusGatewayTimeout:
+		_nethttp.StatusGatewayTimeout,
+		_nethttp.StatusRequestTimeout:
 		return nil, nil, fmt.Errorf(
 			"%w: code: %d body: %s",
 			ErrRetriable,
@@ -631,7 +637,8 @@ func (a *ConstructionAPIService) ConstructionPreprocess(
 		return nil, &v, fmt.Errorf("%+v", v)
 	case _nethttp.StatusBadGateway,
 		_nethttp.StatusServiceUnavailable,
-		_nethttp.StatusGatewayTimeout:
+		_nethttp.StatusGatewayTimeout,
+		_nethttp.StatusRequestTimeout:
 		return nil, nil, fmt.Errorf(
 			"%w: code: %d body: %s",
 			ErrRetriable,
@@ -719,7 +726,8 @@ func (a *ConstructionAPIService) ConstructionSubmit(
 		return nil, &v, fmt.Errorf("%+v", v)
 	case _nethttp.StatusBadGateway,
 		_nethttp.StatusServiceUnavailable,
-		_nethttp.StatusGatewayTimeout:
+		_nethttp.StatusGatewayTimeout,
+		_nethttp.StatusRequestTimeout:
 		return nil, nil, fmt.Errorf(
 			"%w: code: %d body: %s",
 			ErrRetriable,
