@@ -1426,8 +1426,8 @@ func TestJob_Failures(t *testing.T) {
 				Name: "random_number",
 				Actions: []*job.Action{
 					{
-						Type:  job.SetVariable,
-						Input: `{"minumum":"-100", "maximum":"-200"}`,
+						Type:  job.RandomNumber,
+						Input: `{"minimum":"-100", "maximum":"-200"}`,
 					},
 				},
 			},
@@ -1435,10 +1435,10 @@ func TestJob_Failures(t *testing.T) {
 				Workflow: "random",
 				Scenario: "random_number",
 				Action: &job.Action{
-					Type:  job.SetVariable,
-					Input: `{"minumum":"-100", "maximum":"-200"}`,
+					Type:  job.RandomNumber,
+					Input: `{"minimum":"-100", "maximum":"-200"}`,
 				},
-				ProcessedInput: `{"minumum":"-100", "maximum":"-200"}`,
+				ProcessedInput: `{"minimum":"-100", "maximum":"-200"}`,
 				Err:            ErrActionFailed,
 			},
 			helper: &mocks.Helper{},
