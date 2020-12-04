@@ -233,16 +233,25 @@ func TestMilliseconds(t *testing.T) {
 }
 
 func TestRandomNumber(t *testing.T) {
-	minAmount := big.NewInt(10)
-	maxAmount := big.NewInt(13)
+	t.Run("success", func(t *testing.T) {
+		minAmount := big.NewInt(10)
+		maxAmount := big.NewInt(13)
 
-	// somewhat crude but its fast (should be infinitely small chance we don't get all possible
-	// values in small range)
-	for i := 0; i < 10000; i++ {
-		result := RandomNumber(minAmount, maxAmount)
-		assert.NotEqual(t, -1, new(big.Int).Sub(result, minAmount).Sign())
-		assert.Equal(t, 1, new(big.Int).Sub(maxAmount, result).Sign())
-	}
+		// somewhat crude but its fast (should be infinitely small chance we don't get all possible
+		// values in small range)
+		for i := 0; i < 10000; i++ {
+			result, err := RandomNumber(minAmount, maxAmount)
+			assert.NoError(t, err)
+			assert.NotEqual(t, -1, new(big.Int).Sub(result, minAmount).Sign())
+			assert.Equal(t, 1, new(big.Int).Sub(maxAmount, result).Sign())
+		}
+	})
+
+	t.Run("failure", func(t *testing.T) {
+		result, err := RandomNumber(big.NewInt(0), big.NewInt(-10))
+		assert.Nil(t, result)
+		assert.Error(t, err)
+	})
 }
 
 var (
