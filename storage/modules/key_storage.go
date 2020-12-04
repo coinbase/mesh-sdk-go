@@ -259,7 +259,11 @@ func (k *KeyStorage) RandomAccount(ctx context.Context) (*types.AccountIdentifie
 		return nil, storageErrs.ErrNoAddrAvailable
 	}
 
-	randomNumber := utils.RandomNumber(big.NewInt(0), big.NewInt(int64(len(accounts))))
+	randomNumber, err := utils.RandomNumber(big.NewInt(0), big.NewInt(int64(len(accounts))))
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", storageErrs.ErrRandomAddress, err)
+	}
+
 	return accounts[randomNumber.Int64()], nil
 }
 
