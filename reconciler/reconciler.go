@@ -834,7 +834,13 @@ func (r *Reconciler) reconcileInactiveAccounts( // nolint:gocognit
 			nextValidIndex = nextAcct.LastCheck.Index + r.inactiveFrequency
 		}
 
-		if nextValidIndex <= head.Index {
+		if nextValidIndex <= head.Index ||
+			r.helper.ForceInactiveReconciliation(
+				ctx,
+				nextAcct.Entry.Account,
+				nextAcct.Entry.Currency,
+				nextAcct.LastCheck,
+			) {
 			r.inactiveQueue = r.inactiveQueue[1:]
 			r.inactiveQueueMutex.Unlock()
 
