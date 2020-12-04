@@ -278,6 +278,7 @@ var (
 	ErrNoAddrAvailable          = errors.New("no addresses available")
 	ErrAddrImportFailed         = errors.New("unable to import prefunded account")
 	ErrPrefundedAcctStoreFailed = errors.New("unable to store prefunded account")
+	ErrRandomAddress            = errors.New("cannot select random address")
 
 	KeyStorageErrs = []error{
 		ErrAddrExists,
@@ -298,6 +299,7 @@ var (
 		ErrNoAddrAvailable,
 		ErrAddrImportFailed,
 		ErrPrefundedAcctStoreFailed,
+		ErrRandomAddress,
 	}
 )
 

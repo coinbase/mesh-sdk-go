@@ -245,14 +245,22 @@ func Zero() *big.Float {
 
 // RandomNumber returns some number in the range [minimum, maximum).
 // Source: https://golang.org/pkg/crypto/rand/#Int
-func RandomNumber(minimum *big.Int, maximum *big.Int) *big.Int {
+func RandomNumber(minimum *big.Int, maximum *big.Int) (*big.Int, error) {
 	transformed := new(big.Int).Sub(maximum, minimum)
-	addition, err := rand.Int(rand.Reader, transformed)
-	if err != nil {
-		log.Fatalf("cannot get random number: %v", err)
+	if transformed.Sign() < 0 {
+		return nil, fmt.Errorf(
+			"maximum value %s < minimum value %s",
+			maximum.String(),
+			minimum.String(),
+		)
 	}
 
-	return new(big.Int).Add(minimum, addition)
+	addition, err := rand.Int(rand.Reader, transformed)
+	if err != nil {
+		return nil, fmt.Errorf("cannot get random number: %v", err)
+	}
+
+	return new(big.Int).Add(minimum, addition), nil
 }
 
 // ContainsString returns a boolean indicating
