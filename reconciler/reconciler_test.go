@@ -3267,3 +3267,101 @@ func TestPruningRaceConditionInactive(t *testing.T) {
 	mtxn2.AssertExpectations(t)
 	mtxn3.AssertExpectations(t)
 }
+
+func TestReconcile_SuccessOnlyInactiveOverride(t *testing.T) {
+	var (
+		block = &types.BlockIdentifier{
+			Hash:  "block 1",
+			Index: 1,
+		}
+		accountCurrency = &types.AccountCurrency{
+			Account: &types.AccountIdentifier{
+				Address: "addr 1",
+			},
+			Currency: &types.Currency{
+				Symbol:   "BTC",
+				Decimals: 8,
+			},
+		}
+	)
+
+	mockHelper := &mocks.Helper{}
+	mockHandler := &mocks.Handler{}
+	opts := []Option{
+		WithActiveConcurrency(0),
+		WithInactiveConcurrency(1),
+		WithSeenAccounts([]*types.AccountCurrency{accountCurrency}),
+		WithDebugLogging(),
+		WithInactiveFrequency(10),
+		WithLookupBalanceByBlock(),
+	}
+	r := New(
+		mockHelper,
+		mockHandler,
+		nil,
+		opts...,
+	)
+	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
+
+	// Reconcile initially
+	mtxn := &mockDatabase.Transaction{}
+	mtxn.On("Discard", mock.Anything).Once()
+	mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn).Once()
+	mockHelper.On("CurrentBlock", mock.Anything, mtxn).Return(block, nil).Once()
+	mtxn2 := &mockDatabase.Transaction{}
+	mtxn2.On(
+		"Discard",
+		mock.Anything,
+	).Once()
+	mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn2).Once()
+	mockReconcilerCalls(
+		mockHelper,
+		mockHandler,
+		mtxn2,
+		true,
+		accountCurrency,
+		"100",
+		"100",
+		block,
+		block,
+		true,
+		InactiveReconciliation,
+		nil,
+		false,
+		false,
+	)
+
+	// Force Rreconciliation eventhough not required
+	mtxn3 := &mockDatabase.Transaction{}
+	mtxn3.On("Discard", mock.Anything).Once()
+	mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn3).Once()
+	mockHelper.On("CurrentBlock", mock.Anything, mtxn3).Return(block, nil).Once()
+
+	mtxn4 := &mockDatabase.Transaction{}
+	mtxn4.On("Discard", mock.Anything).Run(
+		func(args mock.Arguments) {
+			cancel()
+		},
+	).Once()
+	mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn4).Once()
+	mockHelper.On("ForceInactiveReconciliation", mock.Anything, accountCurrency.Account, accountCurrency.Currency, block).Return(true).Once()
+	mockReconcilerCalls(
+		mockHelper,
+		mockHandler,
+		mtxn4,
+		true,
+		accountCurrency,
+		"100",
+		"100",
+		block,
+		block,
+		true,
+		InactiveReconciliation,
+		nil,
+		false,
+		false,
+	)
+	err := r.Reconcile(ctx)
+	assert.Contains(t, context.Canceled.Error(), err.Error())
+}
