@@ -827,6 +827,7 @@ func (r *Reconciler) reconcileInactiveAccounts( // nolint:gocognit
 		shouldAttempt, head := r.shouldAttemptInactiveReconciliation(ctx)
 		if !shouldAttempt {
 			r.queueMap.Unlock(key)
+			r.inactiveQueueMutex.Unlock()
 			time.Sleep(inactiveReconciliationSleep)
 			continue
 		}
