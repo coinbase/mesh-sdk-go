@@ -213,6 +213,8 @@ func (r *Reconciler) queueChanges(
 			); err != nil {
 				return err
 			}
+
+			continue
 		}
 
 		// Add all seen accounts to inactive reconciler queue.
@@ -825,6 +827,7 @@ func (r *Reconciler) reconcileInactiveAccounts( // nolint:gocognit
 		shouldAttempt, head := r.shouldAttemptInactiveReconciliation(ctx)
 		if !shouldAttempt {
 			r.queueMap.Unlock(key)
+			r.inactiveQueueMutex.Unlock()
 			time.Sleep(inactiveReconciliationSleep)
 			continue
 		}
