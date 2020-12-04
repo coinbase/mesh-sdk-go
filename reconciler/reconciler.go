@@ -213,6 +213,8 @@ func (r *Reconciler) queueChanges(
 			); err != nil {
 				return err
 			}
+
+			continue
 		}
 
 		// Add all seen accounts to inactive reconciler queue.
