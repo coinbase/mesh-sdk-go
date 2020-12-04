@@ -3345,7 +3345,15 @@ func TestReconcile_SuccessOnlyInactiveOverride(t *testing.T) {
 		},
 	).Once()
 	mockHelper.On("DatabaseTransaction", mock.Anything).Return(mtxn4).Once()
-	mockHelper.On("ForceInactiveReconciliation", mock.Anything, accountCurrency.Account, accountCurrency.Currency, block).Return(true).Once()
+	mockHelper.On(
+		"ForceInactiveReconciliation",
+		mock.Anything,
+		accountCurrency.Account,
+		accountCurrency.Currency,
+		block,
+	).Return(
+		true,
+	).Once()
 	mockReconcilerCalls(
 		mockHelper,
 		mockHandler,
