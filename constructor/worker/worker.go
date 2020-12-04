@@ -512,24 +512,31 @@ func (w *Worker) availableAccounts(
 	return accounts, unlockedAccounts, nil
 }
 
-func shouldCreateRandomAccount(input *job.FindBalanceInput, accountCount int) bool {
+func shouldCreateRandomAccount(
+	input *job.FindBalanceInput,
+	accountCount int,
+) (bool, error) {
 	if input.MinimumBalance.Value != "0" {
-		return false
+		return false, nil
 	}
 
 	if input.CreateLimit <= 0 || accountCount >= input.CreateLimit {
-		return false
+		return false, nil
 	}
 
-	rand, _ := utils.RandomNumber(
+	rand, err := utils.RandomNumber(
 		utils.ZeroInt,
 		utils.OneHundredInt,
 	)
-	if rand.Int64() >= int64(input.CreateProbability) {
-		return false
+	if err != nil {
+		return false, err
 	}
 
-	return true
+	if rand.Int64() >= int64(input.CreateProbability) {
+		return false, nil
+	}
+
+	return true, nil
 }
 
 // findBalanceWorkerInputValidation ensures the input to FindBalanceWorker
@@ -626,7 +633,12 @@ func (w *Worker) FindBalanceWorker(
 
 	// Randomly, we choose to generate a new account. If we didn't do this,
 	// we would never grow past 2 accounts for mocking transfers.
-	if shouldCreateRandomAccount(&input, len(accounts)) {
+	shouldCreate, err := shouldCreateRandomAccount(&input, len(accounts))
+	if err != nil {
+		return "", fmt.Errorf("%w: unable to determine if should create", err)
+	}
+
+	if shouldCreate {
 		return "", ErrCreateAccount
 	}
 
