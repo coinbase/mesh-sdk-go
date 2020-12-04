@@ -1421,6 +1421,27 @@ func TestJob_Failures(t *testing.T) {
 			},
 			helper: &mocks.Helper{},
 		},
+		"invalid input: negtive difference in random amount": {
+			scenario: &job.Scenario{
+				Name: "random_number",
+				Actions: []*job.Action{
+					{
+						Type:  job.SetVariable,
+						Input: `{"minumum":"-100", "maximum":"-200"}`,
+					},
+				},
+			},
+			executionErr: &Error{
+				Workflow: "random",
+				Scenario: "random_number",
+				Action: &job.Action{
+					Type:  job.SetVariable,
+					Input: `{"minumum":"-100", "maximum":"-200"}`,
+				},
+				Err: ErrActionFailed,
+			},
+			helper: &mocks.Helper{},
+		},
 		"invalid input: generate key": {
 			scenario: &job.Scenario{
 				Name: "create_address",
