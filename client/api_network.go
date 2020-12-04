@@ -101,7 +101,8 @@ func (a *NetworkAPIService) NetworkList(
 		return nil, &v, fmt.Errorf("%+v", v)
 	case _nethttp.StatusBadGateway,
 		_nethttp.StatusServiceUnavailable,
-		_nethttp.StatusGatewayTimeout:
+		_nethttp.StatusGatewayTimeout,
+		_nethttp.StatusRequestTimeout:
 		return nil, nil, fmt.Errorf(
 			"%w: code: %d body: %s",
 			ErrRetriable,
@@ -188,7 +189,8 @@ func (a *NetworkAPIService) NetworkOptions(
 		return nil, &v, fmt.Errorf("%+v", v)
 	case _nethttp.StatusBadGateway,
 		_nethttp.StatusServiceUnavailable,
-		_nethttp.StatusGatewayTimeout:
+		_nethttp.StatusGatewayTimeout,
+		_nethttp.StatusRequestTimeout:
 		return nil, nil, fmt.Errorf(
 			"%w: code: %d body: %s",
 			ErrRetriable,
@@ -273,7 +275,8 @@ func (a *NetworkAPIService) NetworkStatus(
 		return nil, &v, fmt.Errorf("%+v", v)
 	case _nethttp.StatusBadGateway,
 		_nethttp.StatusServiceUnavailable,
-		_nethttp.StatusGatewayTimeout:
+		_nethttp.StatusGatewayTimeout,
+		_nethttp.StatusRequestTimeout:
 		return nil, nil, fmt.Errorf(
 			"%w: code: %d body: %s",
 			ErrRetriable,
