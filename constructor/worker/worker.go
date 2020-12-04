@@ -324,28 +324,16 @@ func RandomNumberWorker(rawInput string) (string, error) {
 		return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
 	}
 
-	if min.Sign() < 0 {
-		return "", fmt.Errorf(
-			"%w: minimum amount %s for random number is less than zero",
-			ErrActionFailed,
-			min.String(),
-		)
-	}
-
 	max, err := types.BigInt(input.Maximum)
 	if err != nil {
 		return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
 	}
 
-	if max.Sign() < 0 {
-		return "", fmt.Errorf(
-			"%w: maximum amount %s for random number is less than zero",
-			ErrActionFailed,
-			max.String(),
-		)
+	randNum, err := utils.RandomNumber(min, max)
+	if err != nil {
+		return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
 	}
 
-	randNum := utils.RandomNumber(min, max)
 	return marshalString(randNum.String()), nil
 }
 
@@ -533,12 +521,11 @@ func shouldCreateRandomAccount(input *job.FindBalanceInput, accountCount int) bo
 		return false
 	}
 
-	if utils.RandomNumber(
+	rand, _ := utils.RandomNumber(
 		utils.ZeroInt,
 		utils.OneHundredInt,
-	).Int64() >= int64(
-		input.CreateProbability,
-	) {
+	)
+	if rand.Int64() >= int64(input.CreateProbability) {
 		return false
 	}
 
