@@ -56,6 +56,15 @@ const (
 	// DefaultLogValueSize is 64 MB.
 	DefaultLogValueSize = 64 << 20
 
+	// PerformanceMaxTableSize is 3072 MB. The larger
+	// this value is, the larger database transactions
+	// storage can handle (~15% of the max table size
+	// == max commit size).
+	PerformanceMaxTableSize = 3072 << 20
+
+	// PerformanceLogValueSize is 256 MB.
+	PerformanceLogValueSize = 256 << 20
+
 	// DefaultCompressionMode is the default block
 	// compression setting.
 	DefaultCompressionMode = options.None
@@ -165,7 +174,8 @@ func PerformanceBadgerOptions(dir string) badger.Options {
 	opts.Compression = DefaultCompressionMode
 
 	// Use an extended table size for larger commits.
-	opts.MaxTableSize = DefaultMaxTableSize
+	opts.MaxTableSize = PerformanceMaxTableSize
+	opts.ValueLogFileSize = PerformanceLogValueSize
 
 	// Load tables into memory and memory map value logs.
 	opts.TableLoadingMode = options.MemoryMap
