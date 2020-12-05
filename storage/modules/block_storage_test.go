@@ -296,7 +296,6 @@ func findTransactionWithDbTransaction(
 		ctx,
 		transactionIdentifier,
 		txn,
-		false,
 	)
 }
 
