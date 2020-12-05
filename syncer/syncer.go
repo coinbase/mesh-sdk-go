@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"runtime"
 	"time"
 
 	lerrgroup "github.com/neilotoole/errgroup"
@@ -512,9 +513,14 @@ func (s *Syncer) syncRange(
 		close(results)
 	}()
 
-	c := make(chan *blockResult, 100)
+	c := make(chan *blockResult, defaultEncounterBacklog)
 	g.Go(func() error { // TODO: ensures exit is coordinated
-		encounterG, encounterCtx := lerrgroup.WithContextN(pipelineCtx, 24, 24) // TODO: find a food value for this
+		numCPU := runtime.NumCPU()
+		encounterG, encounterCtx := lerrgroup.WithContextN(
+			pipelineCtx,
+			numCPU,
+			numCPU,
+		) // TODO: find a good value for this
 		for b := range results {
 			encounterG.Go(func() error {
 				if err := s.handler.BlockEncountered(encounterCtx, b.block); err != nil {
