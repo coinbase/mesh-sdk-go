@@ -506,13 +506,6 @@ func (s *Syncer) syncRange(
 		})
 	}
 
-	// Wait for all block fetching goroutines to exit
-	// before closing the results channel.
-	go func() {
-		_ = g.Wait()
-		close(results)
-	}()
-
 	c := make(chan *blockResult, defaultEncounterBacklog)
 	g.Go(func() error { // TODO: ensures exit is coordinated
 		numCPU := runtime.NumCPU()
@@ -521,23 +514,36 @@ func (s *Syncer) syncRange(
 			numCPU,
 			numCPU,
 		) // TODO: find a good value for this
-		for b := range results {
-			encounterG.Go(func() error {
-				if err := s.handler.BlockEncountered(encounterCtx, b.block); err != nil {
-					return err
-				}
 
-				select {
-				case c <- b:
-					return nil
-				case <-encounterCtx.Done():
-					return encounterCtx.Err()
-				}
-			})
+		for {
+			select {
+			case result := <-results:
+				encounterG.Go(func() error {
+					if err := s.handler.BlockEncountered(encounterCtx, result.block); err != nil {
+						fmt.Println(err)
+						return err
+					}
+
+					select {
+					case c <- result:
+						return nil
+					case <-encounterCtx.Done():
+						return encounterCtx.Err()
+					}
+				})
+			case <-encounterCtx.Done():
+				close(c) // TODO: will cause error to be silenced
+				return encounterCtx.Err()
+			}
 		}
-
-		return encounterCtx.Err()
 	})
+
+	// Wait for all block fetching goroutines to exit
+	// before closing the results channel.
+	go func() {
+		_ = g.Wait()
+		close(results)
+	}()
 
 	cache := make(map[int64]*blockResult)
 	for b := range c {
