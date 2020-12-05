@@ -21,6 +21,7 @@ import (
 	"log"
 	"time"
 
+	lerrgroup "github.com/neilotoole/errgroup"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
@@ -355,6 +356,10 @@ func (s *Syncer) processBlocks(
 			if err != nil {
 				return fmt.Errorf("%w: %v", ErrFetchBlockReorgFailed, err)
 			}
+
+			if err := s.handler.BlockEncountered(ctx, br.block); err != nil {
+				return err
+			}
 		} else {
 			// Anytime we re-fetch an index, we
 			// will need to make another call to the node
@@ -507,8 +512,29 @@ func (s *Syncer) syncRange(
 		close(results)
 	}()
 
+	c := make(chan *blockResult, 100)
+	g.Go(func() error { // TODO: ensures exit is coordinated
+		encounterG, encounterCtx := lerrgroup.WithContextN(pipelineCtx, 24, 24) // TODO: find a food value for this
+		for b := range results {
+			encounterG.Go(func() error {
+				if err := s.handler.BlockEncountered(encounterCtx, b.block); err != nil {
+					return err
+				}
+
+				select {
+				case c <- b:
+					return nil
+				case <-encounterCtx.Done():
+					return encounterCtx.Err()
+				}
+			})
+		}
+
+		return encounterCtx.Err()
+	})
+
 	cache := make(map[int64]*blockResult)
-	for b := range results {
+	for b := range c {
 		cache[b.index] = b
 
 		if err := s.processBlocks(ctx, cache, endIndex); err != nil {
