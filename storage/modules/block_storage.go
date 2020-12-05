@@ -1041,7 +1041,6 @@ func (b *BlockStorage) FindTransaction(
 	ctx context.Context,
 	transactionIdentifier *types.TransactionIdentifier,
 	txn database.Transaction,
-	allowUnfinalized bool,
 ) (*types.BlockIdentifier, *types.Transaction, error) {
 	blockTransactions, err := b.getAllTransactionsByIdentifier(ctx, transactionIdentifier, txn)
 	if err != nil {
@@ -1064,7 +1063,7 @@ func (b *BlockStorage) FindTransaction(
 			// Now that we are optimistically storing data, there is a change
 			// we may fetch a transaction from an unfinalized block. In some cases (rosetta-bitcoin),
 			// we want this!
-			if !allowUnfinalized && head != nil && blockTransaction.BlockIdentifier.Index > head.Index {
+			if head != nil && blockTransaction.BlockIdentifier.Index > head.Index {
 				continue
 			}
 
