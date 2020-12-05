@@ -81,6 +81,13 @@ const (
 // to handle different events. It is common to write logs or
 // perform reconciliation in the sync processor.
 type Handler interface {
+	// Guaranteed that we will not invoke BlockAdded
+	// until blockencountered has returned.
+	BlockEncountered(
+		ctx context.Context,
+		block *types.Block,
+	) error
+
 	BlockAdded(
 		ctx context.Context,
 		block *types.Block,
