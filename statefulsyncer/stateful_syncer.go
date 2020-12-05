@@ -219,6 +219,21 @@ func (s *StatefulSyncer) Prune(ctx context.Context, helper PruneHelper) error {
 	return ctx.Err()
 }
 
+// BlockEncountered is called by the syncer when a block is encountered.
+func (s *StatefulSyncer) BlockEncountered(ctx context.Context, block *types.Block) error {
+	err := s.blockStorage.EncounterBlock(ctx, block)
+	if err != nil {
+		return fmt.Errorf(
+			"%w: unable to encounter block to storage %s:%d",
+			err,
+			block.BlockIdentifier.Hash,
+			block.BlockIdentifier.Index,
+		)
+	}
+
+	return nil
+}
+
 // BlockAdded is called by the syncer when a block is added.
 func (s *StatefulSyncer) BlockAdded(ctx context.Context, block *types.Block) error {
 	err := s.blockStorage.AddBlock(ctx, block)
