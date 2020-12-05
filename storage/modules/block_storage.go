@@ -637,18 +637,6 @@ func (b *BlockStorage) EncounterBlock(
 	transaction := b.db.WriteTransaction(ctx, block.BlockIdentifier.Hash, true)
 	defer transaction.Discard(ctx)
 
-	// Check if block already saved
-	// TODO: only perform if we find a duplicate
-	bl, err := b.GetBlockLazyTransactional(ctx, types.ConstructPartialBlockIdentifier(block.BlockIdentifier), transaction)
-	if err != nil && !errors.Is(err, storageErrs.ErrBlockNotFound) {
-		return err
-	}
-
-	// Exit early if block already exists!
-	if bl != nil && block.BlockIdentifier.Hash == bl.Block.BlockIdentifier.Hash && block.BlockIdentifier.Index == bl.Block.BlockIdentifier.Index {
-		return nil
-	}
-
 	// Store all transactions in order and check for duplicates
 	identifiers := make([]*types.TransactionIdentifier, len(block.Transactions))
 	identiferSet := map[string]struct{}{}
