@@ -75,6 +75,8 @@ const (
 	// when we are loading more blocks to fetch but we
 	// already have a backlog >= to concurrency.
 	defaultFetchSleep = 500 * time.Millisecond
+
+	defaultEncounterBacklog = 100
 )
 
 // Handler is called at various times during the sync cycle
