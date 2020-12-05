@@ -565,19 +565,40 @@ func (b *BlockStorage) encounterBlock(
 	ctx context.Context,
 	transaction database.Transaction,
 	blockResponse *types.BlockResponse,
-) error {
+) (bool, error) {
 	blockIdentifier := blockResponse.Block.BlockIdentifier
 	namespace, key := getBlockHashKey(blockIdentifier.Hash)
 	buf, err := b.db.Encoder().Encode(namespace, blockResponse)
 	if err != nil {
-		return fmt.Errorf("%w: %v", storageErrs.ErrBlockEncodeFailed, err)
+		return false, fmt.Errorf("%w: %v", storageErrs.ErrBlockEncodeFailed, err)
 	}
 
-	if err := storeUniqueKey(ctx, transaction, key, buf, true); err != nil {
-		return fmt.Errorf("%w: %v", storageErrs.ErrBlockStoreFailed, err)
+	exists, val, err := transaction.Get(ctx, key)
+	if err != nil {
+		return false, err
 	}
 
-	return nil
+	if !exists {
+		return false, transaction.Set(ctx, key, buf, true)
+	}
+
+	var rosettaBlockResponse types.BlockResponse
+	err = b.db.Encoder().Decode(namespace, val, &rosettaBlockResponse, true)
+	if err != nil {
+		return false, err
+	}
+
+	// Exit early if block already exists!
+	if blockResponse.Block.BlockIdentifier.Hash == rosettaBlockResponse.Block.BlockIdentifier.Hash &&
+		blockResponse.Block.BlockIdentifier.Index == rosettaBlockResponse.Block.BlockIdentifier.Index {
+		return true, nil
+	}
+
+	return false, fmt.Errorf(
+		"%w: duplicate key %s found",
+		storageErrs.ErrDuplicateKey,
+		string(key),
+	)
 }
 
 func (b *BlockStorage) storeBlock(
@@ -616,6 +637,18 @@ func (b *BlockStorage) EncounterBlock(
 	transaction := b.db.WriteTransaction(ctx, block.BlockIdentifier.Hash, true)
 	defer transaction.Discard(ctx)
 
+	// Check if block already saved
+	// TODO: only perform if we find a duplicate
+	bl, err := b.GetBlockLazyTransactional(ctx, types.ConstructPartialBlockIdentifier(block.BlockIdentifier), transaction)
+	if err != nil && !errors.Is(err, storageErrs.ErrBlockNotFound) {
+		return err
+	}
+
+	// Exit early if block already exists!
+	if bl != nil && block.BlockIdentifier.Hash == bl.Block.BlockIdentifier.Hash && block.BlockIdentifier.Index == bl.Block.BlockIdentifier.Index {
+		return nil
+	}
+
 	// Store all transactions in order and check for duplicates
 	identifiers := make([]*types.TransactionIdentifier, len(block.Transactions))
 	identiferSet := map[string]struct{}{}
@@ -649,9 +682,13 @@ func (b *BlockStorage) EncounterBlock(
 	}
 
 	// Store block
-	err := b.encounterBlock(ctx, transaction, blockWithoutTransactions)
+	exists, err := b.encounterBlock(ctx, transaction, blockWithoutTransactions)
 	if err != nil {
 		return fmt.Errorf("%w: %v", storageErrs.ErrBlockStoreFailed, err)
+	}
+
+	if exists {
+		return nil
 	}
 
 	g, gctx := errgroup.WithContextN(ctx, b.numCPU, b.numCPU)
