@@ -518,8 +518,10 @@ func (s *Syncer) syncRange(
 		for {
 			select {
 			case result := <-results:
+				// TODO: nil block result?
+				rb := result.block
 				encounterG.Go(func() error {
-					if err := s.handler.BlockEncountered(encounterCtx, result.block); err != nil {
+					if err := s.handler.BlockEncountered(encounterCtx, rb); err != nil {
 						fmt.Println(err)
 						return err
 					}
