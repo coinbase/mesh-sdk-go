@@ -99,6 +99,20 @@ func (_m *Helper) DatabaseTransaction(ctx context.Context) database.Transaction 
 	return r0
 }
 
+// ForceInactiveReconciliation provides a mock function with given fields: ctx, account, currency, lastCheck
+func (_m *Helper) ForceInactiveReconciliation(ctx context.Context, account *types.AccountIdentifier, currency *types.Currency, lastCheck *types.BlockIdentifier) bool {
+	ret := _m.Called(ctx, account, currency, lastCheck)
+
+	var r0 bool
+	if rf, ok := ret.Get(0).(func(context.Context, *types.AccountIdentifier, *types.Currency, *types.BlockIdentifier) bool); ok {
+		r0 = rf(ctx, account, currency, lastCheck)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+
+	return r0
+}
+
 // IndexAtTip provides a mock function with given fields: ctx, index
 func (_m *Helper) IndexAtTip(ctx context.Context, index int64) (bool, error) {
 	ret := _m.Called(ctx, index)

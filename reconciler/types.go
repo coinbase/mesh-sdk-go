@@ -168,6 +168,19 @@ type Helper interface {
 		currency *types.Currency,
 		index int64,
 	) error
+
+	// ForceInactiveReconciliation is invoked by the
+	// inactive reconciler when the next account to
+	// reconcile has been checked within the configured
+	// inactive reconciliation frequency. This allows
+	// the helper to dynamically force inactive reconciliation
+	// when desired (i.e. when at tip).
+	ForceInactiveReconciliation(
+		ctx context.Context,
+		account *types.AccountIdentifier,
+		currency *types.Currency,
+		lastCheck *types.BlockIdentifier,
+	) bool
 }
 
 // Handler is called by Reconciler after a reconciliation
