@@ -561,7 +561,7 @@ func (b *BlockStorage) GetBlock(
 	return b.GetBlockTransactional(ctx, transaction, blockIdentifier)
 }
 
-func (b *BlockStorage) storeBlock(
+func (b *BlockStorage) encounterBlock(
 	ctx context.Context,
 	transaction database.Transaction,
 	blockResponse *types.BlockResponse,
@@ -576,6 +576,16 @@ func (b *BlockStorage) storeBlock(
 	if err := storeUniqueKey(ctx, transaction, key, buf, true); err != nil {
 		return fmt.Errorf("%w: %v", storageErrs.ErrBlockStoreFailed, err)
 	}
+
+	return nil
+}
+
+func (b *BlockStorage) storeBlock(
+	ctx context.Context,
+	transaction database.Transaction,
+	blockIdentifier *types.BlockIdentifier,
+) error {
+	_, key := getBlockHashKey(blockIdentifier.Hash)
 
 	if err := storeUniqueKey(
 		ctx,
@@ -598,12 +608,12 @@ func (b *BlockStorage) storeBlock(
 	return nil
 }
 
-// AddBlock stores a block or returns an error.
-func (b *BlockStorage) AddBlock(
+// EncounterBlock pre-stores a block or returns an error.
+func (b *BlockStorage) EncounterBlock(
 	ctx context.Context,
 	block *types.Block,
 ) error {
-	transaction := b.db.WriteTransaction(ctx, blockSyncIdentifier, true)
+	transaction := b.db.WriteTransaction(ctx, block.BlockIdentifier.Hash, true)
 	defer transaction.Discard(ctx)
 
 	// Store all transactions in order and check for duplicates
@@ -639,7 +649,7 @@ func (b *BlockStorage) AddBlock(
 	}
 
 	// Store block
-	err := b.storeBlock(ctx, transaction, blockWithoutTransactions)
+	err := b.encounterBlock(ctx, transaction, blockWithoutTransactions)
 	if err != nil {
 		return fmt.Errorf("%w: %v", storageErrs.ErrBlockStoreFailed, err)
 	}
@@ -666,6 +676,23 @@ func (b *BlockStorage) AddBlock(
 	}
 	if err := g.Wait(); err != nil {
 		return err
+	}
+
+	return transaction.Commit(ctx)
+}
+
+// AddBlock stores a block or returns an error.
+func (b *BlockStorage) AddBlock(
+	ctx context.Context,
+	block *types.Block,
+) error {
+	transaction := b.db.WriteTransaction(ctx, blockSyncIdentifier, true)
+	defer transaction.Discard(ctx)
+
+	// Store block
+	err := b.storeBlock(ctx, transaction, block.BlockIdentifier)
+	if err != nil {
+		return fmt.Errorf("%w: %v", storageErrs.ErrBlockStoreFailed, err)
 	}
 
 	return b.callWorkersAndCommit(ctx, block, transaction, true)
