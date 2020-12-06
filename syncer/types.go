@@ -85,7 +85,7 @@ const (
 type Handler interface {
 	// Guaranteed that we will not invoke BlockAdded
 	// until blockencountered has returned.
-	BlockEncountered(
+	BlockSeen(
 		ctx context.Context,
 		block *types.Block,
 	) error
