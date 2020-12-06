@@ -561,7 +561,7 @@ func (b *BlockStorage) GetBlock(
 	return b.GetBlockTransactional(ctx, transaction, blockIdentifier)
 }
 
-func (b *BlockStorage) encounterBlock(
+func (b *BlockStorage) seeBlock(
 	ctx context.Context,
 	transaction database.Transaction,
 	blockResponse *types.BlockResponse,
@@ -629,8 +629,8 @@ func (b *BlockStorage) storeBlock(
 	return nil
 }
 
-// EncounterBlock pre-stores a block or returns an error.
-func (b *BlockStorage) EncounterBlock(
+// SeeBlock pre-stores a block or returns an error.
+func (b *BlockStorage) SeeBlock(
 	ctx context.Context,
 	block *types.Block,
 ) error {
@@ -670,7 +670,7 @@ func (b *BlockStorage) EncounterBlock(
 	}
 
 	// Store block
-	exists, err := b.encounterBlock(ctx, transaction, blockWithoutTransactions)
+	exists, err := b.seeBlock(ctx, transaction, blockWithoutTransactions)
 	if err != nil {
 		return fmt.Errorf("%w: %v", storageErrs.ErrBlockStoreFailed, err)
 	}
