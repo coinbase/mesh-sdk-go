@@ -219,9 +219,9 @@ func (s *StatefulSyncer) Prune(ctx context.Context, helper PruneHelper) error {
 	return ctx.Err()
 }
 
-// BlockEncountered is called by the syncer when a block is encountered.
-func (s *StatefulSyncer) BlockEncountered(ctx context.Context, block *types.Block) error {
-	err := s.blockStorage.EncounterBlock(ctx, block)
+// BlockSeen is called by the syncer when a block is seen.
+func (s *StatefulSyncer) BlockSeen(ctx context.Context, block *types.Block) error {
+	err := s.blockStorage.SeeBlock(ctx, block)
 	if err != nil {
 		return fmt.Errorf(
 			"%w: unable to encounter block to storage %s:%d",
