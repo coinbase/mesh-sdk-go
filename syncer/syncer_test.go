@@ -474,7 +474,9 @@ func TestSync_NoReorg(t *testing.T) {
 			b,
 		).Return(
 			nil,
-		).Once()
+		).Run(func(args mock.Arguments) {
+			assertNotCanceled(t, args)
+		}).Once()
 		mockHandler.On(
 			"BlockAdded",
 			mock.AnythingOfType("*context.cancelCtx"),
@@ -483,9 +485,6 @@ func TestSync_NoReorg(t *testing.T) {
 			nil,
 		).Run(func(args mock.Arguments) {
 			assertNotCanceled(t, args)
-			if index == 1100 {
-				assert.Equal(t, int64(3), syncer.concurrency)
-			}
 
 			// Test tip method
 			if index > 200 {
