@@ -476,6 +476,14 @@ func (e *Encoder) DecodeAccountCoin( // nolint:gocognit
 	return nil
 }
 
+// EncodeAccountCurrency is used to encode an AccountCurrency using the scheme (on the happy path):
+// accountAddress|currencySymbol|currencyDecimals
+//
+// And the following scheme on the unhappy path:
+// accountAddress|currencySymbol|currencyDecimals|accountMetadata|
+// subAccountAddress|subAccountMetadata|currencyMetadata
+//
+// In both cases, the | character is represented by the unicodeRecordSeparator rune.
 func (e *Encoder) EncodeAccountCurrency( // nolint:gocognit
 	accountCurrency *types.AccountCurrency,
 ) ([]byte, error) {
@@ -546,6 +554,8 @@ func (e *Encoder) EncodeAccountCurrency( // nolint:gocognit
 	return output.Bytes(), nil
 }
 
+// DecodeAccountCurrency decodes an AccountCurrency and optionally
+// reclaims the memory associated with the input.
 func (e *Encoder) DecodeAccountCurrency( // nolint:gocognit
 	b []byte,
 	accountCurrency *types.AccountCurrency,
