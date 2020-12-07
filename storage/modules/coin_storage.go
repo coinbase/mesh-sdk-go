@@ -20,7 +20,6 @@ import (
 	"math/big"
 	"runtime"
 	"strings"
-	"time"
 
 	"github.com/neilotoole/errgroup"
 
@@ -358,10 +357,6 @@ func (c *CoinStorage) AddingBlock(
 	block *types.Block,
 	transaction database.Transaction,
 ) (database.CommitWorker, error) {
-	start := time.Now()
-	defer func() {
-		fmt.Println("adding coins", time.Since(start))
-	}()
 	return nil, c.updateCoins(ctx, block, true, transaction)
 }
 
