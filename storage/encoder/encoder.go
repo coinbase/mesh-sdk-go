@@ -527,7 +527,8 @@ func (e *Encoder) EncodeAccountCurrency( // nolint:gocognit
 		return nil, fmt.Errorf("%w: %s", errors.ErrObjectEncodeFailed, err.Error())
 	}
 
-	if accountCurrency.Account.SubAccount != nil && accountCurrency.Account.SubAccount.Metadata != nil {
+	if accountCurrency.Account.SubAccount != nil &&
+		accountCurrency.Account.SubAccount.Metadata != nil {
 		if err := e.encodeAndWrite(output, accountCurrency.Account.SubAccount.Metadata); err != nil {
 			return nil, fmt.Errorf("%w: %s", errors.ErrObjectEncodeFailed, err.Error())
 		}
