@@ -76,7 +76,7 @@ const (
 	// already have a backlog >= to concurrency.
 	defaultFetchSleep = 500 * time.Millisecond
 
-	defaultEncounterBacklog = 100
+	defaultSeenBacklog = 100
 )
 
 // Handler is called at various times during the sync cycle
