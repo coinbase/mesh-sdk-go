@@ -473,8 +473,8 @@ func (s *Syncer) handleSeenBlock(
 
 func (s *Syncer) seeBlocks(
 	ctx context.Context,
-	input chan *blockResult,
-	output chan *blockResult,
+	fetchedBlocks chan *blockResult,
+	seenBlocks chan *blockResult,
 ) error {
 	numCPU := runtime.NumCPU()
 	g, ctx := lerrgroup.WithContextN(
@@ -483,29 +483,28 @@ func (s *Syncer) seeBlocks(
 		numCPU,
 	)
 
-	for {
-		select {
-		case result := <-input:
-			g.Go(func() error {
-				if err := s.handleSeenBlock(ctx, result); err != nil {
-					return err
-				}
+	for result := range fetchedBlocks {
+		r := result
+		g.Go(func() error {
+			if err := s.handleSeenBlock(ctx, r); err != nil {
+				return err
+			}
 
-				select {
-				case output <- result:
-					return nil
-				case <-ctx.Done():
-					return ctx.Err()
-				}
-			})
-		case <-ctx.Done():
-			return ctx.Err()
-		}
+			select {
+			case seenBlocks <- r:
+				return nil
+			case <-ctx.Done():
+				return ctx.Err()
+			}
+		})
 	}
+
+	return g.Wait()
 }
 
 func (s *Syncer) sequenceBlocks(
-	ctx context.Context,
+	pipelineCtx context.Context,
+	handleCtx context.Context,
 	g *errgroup.Group,
 	blockIndices chan int64,
 	fetchedBlocks chan *blockResult,
@@ -513,48 +512,45 @@ func (s *Syncer) sequenceBlocks(
 	endIndex int64,
 ) error {
 	cache := make(map[int64]*blockResult)
-	for {
-		select {
-		case b := <-seenBlocks:
-			cache[b.index] = b
+	for b := range seenBlocks {
+		cache[b.index] = b
 
-			if err := s.processBlocks(ctx, cache, endIndex); err != nil {
-				return fmt.Errorf("%w: %v", ErrBlocksProcessMultipleFailed, err)
-			}
-
-			// Determine if concurrency should be adjusted.
-			s.recentBlockSizes = append(s.recentBlockSizes, utils.SizeOf(b))
-			s.lastAdjustment++
-
-			s.concurrencyLock.Lock()
-			shouldCreate := s.adjustWorkers()
-			if !shouldCreate {
-				s.concurrencyLock.Unlock()
-				continue
-			}
-
-			// If we have finished loading blocks or the pipelineCtx
-			// has an error (like context.Canceled), we should avoid
-			// creating more goroutines (as there is a chance that
-			// Wait has returned). Attempting to create more goroutines
-			// after Wait has returned will cause a panic.
-			s.doneLoadingLock.Lock()
-			if !s.doneLoading && ctx.Err() == nil {
-				g.Go(func() error {
-					return s.fetchChannelBlocks(ctx, s.network, blockIndices, fetchedBlocks)
-				})
-			} else {
-				s.concurrency--
-			}
-			s.doneLoadingLock.Unlock()
-
-			// Hold concurrencyLock until after we attempt to create another
-			// new goroutine in the case we accidentally go to 0 during shutdown.
-			s.concurrencyLock.Unlock()
-		case <-ctx.Done():
-			return ctx.Err()
+		if err := s.processBlocks(handleCtx, cache, endIndex); err != nil {
+			return fmt.Errorf("%w: %v", ErrBlocksProcessMultipleFailed, err)
 		}
+
+		// Determine if concurrency should be adjusted.
+		s.recentBlockSizes = append(s.recentBlockSizes, utils.SizeOf(b))
+		s.lastAdjustment++
+
+		s.concurrencyLock.Lock()
+		shouldCreate := s.adjustWorkers()
+		if !shouldCreate {
+			s.concurrencyLock.Unlock()
+			continue
+		}
+
+		// If we have finished loading blocks or the pipelineCtx
+		// has an error (like context.Canceled), we should avoid
+		// creating more goroutines (as there is a chance that
+		// Wait has returned). Attempting to create more goroutines
+		// after Wait has returned will cause a panic.
+		s.doneLoadingLock.Lock()
+		if !s.doneLoading && pipelineCtx.Err() == nil {
+			g.Go(func() error {
+				return s.fetchChannelBlocks(pipelineCtx, s.network, blockIndices, fetchedBlocks)
+			})
+		} else {
+			s.concurrency--
+		}
+		s.doneLoadingLock.Unlock()
+
+		// Hold concurrencyLock until after we attempt to create another
+		// new goroutine in the case we accidentally go to 0 during shutdown.
+		s.concurrencyLock.Unlock()
 	}
+
+	return nil
 }
 
 // syncRange fetches and processes a range of blocks
@@ -588,14 +584,14 @@ func (s *Syncer) syncRange(
 	s.goalConcurrency = s.concurrency
 
 	// Spawn syncing goroutines
-	g, ctx := errgroup.WithContext(ctx)
+	g, pipelineCtx := errgroup.WithContext(ctx)
 	g.Go(func() error {
-		return s.addBlockIndices(ctx, blockIndices, s.nextIndex, endIndex)
+		return s.addBlockIndices(pipelineCtx, blockIndices, s.nextIndex, endIndex)
 	})
 
 	for j := int64(0); j < s.concurrency; j++ {
 		g.Go(func() error {
-			return s.fetchChannelBlocks(ctx, s.network, blockIndices, fetchedBlocks)
+			return s.fetchChannelBlocks(pipelineCtx, s.network, blockIndices, fetchedBlocks)
 		})
 	}
 
@@ -606,14 +602,17 @@ func (s *Syncer) syncRange(
 		close(fetchedBlocks)
 	}()
 
+	g2, handleCtx := errgroup.WithContext(ctx)
 	seenBlocks := make(chan *blockResult, defaultSeenBacklog)
-	g.Go(func() error {
-		return s.seeBlocks(ctx, fetchedBlocks, seenBlocks)
+	g2.Go(func() error {
+		defer close(seenBlocks)
+		return s.seeBlocks(handleCtx, fetchedBlocks, seenBlocks)
 	})
 
-	g.Go(func() error {
+	g2.Go(func() error {
 		return s.sequenceBlocks(
-			ctx,
+			pipelineCtx,
+			handleCtx,
 			g,
 			blockIndices,
 			fetchedBlocks,
@@ -622,7 +621,7 @@ func (s *Syncer) syncRange(
 		)
 	})
 
-	if err := g.Wait(); err != nil {
+	if err := g2.Wait(); err != nil {
 		return fmt.Errorf("%w: unable to sync to %d", err, endIndex)
 	}
 
