@@ -475,26 +475,29 @@ func (b *BalanceStorage) ReconciliationCoverage(
 ) (float64, error) {
 	seen := 0
 	validCoverage := 0
-	err := b.getAllAccountEntries(ctx, func(txn database.Transaction, entry *types.AccountCurrency) error {
-		seen++
+	err := b.getAllAccountEntries(
+		ctx,
+		func(txn database.Transaction, entry *types.AccountCurrency) error {
+			seen++
 
-		// Fetch last reconciliation index in same database.Transaction
-		key := GetAccountKey(reconciliationNamepace, entry.Account, entry.Currency)
-		exists, lastReconciled, err := BigIntGet(ctx, key, txn)
-		if err != nil {
-			return err
-		}
+			// Fetch last reconciliation index in same database.Transaction
+			key := GetAccountKey(reconciliationNamepace, entry.Account, entry.Currency)
+			exists, lastReconciled, err := BigIntGet(ctx, key, txn)
+			if err != nil {
+				return err
+			}
 
-		if !exists {
+			if !exists {
+				return nil
+			}
+
+			if lastReconciled.Int64() >= minimumIndex {
+				validCoverage++
+			}
+
 			return nil
-		}
-
-		if lastReconciled.Int64() >= minimumIndex {
-			validCoverage++
-		}
-
-		return nil
-	})
+		},
+	)
 	if err != nil {
 		return -1, fmt.Errorf("%w: unable to get all account entries", err)
 	}

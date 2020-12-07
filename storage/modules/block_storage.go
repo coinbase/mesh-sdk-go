@@ -1048,9 +1048,8 @@ func (b *BlockStorage) FindTransaction(
 	var newestTransaction *types.Transaction
 	for _, blockTransaction := range blockTransactions {
 		if newestBlock == nil || blockTransaction.BlockIdentifier.Index > newestBlock.Index {
-			// Now that we are optimistically storing data, there is a change
-			// we may fetch a transaction from an unfinalized block. In some cases (rosetta-bitcoin),
-			// we want this!
+			// Now that we are optimistically storing data, there is a chance
+			// we may fetch a transaction from a seen but unsequenced block.
 			if head != nil && blockTransaction.BlockIdentifier.Index > head.Index {
 				continue
 			}
