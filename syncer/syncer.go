@@ -267,6 +267,10 @@ func (s *Syncer) fetchBlockResult(
 		br.block = block
 	}
 
+	if err := s.handleSeenBlock(ctx, br); err != nil {
+		return nil, err
+	}
+
 	return br, nil
 }
 
@@ -299,10 +303,6 @@ func (s *Syncer) fetchBlocks(
 		)
 		if err != nil {
 			return s.safeExit(fmt.Errorf("%w %d: %v", ErrFetchBlockFailed, b, err))
-		}
-
-		if err := s.handleSeenBlock(ctx, br); err != nil {
-			return err
 		}
 
 		select {
@@ -359,10 +359,6 @@ func (s *Syncer) processBlocks(
 			)
 			if err != nil {
 				return fmt.Errorf("%w: %v", ErrFetchBlockReorgFailed, err)
-			}
-
-			if err := s.handleSeenBlock(ctx, br); err != nil {
-				return err
 			}
 		} else {
 			// Anytime we re-fetch an index, we

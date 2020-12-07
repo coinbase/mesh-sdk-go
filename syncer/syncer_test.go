@@ -736,10 +736,7 @@ func TestSync_Reorg(t *testing.T) {
 		"BlockSeen",
 		mock.AnythingOfType("*context.cancelCtx"),
 		newBlocks[0],
-	).Run(func(args mock.Arguments) {
-		err := args.Get(0).(context.Context)
-		assert.NoError(t, err.Err())
-	}).Return(
+	).Return(
 		nil,
 	).Once() // only fetch this block once
 	mockHandler.On(
@@ -766,13 +763,20 @@ func TestSync_Reorg(t *testing.T) {
 		).Run(func(args mock.Arguments) {
 			assertNotCanceled(t, args)
 		}).Once()
+
+		seenTimes := 2
+		if b.BlockIdentifier.Index > 801 {
+			seenTimes = 1
+		}
 		mockHandler.On(
 			"BlockSeen",
 			mock.AnythingOfType("*context.cancelCtx"),
 			b,
 		).Return(
 			nil,
-		).Once()
+		).Run(func(args mock.Arguments) {
+			assertNotCanceled(t, args)
+		}).Times(seenTimes)
 		mockHandler.On(
 			"BlockAdded",
 			mock.AnythingOfType("*context.cancelCtx"),
