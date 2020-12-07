@@ -352,7 +352,7 @@ func (e *Encoder) DecodeAccountCoin( // nolint:gocognit
 	accountCoin *types.AccountCoin,
 	reclaimInput bool,
 ) error {
-	// Indexes of encoded AccountCoin struct
+	// Indices of encoded AccountCoin struct
 	const (
 		accountAddress = iota
 		coinIdentifier
@@ -561,7 +561,7 @@ func (e *Encoder) DecodeAccountCurrency( // nolint:gocognit
 	accountCurrency *types.AccountCurrency,
 	reclaimInput bool,
 ) error {
-	// Indexes of encoded AccountCurrency struct
+	// Indices of encoded AccountCurrency struct
 	const (
 		accountAddress = iota
 		currencySymbol
