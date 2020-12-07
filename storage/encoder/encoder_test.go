@@ -257,3 +257,75 @@ func TestEncodeDecodeAccountCoin(t *testing.T) {
 		})
 	}
 }
+
+func TestEncodeDecodeAccountCurrency(t *testing.T) {
+	tests := map[string]struct {
+		accountCurrency *types.AccountCurrency
+	}{
+		"simple": {
+			accountCurrency: &types.AccountCurrency{
+				Account: &types.AccountIdentifier{
+					Address: "hello",
+				},
+				Currency: &types.Currency{
+					Symbol:   "BTC",
+					Decimals: 8,
+				},
+			},
+		},
+		"sub account info": {
+			accountCurrency: &types.AccountCurrency{
+				Account: &types.AccountIdentifier{
+					Address: "hello",
+					SubAccount: &types.SubAccountIdentifier{
+						Address: "sub",
+						Metadata: map[string]interface{}{
+							"test": "stuff",
+						},
+					},
+				},
+				Currency: &types.Currency{
+					Symbol:   "BTC",
+					Decimals: 8,
+				},
+			},
+		},
+		"currency metadata": {
+			accountCurrency: &types.AccountCurrency{
+				Account: &types.AccountIdentifier{
+					Address: "hello",
+				},
+				Currency: &types.Currency{
+					Symbol:   "BTC",
+					Decimals: 8,
+					Metadata: map[string]interface{}{
+						"issuer": "satoshi",
+					},
+				},
+			},
+		},
+	}
+
+	for name, test := range tests {
+		e, err := NewEncoder(nil, NewBufferPool(), true)
+		assert.NoError(t, err)
+
+		t.Run(name, func(t *testing.T) {
+			standardResult, err := e.Encode("", test.accountCurrency)
+			assert.NoError(t, err)
+			optimizedResult, err := e.EncodeAccountCurrency(test.accountCurrency)
+			assert.NoError(t, err)
+			fmt.Printf(
+				"Uncompressed: %d, Standard Compressed: %d, Optimized: %d\n",
+				len(types.PrintStruct(test.accountCurrency)),
+				len(standardResult),
+				len(optimizedResult),
+			)
+
+			var decoded types.AccountCurrency
+			assert.NoError(t, e.DecodeAccountCurrency(optimizedResult, &decoded, true))
+
+			assert.Equal(t, test.accountCurrency, &decoded)
+		})
+	}
+}
