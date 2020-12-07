@@ -474,7 +474,7 @@ func (s *Syncer) handleSeenBlock(
 	return s.handler.BlockSeen(ctx, result.block)
 }
 
-func (s *Syncer) sequenceBlocks(
+func (s *Syncer) sequenceBlocks( // nolint:golint
 	ctx context.Context,
 	pipelineCtx context.Context,
 	g *errgroup.Group,
