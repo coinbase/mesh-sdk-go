@@ -19,10 +19,8 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"runtime"
 	"time"
 
-	lerrgroup "github.com/neilotoole/errgroup"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
@@ -213,6 +211,7 @@ func (s *Syncer) addBlockIndices(
 	endIndex int64,
 ) error {
 	defer close(blockIndices)
+
 	i := startIndex
 	for i <= endIndex {
 		s.concurrencyLock.Lock()
@@ -282,11 +281,11 @@ func (s *Syncer) safeExit(err error) error {
 	return err
 }
 
-// fetchChannelBlocks fetches blocks from a
+// fetchBlocks fetches blocks from a
 // channel with retries until there are no
 // more blocks in the channel or there is an
 // error.
-func (s *Syncer) fetchChannelBlocks(
+func (s *Syncer) fetchBlocks(
 	ctx context.Context,
 	network *types.NetworkIdentifier,
 	blockIndices chan int64,
@@ -300,6 +299,10 @@ func (s *Syncer) fetchChannelBlocks(
 		)
 		if err != nil {
 			return s.safeExit(fmt.Errorf("%w %d: %v", ErrFetchBlockFailed, b, err))
+		}
+
+		if err := s.handleSeenBlock(ctx, br); err != nil {
+			return err
 		}
 
 		select {
@@ -471,56 +474,24 @@ func (s *Syncer) handleSeenBlock(
 	return s.handler.BlockSeen(ctx, result.block)
 }
 
-func (s *Syncer) seeBlocks(
-	ctx context.Context,
-	fetchedBlocks chan *blockResult,
-	seenBlocks chan *blockResult,
-) error {
-	numCPU := runtime.NumCPU()
-	g, ctx := lerrgroup.WithContextN(
-		ctx,
-		numCPU,
-		numCPU,
-	)
-
-	for result := range fetchedBlocks {
-		r := result
-		g.Go(func() error {
-			if err := s.handleSeenBlock(ctx, r); err != nil {
-				return err
-			}
-
-			select {
-			case seenBlocks <- r:
-				return nil
-			case <-ctx.Done():
-				return ctx.Err()
-			}
-		})
-	}
-
-	return g.Wait()
-}
-
 func (s *Syncer) sequenceBlocks(
+	ctx context.Context,
 	pipelineCtx context.Context,
-	handleCtx context.Context,
 	g *errgroup.Group,
 	blockIndices chan int64,
 	fetchedBlocks chan *blockResult,
-	seenBlocks chan *blockResult,
 	endIndex int64,
 ) error {
 	cache := make(map[int64]*blockResult)
-	for b := range seenBlocks {
-		cache[b.index] = b
+	for result := range fetchedBlocks {
+		cache[result.index] = result
 
-		if err := s.processBlocks(handleCtx, cache, endIndex); err != nil {
+		if err := s.processBlocks(ctx, cache, endIndex); err != nil {
 			return fmt.Errorf("%w: %v", ErrBlocksProcessMultipleFailed, err)
 		}
 
 		// Determine if concurrency should be adjusted.
-		s.recentBlockSizes = append(s.recentBlockSizes, utils.SizeOf(b))
+		s.recentBlockSizes = append(s.recentBlockSizes, utils.SizeOf(result))
 		s.lastAdjustment++
 
 		s.concurrencyLock.Lock()
@@ -538,7 +509,12 @@ func (s *Syncer) sequenceBlocks(
 		s.doneLoadingLock.Lock()
 		if !s.doneLoading && pipelineCtx.Err() == nil {
 			g.Go(func() error {
-				return s.fetchChannelBlocks(pipelineCtx, s.network, blockIndices, fetchedBlocks)
+				return s.fetchBlocks(
+					pipelineCtx,
+					s.network,
+					blockIndices,
+					fetchedBlocks,
+				)
 			})
 		} else {
 			s.concurrency--
@@ -591,7 +567,7 @@ func (s *Syncer) syncRange(
 
 	for j := int64(0); j < s.concurrency; j++ {
 		g.Go(func() error {
-			return s.fetchChannelBlocks(pipelineCtx, s.network, blockIndices, fetchedBlocks)
+			return s.fetchBlocks(pipelineCtx, s.network, blockIndices, fetchedBlocks)
 		})
 	}
 
@@ -602,26 +578,18 @@ func (s *Syncer) syncRange(
 		close(fetchedBlocks)
 	}()
 
-	g2, handleCtx := errgroup.WithContext(ctx)
-	seenBlocks := make(chan *blockResult, defaultSeenBacklog)
-	g2.Go(func() error {
-		defer close(seenBlocks)
-		return s.seeBlocks(handleCtx, fetchedBlocks, seenBlocks)
-	})
+	if err := s.sequenceBlocks(
+		ctx,
+		pipelineCtx,
+		g,
+		blockIndices,
+		fetchedBlocks,
+		endIndex,
+	); err != nil {
+		return err
+	}
 
-	g2.Go(func() error {
-		return s.sequenceBlocks(
-			pipelineCtx,
-			handleCtx,
-			g,
-			blockIndices,
-			fetchedBlocks,
-			seenBlocks,
-			endIndex,
-		)
-	})
-
-	if err := g2.Wait(); err != nil {
+	if err := g.Wait(); err != nil {
 		return fmt.Errorf("%w: unable to sync to %d", err, endIndex)
 	}
 
