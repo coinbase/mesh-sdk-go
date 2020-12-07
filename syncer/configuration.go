@@ -65,3 +65,12 @@ func WithAdjustmentWindow(adjustmentWindow int64) Option {
 		s.adjustmentWindow = adjustmentWindow
 	}
 }
+
+// WithSeenConcurrency overrides the number of concurrent
+// invocations of BlockSeen we will make. We default
+// to the value of runtime.NumCPU().
+func WithSeenConcurrency(concurrency int64) Option {
+	return func(s *Syncer) {
+		s.seenSemaphoreSize = concurrency
+	}
+}
