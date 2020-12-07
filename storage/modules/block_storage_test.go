@@ -335,6 +335,9 @@ func TestBlock(t *testing.T) {
 		assert.Equal(t, int64(-1), oldestIndex)
 		assert.Error(t, storageErrs.ErrOldestIndexMissing, err)
 
+		err = storage.SeeBlock(ctx, genesisBlock)
+		assert.NoError(t, err)
+
 		err = storage.AddBlock(ctx, genesisBlock)
 		assert.NoError(t, err)
 
@@ -349,6 +352,9 @@ func TestBlock(t *testing.T) {
 	})
 
 	t.Run("Set and get block", func(t *testing.T) {
+		err = storage.SeeBlock(ctx, newBlock)
+		assert.NoError(t, err)
+
 		err = storage.AddBlock(ctx, newBlock)
 		assert.NoError(t, err)
 
@@ -419,6 +425,9 @@ func TestBlock(t *testing.T) {
 	})
 
 	t.Run("Set duplicate transaction hash (from prior block)", func(t *testing.T) {
+		err = storage.SeeBlock(ctx, newBlock2)
+		assert.NoError(t, err)
+
 		err = storage.AddBlock(ctx, newBlock2)
 		assert.NoError(t, err)
 
@@ -486,6 +495,9 @@ func TestBlock(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, newBlock2.ParentBlockIdentifier, head)
 
+		err = storage.SeeBlock(ctx, newBlock2)
+		assert.NoError(t, err)
+
 		err = storage.AddBlock(ctx, newBlock2)
 		assert.NoError(t, err)
 
@@ -504,7 +516,10 @@ func TestBlock(t *testing.T) {
 	})
 
 	t.Run("Add block with complex metadata", func(t *testing.T) {
-		err := storage.AddBlock(ctx, complexBlock)
+		err := storage.SeeBlock(ctx, complexBlock)
+		assert.NoError(t, err)
+
+		err = storage.AddBlock(ctx, complexBlock)
 		assert.NoError(t, err)
 
 		oldestIndex, err := storage.GetOldestBlockIndex(ctx)
@@ -533,7 +548,7 @@ func TestBlock(t *testing.T) {
 	})
 
 	t.Run("Set duplicate transaction hash (same block)", func(t *testing.T) {
-		err = storage.AddBlock(ctx, duplicateTxBlock)
+		err = storage.SeeBlock(ctx, duplicateTxBlock)
 		assert.Contains(t, err.Error(), storageErrs.ErrDuplicateTransactionHash.Error())
 
 		head, err := storage.GetHeadBlockIdentifier(ctx)
@@ -542,7 +557,10 @@ func TestBlock(t *testing.T) {
 	})
 
 	t.Run("Add block after omitted", func(t *testing.T) {
-		err := storage.AddBlock(ctx, gapBlock)
+		err := storage.SeeBlock(ctx, gapBlock)
+		assert.NoError(t, err)
+
+		err = storage.AddBlock(ctx, gapBlock)
 		assert.NoError(t, err)
 
 		block, err := storage.GetBlock(
@@ -564,6 +582,9 @@ func TestBlock(t *testing.T) {
 		head, err := storage.GetHeadBlockIdentifier(ctx)
 		assert.NoError(t, err)
 		assert.Equal(t, gapBlock.ParentBlockIdentifier, head)
+
+		err = storage.SeeBlock(ctx, gapBlock)
+		assert.NoError(t, err)
 
 		err = storage.AddBlock(ctx, gapBlock)
 		assert.NoError(t, err)
@@ -611,6 +632,7 @@ func TestBlock(t *testing.T) {
 				ParentBlockIdentifier: parentBlockIdentifier,
 			}
 
+			assert.NoError(t, storage.SeeBlock(ctx, block))
 			assert.NoError(t, storage.AddBlock(ctx, block))
 			head, err := storage.GetHeadBlockIdentifier(ctx)
 			assert.NoError(t, err)
@@ -736,6 +758,9 @@ func TestCreateBlockCache(t *testing.T) {
 	})
 
 	t.Run("1 block processed", func(t *testing.T) {
+		err = storage.SeeBlock(ctx, genesisBlock)
+		assert.NoError(t, err)
+
 		err = storage.AddBlock(ctx, genesisBlock)
 		assert.NoError(t, err)
 		assert.Equal(
@@ -746,6 +771,9 @@ func TestCreateBlockCache(t *testing.T) {
 	})
 
 	t.Run("2 blocks processed", func(t *testing.T) {
+		err = storage.SeeBlock(ctx, newBlock)
+		assert.NoError(t, err)
+
 		err = storage.AddBlock(ctx, newBlock)
 		assert.NoError(t, err)
 		assert.Equal(
@@ -763,6 +791,9 @@ func TestCreateBlockCache(t *testing.T) {
 			},
 			ParentBlockIdentifier: newBlock.BlockIdentifier,
 		}
+
+		err = storage.SeeBlock(ctx, simpleGap)
+		assert.NoError(t, err)
 
 		err = storage.AddBlock(ctx, simpleGap)
 		assert.NoError(t, err)
@@ -804,7 +835,7 @@ func TestAtTip(t *testing.T) {
 	})
 
 	t.Run("Add old block", func(t *testing.T) {
-		err := storage.AddBlock(ctx, &types.Block{
+		b := &types.Block{
 			BlockIdentifier: &types.BlockIdentifier{
 				Hash:  "block 0",
 				Index: 0,
@@ -814,7 +845,11 @@ func TestAtTip(t *testing.T) {
 				Index: 0,
 			},
 			Timestamp: utils.Milliseconds() - (3 * tipDelay * utils.MillisecondsInSecond),
-		})
+		}
+		err := storage.SeeBlock(ctx, b)
+		assert.NoError(t, err)
+
+		err = storage.AddBlock(ctx, b)
 		assert.NoError(t, err)
 
 		atTip, blockIdentifier, err := storage.AtTip(ctx, tipDelay)
@@ -828,7 +863,7 @@ func TestAtTip(t *testing.T) {
 	})
 
 	t.Run("Add new block", func(t *testing.T) {
-		err := storage.AddBlock(ctx, &types.Block{
+		b := &types.Block{
 			BlockIdentifier: &types.BlockIdentifier{
 				Hash:  "block 1",
 				Index: 1,
@@ -838,7 +873,11 @@ func TestAtTip(t *testing.T) {
 				Index: 0,
 			},
 			Timestamp: utils.Milliseconds(),
-		})
+		}
+		err := storage.SeeBlock(ctx, b)
+		assert.NoError(t, err)
+
+		err = storage.AddBlock(ctx, b)
 		assert.NoError(t, err)
 
 		atTip, blockIdentifier, err := storage.AtTip(ctx, tipDelay)
