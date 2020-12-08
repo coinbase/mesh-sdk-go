@@ -71,6 +71,17 @@ func TestSearchTransactionsResponse(t *testing.T) {
 			},
 			err: ErrNextOffsetInvalid,
 		},
+		"valid count": {
+			response: &types.SearchTransactionsResponse{
+				TotalCount: 0,
+			},
+		},
+		"invalid count": {
+			response: &types.SearchTransactionsResponse{
+				TotalCount: -1,
+			},
+			err: ErrTotalCountInvalid,
+		},
 		"valid next + transaction": {
 			response: &types.SearchTransactionsResponse{
 				NextOffset: types.Int64(1),
