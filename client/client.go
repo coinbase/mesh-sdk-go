@@ -41,7 +41,7 @@ var (
 	ErrRetriable = errors.New("retriable http status code received")
 )
 
-// APIClient manages communication with the Rosetta API v1.4.8
+// APIClient manages communication with the Rosetta API v1.4.9
 // In most cases there should be only one, shared, APIClient.
 type APIClient struct {
 	cfg    *Configuration
