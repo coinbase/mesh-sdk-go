@@ -469,6 +469,15 @@ func TestSync_NoReorg(t *testing.T) {
 		}
 
 		mockHandler.On(
+			"BlockSeen",
+			mock.AnythingOfType("*context.cancelCtx"),
+			b,
+		).Return(
+			nil,
+		).Run(func(args mock.Arguments) {
+			assertNotCanceled(t, args)
+		}).Once()
+		mockHandler.On(
 			"BlockAdded",
 			mock.AnythingOfType("*context.cancelCtx"),
 			b,
@@ -476,9 +485,6 @@ func TestSync_NoReorg(t *testing.T) {
 			nil,
 		).Run(func(args mock.Arguments) {
 			assertNotCanceled(t, args)
-			if index == 1100 {
-				assert.Equal(t, int64(3), syncer.concurrency)
-			}
 
 			// Test tip method
 			if index > 200 {
@@ -533,6 +539,13 @@ func TestSync_SpecificStart(t *testing.T) {
 		).Run(func(args mock.Arguments) {
 			assertNotCanceled(t, args)
 		}).Once()
+		mockHandler.On(
+			"BlockSeen",
+			mock.AnythingOfType("*context.cancelCtx"),
+			b,
+		).Return(
+			nil,
+		).Once()
 		mockHandler.On(
 			"BlockAdded",
 			mock.AnythingOfType("*context.cancelCtx"),
@@ -597,6 +610,13 @@ func TestSync_Cancel(t *testing.T) {
 			nil,
 		).Once()
 		mockHandler.On(
+			"BlockSeen",
+			mock.AnythingOfType("*context.cancelCtx"),
+			b,
+		).Return(
+			nil,
+		).Once()
+		mockHandler.On(
 			"BlockAdded",
 			mock.AnythingOfType("*context.cancelCtx"),
 			b,
@@ -649,6 +669,15 @@ func TestSync_Reorg(t *testing.T) {
 		).Run(func(args mock.Arguments) {
 			assertNotCanceled(t, args)
 		}).Once()
+		mockHandler.On(
+			"BlockSeen",
+			mock.AnythingOfType("*context.cancelCtx"),
+			b,
+		).Run(func(args mock.Arguments) {
+			assertNotCanceled(t, args)
+		}).Return(
+			nil,
+		).Once()
 		mockHandler.On(
 			"BlockAdded",
 			mock.AnythingOfType("*context.cancelCtx"),
@@ -704,6 +733,13 @@ func TestSync_Reorg(t *testing.T) {
 	}
 
 	mockHandler.On(
+		"BlockSeen",
+		mock.AnythingOfType("*context.cancelCtx"),
+		newBlocks[0],
+	).Return(
+		nil,
+	).Once() // only fetch this block once
+	mockHandler.On(
 		"BlockAdded",
 		mock.AnythingOfType("*context.cancelCtx"),
 		newBlocks[0],
@@ -727,6 +763,20 @@ func TestSync_Reorg(t *testing.T) {
 		).Run(func(args mock.Arguments) {
 			assertNotCanceled(t, args)
 		}).Once()
+
+		seenTimes := 2
+		if b.BlockIdentifier.Index > 801 {
+			seenTimes = 1
+		}
+		mockHandler.On(
+			"BlockSeen",
+			mock.AnythingOfType("*context.cancelCtx"),
+			b,
+		).Return(
+			nil,
+		).Run(func(args mock.Arguments) {
+			assertNotCanceled(t, args)
+		}).Times(seenTimes)
 		mockHandler.On(
 			"BlockAdded",
 			mock.AnythingOfType("*context.cancelCtx"),
@@ -791,6 +841,15 @@ func TestSync_ManualReorg(t *testing.T) {
 			assertNotCanceled(t, args)
 		}).Once()
 		mockHandler.On(
+			"BlockSeen",
+			mock.AnythingOfType("*context.cancelCtx"),
+			b,
+		).Run(func(args mock.Arguments) {
+			assertNotCanceled(t, args)
+		}).Return(
+			nil,
+		).Once()
+		mockHandler.On(
 			"BlockAdded",
 			mock.AnythingOfType("*context.cancelCtx"),
 			b,
@@ -838,6 +897,13 @@ func TestSync_ManualReorg(t *testing.T) {
 		).Run(func(args mock.Arguments) {
 			assertNotCanceled(t, args)
 		}).Once()
+		mockHandler.On(
+			"BlockSeen",
+			mock.AnythingOfType("*context.cancelCtx"),
+			b,
+		).Return(
+			nil,
+		).Once()
 		mockHandler.On(
 			"BlockAdded",
 			mock.AnythingOfType("*context.cancelCtx"),
@@ -942,6 +1008,15 @@ func TestSync_Dynamic(t *testing.T) {
 		}
 
 		mockHandler.On(
+			"BlockSeen",
+			mock.AnythingOfType("*context.cancelCtx"),
+			b,
+		).Return(
+			nil,
+		).Run(func(args mock.Arguments) {
+			assertNotCanceled(t, args)
+		}).Once()
+		mockHandler.On(
 			"BlockAdded",
 			mock.AnythingOfType("*context.cancelCtx"),
 			b,
@@ -1022,6 +1097,15 @@ func TestSync_DynamicOverhead(t *testing.T) {
 			continue
 		}
 
+		mockHandler.On(
+			"BlockSeen",
+			mock.AnythingOfType("*context.cancelCtx"),
+			b,
+		).Return(
+			nil,
+		).Run(func(args mock.Arguments) {
+			assertNotCanceled(t, args)
+		}).Once()
 		mockHandler.On(
 			"BlockAdded",
 			mock.AnythingOfType("*context.cancelCtx"),

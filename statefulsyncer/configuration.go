@@ -57,3 +57,12 @@ func WithPruneSleepTime(sleepTime int) Option {
 		s.pruneSleepTime = time.Duration(sleepTime) * time.Second
 	}
 }
+
+// WithSeenConcurrency overrides the number of concurrent
+// invocations of BlockSeen we will handle. We default
+// to the value of runtime.NumCPU().
+func WithSeenConcurrency(concurrency int64) Option {
+	return func(s *StatefulSyncer) {
+		s.seenSemaphoreSize = concurrency
+	}
+}
