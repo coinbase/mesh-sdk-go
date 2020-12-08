@@ -68,9 +68,8 @@ type StatefulSyncer struct {
 	adjustmentWindow int64
 	pruneSleepTime   time.Duration
 
-	// SeenSemaphore controls how many concurrent
-	// invocations we make to the SeenBlock function
-	// in the handler.
+	// SeenSemaphore limits how many executions of
+	// BlockSeen occur concurrently.
 	seenSemaphore     *semaphore.Weighted
 	seenSemaphoreSize int64
 }
