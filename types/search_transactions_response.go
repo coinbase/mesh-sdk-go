@@ -20,12 +20,16 @@ package types
 // BlockTransactions that match the query in SearchTransactionsRequest. These BlockTransactions are
 // sorted from most recent block to oldest block.
 type SearchTransactionsResponse struct {
-	// next_offset is the next offset to use when paginating through transaction results. If this
-	// field is not populated, there are no more transactions to query.
-	NextOffset *int64 `json:"next_offset,omitempty"`
 	// transactions is an array of BlockTransactions sorted by most recent BlockIdentifier (meaning
 	// that transactions in recent blocks appear first). If there are many transactions for a
 	// particular search, transactions may not contain all matching transactions. It is up to the
 	// caller to paginate these transactions using the max_block field.
 	Transactions []*BlockTransaction `json:"transactions"`
+	// total_count is the number of results for a given search. Callers typically use this value to
+	// concurrently fetch results by offset or to display a virtual page number associated with
+	// results.
+	TotalCount int64 `json:"total_count"`
+	// next_offset is the next offset to use when paginating through transaction results. If this
+	// field is not populated, there are no more transactions to query.
+	NextOffset *int64 `json:"next_offset,omitempty"`
 }
