@@ -266,7 +266,8 @@ func TestNew(t *testing.T) {
 		networkStatus  *types.NetworkStatusResponse
 		networkOptions *types.NetworkOptionsResponse
 
-		err error
+		err          error
+		skipLoadTest bool
 	}{
 		"valid responses": {
 			network:        validNetwork,
@@ -301,7 +302,8 @@ func TestNew(t *testing.T) {
 			networkStatus:  invalidNetworkStatusSyncStatus,
 			networkOptions: validNetworkOptions,
 
-			err: errors.New("BlockIdentifier is nil"),
+			err:          errors.New("SyncStatus.CurrentIndex is negative"),
+			skipLoadTest: true,
 		},
 		"invalid network options": {
 			network:        validNetwork,
@@ -378,6 +380,10 @@ func TestNew(t *testing.T) {
 				assert.Equal(t, test.networkStatus.GenesisBlockIdentifier.Index+1, configuration.AllowedTimestampStartIndex)
 			}
 		})
+
+		if test.skipLoadTest {
+			continue
+		}
 
 		t.Run(fmt.Sprintf("%s with file", name), func(t *testing.T) {
 			fileConfig := &Configuration{
