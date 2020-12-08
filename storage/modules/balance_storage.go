@@ -329,11 +329,6 @@ func (b *BalanceStorage) RemovingBlock(
 	}, nil
 }
 
-type accountEntry struct {
-	Account  *types.AccountIdentifier `json:"account"`
-	Currency *types.Currency          `json:"currency"`
-}
-
 // SetBalance allows a client to set the balance of an account in a database
 // transaction (removing all historical states). This is particularly useful
 // for bootstrapping balances.
@@ -360,7 +355,7 @@ func (b *BalanceStorage) SetBalance(
 	}
 
 	// Serialize account entry
-	serialAcc, err := b.db.Encoder().Encode(accountNamespace, accountEntry{
+	serialAcc, err := b.db.Encoder().EncodeAccountCurrency(&types.AccountCurrency{
 		Account:  account,
 		Currency: amount.Currency,
 	})
@@ -480,26 +475,29 @@ func (b *BalanceStorage) ReconciliationCoverage(
 ) (float64, error) {
 	seen := 0
 	validCoverage := 0
-	err := b.getAllAccountEntries(ctx, func(txn database.Transaction, entry accountEntry) error {
-		seen++
+	err := b.getAllAccountEntries(
+		ctx,
+		func(txn database.Transaction, entry *types.AccountCurrency) error {
+			seen++
 
-		// Fetch last reconciliation index in same database.Transaction
-		key := GetAccountKey(reconciliationNamepace, entry.Account, entry.Currency)
-		exists, lastReconciled, err := BigIntGet(ctx, key, txn)
-		if err != nil {
-			return err
-		}
+			// Fetch last reconciliation index in same database.Transaction
+			key := GetAccountKey(reconciliationNamepace, entry.Account, entry.Currency)
+			exists, lastReconciled, err := BigIntGet(ctx, key, txn)
+			if err != nil {
+				return err
+			}
 
-		if !exists {
+			if !exists {
+				return nil
+			}
+
+			if lastReconciled.Int64() >= minimumIndex {
+				validCoverage++
+			}
+
 			return nil
-		}
-
-		if lastReconciled.Int64() >= minimumIndex {
-			validCoverage++
-		}
-
-		return nil
-	})
+		},
+	)
 	if err != nil {
 		return -1, fmt.Errorf("%w: unable to get all account entries", err)
 	}
@@ -859,7 +857,7 @@ func (b *BalanceStorage) UpdateBalance(
 	if !exists {
 		newAccount = true
 		key := GetAccountKey(accountNamespace, change.Account, change.Currency)
-		serialAcc, err := b.db.Encoder().Encode(accountNamespace, accountEntry{
+		serialAcc, err := b.db.Encoder().EncodeAccountCurrency(&types.AccountCurrency{
 			Account:  change.Account,
 			Currency: change.Currency,
 		})
@@ -1137,7 +1135,7 @@ func (b *BalanceStorage) BootstrapBalances(
 
 func (b *BalanceStorage) getAllAccountEntries(
 	ctx context.Context,
-	handler func(database.Transaction, accountEntry) error,
+	handler func(database.Transaction, *types.AccountCurrency) error,
 ) error {
 	txn := b.db.ReadTransaction(ctx)
 	defer txn.Discard(ctx)
@@ -1146,9 +1144,9 @@ func (b *BalanceStorage) getAllAccountEntries(
 		[]byte(accountNamespace),
 		[]byte(accountNamespace),
 		func(k []byte, v []byte) error {
-			var accEntry accountEntry
+			var accCurrency types.AccountCurrency
 			// We should not reclaim memory during a scan!!
-			err := b.db.Encoder().Decode(accountNamespace, v, &accEntry, false)
+			err := b.db.Encoder().DecodeAccountCurrency(v, &accCurrency, false)
 			if err != nil {
 				return fmt.Errorf(
 					"%w: unable to parse balance entry for %s",
@@ -1157,7 +1155,7 @@ func (b *BalanceStorage) getAllAccountEntries(
 				)
 			}
 
-			return handler(txn, accEntry)
+			return handler(txn, &accCurrency)
 		},
 		false,
 		false,
@@ -1177,20 +1175,12 @@ func (b *BalanceStorage) GetAllAccountCurrency(
 ) ([]*types.AccountCurrency, error) {
 	log.Println("Loading previously seen accounts (this could take a while)...")
 
-	accountEntries := []*accountEntry{}
-	if err := b.getAllAccountEntries(ctx, func(_ database.Transaction, entry accountEntry) error {
-		accountEntries = append(accountEntries, &entry)
+	accounts := []*types.AccountCurrency{}
+	if err := b.getAllAccountEntries(ctx, func(_ database.Transaction, account *types.AccountCurrency) error {
+		accounts = append(accounts, account)
 		return nil
 	}); err != nil {
 		return nil, fmt.Errorf("%w: unable to get all balance entries", err)
-	}
-
-	accounts := make([]*types.AccountCurrency, len(accountEntries))
-	for i, account := range accountEntries {
-		accounts[i] = &types.AccountCurrency{
-			Account:  account.Account,
-			Currency: account.Currency,
-		}
 	}
 
 	return accounts, nil

@@ -81,6 +81,15 @@ const (
 // to handle different events. It is common to write logs or
 // perform reconciliation in the sync processor.
 type Handler interface {
+	// BlockSeen is invoked AT LEAST ONCE
+	// by the syncer prior to calling BlockAdded
+	// with the same arguments. This allows for
+	// storing block data before it is sequenced.
+	BlockSeen(
+		ctx context.Context,
+		block *types.Block,
+	) error
+
 	BlockAdded(
 		ctx context.Context,
 		block *types.Block,

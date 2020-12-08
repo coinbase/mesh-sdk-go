@@ -561,21 +561,52 @@ func (b *BlockStorage) GetBlock(
 	return b.GetBlockTransactional(ctx, transaction, blockIdentifier)
 }
 
-func (b *BlockStorage) storeBlock(
+func (b *BlockStorage) seeBlock(
 	ctx context.Context,
 	transaction database.Transaction,
 	blockResponse *types.BlockResponse,
-) error {
+) (bool, error) {
 	blockIdentifier := blockResponse.Block.BlockIdentifier
 	namespace, key := getBlockHashKey(blockIdentifier.Hash)
 	buf, err := b.db.Encoder().Encode(namespace, blockResponse)
 	if err != nil {
-		return fmt.Errorf("%w: %v", storageErrs.ErrBlockEncodeFailed, err)
+		return false, fmt.Errorf("%w: %v", storageErrs.ErrBlockEncodeFailed, err)
 	}
 
-	if err := storeUniqueKey(ctx, transaction, key, buf, true); err != nil {
-		return fmt.Errorf("%w: %v", storageErrs.ErrBlockStoreFailed, err)
+	exists, val, err := transaction.Get(ctx, key)
+	if err != nil {
+		return false, err
 	}
+
+	if !exists {
+		return false, transaction.Set(ctx, key, buf, true)
+	}
+
+	var rosettaBlockResponse types.BlockResponse
+	err = b.db.Encoder().Decode(namespace, val, &rosettaBlockResponse, true)
+	if err != nil {
+		return false, err
+	}
+
+	// Exit early if block already exists!
+	if blockResponse.Block.BlockIdentifier.Hash == rosettaBlockResponse.Block.BlockIdentifier.Hash &&
+		blockResponse.Block.BlockIdentifier.Index == rosettaBlockResponse.Block.BlockIdentifier.Index {
+		return true, nil
+	}
+
+	return false, fmt.Errorf(
+		"%w: duplicate key %s found",
+		storageErrs.ErrDuplicateKey,
+		string(key),
+	)
+}
+
+func (b *BlockStorage) storeBlock(
+	ctx context.Context,
+	transaction database.Transaction,
+	blockIdentifier *types.BlockIdentifier,
+) error {
+	_, key := getBlockHashKey(blockIdentifier.Hash)
 
 	if err := storeUniqueKey(
 		ctx,
@@ -598,12 +629,13 @@ func (b *BlockStorage) storeBlock(
 	return nil
 }
 
-// AddBlock stores a block or returns an error.
-func (b *BlockStorage) AddBlock(
+// SeeBlock pre-stores a block or returns an error.
+func (b *BlockStorage) SeeBlock(
 	ctx context.Context,
 	block *types.Block,
 ) error {
-	transaction := b.db.WriteTransaction(ctx, blockSyncIdentifier, true)
+	_, key := getBlockHashKey(block.BlockIdentifier.Hash)
+	transaction := b.db.WriteTransaction(ctx, string(key), true)
 	defer transaction.Discard(ctx)
 
 	// Store all transactions in order and check for duplicates
@@ -639,9 +671,13 @@ func (b *BlockStorage) AddBlock(
 	}
 
 	// Store block
-	err := b.storeBlock(ctx, transaction, blockWithoutTransactions)
+	exists, err := b.seeBlock(ctx, transaction, blockWithoutTransactions)
 	if err != nil {
 		return fmt.Errorf("%w: %v", storageErrs.ErrBlockStoreFailed, err)
+	}
+
+	if exists {
+		return nil
 	}
 
 	g, gctx := errgroup.WithContextN(ctx, b.numCPU, b.numCPU)
@@ -666,6 +702,23 @@ func (b *BlockStorage) AddBlock(
 	}
 	if err := g.Wait(); err != nil {
 		return err
+	}
+
+	return transaction.Commit(ctx)
+}
+
+// AddBlock stores a block or returns an error.
+func (b *BlockStorage) AddBlock(
+	ctx context.Context,
+	block *types.Block,
+) error {
+	transaction := b.db.WriteTransaction(ctx, blockSyncIdentifier, true)
+	defer transaction.Discard(ctx)
+
+	// Store block
+	err := b.storeBlock(ctx, transaction, block.BlockIdentifier)
+	if err != nil {
+		return fmt.Errorf("%w: %v", storageErrs.ErrBlockStoreFailed, err)
 	}
 
 	return b.callWorkersAndCommit(ctx, block, transaction, true)
@@ -987,10 +1040,21 @@ func (b *BlockStorage) FindTransaction(
 		return nil, nil, nil
 	}
 
+	head, err := b.GetHeadBlockIdentifier(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	var newestBlock *types.BlockIdentifier
 	var newestTransaction *types.Transaction
 	for _, blockTransaction := range blockTransactions {
 		if newestBlock == nil || blockTransaction.BlockIdentifier.Index > newestBlock.Index {
+			// Now that we are optimistically storing data, there is a chance
+			// we may fetch a transaction from a seen but unsequenced block.
+			if head != nil && blockTransaction.BlockIdentifier.Index > head.Index {
+				continue
+			}
+
 			newestBlock = blockTransaction.BlockIdentifier
 			newestTransaction = blockTransaction.Transaction
 		}
