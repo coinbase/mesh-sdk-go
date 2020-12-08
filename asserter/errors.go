@@ -282,6 +282,15 @@ var (
 	ErrTimestampStartIndexInvalid = errors.New(
 		"TimestampStartIndex is invalid",
 	)
+	ErrSyncStatusCurrentIndexNegative = errors.New(
+		"SyncStatus.CurrentIndex is negative",
+	)
+	ErrSyncStatusTargetIndexNegative = errors.New(
+		"SyncStatus.TargetIndex is negative",
+	)
+	ErrSyncStatusStageInvalid = errors.New(
+		"SyncStatus.Stage is invalid",
+	)
 
 	NetworkErrs = []error{
 		ErrSubNetworkIdentifierInvalid,
@@ -307,6 +316,9 @@ var (
 		ErrBalanceExemptionSubAccountAddressEmpty,
 		ErrBalanceExemptionNoHistoricalLookup,
 		ErrTimestampStartIndexInvalid,
+		ErrSyncStatusCurrentIndexNegative,
+		ErrSyncStatusTargetIndexNegative,
+		ErrSyncStatusStageInvalid,
 	}
 )
 
@@ -431,9 +443,11 @@ var (
 // Search Errors
 var (
 	ErrNextOffsetInvalid = errors.New("next offset invalid")
+	ErrTotalCountInvalid = errors.New("total count invalid")
 
 	SearchErrs = []error{
 		ErrNextOffsetInvalid,
+		ErrTotalCountInvalid,
 	}
 )
 
