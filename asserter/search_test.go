@@ -80,6 +80,7 @@ func TestSearchTransactionsResponse(t *testing.T) {
 			response: &types.SearchTransactionsResponse{
 				TotalCount: -1,
 			},
+			err: ErrTotalCountInvalid,
 		},
 		"valid next + transaction": {
 			response: &types.SearchTransactionsResponse{
