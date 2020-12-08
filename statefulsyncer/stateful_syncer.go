@@ -19,7 +19,10 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"runtime"
 	"time"
+
+	"golang.org/x/sync/semaphore"
 
 	"github.com/coinbase/rosetta-sdk-go/fetcher"
 	storageErrs "github.com/coinbase/rosetta-sdk-go/storage/errors"
@@ -40,6 +43,9 @@ const (
 	// pruneBuffer is the cushion we apply to pastBlockLimit
 	// when pruning.
 	pruneBuffer = 2
+
+	// semaphoreWeight is the weight of each semaphore request.
+	semaphoreWeight = int64(1)
 )
 
 // StatefulSyncer is an abstraction layer over
@@ -61,6 +67,12 @@ type StatefulSyncer struct {
 	pastBlockLimit   int
 	adjustmentWindow int64
 	pruneSleepTime   time.Duration
+
+	// SeenSemaphore controls how many concurrent
+	// invocations we make to the SeenBlock function
+	// in the handler.
+	seenSemaphore     *semaphore.Weighted
+	seenSemaphoreSize int64
 }
 
 // Logger is used by the statefulsyncer to
@@ -103,17 +115,23 @@ func New(
 		logger:         logger,
 
 		// Optional args
-		cacheSize:        syncer.DefaultCacheSize,
-		maxConcurrency:   syncer.DefaultMaxConcurrency,
-		pastBlockLimit:   syncer.DefaultPastBlockLimit,
-		adjustmentWindow: syncer.DefaultAdjustmentWindow,
-		pruneSleepTime:   DefaultPruneSleepTime,
+		cacheSize:         syncer.DefaultCacheSize,
+		maxConcurrency:    syncer.DefaultMaxConcurrency,
+		pastBlockLimit:    syncer.DefaultPastBlockLimit,
+		adjustmentWindow:  syncer.DefaultAdjustmentWindow,
+		pruneSleepTime:    DefaultPruneSleepTime,
+		seenSemaphoreSize: int64(runtime.NumCPU()),
 	}
 
 	// Override defaults with any provided options
 	for _, opt := range options {
 		opt(s)
 	}
+
+	// We set this after options because the caller
+	// has the ability to set the max concurrency
+	// of seen invocations.
+	s.seenSemaphore = semaphore.NewWeighted(s.seenSemaphoreSize)
 
 	return s
 }
@@ -221,10 +239,14 @@ func (s *StatefulSyncer) Prune(ctx context.Context, helper PruneHelper) error {
 
 // BlockSeen is called by the syncer when a block is seen.
 func (s *StatefulSyncer) BlockSeen(ctx context.Context, block *types.Block) error {
-	err := s.blockStorage.SeeBlock(ctx, block)
-	if err != nil {
+	if err := s.seenSemaphore.Acquire(ctx, semaphoreWeight); err != nil {
+		return err
+	}
+	defer s.seenSemaphore.Release(semaphoreWeight)
+
+	if err := s.blockStorage.SeeBlock(ctx, block); err != nil {
 		return fmt.Errorf(
-			"%w: unable to encounter block to storage %s:%d",
+			"%w: unable to pre-store block %s:%d",
 			err,
 			block.BlockIdentifier.Hash,
 			block.BlockIdentifier.Index,

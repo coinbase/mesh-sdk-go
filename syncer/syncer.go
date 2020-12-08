@@ -19,11 +19,9 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"runtime"
 	"time"
 
 	"golang.org/x/sync/errgroup"
-	"golang.org/x/sync/semaphore"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/coinbase/rosetta-sdk-go/utils"
@@ -39,29 +37,23 @@ func New(
 	options ...Option,
 ) *Syncer {
 	s := &Syncer{
-		network:           network,
-		helper:            helper,
-		handler:           handler,
-		concurrency:       DefaultConcurrency,
-		cacheSize:         DefaultCacheSize,
-		maxConcurrency:    DefaultMaxConcurrency,
-		sizeMultiplier:    DefaultSizeMultiplier,
-		cancel:            cancel,
-		pastBlocks:        []*types.BlockIdentifier{},
-		pastBlockLimit:    DefaultPastBlockLimit,
-		adjustmentWindow:  DefaultAdjustmentWindow,
-		seenSemaphoreSize: int64(runtime.NumCPU()),
+		network:          network,
+		helper:           helper,
+		handler:          handler,
+		concurrency:      DefaultConcurrency,
+		cacheSize:        DefaultCacheSize,
+		maxConcurrency:   DefaultMaxConcurrency,
+		sizeMultiplier:   DefaultSizeMultiplier,
+		cancel:           cancel,
+		pastBlocks:       []*types.BlockIdentifier{},
+		pastBlockLimit:   DefaultPastBlockLimit,
+		adjustmentWindow: DefaultAdjustmentWindow,
 	}
 
 	// Override defaults with any provided options
 	for _, opt := range options {
 		opt(s)
 	}
-
-	// We set this after options because the caller
-	// has the ability to set the max concurrency
-	// of seen invocations.
-	s.seenSemaphore = semaphore.NewWeighted(s.seenSemaphoreSize)
 
 	return s
 }
@@ -474,11 +466,6 @@ func (s *Syncer) handleSeenBlock(
 	if result.block == nil {
 		return nil
 	}
-
-	if err := s.seenSemaphore.Acquire(ctx, semaphoreWeight); err != nil {
-		return err
-	}
-	defer s.seenSemaphore.Release(semaphoreWeight)
 
 	return s.handler.BlockSeen(ctx, result.block)
 }

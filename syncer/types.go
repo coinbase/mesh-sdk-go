@@ -19,8 +19,6 @@ import (
 	"sync"
 	"time"
 
-	"golang.org/x/sync/semaphore"
-
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
@@ -77,9 +75,6 @@ const (
 	// when we are loading more blocks to fetch but we
 	// already have a backlog >= to concurrency.
 	defaultFetchSleep = 500 * time.Millisecond
-
-	// semaphoreWeight is the weight of each semaphore request.
-	semaphoreWeight = int64(1)
 )
 
 // Handler is called at various times during the sync cycle
@@ -162,12 +157,6 @@ type Syncer struct {
 	lastAdjustment   int64
 	adjustmentWindow int64
 	concurrencyLock  sync.Mutex
-
-	// SeenSemaphore controls how many concurrent
-	// invocations we make to the SeenBlock function
-	// in the handler.
-	seenSemaphore     *semaphore.Weighted
-	seenSemaphoreSize int64
 
 	// doneLoading is used to coordinate adding goroutines
 	// when close to the end of syncing a range.
