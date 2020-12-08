@@ -31,6 +31,10 @@ func (a *Asserter) SearchTransactionsResponse(
 		return ErrNextOffsetInvalid
 	}
 
+	if response.TotalCount < 0 {
+		return ErrTotalCountInvalid
+	}
+
 	for _, blockTransaction := range response.Transactions {
 		if err := BlockIdentifier(blockTransaction.BlockIdentifier); err != nil {
 			return err

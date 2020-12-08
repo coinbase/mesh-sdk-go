@@ -51,6 +51,27 @@ func TestNew(t *testing.T) {
 			},
 		}
 
+		validNetworkStatusSyncStatus = &types.NetworkStatusResponse{
+			GenesisBlockIdentifier: &types.BlockIdentifier{
+				Index: 0,
+				Hash:  "block 0",
+			},
+			CurrentBlockIdentifier: &types.BlockIdentifier{
+				Index: 100,
+				Hash:  "block 100",
+			},
+			CurrentBlockTimestamp: MinUnixEpoch + 1,
+			Peers: []*types.Peer{
+				{
+					PeerID: "peer 1",
+				},
+			},
+			SyncStatus: &types.SyncStatus{
+				CurrentIndex: types.Int64(100),
+				Stage:        types.String("pre-sync"),
+			},
+		}
+
 		invalidNetworkStatus = &types.NetworkStatusResponse{
 			CurrentBlockIdentifier: &types.BlockIdentifier{
 				Index: 100,
@@ -61,6 +82,27 @@ func TestNew(t *testing.T) {
 				{
 					PeerID: "peer 1",
 				},
+			},
+		}
+
+		invalidNetworkStatusSyncStatus = &types.NetworkStatusResponse{
+			GenesisBlockIdentifier: &types.BlockIdentifier{
+				Index: 0,
+				Hash:  "block 0",
+			},
+			CurrentBlockIdentifier: &types.BlockIdentifier{
+				Index: 100,
+				Hash:  "block 100",
+			},
+			CurrentBlockTimestamp: MinUnixEpoch + 1,
+			Peers: []*types.Peer{
+				{
+					PeerID: "peer 1",
+				},
+			},
+			SyncStatus: &types.SyncStatus{
+				CurrentIndex: types.Int64(-100),
+				Stage:        types.String("pre-sync"),
 			},
 		}
 
@@ -233,6 +275,13 @@ func TestNew(t *testing.T) {
 
 			err: nil,
 		},
+		"valid responses (with sync status)": {
+			network:        validNetwork,
+			networkStatus:  validNetworkStatusSyncStatus,
+			networkOptions: validNetworkOptions,
+
+			err: nil,
+		},
 		"valid responses (with start index)": {
 			network:        validNetwork,
 			networkStatus:  validNetworkStatus,
@@ -243,6 +292,13 @@ func TestNew(t *testing.T) {
 		"invalid network status": {
 			network:        validNetwork,
 			networkStatus:  invalidNetworkStatus,
+			networkOptions: validNetworkOptions,
+
+			err: errors.New("BlockIdentifier is nil"),
+		},
+		"invalid network status (with SyncStatus)": {
+			network:        validNetwork,
+			networkStatus:  invalidNetworkStatusSyncStatus,
 			networkOptions: validNetworkOptions,
 
 			err: errors.New("BlockIdentifier is nil"),
