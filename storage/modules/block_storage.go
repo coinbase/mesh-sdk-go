@@ -634,7 +634,8 @@ func (b *BlockStorage) SeeBlock(
 	ctx context.Context,
 	block *types.Block,
 ) error {
-	transaction := b.db.WriteTransaction(ctx, block.BlockIdentifier.Hash, true)
+	_, key := getBlockHashKey(block.BlockIdentifier.Hash)
+	transaction := b.db.WriteTransaction(ctx, string(key), true)
 	defer transaction.Discard(ctx)
 
 	// Store all transactions in order and check for duplicates
