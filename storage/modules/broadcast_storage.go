@@ -20,6 +20,8 @@ import (
 	"log"
 	"sync"
 
+	"github.com/neilotoole/errgroup"
+
 	"github.com/coinbase/rosetta-sdk-go/storage/database"
 	"github.com/coinbase/rosetta-sdk-go/storage/errors"
 	"github.com/coinbase/rosetta-sdk-go/types"
@@ -213,6 +215,7 @@ func (b *BroadcastStorage) invokeAddBlockHandlers(
 // AddingBlock is called by BlockStorage when adding a block.
 func (b *BroadcastStorage) AddingBlock(
 	ctx context.Context,
+	g *errgroup.Group,
 	block *types.Block,
 	transaction database.Transaction,
 ) (database.CommitWorker, error) {
@@ -303,6 +306,7 @@ func (b *BroadcastStorage) AddingBlock(
 // TODO: error if transaction removed after confirmed (means confirmation depth not deep enough)
 func (b *BroadcastStorage) RemovingBlock(
 	ctx context.Context,
+	g *errgroup.Group,
 	block *types.Block,
 	transaction database.Transaction,
 ) (database.CommitWorker, error) {

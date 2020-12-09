@@ -28,7 +28,8 @@ import (
 )
 
 const (
-	minPruningDepth = 20
+	minPruningDepth        = 20
+	blockWorkerConcurrency = 10
 )
 
 func TestHeadBlockIdentifier(t *testing.T) {
@@ -53,7 +54,7 @@ func TestHeadBlockIdentifier(t *testing.T) {
 	assert.NoError(t, err)
 	defer database.Close(ctx)
 
-	storage := NewBlockStorage(database)
+	storage := NewBlockStorage(database, blockWorkerConcurrency)
 
 	t.Run("No head block set", func(t *testing.T) {
 		blockIdentifier, err := storage.GetHeadBlockIdentifier(ctx)
@@ -310,7 +311,7 @@ func TestBlock(t *testing.T) {
 	assert.NoError(t, err)
 	defer database.Close(ctx)
 
-	storage := NewBlockStorage(database)
+	storage := NewBlockStorage(database, blockWorkerConcurrency)
 
 	t.Run("Get non-existent tx", func(t *testing.T) {
 		newestBlock, transaction, err := findTransactionWithDbTransaction(
@@ -699,7 +700,7 @@ func TestManyBlocks(t *testing.T) {
 	assert.NoError(t, err)
 	defer database.Close(ctx)
 
-	storage := NewBlockStorage(database)
+	storage := NewBlockStorage(database, blockWorkerConcurrency)
 
 	for i := int64(0); i < 10000; i++ {
 		blockIdentifier := &types.BlockIdentifier{
@@ -751,7 +752,7 @@ func TestCreateBlockCache(t *testing.T) {
 	assert.NoError(t, err)
 	defer database.Close(ctx)
 
-	storage := NewBlockStorage(database)
+	storage := NewBlockStorage(database, blockWorkerConcurrency)
 
 	t.Run("no blocks processed", func(t *testing.T) {
 		assert.Equal(t, []*types.BlockIdentifier{}, storage.CreateBlockCache(ctx, minPruningDepth))
@@ -820,7 +821,7 @@ func TestAtTip(t *testing.T) {
 	assert.NoError(t, err)
 	defer database.Close(ctx)
 
-	storage := NewBlockStorage(database)
+	storage := NewBlockStorage(database, blockWorkerConcurrency)
 	tipDelay := int64(100)
 
 	t.Run("no blocks processed", func(t *testing.T) {

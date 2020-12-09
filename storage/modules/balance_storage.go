@@ -184,6 +184,7 @@ func (b *BalanceStorage) Initialize(
 // AddingBlock is called by BlockStorage when adding a block to storage.
 func (b *BalanceStorage) AddingBlock(
 	ctx context.Context,
+	g *errgroup.Group,
 	block *types.Block,
 	transaction database.Transaction,
 ) (database.CommitWorker, error) {
@@ -194,11 +195,6 @@ func (b *BalanceStorage) AddingBlock(
 
 	// Keep track of how many new accounts have been seen so that the counter
 	// can be updated in a single op.
-	var newAccounts int
-	var newAccountsLock sync.Mutex
-
-	// Concurrent execution limited to runtime.NumCPU
-	g, gctx := errgroup.WithContextN(ctx, b.numCPU, b.numCPU)
 	for i := range changes {
 		// We need to set variable before calling goroutine
 		// to avoid getting an updated pointer as loop iteration
@@ -206,7 +202,7 @@ func (b *BalanceStorage) AddingBlock(
 		change := changes[i]
 		g.Go(func() error {
 			newAccount, err := b.UpdateBalance(
-				gctx,
+				ctx,
 				transaction,
 				change,
 				block.ParentBlockIdentifier,
@@ -219,23 +215,8 @@ func (b *BalanceStorage) AddingBlock(
 				return nil
 			}
 
-			newAccountsLock.Lock()
-			newAccounts++
-			newAccountsLock.Unlock()
-
-			return nil
+			return b.handler.AccountsSeen(ctx, transaction, 1)
 		})
-	}
-
-	if err := g.Wait(); err != nil {
-		return nil, err
-	}
-
-	// Update accounts seen
-	if newAccounts > 0 {
-		if err := b.handler.AccountsSeen(ctx, transaction, newAccounts); err != nil {
-			return nil, err
-		}
 	}
 
 	// Update accounts reconciled
@@ -259,6 +240,7 @@ func (b *BalanceStorage) AddingBlock(
 // RemovingBlock is called by BlockStorage when removing a block from storage.
 func (b *BalanceStorage) RemovingBlock(
 	ctx context.Context,
+	g *errgroup.Group,
 	block *types.Block,
 	transaction database.Transaction,
 ) (database.CommitWorker, error) {
@@ -273,7 +255,6 @@ func (b *BalanceStorage) RemovingBlock(
 	var staleAccountsMutex sync.Mutex
 
 	// Concurrent execution limited to runtime.NumCPU
-	g, gctx := errgroup.WithContextN(ctx, b.numCPU, b.numCPU)
 	for i := range changes {
 		// We need to set variable before calling goroutine
 		// to avoid getting an updated pointer as loop iteration
@@ -281,7 +262,7 @@ func (b *BalanceStorage) RemovingBlock(
 		change := changes[i]
 		g.Go(func() error {
 			shouldRemove, err := b.OrphanBalance(
-				gctx,
+				ctx,
 				transaction,
 				change,
 			)
@@ -302,10 +283,6 @@ func (b *BalanceStorage) RemovingBlock(
 
 			return nil
 		})
-	}
-
-	if err := g.Wait(); err != nil {
-		return nil, err
 	}
 
 	return func(ctx context.Context) error {
