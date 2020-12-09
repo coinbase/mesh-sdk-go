@@ -19,7 +19,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"runtime"
 	"strconv"
 	"strings"
 
@@ -108,9 +107,16 @@ func getTransactionPrefix(
 // to be done while a block is added/removed from storage
 // in the same database transaction as the change.
 type BlockWorker interface {
-	AddingBlock(context.Context, *types.Block, database.Transaction) (database.CommitWorker, error)
+	AddingBlock(
+		context.Context,
+		*errgroup.Group,
+		*types.Block,
+		database.Transaction,
+	) (database.CommitWorker, error)
+
 	RemovingBlock(
 		context.Context,
+		*errgroup.Group,
 		*types.Block,
 		database.Transaction,
 	) (database.CommitWorker, error)
@@ -119,19 +125,20 @@ type BlockWorker interface {
 // BlockStorage implements block specific storage methods
 // on top of a database.Database and database.Transaction interface.
 type BlockStorage struct {
-	db     database.Database
-	numCPU int
+	db database.Database
 
-	workers []BlockWorker
+	workers           []BlockWorker
+	workerConcurrency int
 }
 
 // NewBlockStorage returns a new BlockStorage.
 func NewBlockStorage(
 	db database.Database,
+	workerConcurrency int,
 ) *BlockStorage {
 	return &BlockStorage{
-		db:     db,
-		numCPU: runtime.NumCPU(),
+		db:                db,
+		workerConcurrency: workerConcurrency,
 	}
 }
 
@@ -252,7 +259,7 @@ func (b *BlockStorage) pruneBlock(
 		blockIdentifier := blockResponse.Block.BlockIdentifier
 
 		// Remove all transaction hashes
-		g, gctx := errgroup.WithContextN(ctx, b.numCPU, b.numCPU)
+		g, gctx := errgroup.WithContextN(ctx, b.workerConcurrency, b.workerConcurrency)
 		for i := range blockResponse.OtherTransactions {
 			// We need to set variable before calling goroutine
 			// to avoid getting an updated pointer as loop iteration
@@ -680,7 +687,7 @@ func (b *BlockStorage) SeeBlock(
 		return nil
 	}
 
-	g, gctx := errgroup.WithContextN(ctx, b.numCPU, b.numCPU)
+	g, gctx := errgroup.WithContextN(ctx, b.workerConcurrency, b.workerConcurrency)
 	for i := range block.Transactions {
 		// We need to set variable before calling goroutine
 		// to avoid getting an updated pointer as loop iteration
@@ -780,7 +787,7 @@ func (b *BlockStorage) RemoveBlock(
 	}
 
 	// Remove all transaction hashes
-	g, gctx := errgroup.WithContextN(ctx, b.numCPU, b.numCPU)
+	g, gctx := errgroup.WithContextN(ctx, b.workerConcurrency, b.workerConcurrency)
 	for i := range block.Transactions {
 		// We need to set variable before calling goroutine
 		// to avoid getting an updated pointer as loop iteration
@@ -814,19 +821,28 @@ func (b *BlockStorage) callWorkersAndCommit(
 	adding bool,
 ) error {
 	commitWorkers := make([]database.CommitWorker, len(b.workers))
+
+	// Provision global errgroup to use for all workers
+	// so that we don't need to wait at the end of each worker
+	// for all results.
+	g, gctx := errgroup.WithContextN(ctx, b.workerConcurrency, b.workerConcurrency)
 	for i, w := range b.workers {
 		var cw database.CommitWorker
 		var err error
 		if adding {
-			cw, err = w.AddingBlock(ctx, block, txn)
+			cw, err = w.AddingBlock(gctx, g, block, txn)
 		} else {
-			cw, err = w.RemovingBlock(ctx, block, txn)
+			cw, err = w.RemovingBlock(gctx, g, block, txn)
 		}
 		if err != nil {
 			return err
 		}
 
 		commitWorkers[i] = cw
+	}
+
+	if err := g.Wait(); err != nil {
+		return err
 	}
 
 	if err := txn.Commit(ctx); err != nil {

@@ -265,6 +265,7 @@ func (c *CoinStorage) skipOperation(
 // however, this would put a larger strain on the db.
 func (c *CoinStorage) updateCoins( // nolint:gocognit
 	ctx context.Context,
+	g *errgroup.Group,
 	block *types.Block,
 	addCoinCreated bool,
 	dbTx database.Transaction,
@@ -298,7 +299,6 @@ func (c *CoinStorage) updateCoins( // nolint:gocognit
 		}
 	}
 
-	g, gctx := errgroup.WithContextN(ctx, c.numCPU, c.numCPU)
 	for identifier, val := range addCoins {
 		if _, ok := removeCoins[identifier]; ok {
 			continue
@@ -310,7 +310,7 @@ func (c *CoinStorage) updateCoins( // nolint:gocognit
 		op := val
 		g.Go(func() error {
 			if err := c.addCoin(
-				gctx,
+				ctx,
 				op.Account,
 				&types.Coin{
 					CoinIdentifier: op.CoinChange.CoinIdentifier,
@@ -336,7 +336,7 @@ func (c *CoinStorage) updateCoins( // nolint:gocognit
 		op := val
 		g.Go(func() error {
 			if err := c.removeCoin(
-				gctx,
+				ctx,
 				op.Account,
 				op.CoinChange.CoinIdentifier,
 				dbTx,
@@ -348,25 +348,27 @@ func (c *CoinStorage) updateCoins( // nolint:gocognit
 		})
 	}
 
-	return g.Wait()
+	return nil
 }
 
 // AddingBlock is called by BlockStorage when adding a block.
 func (c *CoinStorage) AddingBlock(
 	ctx context.Context,
+	g *errgroup.Group,
 	block *types.Block,
 	transaction database.Transaction,
 ) (database.CommitWorker, error) {
-	return nil, c.updateCoins(ctx, block, true, transaction)
+	return nil, c.updateCoins(ctx, g, block, true, transaction)
 }
 
 // RemovingBlock is called by BlockStorage when removing a block.
 func (c *CoinStorage) RemovingBlock(
 	ctx context.Context,
+	g *errgroup.Group,
 	block *types.Block,
 	transaction database.Transaction,
 ) (database.CommitWorker, error) {
-	return nil, c.updateCoins(ctx, block, false, transaction)
+	return nil, c.updateCoins(ctx, g, block, false, transaction)
 }
 
 // GetCoinsTransactional returns all unspent coins for a provided *types.AccountIdentifier.
