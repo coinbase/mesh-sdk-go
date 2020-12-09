@@ -20,6 +20,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/neilotoole/errgroup"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
@@ -544,9 +545,11 @@ func TestCoinStorage(t *testing.T) {
 
 	t.Run("add block", func(t *testing.T) {
 		tx := c.db.Transaction(ctx)
-		commitFunc, err := c.AddingBlock(ctx, coinBlock, tx)
+		g, gctx := errgroup.WithContext(ctx)
+		commitFunc, err := c.AddingBlock(gctx, g, coinBlock, tx)
 		assert.Nil(t, commitFunc)
 		assert.NoError(t, err)
+		assert.NoError(t, g.Wait())
 		assert.NoError(t, tx.Commit(ctx))
 
 		mockHelper.On(
@@ -565,9 +568,11 @@ func TestCoinStorage(t *testing.T) {
 
 	t.Run("add duplicate coin", func(t *testing.T) {
 		tx := c.db.Transaction(ctx)
-		commitFunc, err := c.AddingBlock(ctx, coinBlock, tx)
+		g, gctx := errgroup.WithContext(ctx)
+		commitFunc, err := c.AddingBlock(gctx, g, coinBlock, tx)
 		assert.Nil(t, commitFunc)
 		assert.Error(t, err)
+		assert.NoError(t, g.Wait())
 		tx.Discard(ctx)
 
 		mockHelper.On(
@@ -586,9 +591,11 @@ func TestCoinStorage(t *testing.T) {
 
 	t.Run("add duplicate coin in same block", func(t *testing.T) {
 		tx := c.db.Transaction(ctx)
-		commitFunc, err := c.AddingBlock(ctx, coinBlockRepeat, tx)
+		g, gctx := errgroup.WithContext(ctx)
+		commitFunc, err := c.AddingBlock(gctx, g, coinBlockRepeat, tx)
 		assert.Nil(t, commitFunc)
 		assert.Error(t, err)
+		assert.NoError(t, g.Wait())
 		tx.Discard(ctx)
 
 		mockHelper.On(
@@ -607,9 +614,11 @@ func TestCoinStorage(t *testing.T) {
 
 	t.Run("remove block", func(t *testing.T) {
 		tx := c.db.Transaction(ctx)
-		commitFunc, err := c.RemovingBlock(ctx, coinBlock, tx)
+		g, gctx := errgroup.WithContext(ctx)
+		commitFunc, err := c.RemovingBlock(gctx, g, coinBlock, tx)
 		assert.Nil(t, commitFunc)
 		assert.NoError(t, err)
+		assert.NoError(t, g.Wait())
 		assert.NoError(t, tx.Commit(ctx))
 
 		mockHelper.On(
@@ -641,9 +650,11 @@ func TestCoinStorage(t *testing.T) {
 
 	t.Run("spend coin", func(t *testing.T) {
 		tx := c.db.Transaction(ctx)
-		commitFunc, err := c.AddingBlock(ctx, coinBlock, tx)
+		g, gctx := errgroup.WithContext(ctx)
+		commitFunc, err := c.AddingBlock(gctx, g, coinBlock, tx)
 		assert.Nil(t, commitFunc)
 		assert.NoError(t, err)
+		assert.NoError(t, g.Wait())
 		assert.NoError(t, tx.Commit(ctx))
 
 		mockHelper.On(
@@ -660,9 +671,11 @@ func TestCoinStorage(t *testing.T) {
 		assert.Equal(t, blockIdentifier, block)
 
 		tx = c.db.Transaction(ctx)
-		commitFunc, err = c.AddingBlock(ctx, coinBlock2, tx)
+		g, gctx = errgroup.WithContext(ctx)
+		commitFunc, err = c.AddingBlock(gctx, g, coinBlock2, tx)
 		assert.Nil(t, commitFunc)
 		assert.NoError(t, err)
+		assert.NoError(t, g.Wait())
 		assert.NoError(t, tx.Commit(ctx))
 
 		mockHelper.On(
@@ -694,9 +707,11 @@ func TestCoinStorage(t *testing.T) {
 
 	t.Run("add block with multiple outputs for 1 account", func(t *testing.T) {
 		tx := c.db.Transaction(ctx)
-		commitFunc, err := c.AddingBlock(ctx, coinBlock3, tx)
+		g, gctx := errgroup.WithContext(ctx)
+		commitFunc, err := c.AddingBlock(gctx, g, coinBlock3, tx)
 		assert.Nil(t, commitFunc)
 		assert.NoError(t, err)
+		assert.NoError(t, g.Wait())
 		assert.NoError(t, tx.Commit(ctx))
 
 		mockHelper.On(
@@ -756,15 +771,19 @@ func TestCoinStorage(t *testing.T) {
 
 	t.Run("remove block that creates and spends single coin", func(t *testing.T) {
 		tx := c.db.Transaction(ctx)
-		commitFunc, err := c.RemovingBlock(ctx, coinBlock3, tx)
+		g, gctx := errgroup.WithContext(ctx)
+		commitFunc, err := c.RemovingBlock(gctx, g, coinBlock3, tx)
 		assert.Nil(t, commitFunc)
 		assert.NoError(t, err)
+		assert.NoError(t, g.Wait())
 		assert.NoError(t, tx.Commit(ctx))
 
 		tx = c.db.Transaction(ctx)
-		commitFunc, err = c.AddingBlock(ctx, coinBlock3, tx)
+		g, gctx = errgroup.WithContext(ctx)
+		commitFunc, err = c.AddingBlock(gctx, g, coinBlock3, tx)
 		assert.Nil(t, commitFunc)
 		assert.NoError(t, err)
+		assert.NoError(t, g.Wait())
 		assert.NoError(t, tx.Commit(ctx))
 
 		mockHelper.On(

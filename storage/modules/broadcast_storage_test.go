@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/neilotoole/errgroup"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
@@ -154,8 +155,10 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 		block := blocks[0]
 
 		txn := storage.db.Transaction(ctx)
-		commitWorker, err := storage.AddingBlock(ctx, block, txn)
+		g, gctx := errgroup.WithContext(ctx)
+		commitWorker, err := storage.AddingBlock(gctx, g, block, txn)
 		assert.NoError(t, err)
+		assert.NoError(t, g.Wait())
 		err = txn.Commit(ctx)
 		assert.NoError(t, err)
 
@@ -216,8 +219,10 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 			nil,
 			nil,
 		).Once()
-		commitWorker, err := storage.AddingBlock(ctx, block, txn)
+		g, gctx := errgroup.WithContext(ctx)
+		commitWorker, err := storage.AddingBlock(gctx, g, block, txn)
 		assert.NoError(t, err)
+		assert.NoError(t, g.Wait())
 		err = txn.Commit(ctx)
 		assert.NoError(t, err)
 
@@ -370,8 +375,10 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 			&types.TransactionIdentifier{Hash: "tx 1"},
 			nil,
 		).Once()
-		commitWorker, err := storage.AddingBlock(ctx, block, txn)
+		g, gctx := errgroup.WithContext(ctx)
+		commitWorker, err := storage.AddingBlock(gctx, g, block, txn)
 		assert.NoError(t, err)
+		assert.NoError(t, g.Wait())
 
 		accounts, err := storage.LockedAccounts(ctx, txn)
 		assert.NoError(t, err)
@@ -473,8 +480,10 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 			&types.TransactionIdentifier{Hash: "tx 2"},
 			nil,
 		).Once()
-		commitWorker, err := storage.AddingBlock(ctx, block, txn)
+		g, gctx := errgroup.WithContext(ctx)
+		commitWorker, err := storage.AddingBlock(gctx, g, block, txn)
 		assert.NoError(t, err)
+		assert.NoError(t, g.Wait())
 
 		accounts, err := storage.LockedAccounts(ctx, txn)
 		assert.NoError(t, err)
@@ -561,8 +570,10 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 		).Return(
 			nil,
 		).Once()
-		commitWorker, err := storage.AddingBlock(ctx, block, txn)
+		g, gctx := errgroup.WithContext(ctx)
+		commitWorker, err := storage.AddingBlock(gctx, g, block, txn)
 		assert.NoError(t, err)
+		assert.NoError(t, g.Wait())
 
 		accounts, err := storage.LockedAccounts(ctx, txn)
 		assert.NoError(t, err)
@@ -627,8 +638,10 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 		).Return(
 			nil,
 		).Once()
-		commitWorker, err := storage.AddingBlock(ctx, block, txn)
+		g, gctx := errgroup.WithContext(ctx)
+		commitWorker, err := storage.AddingBlock(gctx, g, block, txn)
 		assert.NoError(t, err)
+		assert.NoError(t, g.Wait())
 
 		accounts, err := storage.LockedAccounts(ctx, txn)
 		assert.NoError(t, err)
@@ -866,8 +879,10 @@ func TestBroadcastStorageBroadcastFailure(t *testing.T) {
 		for _, block := range blocks {
 			mockHelper.On("CurrentBlockIdentifier", ctx).Return(block.BlockIdentifier, nil).Once()
 			txn := storage.db.Transaction(ctx)
-			commitWorker, err := storage.AddingBlock(ctx, block, txn)
+			g, gctx := errgroup.WithContext(ctx)
+			commitWorker, err := storage.AddingBlock(gctx, g, block, txn)
 			assert.NoError(t, err)
+			assert.NoError(t, g.Wait())
 			err = txn.Commit(ctx)
 			assert.NoError(t, err)
 
@@ -993,8 +1008,10 @@ func TestBroadcastStorageBehindTip(t *testing.T) {
 		for _, block := range blocks[:60] {
 			mockHelper.On("CurrentBlockIdentifier", ctx).Return(block.BlockIdentifier, nil).Once()
 			txn := storage.db.Transaction(ctx)
-			commitWorker, err := storage.AddingBlock(ctx, block, txn)
+			g, gctx := errgroup.WithContext(ctx)
+			commitWorker, err := storage.AddingBlock(gctx, g, block, txn)
 			assert.NoError(t, err)
+			assert.NoError(t, g.Wait())
 			err = txn.Commit(ctx)
 			assert.NoError(t, err)
 
@@ -1086,8 +1103,10 @@ func TestBroadcastStorageBehindTip(t *testing.T) {
 		for _, block := range blocks[60:71] {
 			mockHelper.On("CurrentBlockIdentifier", ctx).Return(block.BlockIdentifier, nil).Once()
 			txn := storage.db.Transaction(ctx)
-			commitWorker, err := storage.AddingBlock(ctx, block, txn)
+			g, gctx := errgroup.WithContext(ctx)
+			commitWorker, err := storage.AddingBlock(gctx, g, block, txn)
 			assert.NoError(t, err)
+			assert.NoError(t, g.Wait())
 			err = txn.Commit(ctx)
 			assert.NoError(t, err)
 
