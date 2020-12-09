@@ -188,6 +188,10 @@ func (b *BalanceStorage) AddingBlock(
 	block *types.Block,
 	transaction database.Transaction,
 ) (database.CommitWorker, error) {
+	if b.handler == nil {
+		return nil, storageErrs.ErrHelperHandlerMissing
+	}
+
 	changes, err := b.parser.BalanceChanges(ctx, block, false)
 	if err != nil {
 		return nil, fmt.Errorf("%w: unable to calculate balance changes", err)
@@ -244,6 +248,10 @@ func (b *BalanceStorage) RemovingBlock(
 	block *types.Block,
 	transaction database.Transaction,
 ) (database.CommitWorker, error) {
+	if b.handler == nil {
+		return nil, storageErrs.ErrHelperHandlerMissing
+	}
+
 	changes, err := b.parser.BalanceChanges(ctx, block, true)
 	if err != nil {
 		return nil, fmt.Errorf("%w: unable to calculate balance changes", err)
@@ -316,6 +324,10 @@ func (b *BalanceStorage) SetBalance(
 	amount *types.Amount,
 	block *types.BlockIdentifier,
 ) error {
+	if b.handler == nil {
+		return storageErrs.ErrHelperHandlerMissing
+	}
+
 	// Remove all account-related items
 	if err := b.deleteAccountRecords(
 		ctx,
@@ -424,6 +436,10 @@ func (b *BalanceStorage) Reconciled(
 // get an idea of the reconciliation coverage without
 // doing an expensive DB scan across all accounts.
 func (b *BalanceStorage) EstimatedReconciliationCoverage(ctx context.Context) (float64, error) {
+	if b.helper == nil {
+		return -1, storageErrs.ErrHelperHandlerMissing
+	}
+
 	dbTx := b.db.ReadTransaction(ctx)
 	defer dbTx.Discard(ctx)
 
@@ -498,6 +514,10 @@ func (b *BalanceStorage) existingValue(
 	parentBlock *types.BlockIdentifier,
 	existingValue string,
 ) (string, error) {
+	if b.helper == nil {
+		return "", storageErrs.ErrHelperHandlerMissing
+	}
+
 	if exists {
 		return existingValue, nil
 	}
@@ -547,6 +567,10 @@ func (b *BalanceStorage) applyExemptions(
 	change *parser.BalanceChange,
 	newVal string,
 ) (string, error) {
+	if b.helper == nil {
+		return "", storageErrs.ErrHelperHandlerMissing
+	}
+
 	// Find exemptions that are applicable to the *parser.BalanceChange
 	exemptions := b.parser.FindExemptions(change.Account, change.Currency)
 	if len(exemptions) == 0 {
@@ -610,6 +634,10 @@ func (b *BalanceStorage) deleteAccountRecords(
 	account *types.AccountIdentifier,
 	currency *types.Currency,
 ) error {
+	if b.handler == nil {
+		return storageErrs.ErrHelperHandlerMissing
+	}
+
 	// Remove historical balance records
 	if err := b.removeHistoricalBalances(
 		ctx,

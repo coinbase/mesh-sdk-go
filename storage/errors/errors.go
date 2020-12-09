@@ -334,6 +334,8 @@ var (
 	// to save cannot be parsed.
 	ErrInvalidValue = errors.New("invalid value")
 
+	ErrHelperHandlerMissing = errors.New("balance storage helper or handler is missing")
+
 	BalanceStorageErrs = []error{
 		ErrNegativeBalance,
 		ErrInvalidLiveBalance,
@@ -342,6 +344,7 @@ var (
 		ErrAccountMissing,
 		ErrInvalidChangeValue,
 		ErrInvalidValue,
+		ErrHelperHandlerMissing,
 	}
 )
 
