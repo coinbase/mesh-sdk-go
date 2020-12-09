@@ -1574,9 +1574,10 @@ func TestBlockSyncing(t *testing.T) {
 
 	t.Run("add block 1", func(t *testing.T) {
 		dbTx := database.Transaction(ctx)
+		g, gctx := errgroup.WithContext(ctx)
 		mockHelper.On(
 			"AccountBalance",
-			mock.Anything,
+			gctx,
 			addr1,
 			curr,
 			b0.BlockIdentifier,
@@ -1584,8 +1585,7 @@ func TestBlockSyncing(t *testing.T) {
 			&types.Amount{Value: "1", Currency: curr},
 			nil,
 		).Once()
-		mockHandler.On("AccountsSeen", ctx, dbTx, 1).Return(nil).Once()
-		g, gctx := errgroup.WithContext(ctx)
+		mockHandler.On("AccountsSeen", gctx, dbTx, 1).Return(nil).Once()
 		_, err = storage.AddingBlock(gctx, g, b1, dbTx)
 		assert.NoError(t, err)
 		assert.NoError(t, g.Wait())
@@ -1614,9 +1614,10 @@ func TestBlockSyncing(t *testing.T) {
 		assert.NoError(t, err)
 
 		dbTx := database.Transaction(ctx)
+		g, gctx := errgroup.WithContext(ctx)
 		mockHelper.On(
 			"AccountBalance",
-			mock.Anything,
+			gctx,
 			addr2,
 			curr,
 			b1.BlockIdentifier,
@@ -1624,9 +1625,8 @@ func TestBlockSyncing(t *testing.T) {
 			&types.Amount{Value: "0", Currency: curr},
 			nil,
 		).Once()
-		mockHandler.On("AccountsSeen", ctx, dbTx, 1).Return(nil).Once()
-		mockHandler.On("AccountsReconciled", ctx, dbTx, 1).Return(nil).Once()
-		g, gctx := errgroup.WithContext(ctx)
+		mockHandler.On("AccountsSeen", gctx, dbTx, 1).Return(nil).Once()
+		mockHandler.On("AccountsReconciled", gctx, dbTx, 1).Return(nil).Once()
 		_, err = storage.AddingBlock(gctx, g, b2, dbTx)
 		assert.NoError(t, err)
 		assert.NoError(t, g.Wait())
@@ -1735,9 +1735,10 @@ func TestBlockSyncing(t *testing.T) {
 
 	t.Run("add block 1", func(t *testing.T) {
 		dbTx := database.Transaction(ctx)
+		g, gctx := errgroup.WithContext(ctx)
 		mockHelper.On(
 			"AccountBalance",
-			mock.Anything,
+			gctx,
 			addr1,
 			curr,
 			b0.BlockIdentifier,
@@ -1745,8 +1746,7 @@ func TestBlockSyncing(t *testing.T) {
 			&types.Amount{Value: "1", Currency: curr},
 			nil,
 		).Once()
-		mockHandler.On("AccountsSeen", ctx, dbTx, 1).Return(nil).Once()
-		g, gctx := errgroup.WithContext(ctx)
+		mockHandler.On("AccountsSeen", gctx, dbTx, 1).Return(nil).Once()
 		_, err = storage.AddingBlock(gctx, g, b1, dbTx)
 		assert.NoError(t, err)
 		assert.NoError(t, g.Wait())
@@ -1780,9 +1780,10 @@ func TestBlockSyncing(t *testing.T) {
 
 	t.Run("add block 2a", func(t *testing.T) {
 		dbTx := database.Transaction(ctx)
+		g, gctx := errgroup.WithContext(ctx)
 		mockHelper.On(
 			"AccountBalance",
-			mock.Anything,
+			gctx,
 			addr2,
 			curr,
 			b1.BlockIdentifier,
@@ -1790,8 +1791,7 @@ func TestBlockSyncing(t *testing.T) {
 			&types.Amount{Value: "0", Currency: curr},
 			nil,
 		).Once()
-		mockHandler.On("AccountsSeen", ctx, dbTx, 1).Return(nil).Once()
-		g, gctx := errgroup.WithContext(ctx)
+		mockHandler.On("AccountsSeen", gctx, dbTx, 1).Return(nil).Once()
 		_, err = storage.AddingBlock(gctx, g, b2a, dbTx)
 		assert.NoError(t, err)
 		assert.NoError(t, g.Wait())
