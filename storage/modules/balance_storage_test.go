@@ -23,6 +23,7 @@ import (
 	"path"
 	"testing"
 
+	"github.com/neilotoole/errgroup"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
@@ -1557,8 +1558,10 @@ func TestBlockSyncing(t *testing.T) {
 
 	t.Run("add genesis block", func(t *testing.T) {
 		dbTx := database.Transaction(ctx)
-		_, err = storage.AddingBlock(ctx, b0, dbTx)
+		g, gctx := errgroup.WithContext(ctx)
+		_, err = storage.AddingBlock(gctx, g, b0, dbTx)
 		assert.NoError(t, err)
+		assert.NoError(t, g.Wait())
 		assert.NoError(t, dbTx.Commit(ctx))
 
 		amount, err := storage.GetBalance(ctx, addr1, curr, b0.BlockIdentifier.Index)
@@ -1582,8 +1585,10 @@ func TestBlockSyncing(t *testing.T) {
 			nil,
 		).Once()
 		mockHandler.On("AccountsSeen", ctx, dbTx, 1).Return(nil).Once()
-		_, err = storage.AddingBlock(ctx, b1, dbTx)
+		g, gctx := errgroup.WithContext(ctx)
+		_, err = storage.AddingBlock(gctx, g, b1, dbTx)
 		assert.NoError(t, err)
+		assert.NoError(t, g.Wait())
 		assert.NoError(t, dbTx.Commit(ctx))
 
 		amount, err := storage.GetBalance(ctx, addr1, curr, b0.BlockIdentifier.Index)
@@ -1621,8 +1626,10 @@ func TestBlockSyncing(t *testing.T) {
 		).Once()
 		mockHandler.On("AccountsSeen", ctx, dbTx, 1).Return(nil).Once()
 		mockHandler.On("AccountsReconciled", ctx, dbTx, 1).Return(nil).Once()
-		_, err = storage.AddingBlock(ctx, b2, dbTx)
+		g, gctx := errgroup.WithContext(ctx)
+		_, err = storage.AddingBlock(gctx, g, b2, dbTx)
 		assert.NoError(t, err)
+		assert.NoError(t, g.Wait())
 		assert.NoError(t, dbTx.Commit(ctx))
 
 		amount, err := storage.GetBalance(ctx, addr1, curr, b0.BlockIdentifier.Index)
@@ -1659,8 +1666,10 @@ func TestBlockSyncing(t *testing.T) {
 
 	t.Run("orphan block 2", func(t *testing.T) {
 		dbTx := database.Transaction(ctx)
-		commitWorker, err := storage.RemovingBlock(ctx, b2, dbTx)
+		g, gctx := errgroup.WithContext(ctx)
+		commitWorker, err := storage.RemovingBlock(gctx, g, b2, dbTx)
 		assert.NoError(t, err)
+		assert.NoError(t, g.Wait())
 		assert.NoError(t, dbTx.Commit(ctx))
 		mockHandler.On("BlockRemoved", ctx, b2, mock.Anything).Return(nil).Once()
 		mockHandler.On("AccountsSeen", ctx, mock.Anything, -1).Return(nil).Once()
@@ -1694,8 +1703,10 @@ func TestBlockSyncing(t *testing.T) {
 
 	t.Run("orphan block 1", func(t *testing.T) {
 		dbTx := database.Transaction(ctx)
-		commitWorker, err := storage.RemovingBlock(ctx, b1, dbTx)
+		g, gctx := errgroup.WithContext(ctx)
+		commitWorker, err := storage.RemovingBlock(gctx, g, b1, dbTx)
 		assert.NoError(t, err)
+		assert.NoError(t, g.Wait())
 		assert.NoError(t, dbTx.Commit(ctx))
 		mockHandler.On("BlockRemoved", ctx, b1, mock.Anything).Return(nil).Once()
 		mockHandler.On("AccountsSeen", ctx, mock.Anything, -1).Return(nil).Once()
@@ -1735,8 +1746,10 @@ func TestBlockSyncing(t *testing.T) {
 			nil,
 		).Once()
 		mockHandler.On("AccountsSeen", ctx, dbTx, 1).Return(nil).Once()
-		_, err = storage.AddingBlock(ctx, b1, dbTx)
+		g, gctx := errgroup.WithContext(ctx)
+		_, err = storage.AddingBlock(gctx, g, b1, dbTx)
 		assert.NoError(t, err)
+		assert.NoError(t, g.Wait())
 		assert.NoError(t, dbTx.Commit(ctx))
 
 		amount, err := storage.GetBalance(ctx, addr1, curr, b0.BlockIdentifier.Index)
@@ -1778,8 +1791,10 @@ func TestBlockSyncing(t *testing.T) {
 			nil,
 		).Once()
 		mockHandler.On("AccountsSeen", ctx, dbTx, 1).Return(nil).Once()
-		_, err = storage.AddingBlock(ctx, b2a, dbTx)
+		g, gctx := errgroup.WithContext(ctx)
+		_, err = storage.AddingBlock(gctx, g, b2a, dbTx)
 		assert.NoError(t, err)
+		assert.NoError(t, g.Wait())
 		assert.NoError(t, dbTx.Commit(ctx))
 
 		amount, err := storage.GetBalance(ctx, addr1, curr, b0.BlockIdentifier.Index)
