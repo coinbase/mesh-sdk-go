@@ -1035,7 +1035,6 @@ func TestBootstrapBalances(t *testing.T) {
 	mockHelper.On("Asserter").Return(baseAsserter())
 	mockHelper.On("ExemptFunc").Return(exemptFunc())
 	mockHelper.On("BalanceExemptions").Return([]*types.BalanceExemption{})
-	storage.Initialize(mockHelper, mockHandler)
 	bootstrapBalancesFile := path.Join(newDir, "balances.csv")
 
 	t.Run("File doesn't exist", func(t *testing.T) {
@@ -1047,29 +1046,40 @@ func TestBootstrapBalances(t *testing.T) {
 		assert.Contains(t, err.Error(), "no such file or directory")
 	})
 
-	t.Run("Set balance successfully", func(t *testing.T) {
-		amount := &types.Amount{
-			Value: "10",
-			Currency: &types.Currency{
-				Symbol:   "BTC",
-				Decimals: 8,
-			},
-		}
+	// Initialize file
+	amount := &types.Amount{
+		Value: "10",
+		Currency: &types.Currency{
+			Symbol:   "BTC",
+			Decimals: 8,
+		},
+	}
 
-		file, err := json.MarshalIndent([]*BootstrapBalance{
-			{
-				Account:  account,
-				Value:    amount.Value,
-				Currency: amount.Currency,
-			},
-		}, "", " ")
-		assert.NoError(t, err)
+	file, err := json.MarshalIndent([]*BootstrapBalance{
+		{
+			Account:  account,
+			Value:    amount.Value,
+			Currency: amount.Currency,
+		},
+	}, "", " ")
+	assert.NoError(t, err)
 
-		assert.NoError(
-			t,
-			ioutil.WriteFile(bootstrapBalancesFile, file, utils.DefaultFilePermissions),
+	assert.NoError(
+		t,
+		ioutil.WriteFile(bootstrapBalancesFile, file, utils.DefaultFilePermissions),
+	)
+
+	t.Run("run before initializing helper/handler", func(t *testing.T) {
+		err = storage.BootstrapBalances(
+			ctx,
+			bootstrapBalancesFile,
+			genesisBlockIdentifier,
 		)
+		assert.True(t, errors.Is(err, storageErrs.ErrHelperHandlerMissing))
+	})
 
+	storage.Initialize(mockHelper, mockHandler)
+	t.Run("Set balance successfully", func(t *testing.T) {
 		mockHandler.On("AccountsSeen", ctx, mock.Anything, 1).Return(nil).Once()
 		err = storage.BootstrapBalances(
 			ctx,
@@ -1248,8 +1258,14 @@ func TestBalanceReconciliation(t *testing.T) {
 	mockHelper.On("Asserter").Return(baseAsserter())
 	mockHelper.On("ExemptFunc").Return(exemptFunc())
 	mockHelper.On("BalanceExemptions").Return([]*types.BalanceExemption{})
-	storage.Initialize(mockHelper, mockHandler)
 
+	t.Run("test estimated before helper/handler", func(t *testing.T) {
+		coverage, err := storage.EstimatedReconciliationCoverage(ctx)
+		assert.Equal(t, float64(-1), coverage)
+		assert.True(t, errors.Is(err, storageErrs.ErrHelperHandlerMissing))
+	})
+
+	storage.Initialize(mockHelper, mockHandler)
 	t.Run("attempt to store reconciliation for non-existent account", func(t *testing.T) {
 		err := storage.Reconciled(ctx, account, currency, genesisBlock)
 		assert.NoError(t, err)
