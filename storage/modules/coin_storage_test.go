@@ -571,8 +571,8 @@ func TestCoinStorage(t *testing.T) {
 		g, gctx := errgroup.WithContext(ctx)
 		commitFunc, err := c.AddingBlock(gctx, g, coinBlock, tx)
 		assert.Nil(t, commitFunc)
-		assert.Error(t, err)
-		assert.NoError(t, g.Wait())
+		assert.NoError(t, err)
+		assert.Error(t, g.Wait())
 		tx.Discard(ctx)
 
 		mockHelper.On(
