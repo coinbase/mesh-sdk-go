@@ -836,6 +836,9 @@ func (w *Worker) SetBlobWorker(
 		return fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
 	}
 
+	// By using interface{} for key, we can ensure that JSON
+	// objects with the same keys but in a different order are
+	// treated as equal.
 	if err := w.helper.SetBlob(ctx, dbTx, types.Hash(input.Key), input.Value); err != nil {
 		return fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
 	}
@@ -856,6 +859,9 @@ func (w *Worker) GetBlobWorker(
 		return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
 	}
 
+	// By using interface{} for key, we can ensure that JSON
+	// objects with the same keys but in a different order are
+	// treated as equal.
 	exists, val, err := w.helper.GetBlob(ctx, dbTx, types.Hash(input.Key))
 	if err != nil {
 		return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
