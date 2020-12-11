@@ -80,6 +80,10 @@ func (w *Worker) invokeWorker(
 		return LoadEnvWorker(input)
 	case job.HTTPRequest:
 		return HTTPRequestWorker(input)
+	case job.SetBlob:
+		return "", w.SetBlobWorker(ctx, dbTx, input)
+	case job.GetBlob:
+		return w.GetBlobWorker(ctx, dbTx, input)
 	default:
 		return "", fmt.Errorf("%w: %s", ErrInvalidActionType, action)
 	}
@@ -817,4 +821,59 @@ func HTTPRequestWorker(rawInput string) (string, error) {
 	}
 
 	return string(body), nil
+}
+
+// SetBlobWorker transactionally saves a key and value for use
+// across workflows.
+func (w *Worker) SetBlobWorker(
+	ctx context.Context,
+	dbTx database.Transaction,
+	rawInput string,
+) error {
+	var input job.SetBlobInput
+	err := job.UnmarshalInput([]byte(rawInput), &input)
+	if err != nil {
+		return fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
+	}
+
+	// By using interface{} for key, we can ensure that JSON
+	// objects with the same keys but in a different order are
+	// treated as equal.
+	if err := w.helper.SetBlob(ctx, dbTx, types.Hash(input.Key), input.Value); err != nil {
+		return fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
+	}
+
+	return nil
+}
+
+// GetBlobWorker transactionally retrieves a value associated with
+// a key, if it exists.
+func (w *Worker) GetBlobWorker(
+	ctx context.Context,
+	dbTx database.Transaction,
+	rawInput string,
+) (string, error) {
+	var input job.GetBlobInput
+	err := job.UnmarshalInput([]byte(rawInput), &input)
+	if err != nil {
+		return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
+	}
+
+	// By using interface{} for key, we can ensure that JSON
+	// objects with the same keys but in a different order are
+	// treated as equal.
+	exists, val, err := w.helper.GetBlob(ctx, dbTx, types.Hash(input.Key))
+	if err != nil {
+		return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
+	}
+
+	if !exists {
+		return "", fmt.Errorf(
+			"%w: key %s does not exist",
+			ErrActionFailed,
+			types.PrintStruct(input.Key),
+		)
+	}
+
+	return string(val), nil
 }

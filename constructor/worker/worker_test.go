@@ -1851,3 +1851,203 @@ func TestHTTPRequestWorker(t *testing.T) {
 		})
 	}
 }
+
+func TestBlobWorkers(t *testing.T) {
+	tests := map[string]struct {
+		scenario *job.Scenario
+		helper   *mocks.Helper
+
+		assertState  map[string]string
+		executionErr *Error
+	}{
+		"simple save and get": {
+			scenario: &job.Scenario{
+				Name: "create_address",
+				Actions: []*job.Action{
+					{
+						Type:  "set_blob",
+						Input: `{"key":"Testnet3", "value":"Bitcoin"}`,
+					},
+					{
+						Type:       "get_blob",
+						Input:      `{"key":"Testnet3"}`,
+						OutputPath: "k",
+					},
+				},
+			},
+			assertState: map[string]string{
+				"k": "Bitcoin",
+			},
+			helper: func() *mocks.Helper {
+				h := &mocks.Helper{}
+				h.On(
+					"SetBlob",
+					mock.Anything,
+					mock.Anything,
+					types.Hash("Testnet3"),
+					[]byte(`"Bitcoin"`),
+				).Return(nil).Once()
+
+				h.On(
+					"GetBlob",
+					mock.Anything,
+					mock.Anything,
+					types.Hash("Testnet3"),
+				).Return(true, []byte(`"Bitcoin"`), nil).Once()
+
+				return h
+			}(),
+		},
+		"get missing": {
+			scenario: &job.Scenario{
+				Name: "create_address",
+				Actions: []*job.Action{
+					{
+						Type:       "get_blob",
+						Input:      `{"key":"Testnet3"}`,
+						OutputPath: "k",
+					},
+				},
+			},
+			assertState: map[string]string{},
+			helper: func() *mocks.Helper {
+				h := &mocks.Helper{}
+				h.On(
+					"GetBlob",
+					mock.Anything,
+					mock.Anything,
+					types.Hash("Testnet3"),
+				).Return(false, []byte{}, nil).Once()
+
+				return h
+			}(),
+			executionErr: &Error{
+				Workflow: "random",
+				Scenario: "create_address",
+				Action: &job.Action{
+					Type:       "get_blob",
+					Input:      `{"key":"Testnet3"}`,
+					OutputPath: "k",
+				},
+				ProcessedInput: `{"key":"Testnet3"}`,
+				Err:            ErrActionFailed,
+			},
+		},
+		"complex save and get": {
+			scenario: &job.Scenario{
+				Name: "create_address",
+				Actions: []*job.Action{
+					{
+						Type:  "set_blob",
+						Input: `{"key":{"address":"hello", "sub_account":{"address":"neat"}}, "value":{"stuff":"neat"}}`,
+					},
+					{
+						Type:  "set_blob",
+						Input: `{"key":{"address":"hello", "sub_account":{"address":"neat2"}}, "value":"addr2"}`,
+					},
+					{
+						Type:       "get_blob",
+						Input:      `{"key":{"sub_account":{"address":"neat"}, "address":"hello"}}`, // switch order
+						OutputPath: "k",
+					},
+				},
+			},
+			assertState: map[string]string{
+				"k": `{"stuff":"neat"}`,
+			},
+			helper: func() *mocks.Helper {
+				h := &mocks.Helper{}
+				h.On(
+					"SetBlob",
+					mock.Anything,
+					mock.Anything,
+					types.Hash(&types.AccountIdentifier{
+						Address: "hello",
+						SubAccount: &types.SubAccountIdentifier{
+							Address: "neat",
+						},
+					}),
+					[]byte(`{"stuff":"neat"}`),
+				).Return(nil).Once()
+				h.On(
+					"SetBlob",
+					mock.Anything,
+					mock.Anything,
+					types.Hash(&types.AccountIdentifier{
+						Address: "hello",
+						SubAccount: &types.SubAccountIdentifier{
+							Address: "neat2",
+						},
+					}),
+					[]byte(`"addr2"`),
+				).Return(nil).Once()
+
+				h.On(
+					"GetBlob",
+					mock.Anything,
+					mock.Anything,
+					types.Hash(&types.AccountIdentifier{
+						Address: "hello",
+						SubAccount: &types.SubAccountIdentifier{
+							Address: "neat",
+						},
+					}),
+				).Return(
+					true,
+					[]byte(`{"stuff":"neat"}`),
+					nil,
+				).Once()
+
+				return h
+			}(),
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			ctx := context.Background()
+			workflow := &job.Workflow{
+				Name:      "random",
+				Scenarios: []*job.Scenario{test.scenario},
+			}
+			j := job.New(workflow)
+			worker := New(test.helper)
+
+			// Setup DB
+			dir, err := utils.CreateTempDir()
+			assert.NoError(t, err)
+			defer utils.RemoveTempDir(dir)
+
+			db, err := database.NewBadgerDatabase(
+				ctx,
+				dir,
+				database.WithIndexCacheSize(database.TinyIndexCacheSize),
+			)
+			assert.NoError(t, err)
+			assert.NotNil(t, db)
+			defer db.Close(ctx)
+
+			dbTx := db.Transaction(ctx)
+
+			assert.False(t, j.CheckComplete())
+
+			b, executionErr := worker.Process(ctx, dbTx, j)
+			assert.Nil(t, b)
+			if test.executionErr != nil {
+				assert.True(t, errors.Is(executionErr.Err, test.executionErr.Err))
+				executionErr.Err = test.executionErr.Err // makes equality check easier
+				assert.Equal(t, test.executionErr, executionErr)
+			} else {
+				assert.Nil(t, executionErr)
+
+				for k, v := range test.assertState {
+					value := gjson.Get(j.State, k)
+					assert.True(t, value.Exists())
+					assert.Equal(t, v, value.String())
+				}
+			}
+
+			test.helper.AssertExpectations(t)
+		})
+	}
+}
