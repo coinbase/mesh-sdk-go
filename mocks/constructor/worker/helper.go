@@ -118,6 +118,34 @@ func (_m *Helper) Derive(_a0 context.Context, _a1 *types.NetworkIdentifier, _a2 
 	return r0, r1, r2
 }
 
+// GetBlob provides a mock function with given fields: ctx, dbTx, key
+func (_m *Helper) GetBlob(ctx context.Context, dbTx database.Transaction, key string) (bool, string, error) {
+	ret := _m.Called(ctx, dbTx, key)
+
+	var r0 bool
+	if rf, ok := ret.Get(0).(func(context.Context, database.Transaction, string) bool); ok {
+		r0 = rf(ctx, dbTx, key)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+
+	var r1 string
+	if rf, ok := ret.Get(1).(func(context.Context, database.Transaction, string) string); ok {
+		r1 = rf(ctx, dbTx, key)
+	} else {
+		r1 = ret.Get(1).(string)
+	}
+
+	var r2 error
+	if rf, ok := ret.Get(2).(func(context.Context, database.Transaction, string) error); ok {
+		r2 = rf(ctx, dbTx, key)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
+}
+
 // LockedAccounts provides a mock function with given fields: _a0, _a1
 func (_m *Helper) LockedAccounts(_a0 context.Context, _a1 database.Transaction) ([]*types.AccountIdentifier, error) {
 	ret := _m.Called(_a0, _a1)
@@ -139,6 +167,20 @@ func (_m *Helper) LockedAccounts(_a0 context.Context, _a1 database.Transaction) 
 	}
 
 	return r0, r1
+}
+
+// SetBlob provides a mock function with given fields: ctx, dbTx, key, value
+func (_m *Helper) SetBlob(ctx context.Context, dbTx database.Transaction, key string, value string) error {
+	ret := _m.Called(ctx, dbTx, key, value)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, database.Transaction, string, string) error); ok {
+		r0 = rf(ctx, dbTx, key, value)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
 }
 
 // StoreKey provides a mock function with given fields: _a0, _a1, _a2, _a3
