@@ -134,6 +134,20 @@ const (
 	// for making a request to a faucet to automate Construction API
 	// testing.
 	HTTPRequest ActionType = "http_request"
+
+	// SaveBlob stores an arbitrary blob at some key (any valid JSON is
+	// accepted as a key). If a value at a key already exists,
+	// it will be overwritten.
+	//
+	// SaveBlob is often used when there is some metadata created
+	// during a workflow execution that needs to be accessed
+	// in another workflow (i.e. a mapping between different generated
+	// addresses).
+	SaveBlob ActionType = "save_blob"
+
+	// GetBlob attempts to retrieve some previously saved blob.
+	// If the blob is not accessible, it will return an error.
+	GetBlob ActionType = "get_blob"
 )
 
 // Action is a step of computation that
