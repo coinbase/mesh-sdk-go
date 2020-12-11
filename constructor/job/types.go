@@ -15,6 +15,7 @@
 package job
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"github.com/coinbase/rosetta-sdk-go/keys"
@@ -297,8 +298,8 @@ type HTTPRequestInput struct {
 // SetBlobInput is the input to
 // SetBlob.
 type SetBlobInput struct {
-	Key   interface{} `json:"key"`
-	Value string      `json:"value"`
+	Key   interface{}     `json:"key"`
+	Value json.RawMessage `json:"value"`
 }
 
 // GetBlobInput is the input to
