@@ -6,6 +6,10 @@ request_funds(1){
       "symbol":"ETH",
       "decimals":18
     };
+    set_blob({
+      "key":"currency",
+      "value":{{currency}}
+    });
     env = load_env("MIN_BALANCE");
     random_account = find_balance({
       "minimum_balance":{
