@@ -80,7 +80,7 @@ type Helper interface {
 		value []byte,
 	) error
 
-	// GetBlob transactionally persists
+	// GetBlob transactionally retrieves
 	// a key and value.
 	GetBlob(
 		ctx context.Context,
