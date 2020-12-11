@@ -57,7 +57,7 @@ func (f *Fetcher) RequestFailedError(
 	return &Error{
 		Err:       fmt.Errorf("%w: %s %s", ErrRequestFailed, message, err.Error()),
 		ClientErr: rosettaErr,
-		Retry: ((rosettaErr != nil && rosettaErr.Retriable) || transientError(err)) &&
+		Retry: ((rosettaErr != nil && rosettaErr.Retriable) || transientError(err) || f.forceRetry) &&
 			!errors.Is(err, context.Canceled),
 	}
 }
