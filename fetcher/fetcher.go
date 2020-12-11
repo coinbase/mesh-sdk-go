@@ -73,6 +73,7 @@ type Fetcher struct {
 	maxRetries       uint64
 	retryElapsedTime time.Duration
 	insecureTLS      bool
+	forceRetry       bool
 
 	// connectionSemaphore is used to limit the
 	// number of concurrent requests we make.
