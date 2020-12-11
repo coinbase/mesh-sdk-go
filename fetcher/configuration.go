@@ -84,3 +84,18 @@ func WithMaxConnections(connections int) Option {
 		f.maxConnections = connections
 	}
 }
+
+// WithForceRetry overrides the default
+// retry handling logic and treats every error
+// as retriable.
+//
+// This is particularly useful when accessing a Rosetta
+// implementation via a load balancer where there may be
+// periods of inconsistency (i.e. we get a network status
+// from one implementation and query another that has not
+// yet synced the most recent block).
+func WithForceRetry() Option {
+	return func(f *Fetcher) {
+		f.forceRetry = true
+	}
+}
