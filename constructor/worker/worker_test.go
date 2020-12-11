@@ -1898,6 +1898,109 @@ func TestBlobWorkers(t *testing.T) {
 				return h
 			}(),
 		},
+		"get missing": {
+			scenario: &job.Scenario{
+				Name: "create_address",
+				Actions: []*job.Action{
+					{
+						Type:       "get_blob",
+						Input:      `{"key":"Testnet3"}`,
+						OutputPath: "k",
+					},
+				},
+			},
+			assertState: map[string]string{},
+			helper: func() *mocks.Helper {
+				h := &mocks.Helper{}
+				h.On(
+					"GetBlob",
+					mock.Anything,
+					mock.Anything,
+					types.Hash("Testnet3"),
+				).Return(false, "", nil).Once()
+
+				return h
+			}(),
+			executionErr: &Error{
+				Workflow: "random",
+				Scenario: "create_address",
+				Action: &job.Action{
+					Type:       "get_blob",
+					Input:      `{"key":"Testnet3"}`,
+					OutputPath: "k",
+				},
+				ProcessedInput: `{"key":"Testnet3"}`,
+				Err:            ErrActionFailed,
+			},
+		},
+		"complex save and get": {
+			scenario: &job.Scenario{
+				Name: "create_address",
+				Actions: []*job.Action{
+					{
+						Type:  "set_blob",
+						Input: `{"key":{"address":"hello", "sub_account":{"address":"neat"}}, "value":{"stuff":"neat"}}`,
+					},
+					{
+						Type:  "set_blob",
+						Input: `{"key":{"address":"hello", "sub_account":{"address":"neat2"}}, "value":"addr2"}`,
+					},
+					{
+						Type:       "get_blob",
+						Input:      `{"key":{"sub_account":{"address":"neat"}, "address":"hello"}}`, // switch order
+						OutputPath: "k",
+					},
+				},
+			},
+			assertState: map[string]string{
+				"k": `{"stuff":"neat"}`,
+			},
+			helper: func() *mocks.Helper {
+				h := &mocks.Helper{}
+				h.On(
+					"SetBlob",
+					mock.Anything,
+					mock.Anything,
+					types.Hash(&types.AccountIdentifier{
+						Address: "hello",
+						SubAccount: &types.SubAccountIdentifier{
+							Address: "neat",
+						},
+					}),
+					`{"stuff":"neat"}`,
+				).Return(nil).Once()
+				h.On(
+					"SetBlob",
+					mock.Anything,
+					mock.Anything,
+					types.Hash(&types.AccountIdentifier{
+						Address: "hello",
+						SubAccount: &types.SubAccountIdentifier{
+							Address: "neat2",
+						},
+					}),
+					`"addr2"`,
+				).Return(nil).Once()
+
+				h.On(
+					"GetBlob",
+					mock.Anything,
+					mock.Anything,
+					types.Hash(&types.AccountIdentifier{
+						Address: "hello",
+						SubAccount: &types.SubAccountIdentifier{
+							Address: "neat",
+						},
+					}),
+				).Return(
+					true,
+					`{"stuff":"neat"}`,
+					nil,
+				).Once()
+
+				return h
+			}(),
+		},
 	}
 
 	for name, test := range tests {
