@@ -53,6 +53,11 @@ func TestParse(t *testing.T) {
 									Input: `{"key":"currency","value":{{currency}}}`,
 								},
 								{
+									Type:       job.GetBlob,
+									Input:      `{"key":"currency"}`,
+									OutputPath: "fetched_currency",
+								},
+								{
 									Type:       job.LoadEnv,
 									Input:      `"MIN_BALANCE"`,
 									OutputPath: "env",
