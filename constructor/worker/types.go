@@ -70,6 +70,23 @@ type Helper interface {
 		*types.PublicKey,
 		map[string]interface{},
 	) (*types.AccountIdentifier, map[string]interface{}, error)
+
+	// SetBlob transactionally persists
+	// a key and value.
+	SetBlob(
+		ctx context.Context,
+		dbTx database.Transaction,
+		key string,
+		value string,
+	) error
+
+	// GetBlob transactionally persists
+	// a key and value.
+	GetBlob(
+		ctx context.Context,
+		dbTx database.Transaction,
+		key string,
+	) (bool, string, error)
 }
 
 // Worker processes jobs.
