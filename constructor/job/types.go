@@ -294,6 +294,19 @@ type HTTPRequestInput struct {
 	Body string `json:"body"`
 }
 
+// SaveBlobInput is the input to
+// SaveBlob.
+type SaveBlobInput struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
+
+// GetBlobInput is the input to
+// GetBlob.
+type GetBlobInput struct {
+	Key string `json:"key"`
+}
+
 // Scenario is a collection of Actions with a specific
 // confirmation depth.
 //
