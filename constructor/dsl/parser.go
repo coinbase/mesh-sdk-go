@@ -131,7 +131,8 @@ func parseActionType(line string) (job.ActionType, string, string, error) {
 			return job.SetVariable, outputPath, tokens[1], nil
 		case job.GenerateKey, job.Derive, job.SaveAccount, job.PrintMessage,
 			job.RandomString, job.Math, job.FindBalance, job.RandomNumber, job.Assert,
-			job.FindCurrencyAmount, job.LoadEnv, job.HTTPRequest:
+			job.FindCurrencyAmount, job.LoadEnv, job.HTTPRequest, job.SetBlob,
+			job.GetBlob:
 			return thisAction, outputPath, tokens[1], nil
 		default:
 			return "", "", "", ErrInvalidActionType
