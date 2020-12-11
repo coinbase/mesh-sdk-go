@@ -1885,7 +1885,7 @@ func TestBlobWorkers(t *testing.T) {
 					mock.Anything,
 					mock.Anything,
 					types.Hash("Testnet3"),
-					"\"Bitcoin\"",
+					[]byte(`"Bitcoin"`),
 				).Return(nil).Once()
 
 				h.On(
@@ -1893,7 +1893,7 @@ func TestBlobWorkers(t *testing.T) {
 					mock.Anything,
 					mock.Anything,
 					types.Hash("Testnet3"),
-				).Return(true, "\"Bitcoin\"", nil).Once()
+				).Return(true, []byte(`"Bitcoin"`), nil).Once()
 
 				return h
 			}(),
@@ -1917,7 +1917,7 @@ func TestBlobWorkers(t *testing.T) {
 					mock.Anything,
 					mock.Anything,
 					types.Hash("Testnet3"),
-				).Return(false, "", nil).Once()
+				).Return(false, []byte{}, nil).Once()
 
 				return h
 			}(),
@@ -1967,7 +1967,7 @@ func TestBlobWorkers(t *testing.T) {
 							Address: "neat",
 						},
 					}),
-					`{"stuff":"neat"}`,
+					[]byte(`{"stuff":"neat"}`),
 				).Return(nil).Once()
 				h.On(
 					"SetBlob",
@@ -1979,7 +1979,7 @@ func TestBlobWorkers(t *testing.T) {
 							Address: "neat2",
 						},
 					}),
-					`"addr2"`,
+					[]byte(`"addr2"`),
 				).Return(nil).Once()
 
 				h.On(
@@ -1994,7 +1994,7 @@ func TestBlobWorkers(t *testing.T) {
 					}),
 				).Return(
 					true,
-					`{"stuff":"neat"}`,
+					[]byte(`{"stuff":"neat"}`),
 					nil,
 				).Once()
 

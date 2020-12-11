@@ -184,7 +184,7 @@ func (_m *Helper) Derive(_a0 context.Context, _a1 *types.NetworkIdentifier, _a2 
 }
 
 // GetBlob provides a mock function with given fields: ctx, dbTx, key
-func (_m *Helper) GetBlob(ctx context.Context, dbTx database.Transaction, key string) (bool, string, error) {
+func (_m *Helper) GetBlob(ctx context.Context, dbTx database.Transaction, key string) (bool, []byte, error) {
 	ret := _m.Called(ctx, dbTx, key)
 
 	var r0 bool
@@ -194,11 +194,13 @@ func (_m *Helper) GetBlob(ctx context.Context, dbTx database.Transaction, key st
 		r0 = ret.Get(0).(bool)
 	}
 
-	var r1 string
-	if rf, ok := ret.Get(1).(func(context.Context, database.Transaction, string) string); ok {
+	var r1 []byte
+	if rf, ok := ret.Get(1).(func(context.Context, database.Transaction, string) []byte); ok {
 		r1 = rf(ctx, dbTx, key)
 	} else {
-		r1 = ret.Get(1).(string)
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).([]byte)
+		}
 	}
 
 	var r2 error
@@ -430,11 +432,11 @@ func (_m *Helper) Preprocess(_a0 context.Context, _a1 *types.NetworkIdentifier, 
 }
 
 // SetBlob provides a mock function with given fields: ctx, dbTx, key, value
-func (_m *Helper) SetBlob(ctx context.Context, dbTx database.Transaction, key string, value string) error {
+func (_m *Helper) SetBlob(ctx context.Context, dbTx database.Transaction, key string, value []byte) error {
 	ret := _m.Called(ctx, dbTx, key, value)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, database.Transaction, string, string) error); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, database.Transaction, string, []byte) error); ok {
 		r0 = rf(ctx, dbTx, key, value)
 	} else {
 		r0 = ret.Error(0)

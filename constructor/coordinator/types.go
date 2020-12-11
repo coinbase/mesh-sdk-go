@@ -187,7 +187,7 @@ type Helper interface {
 		ctx context.Context,
 		dbTx database.Transaction,
 		key string,
-		value string,
+		value []byte,
 	) error
 
 	// GetBlob transactionally persists
@@ -196,7 +196,7 @@ type Helper interface {
 		ctx context.Context,
 		dbTx database.Transaction,
 		key string,
-	) (bool, string, error)
+	) (bool, []byte, error)
 }
 
 // Handler is an interface called by the coordinator whenever

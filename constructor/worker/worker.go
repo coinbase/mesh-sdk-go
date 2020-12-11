@@ -836,7 +836,7 @@ func (w *Worker) SetBlobWorker(
 		return fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
 	}
 
-	if err := w.helper.SetBlob(ctx, dbTx, types.Hash(input.Key), string(input.Value)); err != nil {
+	if err := w.helper.SetBlob(ctx, dbTx, types.Hash(input.Key), input.Value); err != nil {
 		return fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
 	}
 
@@ -865,5 +865,5 @@ func (w *Worker) GetBlobWorker(
 		return "", fmt.Errorf("%w: key %s does not exist", ErrActionFailed, types.PrintStruct(input.Key))
 	}
 
-	return val, nil
+	return string(val), nil
 }
