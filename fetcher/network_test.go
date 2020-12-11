@@ -70,6 +70,7 @@ func TestNetworkStatusRetry(t *testing.T) {
 		expectedError       error
 		retriableError      bool
 
+		fetcherForceRetry bool
 		fetcherMaxRetries uint64
 		shouldCancel      bool
 	}{
@@ -90,6 +91,13 @@ func TestNetworkStatusRetry(t *testing.T) {
 			errorsBeforeSuccess: 2,
 			expectedError:       ErrRequestFailed,
 			fetcherMaxRetries:   5,
+		},
+		"non-retriable failure (with force)": {
+			network:             basicNetwork,
+			errorsBeforeSuccess: 2,
+			expectedStatus:      basicNetworkStatus,
+			fetcherMaxRetries:   5,
+			fetcherForceRetry:   true,
 		},
 		"exhausted retries": {
 			network:             basicNetwork,
@@ -148,10 +156,17 @@ func TestNetworkStatusRetry(t *testing.T) {
 
 			defer ts.Close()
 
+			opts := []Option{
+				WithRetryElapsedTime(5 * time.Second),
+				WithMaxRetries(test.fetcherMaxRetries),
+			}
+			if test.fetcherForceRetry {
+				opts = append(opts, WithForceRetry())
+			}
+
 			f := New(
 				ts.URL,
-				WithRetryElapsedTime(5*time.Second),
-				WithMaxRetries(test.fetcherMaxRetries),
+				opts...,
 			)
 			status, err := f.NetworkStatusRetry(
 				ctx,
