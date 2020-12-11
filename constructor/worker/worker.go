@@ -862,7 +862,11 @@ func (w *Worker) GetBlobWorker(
 	}
 
 	if !exists {
-		return "", fmt.Errorf("%w: key %s does not exist", ErrActionFailed, types.PrintStruct(input.Key))
+		return "", fmt.Errorf(
+			"%w: key %s does not exist",
+			ErrActionFailed,
+			types.PrintStruct(input.Key),
+		)
 	}
 
 	return string(val), nil
