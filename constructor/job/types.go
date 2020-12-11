@@ -135,15 +135,15 @@ const (
 	// testing.
 	HTTPRequest ActionType = "http_request"
 
-	// SaveBlob stores an arbitrary blob at some key (any valid JSON is
+	// SetBlob stores an arbitrary blob at some key (any valid JSON is
 	// accepted as a key). If a value at a key already exists,
 	// it will be overwritten.
 	//
-	// SaveBlob is often used when there is some metadata created
+	// SetBlob is often used when there is some metadata created
 	// during a workflow execution that needs to be accessed
 	// in another workflow (i.e. a mapping between different generated
 	// addresses).
-	SaveBlob ActionType = "save_blob"
+	SetBlob ActionType = "set_blob"
 
 	// GetBlob attempts to retrieve some previously saved blob.
 	// If the blob is not accessible, it will return an error.
@@ -294,17 +294,17 @@ type HTTPRequestInput struct {
 	Body string `json:"body"`
 }
 
-// SaveBlobInput is the input to
-// SaveBlob.
-type SaveBlobInput struct {
-	Key   string `json:"key"`
-	Value string `json:"value"`
+// SetBlobInput is the input to
+// SetBlob.
+type SetBlobInput struct {
+	Key   interface{} `json:"key"`
+	Value string      `json:"value"`
 }
 
 // GetBlobInput is the input to
 // GetBlob.
 type GetBlobInput struct {
-	Key string `json:"key"`
+	Key interface{} `json:"key"`
 }
 
 // Scenario is a collection of Actions with a specific
