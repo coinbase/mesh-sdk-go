@@ -180,6 +180,23 @@ type Helper interface {
 		context.Context,
 		[]*types.SigningPayload,
 	) ([]*types.Signature, error)
+
+	// SetBlob transactionally persists
+	// a key and value.
+	SetBlob(
+		ctx context.Context,
+		dbTx database.Transaction,
+		key string,
+		value string,
+	) error
+
+	// GetBlob transactionally persists
+	// a key and value.
+	GetBlob(
+		ctx context.Context,
+		dbTx database.Transaction,
+		key string,
+	) (bool, string, error)
 }
 
 // Handler is an interface called by the coordinator whenever
