@@ -17,8 +17,9 @@ package keys
 import (
 	"testing"
 
-	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
 var signerSecp256r1 Signer
