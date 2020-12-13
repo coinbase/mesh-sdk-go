@@ -32,6 +32,9 @@ var (
 	ErrKeyGenEdwards25519Failed = errors.New(
 		"keygen: error generating key pair for edwards25519 curve type",
 	)
+	ErrKeyGenSecp256r1Failed = errors.New(
+		"keygen: error generating key pair for secp256r1 curve type",
+	)
 	ErrCurveTypeNotSupported = errors.New("not a supported CurveType")
 
 	ErrSignUnsupportedPayloadSignatureType = errors.New(
