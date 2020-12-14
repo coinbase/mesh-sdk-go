@@ -356,8 +356,21 @@ func TestBlock(t *testing.T) {
 		err = storage.SeeBlock(ctx, newBlock)
 		assert.NoError(t, err)
 
-		err = storage.AddBlock(ctx, newBlock)
+		// Ensure we can FindTransaction in add block transaction.
+		transaction := storage.db.WriteTransaction(ctx, blockSyncIdentifier, true)
+		err = storage.storeBlock(ctx, transaction, newBlock.BlockIdentifier)
 		assert.NoError(t, err)
+
+		newestBlock, newestTransaction, err := storage.FindTransaction(
+			ctx,
+			newBlock.Transactions[0].TransactionIdentifier,
+			transaction,
+		)
+		assert.NoError(t, err)
+		assert.Equal(t, newBlock.BlockIdentifier, newestBlock)
+		assert.Equal(t, newBlock.Transactions[0], newestTransaction)
+
+		assert.NoError(t, transaction.Commit(ctx))
 
 		block, err := storage.GetBlock(
 			ctx,
@@ -380,15 +393,6 @@ func TestBlock(t *testing.T) {
 		head, err := storage.GetHeadBlockIdentifier(ctx)
 		assert.NoError(t, err)
 		assert.Equal(t, newBlock.BlockIdentifier, head)
-
-		newestBlock, transaction, err := findTransactionWithDbTransaction(
-			ctx,
-			storage,
-			newBlock.Transactions[0].TransactionIdentifier,
-		)
-		assert.NoError(t, err)
-		assert.Equal(t, newBlock.BlockIdentifier, newestBlock)
-		assert.Equal(t, newBlock.Transactions[0], transaction)
 
 		oldestIndex, err := storage.GetOldestBlockIndex(ctx)
 		assert.Equal(t, int64(0), oldestIndex)
