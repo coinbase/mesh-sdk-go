@@ -1056,7 +1056,7 @@ func (b *BlockStorage) FindTransaction(
 		return nil, nil, nil
 	}
 
-	head, err := b.GetHeadBlockIdentifier(ctx)
+	head, err := b.GetHeadBlockIdentifierTransactional(ctx, txn)
 	if err != nil {
 		return nil, nil, err
 	}
