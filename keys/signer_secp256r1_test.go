@@ -39,7 +39,7 @@ func TestSignSecp256r1(t *testing.T) {
 	}
 
 	var payloadTests = []payloadTest{
-		{mockPayload(hash("hello123"), types.Ecdsa), types.Ecdsa, 64, false, nil},
+		{mockPayload(hash("hello1234"), types.Ecdsa), types.Ecdsa, 64, false, nil},
 		{
 			mockPayload(hash("hello1234"), types.EcdsaRecovery),
 			types.EcdsaRecovery,
@@ -48,7 +48,7 @@ func TestSignSecp256r1(t *testing.T) {
 			ErrSignUnsupportedSignatureType,
 		},
 		{
-			mockPayload(hash("hello123"), types.Ed25519),
+			mockPayload(hash("hello1234"), types.Ed25519),
 			types.Ed25519,
 			64,
 			true,
