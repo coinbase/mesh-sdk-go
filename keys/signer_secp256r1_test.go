@@ -94,6 +94,11 @@ func TestVerifySecp256r1(t *testing.T) {
 
 	var signatureTests = []signatureTest{
 		{mockSecpSignature(
+			types.Ecdsa,
+			signerSecp256r1.PublicKey(),
+			[]byte("hello"),
+			testSignatureEcdsa.Bytes), ErrVerifyFailed},
+		{mockSecpSignature(
 			types.Ed25519,
 			signerSecp256r1.PublicKey(),
 			hash("hello"),

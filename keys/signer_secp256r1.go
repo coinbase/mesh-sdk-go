@@ -32,8 +32,9 @@ type SignerSecp256r1 struct {
 
 // The Ecdsa signature is the couple (r, s), both r and s are 32 bytes
 const (
-	EcdsaRLen = 32
-	EcdsaSLen = 32
+	EcdsaRLen   = 32
+	EcdsaSLen   = 32
+	EcdsaMsgLen = 32
 )
 
 var _ Signer = (*SignerSecp256r1)(nil)
@@ -71,6 +72,10 @@ func (s *SignerSecp256r1) Sign(
 
 	crv := elliptic.P256()
 	x, y := crv.ScalarBaseMult(s.KeyPair.PrivateKey)
+	if !crv.IsOnCurve(x, y) {
+		return nil, ErrPubKeyNotOnCurve
+	}
+
 	pubKey := ecdsa.PublicKey{X: x, Y: y, Curve: crv}
 	privKey := ecdsa.PrivateKey{
 		PublicKey: pubKey,
@@ -109,9 +114,18 @@ func (s *SignerSecp256r1) Verify(signature *types.Signature) error {
 	}
 
 	message := signature.SigningPayload.Bytes
+
+	if len(message) != EcdsaMsgLen {
+		return ErrVerifyFailed
+	}
+
 	sig := signature.Bytes
 
+	crv := elliptic.P256()
 	x, y := elliptic.Unmarshal(elliptic.P256(), signature.PublicKey.Bytes)
+	if !crv.IsOnCurve(x, y) {
+		return ErrPubKeyNotOnCurve
+	}
 	publicKey := ecdsa.PublicKey{X: x, Y: y, Curve: elliptic.P256()}
 
 	sigR := new(big.Int).SetBytes(sig[:EcdsaRLen])
