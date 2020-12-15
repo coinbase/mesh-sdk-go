@@ -95,6 +95,10 @@ func ImportPrivateKey(privKeyHex string, curve types.CurveType) (*KeyPair, error
 	case types.Secp256r1:
 		crv := elliptic.P256()
 		x, y := crv.ScalarBaseMult(privKey)
+		if !crv.IsOnCurve(x, y) {
+			return nil, ErrPubKeyNotOnCurve
+		}
+
 		rawPubKey := ecdsa.PublicKey{X: x, Y: y, Curve: crv}
 		rawPrivKey := ecdsa.PrivateKey{
 			PublicKey: rawPubKey,
