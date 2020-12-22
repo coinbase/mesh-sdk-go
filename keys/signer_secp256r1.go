@@ -30,13 +30,14 @@ type SignerSecp256r1 struct {
 	KeyPair *KeyPair
 }
 
-// The Ecdsa signature is the couple (r, s), both r and s are 32 bytes
+// The Ecdsa signature is the couple (R, S), both R and S are 32 bytes
 const (
 	EcdsaRLen   = 32
 	EcdsaSLen   = 32
 	EcdsaMsgLen = 32
 )
 
+// Verify interface compliance at compile time
 var _ Signer = (*SignerSecp256r1)(nil)
 
 // PublicKey returns the PublicKey of the signer
@@ -44,7 +45,7 @@ func (s *SignerSecp256r1) PublicKey() *types.PublicKey {
 	return s.KeyPair.PublicKey
 }
 
-// Sign arbitrary payloads using a KeyPair
+// Sign arbitrary payloads using a KeyPair. Signature format is R || S.
 func (s *SignerSecp256r1) Sign(
 	payload *types.SigningPayload,
 	sigType types.SignatureType,
