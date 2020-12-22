@@ -45,7 +45,8 @@ func (s *SignerSecp256r1) PublicKey() *types.PublicKey {
 	return s.KeyPair.PublicKey
 }
 
-// Sign arbitrary payloads using a KeyPair. Signature format is R || S.
+// Sign arbitrary payloads using a KeyPair with specific sigType.
+// Currently, we only support sigType types.Ecdsa for secp256r1 and the signature format is R || S.
 func (s *SignerSecp256r1) Sign(
 	payload *types.SigningPayload,
 	sigType types.SignatureType,
