@@ -97,7 +97,8 @@ func ImportPrivateKey(privKeyHex string, curve types.CurveType) (*KeyPair, error
 		x, y := crv.ScalarBaseMult(privKey)
 
 		// IsOnCurve will return false for the point at infinity (0, 0)
-		// See: https://github.com/golang/go/blob/3298300ddf45a0792b4d8ea5e05f0fbceec4c9f9/src/crypto/elliptic/elliptic.go#L24
+		// See:
+		// https://github.com/golang/go/blob/3298300ddf45a0792b4d8ea5e05f0fbceec4c9f9/src/crypto/elliptic/elliptic.go#L24
 		if !crv.IsOnCurve(x, y) {
 			return nil, ErrPubKeyNotOnCurve
 		}
