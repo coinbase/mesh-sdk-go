@@ -74,6 +74,9 @@ func (s *SignerSecp256r1) Sign(
 
 	crv := elliptic.P256()
 	x, y := crv.ScalarBaseMult(s.KeyPair.PrivateKey)
+
+	// IsOnCurve will return false for the point at infinity (0, 0)
+	// See: https://github.com/golang/go/blob/3298300ddf45a0792b4d8ea5e05f0fbceec4c9f9/src/crypto/elliptic/elliptic.go#L24
 	if !crv.IsOnCurve(x, y) {
 		return nil, ErrPubKeyNotOnCurve
 	}
@@ -125,6 +128,9 @@ func (s *SignerSecp256r1) Verify(signature *types.Signature) error {
 
 	crv := elliptic.P256()
 	x, y := elliptic.Unmarshal(elliptic.P256(), signature.PublicKey.Bytes)
+
+	// IsOnCurve will return false for the point at infinity (0, 0)
+	// See: https://github.com/golang/go/blob/3298300ddf45a0792b4d8ea5e05f0fbceec4c9f9/src/crypto/elliptic/elliptic.go#L24
 	if !crv.IsOnCurve(x, y) {
 		return ErrPubKeyNotOnCurve
 	}
