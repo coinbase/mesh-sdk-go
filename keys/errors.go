@@ -25,12 +25,16 @@ var (
 	ErrPrivKeyUndecodable   = errors.New("could not decode privkey")
 	ErrPrivKeyLengthInvalid = errors.New("invalid privkey length")
 	ErrPrivKeyZero          = errors.New("privkey cannot be 0")
+	ErrPubKeyNotOnCurve     = errors.New("pubkey is not on the curve")
 
 	ErrKeyGenSecp256k1Failed = errors.New(
 		"keygen: error generating key pair for secp256k1 curve type",
 	)
 	ErrKeyGenEdwards25519Failed = errors.New(
 		"keygen: error generating key pair for edwards25519 curve type",
+	)
+	ErrKeyGenSecp256r1Failed = errors.New(
+		"keygen: error generating key pair for secp256r1 curve type",
 	)
 	ErrCurveTypeNotSupported = errors.New("not a supported CurveType")
 
@@ -58,7 +62,9 @@ func Err(err error) bool {
 		ErrPrivKeyUndecodable,
 		ErrPrivKeyLengthInvalid,
 		ErrPrivKeyZero,
+		ErrPubKeyNotOnCurve,
 		ErrKeyGenSecp256k1Failed,
+		ErrKeyGenSecp256r1Failed,
 		ErrKeyGenEdwards25519Failed,
 		ErrCurveTypeNotSupported,
 		ErrSignUnsupportedPayloadSignatureType,
