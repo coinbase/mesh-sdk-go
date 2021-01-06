@@ -16,12 +16,14 @@
 
 package types
 
-// BlockEvent BlockEvent represents the addition or removal of a BlockIdentifier from storage.
-// Streaming BlockEvents allows lightweight clients to update their own state without needing to
-// implement their own syncing logic.
-type BlockEvent struct {
-	// sequence is the unique identifier of a BlockEvent within the context of a NetworkIdentifier.
-	Sequence        int64            `json:"sequence"`
-	BlockIdentifier *BlockIdentifier `json:"block_identifier"`
-	Type            BlockEventType   `json:"type"`
-}
+// Direction Used by RelatedTransaction to indicate the direction of the relation (i.e.
+// cross-shard/cross-network sends may reference `backward` to an earlier transaction and async
+// execution may reference `forward`). Can be used to indicate if a transaction relation is from
+// child to parent or the reverse.
+type Direction string
+
+// List of Direction
+const (
+	Forward  Direction = "forward"
+	Backward Direction = "backward"
+)
