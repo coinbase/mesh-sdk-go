@@ -397,6 +397,7 @@ func (a *Asserter) RelatedTransactions(relatedTransactions []*types.RelatedTrans
 	return nil
 }
 
+// Direction returns an error if the value passed is not "Forward" or "Backward"
 func (a *Asserter) Direction(direction types.Direction) error {
 	if direction != types.Forward &&
 		direction != types.Backward {
