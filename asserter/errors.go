@@ -91,6 +91,7 @@ var (
 	ErrBlockIndexPrecedesParentBlockIndex = errors.New(
 		"BlockIdentifier.Index <= ParentBlockIdentifier.Index",
 	)
+	ErrInvalidDirection = errors.New("invalid direction (must be 'Forward' or 'Backward')")
 
 	BlockErrs = []error{
 		ErrAmountValueMissing,
@@ -125,6 +126,7 @@ var (
 		ErrBlockIsNil,
 		ErrBlockHashEqualsParentBlockHash,
 		ErrBlockIndexPrecedesParentBlockIndex,
+		ErrInvalidDirection,
 	}
 )
 
