@@ -24,6 +24,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/coinbase/rosetta-sdk-go/parser"
+	storageErrs "github.com/coinbase/rosetta-sdk-go/storage/errors"
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/coinbase/rosetta-sdk-go/utils"
 )
@@ -324,6 +325,9 @@ func (r *Reconciler) CompareBalance(
 		currency,
 		liveBlock.Index,
 	)
+	if errors.Is(err, storageErrs.ErrAccountMissing) {
+		return zeroString, "", head.Index, storageErrs.ErrAccountMissing
+	}
 	if err != nil {
 		return zeroString, "", head.Index, fmt.Errorf(
 			"%w for %+v:%+v: %v",
@@ -491,6 +495,21 @@ func (r *Reconciler) accountReconciliation(
 					account,
 					currency,
 					HeadBehind,
+				)
+			}
+
+			// If the account is missing, it is likely because
+			// the caller is looking up accounts that haven't yet been
+			// seen (no stored computed balance). We should just
+			// skip in this case.
+			// TODO: write a test for this
+			if errors.Is(err, storageErrs.ErrAccountMissing) {
+				return r.handler.ReconciliationSkipped(
+					ctx,
+					reconciliationType,
+					account,
+					currency,
+					storageErrs.ErrAccountMissing.Error(),
 				)
 			}
 
