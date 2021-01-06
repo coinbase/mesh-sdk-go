@@ -376,8 +376,7 @@ func (a *Asserter) RelatedTransactions(relatedTransactions []*types.RelatedTrans
 
 	for i, relatedTransaction := range relatedTransactions {
 		if relatedTransaction.NetworkIdentifier != nil {
-			err := NetworkIdentifier(relatedTransaction.NetworkIdentifier)
-			if err != nil {
+			if err := NetworkIdentifier(relatedTransaction.NetworkIdentifier); err != nil {
 				return fmt.Errorf(
 					"%w invalid network identifier in related transaction at index %d",
 					err,
@@ -406,7 +405,7 @@ func (a *Asserter) RelatedTransactions(relatedTransactions []*types.RelatedTrans
 	return nil
 }
 
-// Direction returns an error if the value passed is not "Forward" or "Backward"
+// Direction returns an error if the value passed is not types.Forward or types.Backward
 func (a *Asserter) Direction(direction types.Direction) error {
 	if direction != types.Forward &&
 		direction != types.Backward {
