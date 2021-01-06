@@ -365,7 +365,8 @@ func (a *Asserter) Transaction(
 	return nil
 }
 
-// RelatedTransactions returns an error if the related transactions array is non-null and non-empty and
+// RelatedTransactions returns an error if the related transactions array is non-null and non-empty
+// and
 // any of the related transactions contain invalid types, invalid network identifiers,
 // invalid transaction identifiers, or a direction not defined by the enum.
 func (a *Asserter) RelatedTransactions(relatedTransactions []*types.RelatedTransaction) error {
@@ -377,12 +378,20 @@ func (a *Asserter) RelatedTransactions(relatedTransactions []*types.RelatedTrans
 		if relatedTransaction.NetworkIdentifier != nil {
 			err := NetworkIdentifier(relatedTransaction.NetworkIdentifier)
 			if err != nil {
-				return fmt.Errorf("%w invalid network identifier in related transaction at index %d", err, i)
+				return fmt.Errorf(
+					"%w invalid network identifier in related transaction at index %d",
+					err,
+					i,
+				)
 			}
 		}
 
 		if err := TransactionIdentifier(relatedTransaction.TransactionIdentifier); err != nil {
-			return fmt.Errorf("%w invalid transaction identifier in related transaction at index %d", err, i)
+			return fmt.Errorf(
+				"%w invalid transaction identifier in related transaction at index %d",
+				err,
+				i,
+			)
 		}
 
 		if err := a.Direction(relatedTransaction.Direction); err != nil {
