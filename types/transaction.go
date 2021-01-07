@@ -1,4 +1,4 @@
-// Copyright 2020 Coinbase, Inc.
+// Copyright 2021 Coinbase, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ package types
 type Transaction struct {
 	TransactionIdentifier *TransactionIdentifier `json:"transaction_identifier"`
 	Operations            []*Operation           `json:"operations"`
+	RelatedTransactions   []*RelatedTransaction  `json:"related_transactions,omitempty"`
 	// Transactions that are related to other transactions (like a cross-shard transaction) should
 	// include the tranaction_identifier of these transactions in the metadata.
 	Metadata map[string]interface{} `json:"metadata,omitempty"`

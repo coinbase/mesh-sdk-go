@@ -1,4 +1,4 @@
-// Copyright 2020 Coinbase, Inc.
+// Copyright 2021 Coinbase, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,5 +18,5 @@ const (
 	// RosettaAPIVersion is the version of the Rosetta API
 	// specification used to generate code for this release
 	// of the SDK.
-	RosettaAPIVersion = "1.4.9"
+	RosettaAPIVersion = "1.4.10"
 )

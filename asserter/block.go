@@ -354,6 +354,60 @@ func (a *Asserter) Transaction(
 		)
 	}
 
+	if err := a.RelatedTransactions(transaction.RelatedTransactions); err != nil {
+		return fmt.Errorf(
+			"%w invalid related transaction in transaction %s",
+			err,
+			transaction.TransactionIdentifier.Hash,
+		)
+	}
+
+	return nil
+}
+
+// RelatedTransactions returns an error if the related transactions array is non-null and non-empty
+// and
+// any of the related transactions contain invalid types, invalid network identifiers,
+// invalid transaction identifiers, or a direction not defined by the enum.
+func (a *Asserter) RelatedTransactions(relatedTransactions []*types.RelatedTransaction) error {
+	for i, relatedTransaction := range relatedTransactions {
+		if relatedTransaction.NetworkIdentifier != nil {
+			if err := NetworkIdentifier(relatedTransaction.NetworkIdentifier); err != nil {
+				return fmt.Errorf(
+					"%w invalid network identifier in related transaction at index %d",
+					err,
+					i,
+				)
+			}
+		}
+
+		if err := TransactionIdentifier(relatedTransaction.TransactionIdentifier); err != nil {
+			return fmt.Errorf(
+				"%w invalid transaction identifier in related transaction at index %d",
+				err,
+				i,
+			)
+		}
+
+		if err := a.Direction(relatedTransaction.Direction); err != nil {
+			return fmt.Errorf(
+				"%w invalid direction in related transaction at index %d",
+				err,
+				i,
+			)
+		}
+	}
+
+	return nil
+}
+
+// Direction returns an error if the value passed is not types.Forward or types.Backward
+func (a *Asserter) Direction(direction types.Direction) error {
+	if direction != types.Forward &&
+		direction != types.Backward {
+		return ErrInvalidDirection
+	}
+
 	return nil
 }
 

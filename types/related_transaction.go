@@ -16,12 +16,11 @@
 
 package types
 
-// BlockEvent BlockEvent represents the addition or removal of a BlockIdentifier from storage.
-// Streaming BlockEvents allows lightweight clients to update their own state without needing to
-// implement their own syncing logic.
-type BlockEvent struct {
-	// sequence is the unique identifier of a BlockEvent within the context of a NetworkIdentifier.
-	Sequence        int64            `json:"sequence"`
-	BlockIdentifier *BlockIdentifier `json:"block_identifier"`
-	Type            BlockEventType   `json:"type"`
+// RelatedTransaction The related_transaction allows implementations to link together multiple
+// transactions. An unpopulated network identifier indicates that the related transaction is on the
+// same network.
+type RelatedTransaction struct {
+	NetworkIdentifier     *NetworkIdentifier     `json:"network_identifier,omitempty"`
+	TransactionIdentifier *TransactionIdentifier `json:"transaction_identifier"`
+	Direction             Direction              `json:"direction"`
 }
