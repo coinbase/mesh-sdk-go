@@ -370,17 +370,15 @@ func (a *Asserter) Transaction(
 // any of the related transactions contain invalid types, invalid network identifiers,
 // invalid transaction identifiers, or a direction not defined by the enum.
 func (a *Asserter) RelatedTransactions(relatedTransactions []*types.RelatedTransaction) error {
-	if relatedTransactions == nil {
-		return nil
-	}
-
 	for i, relatedTransaction := range relatedTransactions {
-		if err := NetworkIdentifier(relatedTransaction.NetworkIdentifier); err != nil {
-			return fmt.Errorf(
-				"%w invalid network identifier in related transaction at index %d",
-				err,
-				i,
-			)
+		if relatedTransaction.NetworkIdentifier != nil {
+			if err := NetworkIdentifier(relatedTransaction.NetworkIdentifier); err != nil {
+				return fmt.Errorf(
+					"%w invalid network identifier in related transaction at index %d",
+					err,
+					i,
+				)
+			}
 		}
 
 		if err := TransactionIdentifier(relatedTransaction.TransactionIdentifier); err != nil {
