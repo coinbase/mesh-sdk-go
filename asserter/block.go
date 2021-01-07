@@ -375,14 +375,12 @@ func (a *Asserter) RelatedTransactions(relatedTransactions []*types.RelatedTrans
 	}
 
 	for i, relatedTransaction := range relatedTransactions {
-		if relatedTransaction.NetworkIdentifier != nil {
-			if err := NetworkIdentifier(relatedTransaction.NetworkIdentifier); err != nil {
-				return fmt.Errorf(
-					"%w invalid network identifier in related transaction at index %d",
-					err,
-					i,
-				)
-			}
+		if err := NetworkIdentifier(relatedTransaction.NetworkIdentifier); err != nil {
+			return fmt.Errorf(
+				"%w invalid network identifier in related transaction at index %d",
+				err,
+				i,
+			)
 		}
 
 		if err := TransactionIdentifier(relatedTransaction.TransactionIdentifier); err != nil {
