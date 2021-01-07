@@ -1,4 +1,4 @@
-// Copyright 2020 Coinbase, Inc.
+// Copyright 2021 Coinbase, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -41,7 +41,7 @@ var (
 	ErrRetriable = errors.New("retriable http status code received")
 )
 
-// APIClient manages communication with the Rosetta API v1.4.9
+// APIClient manages communication with the Rosetta API v1.4.10
 // In most cases there should be only one, shared, APIClient.
 type APIClient struct {
 	cfg    *Configuration
