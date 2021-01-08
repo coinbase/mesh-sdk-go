@@ -27,6 +27,7 @@ import (
 	mocks "github.com/coinbase/rosetta-sdk-go/mocks/reconciler"
 	mockDatabase "github.com/coinbase/rosetta-sdk-go/mocks/storage/database"
 	"github.com/coinbase/rosetta-sdk-go/parser"
+	storageErrors "github.com/coinbase/rosetta-sdk-go/storage/errors"
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/coinbase/rosetta-sdk-go/utils"
 )
@@ -500,7 +501,7 @@ func TestCompareBalance(t *testing.T) {
 			block2.Index,
 		).Return(
 			nil,
-			errors.New("account missing"),
+			storageErrors.ErrAccountMissing,
 		).Once()
 		difference, cachedBalance, headIndex, err := reconciler.CompareBalance(
 			ctx,
@@ -517,6 +518,73 @@ func TestCompareBalance(t *testing.T) {
 	})
 
 	mh.AssertExpectations(t)
+}
+
+func TestAccountReconciliation(t *testing.T) {
+	var (
+		account = &types.AccountIdentifier{
+			Address: "blah",
+		}
+
+		currency = &types.Currency{
+			Symbol:   "curr1",
+			Decimals: 4,
+		}
+
+		block0 = &types.BlockIdentifier{
+			Hash:  "block0",
+			Index: 0,
+		}
+
+		block1 = &types.BlockIdentifier{
+			Hash:  "block1",
+			Index: 2,
+		}
+
+		ctx = context.Background()
+
+		mockHelper  = &mocks.Helper{}
+		mockHandler = &mocks.Handler{}
+	)
+
+	reconciler := New(
+		mockHelper,
+		mockHandler,
+		nil,
+	)
+
+	t.Run("account is missing", func(t *testing.T) {
+		mtxn := &mockDatabase.Transaction{}
+		mtxn.On("Discard", ctx).Once()
+		mockHelper.On("DatabaseTransaction", ctx).Return(mtxn).Once()
+		mockHelper.On("CurrentBlock", ctx, mtxn).Return(block1, nil).Once()
+		mockHelper.On("CanonicalBlock", ctx, mtxn, block0).Return(true, nil).Once()
+		mockHelper.On(
+			"ComputedBalance",
+			ctx,
+			mtxn,
+			account,
+			currency,
+			block0.Index,
+		).Return(
+			nil,
+			storageErrors.ErrAccountMissing,
+		).Once()
+		mockHandler.On(
+			"ReconciliationSkipped",
+			ctx,
+			ActiveReconciliation,
+			account,
+			currency,
+			AccountMissing,
+		).Return(
+			nil,
+		).Once()
+		err := reconciler.accountReconciliation(ctx, account, currency, "100", block0, false)
+		assert.NoError(t, err)
+		mockHelper.AssertExpectations(t)
+		mockHandler.AssertExpectations(t)
+	})
 }
 
 func assertContainsAllAccounts(t *testing.T, m map[string]struct{}, a []*types.AccountCurrency) {
