@@ -324,7 +324,7 @@ var (
 
 	// ErrAccountMissing is returned when a fetched
 	// account does not exist.
-	ErrAccountMissing = errors.New("block nil")
+	ErrAccountMissing = errors.New("account missing")
 
 	// ErrInvalidChangeValue is returned when the change value
 	// cannot be parsed.
