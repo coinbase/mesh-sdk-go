@@ -56,6 +56,17 @@ const (
 	// to process (so the index we are querying at may be
 	// ahead of the nodes tip).
 	TipFailure = "TIP_FAILURE"
+
+	// AccountMissing is returned when looking up computed
+	// balance fails because the account does not exist in
+	// balance storage.
+	// This can happen when interesting accounts
+	// are specified. We try to reconcile balances for
+	// each of these accounts at each block height.
+	// But, until we encounter a block with an interesting account
+	// in it, there is no entry for it in balance storage.
+	// So, we can not reconcile.
+	AccountMissing = "ACCOUNT_MISSING"
 )
 
 const (
