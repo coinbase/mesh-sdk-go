@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	storageErrors "github.com/coinbase/rosetta-sdk-go/storage/errors"
 	"io/ioutil"
 	"log"
 	"math/big"
@@ -185,6 +186,63 @@ type FetcherHelper interface {
 		block *types.PartialBlockIdentifier,
 		currencies []*types.Currency,
 	) (*types.BlockIdentifier, []*types.Amount, map[string]interface{}, *fetcher.Error)
+}
+
+type BlockStorageHelper interface {
+	GetBlockLazy(
+		ctx context.Context,
+		blockIdentifier *types.PartialBlockIdentifier,
+	) (*types.BlockResponse, error)
+}
+
+
+func CheckNetworkTip(ctx context.Context, network *types.NetworkIdentifier, tipDelay int64, f FetcherHelper) (*types.BlockIdentifier, error) {
+	status, fetchErr := f.NetworkStatusRetry(ctx, network, nil)
+	if fetchErr != nil {
+		return nil, fmt.Errorf("%w: unable to fetch network status", fetchErr.Err)
+	}
+
+	// If a block has yet to be synced, start syncing from tip.
+	if AtTip(tipDelay, status.CurrentBlockTimestamp) {
+		return status.CurrentBlockIdentifier, nil
+	}
+
+	// If the Rosetta implementation says it is at tip (regardless of the current
+	// block timestamp), we should start.
+	if status.SyncStatus != nil && status.SyncStatus.Synced != nil && *status.SyncStatus.Synced {
+		return status.CurrentBlockIdentifier, nil
+	}
+
+	return nil, nil
+}
+
+func CheckStorageTip(ctx context.Context, network *types.NetworkIdentifier, tipDelay int64, f FetcherHelper, b BlockStorageHelper) (bool, error){
+	// Get latest block in storage
+	// TODO: lines 60-66 can be moved to a reusable
+	// getCurrentBlockIfExists method in BlockStorage.
+	blockResponse, err := b.GetBlockLazy(ctx, nil)
+	if errors.Is(err, storageErrors.ErrHeadBlockNotFound) {
+		// If no blocks exist in storage yet, we are not at tip
+		return false, nil
+	}
+
+	currentStorageBlock := blockResponse.Block
+	if AtTip(tipDelay, currentStorageBlock.Timestamp) {
+		return true, nil
+	}
+
+	// if latest block in storage is not at tip,
+	// check network status
+	tipBlock, fetchErr := CheckNetworkTip(ctx, network, tipDelay, f)
+	if fetchErr != nil {
+		return false, fmt.Errorf("%w: unable to fetch network status", fetchErr)
+	}
+
+	if tipBlock == nil {
+		return false, nil
+	}
+
+	return types.Hash(tipBlock) == types.Hash(currentStorageBlock.BlockIdentifier), nil
 }
 
 // CheckNetworkSupported checks if a Rosetta implementation supports a given
