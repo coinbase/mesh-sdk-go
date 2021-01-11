@@ -476,26 +476,6 @@ func AtTip(
 	return blockTimestamp >= tipCutoff
 }
 
-// CheckAtTip returns a boolean indicating if a
-// Rosetta implementation is at tip.
-func CheckAtTip(
-	ctx context.Context,
-	networkIdentifier *types.NetworkIdentifier,
-	helper FetcherHelper,
-	tipDelay int64,
-) (bool, error) {
-	status, fetchErr := helper.NetworkStatusRetry(
-		ctx,
-		networkIdentifier,
-		nil,
-	)
-	if fetchErr != nil {
-		return false, fmt.Errorf("%w: unable to get network status", fetchErr.Err)
-	}
-
-	return AtTip(tipDelay, status.CurrentBlockTimestamp), nil
-}
-
 // ContextSleep sleeps for the provided duration and returns
 // an error if context is canceled.
 func ContextSleep(ctx context.Context, duration time.Duration) error {

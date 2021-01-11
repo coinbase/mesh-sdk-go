@@ -382,14 +382,14 @@ func TestGetAccountBalances(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestCheckAtTip(t *testing.T) {
+func TestCheckNetworkTip(t *testing.T) {
 	ctx := context.Background()
 
 	tests := map[string]struct {
 		helper   *mocks.FetcherHelper
 		tipDelay int64
 
-		expectedResult bool
+		expectedResult *types.BlockIdentifier
 		expectedError  error
 	}{
 		"at tip": {
@@ -404,6 +404,7 @@ func TestCheckAtTip(t *testing.T) {
 				).Return(
 					&types.NetworkStatusResponse{
 						CurrentBlockTimestamp: Milliseconds(),
+						CurrentBlockIdentifier: blockIdentifier,
 					},
 					nil,
 				).Once()
@@ -411,7 +412,7 @@ func TestCheckAtTip(t *testing.T) {
 				return mockHelper
 			}(),
 			tipDelay:       100,
-			expectedResult: true,
+			expectedResult: blockIdentifier,
 			expectedError:  nil,
 		},
 		"not at tip": {
@@ -426,6 +427,7 @@ func TestCheckAtTip(t *testing.T) {
 				).Return(
 					&types.NetworkStatusResponse{
 						CurrentBlockTimestamp: Milliseconds() - 300*MillisecondsInSecond,
+						CurrentBlockIdentifier: blockIdentifier,
 					},
 					nil,
 				).Once()
@@ -433,7 +435,7 @@ func TestCheckAtTip(t *testing.T) {
 				return mockHelper
 			}(),
 			tipDelay:       100,
-			expectedResult: false,
+			expectedResult: nil,
 			expectedError:  nil,
 		},
 		"error": {
@@ -461,12 +463,12 @@ func TestCheckAtTip(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			atTip, err := CheckAtTip(ctx, network, test.helper, test.tipDelay)
+			tipBlock, err := CheckNetworkTip(ctx, network, test.tipDelay, test.helper)
 			if test.expectedError != nil {
-				assert.False(t, atTip)
+				assert.Nil(t, tipBlock)
 				assert.True(t, errors.Is(err, test.expectedError))
 			} else {
-				assert.Equal(t, test.expectedResult, atTip)
+				assert.Equal(t, test.expectedResult, tipBlock)
 				assert.NoError(t, err)
 			}
 			test.helper.AssertExpectations(t)
