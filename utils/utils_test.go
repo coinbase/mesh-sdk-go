@@ -438,6 +438,58 @@ func TestCheckNetworkTip(t *testing.T) {
 			expectedResult: nil,
 			expectedError:  nil,
 		},
+		"synced tip": {
+			helper: func() *mocks.FetcherHelper {
+				mockHelper := &mocks.FetcherHelper{}
+
+				mockHelper.On(
+					"NetworkStatusRetry",
+					ctx,
+					network,
+					map[string]interface{}(nil),
+				).Return(
+					&types.NetworkStatusResponse{
+						CurrentBlockTimestamp: Milliseconds() - 300*MillisecondsInSecond,
+						CurrentBlockIdentifier: blockIdentifier,
+						SyncStatus: &types.SyncStatus{
+							Synced:       types.Bool(true),
+						},
+					},
+					nil,
+				).Once()
+
+				return mockHelper
+			}(),
+			tipDelay:       100,
+			expectedResult: blockIdentifier,
+			expectedError:  nil,
+		},
+		"not synced tip": {
+			helper: func() *mocks.FetcherHelper {
+				mockHelper := &mocks.FetcherHelper{}
+
+				mockHelper.On(
+					"NetworkStatusRetry",
+					ctx,
+					network,
+					map[string]interface{}(nil),
+				).Return(
+					&types.NetworkStatusResponse{
+						CurrentBlockTimestamp: Milliseconds() - 300*MillisecondsInSecond,
+						CurrentBlockIdentifier: blockIdentifier,
+						SyncStatus: &types.SyncStatus{
+							Synced:       types.Bool(false),
+						},
+					},
+					nil,
+				).Once()
+
+				return mockHelper
+			}(),
+			tipDelay:       100,
+			expectedResult: nil,
+			expectedError:  nil,
+		},
 		"error": {
 			helper: func() *mocks.FetcherHelper {
 				mockHelper := &mocks.FetcherHelper{}
