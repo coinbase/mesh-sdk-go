@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	storageErrors "github.com/coinbase/rosetta-sdk-go/storage/errors"
 	"io/ioutil"
 	"log"
 	"math/big"
@@ -33,6 +32,7 @@ import (
 	"github.com/fatih/color"
 
 	"github.com/coinbase/rosetta-sdk-go/fetcher"
+	storageErrors "github.com/coinbase/rosetta-sdk-go/storage/errors"
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
@@ -195,7 +195,6 @@ type BlockStorageHelper interface {
 	) (*types.BlockResponse, error)
 }
 
-
 func CheckNetworkTip(ctx context.Context, network *types.NetworkIdentifier, tipDelay int64, f FetcherHelper) (*types.BlockIdentifier, error) {
 	status, fetchErr := f.NetworkStatusRetry(ctx, network, nil)
 	if fetchErr != nil {
@@ -216,7 +215,7 @@ func CheckNetworkTip(ctx context.Context, network *types.NetworkIdentifier, tipD
 	return nil, nil
 }
 
-func CheckStorageTip(ctx context.Context, network *types.NetworkIdentifier, tipDelay int64, f FetcherHelper, b BlockStorageHelper) (bool, error){
+func CheckStorageTip(ctx context.Context, network *types.NetworkIdentifier, tipDelay int64, f FetcherHelper, b BlockStorageHelper) (bool, error) {
 	// Get latest block in storage
 	// TODO: lines 60-66 can be moved to a reusable
 	// getCurrentBlockIfExists method in BlockStorage.
