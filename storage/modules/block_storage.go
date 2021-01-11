@@ -1063,25 +1063,35 @@ func (b *BlockStorage) FindTransaction(
 
 	var newestBlock *types.BlockIdentifier
 	var newestTransaction *types.Transaction
+	var transactionUnsequenced bool
 	for _, blockTransaction := range blockTransactions {
 		if newestBlock == nil || blockTransaction.BlockIdentifier.Index > newestBlock.Index {
 			// Now that we are optimistically storing data, there is a chance
 			// we may fetch a transaction from a seen but unsequenced block.
 			if head != nil && blockTransaction.BlockIdentifier.Index > head.Index {
+				// We have seen a transaction, but it's in a block that is not yet
+				// sequenced.
+				transactionUnsequenced = true
 				continue
 			}
 
 			newestBlock = blockTransaction.BlockIdentifier
+			// When `blockTransaction` is pruned, `blockTransaction.Transaction` is set to nil
 			newestTransaction = blockTransaction.Transaction
 		}
 	}
 
-	// If the transaction has been pruned, it will be nil.
-	if newestTransaction == nil {
+	if newestTransaction != nil {
+		return newestBlock, newestTransaction, nil
+	}
+
+	if !transactionUnsequenced {
+		// All matching transaction have been pruned
 		return nil, nil, storageErrs.ErrCannotAccessPrunedData
 	}
 
-	return newestBlock, newestTransaction, nil
+	// A transaction exists but we have not yet sequenced the block it is in
+	return nil, nil, nil
 }
 
 func (b *BlockStorage) findBlockTransaction(
