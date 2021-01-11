@@ -356,12 +356,25 @@ func TestBlock(t *testing.T) {
 		err = storage.SeeBlock(ctx, newBlock)
 		assert.NoError(t, err)
 
+		// Attempt to find transaction before it's synced
+		transaction := storage.db.ReadTransaction(ctx)
+		newestBlock, newestTransaction, err := storage.FindTransaction(
+			ctx,
+			newBlock.Transactions[0].TransactionIdentifier,
+			transaction,
+		)
+		assert.NoError(t, err)
+		assert.Nil(t, newestBlock)
+		assert.Nil(t, newestTransaction)
+		transaction.Discard(ctx)
+
 		// Ensure we can FindTransaction in add block transaction.
-		transaction := storage.db.WriteTransaction(ctx, blockSyncIdentifier, true)
+		transaction = storage.db.WriteTransaction(ctx, blockSyncIdentifier, true)
+		// Sequence the block so the transaction can be found
 		err = storage.storeBlock(ctx, transaction, newBlock.BlockIdentifier)
 		assert.NoError(t, err)
 
-		newestBlock, newestTransaction, err := storage.FindTransaction(
+		newestBlock, newestTransaction, err = storage.FindTransaction(
 			ctx,
 			newBlock.Transactions[0].TransactionIdentifier,
 			transaction,
