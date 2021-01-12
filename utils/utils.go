@@ -241,8 +241,8 @@ func CheckNetworkTip(ctx context.Context,
 // following two conditions is met:
 // (1) the block was produced within tipDelay of current time
 // (i.e. block timestamp >= current time - tipDelay)
-// (2) CheckNetworkTip returns the same block as the current block
-// in storage
+// (2) CheckNetworkTip returns true and the block it returns
+// is same as the current block in storage
 func CheckStorageTip(ctx context.Context,
 	network *types.NetworkIdentifier,
 	tipDelay int64,
