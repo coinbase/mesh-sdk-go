@@ -11,7 +11,6 @@ GOIMPORTS_CMD=go run golang.org/x/tools/cmd/goimports
 GOLINES_CMD=go run github.com/segmentio/golines
 GOVERALLS_CMD=go run github.com/mattn/goveralls
 GOLINT_CMD=go run golang.org/x/lint/golint
-MOCKERY_CMD=mockery --disable-version-string
 GO_PACKAGES=./asserter/... ./fetcher/... ./types/... ./client/... ./server/... \
 	./parser/... ./syncer/... ./reconciler/... ./keys/... \
 	./statefulsyncer/... ./storage/... ./utils/... ./constructor/... ./errors/...
@@ -74,12 +73,12 @@ release: shellcheck check-gen check-license check-format test lint salus
 
 mocks:
 	rm -rf mocks;
-	${MOCKERY_CMD} --dir syncer --all --case underscore --outpkg syncer --output mocks/syncer;
-	${MOCKERY_CMD} --dir reconciler --all --case underscore --outpkg reconciler --output mocks/reconciler;
-	${MOCKERY_CMD} --dir constructor/worker --all --case underscore --outpkg worker --output mocks/constructor/worker;
-	${MOCKERY_CMD} --dir constructor/coordinator --all --case underscore --outpkg coordinator --output mocks/constructor/coordinator;
-	${MOCKERY_CMD} --dir utils --all --case underscore --outpkg utils --output mocks/utils;
-	${MOCKERY_CMD} --dir storage/database --all --case underscore --outpkg database --output mocks/storage/database;
-	${MOCKERY_CMD} --dir storage/modules --all --case underscore --outpkg modules --output mocks/storage/modules;
+	mockery --dir syncer --all --case underscore --outpkg syncer --output mocks/syncer;
+	mockery --dir reconciler --all --case underscore --outpkg reconciler --output mocks/reconciler;
+	mockery --dir constructor/worker --all --case underscore --outpkg worker --output mocks/constructor/worker;
+	mockery --dir constructor/coordinator --all --case underscore --outpkg coordinator --output mocks/constructor/coordinator;
+	mockery --dir utils --all --case underscore --outpkg utils --output mocks/utils;
+	mockery --dir storage/database --all --case underscore --outpkg database --output mocks/storage/database;
+	mockery --dir storage/modules --all --case underscore --outpkg modules --output mocks/storage/modules;
 
 	${ADDLICENCE_SCRIPT} .;
