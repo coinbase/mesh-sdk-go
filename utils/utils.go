@@ -222,7 +222,8 @@ func CheckNetworkTip(ctx context.Context,
 		return status.CurrentBlockIdentifier, nil
 	}
 
-	// If the sync status returned by network/status is true, we should consider the block to be at tip.
+	// If the sync status returned by network/status is true, we should consider the block to be at
+	// tip.
 	if status.SyncStatus != nil && status.SyncStatus.Synced != nil && *status.SyncStatus.Synced {
 		return status.CurrentBlockIdentifier, nil
 	}
