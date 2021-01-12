@@ -197,8 +197,10 @@ type BlockStorageHelper interface {
 	// to this interface.
 }
 
-// CheckNetworkTip returns block identifier if the block returned by network/status
-// endpoint is at tip. Note that the tipDelay param takes tip delay in seconds.
+// CheckNetworkTip returns a boolean indicating if the block returned by
+// network/status is at tip. It also returns the block identifier
+// returned by network/status.
+// Note that the tipDelay param takes tip delay in seconds.
 // Block returned by network/status is considered to be at tip if one of the
 // following two conditions is met:
 // (1) the block was produced within tipDelay of current time
@@ -208,64 +210,70 @@ func CheckNetworkTip(ctx context.Context,
 	network *types.NetworkIdentifier,
 	tipDelay int64,
 	f FetcherHelper,
-) (*types.BlockIdentifier, error) {
+) (bool, *types.BlockIdentifier, error) {
 	// todo: refactor CheckNetworkTip and its usages to accept metadata and pass it to
 	// NetworkStatusRetry call.
 	status, fetchErr := f.NetworkStatusRetry(ctx, network, nil)
 	if fetchErr != nil {
-		return nil, fmt.Errorf("%w: unable to fetch network status", fetchErr.Err)
+		return false, nil, fmt.Errorf("%w: unable to fetch network status", fetchErr.Err)
 	}
 
 	// if the block timestamp is within tip delay of current time,
 	// it can be considered to be at tip.
 	if AtTip(tipDelay, status.CurrentBlockTimestamp) {
-		return status.CurrentBlockIdentifier, nil
+		return true, status.CurrentBlockIdentifier, nil
 	}
 
 	// If the sync status returned by network/status is true, we should consider the block to be at
 	// tip.
 	if status.SyncStatus != nil && status.SyncStatus.Synced != nil && *status.SyncStatus.Synced {
-		return status.CurrentBlockIdentifier, nil
+		return true, status.CurrentBlockIdentifier, nil
 	}
 
-	return nil, nil
+	return false, status.CurrentBlockIdentifier, nil
 }
 
-// CheckStorageTip returns block identifier if the current block
-// in storage is at tip. Note that the tipDelay param takes tip delay in seconds.
-// A block in storage is considered to be at tip if one of the following two conditions is met
+// CheckStorageTip returns a boolean indicating if the current
+// block returned by block storage helper is at tip. It also
+// returns the block identifier of the current storage block.
+// Note that the tipDelay param takes tip delay in seconds.
+// A block in storage is considered to be at tip if one of the
+// following two conditions is met:
 // (1) the block was produced within tipDelay of current time
 // (i.e. block timestamp >= current time - tipDelay)
-// (2) CheckNetworkTip returns the same block as the current block in storage
+// (2) CheckNetworkTip returns the same block as the current block
+// in storage
 func CheckStorageTip(ctx context.Context,
 	network *types.NetworkIdentifier,
 	tipDelay int64,
 	f FetcherHelper,
 	b BlockStorageHelper,
-) (*types.BlockIdentifier, error) {
+) (bool, *types.BlockIdentifier, error) {
 	blockResponse, err := b.GetBlockLazy(ctx, nil)
 	if errors.Is(err, storageErrors.ErrHeadBlockNotFound) {
 		// If no blocks exist in storage yet, we are not at tip
-		return nil, nil
+		return false, nil, nil
 	}
 
 	currentStorageBlock := blockResponse.Block
 	if AtTip(tipDelay, currentStorageBlock.Timestamp) {
-		return currentStorageBlock.BlockIdentifier, nil
+		return true, currentStorageBlock.BlockIdentifier, nil
 	}
 
 	// if latest block in storage is not at tip,
 	// check network status
-	tipBlock, fetchErr := CheckNetworkTip(ctx, network, tipDelay, f)
+	networkAtTip, tipBlock, fetchErr := CheckNetworkTip(ctx, network, tipDelay, f)
 	if fetchErr != nil {
-		return nil, fmt.Errorf("%w: unable to fetch network status", fetchErr)
+		return false,
+			currentStorageBlock.BlockIdentifier,
+			fmt.Errorf("%w: unable to fetch network status", fetchErr)
 	}
 
-	if types.Hash(tipBlock) == types.Hash(currentStorageBlock.BlockIdentifier) {
-		return currentStorageBlock.BlockIdentifier, nil
+	if networkAtTip && types.Hash(tipBlock) == types.Hash(currentStorageBlock.BlockIdentifier) {
+		return true, currentStorageBlock.BlockIdentifier, nil
 	}
 
-	return nil, nil
+	return false, currentStorageBlock.BlockIdentifier, nil
 }
 
 // CheckNetworkSupported checks if a Rosetta implementation supports a given
