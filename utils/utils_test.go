@@ -635,7 +635,7 @@ func TestCheckStorageTip(t *testing.T) {
 			expectedResult: nil,
 			expectedError:  nil,
 		},
-		"current stored block and network tip blocks are different": {
+		"stored block and network blocks different": {
 			f: func() *mocks.FetcherHelper {
 				mockHelper := &mocks.FetcherHelper{}
 				mockHelper.On("NetworkStatusRetry",
@@ -691,7 +691,7 @@ func TestCheckStorageTip(t *testing.T) {
 				).Once()
 				return mockHelper
 			}(),
-			tipDelay:       1000,
+			tipDelay:       100,
 			expectedResult: nil,
 			expectedError:  nil,
 		},
