@@ -1161,7 +1161,7 @@ func (b *BlockStorage) FindRelatedTransactions(
 			break
 		}
 		child := children[i]
-		i += 1
+		i++
 
 		childBlock, childTx, err := b.FindTransaction(ctx, child, db)
 		if err != nil {
@@ -1211,8 +1211,8 @@ func (b *BlockStorage) getChildren(
 		func(k []byte, v []byte) error {
 			ss := strings.Split(string(k), "/")
 			txHash := ss[len(ss)-1]
-			txId := &types.TransactionIdentifier{Hash: txHash}
-			children = append(children, txId)
+			txID := &types.TransactionIdentifier{Hash: txHash}
+			children = append(children, txID)
 			return nil
 		},
 		false,
