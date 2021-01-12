@@ -32,6 +32,7 @@ import (
 	"github.com/fatih/color"
 
 	"github.com/coinbase/rosetta-sdk-go/fetcher"
+	storageErrors "github.com/coinbase/rosetta-sdk-go/storage/errors"
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
@@ -185,6 +186,86 @@ type FetcherHelper interface {
 		block *types.PartialBlockIdentifier,
 		currencies []*types.Currency,
 	) (*types.BlockIdentifier, []*types.Amount, map[string]interface{}, *fetcher.Error)
+}
+
+type BlockStorageHelper interface {
+	GetBlockLazy(
+		ctx context.Context,
+		blockIdentifier *types.PartialBlockIdentifier,
+	) (*types.BlockResponse, error)
+	// todo add all relevant BlockStorage functions
+	// to this interface.
+}
+
+// CheckNetworkTip returns block identifier if the block returned by network/status
+// endpoint is at tip. Note that the tipDelay param takes tip delay in seconds.
+// Block returned by network/status is considered to be at tip if one of the
+// following two conditions is met:
+// (1) the block was produced within tipDelay of current time
+// (i.e. block timestamp >= current time - tipDelay)
+// (2) the network/status endpoint returns a SyncStatus with Synced = true.
+func CheckNetworkTip(ctx context.Context,
+	network *types.NetworkIdentifier,
+	tipDelay int64,
+	f FetcherHelper,
+) (*types.BlockIdentifier, error) {
+	// todo: refactor CheckNetworkTip and its usages to accept metadata and pass it to
+	// NetworkStatusRetry call.
+	status, fetchErr := f.NetworkStatusRetry(ctx, network, nil)
+	if fetchErr != nil {
+		return nil, fmt.Errorf("%w: unable to fetch network status", fetchErr.Err)
+	}
+
+	// if the block timestamp is within tip delay of current time,
+	// it can be considered to be at tip.
+	if AtTip(tipDelay, status.CurrentBlockTimestamp) {
+		return status.CurrentBlockIdentifier, nil
+	}
+
+	// If the sync status returned by network/status is true, we should consider the block to be at
+	// tip.
+	if status.SyncStatus != nil && status.SyncStatus.Synced != nil && *status.SyncStatus.Synced {
+		return status.CurrentBlockIdentifier, nil
+	}
+
+	return nil, nil
+}
+
+// CheckStorageTip returns block identifier if the current block
+// in storage is at tip. Note that the tipDelay param takes tip delay in seconds.
+// A block in storage is considered to be at tip if one of the following two conditions is met
+// (1) the block was produced within tipDelay of current time
+// (i.e. block timestamp >= current time - tipDelay)
+// (2) CheckNetworkTip returns the same block as the current block in storage
+func CheckStorageTip(ctx context.Context,
+	network *types.NetworkIdentifier,
+	tipDelay int64,
+	f FetcherHelper,
+	b BlockStorageHelper,
+) (*types.BlockIdentifier, error) {
+	blockResponse, err := b.GetBlockLazy(ctx, nil)
+	if errors.Is(err, storageErrors.ErrHeadBlockNotFound) {
+		// If no blocks exist in storage yet, we are not at tip
+		return nil, nil
+	}
+
+	currentStorageBlock := blockResponse.Block
+	if AtTip(tipDelay, currentStorageBlock.Timestamp) {
+		return currentStorageBlock.BlockIdentifier, nil
+	}
+
+	// if latest block in storage is not at tip,
+	// check network status
+	tipBlock, fetchErr := CheckNetworkTip(ctx, network, tipDelay, f)
+	if fetchErr != nil {
+		return nil, fmt.Errorf("%w: unable to fetch network status", fetchErr)
+	}
+
+	if types.Hash(tipBlock) == types.Hash(currentStorageBlock.BlockIdentifier) {
+		return currentStorageBlock.BlockIdentifier, nil
+	}
+
+	return nil, nil
 }
 
 // CheckNetworkSupported checks if a Rosetta implementation supports a given
@@ -417,26 +498,6 @@ func AtTip(
 	tipCutoff := currentTime - (tipDelay * MillisecondsInSecond)
 
 	return blockTimestamp >= tipCutoff
-}
-
-// CheckAtTip returns a boolean indicating if a
-// Rosetta implementation is at tip.
-func CheckAtTip(
-	ctx context.Context,
-	networkIdentifier *types.NetworkIdentifier,
-	helper FetcherHelper,
-	tipDelay int64,
-) (bool, error) {
-	status, fetchErr := helper.NetworkStatusRetry(
-		ctx,
-		networkIdentifier,
-		nil,
-	)
-	if fetchErr != nil {
-		return false, fmt.Errorf("%w: unable to get network status", fetchErr.Err)
-	}
-
-	return AtTip(tipDelay, status.CurrentBlockTimestamp), nil
 }
 
 // ContextSleep sleeps for the provided duration and returns
