@@ -193,9 +193,22 @@ type BlockStorageHelper interface {
 		ctx context.Context,
 		blockIdentifier *types.PartialBlockIdentifier,
 	) (*types.BlockResponse, error)
+	// todo add all relevant BlockStorage functions
+	// to this interface.
+
 }
 
-func CheckNetworkTip(ctx context.Context, network *types.NetworkIdentifier, tipDelay int64, f FetcherHelper) (*types.BlockIdentifier, error) {
+// CheckNetworkTip returns block identifier if the block returned by network/status
+// endpoint is at at tip. tipDelay should be specified in seconds.
+// Block returned by network/status is considered at tip if one of the following two conditions is met
+// (1) the block was produced within tipDelay of current time (i.e. block timestamp >= current time - tipDelay)
+// (2) the network/status endpoint returns a SyncStatus with Synced = true.
+func CheckNetworkTip(ctx context.Context,
+	network *types.NetworkIdentifier,
+	tipDelay int64,
+	f FetcherHelper,
+) (*types.BlockIdentifier, error) {
+	// todo: refactor CheckNetworkTip and its usages to accept metadata and pass it to NetworkStatusRetry call.
 	status, fetchErr := f.NetworkStatusRetry(ctx, network, nil)
 	if fetchErr != nil {
 		return nil, fmt.Errorf("%w: unable to fetch network status", fetchErr.Err)
@@ -215,33 +228,40 @@ func CheckNetworkTip(ctx context.Context, network *types.NetworkIdentifier, tipD
 	return nil, nil
 }
 
-func CheckStorageTip(ctx context.Context, network *types.NetworkIdentifier, tipDelay int64, f FetcherHelper, b BlockStorageHelper) (bool, error) {
-	// Get latest block in storage
-	// TODO: lines 60-66 can be moved to a reusable
-	// getCurrentBlockIfExists method in BlockStorage.
+// CheckStorageTip returns block identifier if the current block
+// in storage is at tip. tipDelay should be specified in seconds.
+// A block in storage is considered at tip if one of the following two conditions is met
+// (1) the block was produced within tipDelay of current time (i.e. block timestamp >= current time - tipDelay)
+// (2) CheckNetworkTip returns the same block as the current block in storage
+func CheckStorageTip(ctx context.Context,
+	network *types.NetworkIdentifier,
+	tipDelay int64,
+	f FetcherHelper,
+	b BlockStorageHelper,
+) (*types.BlockIdentifier, error) {
 	blockResponse, err := b.GetBlockLazy(ctx, nil)
 	if errors.Is(err, storageErrors.ErrHeadBlockNotFound) {
 		// If no blocks exist in storage yet, we are not at tip
-		return false, nil
+		return nil, nil
 	}
 
 	currentStorageBlock := blockResponse.Block
 	if AtTip(tipDelay, currentStorageBlock.Timestamp) {
-		return true, nil
+		return currentStorageBlock.BlockIdentifier, nil
 	}
 
 	// if latest block in storage is not at tip,
 	// check network status
 	tipBlock, fetchErr := CheckNetworkTip(ctx, network, tipDelay, f)
 	if fetchErr != nil {
-		return false, fmt.Errorf("%w: unable to fetch network status", fetchErr)
+		return nil, fmt.Errorf("%w: unable to fetch network status", fetchErr)
 	}
 
-	if tipBlock == nil {
-		return false, nil
+	if types.Hash(tipBlock) == types.Hash(currentStorageBlock.BlockIdentifier) {
+		return currentStorageBlock.BlockIdentifier, nil
 	}
 
-	return types.Hash(tipBlock) == types.Hash(currentStorageBlock.BlockIdentifier), nil
+	return nil, nil
 }
 
 // CheckNetworkSupported checks if a Rosetta implementation supports a given
