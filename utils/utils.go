@@ -200,15 +200,18 @@ type BlockStorageHelper interface {
 
 // CheckNetworkTip returns block identifier if the block returned by network/status
 // endpoint is at at tip. tipDelay should be specified in seconds.
-// Block returned by network/status is considered at tip if one of the following two conditions is met
-// (1) the block was produced within tipDelay of current time (i.e. block timestamp >= current time - tipDelay)
+// Block returned by network/status is considered at tip if one of the following two conditions is
+// met
+// (1) the block was produced within tipDelay of current time (i.e. block timestamp >= current time
+// - tipDelay)
 // (2) the network/status endpoint returns a SyncStatus with Synced = true.
 func CheckNetworkTip(ctx context.Context,
 	network *types.NetworkIdentifier,
 	tipDelay int64,
 	f FetcherHelper,
 ) (*types.BlockIdentifier, error) {
-	// todo: refactor CheckNetworkTip and its usages to accept metadata and pass it to NetworkStatusRetry call.
+	// todo: refactor CheckNetworkTip and its usages to accept metadata and pass it to
+	// NetworkStatusRetry call.
 	status, fetchErr := f.NetworkStatusRetry(ctx, network, nil)
 	if fetchErr != nil {
 		return nil, fmt.Errorf("%w: unable to fetch network status", fetchErr.Err)
@@ -231,7 +234,8 @@ func CheckNetworkTip(ctx context.Context,
 // CheckStorageTip returns block identifier if the current block
 // in storage is at tip. tipDelay should be specified in seconds.
 // A block in storage is considered at tip if one of the following two conditions is met
-// (1) the block was produced within tipDelay of current time (i.e. block timestamp >= current time - tipDelay)
+// (1) the block was produced within tipDelay of current time (i.e. block timestamp >= current time
+// - tipDelay)
 // (2) CheckNetworkTip returns the same block as the current block in storage
 func CheckStorageTip(ctx context.Context,
 	network *types.NetworkIdentifier,

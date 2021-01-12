@@ -544,12 +544,19 @@ func TestCheckStorageTip(t *testing.T) {
 			f: &mocks.FetcherHelper{},
 			b: func() *mocks.BlockStorageHelper {
 				mockHelper := &mocks.BlockStorageHelper{}
-				mockHelper.On("GetBlockLazy", ctx, (*types.PartialBlockIdentifier)(nil)).Return(&types.BlockResponse{
-					Block: &types.Block{
-						BlockIdentifier: blockIdentifier,
-						Timestamp:       Milliseconds(),
+				mockHelper.On(
+					"GetBlockLazy",
+					ctx,
+					(*types.PartialBlockIdentifier)(nil),
+				).Return(
+					&types.BlockResponse{
+						Block: &types.Block{
+							BlockIdentifier: blockIdentifier,
+							Timestamp:       Milliseconds(),
+						},
 					},
-				}, nil).Once()
+					nil,
+				).Once()
 				return mockHelper
 			}(),
 			tipDelay:       1000,
@@ -573,12 +580,19 @@ func TestCheckStorageTip(t *testing.T) {
 			}(),
 			b: func() *mocks.BlockStorageHelper {
 				mockHelper := &mocks.BlockStorageHelper{}
-				mockHelper.On("GetBlockLazy", ctx, (*types.PartialBlockIdentifier)(nil)).Return(&types.BlockResponse{
-					Block: &types.Block{
-						BlockIdentifier: blockIdentifier,
-						Timestamp:       Milliseconds() - 300*MillisecondsInSecond,
+				mockHelper.On(
+					"GetBlockLazy",
+					ctx,
+					(*types.PartialBlockIdentifier)(nil),
+				).Return(
+					&types.BlockResponse{
+						Block: &types.Block{
+							BlockIdentifier: blockIdentifier,
+							Timestamp:       Milliseconds() - 300*MillisecondsInSecond,
+						},
 					},
-				}, nil).Once()
+					nil,
+				).Once()
 				return mockHelper
 			}(),
 			tipDelay:       100,
@@ -602,12 +616,19 @@ func TestCheckStorageTip(t *testing.T) {
 			}(),
 			b: func() *mocks.BlockStorageHelper {
 				mockHelper := &mocks.BlockStorageHelper{}
-				mockHelper.On("GetBlockLazy", ctx, (*types.PartialBlockIdentifier)(nil)).Return(&types.BlockResponse{
-					Block: &types.Block{
-						BlockIdentifier: blockIdentifier,
-						Timestamp:       Milliseconds() - 300*MillisecondsInSecond,
+				mockHelper.On(
+					"GetBlockLazy",
+					ctx,
+					(*types.PartialBlockIdentifier)(nil),
+				).Return(
+					&types.BlockResponse{
+						Block: &types.Block{
+							BlockIdentifier: blockIdentifier,
+							Timestamp:       Milliseconds() - 300*MillisecondsInSecond,
+						},
 					},
-				}, nil).Once()
+					nil,
+				).Once()
 				return mockHelper
 			}(),
 			tipDelay:       100,
@@ -634,15 +655,22 @@ func TestCheckStorageTip(t *testing.T) {
 			}(),
 			b: func() *mocks.BlockStorageHelper {
 				mockHelper := &mocks.BlockStorageHelper{}
-				mockHelper.On("GetBlockLazy", ctx, (*types.PartialBlockIdentifier)(nil)).Return(&types.BlockResponse{
-					Block: &types.Block{
-						BlockIdentifier: &types.BlockIdentifier{
-							Hash:  "block",
-							Index: 1,
+				mockHelper.On(
+					"GetBlockLazy",
+					ctx,
+					(*types.PartialBlockIdentifier)(nil),
+				).Return(
+					&types.BlockResponse{
+						Block: &types.Block{
+							BlockIdentifier: &types.BlockIdentifier{
+								Hash:  "block",
+								Index: 1,
+							},
+							Timestamp: Milliseconds() - 300*MillisecondsInSecond,
 						},
-						Timestamp: Milliseconds() - 300*MillisecondsInSecond,
 					},
-				}, nil).Once()
+					nil,
+				).Once()
 				return mockHelper
 			}(),
 			tipDelay:       100,
@@ -653,7 +681,14 @@ func TestCheckStorageTip(t *testing.T) {
 			f: &mocks.FetcherHelper{},
 			b: func() *mocks.BlockStorageHelper {
 				mockHelper := &mocks.BlockStorageHelper{}
-				mockHelper.On("GetBlockLazy", ctx, (*types.PartialBlockIdentifier)(nil)).Return(nil, storageErrors.ErrHeadBlockNotFound).Once()
+				mockHelper.On(
+					"GetBlockLazy",
+					ctx,
+					(*types.PartialBlockIdentifier)(nil),
+				).Return(
+					nil,
+					storageErrors.ErrHeadBlockNotFound,
+				).Once()
 				return mockHelper
 			}(),
 			tipDelay:       1000,
