@@ -1006,7 +1006,10 @@ func getBackwardRelationKeys(tx *types.Transaction) [][]byte {
 			continue
 		}
 
-		keys = append(keys, getBackwardRelationKey(relatedTx.TransactionIdentifier, tx.TransactionIdentifier))
+		keys = append(
+			keys,
+			getBackwardRelationKey(relatedTx.TransactionIdentifier, tx.TransactionIdentifier),
+		)
 	}
 
 	return keys
@@ -1152,7 +1155,14 @@ func (b *BlockStorage) FindRelatedTransactions(
 		return nil, nil, nil, err
 	}
 
-	for _, child := range children {
+	i := 0
+	for {
+		if i >= len(children) {
+			break
+		}
+		child := children[i]
+		i += 1
+
 		childBlock, childTx, err := b.FindTransaction(ctx, child, db)
 		if err != nil {
 			return nil, nil, nil, err
@@ -1201,7 +1211,7 @@ func (b *BlockStorage) getChildren(
 		func(k []byte, v []byte) error {
 			ss := strings.Split(string(k), "/")
 			txHash := ss[len(ss)-1]
-			txId := &types.TransactionIdentifier{ Hash: txHash }
+			txId := &types.TransactionIdentifier{Hash: txHash}
 			children = append(children, txId)
 			return nil
 		},
