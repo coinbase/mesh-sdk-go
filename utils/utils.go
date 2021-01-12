@@ -195,15 +195,14 @@ type BlockStorageHelper interface {
 	) (*types.BlockResponse, error)
 	// todo add all relevant BlockStorage functions
 	// to this interface.
-
 }
 
 // CheckNetworkTip returns block identifier if the block returned by network/status
-// endpoint is at at tip. tipDelay should be specified in seconds.
-// Block returned by network/status is considered at tip if one of the following two conditions is
-// met
-// (1) the block was produced within tipDelay of current time (i.e. block timestamp >= current time
-// - tipDelay)
+// endpoint is at tip. Note that the tipDelay param takes tip delay in seconds.
+// Block returned by network/status is considered to be at tip if one of the
+// following two conditions is met:
+// (1) the block was produced within tipDelay of current time
+// (i.e. block timestamp >= current time - tipDelay)
 // (2) the network/status endpoint returns a SyncStatus with Synced = true.
 func CheckNetworkTip(ctx context.Context,
 	network *types.NetworkIdentifier,
@@ -217,13 +216,13 @@ func CheckNetworkTip(ctx context.Context,
 		return nil, fmt.Errorf("%w: unable to fetch network status", fetchErr.Err)
 	}
 
-	// If a block has yet to be synced, start syncing from tip.
+	// if the block timestamp is within tip delay of current time,
+	// it can be considered to be at tip.
 	if AtTip(tipDelay, status.CurrentBlockTimestamp) {
 		return status.CurrentBlockIdentifier, nil
 	}
 
-	// If the Rosetta implementation says it is at tip (regardless of the current
-	// block timestamp), we should start.
+	// If the sync status returned by network/status is true, we should consider the block to be at tip.
 	if status.SyncStatus != nil && status.SyncStatus.Synced != nil && *status.SyncStatus.Synced {
 		return status.CurrentBlockIdentifier, nil
 	}
@@ -232,10 +231,10 @@ func CheckNetworkTip(ctx context.Context,
 }
 
 // CheckStorageTip returns block identifier if the current block
-// in storage is at tip. tipDelay should be specified in seconds.
-// A block in storage is considered at tip if one of the following two conditions is met
-// (1) the block was produced within tipDelay of current time (i.e. block timestamp >= current time
-// - tipDelay)
+// in storage is at tip. Note that the tipDelay param takes tip delay in seconds.
+// A block in storage is considered to be at tip if one of the following two conditions is met
+// (1) the block was produced within tipDelay of current time
+// (i.e. block timestamp >= current time - tipDelay)
 // (2) CheckNetworkTip returns the same block as the current block in storage
 func CheckStorageTip(ctx context.Context,
 	network *types.NetworkIdentifier,
