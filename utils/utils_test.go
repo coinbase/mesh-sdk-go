@@ -390,8 +390,9 @@ func TestCheckNetworkTip(t *testing.T) {
 		helper   *mocks.FetcherHelper
 		tipDelay int64
 
-		expectedResult *types.BlockIdentifier
-		expectedError  error
+		expectedAtTip      bool
+		expectedIdentifier *types.BlockIdentifier
+		expectedError      error
 	}{
 		"at tip": {
 			helper: func() *mocks.FetcherHelper {
@@ -412,9 +413,10 @@ func TestCheckNetworkTip(t *testing.T) {
 
 				return mockHelper
 			}(),
-			tipDelay:       100,
-			expectedResult: blockIdentifier,
-			expectedError:  nil,
+			tipDelay:           100,
+			expectedAtTip:      true,
+			expectedIdentifier: blockIdentifier,
+			expectedError:      nil,
 		},
 		"not at tip": {
 			helper: func() *mocks.FetcherHelper {
@@ -435,9 +437,10 @@ func TestCheckNetworkTip(t *testing.T) {
 
 				return mockHelper
 			}(),
-			tipDelay:       100,
-			expectedResult: nil,
-			expectedError:  nil,
+			tipDelay:           100,
+			expectedAtTip:      false,
+			expectedIdentifier: blockIdentifier,
+			expectedError:      nil,
 		},
 		"synced tip": {
 			helper: func() *mocks.FetcherHelper {
@@ -461,9 +464,10 @@ func TestCheckNetworkTip(t *testing.T) {
 
 				return mockHelper
 			}(),
-			tipDelay:       100,
-			expectedResult: blockIdentifier,
-			expectedError:  nil,
+			tipDelay:           100,
+			expectedAtTip:      true,
+			expectedIdentifier: blockIdentifier,
+			expectedError:      nil,
 		},
 		"not synced tip": {
 			helper: func() *mocks.FetcherHelper {
@@ -487,9 +491,10 @@ func TestCheckNetworkTip(t *testing.T) {
 
 				return mockHelper
 			}(),
-			tipDelay:       100,
-			expectedResult: nil,
-			expectedError:  nil,
+			tipDelay:           100,
+			expectedAtTip:      false,
+			expectedIdentifier: blockIdentifier,
+			expectedError:      nil,
 		},
 		"error": {
 			helper: func() *mocks.FetcherHelper {
@@ -510,18 +515,21 @@ func TestCheckNetworkTip(t *testing.T) {
 				return mockHelper
 			}(),
 			tipDelay:      100,
+			expectedAtTip: false,
 			expectedError: fetcher.ErrRequestFailed,
 		},
 	}
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			tipBlock, err := CheckNetworkTip(ctx, network, test.tipDelay, test.helper)
+			atTip, tipBlock, err := CheckNetworkTip(ctx, network, test.tipDelay, test.helper)
 			if test.expectedError != nil {
+				assert.False(t, atTip)
 				assert.Nil(t, tipBlock)
 				assert.True(t, errors.Is(err, test.expectedError))
 			} else {
-				assert.Equal(t, test.expectedResult, tipBlock)
+				assert.Equal(t, test.expectedAtTip, atTip)
+				assert.Equal(t, test.expectedIdentifier, tipBlock)
 				assert.NoError(t, err)
 			}
 			test.helper.AssertExpectations(t)
@@ -537,8 +545,9 @@ func TestCheckStorageTip(t *testing.T) {
 		b        *mocks.BlockStorageHelper
 		tipDelay int64
 
-		expectedResult *types.BlockIdentifier
-		expectedError  error
+		expectedAtTip      bool
+		expectedIdentifier *types.BlockIdentifier
+		expectedError      error
 	}{
 		"stored block within tip delay": {
 			f: &mocks.FetcherHelper{},
@@ -559,9 +568,10 @@ func TestCheckStorageTip(t *testing.T) {
 				).Once()
 				return mockHelper
 			}(),
-			tipDelay:       1000,
-			expectedResult: blockIdentifier,
-			expectedError:  nil,
+			tipDelay:           1000,
+			expectedAtTip:      true,
+			expectedIdentifier: blockIdentifier,
+			expectedError:      nil,
 		},
 		"stored block not within tip delay, network synced ": {
 			f: func() *mocks.FetcherHelper {
@@ -595,11 +605,12 @@ func TestCheckStorageTip(t *testing.T) {
 				).Once()
 				return mockHelper
 			}(),
-			tipDelay:       100,
-			expectedResult: blockIdentifier,
-			expectedError:  nil,
+			tipDelay:           100,
+			expectedAtTip:      true,
+			expectedIdentifier: blockIdentifier,
+			expectedError:      nil,
 		},
-		"stored block not within tip delay, network not synced ": {
+		"stored block not within tip delay, network not synced": {
 			f: func() *mocks.FetcherHelper {
 				mockHelper := &mocks.FetcherHelper{}
 				mockHelper.On("NetworkStatusRetry",
@@ -631,9 +642,10 @@ func TestCheckStorageTip(t *testing.T) {
 				).Once()
 				return mockHelper
 			}(),
-			tipDelay:       100,
-			expectedResult: nil,
-			expectedError:  nil,
+			tipDelay:           100,
+			expectedAtTip:      false,
+			expectedIdentifier: blockIdentifier,
+			expectedError:      nil,
 		},
 		"stored block and network blocks different": {
 			f: func() *mocks.FetcherHelper {
@@ -662,20 +674,18 @@ func TestCheckStorageTip(t *testing.T) {
 				).Return(
 					&types.BlockResponse{
 						Block: &types.Block{
-							BlockIdentifier: &types.BlockIdentifier{
-								Hash:  "block",
-								Index: 1,
-							},
-							Timestamp: Milliseconds() - 300*MillisecondsInSecond,
+							BlockIdentifier: blockIdentifier,
+							Timestamp:       Milliseconds() - 300*MillisecondsInSecond,
 						},
 					},
 					nil,
 				).Once()
 				return mockHelper
 			}(),
-			tipDelay:       100,
-			expectedResult: nil,
-			expectedError:  nil,
+			tipDelay:           100,
+			expectedAtTip:      false,
+			expectedIdentifier: blockIdentifier,
+			expectedError:      nil,
 		},
 		"no blocks in storage": {
 			f: &mocks.FetcherHelper{},
@@ -691,20 +701,23 @@ func TestCheckStorageTip(t *testing.T) {
 				).Once()
 				return mockHelper
 			}(),
-			tipDelay:       100,
-			expectedResult: nil,
-			expectedError:  nil,
+			tipDelay:           100,
+			expectedAtTip:      false,
+			expectedIdentifier: nil,
+			expectedError:      nil,
 		},
 	}
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			tipBlock, err := CheckStorageTip(ctx, network, test.tipDelay, test.f, test.b)
+			atTip, tipBlock, err := CheckStorageTip(ctx, network, test.tipDelay, test.f, test.b)
 			if test.expectedError != nil {
+				assert.False(t, atTip)
 				assert.Nil(t, tipBlock)
 				assert.True(t, errors.Is(err, test.expectedError))
 			} else {
-				assert.Equal(t, test.expectedResult, tipBlock)
+				assert.Equal(t, test.expectedAtTip, atTip)
+				assert.Equal(t, test.expectedIdentifier, tipBlock)
 				assert.NoError(t, err)
 			}
 			test.f.AssertExpectations(t)
