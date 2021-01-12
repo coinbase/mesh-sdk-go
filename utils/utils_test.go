@@ -525,7 +525,7 @@ func TestCheckNetworkTip(t *testing.T) {
 			atTip, tipBlock, err := CheckNetworkTip(ctx, network, test.tipDelay, test.helper)
 			if test.expectedError != nil {
 				assert.False(t, atTip)
-				assert.Equal(t, test.expectedIdentifier, tipBlock)
+				assert.Nil(t, tipBlock)
 				assert.True(t, errors.Is(err, test.expectedError))
 			} else {
 				assert.Equal(t, test.expectedAtTip, atTip)
@@ -713,9 +713,10 @@ func TestCheckStorageTip(t *testing.T) {
 			atTip, tipBlock, err := CheckStorageTip(ctx, network, test.tipDelay, test.f, test.b)
 			if test.expectedError != nil {
 				assert.False(t, atTip)
-				assert.Equal(t, test.expectedAtTip, atTip)
+				assert.Nil(t, tipBlock)
 				assert.True(t, errors.Is(err, test.expectedError))
 			} else {
+				assert.Equal(t, test.expectedAtTip, atTip)
 				assert.Equal(t, test.expectedIdentifier, tipBlock)
 				assert.NoError(t, err)
 			}

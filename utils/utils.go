@@ -265,7 +265,7 @@ func CheckStorageTip(ctx context.Context,
 	networkAtTip, tipBlock, fetchErr := CheckNetworkTip(ctx, network, tipDelay, f)
 	if fetchErr != nil {
 		return false,
-			currentStorageBlock.BlockIdentifier,
+			nil,
 			fmt.Errorf("%w: unable to fetch network status", fetchErr)
 	}
 
