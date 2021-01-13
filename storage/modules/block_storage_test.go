@@ -1036,13 +1036,13 @@ func TestRelatedTransactions(t *testing.T) {
 		assert.Equal(t, len(related), 1)
 		assert.Equal(t, related[0].Hash, block2.Transactions[1].TransactionIdentifier.Hash)
 
-		blockId, tx, related, err := storage.FindRelatedTransactions(
+		blockID, tx, related, err := storage.FindRelatedTransactions(
 			ctx,
 			block2.Transactions[2].TransactionIdentifier,
 			storage.db.ReadTransaction(ctx),
 		)
 		assert.NoError(t, err)
-		assert.Nil(t, blockId)
+		assert.Nil(t, blockID)
 		assert.Nil(t, tx)
 		assert.Empty(t, related)
 	})
