@@ -1025,7 +1025,11 @@ func TestRelatedTransactions(t *testing.T) {
 		)
 		assert.NoError(t, err)
 		assert.Equal(t, len(related), 1)
-		assert.Equal(t, related[0].Hash, block2.Transactions[0].TransactionIdentifier.Hash)
+		assert.Equal(
+			t,
+			related[0].TransactionIdentifier.Hash,
+			block2.Transactions[0].TransactionIdentifier.Hash,
+		)
 
 		_, _, related, err = storage.FindRelatedTransactions(
 			ctx,
@@ -1034,7 +1038,11 @@ func TestRelatedTransactions(t *testing.T) {
 		)
 		assert.NoError(t, err)
 		assert.Equal(t, len(related), 1)
-		assert.Equal(t, related[0].Hash, block2.Transactions[1].TransactionIdentifier.Hash)
+		assert.Equal(
+			t,
+			related[0].TransactionIdentifier.Hash,
+			block2.Transactions[1].TransactionIdentifier.Hash,
+		)
 
 		blockID, tx, related, err := storage.FindRelatedTransactions(
 			ctx,
