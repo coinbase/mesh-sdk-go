@@ -972,7 +972,7 @@ func (b *BlockStorage) storeTransaction(
 	blockIdentifier *types.BlockIdentifier,
 	tx *types.Transaction,
 ) error {
-	err := storeBackwardRelations(ctx, transaction, tx)
+	err := b.storeBackwardRelations(ctx, transaction, tx)
 	if err != nil {
 		return err
 	}
@@ -991,7 +991,7 @@ func (b *BlockStorage) storeTransaction(
 	return storeUniqueKey(ctx, transaction, hashKey, encodedResult, true)
 }
 
-func storeBackwardRelations(
+func (b *BlockStorage) storeBackwardRelations(
 	ctx context.Context,
 	transaction database.Transaction,
 	tx *types.Transaction,
@@ -1005,10 +1005,10 @@ func storeBackwardRelations(
 		return nil
 	}
 
-	return modifyBackwardRelations(ctx, transaction, tx, fn)
+	return b.modifyBackwardRelations(ctx, transaction, tx, fn)
 }
 
-func removeBackwardRelations(
+func (b *BlockStorage) removeBackwardRelations(
 	ctx context.Context,
 	transaction database.Transaction,
 	tx *types.Transaction,
@@ -1022,10 +1022,10 @@ func removeBackwardRelations(
 		return nil
 	}
 
-	return modifyBackwardRelations(ctx, transaction, tx, fn)
+	return b.modifyBackwardRelations(ctx, transaction, tx, fn)
 }
 
-func modifyBackwardRelations(
+func (b *BlockStorage) modifyBackwardRelations(
 	ctx context.Context,
 	transaction database.Transaction,
 	tx *types.Transaction,
@@ -1091,7 +1091,7 @@ func (b *BlockStorage) removeTransaction(
 	blockIdentifier *types.BlockIdentifier,
 	tx *types.Transaction,
 ) error {
-	err := removeBackwardRelations(ctx, transaction, tx)
+	err := b.removeBackwardRelations(ctx, transaction, tx)
 	if err != nil {
 		return err
 	}
