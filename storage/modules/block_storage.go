@@ -972,7 +972,7 @@ func (b *BlockStorage) storeTransaction(
 	blockIdentifier *types.BlockIdentifier,
 	tx *types.Transaction,
 ) error {
-	err := b.storeBackwardRelations(ctx, transaction, tx)
+	err := storeBackwardRelations(ctx, transaction, tx)
 	if err != nil {
 		return err
 	}
@@ -991,10 +991,45 @@ func (b *BlockStorage) storeTransaction(
 	return storeUniqueKey(ctx, transaction, hashKey, encodedResult, true)
 }
 
-func (b *BlockStorage) storeBackwardRelations(
+func storeBackwardRelations(
 	ctx context.Context,
 	transaction database.Transaction,
 	tx *types.Transaction,
+) error {
+	fn := func(ctx context.Context, transaction database.Transaction, key []byte) error {
+		err := transaction.Set(ctx, key, []byte{}, true)
+		if err != nil {
+			return fmt.Errorf("%w: %v", storageErrs.ErrCannotStoreBackwardRelation, err)
+		}
+
+		return nil
+	}
+
+	return modifyBackwardRelations(ctx, transaction, tx, fn)
+}
+
+func removeBackwardRelations(
+	ctx context.Context,
+	transaction database.Transaction,
+	tx *types.Transaction,
+) error {
+	fn := func(ctx context.Context, transaction database.Transaction, key []byte) error {
+		err := transaction.Delete(ctx, key)
+		if err != nil {
+			return fmt.Errorf("%w: %v", storageErrs.ErrCannotRemoveBackwardRelation, err)
+		}
+
+		return nil
+	}
+
+	return modifyBackwardRelations(ctx, transaction, tx, fn)
+}
+
+func modifyBackwardRelations(
+	ctx context.Context,
+	transaction database.Transaction,
+	tx *types.Transaction,
+	fn func(ctx context.Context, transaction database.Transaction, key []byte) error,
 ) error {
 	var backwardRelationKeys [][]byte
 	for _, relatedTx := range tx.RelatedTransactions {
@@ -1022,9 +1057,9 @@ func (b *BlockStorage) storeBackwardRelations(
 	}
 
 	for _, key := range backwardRelationKeys {
-		err := transaction.Set(ctx, key, []byte{}, true)
+		err := fn(ctx, transaction, key)
 		if err != nil {
-			return fmt.Errorf("%w: %v", storageErrs.ErrCannotStoreBackwardRelation, err)
+			return err
 		}
 	}
 
@@ -1056,12 +1091,9 @@ func (b *BlockStorage) removeTransaction(
 	blockIdentifier *types.BlockIdentifier,
 	tx *types.Transaction,
 ) error {
-	backwardRelationKeys := getBackwardRelationKeys(tx)
-	for _, key := range backwardRelationKeys {
-		err := transaction.Delete(ctx, key)
-		if err != nil {
-			return fmt.Errorf("%w: %v", storageErrs.ErrCannotRemoveBackwardRelation, err)
-		}
+	err := removeBackwardRelations(ctx, transaction, tx)
+	if err != nil {
+		return err
 	}
 
 	_, hashKey := getTransactionKey(blockIdentifier, tx.TransactionIdentifier)
