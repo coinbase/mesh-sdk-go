@@ -972,12 +972,9 @@ func (b *BlockStorage) storeTransaction(
 	blockIdentifier *types.BlockIdentifier,
 	tx *types.Transaction,
 ) error {
-	backwardRelationKeys := getBackwardRelationKeys(tx)
-	for _, key := range backwardRelationKeys {
-		err := transaction.Set(ctx, key, []byte{}, true)
-		if err != nil {
-			return fmt.Errorf("error storing backward relation key %s: %w", key, err)
-		}
+	err := b.storeBackwardRelations(ctx, transaction, tx)
+	if err != nil {
+		return err
 	}
 
 	namespace, hashKey := getTransactionKey(blockIdentifier, tx.TransactionIdentifier)
@@ -988,31 +985,50 @@ func (b *BlockStorage) storeTransaction(
 
 	encodedResult, err := b.db.Encoder().Encode(namespace, bt)
 	if err != nil {
-		return fmt.Errorf("%w: %v", storageErrs.ErrCannotStoreBackwardRelation, err)
+		return fmt.Errorf("%w: %v", storageErrs.ErrTransactionDataEncodeFailed, err)
 	}
 
 	return storeUniqueKey(ctx, transaction, hashKey, encodedResult, true)
 }
 
-func getBackwardRelationKeys(tx *types.Transaction) [][]byte {
-	var keys [][]byte
+func (b *BlockStorage) storeBackwardRelations(
+	ctx context.Context,
+	transaction database.Transaction,
+	tx *types.Transaction,
+) error {
+	var backwardRelationKeys [][]byte
 	for _, relatedTx := range tx.RelatedTransactions {
 		// skip if on another network
 		if relatedTx.NetworkIdentifier != nil {
 			continue
 		}
-
 		if relatedTx.Direction == types.Forward {
 			continue
 		}
 
-		keys = append(
-			keys,
+		// skip if related block not found
+		block, _, err := b.FindTransaction(ctx, relatedTx.TransactionIdentifier, transaction)
+		if err != nil {
+			return fmt.Errorf("%w: %v", storageErrs.ErrCannotStoreBackwardRelation, err)
+		}
+		if block == nil {
+			continue
+		}
+
+		backwardRelationKeys = append(
+			backwardRelationKeys,
 			getBackwardRelationKey(relatedTx.TransactionIdentifier, tx.TransactionIdentifier),
 		)
 	}
 
-	return keys
+	for _, key := range backwardRelationKeys {
+		err := transaction.Set(ctx, key, []byte{}, true)
+		if err != nil {
+			return fmt.Errorf("%w: %v", storageErrs.ErrCannotStoreBackwardRelation, err)
+		}
+	}
+
+	return nil
 }
 
 func (b *BlockStorage) pruneTransaction(
@@ -1156,7 +1172,7 @@ func (b *BlockStorage) FindRelatedTransactions(
 	}
 
 	// create map of seen transactions to avoid duplicates
-	seen := make(map[string]bool)
+	seen := make(map[string]struct{})
 	children := []*types.Transaction{}
 
 	i := 0
@@ -1169,7 +1185,7 @@ func (b *BlockStorage) FindRelatedTransactions(
 
 		// skip duplicates
 		if _, val := seen[childID.Hash]; !val {
-			seen[childID.Hash] = true
+			seen[childID.Hash] = struct{}{}
 		} else {
 			continue
 		}
