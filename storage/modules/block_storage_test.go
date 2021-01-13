@@ -135,7 +135,7 @@ func addRelatedTransaction(
 ) *types.Transaction {
 	relatedTx := &types.RelatedTransaction{
 		NetworkIdentifier: nil,
-		TransactionIdentifier: &types.TransactionIdentifier {
+		TransactionIdentifier: &types.TransactionIdentifier{
 			Hash: hash,
 		},
 		Direction: direction,
@@ -951,8 +951,22 @@ func TestRelatedTransactions(t *testing.T) {
 			},
 			Timestamp: 1,
 			Transactions: []*types.Transaction{
-				addRelatedTransaction(simpleTransactionFactory("parentTx", "addr1", "100", &types.Currency{Symbol: "hello"}), "childTx", types.Forward),
-				simpleTransactionFactory("backwardRelative", "addr2", "100", &types.Currency{Symbol: "hello"}),
+				addRelatedTransaction(
+					simpleTransactionFactory(
+						"parentTx",
+						"addr1",
+						"100",
+						&types.Currency{Symbol: "hello"},
+					),
+					"childTx",
+					types.Forward,
+				),
+				simpleTransactionFactory(
+					"backwardRelative",
+					"addr2",
+					"100",
+					&types.Currency{Symbol: "hello"},
+				),
 			},
 		}
 		err = storage.SeeBlock(ctx, block1)
@@ -971,9 +985,32 @@ func TestRelatedTransactions(t *testing.T) {
 			},
 			Timestamp: 1,
 			Transactions: []*types.Transaction{
-				simpleTransactionFactory("childTx", "addr3", "100", &types.Currency{Symbol: "hello"}),
-				addRelatedTransaction(simpleTransactionFactory("backwardTx", "addr4", "100", &types.Currency{Symbol: "hello"}), "backwardRelative", types.Backward),
-				addRelatedTransaction(simpleTransactionFactory("badForward", "addr5", "100", &types.Currency{Symbol: "hello"}), "invalid", types.Forward),
+				simpleTransactionFactory(
+					"childTx",
+					"addr3",
+					"100",
+					&types.Currency{Symbol: "hello"},
+				),
+				addRelatedTransaction(
+					simpleTransactionFactory(
+						"backwardTx",
+						"addr4",
+						"100",
+						&types.Currency{Symbol: "hello"},
+					),
+					"backwardRelative",
+					types.Backward,
+				),
+				addRelatedTransaction(
+					simpleTransactionFactory(
+						"badForward",
+						"addr5",
+						"100",
+						&types.Currency{Symbol: "hello"},
+					),
+					"invalid",
+					types.Forward,
+				),
 			},
 		}
 		err = storage.SeeBlock(ctx, block2)
@@ -981,17 +1018,29 @@ func TestRelatedTransactions(t *testing.T) {
 		err = storage.AddBlock(ctx, block2)
 		assert.NoError(t, err)
 
-		_, _, related, err := storage.FindRelatedTransactions(ctx, block1.Transactions[0].TransactionIdentifier, storage.db.ReadTransaction(ctx))
+		_, _, related, err := storage.FindRelatedTransactions(
+			ctx,
+			block1.Transactions[0].TransactionIdentifier,
+			storage.db.ReadTransaction(ctx),
+		)
 		assert.NoError(t, err)
 		assert.Equal(t, len(related), 1)
 		assert.Equal(t, related[0].Hash, block2.Transactions[0].TransactionIdentifier.Hash)
 
-		_, _, related, err = storage.FindRelatedTransactions(ctx, block1.Transactions[1].TransactionIdentifier, storage.db.ReadTransaction(ctx))
+		_, _, related, err = storage.FindRelatedTransactions(
+			ctx,
+			block1.Transactions[1].TransactionIdentifier,
+			storage.db.ReadTransaction(ctx),
+		)
 		assert.NoError(t, err)
 		assert.Equal(t, len(related), 1)
 		assert.Equal(t, related[0].Hash, block2.Transactions[1].TransactionIdentifier.Hash)
 
-		blockId, tx, related, err := storage.FindRelatedTransactions(ctx, block2.Transactions[2].TransactionIdentifier, storage.db.ReadTransaction(ctx))
+		blockId, tx, related, err := storage.FindRelatedTransactions(
+			ctx,
+			block2.Transactions[2].TransactionIdentifier,
+			storage.db.ReadTransaction(ctx),
+		)
 		assert.NoError(t, err)
 		assert.Nil(t, blockId)
 		assert.Nil(t, tx)
