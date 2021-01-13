@@ -1140,50 +1140,62 @@ func (b *BlockStorage) FindRelatedTransactions(
 	ctx context.Context,
 	transactionIdentifier *types.TransactionIdentifier,
 	db database.Transaction,
-) (*types.BlockIdentifier, *types.Transaction, []*types.TransactionIdentifier, error) {
-	maxBlock, tx, err := b.FindTransaction(ctx, transactionIdentifier, db)
+) (*types.BlockIdentifier, *types.Transaction, []*types.Transaction, error) {
+	rootBlock, tx, err := b.FindTransaction(ctx, transactionIdentifier, db)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 
-	if maxBlock == nil {
+	if rootBlock == nil {
 		return nil, nil, nil, nil
 	}
 
-	children, err := b.getChildren(ctx, tx, db)
+	childIds, err := b.getChildren(ctx, tx, db)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 
+	// create map of seen transactions to avoid duplicates
+	seen := make(map[string]bool)
+	children := []*types.Transaction{}
+
 	i := 0
 	for {
-		if i >= len(children) {
+		if i >= len(childIds) {
 			break
 		}
-		child := children[i]
+		childID := childIds[i]
 		i++
 
-		childBlock, childTx, err := b.FindTransaction(ctx, child, db)
+		// skip duplicates
+		if _, val := seen[childID.Hash]; !val {
+			seen[childID.Hash] = true
+		} else {
+			continue
+		}
+
+		childBlock, childTx, err := b.FindTransaction(ctx, childID, db)
 		if err != nil {
 			return nil, nil, nil, err
 		}
 
-		if childTx == nil {
+		if childBlock == nil {
 			return nil, nil, nil, nil
 		}
 
-		if maxBlock.Index < childBlock.Index {
-			maxBlock = childBlock
+		children = append(children, childTx)
+		if rootBlock.Index < childBlock.Index {
+			rootBlock = childBlock
 		}
 
 		newChildren, err := b.getChildren(ctx, childTx, db)
 		if err != nil {
 			return nil, nil, nil, err
 		}
-		children = append(children, newChildren...)
+		childIds = append(childIds, newChildren...)
 	}
 
-	return maxBlock, tx, children, nil
+	return rootBlock, tx, children, nil
 }
 
 // TODO: add support for relations across multiple networks
