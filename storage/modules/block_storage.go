@@ -1216,7 +1216,7 @@ func (b *BlockStorage) FindRelatedTransactions(
 		i++
 
 		// skip duplicates
-		if _, val := seen[childID.Hash]; !val {
+		if _, ok := seen[childID.Hash]; !ok {
 			seen[childID.Hash] = struct{}{}
 		} else {
 			continue

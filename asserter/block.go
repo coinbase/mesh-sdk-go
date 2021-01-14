@@ -405,7 +405,7 @@ func (a *Asserter) RelatedTransactions(relatedTransactions []*types.RelatedTrans
 	return nil
 }
 
-// ContainsDuplicateCurrency returns nil if no duplicates are found in the array and
+// ContainsDuplicateRelatedTransaction returns nil if no duplicates are found in the array and
 // returns the first duplicated item found otherwise.
 func ContainsDuplicateRelatedTransaction(
 	items []*types.RelatedTransaction,
