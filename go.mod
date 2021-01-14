@@ -21,7 +21,7 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/segmentio/fasthash v1.0.3
 	github.com/stretchr/objx v0.1.1 // indirect
-	github.com/stretchr/testify v1.6.1
+	github.com/stretchr/testify v1.7.0
 	github.com/tidwall/gjson v1.6.7
 	github.com/tidwall/sjson v1.1.4
 	github.com/vmihailenco/msgpack/v5 v5.1.4
