@@ -727,6 +727,59 @@ func TestBlock(t *testing.T) {
 			},
 		},
 	}
+	duplicateRelatedTransactions := &types.Transaction{
+		TransactionIdentifier: &types.TransactionIdentifier{
+			Hash: "blah",
+		},
+		Operations: []*types.Operation{
+			{
+				OperationIdentifier: &types.OperationIdentifier{
+					Index: int64(0),
+				},
+				Type:    "PAYMENT",
+				Status:  types.String("SUCCESS"),
+				Account: validAccount,
+				Amount:  validAmount,
+			},
+			{
+				OperationIdentifier: &types.OperationIdentifier{
+					Index: int64(1),
+				},
+				RelatedOperations: []*types.OperationIdentifier{
+					{
+						Index: int64(0),
+					},
+				},
+				Type:    "PAYMENT",
+				Status:  types.String("SUCCESS"),
+				Account: validAccount,
+				Amount:  validAmount,
+			},
+		},
+		RelatedTransactions: []*types.RelatedTransaction{
+			{
+				NetworkIdentifier: &types.NetworkIdentifier{
+					Blockchain: "hello",
+					Network:    "world",
+				},
+				TransactionIdentifier: &types.TransactionIdentifier{
+					Hash: "blah",
+				},
+				Direction: types.Forward,
+			},
+			{
+				NetworkIdentifier: &types.NetworkIdentifier{
+					Blockchain: "hello",
+					Network:    "world",
+				},
+				TransactionIdentifier: &types.TransactionIdentifier{
+					Hash: "blah",
+				},
+				Direction: types.Forward,
+			},
+		},
+	}
+
 	var tests = map[string]struct {
 		block        *types.Block
 		genesisIndex int64
@@ -907,6 +960,15 @@ func TestBlock(t *testing.T) {
 				Transactions:          []*types.Transaction{invalidRelatedTransaction},
 			},
 			err: ErrInvalidDirection,
+		},
+		"duplicate related transaction": {
+			block: &types.Block{
+				BlockIdentifier:       validBlockIdentifier,
+				ParentBlockIdentifier: validParentBlockIdentifier,
+				Timestamp:             MinUnixEpoch + 1,
+				Transactions:          []*types.Transaction{duplicateRelatedTransactions},
+			},
+			err: ErrDuplicateRelatedTransaction,
 		},
 	}
 
