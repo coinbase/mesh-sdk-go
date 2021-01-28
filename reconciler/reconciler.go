@@ -282,7 +282,7 @@ func (r *Reconciler) CompareBalance(
 	// Head block should be set before we CompareBalance
 	head, err := r.helper.CurrentBlock(ctx, dbTx)
 	if err != nil {
-		return zeroString, "", 0, errors.Wrap(ErrGetCurrentBlockFailed, err.Error())
+		return zeroString, "", 0, errors.Wrapf(ErrGetCurrentBlockFailed, "%v", err)
 	}
 
 	// Check if live block is < head (or wait)
