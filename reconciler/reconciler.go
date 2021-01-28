@@ -573,7 +573,7 @@ func (r *Reconciler) inactiveAccountQueue(
 	accountCurrency *types.AccountCurrency,
 	liveBlock *types.BlockIdentifier,
 	hasLock bool,
-) error {
+) error { // nolint
 	if !hasLock {
 		r.inactiveQueueMutex.Lock(false)
 		defer r.inactiveQueueMutex.Unlock()
