@@ -56,6 +56,8 @@ const (
 	blockSyncIdentifier = "blockSyncIdentifier"
 
 	// backwardRelation is a relation from a child to a root transaction
+	// the root is the destination and the child is the transaction listing the root as a backward
+	// relation
 	backwardRelation = "backwardRelation" // prefix/root/child
 )
 
@@ -109,14 +111,14 @@ func getTransactionPrefix(
 // getBackwardRelationKey returns a db key for a backwards relation. passing nil in for the
 // child returns a prefix key.
 func getBackwardRelationKey(
-	root *types.TransactionIdentifier,
-	child *types.TransactionIdentifier,
+	backwardTransaction *types.TransactionIdentifier,
+	tx *types.TransactionIdentifier,
 ) []byte {
 	childHash := ""
-	if child != nil {
-		childHash = child.Hash
+	if tx != nil {
+		childHash = tx.Hash
 	}
-	return []byte(fmt.Sprintf("%s/%s/%s", backwardRelation, root.Hash, childHash))
+	return []byte(fmt.Sprintf("%s/%s/%s", backwardRelation, backwardTransaction.Hash, childHash))
 }
 
 // BlockWorker is an interface that allows for work
@@ -999,7 +1001,7 @@ func (b *BlockStorage) storeBackwardRelations(
 	fn := func(ctx context.Context, transaction database.Transaction, key []byte) error {
 		err := transaction.Set(ctx, key, []byte{}, true)
 		if err != nil {
-			return fmt.Errorf("%w: %v", storageErrs.ErrCannotStoreBackwardRelation, err)
+			return fmt.Errorf("%v: %w", storageErrs.ErrCannotStoreBackwardRelation, err)
 		}
 
 		return nil
@@ -1037,14 +1039,14 @@ func (b *BlockStorage) modifyBackwardRelations(
 		if relatedTx.NetworkIdentifier != nil {
 			continue
 		}
-		if relatedTx.Direction == types.Forward {
+		if relatedTx.Direction != types.Backward {
 			continue
 		}
 
 		// skip if related block not found
 		block, _, err := b.FindTransaction(ctx, relatedTx.TransactionIdentifier, transaction)
 		if err != nil {
-			return fmt.Errorf("%w: %v", storageErrs.ErrCannotStoreBackwardRelation, err)
+			return fmt.Errorf("%v: %w", storageErrs.ErrCannotStoreBackwardRelation, err)
 		}
 		if block == nil {
 			continue
@@ -1198,7 +1200,7 @@ func (b *BlockStorage) FindRelatedTransactions(
 		return nil, nil, nil, nil
 	}
 
-	childIds, err := b.getChildren(ctx, tx, db)
+	childIds, err := b.getForwardRelatedTransactions(ctx, tx, db)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -1236,7 +1238,7 @@ func (b *BlockStorage) FindRelatedTransactions(
 			rootBlock = childBlock
 		}
 
-		newChildren, err := b.getChildren(ctx, childTx, db)
+		newChildren, err := b.getForwardRelatedTransactions(ctx, childTx, db)
 		if err != nil {
 			return nil, nil, nil, err
 		}
@@ -1247,7 +1249,7 @@ func (b *BlockStorage) FindRelatedTransactions(
 }
 
 // TODO: add support for relations across multiple networks
-func (b *BlockStorage) getChildren(
+func (b *BlockStorage) getForwardRelatedTransactions(
 	ctx context.Context,
 	tx *types.Transaction,
 	db database.Transaction,
@@ -1264,6 +1266,7 @@ func (b *BlockStorage) getChildren(
 		}
 	}
 
+	// scan db for all transactions where tx appears as a backward relation
 	_, err := db.Scan(
 		ctx,
 		getBackwardRelationKey(tx.TransactionIdentifier, nil),
