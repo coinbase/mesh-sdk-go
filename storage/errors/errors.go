@@ -403,6 +403,8 @@ var (
 	ErrNothingToPrune                 = errors.New("nothing to prune")
 	ErrPruningFailed                  = errors.New("pruning failed")
 	ErrCannotPruneTransaction         = errors.New("cannot prune transaction")
+	ErrCannotStoreBackwardRelation    = errors.New("cannot store backward relation")
+	ErrCannotRemoveBackwardRelation   = errors.New("cannot remove backward relation")
 
 	BlockStorageErrs = []error{
 		ErrHeadBlockNotFound,
@@ -438,6 +440,8 @@ var (
 		ErrNothingToPrune,
 		ErrPruningFailed,
 		ErrCannotPruneTransaction,
+		ErrCannotStoreBackwardRelation,
+		ErrCannotRemoveBackwardRelation,
 	}
 )
 

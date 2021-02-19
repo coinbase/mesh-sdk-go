@@ -54,6 +54,11 @@ const (
 	// blockSyncIdentifier is the identifier used to acquire
 	// a database lock.
 	blockSyncIdentifier = "blockSyncIdentifier"
+
+	// backwardRelation is a relation from a child to a root transaction
+	// the root is the destination and the child is the transaction listing the root as a backward
+	// relation
+	backwardRelation = "backwardRelation" // prefix/root/child
 )
 
 type blockTransaction struct {
@@ -101,6 +106,19 @@ func getTransactionPrefix(
 			transactionIdentifier.Hash,
 		),
 	)
+}
+
+// getBackwardRelationKey returns a db key for a backwards relation. passing nil in for the
+// child returns a prefix key.
+func getBackwardRelationKey(
+	backwardTransaction *types.TransactionIdentifier,
+	tx *types.TransactionIdentifier,
+) []byte {
+	childHash := ""
+	if tx != nil {
+		childHash = tx.Hash
+	}
+	return []byte(fmt.Sprintf("%s/%s/%s", backwardRelation, backwardTransaction.Hash, childHash))
 }
 
 // BlockWorker is an interface that allows for work
@@ -798,7 +816,7 @@ func (b *BlockStorage) RemoveBlock(
 				gctx,
 				transaction,
 				blockIdentifier,
-				txn.TransactionIdentifier,
+				txn,
 			)
 		})
 	}
@@ -956,6 +974,11 @@ func (b *BlockStorage) storeTransaction(
 	blockIdentifier *types.BlockIdentifier,
 	tx *types.Transaction,
 ) error {
+	err := b.storeBackwardRelations(ctx, transaction, tx)
+	if err != nil {
+		return err
+	}
+
 	namespace, hashKey := getTransactionKey(blockIdentifier, tx.TransactionIdentifier)
 	bt := &blockTransaction{
 		Transaction: tx,
@@ -968,6 +991,81 @@ func (b *BlockStorage) storeTransaction(
 	}
 
 	return storeUniqueKey(ctx, transaction, hashKey, encodedResult, true)
+}
+
+func (b *BlockStorage) storeBackwardRelations(
+	ctx context.Context,
+	transaction database.Transaction,
+	tx *types.Transaction,
+) error {
+	fn := func(ctx context.Context, transaction database.Transaction, key []byte) error {
+		err := transaction.Set(ctx, key, []byte{}, true)
+		if err != nil {
+			return fmt.Errorf("%v: %w", storageErrs.ErrCannotStoreBackwardRelation, err)
+		}
+
+		return nil
+	}
+
+	return b.modifyBackwardRelations(ctx, transaction, tx, fn)
+}
+
+func (b *BlockStorage) removeBackwardRelations(
+	ctx context.Context,
+	transaction database.Transaction,
+	tx *types.Transaction,
+) error {
+	fn := func(ctx context.Context, transaction database.Transaction, key []byte) error {
+		err := transaction.Delete(ctx, key)
+		if err != nil {
+			return fmt.Errorf("%w: %v", storageErrs.ErrCannotRemoveBackwardRelation, err)
+		}
+
+		return nil
+	}
+
+	return b.modifyBackwardRelations(ctx, transaction, tx, fn)
+}
+
+func (b *BlockStorage) modifyBackwardRelations(
+	ctx context.Context,
+	transaction database.Transaction,
+	tx *types.Transaction,
+	fn func(ctx context.Context, transaction database.Transaction, key []byte) error,
+) error {
+	var backwardRelationKeys [][]byte
+	for _, relatedTx := range tx.RelatedTransactions {
+		// skip if on another network
+		if relatedTx.NetworkIdentifier != nil {
+			continue
+		}
+		if relatedTx.Direction != types.Backward {
+			continue
+		}
+
+		// skip if related block not found
+		block, _, err := b.FindTransaction(ctx, relatedTx.TransactionIdentifier, transaction)
+		if err != nil {
+			return fmt.Errorf("%v: %w", storageErrs.ErrCannotStoreBackwardRelation, err)
+		}
+		if block == nil {
+			continue
+		}
+
+		backwardRelationKeys = append(
+			backwardRelationKeys,
+			getBackwardRelationKey(relatedTx.TransactionIdentifier, tx.TransactionIdentifier),
+		)
+	}
+
+	for _, key := range backwardRelationKeys {
+		err := fn(ctx, transaction, key)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (b *BlockStorage) pruneTransaction(
@@ -993,10 +1091,14 @@ func (b *BlockStorage) removeTransaction(
 	ctx context.Context,
 	transaction database.Transaction,
 	blockIdentifier *types.BlockIdentifier,
-	transactionIdentifier *types.TransactionIdentifier,
+	tx *types.Transaction,
 ) error {
-	_, hashKey := getTransactionKey(blockIdentifier, transactionIdentifier)
+	err := b.removeBackwardRelations(ctx, transaction, tx)
+	if err != nil {
+		return err
+	}
 
+	_, hashKey := getTransactionKey(blockIdentifier, tx.TransactionIdentifier)
 	return transaction.Delete(ctx, hashKey)
 }
 
@@ -1092,6 +1194,109 @@ func (b *BlockStorage) FindTransaction(
 
 	// A transaction exists but we have not yet sequenced the block it is in
 	return nil, nil, nil
+}
+
+func (b *BlockStorage) FindRelatedTransactions(
+	ctx context.Context,
+	transactionIdentifier *types.TransactionIdentifier,
+	db database.Transaction,
+) (*types.BlockIdentifier, *types.Transaction, []*types.Transaction, error) {
+	rootBlock, tx, err := b.FindTransaction(ctx, transactionIdentifier, db)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	if rootBlock == nil {
+		return nil, nil, nil, nil
+	}
+
+	childIds, err := b.getForwardRelatedTransactions(ctx, tx, db)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	// create map of seen transactions to avoid duplicates
+	seen := make(map[string]struct{})
+	children := []*types.Transaction{}
+
+	i := 0
+	for {
+		if i >= len(childIds) {
+			break
+		}
+		childID := childIds[i]
+		i++
+
+		// skip duplicates
+		if _, ok := seen[childID.Hash]; !ok {
+			seen[childID.Hash] = struct{}{}
+		} else {
+			continue
+		}
+
+		childBlock, childTx, err := b.FindTransaction(ctx, childID, db)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+
+		if childBlock == nil {
+			return nil, nil, nil, nil
+		}
+
+		children = append(children, childTx)
+		if rootBlock.Index < childBlock.Index {
+			rootBlock = childBlock
+		}
+
+		newChildren, err := b.getForwardRelatedTransactions(ctx, childTx, db)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		childIds = append(childIds, newChildren...)
+	}
+
+	return rootBlock, tx, children, nil
+}
+
+// TODO: add support for relations across multiple networks
+func (b *BlockStorage) getForwardRelatedTransactions(
+	ctx context.Context,
+	tx *types.Transaction,
+	db database.Transaction,
+) ([]*types.TransactionIdentifier, error) {
+	var children []*types.TransactionIdentifier
+	for _, relatedTx := range tx.RelatedTransactions {
+		// skip if on another network
+		if relatedTx.NetworkIdentifier != nil {
+			continue
+		}
+
+		if relatedTx.Direction == types.Forward {
+			children = append(children, relatedTx.TransactionIdentifier)
+		}
+	}
+
+	// scan db for all transactions where tx appears as a backward relation
+	_, err := db.Scan(
+		ctx,
+		getBackwardRelationKey(tx.TransactionIdentifier, nil),
+		getBackwardRelationKey(tx.TransactionIdentifier, nil),
+		func(k []byte, v []byte) error {
+			ss := strings.Split(string(k), "/")
+			txHash := ss[len(ss)-1]
+			txID := &types.TransactionIdentifier{Hash: txHash}
+			children = append(children, txID)
+			return nil
+		},
+		false,
+		false,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return children, nil
 }
 
 func (b *BlockStorage) findBlockTransaction(

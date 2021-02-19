@@ -91,7 +91,10 @@ var (
 	ErrBlockIndexPrecedesParentBlockIndex = errors.New(
 		"BlockIdentifier.Index <= ParentBlockIdentifier.Index",
 	)
-	ErrInvalidDirection = errors.New("invalid direction (must be 'forward' or 'backward')")
+	ErrInvalidDirection = errors.New(
+		"invalid direction (must be 'forward' or 'backward')",
+	)
+	ErrDuplicateRelatedTransaction = errors.New("duplicate related transaction")
 
 	BlockErrs = []error{
 		ErrAmountValueMissing,
@@ -127,6 +130,7 @@ var (
 		ErrBlockHashEqualsParentBlockHash,
 		ErrBlockIndexPrecedesParentBlockIndex,
 		ErrInvalidDirection,
+		ErrDuplicateRelatedTransaction,
 	}
 )
 
