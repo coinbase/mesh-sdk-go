@@ -370,6 +370,10 @@ func (a *Asserter) Transaction(
 // any of the related transactions contain invalid types, invalid network identifiers,
 // invalid transaction identifiers, or a direction not defined by the enum.
 func (a *Asserter) RelatedTransactions(relatedTransactions []*types.RelatedTransaction) error {
+	if dup := DuplicateRelatedTransaction(relatedTransactions); dup != nil {
+		return fmt.Errorf("%w: %v", ErrDuplicateRelatedTransaction, dup)
+	}
+
 	for i, relatedTransaction := range relatedTransactions {
 		if relatedTransaction.NetworkIdentifier != nil {
 			if err := NetworkIdentifier(relatedTransaction.NetworkIdentifier); err != nil {
@@ -396,6 +400,24 @@ func (a *Asserter) RelatedTransactions(relatedTransactions []*types.RelatedTrans
 				i,
 			)
 		}
+	}
+
+	return nil
+}
+
+// DuplicateRelatedTransaction returns nil if no duplicates are found in the array and
+// returns the first duplicated item found otherwise.
+func DuplicateRelatedTransaction(
+	items []*types.RelatedTransaction,
+) *types.RelatedTransaction {
+	seen := map[string]struct{}{}
+	for _, item := range items {
+		key := types.Hash(item)
+		if _, ok := seen[key]; ok {
+			return item
+		}
+
+		seen[key] = struct{}{}
 	}
 
 	return nil
