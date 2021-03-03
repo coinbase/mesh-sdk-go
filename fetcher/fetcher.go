@@ -116,8 +116,7 @@ func New(
 			DefaultUserAgent,
 			defaultHTTPClient,
 		)
-		client := client.NewAPIClient(clientCfg)
-		f.rosettaClient = client
+		f.rosettaClient = client.NewAPIClient(clientCfg)
 	}
 
 	if f.insecureTLS {
