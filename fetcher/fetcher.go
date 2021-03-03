@@ -85,17 +85,7 @@ func New(
 	serverAddress string,
 	options ...Option,
 ) *Fetcher {
-	// Create default fetcher
-	clientCfg := client.NewConfiguration(
-		serverAddress,
-		DefaultUserAgent,
-		&http.Client{
-			Timeout: DefaultHTTPTimeout,
-		})
-	client := client.NewAPIClient(clientCfg)
-
 	f := &Fetcher{
-		rosettaClient:    client,
 		maxConnections:   DefaultMaxConnections,
 		maxRetries:       DefaultRetries,
 		retryElapsedTime: DefaultElapsedTime,
@@ -106,18 +96,34 @@ func New(
 		opt(f)
 	}
 
-	// Override transport idle connection settings
-	//
-	// See this conversation around why `.Clone()` is used here:
-	// https://github.com/golang/go/issues/26013
-	customTransport := http.DefaultTransport.(*http.Transport).Clone()
-	customTransport.IdleConnTimeout = DefaultIdleConnTimeout
-	customTransport.MaxIdleConns = f.maxConnections
-	customTransport.MaxIdleConnsPerHost = f.maxConnections
-	if f.insecureTLS {
-		customTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true} // #nosec G402
+	if f.rosettaClient == nil {
+		// Override transport idle connection settings
+		//
+		// See this conversation around why `.Clone()` is used here:
+		// https://github.com/golang/go/issues/26013
+		defaultTransport := http.DefaultTransport.(*http.Transport).Clone()
+		defaultTransport.IdleConnTimeout = DefaultIdleConnTimeout
+		defaultTransport.MaxIdleConns = f.maxConnections
+		defaultTransport.MaxIdleConnsPerHost = DefaultMaxConnections
+		defaultHTTPClient := &http.Client{
+			Timeout:   DefaultHTTPTimeout,
+			Transport: defaultTransport,
+		}
+
+		// Create default fetcher
+		clientCfg := client.NewConfiguration(
+			serverAddress,
+			DefaultUserAgent,
+			defaultHTTPClient,
+		)
+		f.rosettaClient = client.NewAPIClient(clientCfg)
 	}
-	f.rosettaClient.GetConfig().HTTPClient.Transport = customTransport
+
+	if f.insecureTLS {
+		if transport, ok := f.rosettaClient.GetConfig().HTTPClient.Transport.(*http.Transport); ok {
+			transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true} // #nosec G402
+		}
+	}
 
 	// Initialize the connection semaphore
 	f.connectionSemaphore = semaphore.NewWeighted(int64(f.maxConnections))
