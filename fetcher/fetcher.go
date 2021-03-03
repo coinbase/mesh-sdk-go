@@ -85,29 +85,7 @@ func New(
 	serverAddress string,
 	options ...Option,
 ) *Fetcher {
-	// Override transport idle connection settings
-	//
-	// See this conversation around why `.Clone()` is used here:
-	// https://github.com/golang/go/issues/26013
-	defaultTransport := http.DefaultTransport.(*http.Transport).Clone()
-	defaultTransport.IdleConnTimeout = DefaultIdleConnTimeout
-	defaultTransport.MaxIdleConns = DefaultMaxConnections
-	defaultTransport.MaxIdleConnsPerHost = DefaultMaxConnections
-	defaultHTTPClient := &http.Client{
-		Timeout:   DefaultHTTPTimeout,
-		Transport: defaultTransport,
-	}
-
-	// Create default fetcher
-	clientCfg := client.NewConfiguration(
-		serverAddress,
-		DefaultUserAgent,
-		defaultHTTPClient,
-	)
-	client := client.NewAPIClient(clientCfg)
-
 	f := &Fetcher{
-		rosettaClient:    client,
 		maxConnections:   DefaultMaxConnections,
 		maxRetries:       DefaultRetries,
 		retryElapsedTime: DefaultElapsedTime,
@@ -116,6 +94,30 @@ func New(
 	// Override defaults with any provided options
 	for _, opt := range options {
 		opt(f)
+	}
+
+	if f.rosettaClient == nil {
+		// Override transport idle connection settings
+		//
+		// See this conversation around why `.Clone()` is used here:
+		// https://github.com/golang/go/issues/26013
+		defaultTransport := http.DefaultTransport.(*http.Transport).Clone()
+		defaultTransport.IdleConnTimeout = DefaultIdleConnTimeout
+		defaultTransport.MaxIdleConns = f.maxConnections
+		defaultTransport.MaxIdleConnsPerHost = DefaultMaxConnections
+		defaultHTTPClient := &http.Client{
+			Timeout:   DefaultHTTPTimeout,
+			Transport: defaultTransport,
+		}
+
+		// Create default fetcher
+		clientCfg := client.NewConfiguration(
+			serverAddress,
+			DefaultUserAgent,
+			defaultHTTPClient,
+		)
+		client := client.NewAPIClient(clientCfg)
+		f.rosettaClient = client
 	}
 
 	if f.insecureTLS {
