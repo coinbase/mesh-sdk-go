@@ -26,6 +26,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
+	"github.com/coinbase/rosetta-sdk-go/client"
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
@@ -194,4 +195,22 @@ func TestInitializeAsserter(t *testing.T) {
 			assert.True(checkError(err, test.expectedError))
 		})
 	}
+}
+
+func TestNewWithHTTPCLient(t *testing.T) {
+	// Callers can pass an http.Client to
+	// the fetcher via WithClient.
+	// Ensure that the fetcher does not
+	// override it.
+	httpClient := &http.Client{}
+	apiClient := client.NewAPIClient(
+		client.NewConfiguration(
+			"https://serveraddress",
+			DefaultUserAgent,
+			httpClient,
+		),
+	)
+	fetcher := New("https://serveraddress", WithClient(apiClient))
+	var assert = assert.New(t)
+	assert.Same(httpClient, fetcher.rosettaClient.GetConfig().HTTPClient)
 }
