@@ -85,13 +85,25 @@ func New(
 	serverAddress string,
 	options ...Option,
 ) *Fetcher {
+	// Override transport idle connection settings
+	//
+	// See this conversation around why `.Clone()` is used here:
+	// https://github.com/golang/go/issues/26013
+	defaultTransport := http.DefaultTransport.(*http.Transport).Clone()
+	defaultTransport.IdleConnTimeout = DefaultIdleConnTimeout
+	defaultTransport.MaxIdleConns = DefaultMaxConnections
+	defaultTransport.MaxIdleConnsPerHost = DefaultMaxConnections
+	defaultHTTPClient := &http.Client{
+		Timeout:   DefaultHTTPTimeout,
+		Transport: defaultTransport,
+	}
+
 	// Create default fetcher
 	clientCfg := client.NewConfiguration(
 		serverAddress,
 		DefaultUserAgent,
-		&http.Client{
-			Timeout: DefaultHTTPTimeout,
-		})
+		defaultHTTPClient,
+	)
 	client := client.NewAPIClient(clientCfg)
 
 	f := &Fetcher{
@@ -106,18 +118,11 @@ func New(
 		opt(f)
 	}
 
-	// Override transport idle connection settings
-	//
-	// See this conversation around why `.Clone()` is used here:
-	// https://github.com/golang/go/issues/26013
-	customTransport := http.DefaultTransport.(*http.Transport).Clone()
-	customTransport.IdleConnTimeout = DefaultIdleConnTimeout
-	customTransport.MaxIdleConns = f.maxConnections
-	customTransport.MaxIdleConnsPerHost = f.maxConnections
 	if f.insecureTLS {
-		customTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true} // #nosec G402
+		if transport, ok := f.rosettaClient.GetConfig().HTTPClient.Transport.(*http.Transport); ok {
+			transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true} // #nosec G402
+		}
 	}
-	f.rosettaClient.GetConfig().HTTPClient.Transport = customTransport
 
 	// Initialize the connection semaphore
 	f.connectionSemaphore = semaphore.NewWeighted(int64(f.maxConnections))
