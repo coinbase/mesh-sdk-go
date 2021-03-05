@@ -253,6 +253,12 @@ func TestBalanceChanges(t *testing.T) {
 			allowedStatus: defaultStatus,
 			err:           nil,
 		},
+		"nil block": {
+			// block not specified, so default to nil, which is what we're testing
+			// changes not specified, so default to nil, which is what's expected
+			allowedStatus: defaultStatus,
+			err: blockNilError,
+		},
 	}
 
 	for name, test := range tests {

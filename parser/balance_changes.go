@@ -16,6 +16,7 @@ package parser
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
@@ -34,6 +35,8 @@ type BalanceChange struct {
 // if the operation should be skipped eventhough it passes other
 // checks indiciating it should be considered a balance change.
 type ExemptOperation func(*types.Operation) bool
+
+var blockNilError = errors.New("block is nil")
 
 // skipOperation returns a boolean indicating whether
 // an operation should be processed. An operation will
@@ -73,10 +76,14 @@ func (p *Parser) skipOperation(op *types.Operation) (bool, error) {
 // orphaned, the opposite of each balance change is
 // returned.
 func (p *Parser) BalanceChanges(
-	ctx context.Context,
+	_ context.Context,
 	block *types.Block,
 	blockRemoved bool,
 ) ([]*BalanceChange, error) {
+	if block == nil {
+		return nil, blockNilError
+	}
+
 	balanceChanges := map[string]*BalanceChange{}
 	for _, tx := range block.Transactions {
 		for _, op := range tx.Operations {
