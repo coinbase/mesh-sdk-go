@@ -36,7 +36,7 @@ type BalanceChange struct {
 // checks indiciating it should be considered a balance change.
 type ExemptOperation func(*types.Operation) bool
 
-var blockNilError = errors.New("block is nil")
+var errBlockNil = errors.New("block is nil")
 
 // skipOperation returns a boolean indicating whether
 // an operation should be processed. An operation will
@@ -81,7 +81,7 @@ func (p *Parser) BalanceChanges(
 	blockRemoved bool,
 ) ([]*BalanceChange, error) {
 	if block == nil {
-		return nil, blockNilError
+		return nil, errBlockNil
 	}
 
 	balanceChanges := map[string]*BalanceChange{}
