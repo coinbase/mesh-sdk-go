@@ -129,17 +129,22 @@ type OperationDescription struct {
 type Descriptions struct {
 	OperationDescriptions []*OperationDescription
 
-	// EqualAmounts are specified using the operation indicies of
+	// EqualAmounts are specified using the operation indices of
 	// OperationDescriptions to handle out of order matches. MatchOperations
 	// will error if all groups of operations aren't equal.
 	EqualAmounts [][]int
 
-	// OppositeAmounts are specified using the operation indicies of
+	// OppositeAmounts are specified using the operation indices of
 	// OperationDescriptions to handle out of order matches. MatchOperations
 	// will error if all groups of operations aren't opposites.
 	OppositeAmounts [][]int
 
-	// EqualAddresses are specified using the operation indicies of
+	// OppositeZeroAmounts are specified using the operation indices of
+	// OperationDescriptions to handle out of order matches. MatchOperations
+	// will error if all groups of operations aren't 0 or opposites.
+	OppositeOrZeroAmounts [][]int
+
+	// EqualAddresses are specified using the operation indices of
 	// OperationDescriptions to handle out of order matches. MatchOperations
 	// will error if all groups of operations addresses aren't equal.
 	EqualAddresses [][]int
