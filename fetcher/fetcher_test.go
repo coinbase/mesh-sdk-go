@@ -221,15 +221,16 @@ func TestNewWithTimeout(t *testing.T) {
 	fetcher := New("https://serveraddress")
 	assert.Equal(DefaultHTTPTimeout, fetcher.rosettaClient.GetConfig().HTTPClient.Timeout)
 
-	var customTimeout = 6*time.Minute
+	var customTimeout = 6 * time.Minute
 	fetcher2 := New("https://serveraddress", WithTimeout(customTimeout))
 	assert.Equal(customTimeout, fetcher2.rosettaClient.GetConfig().HTTPClient.Timeout)
 
-	// If we pass in a http timeout value when initializing the fetcher, and also pass in an existing client,
+	// If we pass in a http timeout value when initializing the fetcher, and also pass in an
+	// existing client,
 	// we will simply respect the timeout on the existing client and not override it.
-	var existingClientTimeout = 3*time.Minute
+	var existingClientTimeout = 3 * time.Minute
 	httpClient := &http.Client{
-		Timeout : existingClientTimeout,
+		Timeout: existingClientTimeout,
 	}
 	apiClient := client.NewAPIClient(
 		client.NewConfiguration(
