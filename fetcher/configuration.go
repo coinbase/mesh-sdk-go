@@ -73,7 +73,7 @@ func WithInsecureTLS() Option {
 // WithTimeout overrides the default HTTP timeout.
 func WithTimeout(timeout time.Duration) Option {
 	return func(f *Fetcher) {
-		f.rosettaClient.GetConfig().HTTPClient.Timeout = timeout
+		f.httpTimeout = timeout
 	}
 }
 

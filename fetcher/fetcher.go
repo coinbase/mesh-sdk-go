@@ -74,6 +74,7 @@ type Fetcher struct {
 	retryElapsedTime time.Duration
 	insecureTLS      bool
 	forceRetry       bool
+	httpTimeout      time.Duration
 
 	// connectionSemaphore is used to limit the
 	// number of concurrent requests we make.
@@ -89,6 +90,7 @@ func New(
 		maxConnections:   DefaultMaxConnections,
 		maxRetries:       DefaultRetries,
 		retryElapsedTime: DefaultElapsedTime,
+		httpTimeout:      DefaultHTTPTimeout,
 	}
 
 	// Override defaults with any provided options
@@ -106,7 +108,7 @@ func New(
 		defaultTransport.MaxIdleConns = f.maxConnections
 		defaultTransport.MaxIdleConnsPerHost = DefaultMaxConnections
 		defaultHTTPClient := &http.Client{
-			Timeout:   DefaultHTTPTimeout,
+			Timeout:   f.httpTimeout,
 			Transport: defaultTransport,
 		}
 
