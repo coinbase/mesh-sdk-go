@@ -28,13 +28,14 @@ type AmountSign int
 
 const (
 	// AnyAmountSign is a positive or negative amount.
-	AnyAmountSign = iota
+	AnyAmountSign = 0
 
 	// NegativeAmountSign is a negative amount.
-	NegativeAmountSign
+	NegativeAmountSign = 1
 
 	// PositiveAmountSign is a positive amount.
-	PositiveAmountSign
+	PositiveAmountSign = 2
+
 
 	// oppositesLength is the only allowed number of
 	// operations to compare as opposites.
