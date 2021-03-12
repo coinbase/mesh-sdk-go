@@ -134,7 +134,7 @@ func TestMatchOperations(t *testing.T) {
 						},
 						Amount: &AmountDescription{
 							Exists: true,
-							Sign:   AnyAmountSign,
+							Sign:   NegativeAmountSignOrZero,
 						},
 					},
 					{
@@ -143,7 +143,7 @@ func TestMatchOperations(t *testing.T) {
 						},
 						Amount: &AmountDescription{
 							Exists: true,
-							Sign:   AnyAmountSign,
+							Sign:   PositiveAmountSignOrZero,
 						},
 					},
 				},
