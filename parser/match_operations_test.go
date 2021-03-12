@@ -226,7 +226,7 @@ func TestMatchOperations(t *testing.T) {
 					Operations: []*types.Operation{
 						{
 							Account: &types.AccountIdentifier{
-								Address: "addr1",
+								Address: "addr2",
 							},
 							Amount: &types.Amount{
 								Value: "0",
@@ -239,7 +239,7 @@ func TestMatchOperations(t *testing.T) {
 					Operations: []*types.Operation{
 						{
 							Account: &types.AccountIdentifier{
-								Address: "addr2",
+								Address: "addr1",
 							},
 							Amount: &types.Amount{
 								Value: "0",
