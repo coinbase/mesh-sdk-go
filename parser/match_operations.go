@@ -535,8 +535,14 @@ func comparisonMatch(
 		return fmt.Errorf("%w: operation addresses not equal", err)
 	}
 
-	oppositeAmountMatchingOperations := [][][]int{descriptions.OppositeOrZeroAmounts, descriptions.OppositeAmounts}
-	oppositeAmountCheckers := []func(*types.Operation, *types.Operation) error{oppositeOrZeroAmounts, oppositeAmounts}
+	oppositeAmountMatchingOperations := [][][]int{
+		descriptions.OppositeOrZeroAmounts,
+		descriptions.OppositeAmounts,
+	}
+	oppositeAmountCheckers := []func(*types.Operation, *types.Operation) error{
+		oppositeOrZeroAmounts,
+		oppositeAmounts,
+	}
 
 	for i := range oppositeAmountMatchingOperations {
 		for _, amountMatch := range oppositeAmountMatchingOperations[i] {
