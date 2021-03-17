@@ -525,7 +525,58 @@ func checkOps(requests [][]int, matches []*Match, valid func([]*types.Operation)
 	return nil
 }
 
-// comparisonMatch ensures collections of *types.Operations
+// compareOppositeMatches ensures collections of *types.Operation
+// that may have opposite amounts contain valid matching amounts
+func compareOppositeMatches(
+	amountPairs [][]int,
+	matches []*Match,
+	amountChecker func(*types.Operation, *types.Operation) error,
+) error {
+	for _, amountMatch := range amountPairs {
+		if len(amountMatch) != oppositesLength { // cannot have opposites without exactly 2
+			return fmt.Errorf("cannot check opposites of %d operations", len(amountMatch))
+		}
+
+		// compare all possible pairs
+		if err := matchIndexValid(matches, amountMatch[0]); err != nil {
+			return fmt.Errorf("%w: amounts comparison error", err)
+		}
+		if err := matchIndexValid(matches, amountMatch[1]); err != nil {
+			return fmt.Errorf("%w: amounts comparison error", err)
+		}
+
+		match0Ops := matches[amountMatch[0]].Operations
+		match1Ops := matches[amountMatch[1]].Operations
+		if err := equalAmounts(match0Ops); err != nil {
+			return fmt.Errorf(
+				"%w: amounts comparison error for match index %d",
+				err,
+				amountMatch[0],
+			)
+		}
+		if err := equalAmounts(match1Ops); err != nil {
+			return fmt.Errorf(
+				"%w: amounts comparison error for match index %d",
+				err,
+				amountMatch[1],
+			)
+		}
+
+		// only need to check amount for the very first operation from each
+		// matched operations group since we made sure all amounts within the same
+		// matched operation group are the same
+		if err := amountChecker(
+			match0Ops[0],
+			match1Ops[0],
+		); err != nil {
+			return fmt.Errorf("%w: amounts do not match the amountChecker function", err)
+		}
+	}
+
+	return nil
+}
+
+// comparisonMatch ensures collections of *types.Operation
 // have either equal or opposite amounts.
 func comparisonMatch(
 	descriptions *Descriptions,
@@ -539,56 +590,11 @@ func comparisonMatch(
 		return fmt.Errorf("%w: operation addresses not equal", err)
 	}
 
-	oppositeAmountMatchingOperations := [][][]int{
-		descriptions.OppositeOrZeroAmounts,
-		descriptions.OppositeAmounts,
+	if err := compareOppositeMatches(descriptions.OppositeAmounts, matches, oppositeAmounts); err != nil {
+		return fmt.Errorf("%w: operation amounts not opposite", err)
 	}
-	oppositeAmountCheckers := []func(*types.Operation, *types.Operation) error{
-		oppositeOrZeroAmounts,
-		oppositeAmounts,
-	}
-
-	for i := range oppositeAmountMatchingOperations {
-		for _, amountMatch := range oppositeAmountMatchingOperations[i] {
-			if len(amountMatch) != oppositesLength { // cannot have opposites without exactly 2
-				return fmt.Errorf("cannot check opposites of %d operations", len(amountMatch))
-			}
-
-			// compare all possible pairs
-			if err := matchIndexValid(matches, amountMatch[0]); err != nil {
-				return fmt.Errorf("%w: opposite amounts comparison error", err)
-			}
-			if err := matchIndexValid(matches, amountMatch[1]); err != nil {
-				return fmt.Errorf("%w: opposite amounts comparison error", err)
-			}
-
-			match0Ops := matches[amountMatch[0]].Operations
-			match1Ops := matches[amountMatch[1]].Operations
-			if err := equalAmounts(match0Ops); err != nil {
-				return fmt.Errorf(
-					"%w: opposite amounts comparison error for match index %d",
-					err,
-					amountMatch[0],
-				)
-			}
-			if err := equalAmounts(match1Ops); err != nil {
-				return fmt.Errorf(
-					"%w: opposite amounts comparison error for match index %d",
-					err,
-					amountMatch[1],
-				)
-			}
-
-			// only need to check opposites amount for the very first operation from each
-			// matched operations group since we made sure all amounts within the same
-			// matched operation group are the same
-			if err := oppositeAmountCheckers[i](
-				match0Ops[0],
-				match1Ops[0],
-			); err != nil {
-				return fmt.Errorf("%w: amounts not opposites or both 0", err)
-			}
-		}
+	if err := compareOppositeMatches(descriptions.OppositeOrZeroAmounts, matches, oppositeOrZeroAmounts); err != nil {
+		return fmt.Errorf("%w: both operation amounts not opposite and not zero", err)
 	}
 
 	return nil
