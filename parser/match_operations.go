@@ -37,10 +37,10 @@ const (
 	PositiveAmountSign = 2
 
 	// PositiveOrZeroAmountSign is a positive or zero amount.
-	PositiveAmountSignOrZero = 3
+	PositiveOrZeroAmountSign = 3
 
 	// NegativeOrZeroAmountSign is a positive or zero amount.
-	NegativeAmountSignOrZero = 4
+	NegativeOrZeroAmountSign = 4
 
 	// oppositesLength is the only allowed number of
 	// operations to compare as opposites.
@@ -67,11 +67,11 @@ func (s AmountSign) Match(amount *types.Amount) bool {
 		return true
 	}
 
-	if s == PositiveAmountSignOrZero && (numeric.Sign() == 1 || amount.Value == "0") {
+	if s == PositiveOrZeroAmountSign && (numeric.Sign() == 1 || amount.Value == "0") {
 		return true
 	}
 
-	if s == NegativeAmountSignOrZero && (numeric.Sign() == -1 || amount.Value == "0") {
+	if s == NegativeOrZeroAmountSign && (numeric.Sign() == -1 || amount.Value == "0") {
 		return true
 	}
 
@@ -87,6 +87,10 @@ func (s AmountSign) String() string {
 		return "negative"
 	case PositiveAmountSign:
 		return "positive"
+	case PositiveOrZeroAmountSign:
+		return "positive or zero"
+	case NegativeOrZeroAmountSign:
+		return "negative or zero"
 	default:
 		return "invalid"
 	}
