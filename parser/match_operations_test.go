@@ -105,6 +105,152 @@ func TestMatchOperations(t *testing.T) {
 			},
 			err: false,
 		},
+		"simple transfer (with OppositeOrZeroAmounts) and opposite value amounts": {
+			operations: []*types.Operation{
+				{
+					Account: &types.AccountIdentifier{
+						Address: "addr2",
+					},
+					Amount: &types.Amount{
+						Value: "100",
+					},
+				},
+				{}, // extra op ignored
+				{
+					Account: &types.AccountIdentifier{
+						Address: "addr1",
+					},
+					Amount: &types.Amount{
+						Value: "-100",
+					},
+				},
+			},
+			descriptions: &Descriptions{
+				OppositeOrZeroAmounts: [][]int{{0, 1}},
+				OperationDescriptions: []*OperationDescription{
+					{
+						Account: &AccountDescription{
+							Exists: true,
+						},
+						Amount: &AmountDescription{
+							Exists: true,
+							Sign:   NegativeOrZeroAmountSign,
+						},
+					},
+					{
+						Account: &AccountDescription{
+							Exists: true,
+						},
+						Amount: &AmountDescription{
+							Exists: true,
+							Sign:   PositiveOrZeroAmountSign,
+						},
+					},
+				},
+			},
+			matches: []*Match{
+				{
+					Operations: []*types.Operation{
+						{
+							Account: &types.AccountIdentifier{
+								Address: "addr1",
+							},
+							Amount: &types.Amount{
+								Value: "-100",
+							},
+						},
+					},
+					Amounts: []*big.Int{big.NewInt(-100)},
+				},
+				{
+					Operations: []*types.Operation{
+						{
+							Account: &types.AccountIdentifier{
+								Address: "addr2",
+							},
+							Amount: &types.Amount{
+								Value: "100",
+							},
+						},
+					},
+					Amounts: []*big.Int{big.NewInt(100)},
+				},
+			},
+			err: false,
+		},
+		"simple transfer (with OppositeOrZeroAmounts) and 0-value amounts": {
+			operations: []*types.Operation{
+				{
+					Account: &types.AccountIdentifier{
+						Address: "addr2",
+					},
+					Amount: &types.Amount{
+						Value: "0",
+					},
+				},
+				{}, // extra op ignored
+				{
+					Account: &types.AccountIdentifier{
+						Address: "addr1",
+					},
+					Amount: &types.Amount{
+						Value: "0",
+					},
+				},
+			},
+			descriptions: &Descriptions{
+				OppositeOrZeroAmounts: [][]int{{0, 1}},
+				OperationDescriptions: []*OperationDescription{
+					{
+						Account: &AccountDescription{
+							Exists: true,
+						},
+						Amount: &AmountDescription{
+							Exists: true,
+							Sign:   AnyAmountSign,
+						},
+					},
+					{
+						Account: &AccountDescription{
+							Exists: true,
+						},
+						Amount: &AmountDescription{
+							Exists: true,
+							Sign:   AnyAmountSign,
+						},
+					},
+				},
+			},
+			matches: []*Match{
+				{
+					Operations: []*types.Operation{
+						{
+							Account: &types.AccountIdentifier{
+								Address: "addr2",
+							},
+							Amount: &types.Amount{
+								Value: "0",
+							},
+						},
+					},
+					Amounts: []*big.Int{big.NewInt(0)},
+				},
+				{
+					Operations: []*types.Operation{
+						{
+							Account: &types.AccountIdentifier{
+								Address: "addr1",
+							},
+							Amount: &types.Amount{
+								Value: "0",
+							},
+						},
+					},
+					Amounts: []*big.Int{big.NewInt(0)},
+				},
+			},
+			err: false,
+		},
 		"simple transfer (with too many opposite amounts)": {
 			operations: []*types.Operation{
 				{

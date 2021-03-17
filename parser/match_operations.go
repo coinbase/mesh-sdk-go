@@ -28,13 +28,19 @@ type AmountSign int
 
 const (
 	// AnyAmountSign is a positive or negative amount.
-	AnyAmountSign = iota
+	AnyAmountSign = 0
 
 	// NegativeAmountSign is a negative amount.
-	NegativeAmountSign
+	NegativeAmountSign = 1
 
 	// PositiveAmountSign is a positive amount.
-	PositiveAmountSign
+	PositiveAmountSign = 2
+
+	// PositiveOrZeroAmountSign is a positive or zero amount.
+	PositiveOrZeroAmountSign = 3
+
+	// NegativeOrZeroAmountSign is a positive or zero amount.
+	NegativeOrZeroAmountSign = 4
 
 	// oppositesLength is the only allowed number of
 	// operations to compare as opposites.
@@ -61,6 +67,14 @@ func (s AmountSign) Match(amount *types.Amount) bool {
 		return true
 	}
 
+	if s == PositiveOrZeroAmountSign && (numeric.Sign() == 1 || amount.Value == "0") {
+		return true
+	}
+
+	if s == NegativeOrZeroAmountSign && (numeric.Sign() == -1 || amount.Value == "0") {
+		return true
+	}
+
 	return false
 }
 
@@ -73,6 +87,10 @@ func (s AmountSign) String() string {
 		return "negative"
 	case PositiveAmountSign:
 		return "positive"
+	case PositiveOrZeroAmountSign:
+		return "positive or zero"
+	case NegativeOrZeroAmountSign:
+		return "negative or zero"
 	default:
 		return "invalid"
 	}
@@ -129,17 +147,22 @@ type OperationDescription struct {
 type Descriptions struct {
 	OperationDescriptions []*OperationDescription
 
-	// EqualAmounts are specified using the operation indicies of
+	// EqualAmounts are specified using the operation indices of
 	// OperationDescriptions to handle out of order matches. MatchOperations
 	// will error if all groups of operations aren't equal.
 	EqualAmounts [][]int
 
-	// OppositeAmounts are specified using the operation indicies of
+	// OppositeAmounts are specified using the operation indices of
 	// OperationDescriptions to handle out of order matches. MatchOperations
 	// will error if all groups of operations aren't opposites.
 	OppositeAmounts [][]int
 
-	// EqualAddresses are specified using the operation indicies of
+	// OppositeZeroAmounts are specified using the operation indices of
+	// OperationDescriptions to handle out of order matches. MatchOperations
+	// will error if all groups of operations aren't 0 or opposites.
+	OppositeOrZeroAmounts [][]int
+
+	// EqualAddresses are specified using the operation indices of
 	// OperationDescriptions to handle out of order matches. MatchOperations
 	// will error if all groups of operations addresses aren't equal.
 	EqualAddresses [][]int
@@ -398,6 +421,40 @@ func oppositeAmounts(a *types.Operation, b *types.Operation) error {
 	return nil
 }
 
+// oppositeOrZeroAmounts returns an error if two operations do not have opposite
+// amounts and both amounts are not zero.
+func oppositeOrZeroAmounts(a *types.Operation, b *types.Operation) error {
+	aVal, err := types.AmountValue(a.Amount)
+	if err != nil {
+		return err
+	}
+
+	bVal, err := types.AmountValue(b.Amount)
+	if err != nil {
+		return err
+	}
+
+	zero := big.NewInt(0)
+	if aVal.Cmp(zero) == 0 && bVal.Cmp(zero) == 0 {
+		return nil
+	}
+
+	if aVal.Sign() == bVal.Sign() {
+		return fmt.Errorf("%w: %s and %s", ErrOppositeAmountsSameSign, aVal.String(), bVal.String())
+	}
+
+	if aVal.CmpAbs(bVal) != 0 {
+		return fmt.Errorf(
+			"%w: %s and %s",
+			ErrOppositeAmountsAbsValMismatch,
+			aVal.String(),
+			bVal.String(),
+		)
+	}
+
+	return nil
+}
+
 // equalAddresses returns an error if a slice of operations do not have
 // equal addresses.
 func equalAddresses(ops []*types.Operation) error {
@@ -468,7 +525,58 @@ func checkOps(requests [][]int, matches []*Match, valid func([]*types.Operation)
 	return nil
 }
 
-// comparisonMatch ensures collections of *types.Operations
+// compareOppositeMatches ensures collections of *types.Operation
+// that may have opposite amounts contain valid matching amounts
+func compareOppositeMatches(
+	amountPairs [][]int,
+	matches []*Match,
+	amountChecker func(*types.Operation, *types.Operation) error,
+) error {
+	for _, amountMatch := range amountPairs {
+		if len(amountMatch) != oppositesLength { // cannot have opposites without exactly 2
+			return fmt.Errorf("cannot check opposites of %d operations", len(amountMatch))
+		}
+
+		// compare all possible pairs
+		if err := matchIndexValid(matches, amountMatch[0]); err != nil {
+			return fmt.Errorf("%w: amounts comparison error", err)
+		}
+		if err := matchIndexValid(matches, amountMatch[1]); err != nil {
+			return fmt.Errorf("%w: amounts comparison error", err)
+		}
+
+		match0Ops := matches[amountMatch[0]].Operations
+		match1Ops := matches[amountMatch[1]].Operations
+		if err := equalAmounts(match0Ops); err != nil {
+			return fmt.Errorf(
+				"%w: amounts comparison error for match index %d",
+				err,
+				amountMatch[0],
+			)
+		}
+		if err := equalAmounts(match1Ops); err != nil {
+			return fmt.Errorf(
+				"%w: amounts comparison error for match index %d",
+				err,
+				amountMatch[1],
+			)
+		}
+
+		// only need to check amount for the very first operation from each
+		// matched operations group since we made sure all amounts within the same
+		// matched operation group are the same
+		if err := amountChecker(
+			match0Ops[0],
+			match1Ops[0],
+		); err != nil {
+			return fmt.Errorf("%w: amounts do not match the amountChecker function", err)
+		}
+	}
+
+	return nil
+}
+
+// comparisonMatch ensures collections of *types.Operation
 // have either equal or opposite amounts.
 func comparisonMatch(
 	descriptions *Descriptions,
@@ -482,45 +590,11 @@ func comparisonMatch(
 		return fmt.Errorf("%w: operation addresses not equal", err)
 	}
 
-	for _, amountMatch := range descriptions.OppositeAmounts {
-		if len(amountMatch) != oppositesLength { // cannot have opposites without exactly 2
-			return fmt.Errorf("cannot check opposites of %d operations", len(amountMatch))
-		}
-
-		// compare all possible pairs
-		if err := matchIndexValid(matches, amountMatch[0]); err != nil {
-			return fmt.Errorf("%w: opposite amounts comparison error", err)
-		}
-		if err := matchIndexValid(matches, amountMatch[1]); err != nil {
-			return fmt.Errorf("%w: opposite amounts comparison error", err)
-		}
-
-		match0Ops := matches[amountMatch[0]].Operations
-		match1Ops := matches[amountMatch[1]].Operations
-		if err := equalAmounts(match0Ops); err != nil {
-			return fmt.Errorf(
-				"%w: opposite amounts comparison error for match index %d",
-				err,
-				amountMatch[0],
-			)
-		}
-		if err := equalAmounts(match1Ops); err != nil {
-			return fmt.Errorf(
-				"%w: opposite amounts comparison error for match index %d",
-				err,
-				amountMatch[1],
-			)
-		}
-
-		// only need to check opposites amount for the very first operation from each
-		// matched operations group since we made sure all amounts within the same
-		// matched operation group are the same
-		if err := oppositeAmounts(
-			match0Ops[0],
-			match1Ops[0],
-		); err != nil {
-			return fmt.Errorf("%w: amounts not opposites", err)
-		}
+	if err := compareOppositeMatches(descriptions.OppositeAmounts, matches, oppositeAmounts); err != nil {
+		return fmt.Errorf("%w: operation amounts not opposite", err)
+	}
+	if err := compareOppositeMatches(descriptions.OppositeOrZeroAmounts, matches, oppositeOrZeroAmounts); err != nil {
+		return fmt.Errorf("%w: both operation amounts not opposite and not zero", err)
 	}
 
 	return nil
