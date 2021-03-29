@@ -646,6 +646,7 @@ func (w *Worker) FindBalanceWorker(
 		return "", ErrCreateAccount
 	}
 
+	var unmatchedAccounts []string
 	// Consider each available account as a potential account.
 	for _, account := range availableAccounts {
 		if skipAccount(input, account) {
@@ -665,10 +666,18 @@ func (w *Worker) FindBalanceWorker(
 
 		// If we did not fund a match, we should continue.
 		if len(output) == 0 {
+			unmatchedAccounts = append(unmatchedAccounts, account.Address)
 			continue
 		}
 
 		return output, nil
+	}
+
+	if len(unmatchedAccounts) > 0 {
+		log.Printf("%d account(s) insufficiently funded. Did you forget to fund? %+v",
+			len(unmatchedAccounts),
+			unmatchedAccounts,
+		)
 	}
 
 	// If we can't do anything, we should return with ErrUnsatisfiable.
