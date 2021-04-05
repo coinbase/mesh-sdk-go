@@ -85,7 +85,7 @@ func TestPriorityMutex(t *testing.T) {
 	assert.Len(t, l.low, 50)
 
 	l.Unlock()
-	assert.NoError(t, g.Wait()) // Wait for all goroutines to ask for lock
+	assert.NoError(t, g.Wait())
 
 	// Check results array to ensure all of the high priority items processed first,
 	// followed by all of the low priority items.
