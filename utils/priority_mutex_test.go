@@ -39,8 +39,10 @@ func newWrappedPriorityMutex(numLockCalls int) *wrappedPriorityMutex {
 
 func (w *wrappedPriorityMutex) Lock(priority bool) {
 	c := w.PriorityMutex.lockInternal(priority)
-	w.lockWg.Done()
-	w.wait(c)
+	if c != nil {
+		w.lockWg.Done()
+		<-c
+	}
 }
 
 func (w *wrappedPriorityMutex) Wait() {
@@ -50,7 +52,7 @@ func (w *wrappedPriorityMutex) Wait() {
 func TestPriorityMutex(t *testing.T) {
 	arr := []bool{}
 	expected := make([]bool, 60)
-	l := newWrappedPriorityMutex(61)
+	l := newWrappedPriorityMutex(60)
 	g, _ := errgroup.WithContext(context.Background())
 
 	// Lock while adding all locks
