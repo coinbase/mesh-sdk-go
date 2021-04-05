@@ -16,10 +16,11 @@ package utils
 
 import (
 	"context"
-	"github.com/stretchr/testify/assert"
-	"golang.org/x/sync/errgroup"
 	"sync"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"golang.org/x/sync/errgroup"
 )
 
 // A wrapper around the PriorityMutex being tested to properly assert invariants without the
