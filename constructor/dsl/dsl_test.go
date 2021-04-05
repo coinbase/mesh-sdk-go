@@ -158,6 +158,16 @@ func TestParse(t *testing.T) {
 									OutputPath: "math_3",
 								},
 								{
+									Type:       job.Math,
+									Input:      `{"operation": "multiplication","left_value": {{math_3}},"right_value": "5"}`,
+									OutputPath: "math_4",
+								},
+								{
+									Type:       job.Math,
+									Input:      `{"operation": "division","left_value": {{math_4}},"right_value": "5"}`,
+									OutputPath: "math_5",
+								},
+								{
 									Type:       job.FindBalance,
 									Input:      `{"account_identifier": {{random_account.account_identifier}},"minimum_balance":{"value": "10000000000000000","currency": {{currency}}}}`, // nolint
 									OutputPath: "loaded_account",

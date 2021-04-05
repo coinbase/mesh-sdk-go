@@ -19,6 +19,8 @@ request_funds(1){
     });
     math_2 = 10 + {{math_1}};
     math_3 = {{math_2}} - "20";
+    math_4 = {{math_3}} * "5";
+    math_5 = {{math_4}} / "5";
     loaded_account = find_balance({
       "account_identifier": {{random_account.account_identifier}},
       "minimum_balance":{
