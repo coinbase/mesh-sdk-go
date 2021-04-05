@@ -1099,6 +1099,16 @@ func TestJob_ComplicatedTransfer(t *testing.T) {
 				Input:      `{"operation":"subtraction", "left_value":"100", "right_value":{{create_send.confirmation_depth}}}`,
 				OutputPath: "create_send.confirmation_depth",
 			},
+			{ // Test multiplication / division
+				Type:       job.Math,
+				Input:      `{"operation":"multiplication", "left_value":"2", "right_value":{{create_send.confirmation_depth}}}`,
+				OutputPath: "create_send.confirmation_depth",
+			},
+			{
+				Type:       job.Math,
+				Input:      `{"operation":"division", "left_value":"296", "right_value":{{create_send.confirmation_depth}}}`,
+				OutputPath: "create_send.confirmation_depth",
+			},
 		},
 	}
 
@@ -1208,7 +1218,7 @@ func TestJob_ComplicatedTransfer(t *testing.T) {
 				},
 			},
 		},
-		ConfirmationDepth: 74,
+		ConfirmationDepth: 2,
 	}, b)
 
 	assert.True(t, j.CheckComplete())
