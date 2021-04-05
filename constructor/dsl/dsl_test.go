@@ -294,12 +294,6 @@ func TestParse(t *testing.T) {
 			expectedErrLine:     3,
 			expectedErrContents: "{",
 		},
-		"action error: invalid math symbol": {
-			file:                "action_invalid_math.ros",
-			expectedErr:         ErrInvalidMathSymbol,
-			expectedErrLine:     8,
-			expectedErrContents: "math = 1 * 10;",
-		},
 		"action error: unexpected end of input": {
 			file:                "action_eof.ros",
 			expectedErr:         ErrUnexpectedEOF,
