@@ -39,12 +39,19 @@ type PriorityMutex struct {
 // priority mutex. When priority is true, a lock
 // will be granted before other low priority callers.
 func (m *PriorityMutex) Lock(priority bool) {
+	c := m.lockInternal(priority)
+	if c != nil {
+		<-c
+	}
+}
+
+func (m *PriorityMutex) lockInternal(priority bool) <-chan struct{} {
 	m.mutex.Lock()
+	defer m.mutex.Unlock()
 
 	if !m.lock {
 		m.lock = true
-		m.mutex.Unlock()
-		return
+		return nil
 	}
 
 	c := make(chan struct{})
@@ -54,8 +61,7 @@ func (m *PriorityMutex) Lock(priority bool) {
 		m.low = append(m.low, c)
 	}
 
-	m.mutex.Unlock()
-	<-c
+	return c
 }
 
 // Unlock selects the next highest priority lock
