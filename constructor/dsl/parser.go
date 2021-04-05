@@ -143,8 +143,8 @@ func parseActionType(line string) (job.ActionType, string, string, error) {
 	for symbol, mathOperation := range map[string]job.MathOperation{
 		add:      job.Addition,
 		subtract: job.Subtraction,
-		multiply: "",
-		divide:   "",
+		multiply: job.Multiplication,
+		divide:   job.Division,
 	} {
 		tokens = strings.SplitN(remaining, symbol, split2)
 		if len(tokens) == split2 {
