@@ -304,6 +304,10 @@ func MathWorker(rawInput string) (string, error) {
 		result, err = types.AddValues(input.LeftValue, input.RightValue)
 	case job.Subtraction:
 		result, err = types.SubtractValues(input.LeftValue, input.RightValue)
+	case job.Multiplication:
+		result, err = types.MultiplyValues(input.LeftValue, input.RightValue)
+	case job.Division:
+		result, err = types.DivideValues(input.LeftValue, input.RightValue)
 	default:
 		return "", fmt.Errorf("%s is not a supported math operation", input.Operation)
 	}

@@ -189,6 +189,10 @@ const (
 
 	// Subtraction is LeftValue - RightValue.
 	Subtraction MathOperation = "subtraction"
+
+	Multiplication MathOperation = "multiplication"
+
+	Division MathOperation = "division"
 )
 
 // MathInput is the input to Math.
