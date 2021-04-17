@@ -143,6 +143,46 @@ func SubtractValues(
 	return newVal.String(), nil
 }
 
+// MultiplyValues multiplies a*b using
+// big.Int.
+func MultiplyValues(
+	a string,
+	b string,
+) (string, error) {
+	aVal, err := BigInt(a)
+	if err != nil {
+		return "", err
+	}
+
+	bVal, err := BigInt(b)
+	if err != nil {
+		return "", err
+	}
+
+	newVal := new(big.Int).Mul(aVal, bVal)
+	return newVal.String(), nil
+}
+
+// DivideValues divides a/b using
+// big.Int.
+func DivideValues(
+	a string,
+	b string,
+) (string, error) {
+	aVal, err := BigInt(a)
+	if err != nil {
+		return "", err
+	}
+
+	bVal, err := BigInt(b)
+	if err != nil {
+		return "", err
+	}
+
+	newVal := new(big.Int).Div(aVal, bVal)
+	return newVal.String(), nil
+}
+
 // NegateValue flips the sign of a value.
 func NegateValue(
 	val string,
