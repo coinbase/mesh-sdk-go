@@ -268,6 +268,134 @@ func TestAccountIdentifier(t *testing.T) {
 	}
 }
 
+func TestOperationsValidations(t *testing.T) {
+	var (
+		validDepositAmount = &types.Amount{
+			Value: "1000",
+			Currency: &types.Currency{
+				Symbol:   "BTC",
+				Decimals: 8,
+			},
+		}
+		validWithdrawAmount = &types.Amount{
+			Value: "-1000",
+			Currency: &types.Currency{
+				Symbol:   "BTC",
+				Decimals: 8,
+			},
+		}
+
+		validFeeAmount = &types.Amount{
+			Value: "-100",
+			Currency: &types.Currency{
+				Symbol:   "BTC",
+				Decimals: 8,
+			},
+		}
+
+		validAccount = &types.AccountIdentifier{
+			Address: "test",
+		}
+	)
+	var tests = map[string]struct {
+		operations         []*types.Operation
+		validationFilePath string
+		asserter           *Asserter
+		construction       bool
+		err                error
+	}{
+		"valid operations based on validation file": {
+			operations: []*types.Operation{
+				{
+					OperationIdentifier: &types.OperationIdentifier{
+						Index: int64(0),
+					},
+					Type:    "PAYMENT",
+					Status:  types.String("SUCCESS"),
+					Account: validAccount,
+					Amount:  validDepositAmount,
+				},
+				{
+					OperationIdentifier: &types.OperationIdentifier{
+						Index: int64(1),
+					},
+					Type:    "PAYMENT",
+					Status:  types.String("SUCCESS"),
+					Account: validAccount,
+					Amount:  validWithdrawAmount,
+				},
+				{
+					OperationIdentifier: &types.OperationIdentifier{
+						Index: int64(2),
+					},
+					Type:    "FEE",
+					Status:  types.String("SUCCESS"),
+					Account: validAccount,
+					Amount:  validFeeAmount,
+				},
+			},
+			validationFilePath: "data/validation_correct.json",
+			construction:       false,
+			err:                nil,
+		},
+	}
+
+	for name, test := range tests {
+		asserter, err := NewClientWithResponses(
+			&types.NetworkIdentifier{
+				Blockchain: "hello",
+				Network:    "world",
+			},
+			&types.NetworkStatusResponse{
+				GenesisBlockIdentifier: &types.BlockIdentifier{
+					Index: 0,
+					Hash:  "block 0",
+				},
+				CurrentBlockIdentifier: &types.BlockIdentifier{
+					Index: 100,
+					Hash:  "block 100",
+				},
+				CurrentBlockTimestamp: MinUnixEpoch + 1,
+				Peers: []*types.Peer{
+					{
+						PeerID: "peer 1",
+					},
+				},
+			},
+			&types.NetworkOptionsResponse{
+				Version: &types.Version{
+					RosettaVersion: "1.4.0",
+					NodeVersion:    "1.0",
+				},
+				Allow: &types.Allow{
+					OperationStatuses: []*types.OperationStatus{
+						{
+							Status:     "SUCCESS",
+							Successful: true,
+						},
+						{
+							Status:     "FAILURE",
+							Successful: false,
+						},
+					},
+					OperationTypes: []string{
+						"PAYMENT",
+						"FEE",
+					},
+				},
+			},
+			test.validationFilePath,
+		)
+		assert.NotNil(t, asserter)
+		assert.NoError(t, err)
+
+		t.Run(name, func(t *testing.T) {
+			actualErr := asserter.Operations(test.operations, test.construction)
+			assert.Equal(t, test.err, actualErr)
+		})
+	}
+}
+
 func TestOperation(t *testing.T) {
 	var (
 		validAmount = &types.Amount{
@@ -480,6 +608,7 @@ func TestOperation(t *testing.T) {
 					},
 				},
 			},
+			"",
 		)
 		assert.NotNil(t, asserter)
 		assert.NoError(t, err)
@@ -1017,6 +1146,7 @@ func TestBlock(t *testing.T) {
 						TimestampStartIndex: test.startIndex,
 					},
 				},
+				"",
 			)
 			assert.NotNil(t, asserter)
 			assert.NoError(t, err)

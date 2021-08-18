@@ -1,0 +1,18 @@
+{
+  "enabled": true,
+  "chain_type": "account",
+  "payment": {
+    "name": "PAYMENT",
+    "operation": {
+      "count": 2,
+      "should_balance": true
+    }
+  },
+  "fee": {
+    "name": "FEE",
+    "operation": {
+      "count": 1,
+      "should_balance": false
+    }
+  }
+}

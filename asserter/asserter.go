@@ -39,7 +39,32 @@ type Asserter struct {
 	supportedNetworks       []*types.NetworkIdentifier
 	callMethods             map[string]struct{}
 	mempoolCoins            bool
+	validations             *Validations
 }
+
+type Validations struct {
+	Enabled   bool                 `json:"enabled"`
+	ChainType ChainType            `json:"chain_type"`
+	Payment   *ValidationOperation `json:"payment"`
+	Fee       *ValidationOperation `json:"fee"`
+}
+
+type ValidationOperation struct {
+	Name      string     `json:"name"`
+	Operation *Operation `json:"operation"`
+}
+
+type Operation struct {
+	Count         int  `json:"count"`
+	ShouldBalance bool `json:"should_balance"`
+}
+
+type ChainType string
+
+const (
+	Account ChainType = "account"
+	UTXO    ChainType = "utxo"
+)
 
 // NewServer constructs a new Asserter for use in the
 // server package.
@@ -49,12 +74,18 @@ func NewServer(
 	supportedNetworks []*types.NetworkIdentifier,
 	callMethods []string,
 	mempoolCoins bool,
+	validationFilePath string,
 ) (*Asserter, error) {
 	if err := OperationTypes(supportedOperationTypes); err != nil {
 		return nil, err
 	}
 
 	if err := SupportedNetworks(supportedNetworks); err != nil {
+		return nil, err
+	}
+
+	validationConfig, err := getValidationConfig(validationFilePath)
+	if err != nil {
 		return nil, err
 	}
 
@@ -77,6 +108,7 @@ func NewServer(
 		supportedNetworks:       supportedNetworks,
 		callMethods:             callMap,
 		mempoolCoins:            mempoolCoins,
+		validations:             validationConfig,
 	}, nil
 }
 
@@ -87,6 +119,7 @@ func NewClientWithResponses(
 	network *types.NetworkIdentifier,
 	networkStatus *types.NetworkStatusResponse,
 	networkOptions *types.NetworkOptionsResponse,
+	validationFilePath string,
 ) (*Asserter, error) {
 	if err := NetworkIdentifier(network); err != nil {
 		return nil, err
@@ -100,6 +133,11 @@ func NewClientWithResponses(
 		return nil, err
 	}
 
+	validationConfig, err := getValidationConfig(validationFilePath)
+	if err != nil {
+		return nil, err
+	}
+
 	return NewClientWithOptions(
 		network,
 		networkStatus.GenesisBlockIdentifier,
@@ -107,6 +145,7 @@ func NewClientWithResponses(
 		networkOptions.Allow.OperationStatuses,
 		networkOptions.Allow.Errors,
 		networkOptions.Allow.TimestampStartIndex,
+		validationConfig,
 	)
 }
 
@@ -147,6 +186,9 @@ func NewClientWithFile(
 		config.AllowedOperationStatuses,
 		config.AllowedErrors,
 		&config.AllowedTimestampStartIndex,
+		&Validations{
+			Enabled: false,
+		},
 	)
 }
 
@@ -160,6 +202,7 @@ func NewClientWithOptions(
 	operationStatuses []*types.OperationStatus,
 	errors []*types.Error,
 	timestampStartIndex *int64,
+	validationConfig *Validations,
 ) (*Asserter, error) {
 	if err := NetworkIdentifier(network); err != nil {
 		return nil, err
@@ -197,6 +240,7 @@ func NewClientWithOptions(
 		operationTypes:      operationTypes,
 		genesisBlock:        genesisBlockIdentifier,
 		timestampStartIndex: parsedTimestampStartIndex,
+		validations:         validationConfig,
 	}
 
 	asserter.operationStatusMap = map[string]bool{}
@@ -260,4 +304,21 @@ func (a *Asserter) OperationSuccessful(operation *types.Operation) (bool, error)
 	}
 
 	return val, nil
+}
+
+func getValidationConfig(validationFilePath string) (*Validations, error) {
+	validationConfig := &Validations{
+		Enabled: false,
+	}
+	if validationFilePath != "" {
+		content, err := ioutil.ReadFile(path.Clean(validationFilePath))
+		if err != nil {
+			return nil, err
+		}
+
+		if err := json.Unmarshal(content, validationConfig); err != nil {
+			return nil, err
+		}
+	}
+	return validationConfig, nil
 }

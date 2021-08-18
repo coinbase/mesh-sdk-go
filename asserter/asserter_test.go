@@ -341,6 +341,7 @@ func TestNew(t *testing.T) {
 				test.network,
 				test.networkStatus,
 				test.networkOptions,
+				"",
 			)
 
 			if test.err != nil {
