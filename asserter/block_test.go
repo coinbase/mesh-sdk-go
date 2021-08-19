@@ -406,7 +406,7 @@ func TestOperationsValidations(t *testing.T) {
 					Type:    "PAYMENT",
 					Status:  types.String("SUCCESS"),
 					Account: validAccount,
-					Amount:  &types.Amount{
+					Amount: &types.Amount{
 						Value: "-2000",
 						Currency: &types.Currency{
 							Symbol:   "BTC",
@@ -446,7 +446,7 @@ func TestOperationsValidations(t *testing.T) {
 					Type:    "PAYMENT",
 					Status:  types.String("SUCCESS"),
 					Account: validAccount,
-					Amount:  &types.Amount{
+					Amount: &types.Amount{
 						Value: "-2000",
 						Currency: &types.Currency{
 							Symbol:   "BTC",

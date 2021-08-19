@@ -358,7 +358,8 @@ func (a *Asserter) ValidatePaymentAndFee(
 	feeCount int,
 ) error {
 	zero := big.NewInt(0)
-	if a.validations.Payment.Operation.Count != -1 && a.validations.Payment.Operation.Count != paymentCount {
+	if a.validations.Payment.Operation.Count != -1 &&
+		a.validations.Payment.Operation.Count != paymentCount {
 		return ErrPaymentCountMismatch
 	}
 
