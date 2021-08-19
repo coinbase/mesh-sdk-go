@@ -297,7 +297,6 @@ func (a *Asserter) Operations(
 	feeTotal := big.NewInt(0)
 	paymentCount := 0
 	feeCount := 0
-	zero := big.NewInt(0)
 	for i, op := range operations {
 		// Ensure operations are sorted
 		if err := a.Operation(op, int64(i), construction); err != nil {
@@ -346,21 +345,33 @@ func (a *Asserter) Operations(
 
 	// only account based validation
 	if a.validations.Enabled && a.validations.ChainType == Account {
-		if a.validations.Payment.Operation.ShouldBalance && paymentTotal.Cmp(zero) != 0 {
-			return ErrPaymentAmountNotBalancing
-		}
+		return a.ValidatePaymentAndFee(paymentTotal, paymentCount, feeTotal, feeCount)
+	}
 
-		if a.validations.Payment.Operation.Count != -1 && a.validations.Payment.Operation.Count != paymentCount {
-			return ErrPaymentCountMismatch
-		}
+	return nil
+}
 
-		if a.validations.Fee.Operation.ShouldBalance && feeTotal.Cmp(zero) != 0 {
-			return ErrPaymentAmountNotBalancing
-		}
+func (a *Asserter) ValidatePaymentAndFee(
+	paymentTotal *big.Int,
+	paymentCount int,
+	feeTotal *big.Int,
+	feeCount int,
+) error {
+	zero := big.NewInt(0)
+	if a.validations.Payment.Operation.Count != -1 && a.validations.Payment.Operation.Count != paymentCount {
+		return ErrPaymentCountMismatch
+	}
 
-		if a.validations.Fee.Operation.Count != -1 && a.validations.Fee.Operation.Count != feeCount {
-			return ErrFeeCountMismatch
-		}
+	if a.validations.Payment.Operation.ShouldBalance && paymentTotal.Cmp(zero) != 0 {
+		return ErrPaymentAmountNotBalancing
+	}
+
+	if a.validations.Fee.Operation.Count != -1 && a.validations.Fee.Operation.Count != feeCount {
+		return ErrFeeCountMismatch
+	}
+
+	if a.validations.Fee.Operation.ShouldBalance && feeTotal.Cmp(zero) != 0 {
+		return ErrPaymentAmountNotBalancing
 	}
 
 	return nil

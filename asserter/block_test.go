@@ -334,7 +334,137 @@ func TestOperationsValidations(t *testing.T) {
 					Amount:  validFeeAmount,
 				},
 			},
-			validationFilePath: "data/validation_correct.json",
+			validationFilePath: "data/validation_fee_and_payment_balanced.json",
+			construction:       false,
+			err:                nil,
+		},
+		"throw error on missing fee operation": {
+			operations: []*types.Operation{
+				{
+					OperationIdentifier: &types.OperationIdentifier{
+						Index: int64(0),
+					},
+					Type:    "PAYMENT",
+					Status:  types.String("SUCCESS"),
+					Account: validAccount,
+					Amount:  validDepositAmount,
+				},
+				{
+					OperationIdentifier: &types.OperationIdentifier{
+						Index: int64(1),
+					},
+					Type:    "PAYMENT",
+					Status:  types.String("SUCCESS"),
+					Account: validAccount,
+					Amount:  validWithdrawAmount,
+				},
+			},
+			validationFilePath: "data/validation_fee_and_payment_balanced.json",
+			construction:       false,
+			err:                ErrFeeCountMismatch,
+		},
+		"throw error on missing payment operation": {
+			operations: []*types.Operation{
+				{
+					OperationIdentifier: &types.OperationIdentifier{
+						Index: int64(0),
+					},
+					Type:    "PAYMENT",
+					Status:  types.String("SUCCESS"),
+					Account: validAccount,
+					Amount:  validDepositAmount,
+				},
+				{
+					OperationIdentifier: &types.OperationIdentifier{
+						Index: int64(1),
+					},
+					Type:    "FEE",
+					Status:  types.String("SUCCESS"),
+					Account: validAccount,
+					Amount:  validFeeAmount,
+				},
+			},
+			validationFilePath: "data/validation_fee_and_payment_balanced.json",
+			construction:       false,
+			err:                ErrPaymentCountMismatch,
+		},
+		"throw error on payment amount not balancing": {
+			operations: []*types.Operation{
+				{
+					OperationIdentifier: &types.OperationIdentifier{
+						Index: int64(0),
+					},
+					Type:    "PAYMENT",
+					Status:  types.String("SUCCESS"),
+					Account: validAccount,
+					Amount:  validDepositAmount,
+				},
+				{
+					OperationIdentifier: &types.OperationIdentifier{
+						Index: int64(1),
+					},
+					Type:    "PAYMENT",
+					Status:  types.String("SUCCESS"),
+					Account: validAccount,
+					Amount:  &types.Amount{
+						Value: "-2000",
+						Currency: &types.Currency{
+							Symbol:   "BTC",
+							Decimals: 8,
+						},
+					},
+				},
+				{
+					OperationIdentifier: &types.OperationIdentifier{
+						Index: int64(2),
+					},
+					Type:    "FEE",
+					Status:  types.String("SUCCESS"),
+					Account: validAccount,
+					Amount:  validFeeAmount,
+				},
+			},
+			validationFilePath: "data/validation_fee_and_payment_balanced.json",
+			construction:       false,
+			err:                ErrPaymentAmountNotBalancing,
+		},
+		"valid operations based on validation file - unbalanced": {
+			operations: []*types.Operation{
+				{
+					OperationIdentifier: &types.OperationIdentifier{
+						Index: int64(0),
+					},
+					Type:    "PAYMENT",
+					Status:  types.String("SUCCESS"),
+					Account: validAccount,
+					Amount:  validDepositAmount,
+				},
+				{
+					OperationIdentifier: &types.OperationIdentifier{
+						Index: int64(1),
+					},
+					Type:    "PAYMENT",
+					Status:  types.String("SUCCESS"),
+					Account: validAccount,
+					Amount:  &types.Amount{
+						Value: "-2000",
+						Currency: &types.Currency{
+							Symbol:   "BTC",
+							Decimals: 8,
+						},
+					},
+				},
+				{
+					OperationIdentifier: &types.OperationIdentifier{
+						Index: int64(2),
+					},
+					Type:    "FEE",
+					Status:  types.String("SUCCESS"),
+					Account: validAccount,
+					Amount:  validFeeAmount,
+				},
+			},
+			validationFilePath: "data/validation_fee_and_payment_unbalanced.json",
 			construction:       false,
 			err:                nil,
 		},
@@ -391,7 +521,11 @@ func TestOperationsValidations(t *testing.T) {
 
 		t.Run(name, func(t *testing.T) {
 			actualErr := asserter.Operations(test.operations, test.construction)
-			assert.Equal(t, test.err, actualErr)
+			if test.err != nil {
+				assert.Contains(t, actualErr.Error(), test.err.Error())
+			} else {
+				assert.NoError(t, actualErr)
+			}
 		})
 	}
 }

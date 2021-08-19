@@ -265,6 +265,7 @@ func TestNew(t *testing.T) {
 		network        *types.NetworkIdentifier
 		networkStatus  *types.NetworkStatusResponse
 		networkOptions *types.NetworkOptionsResponse
+		validationFilePath string
 
 		err          error
 		skipLoadTest bool
@@ -273,6 +274,7 @@ func TestNew(t *testing.T) {
 			network:        validNetwork,
 			networkStatus:  validNetworkStatus,
 			networkOptions: validNetworkOptions,
+			validationFilePath: "",
 
 			err: nil,
 		},
@@ -280,6 +282,7 @@ func TestNew(t *testing.T) {
 			network:        validNetwork,
 			networkStatus:  validNetworkStatusSyncStatus,
 			networkOptions: validNetworkOptions,
+			validationFilePath: "",
 
 			err: nil,
 		},
@@ -287,6 +290,7 @@ func TestNew(t *testing.T) {
 			network:        validNetwork,
 			networkStatus:  validNetworkStatus,
 			networkOptions: validNetworkOptionsWithStartIndex,
+			validationFilePath: "",
 
 			err: nil,
 		},
@@ -294,6 +298,7 @@ func TestNew(t *testing.T) {
 			network:        validNetwork,
 			networkStatus:  invalidNetworkStatus,
 			networkOptions: validNetworkOptions,
+			validationFilePath: "",
 
 			err: errors.New("BlockIdentifier is nil"),
 		},
@@ -301,6 +306,7 @@ func TestNew(t *testing.T) {
 			network:        validNetwork,
 			networkStatus:  invalidNetworkStatusSyncStatus,
 			networkOptions: validNetworkOptions,
+			validationFilePath: "",
 
 			err:          errors.New("SyncStatus.CurrentIndex is negative"),
 			skipLoadTest: true,
@@ -309,6 +315,7 @@ func TestNew(t *testing.T) {
 			network:        validNetwork,
 			networkStatus:  validNetworkStatus,
 			networkOptions: invalidNetworkOptions,
+			validationFilePath: "",
 
 			err: errors.New("no Allow.OperationStatuses found"),
 		},
@@ -316,6 +323,7 @@ func TestNew(t *testing.T) {
 			network:        validNetwork,
 			networkStatus:  validNetworkStatus,
 			networkOptions: duplicateStatuses,
+			validationFilePath: "",
 
 			err: errors.New("Allow.OperationStatuses contains a duplicate Success"),
 		},
@@ -323,6 +331,7 @@ func TestNew(t *testing.T) {
 			network:        validNetwork,
 			networkStatus:  validNetworkStatus,
 			networkOptions: duplicateTypes,
+			validationFilePath: "",
 
 			err: errors.New("Allow.OperationTypes contains a duplicate Transfer"),
 		},
@@ -330,6 +339,7 @@ func TestNew(t *testing.T) {
 			network:        validNetwork,
 			networkStatus:  validNetworkStatus,
 			networkOptions: negativeStartIndex,
+			validationFilePath: "",
 
 			err: errors.New("TimestampStartIndex is invalid: -1"),
 		},
@@ -341,7 +351,7 @@ func TestNew(t *testing.T) {
 				test.network,
 				test.networkStatus,
 				test.networkOptions,
-				"",
+				test.validationFilePath,
 			)
 
 			if test.err != nil {
@@ -477,5 +487,50 @@ func TestNew(t *testing.T) {
 
 		assert.Nil(t, asserter)
 		assert.Error(t, err)
+	})
+
+	t.Run("default no validation file", func(t *testing.T) {
+		asserter, err := NewClientWithResponses(
+			validNetwork,
+			validNetworkStatus,
+			validNetworkOptions,
+			"",
+		)
+
+		assert.NoError(t, err)
+		assert.NotNil(t, asserter)
+		assert.False(t, asserter.validations.Enabled)
+	})
+
+	t.Run("non existent validation file", func(t *testing.T) {
+		asserter, err := NewClientWithResponses(
+			validNetwork,
+			validNetworkStatus,
+			validNetworkOptions,
+			"blah",
+			)
+
+		assert.Error(t, err)
+		assert.Nil(t, asserter)
+	})
+
+	t.Run("wrong format of validation file", func(t *testing.T) {
+		tmpfile, err := ioutil.TempFile("", "test.json")
+		assert.NoError(t, err)
+		defer os.Remove(tmpfile.Name())
+
+		_, err = tmpfile.Write([]byte("blah"))
+		assert.NoError(t, err)
+		assert.NoError(t, tmpfile.Close())
+
+		asserter, err := NewClientWithResponses(
+			validNetwork,
+			validNetworkStatus,
+			validNetworkOptions,
+			tmpfile.Name(),
+		)
+
+		assert.Error(t, err)
+		assert.Nil(t, asserter)
 	})
 }
