@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright 2020 Coinbase, Inc.
+# Copyright 2021 Coinbase, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -206,7 +206,7 @@ done
 
 # Format client generated code
 FORMAT_GEN="gofmt -w /local/types; gofmt -w /local/client; gofmt -w /local/server"
-GOLANG_VERSION=1.15
+GOLANG_VERSION=1.16
 docker run --rm -v "${PWD}":/local \
   golang:${GOLANG_VERSION} sh -c \
   "cd /local; make deps; ${FORMAT_GEN}; make add-license; make shorten-lines; make fix-imports; go mod tidy;"

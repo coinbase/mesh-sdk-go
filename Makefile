@@ -5,11 +5,14 @@
 # it is necessary to use `go run <pkg>`. Running `go get` does
 # not install any binaries that could be used to run
 # the commands directly.
-ADDLICENSE_CMD=go run github.com/google/addlicense
+ADDLICENSE_INSTALL=go install github.com/google/addlicense@latest
+ADDLICENSE_CMD=addlicense
 ADDLICENCE_SCRIPT=${ADDLICENSE_CMD} -c "Coinbase, Inc." -l "apache" -v
 GOIMPORTS_CMD=go run golang.org/x/tools/cmd/goimports
-GOLINES_CMD=go run github.com/segmentio/golines
-GOVERALLS_CMD=go run github.com/mattn/goveralls
+GOLINES_INSTALL=go install github.com/segmentio/golines@latest
+GOLINES_CMD=golines
+GOVERALLS_INSTALL=go install github.com/mattn/goveralls@latest
+GOVERALLS_CMD=goveralls
 GOLINT_CMD=go run golang.org/x/lint/golint
 GO_PACKAGES=./asserter/... ./fetcher/... ./types/... ./client/... ./server/... \
 	./parser/... ./syncer/... ./reconciler/... ./keys/... \
@@ -51,16 +54,20 @@ check-format:
 test:
 	${TEST_SCRIPT}
 
-test-cover:	
+test-cover:
+	${GOVERALLS_INSTALL}
 	if [ "${COVERALLS_TOKEN}" ]; then ${TEST_SCRIPT} -coverprofile=c.out -covermode=count; ${GOVERALLS_CMD} -coverprofile=c.out -repotoken ${COVERALLS_TOKEN}; fi
 
 add-license:
+	${ADDLICENSE_INSTALL}
 	${ADDLICENCE_SCRIPT} .
 
 check-license:
+	${ADDLICENSE_INSTALL}
 	${ADDLICENCE_SCRIPT} -check .
 
 shorten-lines:
+	${GOLINES_INSTALL}
 	${GOLINES_CMD} -w --shorten-comments ${GO_FOLDERS} examples
 
 shellcheck:
