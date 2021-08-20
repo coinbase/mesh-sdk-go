@@ -11,7 +11,8 @@ ADDLICENCE_SCRIPT=${ADDLICENSE_CMD} -c "Coinbase, Inc." -l "apache" -v
 GOIMPORTS_CMD=go run golang.org/x/tools/cmd/goimports
 GOLINES_INSTALL=go install github.com/segmentio/golines@latest
 GOLINES_CMD=golines
-GOVERALLS_CMD=go run github.com/mattn/goveralls
+GOVERALLS_INSTALL=go install github.com/mattn/goveralls@latest
+GOVERALLS_CMD=goveralls
 GOLINT_CMD=go run golang.org/x/lint/golint
 GO_PACKAGES=./asserter/... ./fetcher/... ./types/... ./client/... ./server/... \
 	./parser/... ./syncer/... ./reconciler/... ./keys/... \
@@ -53,7 +54,8 @@ check-format:
 test:
 	${TEST_SCRIPT}
 
-test-cover:	
+test-cover:
+	${GOVERALLS_INSTALL}
 	if [ "${COVERALLS_TOKEN}" ]; then ${TEST_SCRIPT} -coverprofile=c.out -covermode=count; ${GOVERALLS_CMD} -coverprofile=c.out -repotoken ${COVERALLS_TOKEN}; fi
 
 add-license:
