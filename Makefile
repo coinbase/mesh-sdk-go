@@ -61,6 +61,7 @@ add-license:
 	${ADDLICENCE_SCRIPT} .
 
 check-license:
+	${ADDLICENSE_INSTALL}
 	${ADDLICENCE_SCRIPT} -check .
 
 shorten-lines:
