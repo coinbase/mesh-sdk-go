@@ -163,6 +163,7 @@ func TestSearchTransactionsResponse(t *testing.T) {
 						},
 					},
 				},
+				"",
 			)
 			assert.NotNil(t, asserter)
 			assert.NoError(t, err)

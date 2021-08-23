@@ -95,6 +95,10 @@ var (
 		"invalid direction (must be 'forward' or 'backward')",
 	)
 	ErrDuplicateRelatedTransaction = errors.New("duplicate related transaction")
+	ErrPaymentAmountNotBalancing   = errors.New("payment amount doesn't balance")
+	ErrFeeAmountNotBalancing       = errors.New("fee amount doesn't balance")
+	ErrPaymentCountMismatch        = errors.New("payment count doesn't match")
+	ErrFeeCountMismatch            = errors.New("fee count doesn't match")
 
 	BlockErrs = []error{
 		ErrAmountValueMissing,
@@ -131,6 +135,8 @@ var (
 		ErrBlockIndexPrecedesParentBlockIndex,
 		ErrInvalidDirection,
 		ErrDuplicateRelatedTransaction,
+		ErrPaymentAmountNotBalancing,
+		ErrFeeAmountNotBalancing,
 	}
 )
 

@@ -157,6 +157,9 @@ func TestSearchTransactionsRetry(t *testing.T) {
 				basicNetworkOptions.Allow.OperationStatuses,
 				nil,
 				nil,
+				&asserter.Validations{
+					Enabled: false,
+				},
 			)
 			assert.NoError(aerr)
 
