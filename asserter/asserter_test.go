@@ -262,74 +262,84 @@ func TestNew(t *testing.T) {
 	)
 
 	var tests = map[string]struct {
-		network        *types.NetworkIdentifier
-		networkStatus  *types.NetworkStatusResponse
-		networkOptions *types.NetworkOptionsResponse
+		network            *types.NetworkIdentifier
+		networkStatus      *types.NetworkStatusResponse
+		networkOptions     *types.NetworkOptionsResponse
+		validationFilePath string
 
 		err          error
 		skipLoadTest bool
 	}{
 		"valid responses": {
-			network:        validNetwork,
-			networkStatus:  validNetworkStatus,
-			networkOptions: validNetworkOptions,
+			network:            validNetwork,
+			networkStatus:      validNetworkStatus,
+			networkOptions:     validNetworkOptions,
+			validationFilePath: "",
 
 			err: nil,
 		},
 		"valid responses (with sync status)": {
-			network:        validNetwork,
-			networkStatus:  validNetworkStatusSyncStatus,
-			networkOptions: validNetworkOptions,
+			network:            validNetwork,
+			networkStatus:      validNetworkStatusSyncStatus,
+			networkOptions:     validNetworkOptions,
+			validationFilePath: "",
 
 			err: nil,
 		},
 		"valid responses (with start index)": {
-			network:        validNetwork,
-			networkStatus:  validNetworkStatus,
-			networkOptions: validNetworkOptionsWithStartIndex,
+			network:            validNetwork,
+			networkStatus:      validNetworkStatus,
+			networkOptions:     validNetworkOptionsWithStartIndex,
+			validationFilePath: "",
 
 			err: nil,
 		},
 		"invalid network status": {
-			network:        validNetwork,
-			networkStatus:  invalidNetworkStatus,
-			networkOptions: validNetworkOptions,
+			network:            validNetwork,
+			networkStatus:      invalidNetworkStatus,
+			networkOptions:     validNetworkOptions,
+			validationFilePath: "",
 
 			err: errors.New("BlockIdentifier is nil"),
 		},
 		"invalid network status (with SyncStatus)": {
-			network:        validNetwork,
-			networkStatus:  invalidNetworkStatusSyncStatus,
-			networkOptions: validNetworkOptions,
+			network:            validNetwork,
+			networkStatus:      invalidNetworkStatusSyncStatus,
+			networkOptions:     validNetworkOptions,
+			validationFilePath: "",
 
 			err:          errors.New("SyncStatus.CurrentIndex is negative"),
 			skipLoadTest: true,
 		},
 		"invalid network options": {
-			network:        validNetwork,
-			networkStatus:  validNetworkStatus,
-			networkOptions: invalidNetworkOptions,
+			network:            validNetwork,
+			networkStatus:      validNetworkStatus,
+			networkOptions:     invalidNetworkOptions,
+			validationFilePath: "",
 
 			err: errors.New("no Allow.OperationStatuses found"),
 		},
 		"duplicate operation statuses": {
-			network:        validNetwork,
-			networkStatus:  validNetworkStatus,
-			networkOptions: duplicateStatuses,
+			network:            validNetwork,
+			networkStatus:      validNetworkStatus,
+			networkOptions:     duplicateStatuses,
+			validationFilePath: "",
 
 			err: errors.New("Allow.OperationStatuses contains a duplicate Success"),
 		},
 		"duplicate operation types": {
-			network:        validNetwork,
-			networkStatus:  validNetworkStatus,
-			networkOptions: duplicateTypes,
+			network:            validNetwork,
+			networkStatus:      validNetworkStatus,
+			networkOptions:     duplicateTypes,
+			validationFilePath: "",
 
 			err: errors.New("Allow.OperationTypes contains a duplicate Transfer"),
 		},
 		"invalid start index": {
-			network:        validNetwork,
-			networkStatus:  validNetworkStatus,
-			networkOptions: negativeStartIndex,
+			network:            validNetwork,
+			networkStatus:      validNetworkStatus,
+			networkOptions:     negativeStartIndex,
+			validationFilePath: "",
 
 			err: errors.New("TimestampStartIndex is invalid: -1"),
 		},
@@ -341,6 +351,7 @@ func TestNew(t *testing.T) {
 				test.network,
 				test.networkStatus,
 				test.networkOptions,
+				test.validationFilePath,
 			)
 
 			if test.err != nil {
@@ -476,5 +487,50 @@ func TestNew(t *testing.T) {
 
 		assert.Nil(t, asserter)
 		assert.Error(t, err)
+	})
+
+	t.Run("default no validation file", func(t *testing.T) {
+		asserter, err := NewClientWithResponses(
+			validNetwork,
+			validNetworkStatus,
+			validNetworkOptions,
+			"",
+		)
+
+		assert.NoError(t, err)
+		assert.NotNil(t, asserter)
+		assert.False(t, asserter.validations.Enabled)
+	})
+
+	t.Run("non existent validation file", func(t *testing.T) {
+		asserter, err := NewClientWithResponses(
+			validNetwork,
+			validNetworkStatus,
+			validNetworkOptions,
+			"blah",
+		)
+
+		assert.Error(t, err)
+		assert.Nil(t, asserter)
+	})
+
+	t.Run("wrong format of validation file", func(t *testing.T) {
+		tmpfile, err := ioutil.TempFile("", "test.json")
+		assert.NoError(t, err)
+		defer os.Remove(tmpfile.Name())
+
+		_, err = tmpfile.Write([]byte("blah"))
+		assert.NoError(t, err)
+		assert.NoError(t, tmpfile.Close())
+
+		asserter, err := NewClientWithResponses(
+			validNetwork,
+			validNetworkStatus,
+			validNetworkOptions,
+			tmpfile.Name(),
+		)
+
+		assert.Error(t, err)
+		assert.Nil(t, asserter)
 	})
 }

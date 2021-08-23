@@ -128,6 +128,7 @@ func main() {
 		primaryNetwork,
 		networkStatus,
 		networkOptions,
+		"",
 	)
 	if err != nil {
 		log.Fatal(err)
@@ -159,8 +160,8 @@ func main() {
 	// required fields are populated and that operations
 	// in the block only use types and statuses that were
 	// provided in the networkStatusResponse. To run more
-	// intensive validation, use the Rosetta Validator. It
-	// can be found at: https://github.com/coinbase/rosetta-validator
+	// intensive validation, use the Rosetta CLI. It
+	// can be found at: https://github.com/coinbase/rosetta-cli
 	err = asserter.Block(block.Block)
 	if err != nil {
 		log.Fatalf("Assertion Error: %s\n", err.Error())

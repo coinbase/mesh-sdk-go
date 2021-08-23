@@ -148,6 +148,7 @@ func New(
 func (f *Fetcher) InitializeAsserter(
 	ctx context.Context,
 	networkIdentifier *types.NetworkIdentifier,
+	validationFilePath string,
 ) (
 	*types.NetworkIdentifier,
 	*types.NetworkStatusResponse,
@@ -208,6 +209,7 @@ func (f *Fetcher) InitializeAsserter(
 		primaryNetwork,
 		networkStatus,
 		networkOptions,
+		validationFilePath,
 	)
 	if assertErr != nil {
 		return nil, nil, &Error{Err: assertErr}

@@ -239,6 +239,9 @@ func TestBlockRetry(t *testing.T) {
 				basicNetworkOptions.Allow.OperationStatuses,
 				nil,
 				nil,
+				&asserter.Validations{
+					Enabled: false,
+				},
 			)
 			assert.NoError(err)
 

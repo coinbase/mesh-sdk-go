@@ -64,6 +64,7 @@ func main() {
 		[]*types.NetworkIdentifier{network},
 		nil,
 		false,
+		"",
 	)
 	if err != nil {
 		log.Fatal(err)

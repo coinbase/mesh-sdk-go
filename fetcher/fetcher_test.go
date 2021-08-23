@@ -189,7 +189,7 @@ func TestInitializeAsserter(t *testing.T) {
 				WithRetryElapsedTime(5*time.Second),
 			)
 
-			networkIdentifier, networkStatus, err := f.InitializeAsserter(ctx, test.network)
+			networkIdentifier, networkStatus, err := f.InitializeAsserter(ctx, test.network, "")
 			assert.Equal(test.expectedNetwork, networkIdentifier)
 			assert.Equal(test.expectedStatus, networkStatus)
 			assert.True(checkError(err, test.expectedError))

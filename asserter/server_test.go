@@ -202,6 +202,7 @@ var (
 		[]*types.NetworkIdentifier{validNetworkIdentifier},
 		[]string{"eth_call"},
 		false,
+		"",
 	)
 )
 
@@ -275,6 +276,7 @@ func TestNewWithOptions(t *testing.T) {
 				test.supportedNetworks,
 				test.callMethods,
 				false,
+				"",
 			)
 			if test.err == nil {
 				assert.NotNil(t, thisA)
@@ -435,6 +437,7 @@ func TestAccountBalanceRequest(t *testing.T) {
 				[]*types.NetworkIdentifier{validNetworkIdentifier},
 				nil,
 				false,
+				"",
 			)
 			assert.NotNil(t, asserter)
 			assert.NoError(t, err)
@@ -1452,6 +1455,7 @@ func TestAccountCoinsRequest(t *testing.T) {
 				[]*types.NetworkIdentifier{validNetworkIdentifier},
 				nil,
 				test.allowMempool,
+				"",
 			)
 			assert.NotNil(t, asserter)
 			assert.NoError(t, err)

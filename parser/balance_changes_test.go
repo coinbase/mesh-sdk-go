@@ -324,5 +324,8 @@ func simpleAsserterConfiguration(
 		allowedStatus,
 		[]*types.Error{},
 		nil,
+		&asserter.Validations{
+			Enabled: false,
+		},
 	)
 }

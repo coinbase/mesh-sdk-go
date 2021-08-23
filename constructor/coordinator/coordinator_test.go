@@ -62,6 +62,9 @@ func simpleAsserterConfiguration() (*asserter.Asserter, error) {
 		},
 		[]*types.Error{},
 		nil,
+		&asserter.Validations{
+			Enabled: false,
+		},
 	)
 }
 
