@@ -42,6 +42,9 @@ type Asserter struct {
 	validations             *Validations
 }
 
+// Validations is used to define stricter validations
+// on the transaction. Fore more details please refer to
+// https://github.com/coinbase/rosetta-sdk-go/tree/master/asserter#readme
 type Validations struct {
 	Enabled   bool                 `json:"enabled"`
 	ChainType ChainType            `json:"chain_type"`
