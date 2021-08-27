@@ -470,6 +470,12 @@ func (w *Worker) checkAccountBalance(
 	}
 
 	if bigIntDiff.Sign() < 0 {
+		log.Printf(
+			"checkAccountBalance: Account (%s) has balance (%s), less than the minimum balance (%s)",
+			account.Address,
+			amount.Value,
+			input.MinimumBalance.Value,
+		)
 		return "", nil
 	}
 
