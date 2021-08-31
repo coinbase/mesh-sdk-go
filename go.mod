@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	github.com/DataDog/zstd v1.4.5
-	github.com/Zilliqa/gozilliqa-sdk v1.2.1-0.20201201074141-dd0ecada1be6
+	github.com/Zilliqa/gozilliqa-sdk v1.2.1-0.20210716122719-85a9cd918ae4
 	github.com/btcsuite/btcd v0.21.0-beta
 	github.com/cenkalti/backoff v2.2.1+incompatible
 	github.com/dgraph-io/badger/v2 v2.2007.2
