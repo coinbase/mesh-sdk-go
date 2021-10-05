@@ -684,7 +684,7 @@ func (w *Worker) FindBalanceWorker(
 	}
 
 	if len(unmatchedAccounts) > 0 {
-		log.Printf("%d account(s) insufficiently funded. Did you forget to fund? %+v",
+		log.Printf("%d account(s) insufficiently funded. Please fund the address %+v",
 			len(unmatchedAccounts),
 			unmatchedAccounts,
 		)
