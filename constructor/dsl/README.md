@@ -146,6 +146,10 @@ would look like:
   }
 ]
 ```
+Note, if you plan to run the automated Construction API tester in CI for `create_account` workflow, you may wish to
+provide [`prefunded accounts`](https://pkg.go.dev/github.com/coinbase/rosetta-cli/configuration#ConstructionConfiguration)
+when running the tester (otherwise you would need to manually fund generated
+accounts).
 
 ### Workflows
 `Workflows` are defined using the following syntax:
