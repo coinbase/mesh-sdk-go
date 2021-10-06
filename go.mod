@@ -18,7 +18,7 @@ require (
 	github.com/lucasjones/reggen v0.0.0-20180717132126-cdb49ff09d77
 	github.com/mitchellh/mapstructure v1.3.3
 	github.com/neilotoole/errgroup v0.1.5
-	github.com/pkg/errors v0.9.1 // indirect
+	github.com/pkg/errors v0.9.1
 	github.com/segmentio/fasthash v1.0.3
 	github.com/stretchr/objx v0.1.1 // indirect
 	github.com/stretchr/testify v1.7.0
