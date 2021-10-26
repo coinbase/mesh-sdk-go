@@ -15,7 +15,7 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/lucasjones/reggen v0.0.0-20180717132126-cdb49ff09d77
 	github.com/mitchellh/mapstructure v1.4.1
-	github.com/neilotoole/errgroup v0.1.5
+	github.com/neilotoole/errgroup v0.1.6
 	github.com/segmentio/fasthash v1.0.3
 	github.com/stretchr/testify v1.7.0
 	github.com/tidwall/gjson v1.10.2
