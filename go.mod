@@ -3,7 +3,7 @@ module github.com/coinbase/rosetta-sdk-go
 go 1.16
 
 require (
-	github.com/DataDog/zstd v1.4.5
+	github.com/DataDog/zstd v1.4.8
 	github.com/Zilliqa/gozilliqa-sdk v1.2.1-0.20201201074141-dd0ecada1be6
 	github.com/btcsuite/btcd v0.21.0-beta
 	github.com/cenkalti/backoff v2.2.1+incompatible
