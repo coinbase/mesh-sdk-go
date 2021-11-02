@@ -18,7 +18,7 @@ require (
 	github.com/neilotoole/errgroup v0.1.6
 	github.com/segmentio/fasthash v1.0.3
 	github.com/stretchr/testify v1.7.0
-	github.com/tidwall/gjson v1.10.2
+	github.com/tidwall/gjson v1.11.0
 	github.com/tidwall/sjson v1.2.3
 	github.com/vmihailenco/msgpack/v5 v5.3.5
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
