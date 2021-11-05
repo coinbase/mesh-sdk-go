@@ -202,6 +202,26 @@ func (r *Reconciler) queueChanges(
 	}
 
 	for _, change := range balanceChanges {
+		// Add all seen accounts to inactive reconciler queue.
+		//
+		// Note: accounts are only added if they have not been seen before.
+		//
+		// We always add accounts to the inactive reconciler queue even if we're
+		// below the high water mark. Once we have synced all the blocks the inactive
+		// queue will recognize we are at the tip and will begin reconciliation of all
+		// accounts.
+		acctCurrency := &types.AccountCurrency{
+			Account:  change.Account,
+			Currency: change.Currency,
+		}
+
+		r.inactiveQueueMutex.Lock(true)
+		err := r.inactiveAccountQueue(false, acctCurrency, block, true)
+		r.inactiveQueueMutex.Unlock()
+		if err != nil {
+			return err
+		}
+
 		// All changes will have the same block. Continue
 		// if we are too far behind to start reconciling.
 		if block.Index < r.highWaterMark {
@@ -216,21 +236,6 @@ func (r *Reconciler) queueChanges(
 			}
 
 			continue
-		}
-
-		// Add all seen accounts to inactive reconciler queue.
-		//
-		// Note: accounts are only added if they have not been seen before.
-		acctCurrency := &types.AccountCurrency{
-			Account:  change.Account,
-			Currency: change.Currency,
-		}
-
-		r.inactiveQueueMutex.Lock(true)
-		err := r.inactiveAccountQueue(false, acctCurrency, block, true)
-		r.inactiveQueueMutex.Unlock()
-		if err != nil {
-			return err
 		}
 
 		// Add change to queueMap before enqueuing to ensure
