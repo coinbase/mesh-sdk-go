@@ -297,6 +297,8 @@ func (a *Asserter) Operations(
 	feeTotal := big.NewInt(0)
 	paymentCount := 0
 	feeCount := 0
+	opsLen := len(operations)
+	relatedOpsExists := false
 	for i, op := range operations {
 		// Ensure operations are sorted
 		if err := a.Operation(op, int64(i), construction); err != nil {
@@ -314,6 +316,20 @@ func (a *Asserter) Operations(
 				val, _ := new(big.Int).SetString(op.Amount.Value, 10)
 				feeTotal.Add(feeTotal, val)
 				feeCount++
+			}
+		}
+
+		// Ensure all operations have related_operations implemented or none of them do.
+		// If we have multiple outputs (opsLen > 2),
+		// throw an error if related operations key is not implemented.
+		// We need a way to enforce DAG structure among operations.
+		if i != 0 {
+			if len(op.RelatedOperations) == 0 {
+				if relatedOpsExists || opsLen > 2 {
+					return ErrRelatedOperationMissing
+				}
+			} else {
+				relatedOpsExists = true
 			}
 		}
 
@@ -341,6 +357,9 @@ func (a *Asserter) Operations(
 			}
 			relatedIndexes = append(relatedIndexes, relatedOp.Index)
 		}
+	}
+	if !relatedOpsExists {
+		fmt.Println("Related Operations key is not implemented. This is fine as long as there is a distinction between sends and receives")
 	}
 
 	// only account based validation

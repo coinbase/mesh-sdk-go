@@ -319,6 +319,11 @@ func TestOperationsValidations(t *testing.T) {
 					OperationIdentifier: &types.OperationIdentifier{
 						Index: int64(1),
 					},
+					RelatedOperations: []*types.OperationIdentifier{
+						{
+							Index: int64(0),
+						},
+					},
 					Type:    "PAYMENT",
 					Status:  types.String("SUCCESS"),
 					Account: validAccount,
@@ -327,6 +332,11 @@ func TestOperationsValidations(t *testing.T) {
 				{
 					OperationIdentifier: &types.OperationIdentifier{
 						Index: int64(2),
+					},
+					RelatedOperations: []*types.OperationIdentifier{
+						{
+							Index: int64(0),
+						},
 					},
 					Type:    "FEE",
 					Status:  types.String("SUCCESS"),
@@ -353,6 +363,11 @@ func TestOperationsValidations(t *testing.T) {
 					OperationIdentifier: &types.OperationIdentifier{
 						Index: int64(1),
 					},
+					RelatedOperations: []*types.OperationIdentifier{
+						{
+							Index: int64(0),
+						},
+					},
 					Type:    "PAYMENT",
 					Status:  types.String("SUCCESS"),
 					Account: validAccount,
@@ -377,6 +392,11 @@ func TestOperationsValidations(t *testing.T) {
 				{
 					OperationIdentifier: &types.OperationIdentifier{
 						Index: int64(1),
+					},
+					RelatedOperations: []*types.OperationIdentifier{
+						{
+							Index: int64(0),
+						},
 					},
 					Type:    "FEE",
 					Status:  types.String("SUCCESS"),
@@ -403,6 +423,11 @@ func TestOperationsValidations(t *testing.T) {
 					OperationIdentifier: &types.OperationIdentifier{
 						Index: int64(1),
 					},
+					RelatedOperations: []*types.OperationIdentifier{
+						{
+							Index: int64(0),
+						},
+					},
 					Type:    "PAYMENT",
 					Status:  types.String("SUCCESS"),
 					Account: validAccount,
@@ -417,6 +442,11 @@ func TestOperationsValidations(t *testing.T) {
 				{
 					OperationIdentifier: &types.OperationIdentifier{
 						Index: int64(2),
+					},
+					RelatedOperations: []*types.OperationIdentifier{
+						{
+							Index: int64(0),
+						},
 					},
 					Type:    "FEE",
 					Status:  types.String("SUCCESS"),
@@ -443,6 +473,11 @@ func TestOperationsValidations(t *testing.T) {
 					OperationIdentifier: &types.OperationIdentifier{
 						Index: int64(1),
 					},
+					RelatedOperations: []*types.OperationIdentifier{
+						{
+							Index: int64(0),
+						},
+					},
 					Type:    "PAYMENT",
 					Status:  types.String("SUCCESS"),
 					Account: validAccount,
@@ -457,6 +492,11 @@ func TestOperationsValidations(t *testing.T) {
 				{
 					OperationIdentifier: &types.OperationIdentifier{
 						Index: int64(2),
+					},
+					RelatedOperations: []*types.OperationIdentifier{
+						{
+							Index: int64(0),
+						},
 					},
 					Type:    "FEE",
 					Status:  types.String("SUCCESS"),
@@ -948,6 +988,44 @@ func TestBlock(t *testing.T) {
 			},
 		},
 	}
+	relatedMissingTransaction := &types.Transaction{
+		TransactionIdentifier: &types.TransactionIdentifier{
+			Hash: "blah",
+		},
+		Operations: []*types.Operation{
+			{
+				OperationIdentifier: &types.OperationIdentifier{
+					Index: int64(0),
+				},
+				Type:    "PAYMENT",
+				Status:  types.String("SUCCESS"),
+				Account: validAccount,
+				Amount:  validAmount,
+			},
+			{
+				OperationIdentifier: &types.OperationIdentifier{
+					Index: int64(1),
+				},
+				RelatedOperations: []*types.OperationIdentifier{
+				},
+				Type:    "PAYMENT",
+				Status:  types.String("SUCCESS"),
+				Account: validAccount,
+				Amount:  validAmount,
+			},
+			{
+				OperationIdentifier: &types.OperationIdentifier{
+					Index: int64(2),
+				},
+				RelatedOperations: []*types.OperationIdentifier{
+				},
+				Type:    "PAYMENT",
+				Status:  types.String("SUCCESS"),
+				Account: validAccount,
+				Amount:  validAmount,
+			},
+		},
+	}
 	invalidRelatedTransaction := &types.Transaction{
 		TransactionIdentifier: &types.TransactionIdentifier{
 			Hash: "blah",
@@ -1131,6 +1209,15 @@ func TestBlock(t *testing.T) {
 				Transactions:          []*types.Transaction{relatedDuplicateTransaction},
 			},
 			err: ErrRelatedOperationIndexDuplicate,
+		},
+		"missing related transaction operations": {
+			block: &types.Block{
+				BlockIdentifier:       validBlockIdentifier,
+				ParentBlockIdentifier: validParentBlockIdentifier,
+				Timestamp:             MinUnixEpoch + 1,
+				Transactions:          []*types.Transaction{relatedMissingTransaction},
+			},
+			err: ErrRelatedOperationMissing,
 		},
 		"nil block": {
 			block: nil,
