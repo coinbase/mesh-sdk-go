@@ -297,6 +297,7 @@ func (a *Asserter) Operations(
 	feeTotal := big.NewInt(0)
 	paymentCount := 0
 	feeCount := 0
+	relatedOpsExists := false
 	for i, op := range operations {
 		// Ensure operations are sorted
 		if err := a.Operation(op, int64(i), construction); err != nil {
@@ -315,6 +316,11 @@ func (a *Asserter) Operations(
 				feeTotal.Add(feeTotal, val)
 				feeCount++
 			}
+		}
+
+		// Check if related operations key exists in this transaction
+		if len(op.RelatedOperations) != 0 {
+			relatedOpsExists = true
 		}
 
 		// Ensure an operation's related_operations are only
@@ -341,6 +347,11 @@ func (a *Asserter) Operations(
 			}
 			relatedIndexes = append(relatedIndexes, relatedOp.Index)
 		}
+	}
+	//Throw a warning if relatedOps is not implemented
+	if !relatedOpsExists {
+		fmt.Println("Related Operations key is not implemented. " +
+			"This is fine as long as there is a distinction between sends and receives and no multiple outputs")
 	}
 
 	// only account based validation
