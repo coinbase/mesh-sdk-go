@@ -260,7 +260,6 @@ func CallMethods(methods []string) error {
 	if err := StringArray("Allow.CallMethods", methods); err != nil {
 		return err
 	}
-
 	return nil
 }
 

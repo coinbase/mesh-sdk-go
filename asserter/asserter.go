@@ -40,6 +40,7 @@ type Asserter struct {
 	callMethods             map[string]struct{}
 	mempoolCoins            bool
 	validations             *Validations
+	relatedOpsEnabled       bool
 }
 
 // Validations is used to define stricter validations
@@ -78,6 +79,7 @@ func NewServer(
 	callMethods []string,
 	mempoolCoins bool,
 	validationFilePath string,
+	relatedOpsEnabled bool,
 ) (*Asserter, error) {
 	if err := OperationTypes(supportedOperationTypes); err != nil {
 		return nil, err
@@ -112,6 +114,7 @@ func NewServer(
 		callMethods:             callMap,
 		mempoolCoins:            mempoolCoins,
 		validations:             validationConfig,
+		relatedOpsEnabled:       relatedOpsEnabled,
 	}, nil
 }
 

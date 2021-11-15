@@ -203,6 +203,7 @@ var (
 		[]string{"eth_call"},
 		false,
 		"",
+		true,
 	)
 )
 
@@ -214,6 +215,7 @@ func TestNewWithOptions(t *testing.T) {
 		historicalBalanceLookup bool
 		supportedNetworks       []*types.NetworkIdentifier
 		callMethods             []string
+		relatedOpsEnabled       bool
 
 		err error
 	}{
@@ -222,17 +224,20 @@ func TestNewWithOptions(t *testing.T) {
 			historicalBalanceLookup: true,
 			supportedNetworks:       []*types.NetworkIdentifier{validNetworkIdentifier},
 			callMethods:             []string{"eth_call"},
+			relatedOpsEnabled:       true,
 		},
 		"no call methods": {
 			supportedOperationTypes: []string{"PAYMENT"},
 			historicalBalanceLookup: true,
 			supportedNetworks:       []*types.NetworkIdentifier{validNetworkIdentifier},
+			relatedOpsEnabled:       true,
 		},
 		"duplicate operation types": {
 			supportedOperationTypes: []string{"PAYMENT", "PAYMENT"},
 			historicalBalanceLookup: true,
 			supportedNetworks:       []*types.NetworkIdentifier{validNetworkIdentifier},
 			callMethods:             []string{"eth_call"},
+			relatedOpsEnabled:       true,
 			err: errors.New(
 				"Allow.OperationTypes contains a duplicate PAYMENT",
 			),
@@ -242,6 +247,7 @@ func TestNewWithOptions(t *testing.T) {
 			historicalBalanceLookup: true,
 			supportedNetworks:       []*types.NetworkIdentifier{validNetworkIdentifier},
 			callMethods:             []string{"eth_call"},
+			relatedOpsEnabled:       true,
 			err:                     errors.New("Allow.OperationTypes has an empty string"),
 		},
 		"duplicate network identifier": {
@@ -252,6 +258,7 @@ func TestNewWithOptions(t *testing.T) {
 				validNetworkIdentifier,
 			},
 			callMethods: []string{"eth_call"},
+			relatedOpsEnabled:       true,
 			err:         ErrSupportedNetworksDuplicate,
 		},
 		"nil network identifier": {
@@ -259,12 +266,14 @@ func TestNewWithOptions(t *testing.T) {
 			historicalBalanceLookup: true,
 			supportedNetworks:       []*types.NetworkIdentifier{validNetworkIdentifier, nil},
 			callMethods:             []string{"eth_call"},
+			relatedOpsEnabled:       true,
 			err:                     ErrNetworkIdentifierIsNil,
 		},
 		"no supported networks": {
 			supportedOperationTypes: []string{"PAYMENT"},
 			historicalBalanceLookup: true,
 			callMethods:             []string{"eth_call"},
+			relatedOpsEnabled:       true,
 			err:                     ErrNoSupportedNetworks,
 		},
 	}
@@ -277,6 +286,7 @@ func TestNewWithOptions(t *testing.T) {
 				test.callMethods,
 				false,
 				"",
+				test.relatedOpsEnabled,
 			)
 			if test.err == nil {
 				assert.NotNil(t, thisA)
@@ -438,6 +448,7 @@ func TestAccountBalanceRequest(t *testing.T) {
 				nil,
 				false,
 				"",
+				true,
 			)
 			assert.NotNil(t, asserter)
 			assert.NoError(t, err)
@@ -1456,6 +1467,7 @@ func TestAccountCoinsRequest(t *testing.T) {
 				nil,
 				test.allowMempool,
 				"",
+				true,
 			)
 			assert.NotNil(t, asserter)
 			assert.NoError(t, err)

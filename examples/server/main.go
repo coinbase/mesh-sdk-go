@@ -65,6 +65,7 @@ func main() {
 		nil,
 		false,
 		"",
+		true,
 	)
 	if err != nil {
 		log.Fatal(err)
