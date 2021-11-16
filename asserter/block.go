@@ -348,10 +348,16 @@ func (a *Asserter) Operations(
 			relatedIndexes = append(relatedIndexes, relatedOp.Index)
 		}
 	}
-	//Throw a warning if relatedOps is not implemented
+	// throw an error if relatedOps is not implemented and relatedOps is supported
+	// otherwise print a warning
 	if !relatedOpsExists {
-		fmt.Println("Related Operations key is not implemented. " +
-			"This is fine as long as there is a distinction between sends and receives and no multiple outputs")
+		if a.validations.Enabled && a.validations.RelatedOps {
+			return ErrRelatedOperationMissing
+		} else {
+			fmt.Println("Related Operations key is not implemented. " +
+				"This is fine as long as there is a distinction between " +
+				"sends and receives and no multiple outputs")
+		}
 	}
 
 	// only account based validation

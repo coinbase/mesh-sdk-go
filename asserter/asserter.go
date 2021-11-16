@@ -46,10 +46,11 @@ type Asserter struct {
 // on the transaction. Fore more details please refer to
 // https://github.com/coinbase/rosetta-sdk-go/tree/master/asserter#readme
 type Validations struct {
-	Enabled   bool                 `json:"enabled"`
-	ChainType ChainType            `json:"chain_type"`
-	Payment   *ValidationOperation `json:"payment"`
-	Fee       *ValidationOperation `json:"fee"`
+	Enabled    bool                 `json:"enabled"`
+	RelatedOps bool                 `json:"related_ops"`
+	ChainType  ChainType            `json:"chain_type"`
+	Payment    *ValidationOperation `json:"payment"`
+	Fee        *ValidationOperation `json:"fee"`
 }
 
 type ValidationOperation struct {

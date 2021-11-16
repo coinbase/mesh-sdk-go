@@ -1,12 +1,12 @@
 {
   "enabled": true,
-  "related_ops": false,
+  "related_ops": true,
   "chain_type": "account",
   "payment": {
     "name": "PAYMENT",
     "operation": {
       "count": 2,
-      "should_balance": false
+      "should_balance": true
     }
   },
   "fee": {
