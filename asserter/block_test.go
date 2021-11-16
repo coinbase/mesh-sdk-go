@@ -1371,6 +1371,7 @@ func TestBlock(t *testing.T) {
 			)
 			assert.NotNil(t, asserter)
 			assert.NoError(t, err)
+			asserter.relatedOpsEnabled =  true
 
 			err = asserter.Block(test.block)
 			if test.err != nil {
