@@ -319,11 +319,6 @@ func TestOperationsValidations(t *testing.T) {
 					OperationIdentifier: &types.OperationIdentifier{
 						Index: int64(1),
 					},
-					RelatedOperations: []*types.OperationIdentifier{
-						{
-							Index: int64(0),
-						},
-					},
 					Type:    "PAYMENT",
 					Status:  types.String("SUCCESS"),
 					Account: validAccount,
@@ -332,11 +327,6 @@ func TestOperationsValidations(t *testing.T) {
 				{
 					OperationIdentifier: &types.OperationIdentifier{
 						Index: int64(2),
-					},
-					RelatedOperations: []*types.OperationIdentifier{
-						{
-							Index: int64(0),
-						},
 					},
 					Type:    "FEE",
 					Status:  types.String("SUCCESS"),
@@ -363,11 +353,6 @@ func TestOperationsValidations(t *testing.T) {
 					OperationIdentifier: &types.OperationIdentifier{
 						Index: int64(1),
 					},
-					RelatedOperations: []*types.OperationIdentifier{
-						{
-							Index: int64(0),
-						},
-					},
 					Type:    "PAYMENT",
 					Status:  types.String("SUCCESS"),
 					Account: validAccount,
@@ -392,11 +377,6 @@ func TestOperationsValidations(t *testing.T) {
 				{
 					OperationIdentifier: &types.OperationIdentifier{
 						Index: int64(1),
-					},
-					RelatedOperations: []*types.OperationIdentifier{
-						{
-							Index: int64(0),
-						},
 					},
 					Type:    "FEE",
 					Status:  types.String("SUCCESS"),
@@ -423,11 +403,6 @@ func TestOperationsValidations(t *testing.T) {
 					OperationIdentifier: &types.OperationIdentifier{
 						Index: int64(1),
 					},
-					RelatedOperations: []*types.OperationIdentifier{
-						{
-							Index: int64(0),
-						},
-					},
 					Type:    "PAYMENT",
 					Status:  types.String("SUCCESS"),
 					Account: validAccount,
@@ -442,11 +417,6 @@ func TestOperationsValidations(t *testing.T) {
 				{
 					OperationIdentifier: &types.OperationIdentifier{
 						Index: int64(2),
-					},
-					RelatedOperations: []*types.OperationIdentifier{
-						{
-							Index: int64(0),
-						},
 					},
 					Type:    "FEE",
 					Status:  types.String("SUCCESS"),
@@ -473,11 +443,6 @@ func TestOperationsValidations(t *testing.T) {
 					OperationIdentifier: &types.OperationIdentifier{
 						Index: int64(1),
 					},
-					RelatedOperations: []*types.OperationIdentifier{
-						{
-							Index: int64(0),
-						},
-					},
 					Type:    "PAYMENT",
 					Status:  types.String("SUCCESS"),
 					Account: validAccount,
@@ -492,11 +457,6 @@ func TestOperationsValidations(t *testing.T) {
 				{
 					OperationIdentifier: &types.OperationIdentifier{
 						Index: int64(2),
-					},
-					RelatedOperations: []*types.OperationIdentifier{
-						{
-							Index: int64(0),
-						},
 					},
 					Type:    "FEE",
 					Status:  types.String("SUCCESS"),
