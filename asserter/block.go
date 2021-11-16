@@ -318,10 +318,7 @@ func (a *Asserter) Operations(
 			}
 		}
 
-		// Ensure all operations have related_operations implemented or none of them do.
-		// If we have multiple outputs (paymentCount > 2),
-		// throw an error if related operations key is not implemented.
-		// We need a way to enforce DAG structure among operations.
+		// Check if related operations key exists
 		if len(op.RelatedOperations) != 0 {
 			relatedOpsExists = true
 		}
@@ -351,7 +348,10 @@ func (a *Asserter) Operations(
 			relatedIndexes = append(relatedIndexes, relatedOp.Index)
 		}
 	}
-	fmt.Println(a.relatedOpsEnabled)
+
+	// If related operations is not supported in asserter,
+	// Only print warning if related operations keys does not exist
+	// Otherwise throw error
 	if !relatedOpsExists && !a.relatedOpsEnabled {
 		fmt.Println("Related Operations key is not implemented. " +
 			"This is fine as long as there is a distinction between sends and receives and no multiple outputs")
