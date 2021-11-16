@@ -52,7 +52,6 @@ type Allow struct {
 	// contents of the mempool should populate this field as true. If false, requests to
 	// `/account/coins` that set `include_mempool` as true will be automatically rejected.
 	MempoolCoins bool `json:"mempool_coins"`
-	// If related operations is enabled and supported by an asset, we will throw an error if we find this key
-	// missing in a transaction. Otherwise, we will not throw an error.
+	// Any Rosetta implementation that supports related operations should set this to true.
 	RelatedOpsEnabled bool `json:"related_ops_enabled"`
 }
