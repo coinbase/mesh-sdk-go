@@ -11,7 +11,7 @@ require (
 	github.com/dgraph-io/ristretto v0.0.3 // indirect
 	github.com/dgryski/go-farm v0.0.0-20200201041132-a6ae2369ad13 // indirect
 	github.com/ethereum/go-ethereum v1.10.12
-	github.com/fatih/color v1.10.0
+	github.com/fatih/color v1.13.0
 	github.com/gorilla/mux v1.8.0
 	github.com/lucasjones/reggen v0.0.0-20180717132126-cdb49ff09d77
 	github.com/mitchellh/mapstructure v1.4.2
