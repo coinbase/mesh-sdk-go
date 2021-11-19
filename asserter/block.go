@@ -312,6 +312,14 @@ func (a *Asserter) Operations(
 			}
 
 			if op.Type == a.validations.Fee.Name {
+				if op.RelatedOperations != nil {
+					return fmt.Errorf(
+						"%w: operation index %d",
+						ErrRelatedOperationInFeeNotAllowed,
+						op.OperationIdentifier.Index,
+					)
+				}
+
 				val, _ := new(big.Int).SetString(op.Amount.Value, 10)
 				feeTotal.Add(feeTotal, val)
 				feeCount++

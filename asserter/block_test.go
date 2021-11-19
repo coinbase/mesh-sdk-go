@@ -468,6 +468,51 @@ func TestOperationsValidations(t *testing.T) {
 			construction:       false,
 			err:                nil,
 		},
+		"fee operation shouldn't contain related_operation key": {
+			operations: []*types.Operation{
+				{
+					OperationIdentifier: &types.OperationIdentifier{
+						Index: int64(0),
+					},
+					Type:    "PAYMENT",
+					Status:  types.String("SUCCESS"),
+					Account: validAccount,
+					Amount:  validDepositAmount,
+				},
+				{
+					OperationIdentifier: &types.OperationIdentifier{
+						Index: int64(1),
+					},
+					Type:    "PAYMENT",
+					Status:  types.String("SUCCESS"),
+					Account: validAccount,
+					Amount: &types.Amount{
+						Value: "-2000",
+						Currency: &types.Currency{
+							Symbol:   "BTC",
+							Decimals: 8,
+						},
+					},
+				},
+				{
+					OperationIdentifier: &types.OperationIdentifier{
+						Index: int64(2),
+					},
+					Type:    "FEE",
+					Status:  types.String("SUCCESS"),
+					Account: validAccount,
+					Amount:  validFeeAmount,
+					RelatedOperations: []*types.OperationIdentifier {
+						{
+							Index: 0,
+						},
+					},
+				},
+			},
+			validationFilePath: "data/validation_fee_and_payment_unbalanced.json",
+			construction:       false,
+			err:                ErrRelatedOperationInFeeNotAllowed,
+		},
 	}
 
 	for name, test := range tests {
