@@ -502,7 +502,7 @@ func TestOperationsValidations(t *testing.T) {
 					Status:  types.String("SUCCESS"),
 					Account: validAccount,
 					Amount:  validFeeAmount,
-					RelatedOperations: []*types.OperationIdentifier {
+					RelatedOperations: []*types.OperationIdentifier{
 						{
 							Index: 0,
 						},
