@@ -19,7 +19,7 @@ import (
 	"encoding/json"
 )
 
-// SigningPayload SigningPayload is signed by the client with the keypair associated with an
+// SigningPayload is signed by the client with the keypair associated with an
 // AccountIdentifier using the specified SignatureType. SignatureType can be optionally populated if
 // there is a restriction on the signature scheme that can be used to sign the payload.
 type SigningPayload struct {
