@@ -966,23 +966,21 @@ func TestBlock(t *testing.T) {
 				OperationIdentifier: &types.OperationIdentifier{
 					Index: int64(1),
 				},
-				RelatedOperations: []*types.OperationIdentifier{
-				},
-				Type:    "PAYMENT",
-				Status:  types.String("SUCCESS"),
-				Account: validAccount,
-				Amount:  validAmount,
+				RelatedOperations: []*types.OperationIdentifier{},
+				Type:              "PAYMENT",
+				Status:            types.String("SUCCESS"),
+				Account:           validAccount,
+				Amount:            validAmount,
 			},
 			{
 				OperationIdentifier: &types.OperationIdentifier{
 					Index: int64(2),
 				},
-				RelatedOperations: []*types.OperationIdentifier{
-				},
-				Type:    "PAYMENT",
-				Status:  types.String("SUCCESS"),
-				Account: validAccount,
-				Amount:  validAmount,
+				RelatedOperations: []*types.OperationIdentifier{},
+				Type:              "PAYMENT",
+				Status:            types.String("SUCCESS"),
+				Account:           validAccount,
+				Amount:            validAmount,
 			},
 		},
 	}
@@ -1082,11 +1080,11 @@ func TestBlock(t *testing.T) {
 	}
 
 	var tests = map[string]struct {
-		block        *types.Block
+		block              *types.Block
 		validationFilePath string
-		genesisIndex int64
-		startIndex   *int64
-		err          error
+		genesisIndex       int64
+		startIndex         *int64
+		err                error
 	}{
 		"valid block": {
 			block: &types.Block{

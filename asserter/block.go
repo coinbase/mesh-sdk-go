@@ -353,11 +353,10 @@ func (a *Asserter) Operations(
 	if !relatedOpsExists {
 		if a.validations.Enabled && a.validations.RelatedOpsExists {
 			return ErrRelatedOperationMissing
-		} else {
-			fmt.Println("Related Operations key is not implemented. " +
-				"This is fine as long as there is a distinction between " +
-				"sends and receives and no multiple outputs")
 		}
+		fmt.Println("Related Operations key is not implemented. " +
+			"This is fine as long as there is a distinction between " +
+			"sends and receives and no multiple outputs")
 	}
 
 	// only account based validation
