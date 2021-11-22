@@ -351,7 +351,7 @@ func (a *Asserter) Operations(
 	// throw an error if relatedOps is not implemented and relatedOps is supported
 	// otherwise print a warning
 	if !relatedOpsExists {
-		if a.validations.Enabled && a.validations.RelatedOps {
+		if a.validations.Enabled && a.validations.RelatedOpsExists {
 			return ErrRelatedOperationMissing
 		} else {
 			fmt.Println("Related Operations key is not implemented. " +

@@ -1,6 +1,6 @@
 {
   "enabled": true,
-  "related_ops": false,
+  "related_ops_exists": false,
   "chain_type": "account",
   "payment": {
     "name": "PAYMENT",
