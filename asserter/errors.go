@@ -71,6 +71,7 @@ var (
 		"related operation has index greater than operation",
 	)
 	ErrRelatedOperationIndexDuplicate     = errors.New("found duplicate related operation index")
+	ErrRelatedOperationMissing            = errors.New("related operations key is missing")
 	ErrBlockIdentifierIsNil               = errors.New("BlockIdentifier is nil")
 	ErrBlockIdentifierHashMissing         = errors.New("BlockIdentifier.Hash is missing")
 	ErrBlockIdentifierIndexIsNeg          = errors.New("BlockIdentifier.Index is negative")
@@ -119,6 +120,7 @@ var (
 		ErrOperationStatusNotEmptyForConstruction,
 		ErrRelatedOperationIndexOutOfOrder,
 		ErrRelatedOperationIndexDuplicate,
+		ErrRelatedOperationMissing,
 		ErrBlockIdentifierIsNil,
 		ErrBlockIdentifierHashMissing,
 		ErrBlockIdentifierIndexIsNeg,
