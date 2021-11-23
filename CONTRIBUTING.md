@@ -37,6 +37,9 @@ The best way to see a feature added, however, is to submit a pull request.
 
 * Add tests for your feature. You should be able to look at other tests for
   examples. If you're unsure, don't hesitate to [open an issue][1] and ask!
+* Run `make gen` before submitting the PR, it will make sure to update the 
+  code so that `make check-gen` passes in the CI. You should run `make check-gen`
+  before sending out the PR.
 
 * Submit your pull request!
 
