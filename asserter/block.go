@@ -318,16 +318,12 @@ func (a *Asserter) Operations(
 			}
 		}
 
-		// Check if related operations key exists in this transaction
-		if len(op.RelatedOperations) != 0 {
-			relatedOpsExists = true
-		}
-
 		// Ensure an operation's related_operations are only
 		// operations with an index less than the operation
 		// and that there are no duplicates.
 		relatedIndexes := []int64{}
 		for _, relatedOp := range op.RelatedOperations {
+			relatedOpsExists = true
 			if relatedOp.Index >= op.OperationIdentifier.Index {
 				return fmt.Errorf(
 					"%w: related operation index %d >= operation index %d",

@@ -1176,7 +1176,7 @@ func TestBlock(t *testing.T) {
 				Timestamp:             MinUnixEpoch + 1,
 				Transactions:          []*types.Transaction{relatedMissingTransaction},
 			},
-			err: ErrRelatedOperationMissing,
+			err:                ErrRelatedOperationMissing,
 			validationFilePath: "data/validation_balanced_related_ops.json",
 		},
 		"nil block": {
