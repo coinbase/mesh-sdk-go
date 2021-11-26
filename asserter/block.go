@@ -285,7 +285,7 @@ func TransactionIdentifier(
 
 // Operations returns an error if any *types.Operation
 // in a []*types.Operation is invalid.
-func (a *Asserter) Operations(
+func (a *Asserter) Operations( // nolint:gocognit
 	operations []*types.Operation,
 	construction bool,
 ) error {
