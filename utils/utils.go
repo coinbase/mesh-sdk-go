@@ -429,18 +429,7 @@ func CurrencyBalance(
 		return nil, nil, fetchErr.Err
 	}
 
-	liveAmount, err := types.ExtractAmount(liveBalances, currency)
-	if err != nil {
-		formattedError := fmt.Errorf(
-			"%w: could not get %s currency balance for %s",
-			err,
-			types.PrettyPrintStruct(currency),
-			types.PrettyPrintStruct(account),
-		)
-
-		return nil, nil, formattedError
-	}
-
+	liveAmount := types.ExtractAmount(liveBalances, currency)
 	return liveAmount, liveBlock, nil
 }
 
