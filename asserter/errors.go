@@ -70,8 +70,11 @@ var (
 	ErrRelatedOperationIndexOutOfOrder = errors.New(
 		"related operation has index greater than operation",
 	)
-	ErrRelatedOperationIndexDuplicate     = errors.New("found duplicate related operation index")
-	ErrRelatedOperationMissing            = errors.New("related operations key is missing")
+	ErrRelatedOperationIndexDuplicate  = errors.New("found duplicate related operation index")
+	ErrRelatedOperationMissing         = errors.New("related operations key is missing")
+	ErrRelatedOperationInFeeNotAllowed = errors.New(
+		"fee operation shouldn't have related_operations",
+	)
 	ErrBlockIdentifierIsNil               = errors.New("BlockIdentifier is nil")
 	ErrBlockIdentifierHashMissing         = errors.New("BlockIdentifier.Hash is missing")
 	ErrBlockIdentifierIndexIsNeg          = errors.New("BlockIdentifier.Index is negative")
