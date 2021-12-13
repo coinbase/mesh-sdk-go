@@ -17,7 +17,6 @@ package types
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"math/big"
 	"testing"
 
@@ -621,27 +620,21 @@ func TestExtractAmount(t *testing.T) {
 	)
 
 	t.Run("Non-existent currency", func(t *testing.T) {
-		result, err := ExtractAmount(balances, badCurr)
-		assert.Nil(t, result)
-		assert.EqualError(
+		result := ExtractAmount(balances, badCurr)
+		assert.Equal(
 			t,
-			err,
-			fmt.Errorf(
-				"account balance response does not contain currency %s",
-				PrettyPrintStruct(badCurr),
-			).Error(),
+			result.Value,
+			"0",
 		)
 	})
 
 	t.Run("Simple account", func(t *testing.T) {
-		result, err := ExtractAmount(balances, currency1)
+		result := ExtractAmount(balances, currency1)
 		assert.Equal(t, amount1, result)
-		assert.NoError(t, err)
 	})
 
 	t.Run("SubAccount", func(t *testing.T) {
-		result, err := ExtractAmount(balances, currency2)
+		result := ExtractAmount(balances, currency2)
 		assert.Equal(t, amount2, result)
-		assert.NoError(t, err)
 	})
 }
