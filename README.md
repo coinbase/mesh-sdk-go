@@ -3,7 +3,6 @@
     <img width="90%" alt="Rosetta" src="https://www.rosetta-api.org/img/rosetta_header.png">
   </a>
 </p>
-
 <h3 align="center">
    Rosetta SDK
 </h3>
