@@ -1097,7 +1097,16 @@ func (b *BalanceStorage) BootstrapBalances(
 	dbTransaction := b.db.Transaction(ctx)
 	defer dbTransaction.Discard(ctx)
 
-	for _, balance := range balances {
+	for i, balance := range balances {
+		// Commit transaction batch by batch rather than commit at one time.
+		// This helps reduce memory usage and improve running time when bootstrap_balances.json
+		// contains huge number of accounts.
+		if i%utils.MaxEntrySizePerTxn == 0 {
+			if err := dbTransaction.Commit(ctx); err != nil {
+				return err
+			}
+			dbTransaction = b.db.Transaction(ctx)
+		}
 		// Ensure change.Difference is valid
 		amountValue, ok := new(big.Int).SetString(balance.Value, 10)
 		if !ok {
