@@ -1101,7 +1101,7 @@ func (b *BalanceStorage) BootstrapBalances(
 		// Commit transaction batch by batch rather than commit at one time.
 		// This helps reduce memory usage and improve running time when bootstrap_balances.json
 		// contains huge number of accounts.
-		if i%utils.MaxEntrySizePerTxn == 0 {
+		if i != 0 && i%utils.MaxEntrySizePerTxn == 0 {
 			if err := dbTransaction.Commit(ctx); err != nil {
 				return err
 			}
