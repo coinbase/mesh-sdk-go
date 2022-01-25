@@ -21,6 +21,8 @@ require (
 	github.com/tidwall/gjson v1.12.0
 	github.com/tidwall/sjson v1.2.3
 	github.com/vmihailenco/msgpack/v5 v5.3.5
+	golang.org/x/net v0.0.0-20211015210444-4f30a5c0130f // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
+	golang.org/x/sys v0.0.0-20211019181941-9d821ace8654 // indirect
 	google.golang.org/protobuf v1.25.0 // indirect
 )
