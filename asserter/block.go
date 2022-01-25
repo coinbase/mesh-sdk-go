@@ -353,14 +353,10 @@ func (a *Asserter) Operations( // nolint:gocognit
 		}
 	}
 	// throw an error if relatedOps is not implemented and relatedOps is supported
-	// otherwise print a warning
 	if !relatedOpsExists {
 		if a.validations.Enabled && a.validations.RelatedOpsExists {
 			return ErrRelatedOperationMissing
 		}
-		fmt.Println("Related Operations key is not implemented. " +
-			"This is fine as long as there is a distinction between " +
-			"sends and receives and no multiple outputs")
 	}
 
 	// only account based validation
