@@ -78,7 +78,7 @@ func mockSignature(
 	payload := &types.SigningPayload{
 		AccountIdentifier: &types.AccountIdentifier{Address: "test"},
 		Bytes:             msg,
-		SignatureType:     types.Ed25519,
+		SignatureType:     sigType,
 	}
 
 	mockSig := &types.Signature{

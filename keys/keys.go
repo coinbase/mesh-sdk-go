@@ -24,6 +24,7 @@ import (
 	"math/big"
 
 	"github.com/btcsuite/btcd/btcec"
+	"github.com/coinbase/kryptology/pkg/signatures/schnorr/mina"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
 	"github.com/coinbase/rosetta-sdk-go/types"
@@ -183,6 +184,22 @@ func GenerateKeypair(curve types.CurveType) (*KeyPair, error) {
 			PublicKey:  pubKey,
 			PrivateKey: rawPrivKey.D.Bytes(),
 		}
+	case types.Pallas:
+		rawPubKey, rawPrivKey, err := mina.NewKeys()
+		rawPubKeyBytes, _ := rawPubKey.MarshalBinary()
+		rawPrivKeyBytes, _ := rawPrivKey.MarshalBinary()
+		if err != nil {
+			return nil, fmt.Errorf("%w: %v", ErrKeyGenPallasFailed, err)
+		}
+		pubKey := &types.PublicKey{
+			Bytes:     rawPubKeyBytes,
+			CurveType: curve,
+		}
+
+		keyPair = &KeyPair{
+			PublicKey:  pubKey,
+			PrivateKey: rawPrivKeyBytes,
+		}
 	default:
 		return nil, fmt.Errorf("%w: %s", ErrCurveTypeNotSupported, curve)
 	}
@@ -219,6 +236,8 @@ func (k *KeyPair) Signer() (Signer, error) {
 		return &SignerEdwards25519{k}, nil
 	case types.Secp256r1:
 		return &SignerSecp256r1{k}, nil
+	case types.Pallas:
+		return &SignerPallas{k}, nil
 	default:
 		return nil, fmt.Errorf("%w: %s", ErrCurveTypeNotSupported, k.PublicKey.CurveType)
 	}

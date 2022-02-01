@@ -93,27 +93,27 @@ func TestVerifySecp256r1(t *testing.T) {
 	copy(simpleBytes, "hello")
 
 	var signatureTests = []signatureTest{
-		{mockSecpSignature(
+		{mockSignature(
 			types.Ecdsa,
 			signerSecp256r1.PublicKey(),
 			[]byte("hello"),
 			testSignatureEcdsa.Bytes), ErrVerifyFailed},
-		{mockSecpSignature(
+		{mockSignature(
 			types.Ed25519,
 			signerSecp256r1.PublicKey(),
 			hash("hello"),
 			simpleBytes), ErrVerifyUnsupportedSignatureType},
-		{mockSecpSignature(
+		{mockSignature(
 			types.Ecdsa,
 			signerSecp256r1.PublicKey(),
 			hash("hello"),
 			simpleBytes), ErrVerifyFailed},
-		{mockSecpSignature(
+		{mockSignature(
 			types.EcdsaRecovery,
 			signerSecp256r1.PublicKey(),
 			hash("hello"),
 			simpleBytes), ErrVerifyUnsupportedSignatureType},
-		{mockSecpSignature(
+		{mockSignature(
 			types.Schnorr1,
 			signerSecp256r1.PublicKey(),
 			hash("hello"),
@@ -125,7 +125,7 @@ func TestVerifySecp256r1(t *testing.T) {
 		assert.Contains(t, err.Error(), test.errMsg.Error())
 	}
 
-	goodEcdsaSignature := mockSecpSignature(
+	goodEcdsaSignature := mockSignature(
 		types.Ecdsa,
 		signerSecp256r1.PublicKey(),
 		hash("hello"),
