@@ -21,8 +21,8 @@ type Case string
 
 // List of Case
 const (
-	UPPER_CASE     Case = "upper_case"
-	LOWER_CASE     Case = "lower_case"
-	CASE_SENSITIVE Case = "case_sensitive"
-	NULL           Case = "null"
+	UpperCase     Case = "upper_case"
+	LowerCase     Case = "lower_case"
+	CaseSensitive Case = "case_sensitive"
+	Null          Case = "null"
 )

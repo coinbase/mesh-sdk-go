@@ -31,5 +31,5 @@ const (
 	Secp256r1    CurveType = "secp256r1"
 	Edwards25519 CurveType = "edwards25519"
 	Tweedle      CurveType = "tweedle"
-	PALLAS       CurveType = "pallas"
+	Pallas       CurveType = "pallas"
 )
