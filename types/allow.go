@@ -52,4 +52,8 @@ type Allow struct {
 	// contents of the mempool should populate this field as true. If false, requests to
 	// `/account/coins` that set `include_mempool` as true will be automatically rejected.
 	MempoolCoins bool `json:"mempool_coins"`
+	// This specifies the normalized case for block hash in the BlockIdentifier. If not specified,
+	// it's assumed to be case sensitive.
+	BlockHashCase       *string        `json:"block_hash_case,omitempty"`
+	TransactionHashCase *BlockHashCase `json:"transaction_hash_case,omitempty"`
 }
