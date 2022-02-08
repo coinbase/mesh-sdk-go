@@ -51,5 +51,7 @@ type Allow struct {
 	// Any Rosetta implementation that can update an AccountIdentifier's unspent coins based on the
 	// contents of the mempool should populate this field as true. If false, requests to
 	// `/account/coins` that set `include_mempool` as true will be automatically rejected.
-	MempoolCoins bool `json:"mempool_coins"`
+	MempoolCoins        bool  `json:"mempool_coins"`
+	BlockHashCase       *Case `json:"block_hash_case,omitempty"`
+	TransactionHashCase *Case `json:"transaction_hash_case,omitempty"`
 }

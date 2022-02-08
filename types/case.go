@@ -16,11 +16,13 @@
 
 package types
 
-// TransactionIdentifier The transaction_identifier uniquely identifies a transaction in a
-// particular network and block or in the mempool.
-type TransactionIdentifier struct {
-	// Any transactions that are attributable only to a block (ex: a block event) should use the
-	// hash of the block as the identifier.  This should be normalized according to the case
-	// specified in the transaction_hash_case in network options.
-	Hash string `json:"hash"`
-}
+// Case Case specifies the expected case for strings and hashes.
+type Case string
+
+// List of Case
+const (
+	UPPER_CASE     Case = "upper_case"
+	LOWER_CASE     Case = "lower_case"
+	CASE_SENSITIVE Case = "case_sensitive"
+	NULL           Case = "null"
+)

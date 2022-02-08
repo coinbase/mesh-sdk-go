@@ -19,6 +19,8 @@ package types
 // BlockIdentifier The block_identifier uniquely identifies a block in a particular network.
 type BlockIdentifier struct {
 	// This is also known as the block height.
-	Index int64  `json:"index"`
-	Hash  string `json:"hash"`
+	Index int64 `json:"index"`
+	// This should be normalized according to the case specified in the block_hash_case network
+	// options.
+	Hash string `json:"hash"`
 }
