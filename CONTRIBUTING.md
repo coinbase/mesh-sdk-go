@@ -1,4 +1,4 @@
-# Contributing to Rosetta-SDK-Go
+# Contributing to rosetta-sdk-go
 
 ## Code of Conduct
 
