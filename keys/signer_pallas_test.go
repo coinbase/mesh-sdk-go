@@ -28,7 +28,7 @@ var keypair *KeyPair
 var txnBytes []byte
 
 func init() {
-	keypair, _ = GenerateKeypair(types.PALLAS)
+	keypair, _ = GenerateKeypair(types.Pallas)
 	signerPallas, _ = keypair.Signer()
 
 	privKey := &mina.SecretKey{}
