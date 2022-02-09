@@ -53,7 +53,7 @@ done
 rm -rf tmp;
 
 # Download spec file from releases
-ROSETTA_SPEC_VERSION=1.4.10
+ROSETTA_SPEC_VERSION=1.4.12
 curl -L https://github.com/coinbase/rosetta-specifications/releases/download/v${ROSETTA_SPEC_VERSION}/api.json -o api.json;
 
 # Generate client + types code
@@ -121,8 +121,9 @@ sed "${SED_IFLAG[@]}" 's/*CoinAction/CoinAction/g' client/* server/*;
 sed "${SED_IFLAG[@]}" 's/*ExemptionType/ExemptionType/g' client/* server/*;
 sed "${SED_IFLAG[@]}" 's/*BlockEventType/BlockEventType/g' client/* server/*;
 sed "${SED_IFLAG[@]}" 's/*Direction/Direction/g' client/* server/*;
+sed "${SED_IFLAG[@]}" 's/*Case/Case/g' client/* server/*;
 
-# Fix CurveTypes, SignatureTypes, CoinActions, ExemptionTypes, Direction
+# Fix CurveTypes, SignatureTypes, CoinActions, ExemptionTypes, Direction, Case
 sed "${SED_IFLAG[@]}" 's/SECP256K1/Secp256k1/g' client/* server/*;
 sed "${SED_IFLAG[@]}" 's/SECP256R1/Secp256r1/g' client/* server/*;
 sed "${SED_IFLAG[@]}" 's/EDWARDS25519/Edwards25519/g' client/* server/*;
@@ -132,6 +133,7 @@ sed "${SED_IFLAG[@]}" 's/ECDSA/Ecdsa/g' client/* server/*;
 sed "${SED_IFLAG[@]}" 's/ED25519/Ed25519/g' client/* server/*;
 sed "${SED_IFLAG[@]}" 's/SCHNORR_1/Schnorr1/g' client/* server/*;
 sed "${SED_IFLAG[@]}" 's/SCHNORR_POSEIDON/SchnorrPoseidon/g' client/* server/*;
+sed "${SED_IFLAG[@]}" 's/PALLAS/Pallas/g' client/* server/*;
 sed "${SED_IFLAG[@]}" 's/CREATED/CoinCreated/g' client/* server/*;
 sed "${SED_IFLAG[@]}" 's/SPENT/CoinSpent/g' client/* server/*;
 sed "${SED_IFLAG[@]}" 's/GREATER_OR_EQUAL/BalanceGreaterOrEqual/g' client/* server/*;
@@ -139,6 +141,10 @@ sed "${SED_IFLAG[@]}" 's/LESS_OR_EQUAL/BalanceLessOrEqual/g' client/* server/*;
 sed "${SED_IFLAG[@]}" 's/DYNAMIC/BalanceDynamic/g' client/* server/*;
 sed "${SED_IFLAG[@]}" 's/FORWARD/Forward/g' client/* server/*;
 sed "${SED_IFLAG[@]}" 's/BACKWARD/Backward/g' client/* server/*;
+sed "${SED_IFLAG[@]}" 's/UPPER_CASE/UpperCase/g' client/* server/*;
+sed "${SED_IFLAG[@]}" 's/LOWER_CASE/LowerCase/g' client/* server/*;
+sed "${SED_IFLAG[@]}" 's/CASE_SENSITIVE/CaseSensitive/g' client/* server/*;
+sed "${SED_IFLAG[@]}" 's/NULL/Null/g' client/* server/*;
 
 # Convert HexBytes to Bytes
 sed "${SED_IFLAG[@]}" '/Hex-encoded public key bytes in the format specified by the CurveType/d' client/* server/*;
