@@ -70,26 +70,6 @@ func TestSignSecp256k1(t *testing.T) {
 	}
 }
 
-func mockSecpSignature(
-	sigType types.SignatureType,
-	pubkey *types.PublicKey,
-	msg, sig []byte,
-) *types.Signature {
-	payload := &types.SigningPayload{
-		AccountIdentifier: &types.AccountIdentifier{Address: "test"},
-		Bytes:             msg,
-		SignatureType:     sigType,
-	}
-
-	mockSig := &types.Signature{
-		SigningPayload: payload,
-		PublicKey:      pubkey,
-		SignatureType:  sigType,
-		Bytes:          sig,
-	}
-	return mockSig
-}
-
 func TestVerifySecp256k1(t *testing.T) {
 	type signatureTest struct {
 		signature *types.Signature
@@ -119,17 +99,17 @@ func TestVerifySecp256k1(t *testing.T) {
 	copy(simpleBytes, "hello")
 
 	var signatureTests = []signatureTest{
-		{mockSecpSignature(
+		{mockSignature(
 			types.Ed25519,
 			signerSecp256k1.PublicKey(),
 			hash("hello"),
 			simpleBytes), ErrVerifyUnsupportedSignatureType},
-		{mockSecpSignature(
+		{mockSignature(
 			types.Ecdsa,
 			signerSecp256k1.PublicKey(),
 			hash("hello"),
 			simpleBytes), ErrVerifyFailed},
-		{mockSecpSignature(
+		{mockSignature(
 			types.Schnorr1,
 			signerSecp256k1.PublicKey(),
 			hash("hello"),
@@ -141,17 +121,17 @@ func TestVerifySecp256k1(t *testing.T) {
 		assert.Contains(t, err.Error(), test.errMsg.Error())
 	}
 
-	goodEcdsaSignature := mockSecpSignature(
+	goodEcdsaSignature := mockSignature(
 		types.Ecdsa,
 		signerSecp256k1.PublicKey(),
 		hash("hello"),
 		testSignatureEcdsa.Bytes)
-	goodEcdsaRecoverySignature := mockSecpSignature(
+	goodEcdsaRecoverySignature := mockSignature(
 		types.EcdsaRecovery,
 		signerSecp256k1.PublicKey(),
 		hash("hello"),
 		testSignatureEcdsaRecovery.Bytes)
-	goodSchnorr1Signature := mockSecpSignature(
+	goodSchnorr1Signature := mockSignature(
 		types.Schnorr1,
 		signerSecp256k1.PublicKey(),
 		hash("hello"),
