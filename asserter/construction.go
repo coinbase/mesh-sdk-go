@@ -215,7 +215,7 @@ func CurveType(
 	curve types.CurveType,
 ) error {
 	switch curve {
-	case types.Secp256k1, types.Secp256r1, types.Edwards25519, types.Tweedle:
+	case types.Secp256k1, types.Secp256r1, types.Edwards25519, types.Tweedle, types.Pallas:
 		return nil
 	default:
 		return fmt.Errorf("%w: %s", ErrCurveTypeNotSupported, curve)
