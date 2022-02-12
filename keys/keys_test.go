@@ -74,6 +74,15 @@ func TestGenerateKeypairEdwards25519(t *testing.T) {
 	assert.Len(t, keypair.PrivateKey, PrivKeyBytesLen)
 }
 
+func TestGenerateKeypairPallas(t *testing.T) {
+	curve := types.Pallas
+	keypair, err := GenerateKeypair(curve)
+
+	assert.NoError(t, err)
+	assert.Equal(t, keypair.PublicKey.CurveType, curve)
+	assert.Len(t, keypair.PrivateKey, PrivKeyBytesLen)
+}
+
 func mockKeyPair(privKey []byte, curveType types.CurveType) *KeyPair {
 	keypair, _ := GenerateKeypair(curveType)
 	keypair.PrivateKey = privKey
@@ -125,8 +134,14 @@ func TestImportPrivateKey(t *testing.T) {
 			types.Secp256k1,
 			nil,
 		},
+		"simple Pallas": {
+			"B80F3DE13EE6AE01119E7D98A8F2317070FBB6D2A1EA712EE1B55EE7B938AD1D",
+			types.Pallas,
+			nil,
+		},
 		"short ed25519":   {"asd", types.Secp256k1, ErrPrivKeyUndecodable},
 		"short Secp256k1": {"asd", types.Edwards25519, ErrPrivKeyUndecodable},
+		"short pallas":    {"asd", types.Pallas, ErrPrivKeyUndecodable},
 		"long ed25519": {
 			"aeb121b4c545f0f850e1480492508c65a250e9965b0d90176fab4d7506398ebbaeb121b4c545f0f850e1480492508c65a250e9965b0d90176fab4d7506398ebb", // nolint:lll
 			types.Secp256k1,
@@ -135,6 +150,11 @@ func TestImportPrivateKey(t *testing.T) {
 		"long Secp256k1": {
 			"0b188af56b25d007fbc4bbf2176cd2a54d876ce4774bb5df38b7c83349405b7a0b188af56b25d007fbc4bbf2176cd2a54d876ce4774bb5df38b7c83349405b7a", // nolint:lll
 			types.Edwards25519,
+			ErrPrivKeyLengthInvalid,
+		},
+		"long Pallas": {
+			"A80F3DE13EE5AE01119E7D98A8F2317070BFB6D2A1EA712EE1B55EE7B938AD1DA80F3DE13EE5AE01119E7D98A8F2317070BFB6D2A1EA712EE1B55EE7B938AD1D", // nolint:lll
+			types.Pallas,
 			ErrPrivKeyLengthInvalid,
 		},
 	}
