@@ -119,6 +119,20 @@ func ImportPrivateKey(privKeyHex string, curve types.CurveType) (*KeyPair, error
 			PublicKey:  pubKey,
 			PrivateKey: rawPrivKey.D.Bytes(),
 		}
+	case types.Pallas:
+		rawPrivKey := &mina.SecretKey{}
+		_ = rawPrivKey.UnmarshalBinary(privKey)
+
+		pubKey, _ := rawPrivKey.GetPublicKey().MarshalBinary()
+		priKeyBytes, _ := rawPrivKey.MarshalBinary()
+		keyPair = &KeyPair{
+			PublicKey: &types.PublicKey{
+				Bytes:     pubKey,
+				CurveType: curve,
+			},
+			PrivateKey: priKeyBytes,
+		}
+
 	default:
 		return nil, fmt.Errorf("%w: %s", ErrCurveTypeNotSupported, curve)
 	}

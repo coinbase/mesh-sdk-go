@@ -69,6 +69,7 @@ func Err(err error) bool {
 		ErrKeyGenSecp256k1Failed,
 		ErrKeyGenSecp256r1Failed,
 		ErrKeyGenEdwards25519Failed,
+		ErrKeyGenPallasFailed,
 		ErrCurveTypeNotSupported,
 		ErrSignUnsupportedPayloadSignatureType,
 		ErrSignUnsupportedSignatureType,
