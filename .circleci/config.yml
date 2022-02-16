@@ -16,7 +16,7 @@ version: 2.1
 executors:
   default:
     docker:
-      - image: circleci/golang:1.16
+      - image: cimg/go:1.16
         user: root # go directory is owned by root
     working_directory: /go/src/github.com/coinbase/rosetta-sdk-go
     environment:
@@ -44,6 +44,7 @@ jobs:
       name: default
     steps:
       - *fast-checkout
+      - run: apt-get update
       - run: apt-get install -y zstd
       - run: make test
   lint:
@@ -70,6 +71,7 @@ jobs:
       name: default
     steps:
       - *fast-checkout
+      - run: apt-get update
       - run: apt-get install -y zstd
       - run: make test-cover
   salus:
