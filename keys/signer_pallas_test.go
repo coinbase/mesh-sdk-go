@@ -17,7 +17,6 @@ package keys
 import (
 	"testing"
 
-	"github.com/coinbase/kryptology/pkg/signatures/schnorr/mina"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
@@ -28,31 +27,27 @@ var keypair *KeyPair
 var txnBytes []byte
 
 func init() {
-	keypair, _ = GenerateKeypair(types.Pallas)
+	keypair, _ = ImportPrivateKey(
+		"A80F3DE13EE5AE01119E7D98A8F2317070BFB6D2A1EA712EE1B55EE7B938AD1D",
+		"pallas",
+	)
 	signerPallas, _ = keypair.Signer()
 
-	privKey := &mina.SecretKey{}
-	_ = privKey.UnmarshalBinary(keypair.PrivateKey)
-	pubKey := privKey.GetPublicKey()
-
-	_, sourceSecretKey, _ := mina.NewKeys()
-
-	txn := &mina.Transaction{
-		Fee:        3,
-		FeeToken:   1,
-		Nonce:      200,
-		ValidUntil: 1000,
-		Memo:       "this is a memo",
-		FeePayerPk: pubKey,
-		SourcePk:   pubKey,
-		ReceiverPk: sourceSecretKey.GetPublicKey(),
-		TokenId:    1,
-		Amount:     42,
-		Locked:     false,
-		Tag:        [3]bool{false, false, false},
-		NetworkId:  mina.TestNet,
-	}
-	txnBytes, _ = txn.MarshalBinary()
+	unsignedTxStr := "{\"randomOracleInput\":\"000000033769356015133A338518173BE9C263D6E463538ACDF11D523" +
+		"DDEB8C82467093E3769356015133A338518173BE9C263D6E463538ACDF11D523DDEB8C82467093E167031AAE689272378D" +
+		"05042083C66C593EF025060E4C8CA1CBD022E47C72D220000025701154880000000008000000000000000400000007FFFFFFF" +
+		"C0000000000000000000000000000000000000000000000000000000000000000000060000000000000001BC6CD9C400000000\"," +
+		"\"signerInput\":{\"prefix\":[\"3769356015133A338518173BE9C263D6E463538ACDF11D523DDEB8C82467093E\"," +
+		"\"3769356015133A338518173BE9C263D6E463538ACDF11D523DDEB8C82467093E\"," +
+		"\"167031AAE689272378D05042083C66C593EF025060E4C8CA1CBD022E47C72D22\"]," +
+		"\"suffix\":[\"0000000000000007FFFFFFFC0000000400000000000000020000000002255100\"," +
+		"\"0000000003000000000000000000000000000000000000000000000000000000\"," +
+		"\"000000000000000000000000000000000000000000000000047366C7B0000000\"]}," +
+		"\"payment\":{\"to\":\"B62qoLLD2LK2pL2dq2oDHh6ohdaYusgTEYRUZ43Y41Kk9Rgen4v643x\"," +
+		"\"from\":\"B62qooQQ952uaoUSTQP3sZCviGmsWeusBwhg3qVF1Ww662sgzimA25Q\",\"fee\":\"18000000\"," +
+		"\"token\":\"1\",\"nonce\":\"1\",\"memo\":null,\"amount\":\"2389498102\",\"valid_until\":\"4294967295\"}," +
+		"\"stakeDelegation\":null,\"createToken\":null,\"createTokenAccount\":null,\"mintTokens\":null}"
+	txnBytes = []byte(unsignedTxStr)
 }
 
 func TestSignPallas(t *testing.T) {
@@ -91,11 +86,7 @@ func TestVerifyPallas(t *testing.T) {
 		errMsg    error
 	}
 
-	payload := &types.SigningPayload{
-		AccountIdentifier: &types.AccountIdentifier{Address: "test"},
-		Bytes:             txnBytes,
-		SignatureType:     types.SchnorrPoseidon,
-	}
+	payload := mockPayload(txnBytes, types.SchnorrPoseidon)
 	testSignature, err := signerPallas.Sign(payload, types.SchnorrPoseidon)
 	assert.NoError(t, err)
 
@@ -128,9 +119,10 @@ func TestVerifyPallas(t *testing.T) {
 	// happy path
 	goodSignature := mockSignature(
 		types.SchnorrPoseidon,
-		signerPallas.PublicKey(),
+		keypair.PublicKey,
 		txnBytes,
 		testSignature.Bytes,
 	)
+
 	assert.Equal(t, nil, signerPallas.Verify(goodSignature))
 }
