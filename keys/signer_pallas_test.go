@@ -15,9 +15,12 @@
 package keys
 
 import (
+	"encoding/json"
 	"testing"
 
+	"github.com/coinbase/kryptology/pkg/signatures/schnorr/mina"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
@@ -25,6 +28,14 @@ import (
 var signerPallas Signer
 var keypair *KeyPair
 var txnBytes []byte
+
+type ts struct {
+	suite.Suite
+}
+
+func TestSuite(t *testing.T) {
+	suite.Run(t, new(ts))
+}
 
 func init() {
 	keypair, _ = ImportPrivateKey(
@@ -48,6 +59,180 @@ func init() {
 		"\"token\":\"1\",\"nonce\":\"1\",\"memo\":null,\"amount\":\"2389498102\",\"valid_until\":\"4294967295\"}," +
 		"\"stakeDelegation\":null,\"createToken\":null,\"createTokenAccount\":null,\"mintTokens\":null}"
 	txnBytes = []byte(unsignedTxStr)
+}
+
+func (s *ts) TestParseSigningPayload() {
+	// Also used in CSS, for parity testing
+	fromAddress := "B62qkuFDYD82nxNNgGm1aJcSAErLZgAb19A9skSPtAxbBHsUZxsMbhU"
+	toAddress := "B62qo7Ddbw8SXo55bTH6yJAASgQ6owtMYSw5tkuPJJ6GLJ36zvUnEpG"
+
+	toPublicKey := &mina.PublicKey{}
+	_ = toPublicKey.ParseAddress(toAddress)
+
+	fromPublicKey := &mina.PublicKey{}
+	_ = fromPublicKey.ParseAddress(fromAddress)
+
+	var (
+		amount                    = "34"
+		validUntil                = "78"
+		memo                      = "memo"
+		signingPayloadWithPayment = SigningPayload{
+			Payment: &PayloadFields{
+				To:         toAddress,
+				From:       fromAddress,
+				Fee:        "12",
+				Amount:     &amount,
+				Nonce:      "56",
+				ValidUntil: &validUntil,
+				Memo:       &memo,
+			},
+		}
+		signingPayloadWithNoPayment                           = SigningPayload{}
+		signingPayloadWithPaymentAndNullValidUntilAndNullMemo = SigningPayload{
+			Payment: &PayloadFields{
+				To:         toAddress,
+				From:       fromAddress,
+				Fee:        "12",
+				Amount:     &amount,
+				Nonce:      "56",
+				ValidUntil: nil,
+				Memo:       nil,
+			},
+		}
+		signingPayloadWithPaymentAndInvalidFromPublicKey = SigningPayload{
+			Payment: &PayloadFields{
+				To:         toAddress,
+				From:       "InvalidFrom",
+				Fee:        "12",
+				Nonce:      "56",
+				ValidUntil: &validUntil,
+				Memo:       &memo,
+			},
+		}
+		signingPayloadWithPaymentAndInvalidToPublicKey = SigningPayload{
+			Payment: &PayloadFields{
+				To:         "InvalidTo",
+				From:       fromAddress,
+				Fee:        "12",
+				Nonce:      "56",
+				ValidUntil: &validUntil,
+				Memo:       &memo,
+			},
+		}
+	)
+
+	s.Run("successful to parse when payment exists", func() {
+		payloadBinary, _ := json.Marshal(signingPayloadWithPayment)
+		payload := &types.SigningPayload{
+			AccountIdentifier: &types.AccountIdentifier{Address: "test"},
+			Bytes:             payloadBinary,
+			SignatureType:     types.SchnorrPoseidon,
+		}
+		transaction, err := ParseSigningPayload(payload)
+		s.Require().NoError(err)
+		transactionBinary, err := transaction.MarshalBinary()
+		s.Require().NoError(err)
+
+		expectedTransaction := mina.Transaction{
+			Fee:        12,
+			FeeToken:   1,
+			FeePayerPk: fromPublicKey,
+			Nonce:      56,
+			ValidUntil: 78,
+			Memo:       "memo",
+			Tag:        [3]bool{false, false, false},
+			SourcePk:   fromPublicKey,
+			ReceiverPk: toPublicKey,
+			TokenId:    1,
+			Amount:     34,
+			Locked:     false,
+			NetworkId:  mina.TestNet,
+		}
+		expectedTransactionBinary, err := expectedTransaction.MarshalBinary()
+		s.Require().NoError(err)
+		s.Require().Equal(expectedTransactionBinary, transactionBinary)
+	})
+
+	s.Run("failed to parse when payment exists with null valid_until and memo", func() {
+		payloadBinary, _ := json.Marshal(signingPayloadWithPaymentAndNullValidUntilAndNullMemo)
+		payload := &types.SigningPayload{
+			AccountIdentifier: &types.AccountIdentifier{Address: "test"},
+			Bytes:             payloadBinary,
+			SignatureType:     types.SchnorrPoseidon,
+		}
+
+		transaction, err := ParseSigningPayload(payload)
+		s.Require().NoError(err)
+		transactionBinary, err := transaction.MarshalBinary()
+		s.Require().NoError(err)
+
+		expectedTransaction := mina.Transaction{
+			Fee:        12,
+			FeeToken:   1,
+			FeePayerPk: fromPublicKey,
+			Nonce:      56,
+			ValidUntil: 0,
+			Memo:       "",
+			Tag:        [3]bool{false, false, false},
+			SourcePk:   fromPublicKey,
+			ReceiverPk: toPublicKey,
+			TokenId:    1,
+			Amount:     34,
+			Locked:     false,
+			NetworkId:  mina.TestNet,
+		}
+		expectedTransactionBinary, err := expectedTransaction.MarshalBinary()
+		s.Require().NoError(err)
+		s.Require().Equal(expectedTransactionBinary, transactionBinary)
+	})
+
+	s.Run("failed to parse when payment or stake delegation does not exist", func() {
+		payloadBinary, _ := json.Marshal(signingPayloadWithNoPayment)
+		payload := &types.SigningPayload{
+			AccountIdentifier: &types.AccountIdentifier{Address: "test"},
+			Bytes:             payloadBinary,
+			SignatureType:     types.SchnorrPoseidon,
+		}
+		transaction, err := ParseSigningPayload(payload)
+		s.Require().Error(err)
+
+		s.Require().Nil(transaction)
+	})
+
+	s.Run("failed to parse when payload json is invalid", func() {
+		payload := &types.SigningPayload{
+			AccountIdentifier: &types.AccountIdentifier{Address: "test"},
+			Bytes:             []byte{0x12, 0x34},
+			SignatureType:     types.SchnorrPoseidon,
+		}
+		transaction, err := ParseSigningPayload(payload)
+		s.Require().Error(err)
+		s.Require().Nil(transaction)
+	})
+
+	s.Run("failed to parse when from public key in payment is invalid", func() {
+		payloadBinary, _ := json.Marshal(signingPayloadWithPaymentAndInvalidFromPublicKey)
+		payload := &types.SigningPayload{
+			AccountIdentifier: &types.AccountIdentifier{Address: "test"},
+			Bytes:             payloadBinary,
+			SignatureType:     types.SchnorrPoseidon,
+		}
+		transactionBinary, err := ParseSigningPayload(payload)
+		s.Require().Error(err)
+		s.Require().Nil(transactionBinary)
+	})
+
+	s.Run("failed to parse when to public key in payment is invalid", func() {
+		payloadBinary, _ := json.Marshal(signingPayloadWithPaymentAndInvalidToPublicKey)
+		payload := &types.SigningPayload{
+			AccountIdentifier: &types.AccountIdentifier{Address: "test"},
+			Bytes:             payloadBinary,
+			SignatureType:     types.SchnorrPoseidon,
+		}
+		transactionBinary, err := ParseSigningPayload(payload)
+		s.Require().Error(err)
+		s.Require().Nil(transactionBinary)
+	})
 }
 
 func TestSignPallas(t *testing.T) {

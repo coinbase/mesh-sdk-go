@@ -149,7 +149,13 @@ func ParseSigningPayload(rawPayload *types.SigningPayload) (*mina.Transaction, e
 		return nil, err
 	}
 
-	payloadFields = *signingPayload.Payment
+	if signingPayload.Payment != nil {
+		payloadFields = *signingPayload.Payment
+	} else {
+		return nil, errors.New(
+			"payment not found in signingPayload",
+		)
+	}
 
 	transaction, err := constructTransaction(&payloadFields)
 	if err != nil {
