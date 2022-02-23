@@ -17,6 +17,7 @@ package dsl
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -147,6 +148,10 @@ func parseActionType(line string) (job.ActionType, string, string, error) {
 		divide:   job.Division,
 	} {
 		tokens = strings.SplitN(remaining, symbol, split2)
+
+		if json.Valid([]byte(strings.TrimSuffix(remaining, ";"))) {
+			break
+		}
 		if len(tokens) == split2 {
 			if len(mathOperation) == 0 {
 				return "", "", "", ErrInvalidMathSymbol
