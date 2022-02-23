@@ -330,6 +330,37 @@ func TestParse(t *testing.T) {
 			file:        "blah_blah.txt",
 			expectedErr: ErrIncorrectExtension,
 		},
+		"action: valid type": {
+			file: "action_valid.ros",
+			expectedWorkflows: []*job.Workflow{
+				{
+					Name:        string(job.CreateAccount),
+					Concurrency: job.ReservedWorkflowConcurrency,
+					Scenarios: []*job.Scenario{
+						{
+							Name: "create",
+							Actions: []*job.Action{
+								{
+									Type:       job.SetVariable,
+									Input:      `{"network":"chrysalis-devnet", "blockchain":"iota"}`,
+									OutputPath: "network",
+								},
+								{
+									Type:       job.GenerateKey,
+									Input:      `{"curve_type": "edwards25519"}`,
+									OutputPath: "key",
+								},
+								{
+									Type:       job.Derive,
+									Input:      `{"network_identifier": {{network}},"public_key": {{key.public_key}}}`,
+									OutputPath: "account",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for name, test := range tests {
