@@ -15,8 +15,10 @@
 package keys
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 
 	"github.com/coinbase/kryptology/pkg/signatures/schnorr/mina"
 
@@ -67,9 +69,10 @@ func (s *SignerPallas) Sign(
 	privKey := &mina.SecretKey{}
 	_ = privKey.UnmarshalBinary(privKeyBytes)
 
-	// Convert payload to transaction
-	tx := &mina.Transaction{}
-	_ = tx.UnmarshalBinary(payload.Bytes)
+	tx, err := ParseSigningPayload(payload)
+	if err != nil {
+		return nil, err
+	}
 
 	sig, err := privKey.SignTransaction(tx)
 	if err != nil {
@@ -110,17 +113,116 @@ func (s *SignerPallas) Verify(signature *types.Signature) error {
 		return fmt.Errorf("%w: %s", ErrVerifyFailed, err)
 	}
 
-	txnBytes := signature.SigningPayload.Bytes
-	txn := &mina.Transaction{}
-	err = txn.UnmarshalBinary(txnBytes)
+	transaction, err := ParseSigningPayload(signature.SigningPayload)
 	if err != nil {
 		return fmt.Errorf("%w: %s", ErrVerifyFailed, err)
 	}
 
-	verifyErr := pubKey.VerifyTransaction(sig, txn)
+	verifyErr := pubKey.VerifyTransaction(sig, transaction)
 	if verifyErr != nil {
 		return fmt.Errorf("%w: %s", ErrVerifyFailed, verifyErr)
 	}
 
 	return nil
+}
+
+type PayloadFields struct {
+	To         string  `json:"to"`
+	From       string  `json:"from"`
+	Fee        string  `json:"fee"`
+	Amount     *string `json:"amount,omitempty"`
+	Nonce      string  `json:"nonce"`
+	ValidUntil *string `json:"valid_until,omitempty"`
+	Memo       *string `json:"memo,omitempty"`
+}
+
+type SigningPayload struct {
+	Payment *PayloadFields `json:"payment"`
+}
+
+func ParseSigningPayload(rawPayload *types.SigningPayload) (*mina.Transaction, error) {
+	var signingPayload SigningPayload
+	var payloadFields PayloadFields
+
+	err := json.Unmarshal(rawPayload.Bytes, &signingPayload)
+	if err != nil {
+		return nil, err
+	}
+
+	if signingPayload.Payment != nil {
+		payloadFields = *signingPayload.Payment
+	} else {
+		return nil, errors.New(
+			"payment not found in signingPayload",
+		)
+	}
+
+	transaction, err := constructTransaction(&payloadFields)
+	if err != nil {
+		return nil, err
+	}
+	return transaction, nil
+}
+
+func constructTransaction(p *PayloadFields) (*mina.Transaction, error) {
+	var fromPublicKey mina.PublicKey
+	if err := fromPublicKey.ParseAddress(p.From); err != nil {
+		return nil, err
+	}
+
+	var toPublicKey mina.PublicKey
+	if err := toPublicKey.ParseAddress(p.To); err != nil {
+		return nil, err
+	}
+
+	fee, err := strconv.ParseUint(p.Fee, 10, 64)
+	if err != nil {
+		return nil, err
+	}
+
+	// amount is a field that only exists in a Payment transaction
+	amount := uint64(0)
+	if p.Amount != nil {
+		amount, err = strconv.ParseUint(*p.Amount, 10, 64)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	nonce, err := strconv.ParseUint(p.Nonce, 10, 32)
+	if err != nil {
+		return nil, err
+	}
+
+	validUntil := uint64(0)
+	if p.ValidUntil != nil {
+		validUntil, err = strconv.ParseUint(*p.ValidUntil, 10, 32)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	memo := ""
+	if p.Memo != nil {
+		memo = *p.Memo
+	}
+
+	txn := &mina.Transaction{
+		Fee:        fee,
+		FeeToken:   1,
+		FeePayerPk: &fromPublicKey,
+		Nonce:      uint32(nonce),
+		ValidUntil: uint32(validUntil),
+		Memo:       memo,
+		// Tag is a forwards compatible API, at the moment it is set to an array of 3 false's
+		Tag:        [3]bool{false, false, false},
+		SourcePk:   &fromPublicKey,
+		ReceiverPk: &toPublicKey,
+		TokenId:    1,
+		Amount:     amount,
+		Locked:     false,
+		NetworkId:  mina.TestNet,
+	}
+
+	return txn, nil
 }
