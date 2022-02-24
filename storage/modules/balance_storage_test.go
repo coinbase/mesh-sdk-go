@@ -1020,6 +1020,14 @@ func TestBootstrapBalances(t *testing.T) {
 		account = &types.AccountIdentifier{
 			Address: "hello",
 		}
+
+		account2 = &types.AccountIdentifier{
+			Address: "hello world",
+		}
+
+		account3 = &types.AccountIdentifier{
+			Address: "hello world new",
+		}
 	)
 
 	ctx := context.Background()
@@ -1064,6 +1072,16 @@ func TestBootstrapBalances(t *testing.T) {
 			Value:    amount.Value,
 			Currency: amount.Currency,
 		},
+		{
+			Account:  account2,
+			Value:    amount.Value,
+			Currency: amount.Currency,
+		},
+		{
+			Account:  account3,
+			Value:    amount.Value,
+			Currency: amount.Currency,
+		},
 	}, "", " ")
 	assert.NoError(t, err)
 
@@ -1083,7 +1101,7 @@ func TestBootstrapBalances(t *testing.T) {
 
 	storage.Initialize(mockHelper, mockHandler)
 	t.Run("Set balance successfully", func(t *testing.T) {
-		mockHandler.On("AccountsSeen", ctx, mock.Anything, 1).Return(nil).Once()
+		mockHandler.On("AccountsSeen", ctx, mock.Anything, 1).Return(nil).Times(3)
 		err = storage.BootstrapBalances(
 			ctx,
 			bootstrapBalancesFile,
@@ -1099,6 +1117,26 @@ func TestBootstrapBalances(t *testing.T) {
 		)
 
 		assert.Equal(t, amount, retrievedAmount)
+		assert.NoError(t, err)
+
+		retrievedAmount2, err := storage.GetOrSetBalance(
+			ctx,
+			account2,
+			amount.Currency,
+			genesisBlockIdentifier,
+		)
+
+		assert.Equal(t, amount, retrievedAmount2)
+		assert.NoError(t, err)
+
+		retrievedAmount3, err := storage.GetOrSetBalance(
+			ctx,
+			account3,
+			amount.Currency,
+			genesisBlockIdentifier,
+		)
+
+		assert.Equal(t, amount, retrievedAmount3)
 		assert.NoError(t, err)
 
 		// Attempt to update balance

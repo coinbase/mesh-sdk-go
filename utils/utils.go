@@ -63,6 +63,12 @@ const (
 	// to consider when estimating time to tip if the provided
 	// estimate is 0.
 	minBlocksPerSecond = 0.0001
+
+	// MaxEntrySizePerTxn is the maximum number of entries
+	// in one transaction object. This is used for bootstrap
+	// balances process to avoid TxnTooBig error when memory_limit_disabled=false
+	// as well as reduce the running time.
+	MaxEntrySizePerTxn = 600
 )
 
 var (
