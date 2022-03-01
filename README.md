@@ -16,9 +16,10 @@ Go SDK to create and interact with Rosetta API implementations
   <a href="https://github.com/coinbase/rosetta-sdk-go/blob/master/LICENSE.txt"><img src="https://img.shields.io/github/license/coinbase/rosetta-sdk-go.svg" /></a>
   <a href="https://pkg.go.dev/github.com/coinbase/rosetta-sdk-go?tab=overview"><img src="https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=shield" /></a>
 </p>
-
+<p align="center">
 Build once. 
 Integrate your blockchain everywhere.
+</p>
 
 ## Overview
 
@@ -71,11 +72,28 @@ When you've finished an implementation for a blockchain, share your work in the 
 * [rosetta-specifications](https://github.com/coinbase/rosetta-specifications) — The `rosetta-specifications` repository generates the SDK code in the `rosetta-sdk-go` repository.
 * [rosetta-cli](https://github.com/coinbase/rosetta-ecosystem) — Use the `rosetta-cli` tool to test your Rosetta API implementation. The tool also provides the ability to look up block contents and account balances.
 
-### Reference Implementations
+## Reference Implementations
 
 To help you with examples, we developed complete Rosetta API reference implementations for [Bitcoin](https://github.com/coinbase/rosetta-bitcoin) and [Ethereum](https://github.com/coinbase/rosetta-ethereum). Developers of Bitcoin-like or Ethereum-like blockchains may find it easier to fork these reference implementations than to write an implementation from scratch.
 
-You can also find community implementations for a variety of blockchains in the [rosetta-ecosystem][https://github.com/coinbase/rosetta-ecosystem] repository, and in the [ecosystem category](https://community.rosetta-api.org/c/ecosystem) of our community site. 
+You can also find community implementations for a variety of blockchains in the [rosetta-ecosystem](https://github.com/coinbase/rosetta-ecosystem) repository, and in the [ecosystem category](https://community.rosetta-api.org/c/ecosystem) of our community site. 
+
+### Using Golang
+If you are comfortable with Golang, the easiest way to write a Rosetta Data API implementation is to use this repository. This Golang project provides a [server package](https://github.com/coinbase/rosetta-sdk-go/tree/master/server) that empowers a developer to write a full Rosetta Data API server by only implementing an interface. This package automatically validates client requests and calls the functions you implement with pre-parsed requests (instead of in raw JSON).
+
+This is a simple [example](https://github.com/coinbase/rosetta-sdk-go/tree/master/examples/server) of how to write an implementation using this package in rosetta-sdk-go.
+
+### Using Another Language
+
+If you plan to use a language other than Golang, you will need to either codegen a server (using [Swagger Codegen](https://swagger.io/tools/swagger-codegen) or [OpenAPI Generator](https://openapi-generator.tech/)) or write one from scratch. If you choose to write an implementation in another language, we ask that you create a separate repository in an SDK-like format for all the code you generate so that other developers can use it. You can add your repository to the list in the [rosetta-ecosystem](https://github.com/coinbase/rosetta-ecosystem) repository, and in the [ecosystem category](https://community.rosetta-api.org/c/ecosystem) of our community site. Use this repository (rosetta-sdk-go) for an example of how to generate code from this specification.
+
+### Syncer
+
+The core of any integration is syncing blocks reliably. The [syncer](https://github.com/coinbase/rosetta-sdk-go/tree/master/syncer) serially processes blocks from a Data API implementation (automatically handling re-orgs) with user-defined handling logic and pluggable storage. After a block is processed, store it to a DB or send a push notification...it's up to you!
+
+### Parser
+
+When reading the operations in a block, it can be helpful to apply higher-level groupings to related operations, or match operations in a transaction to some set of generic descriptions (e.g., ensure there are two operations of equal but opposite amounts). The [parser](https://github.com/coinbase/rosetta-sdk-go/tree/master/parser) empowers any integrator to build abstractions on top of the [low-level building blocks](https://www.rosetta-api.org/docs/low_level_ops.html) that the Rosetta API exposes.
 
 ## SDK Development
 
