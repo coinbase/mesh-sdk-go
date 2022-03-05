@@ -29,6 +29,7 @@ type SignatureType string
 
 // List of SignatureType
 const (
+	BlsG2Element    SignatureType = "bls12381_g2_element"
 	Ecdsa           SignatureType = "ecdsa"
 	EcdsaRecovery   SignatureType = "ecdsa_recovery"
 	Ed25519         SignatureType = "ed25519"

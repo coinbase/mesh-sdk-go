@@ -27,6 +27,7 @@ type CurveType string
 
 // List of CurveType
 const (
+	Bls12381     CurveType = "bls12381"
 	Secp256k1    CurveType = "secp256k1"
 	Secp256r1    CurveType = "secp256r1"
 	Edwards25519 CurveType = "edwards25519"
