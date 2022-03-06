@@ -20,14 +20,18 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/coinbase/kryptology/pkg/signatures/bls/bls_sig"
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
+var bls12381Keypair *KeyPair
 var signerBls12381 Signer
 var payloadBytes []byte
+var augSigner Signer
+var augPayload []byte
 
 func init() {
-	bls12381Keypair, _ := GenerateKeypair(types.Bls12381)
+	bls12381Keypair, _ = GenerateKeypair(types.Bls12381)
 	signerBls12381, _ = bls12381Keypair.Signer()
 
 	unsignedPayloadStr := "a7ca4bce10200d073ef10c46e9d27c3b4e31263d4c07fbec447650fcc1b286" +
@@ -37,7 +41,7 @@ func init() {
 	payloadBytes, _ = hex.DecodeString(unsignedPayloadStr)
 }
 
-func TestSignBls12381(t *testing.T) {
+func TestSignBls12381Basic(t *testing.T) {
 	type payloadTest struct {
 		payload *types.SigningPayload
 		err     bool
@@ -45,7 +49,7 @@ func TestSignBls12381(t *testing.T) {
 	}
 
 	var payloadTests = []payloadTest{
-		{mockPayload(payloadBytes, types.BlsG2Element), false, nil},
+		{mockPayload(payloadBytes, types.Bls12381BasicMpl), false, nil},
 		{mockPayload(payloadBytes, ""), false, nil},
 		{mockPayload(payloadBytes, types.Ecdsa), true, ErrSignUnsupportedPayloadSignatureType},
 		{
@@ -55,7 +59,7 @@ func TestSignBls12381(t *testing.T) {
 		},
 	}
 	for _, test := range payloadTests {
-		signature, err := signerBls12381.Sign(test.payload, types.BlsG2Element)
+		signature, err := signerBls12381.Sign(test.payload, types.Bls12381BasicMpl)
 
 		if !test.err {
 			assert.NoError(t, err)
@@ -67,14 +71,14 @@ func TestSignBls12381(t *testing.T) {
 	}
 }
 
-func TestVerifyBls(t *testing.T) {
+func TestVerifyBls12381Basic(t *testing.T) {
 	type signatureTest struct {
 		signature *types.Signature
 		errMsg    error
 	}
 
-	payload := mockPayload(payloadBytes, types.BlsG2Element)
-	testSignature, err := signerBls12381.Sign(payload, types.BlsG2Element)
+	payload := mockPayload(payloadBytes, types.Bls12381BasicMpl)
+	testSignature, err := signerBls12381.Sign(payload, types.Bls12381BasicMpl)
 	assert.NoError(t, err)
 
 	simpleBytes := make([]byte, 32)
@@ -92,7 +96,7 @@ func TestVerifyBls(t *testing.T) {
 			payloadBytes,
 			simpleBytes), ErrVerifyUnsupportedPayloadSignatureType},
 		{mockSignature(
-			types.BlsG2Element,
+			types.Bls12381BasicMpl,
 			signerBls12381.PublicKey(),
 			simpleBytes,
 			testSignature.Bytes), ErrVerifyFailed},
@@ -105,11 +109,89 @@ func TestVerifyBls(t *testing.T) {
 
 	// happy path
 	goodSignature := mockSignature(
-		types.BlsG2Element,
+		types.Bls12381BasicMpl,
 		signerBls12381.PublicKey(),
 		payloadBytes,
 		testSignature.Bytes,
 	)
 
 	assert.Equal(t, nil, signerBls12381.Verify(goodSignature))
+}
+
+func mockPublicKey(
+	pubkey_bytes []byte,
+	curveType types.CurveType,
+) *types.PublicKey {
+	mockPubKey := &types.PublicKey{
+		Bytes:     pubkey_bytes,
+		CurveType: curveType,
+	}
+
+	return mockPubKey
+}
+
+func mockKP(
+	pubkey *types.PublicKey,
+	pk_bytes []byte,
+) *KeyPair {
+	mockKP := &KeyPair{
+		PublicKey:  pubkey,
+		PrivateKey: pk_bytes,
+	}
+
+	return mockKP
+}
+
+func TestBls12381AugPrepend(t *testing.T) {
+	type signatureTest struct {
+		signature *types.Signature
+		errMsg    error
+	}
+
+	sk1_bytes, _ := hex.DecodeString("1603e1217d13437657e2716bd51ecb84e803170368e0dcbf2b6eb704d6914d1c")
+	synthetic_sk_bytes, _ := hex.DecodeString("0c0dd789a90f993feb20dc4ce7d9d689ce9a669341d06d6638696cba1eea3177")
+	synthetic_offset_sk_bytes, _ := hex.DecodeString("1d0baa87e45f286a6a1cde0566191e6a0e6a6fa7223764f894c4836565207360")
+
+	payload := mockPayload(payloadBytes, types.Bls12381AugMpl)
+
+	sk1 := new(bls_sig.SecretKey)
+	sk1.UnmarshalBinary(sk1_bytes)
+	pk1, _ := sk1.GetPublicKey()
+	pk1_bytes, _ := pk1.MarshalBinary()
+	pubKey := mockPublicKey(pk1_bytes, types.Bls12381)
+	keyPair := mockKP(pubKey, sk1_bytes)
+	signer, _ := keyPair.Signer()
+
+	sig1, _ := signer.Sign(payload, types.Bls12381AugMpl)
+	assert.Equal(t, nil, signer.Verify(sig1))
+
+	synthetic_sk := new(bls_sig.SecretKey)
+	synthetic_sk.UnmarshalBinary(synthetic_sk_bytes)
+	synthetic_pk, _ := synthetic_sk.GetPublicKey()
+	synthetic_pk_bytes, _ := synthetic_pk.MarshalBinary()
+	syntheticPubKey := mockPublicKey(synthetic_pk_bytes, types.Bls12381)
+	syntheticKeyPair := mockKP(syntheticPubKey, synthetic_sk_bytes)
+	syntheticSigner, _ := syntheticKeyPair.Signer()
+
+	sig2, _ := syntheticSigner.Sign(payload, types.Bls12381AugMpl)
+	assert.Equal(t, nil, syntheticSigner.Verify(sig2))
+
+	synthetic_offset_sk := new(bls_sig.SecretKey)
+	synthetic_offset_sk.UnmarshalBinary(synthetic_offset_sk_bytes)
+	synthetic_offset_pk, _ := synthetic_offset_sk.GetPublicKey()
+	synthetic_offset_pk_bytes, _ := synthetic_offset_pk.MarshalBinary()
+	syntheticOffsetPubKey := mockPublicKey(synthetic_offset_pk_bytes, types.Bls12381)
+	syntheticOffsetKeyPair := mockKP(syntheticOffsetPubKey, synthetic_offset_sk_bytes)
+	syntheticOffsetSigner, _ := syntheticOffsetKeyPair.Signer()
+
+	prependedPayload := mockPayload(append(syntheticPubKey.Bytes, payloadBytes...), types.Bls12381AugMpl)
+
+	offset_sig, _ := syntheticOffsetSigner.Sign(prependedPayload, types.Bls12381AugMpl)
+	assert.Equal(t, nil, syntheticOffsetSigner.Verify(offset_sig))
+
+	sig3, _ := signer.Sign(prependedPayload, types.Bls12381AugMpl)
+
+	assert.Equal(t, nil, signer.Verify(sig3))
+	assert.Equal(t, nil, syntheticOffsetSigner.Verify(sig3))
+	assert.Equal(t, nil, syntheticSigner.Verify(sig3))
 }

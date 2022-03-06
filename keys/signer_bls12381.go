@@ -43,21 +43,13 @@ func (s *SignerBls12381) Sign(
 		return nil, err
 	}
 
-	if !(payload.SignatureType == types.BlsG2Element || payload.SignatureType == "") {
+	if !(payload.SignatureType == types.Bls12381BasicMpl || payload.SignatureType == types.Bls12381AugMpl || payload.SignatureType == "") {
 		return nil, fmt.Errorf(
-			"%w: expected %v but got %v",
+			"%w: expected %v or %v but got %v",
 			ErrSignUnsupportedPayloadSignatureType,
-			types.BlsG2Element,
+			types.Bls12381BasicMpl,
+			types.Bls12381AugMpl,
 			payload.SignatureType,
-		)
-	}
-
-	if sigType != types.BlsG2Element {
-		return nil, fmt.Errorf(
-			"%w: expected %v but got %v",
-			ErrSignUnsupportedSignatureType,
-			types.BlsG2Element,
-			sigType,
 		)
 	}
 
@@ -66,33 +58,65 @@ func (s *SignerBls12381) Sign(
 	privKey := &bls_sig.SecretKey{}
 	_ = privKey.UnmarshalBinary(privKeyBytes)
 
+	switch sigType {
+	case types.Bls12381BasicMpl:
+		sigBytes, _ := signBasic(privKey, payload, s.KeyPair.PublicKey)
+
+		return &types.Signature{
+			SigningPayload: payload,
+			PublicKey:      s.KeyPair.PublicKey,
+			SignatureType:  payload.SignatureType,
+			Bytes:          sigBytes,
+		}, nil
+	case types.Bls12381AugMpl:
+		sigBytes, _ := signAug(privKey, payload, s.KeyPair.PublicKey)
+
+		return &types.Signature{
+			SigningPayload: payload,
+			PublicKey:      s.KeyPair.PublicKey,
+			SignatureType:  payload.SignatureType,
+			Bytes:          sigBytes,
+		}, nil
+	default:
+		return nil, fmt.Errorf(
+			"%w: expected %v or %v but got %v",
+			ErrSignUnsupportedSignatureType,
+			types.Bls12381BasicMpl,
+			types.Bls12381AugMpl,
+			sigType,
+		)
+	}
+}
+
+func signBasic(sk *bls_sig.SecretKey, payload *types.SigningPayload, pk *types.PublicKey) ([]byte, error) {
 	bls := bls_sig.NewSigBasic()
-	sig, err := bls.Sign(privKey, payload.Bytes)
+
+	sig, err := bls.Sign(sk, payload.Bytes)
+
 	if err != nil {
 		return nil, err
 	}
 	sigBytes, _ := sig.MarshalBinary()
 
-	return &types.Signature{
-		SigningPayload: payload,
-		PublicKey:      s.KeyPair.PublicKey,
-		SignatureType:  payload.SignatureType,
-		Bytes:          sigBytes,
-	}, nil
+	return sigBytes, nil
+}
+
+func signAug(sk *bls_sig.SecretKey, payload *types.SigningPayload, pk *types.PublicKey) ([]byte, error) {
+	bls := bls_sig.NewSigAug()
+
+	sig, err := bls.Sign(sk, payload.Bytes)
+
+	if err != nil {
+		return nil, err
+	}
+	sigBytes, _ := sig.MarshalBinary()
+
+	return sigBytes, nil
 }
 
 // Verify verifies a Signature, by checking the validity of a Signature,
 // the SigningPayload, and the PublicKey of the Signature.
 func (s *SignerBls12381) Verify(signature *types.Signature) error {
-	if signature.SignatureType != types.BlsG2Element {
-		return fmt.Errorf(
-			"%w: expected %v but got %v",
-			ErrVerifyUnsupportedPayloadSignatureType,
-			types.BlsG2Element,
-			signature.SignatureType,
-		)
-	}
-
 	pubKeyBytes := signature.PublicKey.Bytes
 	pubKey := &bls_sig.PublicKey{}
 	_ = pubKey.UnmarshalBinary(pubKeyBytes)
@@ -106,8 +130,40 @@ func (s *SignerBls12381) Verify(signature *types.Signature) error {
 		return fmt.Errorf("%w: %s", ErrVerifyFailed, err)
 	}
 
+	switch signature.SignatureType {
+	case types.Bls12381BasicMpl:
+		return verifyBasic(pubKey, signature.SigningPayload.Bytes, sig)
+	case types.Bls12381AugMpl:
+		return verifyAug(pubKey, signature.SigningPayload.Bytes, sig)
+	default:
+		return fmt.Errorf(
+			"%w: expected %v or %v but got %v",
+			ErrVerifyUnsupportedPayloadSignatureType,
+			types.Bls12381BasicMpl,
+			types.Bls12381AugMpl,
+			signature.SignatureType,
+		)
+	}
+}
+
+func verifyBasic(pubKey *bls_sig.PublicKey, payload []byte, signature *bls_sig.Signature) error {
 	bls := bls_sig.NewSigBasic()
-	result, err := bls.Verify(pubKey, signature.SigningPayload.Bytes, sig)
+	result, err := bls.Verify(pubKey, payload, signature)
+
+	if err != nil {
+		return err
+	}
+
+	if !result {
+		return fmt.Errorf("%w: %s", ErrVerifyFailed, "Verify failed")
+	}
+
+	return nil
+}
+
+func verifyAug(pubKey *bls_sig.PublicKey, payload []byte, signature *bls_sig.Signature) error {
+	bls := bls_sig.NewSigAug()
+	result, err := bls.Verify(pubKey, payload, signature)
 
 	if err != nil {
 		return err
