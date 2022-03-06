@@ -15,6 +15,7 @@
 package keys
 
 import (
+	"encoding/hex"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -23,16 +24,17 @@ import (
 )
 
 var signerBls12381 Signer
+var payloadBytes []byte
 
 func init() {
 	bls12381Keypair, _ := GenerateKeypair(types.Bls12381)
 	signerBls12381, _ = bls12381Keypair.Signer()
 
-	unsignedTxStr := "a7ca4bce10200d073ef10c46e9d27c3b4e31263d4c07fbec447650fcc1b286" +
+	unsignedPayloadStr := "a7ca4bce10200d073ef10c46e9d27c3b4e31263d4c07fbec447650fcc1b286" +
 		"300e8ecf25c0560f9cb5aa673247fb6a6f95fb73164d1bf5d41288f57ea40517d9da86c44a289ed" +
 		"2b6f9d3bf9a750ee96dbf905073f8ae56c80100ef47f5585acf70baff8c72c3b8a833181fb3edf4" +
 		"328fccd5bb71183532bff220ba46c268991a3ff07eb358e8255a65c30a2dce0e5fbb"
-	txnBytes = []byte(unsignedTxStr)
+	payloadBytes, _ = hex.DecodeString(unsignedPayloadStr)
 }
 
 func TestSignBls12381(t *testing.T) {
@@ -43,11 +45,11 @@ func TestSignBls12381(t *testing.T) {
 	}
 
 	var payloadTests = []payloadTest{
-		{mockPayload(txnBytes, types.BlsG2Element), false, nil},
-		{mockPayload(txnBytes, ""), false, nil},
-		{mockPayload(txnBytes, types.Ecdsa), true, ErrSignUnsupportedPayloadSignatureType},
+		{mockPayload(payloadBytes, types.BlsG2Element), false, nil},
+		{mockPayload(payloadBytes, ""), false, nil},
+		{mockPayload(payloadBytes, types.Ecdsa), true, ErrSignUnsupportedPayloadSignatureType},
 		{
-			mockPayload(txnBytes, types.EcdsaRecovery),
+			mockPayload(payloadBytes, types.EcdsaRecovery),
 			true,
 			ErrSignUnsupportedPayloadSignatureType,
 		},
@@ -71,7 +73,7 @@ func TestVerifyBls(t *testing.T) {
 		errMsg    error
 	}
 
-	payload := mockPayload(txnBytes, types.BlsG2Element)
+	payload := mockPayload(payloadBytes, types.BlsG2Element)
 	testSignature, err := signerBls12381.Sign(payload, types.BlsG2Element)
 	assert.NoError(t, err)
 
@@ -82,12 +84,12 @@ func TestVerifyBls(t *testing.T) {
 		{mockSignature(
 			types.Ecdsa,
 			signerBls12381.PublicKey(),
-			txnBytes,
+			payloadBytes,
 			simpleBytes), ErrVerifyUnsupportedPayloadSignatureType},
 		{mockSignature(
 			types.EcdsaRecovery,
 			signerBls12381.PublicKey(),
-			txnBytes,
+			payloadBytes,
 			simpleBytes), ErrVerifyUnsupportedPayloadSignatureType},
 		{mockSignature(
 			types.BlsG2Element,
@@ -105,7 +107,7 @@ func TestVerifyBls(t *testing.T) {
 	goodSignature := mockSignature(
 		types.BlsG2Element,
 		signerBls12381.PublicKey(),
-		txnBytes,
+		payloadBytes,
 		testSignature.Bytes,
 	)
 
