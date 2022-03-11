@@ -53,11 +53,9 @@ type CallAPIRouter interface {
 }
 
 // ConstructionAPIRouter defines the required methods for binding the api requests to a responses
-// for the ConstructionAPI
-// The ConstructionAPIRouter implementation should parse necessary information from the http
-// request,
-// pass the data to a ConstructionAPIServicer to perform the required actions, then write the
-// service results to the http response.
+// for the ConstructionAPI The ConstructionAPIRouter implementation should parse necessary
+// information from the http request, pass the data to a ConstructionAPIServicer to perform the
+// required actions, then write the service results to the http response.
 type ConstructionAPIRouter interface {
 	ConstructionCombine(http.ResponseWriter, *http.Request)
 	ConstructionDerive(http.ResponseWriter, *http.Request)

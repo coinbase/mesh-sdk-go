@@ -7,7 +7,7 @@ require (
 	github.com/Zilliqa/gozilliqa-sdk v1.2.1-0.20201201074141-dd0ecada1be6
 	github.com/btcsuite/btcd v0.22.0-beta
 	github.com/cenkalti/backoff v2.2.1+incompatible
-	github.com/coinbase/kryptology v1.5.5
+	github.com/coinbase/kryptology v1.8.0
 	github.com/dgraph-io/badger/v2 v2.2007.4
 	github.com/dgraph-io/ristretto v0.0.3 // indirect
 	github.com/dgryski/go-farm v0.0.0-20200201041132-a6ae2369ad13 // indirect
