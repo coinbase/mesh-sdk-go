@@ -60,7 +60,7 @@ func (s *SignerBls12381) Sign(
 
 	switch sigType {
 	case types.Bls12381BasicMpl:
-		sigBytes, _ := signBasic(privKey, payload, s.KeyPair.PublicKey)
+		sigBytes, _ := signBasic(privKey, payload)
 
 		return &types.Signature{
 			SigningPayload: payload,
@@ -69,7 +69,7 @@ func (s *SignerBls12381) Sign(
 			Bytes:          sigBytes,
 		}, nil
 	case types.Bls12381AugMpl:
-		sigBytes, _ := signAug(privKey, payload, s.KeyPair.PublicKey)
+		sigBytes, _ := signAug(privKey, payload)
 
 		return &types.Signature{
 			SigningPayload: payload,
@@ -88,7 +88,7 @@ func (s *SignerBls12381) Sign(
 	}
 }
 
-func signBasic(sk *bls_sig.SecretKey, payload *types.SigningPayload, pk *types.PublicKey) ([]byte, error) {
+func signBasic(sk *bls_sig.SecretKey, payload *types.SigningPayload) ([]byte, error) {
 	bls := bls_sig.NewSigBasic()
 
 	sig, err := bls.Sign(sk, payload.Bytes)
@@ -101,8 +101,11 @@ func signBasic(sk *bls_sig.SecretKey, payload *types.SigningPayload, pk *types.P
 	return sigBytes, nil
 }
 
-func signAug(sk *bls_sig.SecretKey, payload *types.SigningPayload, pk *types.PublicKey) ([]byte, error) {
-	bls := bls_sig.NewSigAug()
+func signAug(sk *bls_sig.SecretKey, payload *types.SigningPayload) ([]byte, error) {
+	// Domain separation tag for aug scheme
+	// according to section 4.2.2 in
+	// https://tools.ietf.org/html/draft-irtf-cfrg-bls-signature-03
+	bls := bls_sig.NewSigBasicWithDst("BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_AUG_")
 
 	sig, err := bls.Sign(sk, payload.Bytes)
 
