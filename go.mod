@@ -18,7 +18,7 @@ require (
 	github.com/mitchellh/mapstructure v1.4.3
 	github.com/neilotoole/errgroup v0.1.6
 	github.com/segmentio/fasthash v1.0.3
-	github.com/stretchr/testify v1.7.0
+	github.com/stretchr/testify v1.7.1
 	github.com/tidwall/gjson v1.14.0
 	github.com/tidwall/sjson v1.2.4
 	github.com/vmihailenco/msgpack/v5 v5.3.5
