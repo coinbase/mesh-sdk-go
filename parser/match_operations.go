@@ -67,11 +67,11 @@ func (s AmountSign) Match(amount *types.Amount) bool {
 		return true
 	}
 
-	if s == PositiveOrZeroAmountSign && (numeric.Sign() == 1 || amount.Value == "0") {
+	if s == PositiveOrZeroAmountSign && (numeric.Sign() == 1 || len(numeric.Bits()) == 0) {
 		return true
 	}
 
-	if s == NegativeOrZeroAmountSign && (numeric.Sign() == -1 || amount.Value == "0") {
+	if s == NegativeOrZeroAmountSign && (numeric.Sign() == -1 || len(numeric.Bits()) == 0) {
 		return true
 	}
 
