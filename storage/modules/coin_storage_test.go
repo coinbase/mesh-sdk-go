@@ -386,6 +386,15 @@ var (
 			},
 		},
 	}
+
+	acctCoins = []*utils.AccountCoinsResponse{
+		{
+			Coins: accBalance1.Coins,
+		},
+		{
+			Coins: accBalance2.Coins,
+		},
+	}
 )
 
 func TestCoinStorage(t *testing.T) {
@@ -961,9 +970,8 @@ func TestCoinStorage(t *testing.T) {
 	})
 
 	t.Run("SetCoinsImported", func(t *testing.T) {
-		accBalances := []*utils.AccountBalance{accBalance1, accBalance2}
-
-		err := c.SetCoinsImported(ctx, accBalances)
+		accts := []*types.AccountIdentifier{accBalance1.Account, accBalance2.Account}
+		err := c.SetCoinsImported(ctx, accts, acctCoins)
 		assert.NoError(t, err)
 
 		mockHelper.On(
