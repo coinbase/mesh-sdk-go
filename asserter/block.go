@@ -320,7 +320,20 @@ func (a *Asserter) Operations( // nolint:gocognit
 					)
 				}
 
-				val, _ := new(big.Int).SetString(op.Amount.Value, 10)
+				val, err := types.BigInt(op.Amount.Value)
+				if err != nil {
+					return err
+				}
+
+				// Validate that fee operation amount is negative
+				if val.Sign() != -1 {
+					return fmt.Errorf(
+						"%w: operation index %d",
+						ErrFeeAmountNotNegative,
+						op.OperationIdentifier.Index,
+					)
+				}
+
 				feeTotal.Add(feeTotal, val)
 				feeCount++
 			}
