@@ -59,6 +59,49 @@ func (_m *FetcherHelper) AccountBalanceRetry(ctx context.Context, network *types
 	return r0, r1, r2, r3
 }
 
+// AccountCoinsRetry provides a mock function with given fields: ctx, network, account, includeMempool, currencies
+func (_m *FetcherHelper) AccountCoinsRetry(ctx context.Context, network *types.NetworkIdentifier, account *types.AccountIdentifier, includeMempool bool, currencies []*types.Currency) (*types.BlockIdentifier, []*types.Coin, map[string]interface{}, *fetcher.Error) {
+	ret := _m.Called(ctx, network, account, includeMempool, currencies)
+
+	var r0 *types.BlockIdentifier
+	if rf, ok := ret.Get(0).(func(context.Context, *types.NetworkIdentifier, *types.AccountIdentifier, bool, []*types.Currency) *types.BlockIdentifier); ok {
+		r0 = rf(ctx, network, account, includeMempool, currencies)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*types.BlockIdentifier)
+		}
+	}
+
+	var r1 []*types.Coin
+	if rf, ok := ret.Get(1).(func(context.Context, *types.NetworkIdentifier, *types.AccountIdentifier, bool, []*types.Currency) []*types.Coin); ok {
+		r1 = rf(ctx, network, account, includeMempool, currencies)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).([]*types.Coin)
+		}
+	}
+
+	var r2 map[string]interface{}
+	if rf, ok := ret.Get(2).(func(context.Context, *types.NetworkIdentifier, *types.AccountIdentifier, bool, []*types.Currency) map[string]interface{}); ok {
+		r2 = rf(ctx, network, account, includeMempool, currencies)
+	} else {
+		if ret.Get(2) != nil {
+			r2 = ret.Get(2).(map[string]interface{})
+		}
+	}
+
+	var r3 *fetcher.Error
+	if rf, ok := ret.Get(3).(func(context.Context, *types.NetworkIdentifier, *types.AccountIdentifier, bool, []*types.Currency) *fetcher.Error); ok {
+		r3 = rf(ctx, network, account, includeMempool, currencies)
+	} else {
+		if ret.Get(3) != nil {
+			r3 = ret.Get(3).(*fetcher.Error)
+		}
+	}
+
+	return r0, r1, r2, r3
+}
+
 // NetworkList provides a mock function with given fields: ctx, metadata
 func (_m *FetcherHelper) NetworkList(ctx context.Context, metadata map[string]interface{}) (*types.NetworkListResponse, *fetcher.Error) {
 	ret := _m.Called(ctx, metadata)
