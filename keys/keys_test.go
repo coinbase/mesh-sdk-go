@@ -139,6 +139,11 @@ func TestImportPrivateKey(t *testing.T) {
 			types.Pallas,
 			nil,
 		},
+		"simple Bls12381": {
+			"3ffb736d41737fc1fac8856458650742bfd01997bd96dd016215828b16309f58",
+			types.Bls12381,
+			nil,
+		},
 		"short ed25519":   {"asd", types.Secp256k1, ErrPrivKeyUndecodable},
 		"short Secp256k1": {"asd", types.Edwards25519, ErrPrivKeyUndecodable},
 		"short pallas":    {"asd", types.Pallas, ErrPrivKeyUndecodable},
