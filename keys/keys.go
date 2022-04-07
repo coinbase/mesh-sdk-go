@@ -23,7 +23,7 @@ import (
 	"fmt"
 	"math/big"
 
-	btcec "github.com/btcsuite/btcd/btcec/v2"
+	"github.com/btcsuite/btcd/btcec"
 	"github.com/coinbase/kryptology/pkg/signatures/schnorr/mina"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
@@ -70,7 +70,7 @@ func ImportPrivateKey(privKeyHex string, curve types.CurveType) (*KeyPair, error
 	var keyPair *KeyPair
 	switch curve {
 	case types.Secp256k1:
-		rawPrivKey, rawPubKey := btcec.PrivKeyFromBytes(privKey)
+		rawPrivKey, rawPubKey := btcec.PrivKeyFromBytes(btcec.S256(), privKey)
 
 		pubKey := &types.PublicKey{
 			Bytes:     rawPubKey.SerializeCompressed(),
@@ -152,7 +152,7 @@ func GenerateKeypair(curve types.CurveType) (*KeyPair, error) {
 
 	switch curve {
 	case types.Secp256k1:
-		rawPrivKey, err := btcec.NewPrivateKey()
+		rawPrivKey, err := btcec.NewPrivateKey(btcec.S256())
 		if err != nil {
 			return nil, fmt.Errorf("%w: %v", ErrKeyGenSecp256k1Failed, err)
 		}
