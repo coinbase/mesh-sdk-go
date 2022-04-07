@@ -11,6 +11,7 @@ require (
 	github.com/dgraph-io/badger/v2 v2.2007.4
 	github.com/dgraph-io/ristretto v0.0.3 // indirect
 	github.com/dgryski/go-farm v0.0.0-20200201041132-a6ae2369ad13 // indirect
+	github.com/btcsuite/btcd/chaincfg/chainhash v1.0.2-0.20220316175102-8d5c75c28923 // indirect
 	github.com/ethereum/go-ethereum v1.10.17
 	github.com/fatih/color v1.13.0
 	github.com/gorilla/mux v1.8.0

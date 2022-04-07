@@ -8,7 +8,8 @@
 ADDLICENSE_INSTALL=go install github.com/google/addlicense@latest
 ADDLICENSE_CMD=addlicense
 ADDLICENCE_SCRIPT=${ADDLICENSE_CMD} -c "Coinbase, Inc." -l "apache" -v
-GOIMPORTS_CMD=go run golang.org/x/tools/cmd/goimports
+GOIMPORTS_INSTALL=go install golang.org/x/tools/cmd/goimports@latest
+GOIMPORTS_CMD=goimports
 GOLINES_INSTALL=go install github.com/segmentio/golines@latest
 GOLINES_CMD=golines
 GOVERALLS_INSTALL=go install github.com/mattn/goveralls@latest
@@ -45,10 +46,12 @@ lint: | lint-examples
 
 format:
 	gofmt -s -w -l .
+	${GOIMPORTS_INSTALL}
 	${GOIMPORTS_CMD} -w .
 
 check-format:
 	! gofmt -s -l . | read;
+	${GOIMPORTS_INSTALL}
 	! ${GOIMPORTS_CMD} -l . | read;
 
 test:
