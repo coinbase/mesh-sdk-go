@@ -23,7 +23,7 @@ TEST_SCRIPT=go test ${GO_PACKAGES}
 LINT_SETTINGS=golint,misspell,gocyclo,gocritic,whitespace,goconst,gocognit,bodyclose,unconvert,lll,unparam
 
 deps:
-	go get ./...
+	go install ./...
 
 gen:
 	./codegen.sh;
