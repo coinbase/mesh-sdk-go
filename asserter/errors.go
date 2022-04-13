@@ -103,6 +103,7 @@ var (
 	ErrFeeAmountNotBalancing       = errors.New("fee amount doesn't balance")
 	ErrPaymentCountMismatch        = errors.New("payment count doesn't match")
 	ErrFeeCountMismatch            = errors.New("fee count doesn't match")
+	ErrFeeAmountNotNegative        = errors.New("fee amount is not negative")
 
 	BlockErrs = []error{
 		ErrAmountValueMissing,
@@ -142,6 +143,7 @@ var (
 		ErrDuplicateRelatedTransaction,
 		ErrPaymentAmountNotBalancing,
 		ErrFeeAmountNotBalancing,
+		ErrFeeAmountNotNegative,
 	}
 )
 
