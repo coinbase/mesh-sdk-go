@@ -3,6 +3,9 @@ module github.com/coinbase/rosetta-sdk-go
 go 1.16
 
 require (
+	github.com/Azure/azure-pipeline-go v0.2.2 // indirect
+	github.com/Azure/azure-storage-blob-go v0.7.0 // indirect
+	github.com/Azure/go-autorest/autorest/adal v0.8.0 // indirect
 	github.com/DataDog/zstd v1.5.0
 	github.com/Zilliqa/gozilliqa-sdk v1.2.1-0.20201201074141-dd0ecada1be6
 	github.com/btcsuite/btcd v0.22.0-beta
@@ -11,7 +14,7 @@ require (
 	github.com/dgraph-io/badger/v2 v2.2007.4
 	github.com/dgraph-io/ristretto v0.0.3 // indirect
 	github.com/dgryski/go-farm v0.0.0-20200201041132-a6ae2369ad13 // indirect
-	github.com/ethereum/go-ethereum v1.10.16
+	github.com/ethereum/go-ethereum v1.10.17
 	github.com/fatih/color v1.13.0
 	github.com/gorilla/mux v1.8.0
 	github.com/lucasjones/reggen v0.0.0-20180717132126-cdb49ff09d77
