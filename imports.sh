@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-go get github.com/incu6us/goimports-reviser/v2;
+go install github.com/incu6us/goimports-reviser/v2@latest;
 
 while IFS= read -r -d '' FILE 
 do
