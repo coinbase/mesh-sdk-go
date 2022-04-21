@@ -16,7 +16,7 @@ version: 2.1
 executors:
   default:
     docker:
-      - image: cimg/go:1.17
+      - image: cimg/go:1.16
         user: root # go directory is owned by root
     working_directory: /go/src/github.com/coinbase/rosetta-sdk-go
     environment:
