@@ -7,7 +7,8 @@
 # the commands directly.
 ADDLICENSE_INSTALL=go install github.com/google/addlicense@latest
 ADDLICENSE_CMD=addlicense
-ADDLICENCE_SCRIPT=${ADDLICENSE_CMD} -c "Coinbase, Inc." -l "apache" -v
+ADDLICENSE_IGNORE=-ignore ".github/**/*" -ignore ".idea/**/*"
+ADDLICENCE_SCRIPT=${ADDLICENSE_CMD} -c "Coinbase, Inc." -l "apache" -v ${ADDLICENSE_IGNORE}
 GOIMPORTS_INSTALL=go install golang.org/x/tools/cmd/goimports@latest
 GOIMPORTS_CMD=goimports
 GOLINES_INSTALL=go install github.com/segmentio/golines@latest
