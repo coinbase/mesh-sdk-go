@@ -7,7 +7,8 @@
 # the commands directly.
 ADDLICENSE_INSTALL=go install github.com/google/addlicense@latest
 ADDLICENSE_CMD=addlicense
-ADDLICENCE_SCRIPT=${ADDLICENSE_CMD} -c "Coinbase, Inc." -l "apache" -v
+ADDLICENSE_IGNORE=-ignore ".github/**/*" -ignore ".idea/**/*"
+ADDLICENCE_SCRIPT=${ADDLICENSE_CMD} -c "Coinbase, Inc." -l "apache" -v ${ADDLICENSE_IGNORE}
 GOIMPORTS_INSTALL=go install golang.org/x/tools/cmd/goimports@latest
 GOIMPORTS_CMD=goimports
 GOLINES_INSTALL=go install github.com/segmentio/golines@latest
@@ -22,6 +23,9 @@ GO_FOLDERS=$(shell echo ${GO_PACKAGES} | sed -e "s/\.\///g" | sed -e "s/\/\.\.\.
 TEST_SCRIPT=go test ${GO_PACKAGES}
 LINT_SETTINGS=golint,misspell,gocyclo,gocritic,whitespace,goconst,gocognit,bodyclose,unconvert,lll,unparam
 
+build:
+	go build ./...
+	
 deps:
 	go install ./...
 
