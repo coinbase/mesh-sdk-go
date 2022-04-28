@@ -112,8 +112,8 @@ func GetHistoricalBalancePrefix(account *types.AccountIdentifier, currency *type
 
 // BalanceStorageHandler is invoked after balance changes are committed to the database.
 type BalanceStorageHandler interface {
-	BlockAdded(ctx context.Context, block *types.Block, changes []*parser.BalanceChange) error
-	BlockRemoved(ctx context.Context, block *types.Block, changes []*parser.BalanceChange) error
+	BlockAdded(ctx context.Context, block *types.Block, changes []*parser.BalanceSeqChange) error
+	BlockRemoved(ctx context.Context, block *types.Block, changes []*parser.BalanceSeqChange) error
 
 	AccountsReconciled(ctx context.Context, dbTx database.Transaction, count int) error
 	AccountsSeen(ctx context.Context, dbTx database.Transaction, count int) error
@@ -129,10 +129,17 @@ type BalanceStorageHelper interface {
 		currency *types.Currency,
 		block *types.BlockIdentifier,
 	) (*types.Amount, error)
+	AccountSeqNum(
+		ctx context.Context,
+		account *types.AccountIdentifier,
+		currency *types.Currency,
+		block *types.BlockIdentifier,
+	) (int32, error)
 
 	ExemptFunc() parser.ExemptOperation
 	BalanceExemptions() []*types.BalanceExemption
 	Asserter() *asserter.Asserter
+	SequenceNumSupport() *types.SequenceNumSupport
 
 	AccountsReconciled(ctx context.Context, dbTx database.Transaction) (*big.Int, error)
 	AccountsSeen(ctx context.Context, dbTx database.Transaction) (*big.Int, error)
@@ -178,6 +185,7 @@ func (b *BalanceStorage) Initialize(
 		helper.Asserter(),
 		helper.ExemptFunc(),
 		helper.BalanceExemptions(),
+		helper.SequenceNumSupport(),
 	)
 }
 
@@ -510,7 +518,7 @@ func (b *BalanceStorage) ReconciliationCoverage(
 func (b *BalanceStorage) existingValue(
 	ctx context.Context,
 	exists bool,
-	change *parser.BalanceChange,
+	change *parser.BalanceSeqChange,
 	parentBlock *types.BlockIdentifier,
 	existingValue string,
 ) (string, error) {
@@ -564,7 +572,7 @@ func (b *BalanceStorage) existingValue(
 // at the parent block.
 func (b *BalanceStorage) applyExemptions(
 	ctx context.Context,
-	change *parser.BalanceChange,
+	change *parser.BalanceSeqChange,
 	newVal string,
 ) (string, error) {
 	if b.helper == nil {
@@ -703,7 +711,7 @@ func (b *BalanceStorage) deleteAccountRecords(
 func (b *BalanceStorage) OrphanBalance(
 	ctx context.Context,
 	dbTransaction database.Transaction,
-	change *parser.BalanceChange,
+	change *parser.BalanceSeqChange,
 ) (bool, error) {
 	err := b.removeHistoricalBalances(
 		ctx,
@@ -744,7 +752,7 @@ func (b *BalanceStorage) OrphanBalance(
 		return false, storageErrs.ErrAccountMissing
 	}
 
-	difference, ok := new(big.Int).SetString(change.Difference, 10)
+	difference, ok := new(big.Int).SetString(change.BalanceDifference, 10)
 	if !ok {
 		return false, storageErrs.ErrInvalidChangeValue
 	}
@@ -796,13 +804,12 @@ func (b *BalanceStorage) PruneBalances(
 func (b *BalanceStorage) UpdateBalance(
 	ctx context.Context,
 	dbTransaction database.Transaction,
-	change *parser.BalanceChange,
+	change *parser.BalanceSeqChange,
 	parentBlock *types.BlockIdentifier,
 ) (bool, error) {
 	if change.Currency == nil {
 		return false, errors.New("invalid currency")
 	}
-
 	// If the balance key does not exist, the account
 	// does not exist.
 	key := GetAccountKey(balanceNamespace, change.Account, change.Currency)
@@ -828,7 +835,7 @@ func (b *BalanceStorage) UpdateBalance(
 		return false, err
 	}
 
-	newVal, err := types.AddValues(change.Difference, existingValue)
+	newVal, err := types.AddValues(change.BalanceDifference, existingValue)
 	if err != nil {
 		return false, err
 	}

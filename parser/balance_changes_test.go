@@ -35,11 +35,19 @@ func TestBalanceChanges(t *testing.T) {
 			Address: "acct1",
 		}
 
+		sender =  &types.AccountIdentifier{
+			Address: "acct2",
+		}
+
 		recipientAmount = &types.Amount{
 			Value:    "100",
 			Currency: currency,
 		}
 
+		senderAmount = &types.Amount{
+			Value: "-100",
+			Currency: currency,
+		}
 		emptyAccountAndAmount = &types.Operation{
 			OperationIdentifier: &types.OperationIdentifier{
 				Index: 0,
@@ -57,6 +65,15 @@ func TestBalanceChanges(t *testing.T) {
 			Account: recipient,
 		}
 
+		senderOperation = &types.Operation{
+			OperationIdentifier: &types.OperationIdentifier{
+				Index: 1,
+			},
+			Type:    "Transfer",
+			Status:  types.String("Success"),
+			Account: sender,
+			Amount:  senderAmount,
+		}
 		recipientOperation = &types.Operation{
 			OperationIdentifier: &types.OperationIdentifier{
 				Index: 0,
@@ -89,6 +106,15 @@ func TestBalanceChanges(t *testing.T) {
 			},
 		}
 
+		transferTransaction = &types.Transaction{
+			TransactionIdentifier: &types.TransactionIdentifier{
+				Hash: "tx2",
+			},
+			Operations: []*types.Operation{
+				senderOperation,
+				recipientOperation,
+			},
+		}
 		defaultStatus = []*types.OperationStatus{
 			{
 				Status:     "Success",
@@ -104,7 +130,7 @@ func TestBalanceChanges(t *testing.T) {
 	var tests = map[string]struct {
 		block         *types.Block
 		orphan        bool
-		changes       []*BalanceChange
+		changes       []*BalanceSeqChange
 		allowedStatus []*types.OperationStatus
 		exemptFunc    ExemptOperation
 		err           error
@@ -125,7 +151,7 @@ func TestBalanceChanges(t *testing.T) {
 				Timestamp: asserter.MinUnixEpoch + 1,
 			},
 			orphan: false,
-			changes: []*BalanceChange{
+			changes: []*BalanceSeqChange{
 				{
 					Account:  recipient,
 					Currency: currency,
@@ -133,7 +159,8 @@ func TestBalanceChanges(t *testing.T) {
 						Hash:  "1",
 						Index: 1,
 					},
-					Difference: "100",
+					BalanceDifference: "100",
+					SeqNumDifference: 0,
 				},
 			},
 			allowedStatus: defaultStatus,
@@ -155,7 +182,7 @@ func TestBalanceChanges(t *testing.T) {
 				Timestamp: asserter.MinUnixEpoch + 1,
 			},
 			orphan:        false,
-			changes:       []*BalanceChange{},
+			changes:       []*BalanceSeqChange{},
 			allowedStatus: defaultStatus,
 			exemptFunc: func(op *types.Operation) bool {
 				return types.Hash(op.Account) ==
@@ -181,7 +208,7 @@ func TestBalanceChanges(t *testing.T) {
 				Timestamp: asserter.MinUnixEpoch + 1,
 			},
 			orphan: false,
-			changes: []*BalanceChange{
+			changes: []*BalanceSeqChange{
 				{
 					Account: &types.AccountIdentifier{
 						Address: "addr1",
@@ -191,7 +218,8 @@ func TestBalanceChanges(t *testing.T) {
 						Hash:  "1",
 						Index: 1,
 					},
-					Difference: "250",
+					BalanceDifference: "250",
+					SeqNumDifference: 0,
 				},
 				{
 					Account: &types.AccountIdentifier{
@@ -202,7 +230,8 @@ func TestBalanceChanges(t *testing.T) {
 						Hash:  "1",
 						Index: 1,
 					},
-					Difference: "150",
+					BalanceDifference: "150",
+					SeqNumDifference: 0,
 				},
 			},
 			allowedStatus: defaultStatus,
@@ -226,7 +255,7 @@ func TestBalanceChanges(t *testing.T) {
 				Timestamp: asserter.MinUnixEpoch + 1,
 			},
 			orphan: true,
-			changes: []*BalanceChange{
+			changes: []*BalanceSeqChange{
 				{
 					Account: &types.AccountIdentifier{
 						Address: "addr1",
@@ -236,7 +265,8 @@ func TestBalanceChanges(t *testing.T) {
 						Hash:  "1",
 						Index: 1,
 					},
-					Difference: "-250",
+					BalanceDifference: "-250",
+					SeqNumDifference: 0,
 				},
 				{
 					Account: &types.AccountIdentifier{
@@ -247,7 +277,92 @@ func TestBalanceChanges(t *testing.T) {
 						Hash:  "1",
 						Index: 1,
 					},
-					Difference: "-150",
+					BalanceDifference: "-150",
+					SeqNumDifference: 0,
+				},
+			},
+			allowedStatus: defaultStatus,
+			err:           nil,
+		},
+		"simple block with transfer transaction":{
+			block: &types.Block{
+				BlockIdentifier: &types.BlockIdentifier{
+					Hash:  "1",
+					Index: 1,
+				},
+				ParentBlockIdentifier: &types.BlockIdentifier{
+					Hash:  "0",
+					Index: 0,
+				},
+				Transactions: []*types.Transaction{
+					transferTransaction,
+					transferTransaction,
+				},
+				Timestamp: asserter.MinUnixEpoch + 1,
+			},
+			orphan: false,
+			changes: []*BalanceSeqChange{
+				{
+					Account:  sender,
+					Currency: currency,
+					Block: &types.BlockIdentifier{
+						Hash:  "1",
+						Index: 1,
+					},
+					BalanceDifference: "-200",
+					SeqNumDifference: 2,
+				},
+				{
+					Account:  recipient,
+					Currency: currency,
+					Block: &types.BlockIdentifier{
+						Hash:  "1",
+						Index: 1,
+					},
+					BalanceDifference: "200",
+					SeqNumDifference: 0,
+				},
+			},
+			allowedStatus: defaultStatus,
+			err:           nil,
+		},
+		"multiple transfers in orphan block": {
+			block: &types.Block{
+				BlockIdentifier: &types.BlockIdentifier{
+					Hash:  "1",
+					Index: 1,
+				},
+				ParentBlockIdentifier: &types.BlockIdentifier{
+					Hash:  "0",
+					Index: 0,
+				},
+				Transactions: []*types.Transaction{
+					transferTransaction,
+					transferTransaction,
+				},
+				Timestamp: asserter.MinUnixEpoch + 1,
+			},
+			orphan: true,
+			changes: []*BalanceSeqChange{
+				{
+					Account:  sender,
+					Currency: currency,
+					Block: &types.BlockIdentifier{
+						Hash:  "1",
+						Index: 1,
+					},
+					BalanceDifference: "200",
+					SeqNumDifference: -2,
+				},
+				{
+					Account:  recipient,
+					Currency: currency,
+					Block: &types.BlockIdentifier{
+						Hash:  "1",
+						Index: 1,
+					},
+					BalanceDifference: "-200",
+					SeqNumDifference: 0,
 				},
 			},
 			allowedStatus: defaultStatus,
@@ -261,10 +376,15 @@ func TestBalanceChanges(t *testing.T) {
 			assert.NoError(t, err)
 			assert.NotNil(t, asserter)
 
+			sequenceNum := &types.SequenceNum{
+				SupportSeq: true,
+				SeqOpType: "Transfer",
+			}
 			parser := New(
 				asserter,
 				test.exemptFunc,
 				nil,
+				sequenceNum,
 			)
 
 			changes, err := parser.BalanceChanges(

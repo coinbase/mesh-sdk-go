@@ -185,6 +185,10 @@ func TestBalance(t *testing.T) {
 			Value:    "-1000",
 			Currency: currency,
 		}
+		seqNumSupport = &types.SequenceNumSupport{
+			SupportSeq: true,
+			SeqOpType: "Transfer",
+		}
 	)
 
 	ctx := context.Background()
@@ -202,6 +206,7 @@ func TestBalance(t *testing.T) {
 	mockHelper.On("Asserter").Return(baseAsserter())
 	mockHelper.On("ExemptFunc").Return(exemptFunc())
 	mockHelper.On("BalanceExemptions").Return(exemptions)
+	mockHelper.On("SequenceNumSupport").Return(seqNumSupport)
 	mockHandler := &mocks.BalanceStorageHandler{}
 	storage.Initialize(mockHelper, mockHandler)
 
