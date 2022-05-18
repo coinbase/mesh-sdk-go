@@ -16,11 +16,8 @@ package modules
 
 import (
 	"context"
-	"encoding/json"
 	"github.com/stretchr/testify/mock"
-	"io/ioutil"
 	"math/big"
-	"path"
 
 	//"encoding/json"
 	"errors"
@@ -1220,6 +1217,117 @@ func TestBalance(t *testing.T) {
 
 //func TestBootstrapBalances(t *testing.T) {
 //	var (
+//		blockIdentifier = &types.BlockIdentifier{
+//			Hash:  "block",
+//			Index: 1,
+//		}
+//
+//		accountCoin = &types.AccountIdentifier{
+//			Address: "test",
+//		}
+//
+//		currency = &types.Currency{
+//			Symbol:   "BLAH",
+//			Decimals: 2,
+//		}
+//
+//		amountCoins = &types.Amount{
+//			Value:    "60",
+//			Currency: currency,
+//		}
+//
+//		accountCoins = []*types.Coin{
+//			{
+//				CoinIdentifier: &types.CoinIdentifier{Identifier: "coin1"},
+//				Amount: &types.Amount{
+//					Value:    "30",
+//					Currency: currency,
+//				},
+//			},
+//			{
+//				CoinIdentifier: &types.CoinIdentifier{Identifier: "coin2"},
+//				Amount: &types.Amount{
+//					Value:    "30",
+//					Currency: currency,
+//				},
+//			},
+//		}
+//
+//		accountBalance = &types.AccountIdentifier{
+//			Address: "test2",
+//		}
+//
+//		amountBalance = &types.Amount{
+//			Value:    "100",
+//			Currency: currency,
+//		}
+//
+//		accBalance1 = &utils.AccountBalance{
+//			Account: accountCoin,
+//			Amount:  amountCoins,
+//			Coins:   accountCoins,
+//			Block:   blockIdentifier,
+//		}
+//
+//		accBalance2 = &utils.AccountBalance{
+//			Account: accountBalance,
+//			Amount:  amountBalance,
+//			Block:   blockIdentifier,
+//		}
+//	)
+//
+//	ctx := context.Background()
+//
+//	newDir, err := utils.CreateTempDir()
+//	assert.NoError(t, err)
+//	defer utils.RemoveTempDir(newDir)
+//
+//	database, err := newTestBadgerDatabase(ctx, newDir)
+//	assert.NoError(t, err)
+//	defer database.Close(ctx)
+//
+//	storage := NewBalanceStorage(database)
+//	mockHelper := &mocks.BalanceStorageHelper{}
+//	mockHandler := &mocks.BalanceStorageHandler{}
+//	mockHelper.On("Asserter").Return(baseAsserter())
+//	mockHelper.On("ExemptFunc").Return(exemptFunc())
+//	mockHelper.On("BalanceExemptions").Return([]*types.BalanceExemption{})
+//	storage.Initialize(mockHelper, mockHandler)
+//
+//	t.Run("Set balance successfully", func(t *testing.T) {
+//		mockHandler.On("AccountsSeen", ctx, mock.Anything, 1).Return(nil).Twice()
+//		err = storage.SetBalanceImported(
+//			ctx,
+//			nil,
+//			[]*utils.AccountBalance{accBalance1, accBalance2},
+//		)
+//		assert.NoError(t, err)
+//
+//		amount1, err := storage.GetOrSetBalance(
+//			ctx,
+//			accountCoin,
+//			currency,
+//			blockIdentifier,
+//		)
+//		assert.NoError(t, err)
+//		assert.Equal(t, amount1.Value, amountCoins.Value)
+//
+//		amount2, err := storage.GetOrSetBalance(
+//			ctx,
+//			accountBalance,
+//			currency,
+//			blockIdentifier,
+//		)
+//		assert.NoError(t, err)
+//		assert.Equal(t, amount2.Value, amountBalance.Value)
+//	})
+//
+//	mockHelper.AssertExpectations(t)
+//	mockHandler.AssertExpectations(t)
+//}
+//
+//func TestBootstrapBalances(t *testing.T) {
+//	var (
 //		genesisBlockIdentifier = &types.BlockIdentifier{
 //			Index: 0,
 //			Hash:  "0",
@@ -1425,7 +1533,7 @@ func TestBalance(t *testing.T) {
 //	mockHelper.AssertExpectations(t)
 //	mockHandler.AssertExpectations(t)
 //}
-
+//
 //func TestBalanceReconciliation(t *testing.T) {
 //	var (
 //		account = &types.AccountIdentifier{
