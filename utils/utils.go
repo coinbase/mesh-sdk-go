@@ -63,6 +63,12 @@ const (
 	// to consider when estimating time to tip if the provided
 	// estimate is 0.
 	minBlocksPerSecond = 0.0001
+
+	// MaxEntrySizePerTxn is the maximum number of entries
+	// in one transaction object. This is used for bootstrap
+	// balances process to avoid TxnTooBig error when memory_limit_disabled=false
+	// as well as reduce the running time.
+	MaxEntrySizePerTxn = 600
 )
 
 var (
@@ -186,6 +192,14 @@ type FetcherHelper interface {
 		block *types.PartialBlockIdentifier,
 		currencies []*types.Currency,
 	) (*types.BlockIdentifier, []*types.Amount, map[string]interface{}, *fetcher.Error)
+
+	AccountCoinsRetry(
+		ctx context.Context,
+		network *types.NetworkIdentifier,
+		acct *types.AccountIdentifier,
+		includeMempool bool,
+		currencies []*types.Currency,
+	) (*types.BlockIdentifier, []*types.Coin, map[string]interface{}, *fetcher.Error)
 }
 
 type BlockStorageHelper interface {
@@ -484,6 +498,57 @@ func GetAccountBalances(
 
 	return accountBalances, nil
 }
+
+// -------------------------------------------------------------------------------
+// ----------------- Helper struct for fetching account coins --------------------
+// -------------------------------------------------------------------------------
+
+// AccountCoinsRequest defines the required information to get an account's coins.
+type AccountCoinsRequest struct {
+	Account        *types.AccountIdentifier
+	Network        *types.NetworkIdentifier
+	Currencies     []*types.Currency
+	IncludeMempool bool
+}
+
+// AccountCoins defines an account's coins info at tip.
+type AccountCoinsResponse struct {
+	Coins []*types.Coin
+}
+
+// GetAccountCoins calls /account/coins endpoint and returns an array of coins at tip.
+func GetAccountCoins(
+	ctx context.Context,
+	fetcher FetcherHelper,
+	acctCoinsReqs []*AccountCoinsRequest,
+) ([]*AccountCoinsResponse, error) {
+	var acctCoins []*AccountCoinsResponse
+	for _, req := range acctCoinsReqs {
+		_, coins, _, err := fetcher.AccountCoinsRetry(
+			ctx,
+			req.Network,
+			req.Account,
+			req.IncludeMempool,
+			req.Currencies,
+		)
+
+		if err != nil {
+			return nil, err.Err
+		}
+
+		resp := &AccountCoinsResponse{
+			Coins: coins,
+		}
+
+		acctCoins = append(acctCoins, resp)
+	}
+
+	return acctCoins, nil
+}
+
+// -------------------------------------------------------------------------------
+// ------------------- End of helper struct for account coins --------------------
+// -------------------------------------------------------------------------------
 
 // AtTip returns a boolean indicating if a block timestamp
 // is within tipDelay from the current time.
