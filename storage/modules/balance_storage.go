@@ -329,7 +329,8 @@ func (b *BalanceStorage) SetBalance(
 	ctx context.Context,
 	dbTransaction database.Transaction,
 	account *types.AccountIdentifier,
-	amount *types.Amount,
+	balanceSeq *types.BalanceSeq,
+	//amount *types.Amount,
 	block *types.BlockIdentifier,
 ) error {
 	if b.handler == nil {
@@ -341,7 +342,7 @@ func (b *BalanceStorage) SetBalance(
 		ctx,
 		dbTransaction,
 		account,
-		amount.Currency,
+		balanceSeq.Amount.Currency,
 	); err != nil {
 		return err
 	}
@@ -354,32 +355,31 @@ func (b *BalanceStorage) SetBalance(
 	// Serialize account entry
 	serialAcc, err := b.db.Encoder().EncodeAccountCurrency(&types.AccountCurrency{
 		Account:  account,
-		Currency: amount.Currency,
+		Currency: balanceSeq.Amount.Currency,
 	})
 	if err != nil {
 		return err
 	}
 
 	// Set account
-	key := GetAccountKey(accountNamespace, account, amount.Currency)
+	key := GetAccountKey(accountNamespace, account, balanceSeq.Amount.Currency)
 	if err := dbTransaction.Set(ctx, key, serialAcc, true); err != nil {
 		return err
 	}
 
 	// Set current balance
-	key = GetAccountKey(balanceNamespace, account, amount.Currency)
-	value, ok := new(big.Int).SetString(amount.Value, 10)
-	if !ok {
-		return storageErrs.ErrInvalidValue
+	key = GetAccountKey(balanceNamespace, account, balanceSeq.Amount.Currency)
+	valueBytes, err := b.db.Encoder().EncodeBalanceSeq(balanceSeq)
+	if err != nil {
+		return err
 	}
 
-	valueBytes := value.Bytes()
 	if err := dbTransaction.Set(ctx, key, valueBytes, false); err != nil {
 		return err
 	}
 
 	// Set historical balance
-	key = GetHistoricalBalanceKey(account, amount.Currency, block.Index)
+	key = GetHistoricalBalanceKey(account, balanceSeq.Amount.Currency, block.Index)
 	if err := dbTransaction.Set(ctx, key, valueBytes, true); err != nil {
 		return err
 	}
@@ -515,15 +515,16 @@ func (b *BalanceStorage) ReconciliationCoverage(
 //
 // If there are matching balance exemptions,
 // we update the passed in existing value.
+// TODO: update comment
 func (b *BalanceStorage) existingValue(
 	ctx context.Context,
 	exists bool,
 	change *parser.BalanceSeqChange,
 	parentBlock *types.BlockIdentifier,
-	existingValue string,
-) (string, error) {
+	existingValue *types.BalanceSeq,
+) (*types.BalanceSeq, error) {
 	if b.helper == nil {
-		return "", storageErrs.ErrHelperHandlerMissing
+		return nil, storageErrs.ErrHelperHandlerMissing
 	}
 
 	if exists {
@@ -535,8 +536,14 @@ func (b *BalanceStorage) existingValue(
 	//
 	// We also ensure we don't exit with 0 if the value already exists,
 	// which could be true if balances are bootstrapped.
+	// TODO: why this?
 	if parentBlock != nil && change.Block.Hash == parentBlock.Hash {
-		return "0", nil
+		//return "0", nil
+		return  &types.BalanceSeq{
+			Amount: &types.Amount{Value: "0", Currency: change.Currency},
+			SeqNumSupport: &types.SequenceNumSupport{SupportSeq: true},
+			Seq:           int32(0),
+		}, nil
 	}
 
 	// Use helper to fetch existing balance.
@@ -547,7 +554,7 @@ func (b *BalanceStorage) existingValue(
 		parentBlock,
 	)
 	if err != nil {
-		return "", fmt.Errorf(
+		return nil, fmt.Errorf(
 			"%w: unable to get previous account balance for %s %s at %s",
 			err,
 			types.PrintStruct(change.Account),
@@ -555,8 +562,33 @@ func (b *BalanceStorage) existingValue(
 			types.PrintStruct(parentBlock),
 		)
 	}
+	if existingValue.SeqNumSupport.SupportSeq {
+		seqNum, err := b.helper.AccountSeqNum(
+			ctx,
+			change.Account,
+			change.Currency,
+			parentBlock,
+		)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"%w: unable to get previous account sequence number for %s %s at %s",
+				err,
+				types.PrintStruct(change.Account),
+				types.PrintStruct(change.Currency),
+				types.PrintStruct(parentBlock),
+			)
+		}
+		return &types.BalanceSeq{
+			Amount: &types.Amount{Value: amount.Value, Currency: change.Currency},
+			SeqNumSupport: &types.SequenceNumSupport{SupportSeq: true},
+			Seq:           seqNum,
+		}, nil
+	}
 
-	return amount.Value, nil
+	return &types.BalanceSeq{
+		Amount: &types.Amount{Value: amount.Value, Currency: change.Currency},
+		SeqNumSupport: &types.SequenceNumSupport{SupportSeq: false},
+	}, nil
 }
 
 // applyExemptions compares the computed balance of an account
@@ -570,13 +602,14 @@ func (b *BalanceStorage) existingValue(
 // means it is possible for an account balance to go negative
 // if the balance change is applied to the balance of the account
 // at the parent block.
+// TODO: do we need to return sequence number from live as well?
 func (b *BalanceStorage) applyExemptions(
 	ctx context.Context,
 	change *parser.BalanceSeqChange,
-	newVal string,
-) (string, error) {
+	newVal *types.BalanceSeq,
+) (*types.BalanceSeq, error) {
 	if b.helper == nil {
-		return "", storageErrs.ErrHelperHandlerMissing
+		return nil, storageErrs.ErrHelperHandlerMissing
 	}
 
 	// Find exemptions that are applicable to the *parser.BalanceChange
@@ -593,7 +626,7 @@ func (b *BalanceStorage) applyExemptions(
 		change.Block,
 	)
 	if err != nil {
-		return "", fmt.Errorf(
+		return nil, fmt.Errorf(
 			"%w: unable to get current account balance for %s %s at %s",
 			err,
 			types.PrintStruct(change.Account),
@@ -604,9 +637,9 @@ func (b *BalanceStorage) applyExemptions(
 
 	// Determine if new live balance complies
 	// with any balance exemption.
-	difference, err := types.SubtractValues(liveAmount.Value, newVal)
+	difference, err := types.SubtractValues(liveAmount.Value, newVal.Amount.Value)
 	if err != nil {
-		return "", fmt.Errorf(
+		return nil, fmt.Errorf(
 			"%w: unable to calculate difference between live and computed balances",
 			err,
 		)
@@ -617,7 +650,7 @@ func (b *BalanceStorage) applyExemptions(
 		difference,
 	)
 	if exemption == nil {
-		return "", fmt.Errorf(
+		return nil, fmt.Errorf(
 			"%w: account %s balance difference (live - computed) %s at %s is not allowed by any balance exemption",
 			storageErrs.ErrInvalidLiveBalance,
 			types.PrintStruct(change.Account),
@@ -625,8 +658,26 @@ func (b *BalanceStorage) applyExemptions(
 			types.PrintStruct(change.Block),
 		)
 	}
+	newVal.Amount.Value = liveAmount.Value
+	if newVal.SeqNumSupport.SupportSeq {
+		liveSeqNum, err := b.helper.AccountSeqNum(ctx,
+			change.Account,
+			change.Currency,
+			change.Block,
+		)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"%w: unable to get current sequence number for %s %s at %s",
+				err,
+				types.PrintStruct(change.Account),
+				types.PrintStruct(change.Currency),
+				types.PrintStruct(change.Block),
+			)
+		}
+		newVal.Seq = liveSeqNum
+	}
 
-	return liveAmount.Value, nil
+	return newVal, nil
 }
 
 // deleteAccountRecords is a convenience method that deletes
@@ -799,7 +850,7 @@ func (b *BalanceStorage) PruneBalances(
 }
 
 // UpdateBalance updates a types.AccountIdentifer
-// by a types.Amount and sets the account's most
+// by a types.BalanceSeq and sets the account's most
 // recent accessed block.
 func (b *BalanceStorage) UpdateBalance(
 	ctx context.Context,
@@ -813,10 +864,17 @@ func (b *BalanceStorage) UpdateBalance(
 	// If the balance key does not exist, the account
 	// does not exist.
 	key := GetAccountKey(balanceNamespace, change.Account, change.Currency)
-	exists, currentBalance, err := BigIntGet(ctx, key, dbTransaction)
+	exists, val, err := dbTransaction.Get(ctx, key)
 	if err != nil {
 		return false, err
 	}
+
+	var currentBalanceSeq types.BalanceSeq
+	if err:= b.db.Encoder().DecodeBalanceSeq(val, &currentBalanceSeq, false); err != nil {
+		return false, fmt.Errorf("%w: %v", storageErrs.ErrObjectDecodeFailed, err)
+	}
+
+	currentBalanceSeq.SeqNumSupport = b.helper.SequenceNumSupport()
 
 	// Find account existing value whether the account is new, has an
 	// existing balance, or is subject to additional accounting from
@@ -829,26 +887,35 @@ func (b *BalanceStorage) UpdateBalance(
 		exists,
 		change,
 		parentBlock,
-		currentBalance.String(),
+		&currentBalanceSeq,
 	)
 	if err != nil {
 		return false, err
 	}
 
-	newVal, err := types.AddValues(change.BalanceDifference, existingValue)
+	newVal, err := types.AddValues(change.BalanceDifference, existingValue.Amount.Value)
 	if err != nil {
 		return false, err
 	}
 
+	newBalanceSeq := &types.BalanceSeq{
+		Amount: &types.Amount{Value: newVal, Currency: change.Currency},
+		SeqNumSupport: existingValue.SeqNumSupport,
+	}
+
+	if existingValue.SeqNumSupport.SupportSeq {
+		newSeqNum := change.SeqNumDifference + existingValue.Seq
+		newBalanceSeq.Seq = newSeqNum
+	}
 	// If any exemptions apply, the returned new value will
 	// reflect the live balance for the *types.AccountIdentifier
 	// and *types.Currency.
-	newVal, err = b.applyExemptions(ctx, change, newVal)
+	newBalanceSeq, err = b.applyExemptions(ctx, change, newBalanceSeq)
 	if err != nil {
 		return false, err
 	}
 
-	bigNewVal, ok := new(big.Int).SetString(newVal, 10)
+	bigNewVal, ok := new(big.Int).SetString(newBalanceSeq.Amount.Value, 10)
 	if !ok {
 		return false, fmt.Errorf("%s is not an integer", newVal)
 	}
@@ -858,6 +925,18 @@ func (b *BalanceStorage) UpdateBalance(
 			"%w %s:%+v for %+v at %+v",
 			storageErrs.ErrNegativeBalance,
 			newVal,
+			change.Currency,
+			change.Account,
+			change.Block,
+		)
+	}
+
+	if newBalanceSeq.SeqNumSupport.SupportSeq && newBalanceSeq.Seq < 0{
+		// TODO: create a new error - negativeSequenceNumber
+		return false, fmt.Errorf(
+			"%w %s:%+v for %+v at %+v",
+			storageErrs.ErrNegativeBalance,
+			newBalanceSeq.Amount.Value,
 			change.Currency,
 			change.Account,
 			change.Block,
@@ -882,7 +961,12 @@ func (b *BalanceStorage) UpdateBalance(
 	}
 
 	// Update current balance
-	if err := dbTransaction.Set(ctx, key, bigNewVal.Bytes(), true); err != nil {
+	balanceSeqBytes, err := b.db.Encoder().EncodeBalanceSeq(newBalanceSeq)
+	if err != nil {
+		// TODO: format error
+		return false, err
+	}
+	if err := dbTransaction.Set(ctx, key, balanceSeqBytes, true); err != nil {
 		return false, err
 	}
 
@@ -892,7 +976,7 @@ func (b *BalanceStorage) UpdateBalance(
 		change.Currency,
 		change.Block.Index,
 	)
-	if err := dbTransaction.Set(ctx, historicalKey, bigNewVal.Bytes(), true); err != nil {
+	if err := dbTransaction.Set(ctx, historicalKey, balanceSeqBytes, true); err != nil {
 		return false, err
 	}
 
@@ -906,11 +990,11 @@ func (b *BalanceStorage) GetBalance(
 	account *types.AccountIdentifier,
 	currency *types.Currency,
 	index int64,
-) (*types.Amount, error) {
+) (*types.BalanceSeq, error) {
 	dbTx := b.db.ReadTransaction(ctx)
 	defer dbTx.Discard(ctx)
 
-	amount, err := b.GetBalanceTransactional(
+	balanceSeq, err := b.GetBalanceTransactional(
 		ctx,
 		dbTx,
 		account,
@@ -918,10 +1002,10 @@ func (b *BalanceStorage) GetBalance(
 		index,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("%w: unable to get balance", err)
+		return nil, fmt.Errorf("%w: unable to get balance and sequence number", err)
 	}
 
-	return amount, nil
+	return balanceSeq, nil
 }
 
 // GetBalanceTransactional returns all the balances of a types.AccountIdentifier
@@ -932,7 +1016,7 @@ func (b *BalanceStorage) GetBalanceTransactional(
 	account *types.AccountIdentifier,
 	currency *types.Currency,
 	index int64,
-) (*types.Amount, error) {
+) (*types.BalanceSeq, error) {
 	key := GetAccountKey(balanceNamespace, account, currency)
 	exists, _, err := dbTx.Get(ctx, key)
 	if err != nil {
@@ -958,7 +1042,7 @@ func (b *BalanceStorage) GetBalanceTransactional(
 		)
 	}
 
-	amount, err := b.getHistoricalBalance(
+	balanceSeq, err := b.getHistoricalBalance(
 		ctx,
 		dbTx,
 		account,
@@ -970,17 +1054,23 @@ func (b *BalanceStorage) GetBalanceTransactional(
 	// the balance to be 0 (i.e. before any balance
 	// changes applied). If syncing starts after
 	// genesis, this behavior could cause issues.
+	// TODO: what to return?
+	// TODO: Test: orphan balance correctly
 	if errors.Is(err, storageErrs.ErrAccountMissing) {
-		return &types.Amount{
-			Value:    "0",
-			Currency: currency,
-		}, nil
+		return &types.BalanceSeq{
+			Amount: &types.Amount{
+				Value:    "0",
+				Currency: currency,
+			},
+		SeqNumSupport: b.helper.SequenceNumSupport(),
+		Seq: int32(0)}, nil
+		//return nil, nil
 	}
 	if err != nil {
 		return nil, err
 	}
 
-	return amount, nil
+	return balanceSeq, nil
 }
 
 func (b *BalanceStorage) fetchAndSetBalance(
@@ -989,24 +1079,33 @@ func (b *BalanceStorage) fetchAndSetBalance(
 	account *types.AccountIdentifier,
 	currency *types.Currency,
 	block *types.BlockIdentifier,
-) (*types.Amount, error) {
+) (*types.BalanceSeq, error) {
 	amount, err := b.helper.AccountBalance(ctx, account, currency, block)
 	if err != nil {
 		return nil, fmt.Errorf("%w: unable to get account balance from helper", err)
+	}
+
+	balanceSeq := &types.BalanceSeq{Amount: amount, SeqNumSupport: b.helper.SequenceNumSupport()}
+	if balanceSeq.SeqNumSupport.SupportSeq {
+		seqNum, err := b.helper.AccountSeqNum(ctx, account, currency, block)
+		if err != nil {
+			return nil, fmt.Errorf("%w: unable to get account sequence number from helper", err)
+		}
+		balanceSeq.Seq = seqNum
 	}
 
 	err = b.SetBalance(
 		ctx,
 		dbTx,
 		account,
-		amount,
+		balanceSeq,
 		block,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("%w: unable to set account balance", err)
 	}
 
-	return amount, nil
+	return balanceSeq, nil
 }
 
 // GetOrSetBalance returns the balance of a types.AccountIdentifier
@@ -1017,11 +1116,11 @@ func (b *BalanceStorage) GetOrSetBalance(
 	account *types.AccountIdentifier,
 	currency *types.Currency,
 	block *types.BlockIdentifier,
-) (*types.Amount, error) {
+) (*types.BalanceSeq, error) {
 	dbTx := b.db.Transaction(ctx)
 	defer dbTx.Discard(ctx)
 
-	amount, err := b.GetOrSetBalanceTransactional(
+	balanceSeq, err := b.GetOrSetBalanceTransactional(
 		ctx,
 		dbTx,
 		account,
@@ -1037,7 +1136,7 @@ func (b *BalanceStorage) GetOrSetBalance(
 		return nil, fmt.Errorf("%w: unable to commit account balance transaction", err)
 	}
 
-	return amount, nil
+	return balanceSeq, nil
 }
 
 // GetOrSetBalanceTransactional returns the balance of a types.AccountIdentifier
@@ -1049,12 +1148,12 @@ func (b *BalanceStorage) GetOrSetBalanceTransactional(
 	account *types.AccountIdentifier,
 	currency *types.Currency,
 	block *types.BlockIdentifier,
-) (*types.Amount, error) {
+) (*types.BalanceSeq, error) {
 	if block == nil {
 		return nil, storageErrs.ErrBlockNil
 	}
 
-	amount, err := b.GetBalanceTransactional(
+	balanceSeq, err := b.GetBalanceTransactional(
 		ctx,
 		dbTx,
 		account,
@@ -1062,7 +1161,8 @@ func (b *BalanceStorage) GetOrSetBalanceTransactional(
 		block.Index,
 	)
 	if errors.Is(err, storageErrs.ErrAccountMissing) {
-		amount, err = b.fetchAndSetBalance(ctx, dbTx, account, currency, block)
+		// TODO
+		amount, err := b.fetchAndSetBalance(ctx, dbTx, account, currency, block)
 		if err != nil {
 			return nil, fmt.Errorf("%w: unable to set balance", err)
 		}
@@ -1073,7 +1173,7 @@ func (b *BalanceStorage) GetOrSetBalanceTransactional(
 		return nil, fmt.Errorf("%w: unable to get balance", err)
 	}
 
-	return amount, nil
+	return balanceSeq, nil
 }
 
 // BootstrapBalance represents a balance of
@@ -1089,6 +1189,7 @@ type BootstrapBalance struct {
 // any number of AccountIdentifiers at the genesis blocks.
 // This is particularly useful for setting the value of
 // accounts that received an allocation in the genesis block.
+// TODO: should also bootstrap seqnum if supported?
 func (b *BalanceStorage) BootstrapBalances(
 	ctx context.Context,
 	bootstrapBalancesFile string,
@@ -1135,9 +1236,12 @@ func (b *BalanceStorage) BootstrapBalances(
 			ctx,
 			dbTransaction,
 			balance.Account,
-			&types.Amount{
-				Value:    balance.Value,
-				Currency: balance.Currency,
+			&types.BalanceSeq{
+				Amount: &types.Amount{
+					Value:    balance.Value,
+					Currency: balance.Currency,
+				},
+				SeqNumSupport: b.helper.SequenceNumSupport(),
 			},
 			genesisBlockIdentifier,
 		)
@@ -1210,6 +1314,7 @@ func (b *BalanceStorage) GetAllAccountCurrency(
 // SetBalanceImported sets the balances of a set of addresses by
 // getting their balances from the tip block, and populating the database.
 // This is used when importing prefunded addresses.
+// TODO: should we have set seqNum imported as well?
 func (b *BalanceStorage) SetBalanceImported(
 	ctx context.Context,
 	helper BalanceStorageHelper,
@@ -1231,7 +1336,7 @@ func (b *BalanceStorage) SetBalanceImported(
 			ctx,
 			transaction,
 			accountBalance.Account,
-			accountBalance.Amount,
+			&types.BalanceSeq{SeqNumSupport: b.helper.SequenceNumSupport(), Amount: accountBalance.Amount},
 			accountBalance.Block,
 		)
 		if err != nil {
@@ -1247,32 +1352,34 @@ func (b *BalanceStorage) SetBalanceImported(
 	return nil
 }
 
-// getHistoricalBalance returns the balance of an account
-// at a particular *types.BlockIdentifier.
+// getHistoricalBalance returns the balance and sequence number (if supported)
+// of an account at a particular *types.BlockIdentifier.
 func (b *BalanceStorage) getHistoricalBalance(
 	ctx context.Context,
 	dbTx database.Transaction,
 	account *types.AccountIdentifier,
 	currency *types.Currency,
 	index int64,
-) (*types.Amount, error) {
-	var foundValue string
+) (*types.BalanceSeq, error) {
+	var balanceSeq types.BalanceSeq
 	_, err := dbTx.Scan(
 		ctx,
 		GetHistoricalBalancePrefix(account, currency),
 		GetHistoricalBalanceKey(account, currency, index),
 		func(k []byte, v []byte) error {
-			foundValue = new(big.Int).SetBytes(v).String()
+			if err:= b.db.Encoder().DecodeBalanceSeq(v, &balanceSeq, false); err != nil {
+				return fmt.Errorf("%w: %v", storageErrs.ErrObjectDecodeFailed, err)
+			}
 			return errAccountFound
 		},
 		false,
 		true,
 	)
 	if errors.Is(err, errAccountFound) {
-		return &types.Amount{
-			Value:    foundValue,
-			Currency: currency,
-		}, nil
+		balanceSeq.Amount.Currency = currency
+		// TODO: how to do it simpler?
+		balanceSeq.SeqNumSupport = b.helper.SequenceNumSupport()
+		return &balanceSeq, nil
 	}
 	if err != nil {
 		return nil, fmt.Errorf("%w: database scan failed", err)
@@ -1284,6 +1391,7 @@ func (b *BalanceStorage) getHistoricalBalance(
 // removeHistoricalBalances deletes all historical balances
 // >= (used during reorg) or <= (used during pruning) a particular
 // index.
+// TODO: q: if orphan, does it mean we remove from genesis to orphan block? why?
 func (b *BalanceStorage) removeHistoricalBalances(
 	ctx context.Context,
 	dbTx database.Transaction,

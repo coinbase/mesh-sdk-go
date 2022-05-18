@@ -18,6 +18,7 @@ package types
 
 
 type BalanceSeq struct {
-	BalanceAmount *Amount
+	Amount *Amount
+	SeqNumSupport *SequenceNumSupport
 	Seq int32
 }
