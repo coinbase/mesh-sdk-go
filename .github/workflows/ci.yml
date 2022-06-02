@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+env:
+  go_version: 1.16
+  GO111MODULE: on
+  COVERALLS_TOKEN: ${{ secrets.COVERALLS_TOKEN }}
+
+jobs:
+  Build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
+        with:
+          go-version: ${{ env.go_version }}
+      - run: make build
+  Test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
+        with:
+          go-version: ${{ env.go_version }}
+      - run: make test
+  Lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
+        with:
+          go-version: ${{ env.go_version }}
+      - uses: golangci/golangci-lint-action@v3
+        with:
+          version: latest
+          args: --timeout 3m
+
+  Check-License:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          version: latest
+      - uses: actions/setup-go@v3
+        with:
+          go-version: ${{ env.go_version }}
+      - run: make check-license
+
+  Check-Format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          version: latest
+      - run: make check-format 
+  
+  Check-Gen:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          version: latest
+      - run: make check-gen 
+
+  Coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          version: latest
+      - uses: actions/setup-go@v3
+        with:
+          go-version: ${{ env.go_version }}
+      - run: make test-cover COVERALLS_TOKEN="$COVERALLS_TOKEN"
+
+  Salus:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          version: latest
+      - run: make salus
+    

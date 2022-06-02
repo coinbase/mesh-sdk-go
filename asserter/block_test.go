@@ -293,6 +293,14 @@ func TestOperationsValidations(t *testing.T) {
 			},
 		}
 
+		invalidFeeAmount = &types.Amount{
+			Value: "100",
+			Currency: &types.Currency{
+				Symbol:   "BTC",
+				Decimals: 8,
+			},
+		}
+
 		validAccount = &types.AccountIdentifier{
 			Address: "test",
 		}
@@ -512,6 +520,88 @@ func TestOperationsValidations(t *testing.T) {
 			validationFilePath: "data/validation_fee_and_payment_unbalanced.json",
 			construction:       false,
 			err:                ErrRelatedOperationInFeeNotAllowed,
+		},
+
+		"fee amount is non-negative": {
+			operations: []*types.Operation{
+				{
+					OperationIdentifier: &types.OperationIdentifier{
+						Index: int64(0),
+					},
+					Type:    "PAYMENT",
+					Status:  types.String("SUCCESS"),
+					Account: validAccount,
+					Amount:  validDepositAmount,
+				},
+				{
+					OperationIdentifier: &types.OperationIdentifier{
+						Index: int64(1),
+					},
+					Type:    "PAYMENT",
+					Status:  types.String("SUCCESS"),
+					Account: validAccount,
+					Amount: &types.Amount{
+						Value: "-2000",
+						Currency: &types.Currency{
+							Symbol:   "BTC",
+							Decimals: 8,
+						},
+					},
+				},
+				{
+					OperationIdentifier: &types.OperationIdentifier{
+						Index: int64(2),
+					},
+					Type:    "FEE",
+					Status:  types.String("SUCCESS"),
+					Account: validAccount,
+					Amount:  invalidFeeAmount,
+				},
+			},
+			validationFilePath: "data/validation_fee_and_payment_unbalanced.json",
+			construction:       false,
+			err:                ErrFeeAmountNotNegative,
+		},
+
+		"fee amount is negative as expected": {
+			operations: []*types.Operation{
+				{
+					OperationIdentifier: &types.OperationIdentifier{
+						Index: int64(0),
+					},
+					Type:    "PAYMENT",
+					Status:  types.String("SUCCESS"),
+					Account: validAccount,
+					Amount:  validDepositAmount,
+				},
+				{
+					OperationIdentifier: &types.OperationIdentifier{
+						Index: int64(1),
+					},
+					Type:    "PAYMENT",
+					Status:  types.String("SUCCESS"),
+					Account: validAccount,
+					Amount: &types.Amount{
+						Value: "-2000",
+						Currency: &types.Currency{
+							Symbol:   "BTC",
+							Decimals: 8,
+						},
+					},
+				},
+				{
+					OperationIdentifier: &types.OperationIdentifier{
+						Index: int64(2),
+					},
+					Type:    "FEE",
+					Status:  types.String("SUCCESS"),
+					Account: validAccount,
+					Amount:  validFeeAmount,
+				},
+			},
+			validationFilePath: "data/validation_fee_and_payment_unbalanced.json",
+			construction:       false,
+			err:                nil,
 		},
 	}
 

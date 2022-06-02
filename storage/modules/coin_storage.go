@@ -501,21 +501,28 @@ func (c *CoinStorage) GetLargestCoin(
 // This is used when importing prefunded addresses.
 func (c *CoinStorage) SetCoinsImported(
 	ctx context.Context,
-	accountBalances []*utils.AccountBalance,
+	accts []*types.AccountIdentifier,
+	acctCoinsResp []*utils.AccountCoinsResponse,
 ) error {
-	var accountCoins []*types.AccountCoin
-	for _, accountBalance := range accountBalances {
-		for _, coin := range accountBalance.Coins {
-			accountCoin := &types.AccountCoin{
-				Account: accountBalance.Account,
+	// Request array length should always equal response array length.
+	// But we still check it for sure.
+	if len(accts) != len(acctCoinsResp) {
+		return errors.ErrCoinImportFailed
+	}
+
+	var acctCoins []*types.AccountCoin
+	for i, resp := range acctCoinsResp {
+		for _, coin := range resp.Coins {
+			acctCoin := &types.AccountCoin{
+				Account: accts[i],
 				Coin:    coin,
 			}
 
-			accountCoins = append(accountCoins, accountCoin)
+			acctCoins = append(acctCoins, acctCoin)
 		}
 	}
 
-	if err := c.AddCoins(ctx, accountCoins); err != nil {
+	if err := c.AddCoins(ctx, acctCoins); err != nil {
 		return fmt.Errorf("%w: %v", errors.ErrCoinImportFailed, err)
 	}
 
