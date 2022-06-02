@@ -131,16 +131,10 @@ func CheckNetworkListForNetwork(
 	networkList *types.NetworkListResponse,
 	networkIdentifier *types.NetworkIdentifier,
 ) (bool, []*types.NetworkIdentifier) {
-	networkMatched := false
-	supportedNetworks := []*types.NetworkIdentifier{}
-	for _, availableNetwork := range networkList.NetworkIdentifiers {
-		if types.Hash(availableNetwork) == types.Hash(networkIdentifier) {
-			networkMatched = true
-			break
-		}
-
-		supportedNetworks = append(supportedNetworks, availableNetwork)
+	availableNetwork := networkList.NetworkIdentifiers[0]
+	if types.Hash(availableNetwork) == types.Hash(networkIdentifier) {
+		return true, networkList.NetworkIdentifiers
 	}
 
-	return networkMatched, supportedNetworks
+	return false, []*types.NetworkIdentifier{}
 }

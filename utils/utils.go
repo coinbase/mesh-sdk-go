@@ -298,9 +298,12 @@ func CheckNetworkSupported(
 	helper FetcherHelper,
 ) (*types.NetworkStatusResponse, error) {
 	networks, fetchErr := helper.NetworkList(ctx, nil)
-
 	if fetchErr != nil {
 		return nil, fmt.Errorf("%w: unable to fetch network list", fetchErr.Err)
+	}
+
+	if len(networks.NetworkIdentifiers) != 1 {
+		return nil, fmt.Errorf("network/list endpoint returns more (or no) network ID")
 	}
 
 	networkMatched, supportedNetworks := fetcher.CheckNetworkListForNetwork(
