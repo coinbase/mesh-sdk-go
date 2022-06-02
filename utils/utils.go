@@ -298,6 +298,7 @@ func CheckNetworkSupported(
 	helper FetcherHelper,
 ) (*types.NetworkStatusResponse, error) {
 	networks, fetchErr := helper.NetworkList(ctx, nil)
+
 	if fetchErr != nil {
 		return nil, fmt.Errorf("%w: unable to fetch network list", fetchErr.Err)
 	}
