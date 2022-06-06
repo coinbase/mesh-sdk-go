@@ -5,7 +5,6 @@ go 1.16
 require (
 	github.com/DataDog/zstd v1.5.2
 	github.com/Zilliqa/gozilliqa-sdk v1.2.1-0.20201201074141-dd0ecada1be6
-	github.com/btcsuite/btcd v0.22.1
 	github.com/cenkalti/backoff v2.2.1+incompatible
 	github.com/coinbase/kryptology v1.8.0
 	github.com/dgraph-io/badger/v2 v2.2007.4
@@ -24,6 +23,7 @@ require (
 )
 
 require (
+	github.com/btcsuite/btcutil v1.0.3-0.20201208143702-a53e38424cce // indirect
 	github.com/dgraph-io/ristretto v0.0.3 // indirect
 	github.com/dgryski/go-farm v0.0.0-20200201041132-a6ae2369ad13 // indirect
 	google.golang.org/protobuf v1.25.0 // indirect
