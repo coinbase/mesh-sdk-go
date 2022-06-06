@@ -7,7 +7,7 @@ on:
   pull_request:
 
 env:
-  go_version: 1.16
+  go_version: 1.18
   GO111MODULE: on
   COVERALLS_TOKEN: ${{ secrets.COVERALLS_TOKEN }}
 
