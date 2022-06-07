@@ -105,7 +105,11 @@ type MetadataDescription struct {
 
 // AccountDescription is used to describe a *types.AccountIdentifier.
 type AccountDescription struct {
-	Exists                 bool
+	Exists bool
+
+	// SubAccountOptional If this is true then SubAccountExists, SubAccountAddress,
+	// SubAccountMetadataKeys matching is ignored
+	SubAccountOptional     bool
 	SubAccountExists       bool
 	SubAccountAddress      string
 	SubAccountMetadataKeys []*MetadataDescription
@@ -210,6 +214,10 @@ func accountMatch(req *AccountDescription, account *types.AccountIdentifier) err
 			return ErrAccountMatchAccountMissing
 		}
 
+		return nil
+	}
+
+	if req.SubAccountOptional {
 		return nil
 	}
 

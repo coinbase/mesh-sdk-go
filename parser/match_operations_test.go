@@ -1408,6 +1408,132 @@ func TestMatchOperations(t *testing.T) {
 			matches: nil,
 			err:     true,
 		},
+		"nil amount ops (sub account optional - when sub-account exist)": {
+			operations: []*types.Operation{
+				{
+					Account: &types.AccountIdentifier{
+						Address: "addr1",
+						SubAccount: &types.SubAccountIdentifier{
+							Address: "sub 3",
+						},
+					},
+				},
+				{
+					Account: &types.AccountIdentifier{
+						Address: "addr2",
+						SubAccount: &types.SubAccountIdentifier{
+							Address: "sub 2",
+						},
+					},
+				},
+			},
+			descriptions: &Descriptions{
+				OperationDescriptions: []*OperationDescription{
+					{
+						Account: &AccountDescription{
+							Exists:             true,
+							SubAccountOptional: true,
+							SubAccountExists:   true,
+							SubAccountAddress:  "sub 2",
+						},
+					},
+					{
+						Account: &AccountDescription{
+							Exists:             true,
+							SubAccountOptional: true,
+							SubAccountExists:   true,
+							SubAccountAddress:  "sub 1",
+						},
+					},
+				},
+			},
+			matches: []*Match{
+				{
+					Operations: []*types.Operation{
+						{
+							Account: &types.AccountIdentifier{
+								Address: "addr1",
+								SubAccount: &types.SubAccountIdentifier{
+									Address: "sub 3",
+								},
+							},
+						},
+					},
+					Amounts: []*big.Int{nil},
+				},
+				{
+					Operations: []*types.Operation{
+						{
+							Account: &types.AccountIdentifier{
+								Address: "addr2",
+								SubAccount: &types.SubAccountIdentifier{
+									Address: "sub 2",
+								},
+							},
+						},
+					},
+					Amounts: []*big.Int{nil},
+				},
+			},
+			err: false,
+		},
+		"nil amount ops (sub account optional - when sub-account doesn't exist)": {
+			operations: []*types.Operation{
+				{
+					Account: &types.AccountIdentifier{
+						Address: "addr1",
+					},
+				},
+				{
+					Account: &types.AccountIdentifier{
+						Address: "addr2",
+					},
+				},
+			},
+			descriptions: &Descriptions{
+				OperationDescriptions: []*OperationDescription{
+					{
+						Account: &AccountDescription{
+							Exists:             true,
+							SubAccountOptional: true,
+							SubAccountExists:   true,
+							SubAccountAddress:  "sub 2",
+						},
+					},
+					{
+						Account: &AccountDescription{
+							Exists:             true,
+							SubAccountOptional: true,
+							SubAccountExists:   true,
+							SubAccountAddress:  "sub 1",
+						},
+					},
+				},
+			},
+			matches: []*Match{
+				{
+					Operations: []*types.Operation{
+						{
+							Account: &types.AccountIdentifier{
+								Address: "addr1",
+							},
+						},
+					},
+					Amounts: []*big.Int{nil},
+				},
+				{
+					Operations: []*types.Operation{
+						{
+							Account: &types.AccountIdentifier{
+								Address: "addr2",
+							},
+						},
+					},
+					Amounts: []*big.Int{nil},
+				},
+			},
+			err: false,
+		},
 		"nil descriptions": {
 			operations: []*types.Operation{
 				{
