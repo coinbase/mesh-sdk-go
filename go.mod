@@ -16,7 +16,7 @@ require (
 	github.com/mitchellh/mapstructure v1.4.3
 	github.com/neilotoole/errgroup v0.1.6
 	github.com/segmentio/fasthash v1.0.3
-	github.com/stretchr/testify v1.7.0
+	github.com/stretchr/testify v1.7.2
 	github.com/tidwall/gjson v1.14.1
 	github.com/tidwall/sjson v1.2.4
 	github.com/vmihailenco/msgpack/v5 v5.3.5
@@ -48,5 +48,5 @@ require (
 	golang.org/x/net v0.0.0-20211015210444-4f30a5c0130f // indirect
 	golang.org/x/sys v0.0.0-20211019181941-9d821ace8654 // indirect
 	google.golang.org/protobuf v1.25.0 // indirect
-	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
