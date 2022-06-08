@@ -1,4 +1,4 @@
-// Copyright 2020 Coinbase, Inc.
+// Copyright 2022 Coinbase, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -1401,6 +1401,108 @@ func TestMatchOperations(t *testing.T) {
 							Exists:            true,
 							SubAccountExists:  true,
 							SubAccountAddress: "sub 1",
+						},
+					},
+				},
+			},
+			matches: nil,
+			err:     true,
+		},
+		"sub account optional - when sub-account exist": {
+			operations: []*types.Operation{
+				{
+					Account: &types.AccountIdentifier{
+						Address: "addr1",
+						SubAccount: &types.SubAccountIdentifier{
+							Address: "sub 2",
+						},
+					},
+				},
+				{
+					Account: &types.AccountIdentifier{
+						Address: "addr2",
+					},
+				},
+			},
+			descriptions: &Descriptions{
+				OperationDescriptions: []*OperationDescription{
+					{
+						Account: &AccountDescription{
+							Exists:             true,
+							SubAccountOptional: true,
+							SubAccountExists:   true,
+							SubAccountAddress:  "sub 2",
+						},
+					},
+					{
+						Account: &AccountDescription{
+							Exists:             true,
+							SubAccountOptional: true,
+							SubAccountExists:   true,
+							SubAccountAddress:  "sub 1",
+						},
+					},
+				},
+			},
+			matches: []*Match{
+				{
+					Operations: []*types.Operation{
+						{
+							Account: &types.AccountIdentifier{
+								Address: "addr1",
+								SubAccount: &types.SubAccountIdentifier{
+									Address: "sub 2",
+								},
+							},
+						},
+					},
+					Amounts: []*big.Int{nil},
+				},
+				{
+					Operations: []*types.Operation{
+						{
+							Account: &types.AccountIdentifier{
+								Address: "addr2",
+							},
+						},
+					},
+					Amounts: []*big.Int{nil},
+				},
+			},
+			err: false,
+		},
+		"sub account optional - when sub-account address is different": {
+			operations: []*types.Operation{
+				{
+					Account: &types.AccountIdentifier{
+						Address: "addr1",
+						SubAccount: &types.SubAccountIdentifier{
+							Address: "sub 2",
+						},
+					},
+				},
+				{
+					Account: &types.AccountIdentifier{
+						Address: "addr2",
+					},
+				},
+			},
+			descriptions: &Descriptions{
+				OperationDescriptions: []*OperationDescription{
+					{
+						Account: &AccountDescription{
+							Exists:             true,
+							SubAccountOptional: true,
+							SubAccountExists:   true,
+							SubAccountAddress:  "sub 3",
+						},
+					},
+					{
+						Account: &AccountDescription{
+							Exists:             true,
+							SubAccountOptional: true,
+							SubAccountExists:   true,
+							SubAccountAddress:  "sub 1",
 						},
 					},
 				},
