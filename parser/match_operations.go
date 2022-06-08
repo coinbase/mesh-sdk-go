@@ -1,4 +1,4 @@
-// Copyright 2020 Coinbase, Inc.
+// Copyright 2022 Coinbase, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -251,7 +251,10 @@ func accountMatch(req *AccountDescription, account *types.AccountIdentifier) err
 	return nil
 }
 
-func verifySubAccountAddress(subAccountAddress string, subAccount *types.SubAccountIdentifier) error {
+func verifySubAccountAddress(
+	subAccountAddress string,
+	subAccount *types.SubAccountIdentifier,
+) error {
 	if len(subAccountAddress) > 0 && subAccount.Address != subAccountAddress {
 		return fmt.Errorf(
 			"%w: expected %s but got %s",
