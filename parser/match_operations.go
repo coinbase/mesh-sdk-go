@@ -251,6 +251,8 @@ func accountMatch(req *AccountDescription, account *types.AccountIdentifier) err
 	return nil
 }
 
+// verifySubAccountAddress verifies the sub-account address if
+// sub-account is present.
 func verifySubAccountAddress(
 	subAccountAddress string,
 	subAccount *types.SubAccountIdentifier,
