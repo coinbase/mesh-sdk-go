@@ -218,6 +218,12 @@ func accountMatch(req *AccountDescription, account *types.AccountIdentifier) err
 	}
 
 	if req.SubAccountOptional {
+		// Optionally can require a certain subaccount address if subaccount is present
+		if account.SubAccount != nil {
+			if err := verifySubAccountAddress(req.SubAccountAddress, account.SubAccount); err != nil {
+				return err
+			}
+		}
 		return nil
 	}
 
@@ -234,19 +240,26 @@ func accountMatch(req *AccountDescription, account *types.AccountIdentifier) err
 	}
 
 	// Optionally can require a certain subaccount address
-	if len(req.SubAccountAddress) > 0 && account.SubAccount.Address != req.SubAccountAddress {
-		return fmt.Errorf(
-			"%w: expected %s but got %s",
-			ErrAccountMatchUnexpectedSubAccountAddr,
-			req.SubAccountAddress,
-			account.SubAccount.Address,
-		)
+	if err := verifySubAccountAddress(req.SubAccountAddress, account.SubAccount); err != nil {
+		return err
 	}
 
 	if err := metadataMatch(req.SubAccountMetadataKeys, account.SubAccount.Metadata); err != nil {
 		return fmt.Errorf("%w: account metadata keys mismatch", err)
 	}
 
+	return nil
+}
+
+func verifySubAccountAddress(subAccountAddress string, subAccount *types.SubAccountIdentifier) error {
+	if len(subAccountAddress) > 0 && subAccount.Address != subAccountAddress {
+		return fmt.Errorf(
+			"%w: expected %s but got %s",
+			ErrAccountMatchUnexpectedSubAccountAddr,
+			subAccountAddress,
+			subAccount.Address,
+		)
+	}
 	return nil
 }
 

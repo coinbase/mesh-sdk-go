@@ -1408,22 +1408,19 @@ func TestMatchOperations(t *testing.T) {
 			matches: nil,
 			err:     true,
 		},
-		"nil amount ops (sub account optional - when sub-account exist)": {
+		"sub account optional - when sub-account exist": {
 			operations: []*types.Operation{
 				{
 					Account: &types.AccountIdentifier{
 						Address: "addr1",
 						SubAccount: &types.SubAccountIdentifier{
-							Address: "sub 3",
+							Address: "sub 2",
 						},
 					},
 				},
 				{
 					Account: &types.AccountIdentifier{
 						Address: "addr2",
-						SubAccount: &types.SubAccountIdentifier{
-							Address: "sub 2",
-						},
 					},
 				},
 			},
@@ -1453,19 +1450,6 @@ func TestMatchOperations(t *testing.T) {
 						{
 							Account: &types.AccountIdentifier{
 								Address: "addr1",
-								SubAccount: &types.SubAccountIdentifier{
-									Address: "sub 3",
-								},
-							},
-						},
-					},
-					Amounts: []*big.Int{nil},
-				},
-				{
-					Operations: []*types.Operation{
-						{
-							Account: &types.AccountIdentifier{
-								Address: "addr2",
 								SubAccount: &types.SubAccountIdentifier{
 									Address: "sub 2",
 								},
@@ -1474,14 +1458,27 @@ func TestMatchOperations(t *testing.T) {
 					},
 					Amounts: []*big.Int{nil},
 				},
+				{
+					Operations: []*types.Operation{
+						{
+							Account: &types.AccountIdentifier{
+								Address: "addr2",
+							},
+						},
+					},
+					Amounts: []*big.Int{nil},
+				},
 			},
 			err: false,
 		},
-		"nil amount ops (sub account optional - when sub-account doesn't exist)": {
+		"sub account optional - when sub-account address is different": {
 			operations: []*types.Operation{
 				{
 					Account: &types.AccountIdentifier{
 						Address: "addr1",
+						SubAccount: &types.SubAccountIdentifier{
+							Address: "sub 2",
+						},
 					},
 				},
 				{
@@ -1497,7 +1494,7 @@ func TestMatchOperations(t *testing.T) {
 							Exists:             true,
 							SubAccountOptional: true,
 							SubAccountExists:   true,
-							SubAccountAddress:  "sub 2",
+							SubAccountAddress:  "sub 3",
 						},
 					},
 					{
@@ -1510,29 +1507,8 @@ func TestMatchOperations(t *testing.T) {
 					},
 				},
 			},
-			matches: []*Match{
-				{
-					Operations: []*types.Operation{
-						{
-							Account: &types.AccountIdentifier{
-								Address: "addr1",
-							},
-						},
-					},
-					Amounts: []*big.Int{nil},
-				},
-				{
-					Operations: []*types.Operation{
-						{
-							Account: &types.AccountIdentifier{
-								Address: "addr2",
-							},
-						},
-					},
-					Amounts: []*big.Int{nil},
-				},
-			},
-			err: false,
+			matches: nil,
+			err:     true,
 		},
 		"nil descriptions": {
 			operations: []*types.Operation{
