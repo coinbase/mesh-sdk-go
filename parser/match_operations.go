@@ -1,4 +1,4 @@
-// Copyright 2020 Coinbase, Inc.
+// Copyright 2022 Coinbase, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -105,7 +105,11 @@ type MetadataDescription struct {
 
 // AccountDescription is used to describe a *types.AccountIdentifier.
 type AccountDescription struct {
-	Exists                 bool
+	Exists bool
+
+	// SubAccountOptional If this is true then SubAccountExists, SubAccountAddress,
+	// SubAccountMetadataKeys matching is ignored
+	SubAccountOptional     bool
 	SubAccountExists       bool
 	SubAccountAddress      string
 	SubAccountMetadataKeys []*MetadataDescription
@@ -213,6 +217,16 @@ func accountMatch(req *AccountDescription, account *types.AccountIdentifier) err
 		return nil
 	}
 
+	if req.SubAccountOptional {
+		// Optionally can require a certain subaccount address if subaccount is present
+		if account.SubAccount != nil {
+			if err := verifySubAccountAddress(req.SubAccountAddress, account.SubAccount); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
 	if account.SubAccount == nil {
 		if req.SubAccountExists {
 			return ErrAccountMatchSubAccountMissing
@@ -226,19 +240,31 @@ func accountMatch(req *AccountDescription, account *types.AccountIdentifier) err
 	}
 
 	// Optionally can require a certain subaccount address
-	if len(req.SubAccountAddress) > 0 && account.SubAccount.Address != req.SubAccountAddress {
-		return fmt.Errorf(
-			"%w: expected %s but got %s",
-			ErrAccountMatchUnexpectedSubAccountAddr,
-			req.SubAccountAddress,
-			account.SubAccount.Address,
-		)
+	if err := verifySubAccountAddress(req.SubAccountAddress, account.SubAccount); err != nil {
+		return err
 	}
 
 	if err := metadataMatch(req.SubAccountMetadataKeys, account.SubAccount.Metadata); err != nil {
 		return fmt.Errorf("%w: account metadata keys mismatch", err)
 	}
 
+	return nil
+}
+
+// verifySubAccountAddress verifies the sub-account address if
+// sub-account is present.
+func verifySubAccountAddress(
+	subAccountAddress string,
+	subAccount *types.SubAccountIdentifier,
+) error {
+	if len(subAccountAddress) > 0 && subAccount.Address != subAccountAddress {
+		return fmt.Errorf(
+			"%w: expected %s but got %s",
+			ErrAccountMatchUnexpectedSubAccountAddr,
+			subAccountAddress,
+			subAccount.Address,
+		)
+	}
 	return nil
 }
 
