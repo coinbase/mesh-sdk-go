@@ -29,9 +29,11 @@ type SignatureType string
 
 // List of SignatureType
 const (
-	Ecdsa           SignatureType = "ecdsa"
-	EcdsaRecovery   SignatureType = "ecdsa_recovery"
-	Ed25519         SignatureType = "ed25519"
-	Schnorr1        SignatureType = "schnorr_1"
-	SchnorrPoseidon SignatureType = "schnorr_poseidon"
+	Bls12381BasicMpl SignatureType = "bls12381_basic_mpl"
+	Bls12381AugMpl   SignatureType = "bls12381_aug_mpl"
+	Ecdsa            SignatureType = "ecdsa"
+	EcdsaRecovery    SignatureType = "ecdsa_recovery"
+	Ed25519          SignatureType = "ed25519"
+	Schnorr1         SignatureType = "schnorr_1"
+	SchnorrPoseidon  SignatureType = "schnorr_poseidon"
 )

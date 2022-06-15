@@ -39,6 +39,9 @@ var (
 	ErrKeyGenPallasFailed = errors.New(
 		"keygen: error generating key pair for pallas curve type",
 	)
+	ErrKeyGenBls12381Failed = errors.New(
+		"keygen: error generating key pair for bls12381 curve type",
+	)
 	ErrCurveTypeNotSupported = errors.New("not a supported CurveType")
 
 	ErrSignUnsupportedPayloadSignatureType = errors.New(

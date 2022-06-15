@@ -24,6 +24,7 @@ import (
 	"math/big"
 
 	"github.com/btcsuite/btcd/btcec"
+	"github.com/coinbase/kryptology/pkg/signatures/bls/bls_sig"
 	"github.com/coinbase/kryptology/pkg/signatures/schnorr/mina"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
@@ -132,6 +133,20 @@ func ImportPrivateKey(privKeyHex string, curve types.CurveType) (*KeyPair, error
 			},
 			PrivateKey: priKeyBytes,
 		}
+	case types.Bls12381:
+		rawPrivKey := &bls_sig.SecretKey{}
+		_ = rawPrivKey.UnmarshalBinary(privKey)
+
+		pubKey, _ := rawPrivKey.GetPublicKey()
+		pubKeyBin, _ := pubKey.MarshalBinary()
+		priKeyBytes, _ := rawPrivKey.MarshalBinary()
+		keyPair = &KeyPair{
+			PublicKey: &types.PublicKey{
+				Bytes:     pubKeyBin,
+				CurveType: curve,
+			},
+			PrivateKey: priKeyBytes,
+		}
 
 	default:
 		return nil, fmt.Errorf("%w: %s", ErrCurveTypeNotSupported, curve)
@@ -214,6 +229,22 @@ func GenerateKeypair(curve types.CurveType) (*KeyPair, error) {
 			PublicKey:  pubKey,
 			PrivateKey: rawPrivKeyBytes,
 		}
+	case types.Bls12381:
+		rawPubKey, rawPrivKey, err := bls_sig.NewSigBasic().Keygen()
+		rawPubKeyBytes, _ := rawPubKey.MarshalBinary()
+		rawPrivKeyBytes, _ := rawPrivKey.MarshalBinary()
+		if err != nil {
+			return nil, fmt.Errorf("%w: %v", ErrKeyGenBls12381Failed, err)
+		}
+		pubKey := &types.PublicKey{
+			Bytes:     rawPubKeyBytes,
+			CurveType: curve,
+		}
+
+		keyPair = &KeyPair{
+			PublicKey:  pubKey,
+			PrivateKey: rawPrivKeyBytes,
+		}
 	default:
 		return nil, fmt.Errorf("%w: %s", ErrCurveTypeNotSupported, curve)
 	}
@@ -252,6 +283,8 @@ func (k *KeyPair) Signer() (Signer, error) {
 		return &SignerSecp256r1{k}, nil
 	case types.Pallas:
 		return &SignerPallas{k}, nil
+	case types.Bls12381:
+		return &SignerBls12381{k}, nil
 	default:
 		return nil, fmt.Errorf("%w: %s", ErrCurveTypeNotSupported, k.PublicKey.CurveType)
 	}

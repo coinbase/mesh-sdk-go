@@ -83,6 +83,15 @@ func TestGenerateKeypairPallas(t *testing.T) {
 	assert.Len(t, keypair.PrivateKey, PrivKeyBytesLen)
 }
 
+func TestGenerateKeypairBls12381(t *testing.T) {
+	curve := types.Bls12381
+	keypair, err := GenerateKeypair(curve)
+
+	assert.NoError(t, err)
+	assert.Equal(t, keypair.PublicKey.CurveType, curve)
+	assert.Len(t, keypair.PrivateKey, PrivKeyBytesLen)
+}
+
 func mockKeyPair(privKey []byte, curveType types.CurveType) *KeyPair {
 	keypair, _ := GenerateKeypair(curveType)
 	keypair.PrivateKey = privKey
@@ -137,6 +146,11 @@ func TestImportPrivateKey(t *testing.T) {
 		"simple Pallas": {
 			"92D872DA7B3C90CF69D347908C3D3D692EA033A1D6E4A1695FCDCF6BBED87F37",
 			types.Pallas,
+			nil,
+		},
+		"simple Bls12381": {
+			"3ffb736d41737fc1fac8856458650742bfd01997bd96dd016215828b16309f58",
+			types.Bls12381,
 			nil,
 		},
 		"short ed25519":   {"asd", types.Secp256k1, ErrPrivKeyUndecodable},
