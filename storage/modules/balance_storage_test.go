@@ -16,16 +16,19 @@ package modules
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
-	"io/ioutil"
+	"github.com/stretchr/testify/mock"
 	"math/big"
-	"path"
+
+	//"encoding/json"
+	"errors"
+	//"io/ioutil"
+	//"math/big"
+	//"path"
 	"testing"
 
-	"github.com/neilotoole/errgroup"
+	//"github.com/neilotoole/errgroup"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
+	//"github.com/stretchr/testify/mock"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
 	mocks "github.com/coinbase/rosetta-sdk-go/mocks/storage/modules"
@@ -67,6 +70,14 @@ func exemptFunc() parser.ExemptOperation {
 	}
 }
 
+func getMockBalanceStorageHelper(exemptions []*types.BalanceExemption, seqNumSupport *types.SequenceNumSupport) *mocks.BalanceStorageHelper{
+	mockHelper := &mocks.BalanceStorageHelper{}
+	mockHelper.On("Asserter").Return(baseAsserter())
+	mockHelper.On("ExemptFunc").Return(exemptFunc())
+	mockHelper.On("BalanceExemptions").Return(exemptions)
+	mockHelper.On("SequenceNumSupport").Return(seqNumSupport)
+	return mockHelper
+}
 func TestBalance(t *testing.T) {
 	var (
 		genesisAccount = &types.AccountIdentifier{
@@ -75,9 +86,9 @@ func TestBalance(t *testing.T) {
 		account = &types.AccountIdentifier{
 			Address: "blah",
 		}
-		account2 = &types.AccountIdentifier{
-			Address: "blah2",
-		}
+		//account2 = &types.AccountIdentifier{
+		//	Address: "blah2",
+		//}
 		account3 = &types.AccountIdentifier{
 			Address: "blah3",
 		}
@@ -169,10 +180,6 @@ func TestBalance(t *testing.T) {
 			Hash:  "pkdasdj",
 			Index: 123891,
 		}
-		result = &types.Amount{
-			Value:    "200",
-			Currency: currency,
-		}
 		newBlock3 = &types.BlockIdentifier{
 			Hash:  "pkdgdj",
 			Index: 123892,
@@ -185,6 +192,13 @@ func TestBalance(t *testing.T) {
 			Value:    "-1000",
 			Currency: currency,
 		}
+		seqNumSupported = &types.SequenceNumSupport{
+			SupportSeq: true,
+			SeqOpType: "Transfer",
+		}
+		//seqNumNotSupported = &types.SequenceNumSupport{
+		//	SupportSeq: false,
+		//}
 	)
 
 	ctx := context.Background()
@@ -198,10 +212,7 @@ func TestBalance(t *testing.T) {
 	defer database.Close(ctx)
 
 	storage := NewBalanceStorage(database)
-	mockHelper := &mocks.BalanceStorageHelper{}
-	mockHelper.On("Asserter").Return(baseAsserter())
-	mockHelper.On("ExemptFunc").Return(exemptFunc())
-	mockHelper.On("BalanceExemptions").Return(exemptions)
+	mockHelper := getMockBalanceStorageHelper(exemptions, seqNumSupported)
 	mockHandler := &mocks.BalanceStorageHandler{}
 	storage.Initialize(mockHelper, mockHandler)
 
@@ -228,44 +239,68 @@ func TestBalance(t *testing.T) {
 			&types.Amount{Value: "10", Currency: currency},
 			nil,
 		).Once()
-		mockHandler.On("AccountsSeen", ctx, mock.Anything, 1).Return(nil).Once()
-		amount, err := storage.GetOrSetBalance(ctx, account, currency, newBlock)
-		assert.NoError(t, err)
-		assert.Equal(t, &types.Amount{
-			Value:    "10",
-			Currency: currency,
-		}, amount)
 
-		amount, err = storage.GetOrSetBalance(ctx, account, currency, newBlock)
+		mockHelper.On(
+			"AccountSeqNum",
+			ctx,
+			account,
+			currency,
+			newBlock,
+		).Return(
+			int32(2),
+			nil,
+		).Once()
+		mockHandler.On("AccountsSeen", ctx, mock.Anything, 1).Return(nil).Once()
+
+		actualBalanceSeq, err := storage.GetOrSetBalance(ctx, account, currency, newBlock)
+		expectedBalanceSeq := &types.BalanceSeq{
+			Amount: &types.Amount{
+				Value:    "10",
+				Currency: currency,
+			},
+			SeqNumSupport: seqNumSupported,
+			Seq: int32(2),
+		}
 		assert.NoError(t, err)
-		assert.Equal(t, &types.Amount{
-			Value:    "10",
-			Currency: currency,
-		}, amount)
+		assert.Equal(t, expectedBalanceSeq, actualBalanceSeq)
+
+		actualBalanceSeq, err = storage.GetOrSetBalance(ctx, account, currency, newBlock)
+		assert.NoError(t, err)
+		expectedBalanceSeq = &types.BalanceSeq{
+			Amount: &types.Amount{
+				Value:    "10",
+				Currency: currency,
+			},
+			SeqNumSupport: seqNumSupported,
+			Seq: int32(2),
+		}
+		assert.Equal(t, expectedBalanceSeq, actualBalanceSeq)
 	})
 
 	t.Run("Set and get genesis balance", func(t *testing.T) {
 		txn := storage.db.Transaction(ctx)
 		mockHandler.On("AccountsSeen", ctx, txn, 1).Return(nil).Once()
+		expectedBalanceSeq := &types.BalanceSeq{
+			SeqNumSupport: seqNumSupported,
+			Amount: &types.Amount{
+				Value:    amount.Value,
+				Currency: currency,
+			},
+			Seq: int32(0),
+		}
 		err := storage.SetBalance(
 			ctx,
 			txn,
 			genesisAccount,
-			&types.Amount{
-				Value:    amount.Value,
-				Currency: currency,
-			},
+			expectedBalanceSeq,
 			genesisBlock,
 		)
 		assert.NoError(t, err)
 		assert.NoError(t, txn.Commit(ctx))
 
-		amount, err := storage.GetOrSetBalance(ctx, genesisAccount, currency, genesisBlock)
+		actualBalanceSeq, err := storage.GetOrSetBalance(ctx, genesisAccount, currency, genesisBlock)
 		assert.NoError(t, err)
-		assert.Equal(t, &types.Amount{
-			Value:    "100",
-			Currency: currency,
-		}, amount)
+		assert.Equal(t, expectedBalanceSeq, actualBalanceSeq)
 	})
 
 	t.Run("Set and get balance", func(t *testing.T) {
@@ -277,23 +312,31 @@ func TestBalance(t *testing.T) {
 		// When adding the account, we increment the account seen count.
 		mockHandler.On("AccountsSeen", ctx, txn, 1).Return(nil).Once()
 
+		expectedBalanceSeq := &types.BalanceSeq{
+			SeqNumSupport: seqNumSupported,
+			Amount: &types.Amount{
+				Value:    amount.Value,
+				Currency: currency,
+			},
+			Seq: int32(3),
+		}
 		err := storage.SetBalance(
 			ctx,
 			txn,
 			account,
-			amount,
+			expectedBalanceSeq,
 			newBlock,
 		)
 		assert.NoError(t, err)
 		assert.NoError(t, txn.Commit(ctx))
 
-		retrievedAmount, err := storage.GetOrSetBalance(ctx, account, currency, newBlock)
+		actualBalanceSeq, err := storage.GetOrSetBalance(ctx, account, currency, newBlock)
 		assert.NoError(t, err)
-		assert.Equal(t, amount, retrievedAmount)
+		assert.Equal(t, expectedBalanceSeq, actualBalanceSeq)
 
-		retrievedAmount, err = storage.GetOrSetBalance(ctx, account, currency, newBlock2)
+		actualBalanceSeq, err = storage.GetOrSetBalance(ctx, account, currency, newBlock2)
 		assert.NoError(t, err)
-		assert.Equal(t, amount, retrievedAmount)
+		assert.Equal(t, expectedBalanceSeq, actualBalanceSeq)
 	})
 
 	t.Run("Set and get balance with storage helper", func(t *testing.T) {
@@ -307,25 +350,42 @@ func TestBalance(t *testing.T) {
 			&types.Amount{Value: "10", Currency: currency},
 			nil,
 		).Once()
+
+		mockHelper.On(
+			"AccountSeqNum",
+			ctx,
+			account3,
+			currency,
+			(*types.BlockIdentifier)(nil),
+		).Return(
+			int32(0),
+			nil,
+		).Once()
 		txn := storage.db.Transaction(ctx)
 		newAccount, err := storage.UpdateBalance(
 			ctx,
 			txn,
-			&parser.BalanceChange{
+			&parser.BalanceSeqChange{
 				Account:    account3,
 				Currency:   currency,
 				Block:      newBlock,
-				Difference: amount.Value,
+				BalanceDifference: amount.Value,
+				SeqNumDifference: int32(0),
 			},
 			nil,
 		)
+		expectedBalanceSeq := &types.BalanceSeq{
+			Amount: amountWithPrevious,
+			SeqNumSupport: seqNumSupported,
+			Seq: int32(0),
+		}
 		assert.True(t, newAccount)
 		assert.NoError(t, err)
 		assert.NoError(t, txn.Commit(ctx))
 
-		retrievedAmount, err := storage.GetOrSetBalance(ctx, account3, currency, newBlock)
+		retrievedBalanceSeq, err := storage.GetOrSetBalance(ctx, account3, currency, newBlock)
 		assert.NoError(t, err)
-		assert.Equal(t, amountWithPrevious, retrievedAmount)
+		assert.Equal(t, expectedBalanceSeq, retrievedBalanceSeq)
 	})
 
 	t.Run("Set balance with nil currency", func(t *testing.T) {
@@ -333,11 +393,12 @@ func TestBalance(t *testing.T) {
 		newAccount, err := storage.UpdateBalance(
 			ctx,
 			txn,
-			&parser.BalanceChange{
+			&parser.BalanceSeqChange{
 				Account:    account,
 				Currency:   nil,
 				Block:      newBlock,
-				Difference: amountNilCurrency.Value,
+				BalanceDifference: amountNilCurrency.Value,
+				SeqNumDifference: int32(0),
 			},
 			nil,
 		)
@@ -345,9 +406,14 @@ func TestBalance(t *testing.T) {
 		assert.EqualError(t, err, "invalid currency")
 		txn.Discard(ctx)
 
+		expectedBalanceSeq := &types.BalanceSeq{
+			Amount: amount,
+			SeqNumSupport: seqNumSupported,
+			Seq: int32(3),
+		}
 		retrievedAmount, err := storage.GetOrSetBalance(ctx, account, currency, newBlock)
 		assert.NoError(t, err)
-		assert.Equal(t, amount, retrievedAmount)
+		assert.Equal(t, expectedBalanceSeq, retrievedAmount)
 	})
 
 	t.Run("Modify existing balance", func(t *testing.T) {
@@ -355,11 +421,12 @@ func TestBalance(t *testing.T) {
 		newAccount, err := storage.UpdateBalance(
 			ctx,
 			txn,
-			&parser.BalanceChange{
+			&parser.BalanceSeqChange{
 				Account:    account,
 				Currency:   currency,
 				Block:      newBlock2,
-				Difference: amount.Value,
+				BalanceDifference: "-50",
+				SeqNumDifference: int32(1),
 			},
 			nil,
 		)
@@ -367,9 +434,17 @@ func TestBalance(t *testing.T) {
 		assert.NoError(t, err)
 		assert.NoError(t, txn.Commit(ctx))
 
+		expectedBalanceSeq := &types.BalanceSeq{
+			Amount: &types.Amount{
+				Value: "50",
+				Currency: currency,
+			},
+			SeqNumSupport: seqNumSupported,
+			Seq: int32(4),
+		}
 		retrievedAmount, err := storage.GetOrSetBalance(ctx, account, currency, newBlock2)
 		assert.NoError(t, err)
-		assert.Equal(t, result, retrievedAmount)
+		assert.Equal(t, expectedBalanceSeq, retrievedAmount)
 	})
 
 	t.Run("Discard transaction", func(t *testing.T) {
@@ -377,11 +452,12 @@ func TestBalance(t *testing.T) {
 		newAccount, err := storage.UpdateBalance(
 			ctx,
 			txn,
-			&parser.BalanceChange{
+			&parser.BalanceSeqChange{
 				Account:    account,
 				Currency:   currency,
 				Block:      newBlock3,
-				Difference: amount.Value,
+				BalanceDifference: amount.Value,
+				SeqNumDifference: int32(0),
 			},
 			nil,
 		)
@@ -398,8 +474,16 @@ func TestBalance(t *testing.T) {
 			currency,
 			newBlock2.Index,
 		)
+		expectedBalanceSeq := &types.BalanceSeq{
+			Amount: &types.Amount{
+				Value: "50",
+				Currency: currency,
+			},
+			SeqNumSupport: seqNumSupported,
+			Seq: int32(4),
+		}
 		assert.NoError(t, err)
-		assert.Equal(t, result, retrievedAmount)
+		assert.Equal(t, expectedBalanceSeq, retrievedAmount)
 
 		txn.Discard(ctx)
 	})
@@ -409,11 +493,12 @@ func TestBalance(t *testing.T) {
 		newAccount, err := storage.UpdateBalance(
 			ctx,
 			txn,
-			&parser.BalanceChange{
+			&parser.BalanceSeqChange{
 				Account:    account,
 				Currency:   largeDeduction.Currency,
 				Block:      newBlock3,
-				Difference: largeDeduction.Value,
+				BalanceDifference: largeDeduction.Value,
+				SeqNumDifference: int32(1),
 			},
 			nil,
 		)
@@ -421,7 +506,8 @@ func TestBalance(t *testing.T) {
 		assert.False(t, newAccount)
 		txn.Discard(ctx)
 	})
-
+	// TODO: Attempt modification to push sequence num negative on new acct
+	// TODO: Attempt modification to push sequence num negative on existing acct
 	t.Run("Attempt modification to push balance negative on new acct", func(t *testing.T) {
 		txn := storage.db.Transaction(ctx)
 		mockHelper.On(
@@ -434,14 +520,26 @@ func TestBalance(t *testing.T) {
 			&types.Amount{Value: "0", Currency: largeDeduction.Currency},
 			nil,
 		).Once()
+
+		mockHelper.On(
+			"AccountSeqNum",
+			ctx,
+			account2,
+			largeDeduction.Currency,
+			(*types.BlockIdentifier)(nil),
+		).Return(
+			int32(0),
+			nil,
+		).Once()
 		newAccount, err := storage.UpdateBalance(
 			ctx,
 			txn,
-			&parser.BalanceChange{
+			&parser.BalanceSeqChange{
 				Account:    account2,
 				Currency:   largeDeduction.Currency,
 				Block:      newBlock2,
-				Difference: largeDeduction.Value,
+				BalanceDifference: largeDeduction.Value,
+				SeqNumDifference: int32(1),
 			},
 			nil,
 		)
@@ -463,14 +561,26 @@ func TestBalance(t *testing.T) {
 			&types.Amount{Value: "0", Currency: amount.Currency},
 			nil,
 		).Once()
+
+		mockHelper.On(
+			"AccountSeqNum",
+			ctx,
+			subAccount,
+			amount.Currency,
+			(*types.BlockIdentifier)(nil),
+		).Return(
+			int32(0),
+			nil,
+		).Once()
 		newAccount, err := storage.UpdateBalance(
 			ctx,
 			txn,
-			&parser.BalanceChange{
+			&parser.BalanceSeqChange{
 				Account:    subAccount,
 				Currency:   amount.Currency,
 				Block:      newBlock,
-				Difference: amount.Value,
+				BalanceDifference: amount.Value,
+				SeqNumDifference: int32(0),
 			},
 			nil,
 		)
@@ -484,8 +594,14 @@ func TestBalance(t *testing.T) {
 			amount.Currency,
 			newBlock,
 		)
+
+		expectedBalanceSeq := &types.BalanceSeq{
+			Amount: amount,
+			SeqNumSupport: seqNumSupported,
+			Seq: int32(0),
+		}
 		assert.NoError(t, err)
-		assert.Equal(t, amount, retrievedAmount)
+		assert.Equal(t, expectedBalanceSeq, retrievedAmount)
 	})
 
 	t.Run("sub account metadata set and get balance", func(t *testing.T) {
@@ -500,14 +616,26 @@ func TestBalance(t *testing.T) {
 			&types.Amount{Value: "0", Currency: amount.Currency},
 			nil,
 		).Once()
+
+		mockHelper.On(
+			"AccountSeqNum",
+			ctx,
+			subAccountMetadata,
+			amount.Currency,
+			(*types.BlockIdentifier)(nil),
+		).Return(
+			int32(1),
+			nil,
+		).Once()
+
 		newAccount, err := storage.UpdateBalance(
 			ctx,
 			txn,
-			&parser.BalanceChange{
+			&parser.BalanceSeqChange{
 				Account:    subAccountMetadata,
 				Currency:   amount.Currency,
 				Block:      newBlock,
-				Difference: amount.Value,
+				BalanceDifference: amount.Value,
 			},
 			nil,
 		)
@@ -521,8 +649,15 @@ func TestBalance(t *testing.T) {
 			amount.Currency,
 			newBlock,
 		)
+
+		expectedBalanceSeq := &types.BalanceSeq{
+			Amount: amount,
+			SeqNumSupport: seqNumSupported,
+			Seq: int32(1),
+		}
+
 		assert.NoError(t, err)
-		assert.Equal(t, amount, retrievedAmount)
+		assert.Equal(t, expectedBalanceSeq, retrievedAmount)
 	})
 
 	t.Run("sub account unique metadata set and get balance", func(t *testing.T) {
@@ -537,14 +672,26 @@ func TestBalance(t *testing.T) {
 			&types.Amount{Value: "0", Currency: amount.Currency},
 			nil,
 		).Once()
+
+		mockHelper.On(
+			"AccountSeqNum",
+			ctx,
+			subAccountMetadata2,
+			amount.Currency,
+			(*types.BlockIdentifier)(nil),
+		).Return(
+			int32(1),
+			nil,
+		).Once()
+
 		newAccount, err := storage.UpdateBalance(
 			ctx,
 			txn,
-			&parser.BalanceChange{
+			&parser.BalanceSeqChange{
 				Account:    subAccountMetadata2,
 				Currency:   amount.Currency,
 				Block:      newBlock,
-				Difference: amount.Value,
+				BalanceDifference: amount.Value,
 			},
 			nil,
 		)
@@ -558,8 +705,15 @@ func TestBalance(t *testing.T) {
 			amount.Currency,
 			newBlock,
 		)
+
+		expectedBalanceSeq := &types.BalanceSeq{
+			Amount: amount,
+			SeqNumSupport: seqNumSupported,
+			Seq: int32(1),
+		}
+
 		assert.NoError(t, err)
-		assert.Equal(t, amount, retrievedAmount)
+		assert.Equal(t, expectedBalanceSeq, retrievedAmount)
 	})
 
 	t.Run("balance exemption update", func(t *testing.T) {
@@ -569,9 +723,13 @@ func TestBalance(t *testing.T) {
 			ctx,
 			txn,
 			exemptionAccount,
-			&types.Amount{
-				Value:    "0",
-				Currency: exemptionCurrency,
+			&types.BalanceSeq{
+				Amount: &types.Amount{
+					Value:    "0",
+					Currency: exemptionCurrency,
+				},
+				SeqNumSupport: seqNumSupported,
+				Seq: int32(0),
 			},
 			genesisBlock,
 		)
@@ -589,15 +747,28 @@ func TestBalance(t *testing.T) {
 			&types.Amount{Value: "150", Currency: exemptionCurrency},
 			nil,
 		).Once()
+
+		mockHelper.On(
+			"AccountSeqNum",
+			ctx,
+			exemptionAccount,
+			exemptionCurrency,
+			newBlock,
+		).Return(
+			int32(2),
+			nil,
+		).Once()
+
 		txn = storage.db.Transaction(ctx)
 		newAccount, err := storage.UpdateBalance(
 			ctx,
 			txn,
-			&parser.BalanceChange{
+			&parser.BalanceSeqChange{
 				Account:    exemptionAccount,
 				Currency:   exemptionCurrency,
 				Block:      newBlock,
-				Difference: "-10",
+				BalanceDifference: "-10",
+				SeqNumDifference: int32(1),
 			},
 			nil,
 		)
@@ -612,7 +783,8 @@ func TestBalance(t *testing.T) {
 			newBlock,
 		)
 		assert.NoError(t, err)
-		assert.Equal(t, "150", retrievedAmount.Value)
+		assert.Equal(t, "150", retrievedAmount.Amount.Value)
+		assert.Equal(t, int32(2), retrievedAmount.Seq)
 
 		// Successful (balance == computed)
 		mockHelper.On(
@@ -625,15 +797,28 @@ func TestBalance(t *testing.T) {
 			&types.Amount{Value: "200", Currency: exemptionCurrency},
 			nil,
 		).Once()
+
+		mockHelper.On(
+			"AccountSeqNum",
+			ctx,
+			exemptionAccount,
+			exemptionCurrency,
+			newBlock3,
+		).Return(
+			int32(2),
+			nil,
+		).Once()
+
 		txn = storage.db.Transaction(ctx)
 		newAccount, err = storage.UpdateBalance(
 			ctx,
 			txn,
-			&parser.BalanceChange{
+			&parser.BalanceSeqChange{
 				Account:    exemptionAccount,
 				Currency:   exemptionCurrency,
 				Block:      newBlock3,
-				Difference: "50",
+				BalanceDifference: "50",
+				SeqNumDifference: int32(0),
 			},
 			nil,
 		)
@@ -648,7 +833,8 @@ func TestBalance(t *testing.T) {
 			newBlock3,
 		)
 		assert.NoError(t, err)
-		assert.Equal(t, "200", retrievedAmount.Value)
+		assert.Equal(t, "200", retrievedAmount.Amount.Value)
+		assert.Equal(t, int32(2), retrievedAmount.Seq)
 
 		// Unsuccessful (balance < computed)
 		mockHelper.On(
@@ -661,15 +847,17 @@ func TestBalance(t *testing.T) {
 			&types.Amount{Value: "10", Currency: exemptionCurrency},
 			nil,
 		).Once()
+
 		txn = storage.db.Transaction(ctx)
 		newAccount, err = storage.UpdateBalance(
 			ctx,
 			txn,
-			&parser.BalanceChange{
+			&parser.BalanceSeqChange{
 				Account:    exemptionAccount,
 				Currency:   exemptionCurrency,
 				Block:      newBlock4,
-				Difference: "50",
+				BalanceDifference: "50",
+				SeqNumDifference: int32(0),
 			},
 			nil,
 		)
@@ -684,7 +872,8 @@ func TestBalance(t *testing.T) {
 			newBlock4,
 		)
 		assert.NoError(t, err)
-		assert.Equal(t, "200", retrievedAmount.Value)
+		assert.Equal(t, "200", retrievedAmount.Amount.Value)
+		assert.Equal(t, int32(2), retrievedAmount.Seq)
 	})
 
 	t.Run("get all set AccountCurrency", func(t *testing.T) {
@@ -738,10 +927,12 @@ func TestBalance(t *testing.T) {
 			newBlock3,
 		)
 		assert.NoError(t, err)
-		assert.Equal(t, &types.Amount{
-			Value:    "200",
+		assert.Equal(t, &types.BalanceSeq{Amount: &types.Amount{
+			Value:    "50",
 			Currency: largeDeduction.Currency,
-		}, retrievedAmount)
+		},
+		SeqNumSupport: seqNumSupported,
+		Seq: int32(4)}, retrievedAmount)
 		retrievedAmount, err = storage.GetOrSetBalance(
 			ctx,
 			account,
@@ -749,10 +940,12 @@ func TestBalance(t *testing.T) {
 			newBlock2,
 		)
 		assert.NoError(t, err)
-		assert.Equal(t, &types.Amount{
-			Value:    "200",
+		assert.Equal(t, &types.BalanceSeq{Amount: &types.Amount{
+			Value:    "50",
 			Currency: largeDeduction.Currency,
-		}, retrievedAmount)
+		},
+			SeqNumSupport: seqNumSupported,
+			Seq: int32(4)}, retrievedAmount)
 		retrievedAmount, err = storage.GetOrSetBalance(
 			ctx,
 			account,
@@ -760,23 +953,27 @@ func TestBalance(t *testing.T) {
 			newBlock,
 		)
 		assert.NoError(t, err)
-		assert.Equal(t, &types.Amount{
+		assert.Equal(t, &types.BalanceSeq{Amount: &types.Amount{
 			Value:    "100",
 			Currency: largeDeduction.Currency,
-		}, retrievedAmount)
+		},
+			SeqNumSupport: seqNumSupported,
+			Seq: int32(3)}, retrievedAmount)
 	})
 
+	// After this test, account at newBlock3 will be: balance 50, seqNum: 4
 	t.Run("update existing balance", func(t *testing.T) {
 		txn := storage.db.Transaction(ctx)
 		orphanValue, _ := new(big.Int).SetString(largeDeduction.Value, 10)
 		newAccount, err := storage.UpdateBalance(
 			ctx,
 			txn,
-			&parser.BalanceChange{
+			&parser.BalanceSeqChange{
 				Account:    account,
 				Currency:   largeDeduction.Currency,
 				Block:      newBlock2,
-				Difference: new(big.Int).Neg(orphanValue).String(),
+				BalanceDifference: new(big.Int).Neg(orphanValue).String(),
+				SeqNumDifference: int32(0),
 			},
 			nil,
 		)
@@ -790,10 +987,12 @@ func TestBalance(t *testing.T) {
 			newBlock3.Index,
 		)
 		assert.NoError(t, err)
-		assert.Equal(t, &types.Amount{
-			Value:    "1200",
+		assert.Equal(t, &types.BalanceSeq{Amount: &types.Amount{
+			Value:    "1050",
 			Currency: largeDeduction.Currency,
-		}, retrievedAmount)
+		},
+			SeqNumSupport: seqNumSupported,
+			Seq: int32(4)}, retrievedAmount)
 		txn.Discard(ctx)
 
 		retrievedAmount, err = storage.GetOrSetBalance(
@@ -803,10 +1002,12 @@ func TestBalance(t *testing.T) {
 			newBlock3,
 		)
 		assert.NoError(t, err)
-		assert.Equal(t, &types.Amount{
-			Value:    "200",
+		assert.Equal(t, &types.BalanceSeq{Amount: &types.Amount{
+			Value:    "50",
 			Currency: largeDeduction.Currency,
-		}, retrievedAmount)
+		},
+			SeqNumSupport: seqNumSupported,
+			Seq: int32(4)}, retrievedAmount)
 	})
 
 	t.Run("orphan balance correctly", func(t *testing.T) {
@@ -817,16 +1018,18 @@ func TestBalance(t *testing.T) {
 			newBlock,
 		)
 		assert.NoError(t, err)
-		assert.Equal(t, &types.Amount{
+		assert.Equal(t, &types.BalanceSeq{Amount: &types.Amount{
 			Value:    "100",
 			Currency: largeDeduction.Currency,
-		}, retrievedAmount)
+		},
+			SeqNumSupport: seqNumSupported,
+			Seq: int32(3)}, retrievedAmount)
 
 		txn := storage.db.Transaction(ctx)
 		shouldRemove, err := storage.OrphanBalance(
 			ctx,
 			txn,
-			&parser.BalanceChange{
+			&parser.BalanceSeqChange{
 				Account:  account,
 				Currency: largeDeduction.Currency,
 				Block:    newBlock,
@@ -843,10 +1046,12 @@ func TestBalance(t *testing.T) {
 			newBlock,
 		)
 		assert.NoError(t, err)
-		assert.Equal(t, &types.Amount{
+		assert.Equal(t, &types.BalanceSeq{Amount: &types.Amount{
 			Value:    "0",
 			Currency: largeDeduction.Currency,
-		}, retrievedAmount)
+		},
+			SeqNumSupport: seqNumSupported,
+			Seq: int32(0)}, retrievedAmount)
 	})
 
 	t.Run("prune index", func(t *testing.T) {
@@ -865,10 +1070,13 @@ func TestBalance(t *testing.T) {
 			newBlock3,
 		)
 		assert.NoError(t, err)
-		assert.Equal(t, &types.Amount{
+
+		assert.Equal(t,&types.BalanceSeq{Amount: &types.Amount{
 			Value:    "0",
 			Currency: largeDeduction.Currency,
-		}, retrievedAmount)
+		},
+			SeqNumSupport: seqNumSupported,
+			Seq: int32(0)}, retrievedAmount)
 		retrievedAmount, err = storage.GetOrSetBalance(
 			ctx,
 			account,
@@ -876,10 +1084,12 @@ func TestBalance(t *testing.T) {
 			newBlock2,
 		)
 		assert.NoError(t, err)
-		assert.Equal(t, &types.Amount{
+		assert.Equal(t, &types.BalanceSeq{Amount: &types.Amount{
 			Value:    "0",
 			Currency: largeDeduction.Currency,
-		}, retrievedAmount)
+		},
+			SeqNumSupport: seqNumSupported,
+			Seq: int32(0)}, retrievedAmount)
 		retrievedAmount, err = storage.GetOrSetBalance(
 			ctx,
 			account,
@@ -894,998 +1104,1071 @@ func TestBalance(t *testing.T) {
 	mockHandler.AssertExpectations(t)
 }
 
-func TestSetBalanceImported(t *testing.T) {
-	var (
-		blockIdentifier = &types.BlockIdentifier{
-			Hash:  "block",
-			Index: 1,
-		}
-
-		accountCoin = &types.AccountIdentifier{
-			Address: "test",
-		}
-
-		currency = &types.Currency{
-			Symbol:   "BLAH",
-			Decimals: 2,
-		}
-
-		amountCoins = &types.Amount{
-			Value:    "60",
-			Currency: currency,
-		}
-
-		accountCoins = []*types.Coin{
-			{
-				CoinIdentifier: &types.CoinIdentifier{Identifier: "coin1"},
-				Amount: &types.Amount{
-					Value:    "30",
-					Currency: currency,
-				},
-			},
-			{
-				CoinIdentifier: &types.CoinIdentifier{Identifier: "coin2"},
-				Amount: &types.Amount{
-					Value:    "30",
-					Currency: currency,
-				},
-			},
-		}
-
-		accountBalance = &types.AccountIdentifier{
-			Address: "test2",
-		}
-
-		amountBalance = &types.Amount{
-			Value:    "100",
-			Currency: currency,
-		}
-
-		accBalance1 = &utils.AccountBalance{
-			Account: accountCoin,
-			Amount:  amountCoins,
-			Coins:   accountCoins,
-			Block:   blockIdentifier,
-		}
-
-		accBalance2 = &utils.AccountBalance{
-			Account: accountBalance,
-			Amount:  amountBalance,
-			Block:   blockIdentifier,
-		}
-	)
-
-	ctx := context.Background()
-
-	newDir, err := utils.CreateTempDir()
-	assert.NoError(t, err)
-	defer utils.RemoveTempDir(newDir)
-
-	database, err := newTestBadgerDatabase(ctx, newDir)
-	assert.NoError(t, err)
-	defer database.Close(ctx)
-
-	storage := NewBalanceStorage(database)
-	mockHelper := &mocks.BalanceStorageHelper{}
-	mockHandler := &mocks.BalanceStorageHandler{}
-	mockHelper.On("Asserter").Return(baseAsserter())
-	mockHelper.On("ExemptFunc").Return(exemptFunc())
-	mockHelper.On("BalanceExemptions").Return([]*types.BalanceExemption{})
-	storage.Initialize(mockHelper, mockHandler)
-
-	t.Run("Set balance successfully", func(t *testing.T) {
-		mockHandler.On("AccountsSeen", ctx, mock.Anything, 1).Return(nil).Twice()
-		err = storage.SetBalanceImported(
-			ctx,
-			nil,
-			[]*utils.AccountBalance{accBalance1, accBalance2},
-		)
-		assert.NoError(t, err)
-
-		amount1, err := storage.GetOrSetBalance(
-			ctx,
-			accountCoin,
-			currency,
-			blockIdentifier,
-		)
-		assert.NoError(t, err)
-		assert.Equal(t, amount1.Value, amountCoins.Value)
-
-		amount2, err := storage.GetOrSetBalance(
-			ctx,
-			accountBalance,
-			currency,
-			blockIdentifier,
-		)
-		assert.NoError(t, err)
-		assert.Equal(t, amount2.Value, amountBalance.Value)
-	})
-
-	mockHelper.AssertExpectations(t)
-	mockHandler.AssertExpectations(t)
-}
-
-func TestBootstrapBalances(t *testing.T) {
-	var (
-		genesisBlockIdentifier = &types.BlockIdentifier{
-			Index: 0,
-			Hash:  "0",
-		}
-
-		newBlock = &types.BlockIdentifier{
-			Index: 1,
-			Hash:  "1",
-		}
-
-		account = &types.AccountIdentifier{
-			Address: "hello",
-		}
-
-		account2 = &types.AccountIdentifier{
-			Address: "hello world",
-		}
-
-		account3 = &types.AccountIdentifier{
-			Address: "hello world new",
-		}
-	)
-
-	ctx := context.Background()
-
-	newDir, err := utils.CreateTempDir()
-	assert.NoError(t, err)
-	defer utils.RemoveTempDir(newDir)
-
-	database, err := newTestBadgerDatabase(ctx, newDir)
-	assert.NoError(t, err)
-	defer database.Close(ctx)
-
-	storage := NewBalanceStorage(database)
-	mockHelper := &mocks.BalanceStorageHelper{}
-	mockHandler := &mocks.BalanceStorageHandler{}
-	mockHelper.On("Asserter").Return(baseAsserter())
-	mockHelper.On("ExemptFunc").Return(exemptFunc())
-	mockHelper.On("BalanceExemptions").Return([]*types.BalanceExemption{})
-	bootstrapBalancesFile := path.Join(newDir, "balances.csv")
-
-	t.Run("File doesn't exist", func(t *testing.T) {
-		err = storage.BootstrapBalances(
-			ctx,
-			bootstrapBalancesFile,
-			genesisBlockIdentifier,
-		)
-		assert.Contains(t, err.Error(), "no such file or directory")
-	})
-
-	// Initialize file
-	amount := &types.Amount{
-		Value: "10",
-		Currency: &types.Currency{
-			Symbol:   "BTC",
-			Decimals: 8,
-		},
-	}
-
-	file, err := json.MarshalIndent([]*BootstrapBalance{
-		{
-			Account:  account,
-			Value:    amount.Value,
-			Currency: amount.Currency,
-		},
-		{
-			Account:  account2,
-			Value:    amount.Value,
-			Currency: amount.Currency,
-		},
-		{
-			Account:  account3,
-			Value:    amount.Value,
-			Currency: amount.Currency,
-		},
-	}, "", " ")
-	assert.NoError(t, err)
-
-	assert.NoError(
-		t,
-		ioutil.WriteFile(bootstrapBalancesFile, file, utils.DefaultFilePermissions),
-	)
-
-	t.Run("run before initializing helper/handler", func(t *testing.T) {
-		err = storage.BootstrapBalances(
-			ctx,
-			bootstrapBalancesFile,
-			genesisBlockIdentifier,
-		)
-		assert.True(t, errors.Is(err, storageErrs.ErrHelperHandlerMissing))
-	})
-
-	storage.Initialize(mockHelper, mockHandler)
-	t.Run("Set balance successfully", func(t *testing.T) {
-		mockHandler.On("AccountsSeen", ctx, mock.Anything, 1).Return(nil).Times(3)
-		err = storage.BootstrapBalances(
-			ctx,
-			bootstrapBalancesFile,
-			genesisBlockIdentifier,
-		)
-		assert.NoError(t, err)
-
-		retrievedAmount, err := storage.GetOrSetBalance(
-			ctx,
-			account,
-			amount.Currency,
-			genesisBlockIdentifier,
-		)
-
-		assert.Equal(t, amount, retrievedAmount)
-		assert.NoError(t, err)
-
-		retrievedAmount2, err := storage.GetOrSetBalance(
-			ctx,
-			account2,
-			amount.Currency,
-			genesisBlockIdentifier,
-		)
-
-		assert.Equal(t, amount, retrievedAmount2)
-		assert.NoError(t, err)
-
-		retrievedAmount3, err := storage.GetOrSetBalance(
-			ctx,
-			account3,
-			amount.Currency,
-			genesisBlockIdentifier,
-		)
-
-		assert.Equal(t, amount, retrievedAmount3)
-		assert.NoError(t, err)
-
-		// Attempt to update balance
-		txn := storage.db.Transaction(ctx)
-		newAccount, err := storage.UpdateBalance(
-			ctx,
-			txn,
-			&parser.BalanceChange{
-				Account:    account,
-				Currency:   amount.Currency,
-				Block:      newBlock,
-				Difference: "100",
-			},
-			newBlock,
-		)
-		assert.False(t, newAccount)
-		assert.NoError(t, err)
-		assert.NoError(t, txn.Commit(ctx))
-
-		retrievedAmount, err = storage.GetOrSetBalance(
-			ctx,
-			account,
-			amount.Currency,
-			newBlock,
-		)
-
-		assert.Equal(t, "110", retrievedAmount.Value)
-		assert.NoError(t, err)
-	})
-
-	t.Run("Invalid file contents", func(t *testing.T) {
-		assert.NoError(
-			t,
-			ioutil.WriteFile(
-				bootstrapBalancesFile,
-				[]byte("bad file"),
-				utils.DefaultFilePermissions,
-			),
-		)
-
-		err := storage.BootstrapBalances(
-			ctx,
-			bootstrapBalancesFile,
-			genesisBlockIdentifier,
-		)
-		assert.Error(t, err)
-	})
-
-	t.Run("Invalid account balance", func(t *testing.T) {
-		amount := &types.Amount{
-			Value: "-10",
-			Currency: &types.Currency{
-				Symbol:   "BTC",
-				Decimals: 8,
-			},
-		}
-
-		file, err := json.MarshalIndent([]*BootstrapBalance{
-			{
-				Account:  account,
-				Value:    amount.Value,
-				Currency: amount.Currency,
-			},
-		}, "", " ")
-		assert.NoError(t, err)
-
-		assert.NoError(
-			t,
-			ioutil.WriteFile(bootstrapBalancesFile, file, utils.DefaultFilePermissions),
-		)
-
-		err = storage.BootstrapBalances(
-			ctx,
-			bootstrapBalancesFile,
-			genesisBlockIdentifier,
-		)
-		assert.EqualError(t, err, "cannot bootstrap zero or negative balance -10")
-	})
-
-	t.Run("Invalid account value", func(t *testing.T) {
-		amount := &types.Amount{
-			Value: "goodbye",
-			Currency: &types.Currency{
-				Symbol:   "BTC",
-				Decimals: 8,
-			},
-		}
-
-		file, err := json.MarshalIndent([]*BootstrapBalance{
-			{
-				Account:  account,
-				Value:    amount.Value,
-				Currency: amount.Currency,
-			},
-		}, "", " ")
-		assert.NoError(t, err)
-
-		assert.NoError(
-			t,
-			ioutil.WriteFile(bootstrapBalancesFile, file, utils.DefaultFilePermissions),
-		)
-
-		err = storage.BootstrapBalances(
-			ctx,
-			bootstrapBalancesFile,
-			genesisBlockIdentifier,
-		)
-		assert.EqualError(t, err, "goodbye is not an integer")
-	})
-
-	mockHelper.AssertExpectations(t)
-	mockHandler.AssertExpectations(t)
-}
-
-func TestBalanceReconciliation(t *testing.T) {
-	var (
-		account = &types.AccountIdentifier{
-			Address: "blah",
-		}
-		subAccountMetadata2 = &types.AccountIdentifier{
-			Address: "blah",
-			SubAccount: &types.SubAccountIdentifier{
-				Address: "stake",
-				Metadata: map[string]interface{}{
-					"cool": float64(10),
-				},
-			},
-		}
-		currency = &types.Currency{
-			Symbol:   "BLAH",
-			Decimals: 2,
-		}
-		currency2 = &types.Currency{
-			Symbol:   "BLAH2",
-			Decimals: 4,
-		}
-		genesisBlock = &types.BlockIdentifier{
-			Hash:  "0",
-			Index: 0,
-		}
-		newBlock = &types.BlockIdentifier{
-			Hash:  "kdasdj",
-			Index: 123890,
-		}
-	)
-
-	ctx := context.Background()
-
-	newDir, err := utils.CreateTempDir()
-	assert.NoError(t, err)
-	defer utils.RemoveTempDir(newDir)
-
-	database, err := newTestBadgerDatabase(ctx, newDir)
-	assert.NoError(t, err)
-	defer database.Close(ctx)
-
-	storage := NewBalanceStorage(database)
-	mockHelper := &mocks.BalanceStorageHelper{}
-	mockHandler := &mocks.BalanceStorageHandler{}
-	mockHelper.On("Asserter").Return(baseAsserter())
-	mockHelper.On("ExemptFunc").Return(exemptFunc())
-	mockHelper.On("BalanceExemptions").Return([]*types.BalanceExemption{})
-
-	t.Run("test estimated before helper/handler", func(t *testing.T) {
-		coverage, err := storage.EstimatedReconciliationCoverage(ctx)
-		assert.Equal(t, float64(-1), coverage)
-		assert.True(t, errors.Is(err, storageErrs.ErrHelperHandlerMissing))
-	})
-
-	storage.Initialize(mockHelper, mockHandler)
-	t.Run("attempt to store reconciliation for non-existent account", func(t *testing.T) {
-		err := storage.Reconciled(ctx, account, currency, genesisBlock)
-		assert.NoError(t, err)
-
-		coverage, err := storage.ReconciliationCoverage(ctx, 0)
-		assert.NoError(t, err)
-		assert.Equal(t, 0.0, coverage)
-	})
-
-	t.Run("set balance", func(t *testing.T) {
-		txn := storage.db.Transaction(ctx)
-		newAccount, err := storage.UpdateBalance(
-			ctx,
-			txn,
-			&parser.BalanceChange{
-				Account:    account,
-				Currency:   currency,
-				Block:      genesisBlock,
-				Difference: "100",
-			},
-			genesisBlock,
-		)
-		assert.True(t, newAccount)
-		assert.NoError(t, err)
-		assert.NoError(t, txn.Commit(ctx))
-
-		coverage, err := storage.ReconciliationCoverage(ctx, 0)
-		assert.NoError(t, err)
-		assert.Equal(t, 0.0, coverage)
-	})
-
-	t.Run("store reconciliation", func(t *testing.T) {
-		err := storage.Reconciled(ctx, account, currency, genesisBlock)
-		assert.NoError(t, err)
-
-		txn := storage.db.Transaction(ctx)
-		newAccount, err := storage.UpdateBalance(
-			ctx,
-			txn,
-			&parser.BalanceChange{
-				Account:    account,
-				Currency:   currency2,
-				Block:      genesisBlock,
-				Difference: "200",
-			},
-			genesisBlock,
-		)
-		assert.True(t, newAccount)
-		assert.NoError(t, err)
-		assert.NoError(t, txn.Commit(ctx))
-
-		coverage, err := storage.ReconciliationCoverage(ctx, 0)
-		assert.NoError(t, err)
-		assert.Equal(t, 0.5, coverage)
-
-		coverage, err = storage.ReconciliationCoverage(ctx, 1)
-		assert.NoError(t, err)
-		assert.Equal(t, 0.0, coverage)
-	})
-
-	t.Run("update reconciliation", func(t *testing.T) {
-		err := storage.Reconciled(ctx, account, currency, newBlock)
-		assert.NoError(t, err)
-
-		coverage, err := storage.ReconciliationCoverage(ctx, 0)
-		assert.NoError(t, err)
-		assert.Equal(t, 0.5, coverage)
-
-		coverage, err = storage.ReconciliationCoverage(ctx, 1)
-		assert.NoError(t, err)
-		assert.Equal(t, 0.5, coverage)
-	})
-
-	t.Run("update reconciliation to old block", func(t *testing.T) {
-		err := storage.Reconciled(ctx, account, currency, genesisBlock)
-		assert.NoError(t, err)
-
-		coverage, err := storage.ReconciliationCoverage(ctx, 0)
-		assert.NoError(t, err)
-		assert.Equal(t, 0.5, coverage)
-
-		// We should skip update so this stays 0.5
-		coverage, err = storage.ReconciliationCoverage(ctx, 1)
-		assert.NoError(t, err)
-		assert.Equal(t, 0.5, coverage)
-	})
-
-	t.Run("add unreconciled", func(t *testing.T) {
-		txn := storage.db.Transaction(ctx)
-		newAccount, err := storage.UpdateBalance(
-			ctx,
-			txn,
-			&parser.BalanceChange{
-				Account:    subAccountMetadata2,
-				Currency:   currency2,
-				Block:      newBlock,
-				Difference: "200",
-			},
-			newBlock,
-		)
-		assert.True(t, newAccount)
-		assert.NoError(t, err)
-		assert.NoError(t, txn.Commit(ctx))
-
-		coverage, err := storage.ReconciliationCoverage(ctx, 1)
-		assert.NoError(t, err)
-		assert.Equal(t, float64(1)/float64(3), coverage)
-	})
-
-	t.Run("test estimated no reconciliations", func(t *testing.T) {
-		mockHelper.On("AccountsReconciled", ctx, mock.Anything).Return(big.NewInt(0), nil).Once()
-		mockHelper.On("AccountsSeen", ctx, mock.Anything).Return(big.NewInt(0), nil).Once()
-		coverage, err := storage.EstimatedReconciliationCoverage(ctx)
-		assert.Equal(t, float64(0), coverage)
-		assert.NoError(t, err)
-	})
-
-	t.Run("test estimated some reconciliations", func(t *testing.T) {
-		mockHelper.On("AccountsReconciled", ctx, mock.Anything).Return(big.NewInt(1), nil).Once()
-		mockHelper.On("AccountsSeen", ctx, mock.Anything).Return(big.NewInt(2), nil).Once()
-		coverage, err := storage.EstimatedReconciliationCoverage(ctx)
-		assert.Equal(t, float64(0.5), coverage)
-		assert.NoError(t, err)
-	})
-
-	mockHelper.AssertExpectations(t)
-	mockHandler.AssertExpectations(t)
-}
-
-func TestBlockSyncing(t *testing.T) {
-	ctx := context.Background()
-
-	newDir, err := utils.CreateTempDir()
-	assert.NoError(t, err)
-	defer utils.RemoveTempDir(newDir)
-
-	database, err := newTestBadgerDatabase(ctx, newDir)
-	assert.NoError(t, err)
-	defer database.Close(ctx)
-
-	storage := NewBalanceStorage(database)
-	mockHelper := &mocks.BalanceStorageHelper{}
-	mockHandler := &mocks.BalanceStorageHandler{}
-	mockHelper.On("Asserter").Return(baseAsserter())
-	mockHelper.On("ExemptFunc").Return(exemptFunc())
-	mockHelper.On("BalanceExemptions").Return([]*types.BalanceExemption{})
-	storage.Initialize(mockHelper, mockHandler)
-
-	// Genesis block with no transactions
-	b0 := &types.Block{
-		BlockIdentifier: &types.BlockIdentifier{
-			Index: 0,
-			Hash:  "0",
-		},
-		ParentBlockIdentifier: &types.BlockIdentifier{
-			Index: 0,
-			Hash:  "0",
-		},
-	}
-
-	addr1 := &types.AccountIdentifier{
-		Address: "addr1",
-	}
-	addr2 := &types.AccountIdentifier{
-		Address: "addr2",
-	}
-	curr := &types.Currency{
-		Symbol:   "ETH",
-		Decimals: 18,
-	}
-
-	// Block 1 with transaction
-	b1 := &types.Block{
-		BlockIdentifier: &types.BlockIdentifier{
-			Index: 1,
-			Hash:  "1",
-		},
-		ParentBlockIdentifier: &types.BlockIdentifier{
-			Index: 0,
-			Hash:  "0",
-		},
-		Transactions: []*types.Transaction{
-			{
-				TransactionIdentifier: &types.TransactionIdentifier{
-					Hash: "1_0",
-				},
-				Operations: []*types.Operation{
-					{
-						OperationIdentifier: &types.OperationIdentifier{
-							Index: 0,
-						},
-						Account: addr1,
-						Status:  types.String("Success"),
-						Type:    "Transfer",
-						Amount: &types.Amount{
-							Value:    "100",
-							Currency: curr,
-						},
-					},
-				},
-			},
-		},
-	}
-
-	// Another Transaction for some acocunt in Block 1
-	b2 := &types.Block{
-		BlockIdentifier: &types.BlockIdentifier{
-			Index: 2,
-			Hash:  "2",
-		},
-		ParentBlockIdentifier: &types.BlockIdentifier{
-			Index: 1,
-			Hash:  "1",
-		},
-		Transactions: []*types.Transaction{
-			{
-				TransactionIdentifier: &types.TransactionIdentifier{
-					Hash: "2_0",
-				},
-				Operations: []*types.Operation{
-					{
-						OperationIdentifier: &types.OperationIdentifier{
-							Index: 0,
-						},
-						Account: addr1,
-						Status:  types.String("Success"),
-						Type:    "Transfer",
-						Amount: &types.Amount{
-							Value:    "-50",
-							Currency: curr,
-						},
-					},
-					{
-						OperationIdentifier: &types.OperationIdentifier{
-							Index: 1,
-						},
-						Account: addr2,
-						Status:  types.String("Success"),
-						Type:    "Transfer",
-						Amount: &types.Amount{
-							Value:    "50",
-							Currency: curr,
-						},
-					},
-					{
-						OperationIdentifier: &types.OperationIdentifier{
-							Index: 2,
-						},
-						Account: addr1,
-						Status:  types.String("Success"),
-						Type:    "Transfer",
-						Amount: &types.Amount{
-							Value:    "-1",
-							Currency: curr,
-						},
-					},
-				},
-			},
-		},
-	}
-
-	// Orphaned block with slightly different tx
-	b2a := &types.Block{
-		BlockIdentifier: &types.BlockIdentifier{
-			Index: 2,
-			Hash:  "2a",
-		},
-		ParentBlockIdentifier: &types.BlockIdentifier{
-			Index: 1,
-			Hash:  "1",
-		},
-		Transactions: []*types.Transaction{
-			{
-				TransactionIdentifier: &types.TransactionIdentifier{
-					Hash: "2_0",
-				},
-				Operations: []*types.Operation{
-					{
-						OperationIdentifier: &types.OperationIdentifier{
-							Index: 0,
-						},
-						Account: addr1,
-						Status:  types.String("Success"),
-						Type:    "Transfer",
-						Amount: &types.Amount{
-							Value:    "-100",
-							Currency: curr,
-						},
-					},
-					{
-						OperationIdentifier: &types.OperationIdentifier{
-							Index: 1,
-						},
-						Account: addr2,
-						Status:  types.String("Success"),
-						Type:    "Transfer",
-						Amount: &types.Amount{
-							Value:    "100",
-							Currency: curr,
-						},
-					},
-				},
-			},
-		},
-	}
-
-	t.Run("add genesis block", func(t *testing.T) {
-		dbTx := database.Transaction(ctx)
-		g, gctx := errgroup.WithContext(ctx)
-		_, err = storage.AddingBlock(gctx, g, b0, dbTx)
-		assert.NoError(t, err)
-		assert.NoError(t, g.Wait())
-		assert.NoError(t, dbTx.Commit(ctx))
-
-		amount, err := storage.GetBalance(ctx, addr1, curr, b0.BlockIdentifier.Index)
-		assert.True(t, errors.Is(err, storageErrs.ErrAccountMissing))
-		assert.Nil(t, amount)
-		amount, err = storage.GetBalance(ctx, addr2, curr, b0.BlockIdentifier.Index)
-		assert.True(t, errors.Is(err, storageErrs.ErrAccountMissing))
-		assert.Nil(t, amount)
-	})
-
-	t.Run("add block 1", func(t *testing.T) {
-		dbTx := database.Transaction(ctx)
-		g, gctx := errgroup.WithContext(ctx)
-		mockHelper.On(
-			"AccountBalance",
-			gctx,
-			addr1,
-			curr,
-			b0.BlockIdentifier,
-		).Return(
-			&types.Amount{Value: "1", Currency: curr},
-			nil,
-		).Once()
-		mockHandler.On("AccountsSeen", gctx, dbTx, 1).Return(nil).Once()
-		_, err = storage.AddingBlock(gctx, g, b1, dbTx)
-		assert.NoError(t, err)
-		assert.NoError(t, g.Wait())
-		assert.NoError(t, dbTx.Commit(ctx))
-
-		amount, err := storage.GetBalance(ctx, addr1, curr, b0.BlockIdentifier.Index)
-		assert.NoError(t, err)
-		assert.Equal(t, &types.Amount{
-			Value:    "0",
-			Currency: curr,
-		}, amount)
-		amount, err = storage.GetBalance(ctx, addr1, curr, b1.BlockIdentifier.Index)
-		assert.NoError(t, err)
-		assert.Equal(t, &types.Amount{
-			Value:    "101",
-			Currency: curr,
-		}, amount)
-		amount, err = storage.GetBalance(ctx, addr2, curr, b1.BlockIdentifier.Index)
-		assert.True(t, errors.Is(err, storageErrs.ErrAccountMissing))
-		assert.Nil(t, amount)
-	})
-
-	t.Run("add block 2", func(t *testing.T) {
-		// Reconcile a previously seen account
-		err := storage.Reconciled(ctx, addr1, curr, b1.BlockIdentifier)
-		assert.NoError(t, err)
-
-		dbTx := database.Transaction(ctx)
-		g, gctx := errgroup.WithContext(ctx)
-		mockHelper.On(
-			"AccountBalance",
-			gctx,
-			addr2,
-			curr,
-			b1.BlockIdentifier,
-		).Return(
-			&types.Amount{Value: "0", Currency: curr},
-			nil,
-		).Once()
-		mockHandler.On("AccountsSeen", gctx, dbTx, 1).Return(nil).Once()
-		mockHandler.On("AccountsReconciled", gctx, dbTx, 1).Return(nil).Once()
-		_, err = storage.AddingBlock(gctx, g, b2, dbTx)
-		assert.NoError(t, err)
-		assert.NoError(t, g.Wait())
-		assert.NoError(t, dbTx.Commit(ctx))
-
-		amount, err := storage.GetBalance(ctx, addr1, curr, b0.BlockIdentifier.Index)
-		assert.NoError(t, err)
-		assert.Equal(t, &types.Amount{
-			Value:    "0",
-			Currency: curr,
-		}, amount)
-		amount, err = storage.GetBalance(ctx, addr1, curr, b1.BlockIdentifier.Index)
-		assert.NoError(t, err)
-		assert.Equal(t, &types.Amount{
-			Value:    "101",
-			Currency: curr,
-		}, amount)
-		amount, err = storage.GetBalance(ctx, addr2, curr, b1.BlockIdentifier.Index)
-		assert.NoError(t, err)
-		assert.Equal(t, &types.Amount{
-			Value:    "0",
-			Currency: curr,
-		}, amount)
-		amount, err = storage.GetBalance(ctx, addr1, curr, b2.BlockIdentifier.Index)
-		assert.NoError(t, err)
-		assert.Equal(t, &types.Amount{
-			Value:    "50",
-			Currency: curr,
-		}, amount)
-		amount, err = storage.GetBalance(ctx, addr2, curr, b2.BlockIdentifier.Index)
-		assert.NoError(t, err)
-		assert.Equal(t, &types.Amount{
-			Value:    "50",
-			Currency: curr,
-		}, amount)
-	})
-
-	t.Run("orphan block 2", func(t *testing.T) {
-		dbTx := database.Transaction(ctx)
-		g, gctx := errgroup.WithContext(ctx)
-		commitWorker, err := storage.RemovingBlock(gctx, g, b2, dbTx)
-		assert.NoError(t, err)
-		assert.NoError(t, g.Wait())
-		assert.NoError(t, dbTx.Commit(ctx))
-		mockHandler.On("BlockRemoved", ctx, b2, mock.Anything).Return(nil).Once()
-		mockHandler.On("AccountsSeen", ctx, mock.Anything, -1).Return(nil).Once()
-		assert.NoError(t, commitWorker(ctx))
-
-		amount, err := storage.GetBalance(ctx, addr1, curr, b0.BlockIdentifier.Index)
-		assert.NoError(t, err)
-		assert.Equal(t, &types.Amount{
-			Value:    "0",
-			Currency: curr,
-		}, amount)
-		amount, err = storage.GetBalance(ctx, addr1, curr, b1.BlockIdentifier.Index)
-		assert.NoError(t, err)
-		assert.Equal(t, &types.Amount{
-			Value:    "101",
-			Currency: curr,
-		}, amount)
-		amount, err = storage.GetBalance(ctx, addr2, curr, b1.BlockIdentifier.Index)
-		assert.True(t, errors.Is(err, storageErrs.ErrAccountMissing))
-		assert.Nil(t, amount)
-		amount, err = storage.GetBalance(ctx, addr1, curr, b2.BlockIdentifier.Index)
-		assert.NoError(t, err)
-		assert.Equal(t, &types.Amount{
-			Value:    "101",
-			Currency: curr,
-		}, amount)
-		amount, err = storage.GetBalance(ctx, addr2, curr, b2.BlockIdentifier.Index)
-		assert.True(t, errors.Is(err, storageErrs.ErrAccountMissing))
-		assert.Nil(t, amount)
-	})
-
-	t.Run("orphan block 1", func(t *testing.T) {
-		dbTx := database.Transaction(ctx)
-		g, gctx := errgroup.WithContext(ctx)
-		commitWorker, err := storage.RemovingBlock(gctx, g, b1, dbTx)
-		assert.NoError(t, err)
-		assert.NoError(t, g.Wait())
-		assert.NoError(t, dbTx.Commit(ctx))
-		mockHandler.On("BlockRemoved", ctx, b1, mock.Anything).Return(nil).Once()
-		mockHandler.On("AccountsSeen", ctx, mock.Anything, -1).Return(nil).Once()
-		mockHandler.On("AccountsReconciled", ctx, mock.Anything, -1).Return(nil).Once()
-		assert.NoError(t, commitWorker(ctx))
-
-		amount, err := storage.GetBalance(ctx, addr1, curr, b0.BlockIdentifier.Index)
-		assert.True(t, errors.Is(err, storageErrs.ErrAccountMissing))
-		assert.Nil(t, amount)
-		amount, err = storage.GetBalance(ctx, addr2, curr, b0.BlockIdentifier.Index)
-		assert.True(t, errors.Is(err, storageErrs.ErrAccountMissing))
-		assert.Nil(t, amount)
-		amount, err = storage.GetBalance(ctx, addr1, curr, b1.BlockIdentifier.Index)
-		assert.True(t, errors.Is(err, storageErrs.ErrAccountMissing))
-		assert.Nil(t, amount)
-		amount, err = storage.GetBalance(ctx, addr2, curr, b1.BlockIdentifier.Index)
-		assert.True(t, errors.Is(err, storageErrs.ErrAccountMissing))
-		assert.Nil(t, amount)
-		amount, err = storage.GetBalance(ctx, addr1, curr, b2.BlockIdentifier.Index)
-		assert.True(t, errors.Is(err, storageErrs.ErrAccountMissing))
-		assert.Nil(t, amount)
-		amount, err = storage.GetBalance(ctx, addr2, curr, b2.BlockIdentifier.Index)
-		assert.True(t, errors.Is(err, storageErrs.ErrAccountMissing))
-		assert.Nil(t, amount)
-	})
-
-	t.Run("add block 1", func(t *testing.T) {
-		dbTx := database.Transaction(ctx)
-		g, gctx := errgroup.WithContext(ctx)
-		mockHelper.On(
-			"AccountBalance",
-			gctx,
-			addr1,
-			curr,
-			b0.BlockIdentifier,
-		).Return(
-			&types.Amount{Value: "1", Currency: curr},
-			nil,
-		).Once()
-		mockHandler.On("AccountsSeen", gctx, dbTx, 1).Return(nil).Once()
-		_, err = storage.AddingBlock(gctx, g, b1, dbTx)
-		assert.NoError(t, err)
-		assert.NoError(t, g.Wait())
-		assert.NoError(t, dbTx.Commit(ctx))
-
-		amount, err := storage.GetBalance(ctx, addr1, curr, b0.BlockIdentifier.Index)
-		assert.NoError(t, err)
-		assert.Equal(t, &types.Amount{
-			Value:    "0",
-			Currency: curr,
-		}, amount)
-		amount, err = storage.GetBalance(ctx, addr1, curr, b1.BlockIdentifier.Index)
-		assert.NoError(t, err)
-		assert.Equal(t, &types.Amount{
-			Value:    "101",
-			Currency: curr,
-		}, amount)
-		amount, err = storage.GetBalance(ctx, addr2, curr, b1.BlockIdentifier.Index)
-		assert.True(t, errors.Is(err, storageErrs.ErrAccountMissing))
-		assert.Nil(t, amount)
-		amount, err = storage.GetBalance(ctx, addr1, curr, b2.BlockIdentifier.Index)
-		assert.NoError(t, err)
-		assert.Equal(t, &types.Amount{
-			Value:    "101",
-			Currency: curr,
-		}, amount)
-		amount, err = storage.GetBalance(ctx, addr2, curr, b2.BlockIdentifier.Index)
-		assert.True(t, errors.Is(err, storageErrs.ErrAccountMissing))
-		assert.Nil(t, amount)
-	})
-
-	t.Run("add block 2a", func(t *testing.T) {
-		dbTx := database.Transaction(ctx)
-		g, gctx := errgroup.WithContext(ctx)
-		mockHelper.On(
-			"AccountBalance",
-			gctx,
-			addr2,
-			curr,
-			b1.BlockIdentifier,
-		).Return(
-			&types.Amount{Value: "0", Currency: curr},
-			nil,
-		).Once()
-		mockHandler.On("AccountsSeen", gctx, dbTx, 1).Return(nil).Once()
-		_, err = storage.AddingBlock(gctx, g, b2a, dbTx)
-		assert.NoError(t, err)
-		assert.NoError(t, g.Wait())
-		assert.NoError(t, dbTx.Commit(ctx))
-
-		amount, err := storage.GetBalance(ctx, addr1, curr, b0.BlockIdentifier.Index)
-		assert.NoError(t, err)
-		assert.Equal(t, &types.Amount{
-			Value:    "0",
-			Currency: curr,
-		}, amount)
-		amount, err = storage.GetBalance(ctx, addr1, curr, b1.BlockIdentifier.Index)
-		assert.NoError(t, err)
-		assert.Equal(t, &types.Amount{
-			Value:    "101",
-			Currency: curr,
-		}, amount)
-		amount, err = storage.GetBalance(ctx, addr2, curr, b1.BlockIdentifier.Index)
-		assert.NoError(t, err)
-		assert.Equal(t, &types.Amount{
-			Value:    "0",
-			Currency: curr,
-		}, amount)
-		amount, err = storage.GetBalance(ctx, addr1, curr, b2.BlockIdentifier.Index)
-		assert.NoError(t, err)
-		assert.Equal(t, &types.Amount{
-			Value:    "1",
-			Currency: curr,
-		}, amount)
-		amount, err = storage.GetBalance(ctx, addr2, curr, b2.BlockIdentifier.Index)
-		assert.NoError(t, err)
-		assert.Equal(t, &types.Amount{
-			Value:    "100",
-			Currency: curr,
-		}, amount)
-	})
-
-	mockHelper.AssertExpectations(t)
-	mockHandler.AssertExpectations(t)
-}
+//func TestSetBalanceImported(t *testing.T) {
+//	var (
+//		blockIdentifier = &types.BlockIdentifier{
+//			Hash:  "block",
+//			Index: 1,
+//		}
+//
+//		accountCoin = &types.AccountIdentifier{
+//			Address: "test",
+//		}
+//
+//		currency = &types.Currency{
+//			Symbol:   "BLAH",
+//			Decimals: 2,
+//		}
+//
+//		amountCoins = &types.Amount{
+//			Value:    "60",
+//			Currency: currency,
+//		}
+//
+//		accountCoins = []*types.Coin{
+//			{
+//				CoinIdentifier: &types.CoinIdentifier{Identifier: "coin1"},
+//				Amount: &types.Amount{
+//					Value:    "30",
+//					Currency: currency,
+//				},
+//			},
+//			{
+//				CoinIdentifier: &types.CoinIdentifier{Identifier: "coin2"},
+//				Amount: &types.Amount{
+//					Value:    "30",
+//					Currency: currency,
+//				},
+//			},
+//		}
+//
+//		accountBalance = &types.AccountIdentifier{
+//			Address: "test2",
+//		}
+//
+//		amountBalance = &types.Amount{
+//			Value:    "100",
+//			Currency: currency,
+//		}
+//
+//		accBalance1 = &utils.AccountBalance{
+//			Account: accountCoin,
+//			Amount:  amountCoins,
+//			Coins:   accountCoins,
+//			Block:   blockIdentifier,
+//		}
+//
+//		accBalance2 = &utils.AccountBalance{
+//			Account: accountBalance,
+//			Amount:  amountBalance,
+//			Block:   blockIdentifier,
+//		}
+//	)
+//
+//	ctx := context.Background()
+//
+//	newDir, err := utils.CreateTempDir()
+//	assert.NoError(t, err)
+//	defer utils.RemoveTempDir(newDir)
+//
+//	database, err := newTestBadgerDatabase(ctx, newDir)
+//	assert.NoError(t, err)
+//	defer database.Close(ctx)
+//
+//	storage := NewBalanceStorage(database)
+//	mockHelper := &mocks.BalanceStorageHelper{}
+//	mockHandler := &mocks.BalanceStorageHandler{}
+//	mockHelper.On("Asserter").Return(baseAsserter())
+//	mockHelper.On("ExemptFunc").Return(exemptFunc())
+//	mockHelper.On("BalanceExemptions").Return([]*types.BalanceExemption{})
+//	storage.Initialize(mockHelper, mockHandler)
+//
+//	t.Run("Set balance successfully", func(t *testing.T) {
+//		mockHandler.On("AccountsSeen", ctx, mock.Anything, 1).Return(nil).Twice()
+//		err = storage.SetBalanceImported(
+//			ctx,
+//			nil,
+//			[]*utils.AccountBalance{accBalance1, accBalance2},
+//		)
+//		assert.NoError(t, err)
+//
+//		amount1, err := storage.GetOrSetBalance(
+//			ctx,
+//			accountCoin,
+//			currency,
+//			blockIdentifier,
+//		)
+//		assert.NoError(t, err)
+//		assert.Equal(t, amount1.Value, amountCoins.Value)
+//
+//		amount2, err := storage.GetOrSetBalance(
+//			ctx,
+//			accountBalance,
+//			currency,
+//			blockIdentifier,
+//		)
+//		assert.NoError(t, err)
+//		assert.Equal(t, amount2.Value, amountBalance.Value)
+//	})
+//
+//	mockHelper.AssertExpectations(t)
+//	mockHandler.AssertExpectations(t)
+//}
+
+//func TestBootstrapBalances(t *testing.T) {
+//	var (
+//		blockIdentifier = &types.BlockIdentifier{
+//			Hash:  "block",
+//			Index: 1,
+//		}
+//
+//		accountCoin = &types.AccountIdentifier{
+//			Address: "test",
+//		}
+//
+//		currency = &types.Currency{
+//			Symbol:   "BLAH",
+//			Decimals: 2,
+//		}
+//
+//		amountCoins = &types.Amount{
+//			Value:    "60",
+//			Currency: currency,
+//		}
+//
+//		accountCoins = []*types.Coin{
+//			{
+//				CoinIdentifier: &types.CoinIdentifier{Identifier: "coin1"},
+//				Amount: &types.Amount{
+//					Value:    "30",
+//					Currency: currency,
+//				},
+//			},
+//			{
+//				CoinIdentifier: &types.CoinIdentifier{Identifier: "coin2"},
+//				Amount: &types.Amount{
+//					Value:    "30",
+//					Currency: currency,
+//				},
+//			},
+//		}
+//
+//		accountBalance = &types.AccountIdentifier{
+//			Address: "test2",
+//		}
+//
+//		amountBalance = &types.Amount{
+//			Value:    "100",
+//			Currency: currency,
+//		}
+//
+//		accBalance1 = &utils.AccountBalance{
+//			Account: accountCoin,
+//			Amount:  amountCoins,
+//			Coins:   accountCoins,
+//			Block:   blockIdentifier,
+//		}
+//
+//		accBalance2 = &utils.AccountBalance{
+//			Account: accountBalance,
+//			Amount:  amountBalance,
+//			Block:   blockIdentifier,
+//		}
+//	)
+//
+//	ctx := context.Background()
+//
+//	newDir, err := utils.CreateTempDir()
+//	assert.NoError(t, err)
+//	defer utils.RemoveTempDir(newDir)
+//
+//	database, err := newTestBadgerDatabase(ctx, newDir)
+//	assert.NoError(t, err)
+//	defer database.Close(ctx)
+//
+//	storage := NewBalanceStorage(database)
+//	mockHelper := &mocks.BalanceStorageHelper{}
+//	mockHandler := &mocks.BalanceStorageHandler{}
+//	mockHelper.On("Asserter").Return(baseAsserter())
+//	mockHelper.On("ExemptFunc").Return(exemptFunc())
+//	mockHelper.On("BalanceExemptions").Return([]*types.BalanceExemption{})
+//	storage.Initialize(mockHelper, mockHandler)
+//
+//	t.Run("Set balance successfully", func(t *testing.T) {
+//		mockHandler.On("AccountsSeen", ctx, mock.Anything, 1).Return(nil).Twice()
+//		err = storage.SetBalanceImported(
+//			ctx,
+//			nil,
+//			[]*utils.AccountBalance{accBalance1, accBalance2},
+//		)
+//		assert.NoError(t, err)
+//
+//		amount1, err := storage.GetOrSetBalance(
+//			ctx,
+//			accountCoin,
+//			currency,
+//			blockIdentifier,
+//		)
+//		assert.NoError(t, err)
+//		assert.Equal(t, amount1.Value, amountCoins.Value)
+//
+//		amount2, err := storage.GetOrSetBalance(
+//			ctx,
+//			accountBalance,
+//			currency,
+//			blockIdentifier,
+//		)
+//		assert.NoError(t, err)
+//		assert.Equal(t, amount2.Value, amountBalance.Value)
+//	})
+//
+//	mockHelper.AssertExpectations(t)
+//	mockHandler.AssertExpectations(t)
+//}
+//
+//func TestBootstrapBalances(t *testing.T) {
+//	var (
+//		genesisBlockIdentifier = &types.BlockIdentifier{
+//			Index: 0,
+//			Hash:  "0",
+//		}
+//
+//		newBlock = &types.BlockIdentifier{
+//			Index: 1,
+//			Hash:  "1",
+//		}
+//
+//		account = &types.AccountIdentifier{
+//			Address: "hello",
+//		}
+//	)
+//
+//	ctx := context.Background()
+//
+//	newDir, err := utils.CreateTempDir()
+//	assert.NoError(t, err)
+//	defer utils.RemoveTempDir(newDir)
+//
+//	database, err := newTestBadgerDatabase(ctx, newDir)
+//	assert.NoError(t, err)
+//	defer database.Close(ctx)
+//
+//	storage := NewBalanceStorage(database)
+//	mockHelper := &mocks.BalanceStorageHelper{}
+//	mockHandler := &mocks.BalanceStorageHandler{}
+//	mockHelper.On("Asserter").Return(baseAsserter())
+//	mockHelper.On("ExemptFunc").Return(exemptFunc())
+//	mockHelper.On("BalanceExemptions").Return([]*types.BalanceExemption{})
+//	bootstrapBalancesFile := path.Join(newDir, "balances.csv")
+//
+//	t.Run("File doesn't exist", func(t *testing.T) {
+//		err = storage.BootstrapBalances(
+//			ctx,
+//			bootstrapBalancesFile,
+//			genesisBlockIdentifier,
+//		)
+//		assert.Contains(t, err.Error(), "no such file or directory")
+//	})
+//
+//	// Initialize file
+//	amount := &types.Amount{
+//		Value: "10",
+//		Currency: &types.Currency{
+//			Symbol:   "BTC",
+//			Decimals: 8,
+//		},
+//	}
+//
+//	file, err := json.MarshalIndent([]*BootstrapBalance{
+//		{
+//			Account:  account,
+//			Value:    amount.Value,
+//			Currency: amount.Currency,
+//		},
+//	}, "", " ")
+//	assert.NoError(t, err)
+//
+//	assert.NoError(
+//		t,
+//		ioutil.WriteFile(bootstrapBalancesFile, file, utils.DefaultFilePermissions),
+//	)
+//
+//	t.Run("run before initializing helper/handler", func(t *testing.T) {
+//		err = storage.BootstrapBalances(
+//			ctx,
+//			bootstrapBalancesFile,
+//			genesisBlockIdentifier,
+//		)
+//		assert.True(t, errors.Is(err, storageErrs.ErrHelperHandlerMissing))
+//	})
+//
+//	storage.Initialize(mockHelper, mockHandler)
+//	t.Run("Set balance successfully", func(t *testing.T) {
+//		mockHandler.On("AccountsSeen", ctx, mock.Anything, 1).Return(nil).Once()
+//		err = storage.BootstrapBalances(
+//			ctx,
+//			bootstrapBalancesFile,
+//			genesisBlockIdentifier,
+//		)
+//		assert.NoError(t, err)
+//
+//		retrievedAmount, err := storage.GetOrSetBalance(
+//			ctx,
+//			account,
+//			amount.Currency,
+//			genesisBlockIdentifier,
+//		)
+//
+//		assert.Equal(t, amount, retrievedAmount)
+//		assert.NoError(t, err)
+//
+//		// Attempt to update balance
+//		txn := storage.db.Transaction(ctx)
+//		newAccount, err := storage.UpdateBalance(
+//			ctx,
+//			txn,
+//			&parser.BalanceChange{
+//				Account:    account,
+//				Currency:   amount.Currency,
+//				Block:      newBlock,
+//				Difference: "100",
+//			},
+//			newBlock,
+//		)
+//		assert.False(t, newAccount)
+//		assert.NoError(t, err)
+//		assert.NoError(t, txn.Commit(ctx))
+//
+//		retrievedAmount, err = storage.GetOrSetBalance(
+//			ctx,
+//			account,
+//			amount.Currency,
+//			newBlock,
+//		)
+//
+//		assert.Equal(t, "110", retrievedAmount.Value)
+//		assert.NoError(t, err)
+//	})
+//
+//	t.Run("Invalid file contents", func(t *testing.T) {
+//		assert.NoError(
+//			t,
+//			ioutil.WriteFile(
+//				bootstrapBalancesFile,
+//				[]byte("bad file"),
+//				utils.DefaultFilePermissions,
+//			),
+//		)
+//
+//		err := storage.BootstrapBalances(
+//			ctx,
+//			bootstrapBalancesFile,
+//			genesisBlockIdentifier,
+//		)
+//		assert.Error(t, err)
+//	})
+//
+//	t.Run("Invalid account balance", func(t *testing.T) {
+//		amount := &types.Amount{
+//			Value: "-10",
+//			Currency: &types.Currency{
+//				Symbol:   "BTC",
+//				Decimals: 8,
+//			},
+//		}
+//
+//		file, err := json.MarshalIndent([]*BootstrapBalance{
+//			{
+//				Account:  account,
+//				Value:    amount.Value,
+//				Currency: amount.Currency,
+//			},
+//		}, "", " ")
+//		assert.NoError(t, err)
+//
+//		assert.NoError(
+//			t,
+//			ioutil.WriteFile(bootstrapBalancesFile, file, utils.DefaultFilePermissions),
+//		)
+//
+//		err = storage.BootstrapBalances(
+//			ctx,
+//			bootstrapBalancesFile,
+//			genesisBlockIdentifier,
+//		)
+//		assert.EqualError(t, err, "cannot bootstrap zero or negative balance -10")
+//	})
+//
+//	t.Run("Invalid account value", func(t *testing.T) {
+//		amount := &types.Amount{
+//			Value: "goodbye",
+//			Currency: &types.Currency{
+//				Symbol:   "BTC",
+//				Decimals: 8,
+//			},
+//		}
+//
+//		file, err := json.MarshalIndent([]*BootstrapBalance{
+//			{
+//				Account:  account,
+//				Value:    amount.Value,
+//				Currency: amount.Currency,
+//			},
+//		}, "", " ")
+//		assert.NoError(t, err)
+//
+//		assert.NoError(
+//			t,
+//			ioutil.WriteFile(bootstrapBalancesFile, file, utils.DefaultFilePermissions),
+//		)
+//
+//		err = storage.BootstrapBalances(
+//			ctx,
+//			bootstrapBalancesFile,
+//			genesisBlockIdentifier,
+//		)
+//		assert.EqualError(t, err, "goodbye is not an integer")
+//	})
+//
+//	mockHelper.AssertExpectations(t)
+//	mockHandler.AssertExpectations(t)
+//}
+//
+//func TestBalanceReconciliation(t *testing.T) {
+//	var (
+//		account = &types.AccountIdentifier{
+//			Address: "blah",
+//		}
+//		subAccountMetadata2 = &types.AccountIdentifier{
+//			Address: "blah",
+//			SubAccount: &types.SubAccountIdentifier{
+//				Address: "stake",
+//				Metadata: map[string]interface{}{
+//					"cool": float64(10),
+//				},
+//			},
+//		}
+//		currency = &types.Currency{
+//			Symbol:   "BLAH",
+//			Decimals: 2,
+//		}
+//		currency2 = &types.Currency{
+//			Symbol:   "BLAH2",
+//			Decimals: 4,
+//		}
+//		genesisBlock = &types.BlockIdentifier{
+//			Hash:  "0",
+//			Index: 0,
+//		}
+//		newBlock = &types.BlockIdentifier{
+//			Hash:  "kdasdj",
+//			Index: 123890,
+//		}
+//	)
+//
+//	ctx := context.Background()
+//
+//	newDir, err := utils.CreateTempDir()
+//	assert.NoError(t, err)
+//	defer utils.RemoveTempDir(newDir)
+//
+//	database, err := newTestBadgerDatabase(ctx, newDir)
+//	assert.NoError(t, err)
+//	defer database.Close(ctx)
+//
+//	storage := NewBalanceStorage(database)
+//	mockHelper := &mocks.BalanceStorageHelper{}
+//	mockHandler := &mocks.BalanceStorageHandler{}
+//	mockHelper.On("Asserter").Return(baseAsserter())
+//	mockHelper.On("ExemptFunc").Return(exemptFunc())
+//	mockHelper.On("BalanceExemptions").Return([]*types.BalanceExemption{})
+//
+//	t.Run("test estimated before helper/handler", func(t *testing.T) {
+//		coverage, err := storage.EstimatedReconciliationCoverage(ctx)
+//		assert.Equal(t, float64(-1), coverage)
+//		assert.True(t, errors.Is(err, storageErrs.ErrHelperHandlerMissing))
+//	})
+//
+//	storage.Initialize(mockHelper, mockHandler)
+//	t.Run("attempt to store reconciliation for non-existent account", func(t *testing.T) {
+//		err := storage.Reconciled(ctx, account, currency, genesisBlock)
+//		assert.NoError(t, err)
+//
+//		coverage, err := storage.ReconciliationCoverage(ctx, 0)
+//		assert.NoError(t, err)
+//		assert.Equal(t, 0.0, coverage)
+//	})
+//
+//	t.Run("set balance", func(t *testing.T) {
+//		txn := storage.db.Transaction(ctx)
+//		newAccount, err := storage.UpdateBalance(
+//			ctx,
+//			txn,
+//			&parser.BalanceChange{
+//				Account:    account,
+//				Currency:   currency,
+//				Block:      genesisBlock,
+//				Difference: "100",
+//			},
+//			genesisBlock,
+//		)
+//		assert.True(t, newAccount)
+//		assert.NoError(t, err)
+//		assert.NoError(t, txn.Commit(ctx))
+//
+//		coverage, err := storage.ReconciliationCoverage(ctx, 0)
+//		assert.NoError(t, err)
+//		assert.Equal(t, 0.0, coverage)
+//	})
+//
+//	t.Run("store reconciliation", func(t *testing.T) {
+//		err := storage.Reconciled(ctx, account, currency, genesisBlock)
+//		assert.NoError(t, err)
+//
+//		txn := storage.db.Transaction(ctx)
+//		newAccount, err := storage.UpdateBalance(
+//			ctx,
+//			txn,
+//			&parser.BalanceChange{
+//				Account:    account,
+//				Currency:   currency2,
+//				Block:      genesisBlock,
+//				Difference: "200",
+//			},
+//			genesisBlock,
+//		)
+//		assert.True(t, newAccount)
+//		assert.NoError(t, err)
+//		assert.NoError(t, txn.Commit(ctx))
+//
+//		coverage, err := storage.ReconciliationCoverage(ctx, 0)
+//		assert.NoError(t, err)
+//		assert.Equal(t, 0.5, coverage)
+//
+//		coverage, err = storage.ReconciliationCoverage(ctx, 1)
+//		assert.NoError(t, err)
+//		assert.Equal(t, 0.0, coverage)
+//	})
+//
+//	t.Run("update reconciliation", func(t *testing.T) {
+//		err := storage.Reconciled(ctx, account, currency, newBlock)
+//		assert.NoError(t, err)
+//
+//		coverage, err := storage.ReconciliationCoverage(ctx, 0)
+//		assert.NoError(t, err)
+//		assert.Equal(t, 0.5, coverage)
+//
+//		coverage, err = storage.ReconciliationCoverage(ctx, 1)
+//		assert.NoError(t, err)
+//		assert.Equal(t, 0.5, coverage)
+//	})
+//
+//	t.Run("update reconciliation to old block", func(t *testing.T) {
+//		err := storage.Reconciled(ctx, account, currency, genesisBlock)
+//		assert.NoError(t, err)
+//
+//		coverage, err := storage.ReconciliationCoverage(ctx, 0)
+//		assert.NoError(t, err)
+//		assert.Equal(t, 0.5, coverage)
+//
+//		// We should skip update so this stays 0.5
+//		coverage, err = storage.ReconciliationCoverage(ctx, 1)
+//		assert.NoError(t, err)
+//		assert.Equal(t, 0.5, coverage)
+//	})
+//
+//	t.Run("add unreconciled", func(t *testing.T) {
+//		txn := storage.db.Transaction(ctx)
+//		newAccount, err := storage.UpdateBalance(
+//			ctx,
+//			txn,
+//			&parser.BalanceChange{
+//				Account:    subAccountMetadata2,
+//				Currency:   currency2,
+//				Block:      newBlock,
+//				Difference: "200",
+//			},
+//			newBlock,
+//		)
+//		assert.True(t, newAccount)
+//		assert.NoError(t, err)
+//		assert.NoError(t, txn.Commit(ctx))
+//
+//		coverage, err := storage.ReconciliationCoverage(ctx, 1)
+//		assert.NoError(t, err)
+//		assert.Equal(t, float64(1)/float64(3), coverage)
+//	})
+//
+//	t.Run("test estimated no reconciliations", func(t *testing.T) {
+//		mockHelper.On("AccountsReconciled", ctx, mock.Anything).Return(big.NewInt(0), nil).Once()
+//		mockHelper.On("AccountsSeen", ctx, mock.Anything).Return(big.NewInt(0), nil).Once()
+//		coverage, err := storage.EstimatedReconciliationCoverage(ctx)
+//		assert.Equal(t, float64(0), coverage)
+//		assert.NoError(t, err)
+//	})
+//
+//	t.Run("test estimated some reconciliations", func(t *testing.T) {
+//		mockHelper.On("AccountsReconciled", ctx, mock.Anything).Return(big.NewInt(1), nil).Once()
+//		mockHelper.On("AccountsSeen", ctx, mock.Anything).Return(big.NewInt(2), nil).Once()
+//		coverage, err := storage.EstimatedReconciliationCoverage(ctx)
+//		assert.Equal(t, float64(0.5), coverage)
+//		assert.NoError(t, err)
+//	})
+//
+//	mockHelper.AssertExpectations(t)
+//	mockHandler.AssertExpectations(t)
+//}
+//
+//func TestBlockSyncing(t *testing.T) {
+//	ctx := context.Background()
+//
+//	newDir, err := utils.CreateTempDir()
+//	assert.NoError(t, err)
+//	defer utils.RemoveTempDir(newDir)
+//
+//	database, err := newTestBadgerDatabase(ctx, newDir)
+//	assert.NoError(t, err)
+//	defer database.Close(ctx)
+//
+//	storage := NewBalanceStorage(database)
+//	mockHelper := &mocks.BalanceStorageHelper{}
+//	mockHandler := &mocks.BalanceStorageHandler{}
+//	mockHelper.On("Asserter").Return(baseAsserter())
+//	mockHelper.On("ExemptFunc").Return(exemptFunc())
+//	mockHelper.On("BalanceExemptions").Return([]*types.BalanceExemption{})
+//	storage.Initialize(mockHelper, mockHandler)
+//
+//	// Genesis block with no transactions
+//	b0 := &types.Block{
+//		BlockIdentifier: &types.BlockIdentifier{
+//			Index: 0,
+//			Hash:  "0",
+//		},
+//		ParentBlockIdentifier: &types.BlockIdentifier{
+//			Index: 0,
+//			Hash:  "0",
+//		},
+//	}
+//
+//	addr1 := &types.AccountIdentifier{
+//		Address: "addr1",
+//	}
+//	addr2 := &types.AccountIdentifier{
+//		Address: "addr2",
+//	}
+//	curr := &types.Currency{
+//		Symbol:   "ETH",
+//		Decimals: 18,
+//	}
+//
+//	// Block 1 with transaction
+//	b1 := &types.Block{
+//		BlockIdentifier: &types.BlockIdentifier{
+//			Index: 1,
+//			Hash:  "1",
+//		},
+//		ParentBlockIdentifier: &types.BlockIdentifier{
+//			Index: 0,
+//			Hash:  "0",
+//		},
+//		Transactions: []*types.Transaction{
+//			{
+//				TransactionIdentifier: &types.TransactionIdentifier{
+//					Hash: "1_0",
+//				},
+//				Operations: []*types.Operation{
+//					{
+//						OperationIdentifier: &types.OperationIdentifier{
+//							Index: 0,
+//						},
+//						Account: addr1,
+//						Status:  types.String("Success"),
+//						Type:    "Transfer",
+//						Amount: &types.Amount{
+//							Value:    "100",
+//							Currency: curr,
+//						},
+//					},
+//				},
+//			},
+//		},
+//	}
+//
+//	// Another Transaction for some acocunt in Block 1
+//	b2 := &types.Block{
+//		BlockIdentifier: &types.BlockIdentifier{
+//			Index: 2,
+//			Hash:  "2",
+//		},
+//		ParentBlockIdentifier: &types.BlockIdentifier{
+//			Index: 1,
+//			Hash:  "1",
+//		},
+//		Transactions: []*types.Transaction{
+//			{
+//				TransactionIdentifier: &types.TransactionIdentifier{
+//					Hash: "2_0",
+//				},
+//				Operations: []*types.Operation{
+//					{
+//						OperationIdentifier: &types.OperationIdentifier{
+//							Index: 0,
+//						},
+//						Account: addr1,
+//						Status:  types.String("Success"),
+//						Type:    "Transfer",
+//						Amount: &types.Amount{
+//							Value:    "-50",
+//							Currency: curr,
+//						},
+//					},
+//					{
+//						OperationIdentifier: &types.OperationIdentifier{
+//							Index: 1,
+//						},
+//						Account: addr2,
+//						Status:  types.String("Success"),
+//						Type:    "Transfer",
+//						Amount: &types.Amount{
+//							Value:    "50",
+//							Currency: curr,
+//						},
+//					},
+//					{
+//						OperationIdentifier: &types.OperationIdentifier{
+//							Index: 2,
+//						},
+//						Account: addr1,
+//						Status:  types.String("Success"),
+//						Type:    "Transfer",
+//						Amount: &types.Amount{
+//							Value:    "-1",
+//							Currency: curr,
+//						},
+//					},
+//				},
+//			},
+//		},
+//	}
+//
+//	// Orphaned block with slightly different tx
+//	b2a := &types.Block{
+//		BlockIdentifier: &types.BlockIdentifier{
+//			Index: 2,
+//			Hash:  "2a",
+//		},
+//		ParentBlockIdentifier: &types.BlockIdentifier{
+//			Index: 1,
+//			Hash:  "1",
+//		},
+//		Transactions: []*types.Transaction{
+//			{
+//				TransactionIdentifier: &types.TransactionIdentifier{
+//					Hash: "2_0",
+//				},
+//				Operations: []*types.Operation{
+//					{
+//						OperationIdentifier: &types.OperationIdentifier{
+//							Index: 0,
+//						},
+//						Account: addr1,
+//						Status:  types.String("Success"),
+//						Type:    "Transfer",
+//						Amount: &types.Amount{
+//							Value:    "-100",
+//							Currency: curr,
+//						},
+//					},
+//					{
+//						OperationIdentifier: &types.OperationIdentifier{
+//							Index: 1,
+//						},
+//						Account: addr2,
+//						Status:  types.String("Success"),
+//						Type:    "Transfer",
+//						Amount: &types.Amount{
+//							Value:    "100",
+//							Currency: curr,
+//						},
+//					},
+//				},
+//			},
+//		},
+//	}
+//
+//	t.Run("add genesis block", func(t *testing.T) {
+//		dbTx := database.Transaction(ctx)
+//		g, gctx := errgroup.WithContext(ctx)
+//		_, err = storage.AddingBlock(gctx, g, b0, dbTx)
+//		assert.NoError(t, err)
+//		assert.NoError(t, g.Wait())
+//		assert.NoError(t, dbTx.Commit(ctx))
+//
+//		amount, err := storage.GetBalance(ctx, addr1, curr, b0.BlockIdentifier.Index)
+//		assert.True(t, errors.Is(err, storageErrs.ErrAccountMissing))
+//		assert.Nil(t, amount)
+//		amount, err = storage.GetBalance(ctx, addr2, curr, b0.BlockIdentifier.Index)
+//		assert.True(t, errors.Is(err, storageErrs.ErrAccountMissing))
+//		assert.Nil(t, amount)
+//	})
+//
+//	t.Run("add block 1", func(t *testing.T) {
+//		dbTx := database.Transaction(ctx)
+//		g, gctx := errgroup.WithContext(ctx)
+//		mockHelper.On(
+//			"AccountBalance",
+//			gctx,
+//			addr1,
+//			curr,
+//			b0.BlockIdentifier,
+//		).Return(
+//			&types.Amount{Value: "1", Currency: curr},
+//			nil,
+//		).Once()
+//		mockHandler.On("AccountsSeen", gctx, dbTx, 1).Return(nil).Once()
+//		_, err = storage.AddingBlock(gctx, g, b1, dbTx)
+//		assert.NoError(t, err)
+//		assert.NoError(t, g.Wait())
+//		assert.NoError(t, dbTx.Commit(ctx))
+//
+//		amount, err := storage.GetBalance(ctx, addr1, curr, b0.BlockIdentifier.Index)
+//		assert.NoError(t, err)
+//		assert.Equal(t, &types.Amount{
+//			Value:    "0",
+//			Currency: curr,
+//		}, amount)
+//		amount, err = storage.GetBalance(ctx, addr1, curr, b1.BlockIdentifier.Index)
+//		assert.NoError(t, err)
+//		assert.Equal(t, &types.Amount{
+//			Value:    "101",
+//			Currency: curr,
+//		}, amount)
+//		amount, err = storage.GetBalance(ctx, addr2, curr, b1.BlockIdentifier.Index)
+//		assert.True(t, errors.Is(err, storageErrs.ErrAccountMissing))
+//		assert.Nil(t, amount)
+//	})
+//
+//	t.Run("add block 2", func(t *testing.T) {
+//		// Reconcile a previously seen account
+//		err := storage.Reconciled(ctx, addr1, curr, b1.BlockIdentifier)
+//		assert.NoError(t, err)
+//
+//		dbTx := database.Transaction(ctx)
+//		g, gctx := errgroup.WithContext(ctx)
+//		mockHelper.On(
+//			"AccountBalance",
+//			gctx,
+//			addr2,
+//			curr,
+//			b1.BlockIdentifier,
+//		).Return(
+//			&types.Amount{Value: "0", Currency: curr},
+//			nil,
+//		).Once()
+//		mockHandler.On("AccountsSeen", gctx, dbTx, 1).Return(nil).Once()
+//		mockHandler.On("AccountsReconciled", gctx, dbTx, 1).Return(nil).Once()
+//		_, err = storage.AddingBlock(gctx, g, b2, dbTx)
+//		assert.NoError(t, err)
+//		assert.NoError(t, g.Wait())
+//		assert.NoError(t, dbTx.Commit(ctx))
+//
+//		amount, err := storage.GetBalance(ctx, addr1, curr, b0.BlockIdentifier.Index)
+//		assert.NoError(t, err)
+//		assert.Equal(t, &types.Amount{
+//			Value:    "0",
+//			Currency: curr,
+//		}, amount)
+//		amount, err = storage.GetBalance(ctx, addr1, curr, b1.BlockIdentifier.Index)
+//		assert.NoError(t, err)
+//		assert.Equal(t, &types.Amount{
+//			Value:    "101",
+//			Currency: curr,
+//		}, amount)
+//		amount, err = storage.GetBalance(ctx, addr2, curr, b1.BlockIdentifier.Index)
+//		assert.NoError(t, err)
+//		assert.Equal(t, &types.Amount{
+//			Value:    "0",
+//			Currency: curr,
+//		}, amount)
+//		amount, err = storage.GetBalance(ctx, addr1, curr, b2.BlockIdentifier.Index)
+//		assert.NoError(t, err)
+//		assert.Equal(t, &types.Amount{
+//			Value:    "50",
+//			Currency: curr,
+//		}, amount)
+//		amount, err = storage.GetBalance(ctx, addr2, curr, b2.BlockIdentifier.Index)
+//		assert.NoError(t, err)
+//		assert.Equal(t, &types.Amount{
+//			Value:    "50",
+//			Currency: curr,
+//		}, amount)
+//	})
+//
+//	t.Run("orphan block 2", func(t *testing.T) {
+//		dbTx := database.Transaction(ctx)
+//		g, gctx := errgroup.WithContext(ctx)
+//		commitWorker, err := storage.RemovingBlock(gctx, g, b2, dbTx)
+//		assert.NoError(t, err)
+//		assert.NoError(t, g.Wait())
+//		assert.NoError(t, dbTx.Commit(ctx))
+//		mockHandler.On("BlockRemoved", ctx, b2, mock.Anything).Return(nil).Once()
+//		mockHandler.On("AccountsSeen", ctx, mock.Anything, -1).Return(nil).Once()
+//		assert.NoError(t, commitWorker(ctx))
+//
+//		amount, err := storage.GetBalance(ctx, addr1, curr, b0.BlockIdentifier.Index)
+//		assert.NoError(t, err)
+//		assert.Equal(t, &types.Amount{
+//			Value:    "0",
+//			Currency: curr,
+//		}, amount)
+//		amount, err = storage.GetBalance(ctx, addr1, curr, b1.BlockIdentifier.Index)
+//		assert.NoError(t, err)
+//		assert.Equal(t, &types.Amount{
+//			Value:    "101",
+//			Currency: curr,
+//		}, amount)
+//		amount, err = storage.GetBalance(ctx, addr2, curr, b1.BlockIdentifier.Index)
+//		assert.True(t, errors.Is(err, storageErrs.ErrAccountMissing))
+//		assert.Nil(t, amount)
+//		amount, err = storage.GetBalance(ctx, addr1, curr, b2.BlockIdentifier.Index)
+//		assert.NoError(t, err)
+//		assert.Equal(t, &types.Amount{
+//			Value:    "101",
+//			Currency: curr,
+//		}, amount)
+//		amount, err = storage.GetBalance(ctx, addr2, curr, b2.BlockIdentifier.Index)
+//		assert.True(t, errors.Is(err, storageErrs.ErrAccountMissing))
+//		assert.Nil(t, amount)
+//	})
+//
+//	t.Run("orphan block 1", func(t *testing.T) {
+//		dbTx := database.Transaction(ctx)
+//		g, gctx := errgroup.WithContext(ctx)
+//		commitWorker, err := storage.RemovingBlock(gctx, g, b1, dbTx)
+//		assert.NoError(t, err)
+//		assert.NoError(t, g.Wait())
+//		assert.NoError(t, dbTx.Commit(ctx))
+//		mockHandler.On("BlockRemoved", ctx, b1, mock.Anything).Return(nil).Once()
+//		mockHandler.On("AccountsSeen", ctx, mock.Anything, -1).Return(nil).Once()
+//		mockHandler.On("AccountsReconciled", ctx, mock.Anything, -1).Return(nil).Once()
+//		assert.NoError(t, commitWorker(ctx))
+//
+//		amount, err := storage.GetBalance(ctx, addr1, curr, b0.BlockIdentifier.Index)
+//		assert.True(t, errors.Is(err, storageErrs.ErrAccountMissing))
+//		assert.Nil(t, amount)
+//		amount, err = storage.GetBalance(ctx, addr2, curr, b0.BlockIdentifier.Index)
+//		assert.True(t, errors.Is(err, storageErrs.ErrAccountMissing))
+//		assert.Nil(t, amount)
+//		amount, err = storage.GetBalance(ctx, addr1, curr, b1.BlockIdentifier.Index)
+//		assert.True(t, errors.Is(err, storageErrs.ErrAccountMissing))
+//		assert.Nil(t, amount)
+//		amount, err = storage.GetBalance(ctx, addr2, curr, b1.BlockIdentifier.Index)
+//		assert.True(t, errors.Is(err, storageErrs.ErrAccountMissing))
+//		assert.Nil(t, amount)
+//		amount, err = storage.GetBalance(ctx, addr1, curr, b2.BlockIdentifier.Index)
+//		assert.True(t, errors.Is(err, storageErrs.ErrAccountMissing))
+//		assert.Nil(t, amount)
+//		amount, err = storage.GetBalance(ctx, addr2, curr, b2.BlockIdentifier.Index)
+//		assert.True(t, errors.Is(err, storageErrs.ErrAccountMissing))
+//		assert.Nil(t, amount)
+//	})
+//
+//	t.Run("add block 1", func(t *testing.T) {
+//		dbTx := database.Transaction(ctx)
+//		g, gctx := errgroup.WithContext(ctx)
+//		mockHelper.On(
+//			"AccountBalance",
+//			gctx,
+//			addr1,
+//			curr,
+//			b0.BlockIdentifier,
+//		).Return(
+//			&types.Amount{Value: "1", Currency: curr},
+//			nil,
+//		).Once()
+//		mockHandler.On("AccountsSeen", gctx, dbTx, 1).Return(nil).Once()
+//		_, err = storage.AddingBlock(gctx, g, b1, dbTx)
+//		assert.NoError(t, err)
+//		assert.NoError(t, g.Wait())
+//		assert.NoError(t, dbTx.Commit(ctx))
+//
+//		amount, err := storage.GetBalance(ctx, addr1, curr, b0.BlockIdentifier.Index)
+//		assert.NoError(t, err)
+//		assert.Equal(t, &types.Amount{
+//			Value:    "0",
+//			Currency: curr,
+//		}, amount)
+//		amount, err = storage.GetBalance(ctx, addr1, curr, b1.BlockIdentifier.Index)
+//		assert.NoError(t, err)
+//		assert.Equal(t, &types.Amount{
+//			Value:    "101",
+//			Currency: curr,
+//		}, amount)
+//		amount, err = storage.GetBalance(ctx, addr2, curr, b1.BlockIdentifier.Index)
+//		assert.True(t, errors.Is(err, storageErrs.ErrAccountMissing))
+//		assert.Nil(t, amount)
+//		amount, err = storage.GetBalance(ctx, addr1, curr, b2.BlockIdentifier.Index)
+//		assert.NoError(t, err)
+//		assert.Equal(t, &types.Amount{
+//			Value:    "101",
+//			Currency: curr,
+//		}, amount)
+//		amount, err = storage.GetBalance(ctx, addr2, curr, b2.BlockIdentifier.Index)
+//		assert.True(t, errors.Is(err, storageErrs.ErrAccountMissing))
+//		assert.Nil(t, amount)
+//	})
+//
+//	t.Run("add block 2a", func(t *testing.T) {
+//		dbTx := database.Transaction(ctx)
+//		g, gctx := errgroup.WithContext(ctx)
+//		mockHelper.On(
+//			"AccountBalance",
+//			gctx,
+//			addr2,
+//			curr,
+//			b1.BlockIdentifier,
+//		).Return(
+//			&types.Amount{Value: "0", Currency: curr},
+//			nil,
+//		).Once()
+//		mockHandler.On("AccountsSeen", gctx, dbTx, 1).Return(nil).Once()
+//		_, err = storage.AddingBlock(gctx, g, b2a, dbTx)
+//		assert.NoError(t, err)
+//		assert.NoError(t, g.Wait())
+//		assert.NoError(t, dbTx.Commit(ctx))
+//
+//		amount, err := storage.GetBalance(ctx, addr1, curr, b0.BlockIdentifier.Index)
+//		assert.NoError(t, err)
+//		assert.Equal(t, &types.Amount{
+//			Value:    "0",
+//			Currency: curr,
+//		}, amount)
+//		amount, err = storage.GetBalance(ctx, addr1, curr, b1.BlockIdentifier.Index)
+//		assert.NoError(t, err)
+//		assert.Equal(t, &types.Amount{
+//			Value:    "101",
+//			Currency: curr,
+//		}, amount)
+//		amount, err = storage.GetBalance(ctx, addr2, curr, b1.BlockIdentifier.Index)
+//		assert.NoError(t, err)
+//		assert.Equal(t, &types.Amount{
+//			Value:    "0",
+//			Currency: curr,
+//		}, amount)
+//		amount, err = storage.GetBalance(ctx, addr1, curr, b2.BlockIdentifier.Index)
+//		assert.NoError(t, err)
+//		assert.Equal(t, &types.Amount{
+//			Value:    "1",
+//			Currency: curr,
+//		}, amount)
+//		amount, err = storage.GetBalance(ctx, addr2, curr, b2.BlockIdentifier.Index)
+//		assert.NoError(t, err)
+//		assert.Equal(t, &types.Amount{
+//			Value:    "100",
+//			Currency: curr,
+//		}, amount)
+//	})
+//
+//	mockHelper.AssertExpectations(t)
+//	mockHandler.AssertExpectations(t)
+//}

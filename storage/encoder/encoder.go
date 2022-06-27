@@ -664,3 +664,88 @@ func (e *Encoder) DecodeAccountCurrency( // nolint:gocognit
 
 	return nil
 }
+
+
+func (e *Encoder) EncodeBalanceSeq( // nolint:gocognit
+	balanceSeq *types.BalanceSeq,
+) ([]byte, error) {
+	output := e.pool.Get()
+	if _, err := output.WriteString(balanceSeq.Amount.Value); err != nil {
+		return nil, fmt.Errorf("%w: %s", errors.ErrObjectEncodeFailed, err.Error())
+	}
+	if balanceSeq.SeqNumSupport == nil || !balanceSeq.SeqNumSupport.SupportSeq {
+		return output.Bytes(), nil
+	}
+
+	if _, err := output.WriteRune(unicodeRecordSeparator); err != nil {
+		return nil, fmt.Errorf("%w: %s", errors.ErrObjectEncodeFailed, err.Error())
+	}
+	if _, err := output.WriteString(strconv.FormatInt(int64(balanceSeq.Seq), 10),); err != nil {
+		return nil, fmt.Errorf("%w: %s", errors.ErrObjectEncodeFailed, err.Error())
+	}
+
+	return output.Bytes(), nil
+}
+
+func (e *Encoder) DecodeBalanceSeq(
+	b []byte,
+	balanceSeq *types.BalanceSeq,
+	reclaimInput bool,
+) error {
+	// Indices of encoded BalanceSeq struct
+	const (
+		balanceValue = iota
+		seq
+	)
+
+	count := 0
+	currentBytes := b
+	for {
+		nextRune := bytes.IndexRune(currentBytes, unicodeRecordSeparator)
+		if nextRune == -1 {
+			if count != balanceValue && count != seq {
+				return fmt.Errorf("%w: next rune is -1 at %d", errors.ErrRawDecodeFailed, count)
+			}
+
+			nextRune = len(currentBytes)
+		}
+
+		val := currentBytes[:nextRune]
+		if len(val) == 0 {
+			goto handleNext
+		}
+
+		switch count {
+		case balanceValue:
+			balanceSeq.Amount = &types.Amount{Value: string(val)}
+		case seq:
+			strVal := string(val)
+			i, err := strconv.ParseInt(strVal, 10, 32)
+			if err != nil {
+				return fmt.Errorf("%w: %s", errors.ErrRawDecodeFailed, err.Error())
+			}
+
+			balanceSeq.Seq = int32(i)
+			balanceSeq.SeqNumSupport = &types.SequenceNumSupport{
+				SupportSeq: true,
+			}
+		default:
+			return fmt.Errorf("%w: count %d > end", errors.ErrRawDecodeFailed, count)
+		}
+
+		handleNext:
+		if nextRune == len(currentBytes) &&
+			(count == balanceValue || count == seq) {
+			break
+		}
+
+		currentBytes = currentBytes[nextRune+1:]
+		count++
+	}
+
+	if reclaimInput {
+		e.pool.PutByteSlice(b)
+	}
+
+	return nil
+}

@@ -544,7 +544,7 @@ func TestExpectedOperations(t *testing.T) {
 		assert.NoError(t, err)
 		assert.NotNil(t, asserter)
 
-		parser := New(asserter, nil, nil)
+		parser := New(asserter, nil, nil, types.SequenceNum{})
 
 		t.Run(name, func(t *testing.T) {
 			err := parser.ExpectedOperations(

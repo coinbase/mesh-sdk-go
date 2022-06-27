@@ -17,7 +17,6 @@ package parser
 import (
 	"context"
 	"fmt"
-
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
@@ -28,6 +27,16 @@ type BalanceChange struct {
 	Currency   *types.Currency          `json:"currency,omitempty"`
 	Block      *types.BlockIdentifier   `json:"block_identifier,omitempty"`
 	Difference string                   `json:"difference,omitempty"`
+
+}
+
+type BalanceSeqChange struct {
+	Account    *types.AccountIdentifier
+	Currency   *types.Currency
+	Block      *types.BlockIdentifier
+	BalanceDifference string
+	SeqNumDifference int32
+	SeqNumAvailable bool
 }
 
 // ExemptOperation is a function that returns a boolean indicating
@@ -76,8 +85,9 @@ func (p *Parser) BalanceChanges(
 	ctx context.Context,
 	block *types.Block,
 	blockRemoved bool,
-) ([]*BalanceChange, error) {
-	balanceChanges := map[string]*BalanceChange{}
+) ([]*BalanceSeqChange, error) {
+	balanceChanges := map[string]*BalanceSeqChange{}
+
 	for _, tx := range block.Transactions {
 		for _, op := range tx.Operations {
 			skip, err := p.skipOperation(op)
@@ -87,12 +97,18 @@ func (p *Parser) BalanceChanges(
 			if skip {
 				continue
 			}
+			valueInt, err := types.AmountValue(op.Amount)
+			if err != nil {
+				return nil, err
+			}
 
 			// We create a copy of Amount.Value
 			// here to ensure we don't accidentally overwrite
 			// the value of op.Amount.
 			amountValue := op.Amount.Value
 			blockIdentifier := block.BlockIdentifier
+			seqNumChange := int32(0)
+
 			if blockRemoved {
 				negatedValue, err := types.NegateValue(amountValue)
 				if err != nil {
@@ -101,6 +117,14 @@ func (p *Parser) BalanceChanges(
 				amountValue = negatedValue
 			}
 
+			// Make sure we only update sequence number of the sender
+			if p.SequenceNumSupport.SeqOpType == op.Type && valueInt.Sign() == -1 {
+				if blockRemoved{
+					seqNumChange = -1
+				}else{
+					seqNumChange = 1
+				}
+			}
 			// Merge values by account and currency
 			key := fmt.Sprintf(
 				"%s/%s",
@@ -110,26 +134,28 @@ func (p *Parser) BalanceChanges(
 
 			val, ok := balanceChanges[key]
 			if !ok {
-				balanceChanges[key] = &BalanceChange{
+				balanceChanges[key] = &BalanceSeqChange{
 					Account:    op.Account,
 					Currency:   op.Amount.Currency,
-					Difference: amountValue,
+					BalanceDifference: amountValue,
 					Block:      blockIdentifier,
+					SeqNumDifference: seqNumChange,
 				}
 				continue
 			}
 
-			newDifference, err := types.AddValues(val.Difference, amountValue)
+			newDifference, err := types.AddValues(val.BalanceDifference, amountValue)
 			if err != nil {
 				return nil, err
 			}
-			val.Difference = newDifference
+			val.BalanceDifference = newDifference
 			balanceChanges[key] = val
+			balanceChanges[key].SeqNumDifference += seqNumChange
 		}
 	}
 
 	i := 0
-	allChanges := make([]*BalanceChange, len(balanceChanges))
+	allChanges := make([]*BalanceSeqChange, len(balanceChanges))
 	for _, change := range balanceChanges {
 		allChanges[i] = change
 		i++

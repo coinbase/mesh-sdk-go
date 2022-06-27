@@ -24,6 +24,7 @@ type Parser struct {
 	Asserter          *asserter.Asserter
 	ExemptFunc        ExemptOperation
 	BalanceExemptions []*types.BalanceExemption
+	SequenceNumSupport *types.SequenceNumSupport
 }
 
 // New creates a new Parser.
@@ -31,10 +32,12 @@ func New(
 	asserter *asserter.Asserter,
 	exemptFunc ExemptOperation,
 	balanceExemptions []*types.BalanceExemption,
+	sequenceNumSupport *types.SequenceNumSupport,
 ) *Parser {
 	return &Parser{
 		Asserter:          asserter,
 		ExemptFunc:        exemptFunc,
 		BalanceExemptions: balanceExemptions,
+		SequenceNumSupport: sequenceNumSupport,
 	}
 }

@@ -195,7 +195,7 @@ func TestFindExemptions(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			parser := New(nil, nil, test.balanceExemptions)
+			parser := New(nil, nil, test.balanceExemptions,types.SequenceNum{})
 			assert.Equal(t, test.expected, parser.FindExemptions(test.account, test.currency))
 		})
 	}
@@ -456,7 +456,7 @@ func TestMatchBalanceExemption(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			parser := New(nil, nil, test.balanceExemptions)
+			parser := New(nil, nil, test.balanceExemptions, types.SequenceNum{})
 			exemptions := parser.FindExemptions(test.account, test.currency)
 			assert.Equal(t, test.expected, MatchBalanceExemption(exemptions, test.difference))
 		})
