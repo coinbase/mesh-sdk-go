@@ -38,6 +38,10 @@ const (
 	blockBroadcastLimit = 10
 )
 
+var (
+	broadcastMetadata = map[string]interface{}{}
+)
+
 func blockFiller(start int64, end int64) []*types.Block {
 	blocks := []*types.Block{}
 	for i := start; i < end; i++ {
@@ -116,6 +120,7 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 			&types.TransactionIdentifier{Hash: "tx 1"},
 			"payload 1",
 			confirmationDepth,
+			broadcastMetadata,
 		)
 		assert.NoError(t, err)
 
@@ -274,6 +279,7 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 			&types.TransactionIdentifier{Hash: "tx 2"},
 			"payload 2",
 			confirmationDepth,
+			broadcastMetadata,
 		)
 		assert.NoError(t, err)
 
@@ -730,6 +736,7 @@ func TestBroadcastStorageBroadcastFailure(t *testing.T) {
 			&types.TransactionIdentifier{Hash: "tx 1"},
 			"payload 1",
 			confirmationDepth,
+			broadcastMetadata,
 		)
 		assert.NoError(t, err)
 
@@ -742,6 +749,7 @@ func TestBroadcastStorageBroadcastFailure(t *testing.T) {
 			&types.TransactionIdentifier{Hash: "tx 2"},
 			"payload 2",
 			confirmationDepth,
+			broadcastMetadata,
 		)
 		assert.NoError(t, err)
 
@@ -946,6 +954,7 @@ func TestBroadcastStorageBehindTip(t *testing.T) {
 			&types.TransactionIdentifier{Hash: "tx 1"},
 			"payload 1",
 			confirmationDepth,
+			broadcastMetadata,
 		)
 		assert.NoError(t, err)
 
@@ -958,6 +967,7 @@ func TestBroadcastStorageBehindTip(t *testing.T) {
 			&types.TransactionIdentifier{Hash: "tx 2"},
 			"payload 2",
 			confirmationDepth,
+			broadcastMetadata,
 		)
 		assert.NoError(t, err)
 
@@ -1210,6 +1220,7 @@ func TestBroadcastStorageClearBroadcasts(t *testing.T) {
 			&types.TransactionIdentifier{Hash: "tx 1"},
 			"payload 1",
 			confirmationDepth,
+			broadcastMetadata,
 		)
 		assert.NoError(t, err)
 
@@ -1222,6 +1233,7 @@ func TestBroadcastStorageClearBroadcasts(t *testing.T) {
 			&types.TransactionIdentifier{Hash: "tx 2"},
 			"payload 2",
 			confirmationDepth,
+			broadcastMetadata,
 		)
 		assert.NoError(t, err)
 

@@ -107,6 +107,7 @@ type BroadcastStorageHandler interface {
 		*types.BlockIdentifier,
 		*types.Transaction,
 		[]*types.Operation,
+		map[string]interface{}, // transaction metadata
 	) error // can use locked account again + confirm matches intent + update logger
 
 	// TransactionStale is called when a transaction has not yet been
@@ -140,6 +141,7 @@ type Broadcast struct {
 	Payload               string                       `json:"payload"`
 	LastBroadcast         *types.BlockIdentifier       `json:"broadcast_at"`
 	Broadcasts            int                          `json:"broadcasts"`
+	TransactionMetadata   map[string]interface{}       `json:"metadata"`
 }
 
 // NewBroadcastStorage returns a new BroadcastStorage.
@@ -198,6 +200,7 @@ func (b *BroadcastStorage) invokeAddBlockHandlers(
 			foundBlocks[i],
 			foundTransactions[i],
 			broadcast.Intent,
+			broadcast.TransactionMetadata,
 		)
 		if err != nil {
 			return fmt.Errorf(
@@ -324,6 +327,7 @@ func (b *BroadcastStorage) Broadcast(
 	transactionIdentifier *types.TransactionIdentifier,
 	payload string,
 	confirmationDepth int64,
+	transactionMetadata map[string]interface{},
 ) error {
 	namespace, broadcastKey := getBroadcastKey(transactionIdentifier)
 
@@ -344,6 +348,7 @@ func (b *BroadcastStorage) Broadcast(
 		Payload:               payload,
 		Broadcasts:            0,
 		ConfirmationDepth:     confirmationDepth,
+		TransactionMetadata:   transactionMetadata,
 	})
 	if err != nil {
 		return fmt.Errorf("%w: %v", errors.ErrBroadcastEncodeFailed, err)

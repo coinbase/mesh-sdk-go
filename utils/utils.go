@@ -447,6 +447,38 @@ func CurrencyBalance(
 	return liveAmount, liveBlock, nil
 }
 
+// CurrencyBalanceBatch returns the balance batch of an account
+// for all currencies at a particular height.
+// It is up to the caller to determine if the retrieved
+// block has the expected hash for the requested index.
+func CurrencyBalanceBatch(
+	ctx context.Context,
+	network *types.NetworkIdentifier,
+	helper FetcherHelper,
+	account *types.AccountIdentifier,
+	index int64,
+) ([]*types.Amount, *types.BlockIdentifier, error) {
+	var lookupBlock *types.PartialBlockIdentifier
+	if index >= 0 {
+		lookupBlock = &types.PartialBlockIdentifier{
+			Index: &index,
+		}
+	}
+
+	liveBlock, liveBalances, _, fetchErr := helper.AccountBalanceRetry(
+		ctx,
+		network,
+		account,
+		lookupBlock,
+		nil,
+	)
+	if fetchErr != nil {
+		return nil, nil, fetchErr.Err
+	}
+
+	return liveBalances, liveBlock, nil
+}
+
 // AccountBalanceRequest defines the required information
 // to get an account's balance.
 type AccountBalanceRequest struct {
@@ -474,26 +506,46 @@ func GetAccountBalances(
 ) ([]*AccountBalance, error) {
 	var accountBalances []*AccountBalance
 	for _, balanceRequest := range balanceRequests {
-		amount, block, err := CurrencyBalance(
-			ctx,
-			balanceRequest.Network,
-			fetcher,
-			balanceRequest.Account,
-			balanceRequest.Currency,
-			-1,
-		)
+		if balanceRequest.Currency != nil {
+			amount, block, err := CurrencyBalance(
+				ctx,
+				balanceRequest.Network,
+				fetcher,
+				balanceRequest.Account,
+				balanceRequest.Currency,
+				-1,
+			)
+			if err != nil {
+				return nil, err
+			}
 
-		if err != nil {
-			return nil, err
+			accountBalance := &AccountBalance{
+				Account: balanceRequest.Account,
+				Amount:  amount,
+				Block:   block,
+			}
+			accountBalances = append(accountBalances, accountBalance)
+		} else {
+			amounts, block, err := CurrencyBalanceBatch(
+				ctx,
+				balanceRequest.Network,
+				fetcher,
+				balanceRequest.Account,
+				-1,
+			)
+			if err != nil {
+				return nil, err
+			}
+
+			for _, amount := range amounts {
+				accountBalance := &AccountBalance{
+					Account: balanceRequest.Account,
+					Amount:  amount,
+					Block:   block,
+				}
+				accountBalances = append(accountBalances, accountBalance)
+			}
 		}
-
-		accountBalance := &AccountBalance{
-			Account: balanceRequest.Account,
-			Amount:  amount,
-			Block:   block,
-		}
-
-		accountBalances = append(accountBalances, accountBalance)
 	}
 
 	return accountBalances, nil
