@@ -70,7 +70,7 @@ When you've finished an implementation for a blockchain, share your work in the 
 ## Related Projects
 
 * [rosetta-specifications](https://github.com/coinbase/rosetta-specifications) — The `rosetta-specifications` repository generates the SDK code in the `rosetta-sdk-go` repository.
-* [rosetta-cli](https://github.com/coinbase/rosetta-ecosystem) — Use the `rosetta-cli` tool to test your Rosetta API implementation. The tool also provides the ability to look up block contents and account balances.
+* [rosetta-cli](https://github.com/coinbase/rosetta-cli) — Use the `rosetta-cli` tool to test your Rosetta API implementation. The tool also provides the ability to look up block contents and account balances.
 
 ## Reference Implementations
 
