@@ -39,6 +39,12 @@ const (
 	jobIdentifier = "job"
 )
 
+var (
+	broadcastMetadata = map[string]interface{}{
+		"test": "works",
+	}
+)
+
 func simpleAsserterConfiguration() (*asserter.Asserter, error) {
 	return asserter.NewClientWithOptions(
 		&types.NetworkIdentifier{
@@ -673,6 +679,7 @@ func TestProcess(t *testing.T) {
 		txIdentifier,
 		networkTx,
 		int64(1),
+		broadcastMetadata,
 	).Return(nil).Once()
 	handler.On("TransactionCreated", ctx, "job4", txIdentifier).Return(nil).Once()
 	helper.On("BroadcastAll", ctx).Return(nil).Once()
@@ -1136,6 +1143,7 @@ func TestProcess_Failed(t *testing.T) {
 		txIdentifier,
 		networkTx,
 		int64(1),
+		broadcastMetadata,
 	).Return(nil).Once()
 	handler.On("TransactionCreated", ctx, jobIdentifier, txIdentifier).Return(nil).Once()
 	helper.On("BroadcastAll", ctx).Return(nil).Once()
@@ -2204,6 +2212,7 @@ func TestReturnFunds(t *testing.T) {
 		txIdentifier,
 		networkTx,
 		int64(1),
+		broadcastMetadata,
 	).Return(nil).Once()
 	handler.On("TransactionCreated", ctx, jobIdentifier, txIdentifier).Return(nil).Once()
 	helper.On("BroadcastAll", ctx).Return(nil).Once()

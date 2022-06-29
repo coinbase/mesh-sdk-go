@@ -110,6 +110,7 @@ type Helper interface {
 		*types.TransactionIdentifier,
 		string, // network transaction
 		int64, // confirmation depth
+		map[string]interface{}, // transaction metadata
 	) error
 
 	// Derive returns a new *types.AccountIdentifier for a provided publicKey.
