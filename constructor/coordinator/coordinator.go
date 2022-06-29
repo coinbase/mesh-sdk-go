@@ -575,6 +575,7 @@ func (c *Coordinator) process( // nolint:gocognit
 				transactionIdentifier,
 				networkTransaction,
 				broadcast.ConfirmationDepth,
+				broadcast.Metadata,
 			); err != nil {
 				return -1, fmt.Errorf("%w: unable to enqueue broadcast", err)
 			}

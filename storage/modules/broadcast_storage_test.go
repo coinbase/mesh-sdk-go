@@ -38,6 +38,10 @@ const (
 	blockBroadcastLimit = 10
 )
 
+var (
+	broadcastMetadata = map[string]interface{}{}
+)
+
 func blockFiller(start int64, end int64) []*types.Block {
 	blocks := []*types.Block{}
 	for i := start; i < end; i++ {
@@ -116,6 +120,7 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 			&types.TransactionIdentifier{Hash: "tx 1"},
 			"payload 1",
 			confirmationDepth,
+			broadcastMetadata,
 		)
 		assert.NoError(t, err)
 
@@ -139,6 +144,7 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 				Intent:                send1,
 				Payload:               "payload 1",
 				ConfirmationDepth:     confirmationDepth,
+				TransactionMetadata:   broadcastMetadata,
 			},
 		}, broadcasts)
 
@@ -194,6 +200,7 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 				LastBroadcast:         blocks[0].BlockIdentifier,
 				Broadcasts:            1,
 				ConfirmationDepth:     confirmationDepth,
+				TransactionMetadata:   broadcastMetadata,
 			},
 		}, broadcasts)
 
@@ -249,6 +256,7 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 				LastBroadcast:         blocks[0].BlockIdentifier,
 				Broadcasts:            1,
 				ConfirmationDepth:     confirmationDepth,
+				TransactionMetadata:   broadcastMetadata,
 			},
 		}, broadcasts)
 		mockHelper.AssertExpectations(t)
@@ -274,6 +282,7 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 			&types.TransactionIdentifier{Hash: "tx 2"},
 			"payload 2",
 			confirmationDepth,
+			broadcastMetadata,
 		)
 		assert.NoError(t, err)
 
@@ -310,6 +319,7 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 				LastBroadcast:         blocks[0].BlockIdentifier,
 				Broadcasts:            1,
 				ConfirmationDepth:     confirmationDepth,
+				TransactionMetadata:   broadcastMetadata,
 			},
 			{
 				Identifier:            "broadcast 2",
@@ -320,6 +330,7 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 				LastBroadcast:         blocks[1].BlockIdentifier,
 				Broadcasts:            1,
 				ConfirmationDepth:     confirmationDepth,
+				TransactionMetadata:   broadcastMetadata,
 			},
 		}, broadcasts)
 
@@ -406,6 +417,7 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 				LastBroadcast:         blocks[2].BlockIdentifier,
 				Broadcasts:            2,
 				ConfirmationDepth:     confirmationDepth,
+				TransactionMetadata:   broadcastMetadata,
 			},
 			{
 				Identifier:            "broadcast 2",
@@ -416,6 +428,7 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 				LastBroadcast:         blocks[1].BlockIdentifier,
 				Broadcasts:            1,
 				ConfirmationDepth:     confirmationDepth,
+				TransactionMetadata:   broadcastMetadata,
 			},
 		}, broadcasts)
 
@@ -512,6 +525,7 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 				LastBroadcast:         blocks[2].BlockIdentifier,
 				Broadcasts:            2,
 				ConfirmationDepth:     confirmationDepth,
+				TransactionMetadata:   broadcastMetadata,
 			},
 			{
 				Identifier:            "broadcast 2",
@@ -522,6 +536,7 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 				LastBroadcast:         blocks[3].BlockIdentifier,
 				Broadcasts:            2,
 				ConfirmationDepth:     confirmationDepth,
+				TransactionMetadata:   broadcastMetadata,
 			},
 		}, broadcasts)
 
@@ -568,6 +583,7 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 			blocks[3].BlockIdentifier,
 			tx1,
 			send1,
+			broadcastMetadata,
 		).Return(
 			nil,
 		).Once()
@@ -601,6 +617,7 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 				LastBroadcast:         blocks[3].BlockIdentifier,
 				Broadcasts:            2,
 				ConfirmationDepth:     confirmationDepth,
+				TransactionMetadata:   broadcastMetadata,
 			},
 		}, broadcasts)
 
@@ -636,6 +653,7 @@ func TestBroadcastStorageBroadcastSuccess(t *testing.T) {
 			blocks[4].BlockIdentifier,
 			tx2,
 			send2,
+			broadcastMetadata,
 		).Return(
 			nil,
 		).Once()
@@ -730,6 +748,7 @@ func TestBroadcastStorageBroadcastFailure(t *testing.T) {
 			&types.TransactionIdentifier{Hash: "tx 1"},
 			"payload 1",
 			confirmationDepth,
+			broadcastMetadata,
 		)
 		assert.NoError(t, err)
 
@@ -742,6 +761,7 @@ func TestBroadcastStorageBroadcastFailure(t *testing.T) {
 			&types.TransactionIdentifier{Hash: "tx 2"},
 			"payload 2",
 			confirmationDepth,
+			broadcastMetadata,
 		)
 		assert.NoError(t, err)
 
@@ -768,6 +788,7 @@ func TestBroadcastStorageBroadcastFailure(t *testing.T) {
 				Intent:                send1,
 				Payload:               "payload 1",
 				ConfirmationDepth:     confirmationDepth,
+				TransactionMetadata:   broadcastMetadata,
 			},
 			{
 				Identifier:            "broadcast 2",
@@ -776,6 +797,7 @@ func TestBroadcastStorageBroadcastFailure(t *testing.T) {
 				Intent:                send2,
 				Payload:               "payload 2",
 				ConfirmationDepth:     confirmationDepth,
+				TransactionMetadata:   broadcastMetadata,
 			},
 		}, broadcasts)
 
@@ -946,6 +968,7 @@ func TestBroadcastStorageBehindTip(t *testing.T) {
 			&types.TransactionIdentifier{Hash: "tx 1"},
 			"payload 1",
 			confirmationDepth,
+			broadcastMetadata,
 		)
 		assert.NoError(t, err)
 
@@ -958,6 +981,7 @@ func TestBroadcastStorageBehindTip(t *testing.T) {
 			&types.TransactionIdentifier{Hash: "tx 2"},
 			"payload 2",
 			confirmationDepth,
+			broadcastMetadata,
 		)
 		assert.NoError(t, err)
 
@@ -982,6 +1006,7 @@ func TestBroadcastStorageBehindTip(t *testing.T) {
 				Intent:                send1,
 				Payload:               "payload 1",
 				ConfirmationDepth:     confirmationDepth,
+				TransactionMetadata:   broadcastMetadata,
 			},
 			{
 				Identifier:            "broadcast 2",
@@ -990,6 +1015,7 @@ func TestBroadcastStorageBehindTip(t *testing.T) {
 				Intent:                send2,
 				Payload:               "payload 2",
 				ConfirmationDepth:     confirmationDepth,
+				TransactionMetadata:   broadcastMetadata,
 			},
 		}, broadcasts)
 
@@ -1040,6 +1066,7 @@ func TestBroadcastStorageBehindTip(t *testing.T) {
 				Intent:                send1,
 				Payload:               "payload 1",
 				ConfirmationDepth:     confirmationDepth,
+				TransactionMetadata:   broadcastMetadata,
 			},
 			{
 				Identifier:            "broadcast 2",
@@ -1048,6 +1075,7 @@ func TestBroadcastStorageBehindTip(t *testing.T) {
 				Intent:                send2,
 				Payload:               "payload 2",
 				ConfirmationDepth:     confirmationDepth,
+				TransactionMetadata:   broadcastMetadata,
 			},
 		}, broadcasts)
 
@@ -1137,6 +1165,7 @@ func TestBroadcastStorageBehindTip(t *testing.T) {
 				LastBroadcast:         blocks[60].BlockIdentifier,
 				Broadcasts:            1,
 				ConfirmationDepth:     confirmationDepth,
+				TransactionMetadata:   broadcastMetadata,
 			},
 			{
 				Identifier:            "broadcast 2",
@@ -1147,6 +1176,7 @@ func TestBroadcastStorageBehindTip(t *testing.T) {
 				LastBroadcast:         blocks[60].BlockIdentifier,
 				Broadcasts:            1,
 				ConfirmationDepth:     confirmationDepth,
+				TransactionMetadata:   broadcastMetadata,
 			},
 		}, broadcasts)
 
@@ -1210,6 +1240,7 @@ func TestBroadcastStorageClearBroadcasts(t *testing.T) {
 			&types.TransactionIdentifier{Hash: "tx 1"},
 			"payload 1",
 			confirmationDepth,
+			broadcastMetadata,
 		)
 		assert.NoError(t, err)
 
@@ -1222,6 +1253,7 @@ func TestBroadcastStorageClearBroadcasts(t *testing.T) {
 			&types.TransactionIdentifier{Hash: "tx 2"},
 			"payload 2",
 			confirmationDepth,
+			broadcastMetadata,
 		)
 		assert.NoError(t, err)
 
@@ -1246,6 +1278,7 @@ func TestBroadcastStorageClearBroadcasts(t *testing.T) {
 				Intent:                send1,
 				Payload:               "payload 1",
 				ConfirmationDepth:     confirmationDepth,
+				TransactionMetadata:   broadcastMetadata,
 			},
 			{
 				Identifier:            "broadcast 2",
@@ -1254,6 +1287,7 @@ func TestBroadcastStorageClearBroadcasts(t *testing.T) {
 				Intent:                send2,
 				Payload:               "payload 2",
 				ConfirmationDepth:     confirmationDepth,
+				TransactionMetadata:   broadcastMetadata,
 			},
 		}, broadcasts)
 
@@ -1297,6 +1331,7 @@ func TestBroadcastStorageClearBroadcasts(t *testing.T) {
 				Intent:                send1,
 				Payload:               "payload 1",
 				ConfirmationDepth:     confirmationDepth,
+				TransactionMetadata:   broadcastMetadata,
 			},
 			{
 				Identifier:            "broadcast 2",
@@ -1305,6 +1340,7 @@ func TestBroadcastStorageClearBroadcasts(t *testing.T) {
 				Intent:                send2,
 				Payload:               "payload 2",
 				ConfirmationDepth:     confirmationDepth,
+				TransactionMetadata:   broadcastMetadata,
 			},
 		}, broadcasts)
 
