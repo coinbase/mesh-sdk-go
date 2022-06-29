@@ -447,11 +447,11 @@ func CurrencyBalance(
 	return liveAmount, liveBlock, nil
 }
 
-// CurrencyBalanceBatch returns the balance batch of an account
+// AllCurrencyBalance returns the balance batch of an account
 // for all currencies at a particular height.
 // It is up to the caller to determine if the retrieved
 // block has the expected hash for the requested index.
-func CurrencyBalanceBatch(
+func AllCurrencyBalance(
 	ctx context.Context,
 	network *types.NetworkIdentifier,
 	helper FetcherHelper,
@@ -526,7 +526,7 @@ func GetAccountBalances(
 			}
 			accountBalances = append(accountBalances, accountBalance)
 		} else {
-			amounts, block, err := CurrencyBalanceBatch(
+			amounts, block, err := AllCurrencyBalance(
 				ctx,
 				balanceRequest.Network,
 				fetcher,

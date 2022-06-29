@@ -312,6 +312,17 @@ var (
 		Amount:  amountBalance,
 		Block:   blockIdentifier,
 	}
+
+	accBalanceRequest3 = &AccountBalanceRequest{
+		Account: accountBalance,
+		Network: network,
+	}
+
+	accBalanceResp3 = &AccountBalance{
+		Account: accountBalance,
+		Amount:  amountBalance,
+		Block:   blockIdentifier,
+	}
 )
 
 func TestGetAccountBalances(t *testing.T) {
@@ -347,15 +358,30 @@ func TestGetAccountBalances(t *testing.T) {
 		nil,
 	).Once()
 
+	mockHelper.On(
+		"AccountBalanceRetry",
+		ctx,
+		network,
+		accountBalance,
+		(*types.PartialBlockIdentifier)(nil),
+		([]*types.Currency)(nil),
+	).Return(
+		blockIdentifier,
+		[]*types.Amount{amountBalance},
+		nil,
+		nil,
+	).Once()
+
 	accBalances, err := GetAccountBalances(
 		ctx,
 		mockHelper,
-		[]*AccountBalanceRequest{accBalanceRequest1, accBalanceRequest2},
+		[]*AccountBalanceRequest{accBalanceRequest1, accBalanceRequest2, accBalanceRequest3},
 	)
 
 	assert.Nil(t, err)
 	assert.Equal(t, accBalances[0], accBalanceResp1)
 	assert.Equal(t, accBalances[1], accBalanceResp2)
+	assert.Equal(t, accBalances[2], accBalanceResp3)
 
 	// Error in fetcher
 	mockHelper.On(
