@@ -16,6 +16,8 @@ package statefulsyncer
 
 import (
 	"time"
+
+	"github.com/coinbase/rosetta-sdk-go/syncer"
 )
 
 // Option is used to overwrite default values in
@@ -64,5 +66,11 @@ func WithPruneSleepTime(sleepTime int) Option {
 func WithSeenConcurrency(concurrency int64) Option {
 	return func(s *StatefulSyncer) {
 		s.seenSemaphoreSize = concurrency
+	}
+}
+
+func WithExtraSyncerOpts(os ...syncer.Option) Option {
+	return func(s *StatefulSyncer) {
+		s.extraSyncerOpts = os
 	}
 }

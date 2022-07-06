@@ -65,3 +65,9 @@ func WithAdjustmentWindow(adjustmentWindow int64) Option {
 		s.adjustmentWindow = adjustmentWindow
 	}
 }
+
+func WithCustomHelper(h func(Helper) Helper) Option {
+	return func(s *Syncer) {
+		s.helper = h(s.helper)
+	}
+}

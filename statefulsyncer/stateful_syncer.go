@@ -72,6 +72,8 @@ type StatefulSyncer struct {
 	// BlockSeen occur concurrently.
 	seenSemaphore     *semaphore.Weighted
 	seenSemaphoreSize int64
+
+	extraSyncerOpts []syncer.Option
 }
 
 // Logger is used by the statefulsyncer to
@@ -162,10 +164,12 @@ func (s *StatefulSyncer) Sync(ctx context.Context, startIndex int64, endIndex in
 		s,
 		s,
 		s.cancel,
-		syncer.WithPastBlocks(pastBlocks),
-		syncer.WithCacheSize(s.cacheSize),
-		syncer.WithMaxConcurrency(s.maxConcurrency),
-		syncer.WithAdjustmentWindow(s.adjustmentWindow),
+		append([]syncer.Option{
+			syncer.WithPastBlocks(pastBlocks),
+			syncer.WithCacheSize(s.cacheSize),
+			syncer.WithMaxConcurrency(s.maxConcurrency),
+			syncer.WithAdjustmentWindow(s.adjustmentWindow),
+		}, s.extraSyncerOpts...)...,
 	)
 
 	return syncer.Sync(ctx, startIndex, endIndex)
