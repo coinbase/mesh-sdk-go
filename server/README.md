@@ -19,7 +19,7 @@ The router is a [Mux](https://github.com/gorilla/mux) router that
 routes traffic to the correct controller.
 
 ### Controller
-Contollers are automatically generated code that specify an interface
+Controllers are automatically generated code that specify an interface
 that a service must implement.
 
 ### Services
