@@ -197,6 +197,18 @@ func PerformanceBadgerOptions(dir string) badger.Options {
 	return opts
 }
 
+// AllInMemoryOptions are enable all the data 
+// storaged in Memory, this will increase the memory usage significantly 
+func AllInMemoryOptions(dir string) badger.Options {
+	opts := badger.DefaultOptions(dir)
+
+	// storage all tables in memory. Doing so can
+	// significantly increase memory usage.
+	opts.InMemory = true
+
+	return opts
+}
+
 // NewBadgerDatabase creates a new BadgerDatabase.
 func NewBadgerDatabase(
 	ctx context.Context,

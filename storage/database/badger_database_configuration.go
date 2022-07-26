@@ -68,3 +68,10 @@ func WithWriterShards(shards int) BadgerOption {
 		b.writerShards = shards
 	}
 }
+
+// WithInMemory enable the InMemory model
+func WithInMemory() BadgerOption {
+	return func(b *BadgerDatabase) {
+		b.badgerOptions.WithInMemory(true)
+	}
+}
