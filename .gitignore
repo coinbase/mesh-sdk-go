@@ -6,3 +6,5 @@ examples/client/client
 examples/fetcher/fetcher
 
 .idea/
+
+.vscode/
