@@ -51,6 +51,13 @@ func WithIndexCacheSize(size int64) BadgerOption {
 	}
 }
 
+func WithTableSize(size int64) BadgerOption {
+	size = size << 30
+	return func(b *BadgerDatabase) {
+		b.badgerOptions.MaxTableSize = size
+	}
+}
+
 // WithCustomSettings allows for overriding all default BadgerDB
 // options with custom settings.
 func WithCustomSettings(settings badger.Options) BadgerOption {

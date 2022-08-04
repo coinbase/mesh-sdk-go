@@ -47,6 +47,9 @@ const (
 	// TinyIndexCacheSize is 10 MB.
 	TinyIndexCacheSize = 10 << 20
 
+	// AllInMemoryCacheSize is 4 GB.
+	AllInMemoryCacheSize = 4000 << 20
+
 	// DefaultMaxTableSize is 256 MB. The larger
 	// this value is, the larger database transactions
 	// storage can handle (~15% of the max table size
@@ -64,6 +67,12 @@ const (
 
 	// PerformanceLogValueSize is 256 MB.
 	PerformanceLogValueSize = 256 << 20
+
+	// AllInMemoryTableSize is 10240 MB. The 
+	AllInMemoryTableSize = 10240 << 20
+
+	// PerformanceLogValueSize is 1024 MB.
+	AllInMemoryLogValueSize = 1024 << 20
 
 	// DefaultCompressionMode is the default block
 	// compression setting.
@@ -197,8 +206,42 @@ func PerformanceBadgerOptions(dir string) badger.Options {
 	return opts
 }
 
-// AllInMemoryOptions are enable all the data 
-// storaged in Memory, this will increase the memory usage significantly 
+// AllInMemoryBadgerOptions are performance geared
+// BadgerDB options that use much more RAM than the
+// default settings and PerformanceBadger settings
+func AllInMemoryBadgerOptions(dir string) badger.Options {
+	opts := badger.DefaultOptions("")
+
+	// By default, we do not compress the table at all. Doing so can
+	// significantly increase memory usage.
+	opts.Compression = DefaultCompressionMode
+
+	// Use an extended table size for larger commits.
+	opts.MaxTableSize = AllInMemoryTableSize
+	opts.ValueLogFileSize = AllInMemoryLogValueSize
+
+	// Load tables into memory and memory map value logs.
+	opts.TableLoadingMode = options.MemoryMap
+	opts.ValueLogLoadingMode = options.MemoryMap
+
+	// This option will have a significant effect the memory. If the level is kept
+	// in-memory, read are faster but the tables will be kept in memory. By default,
+	// this is set to false.
+	opts.InMemory = true
+
+	// We don't compact L0 on close as this can greatly delay shutdown time.
+	opts.CompactL0OnClose = false
+
+	// LoadBloomsOnOpen=false will improve the db startup speed. This is also
+	// a waste to enable with a limited index cache size (as many of the loaded bloom
+	// filters will be immediately discarded from the cache).
+	opts.LoadBloomsOnOpen = true
+
+	return opts
+}
+
+// AllInMemoryOptions are enable all the data
+// storaged in Memory, this will increase the memory usage significantly
 func AllInMemoryOptions(dir string) badger.Options {
 	opts := badger.DefaultOptions(dir)
 
