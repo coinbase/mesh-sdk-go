@@ -68,11 +68,11 @@ const (
 	// PerformanceLogValueSize is 256 MB.
 	PerformanceLogValueSize = 256 << 20
 
-	// AllInMemoryTableSize is 10240 MB. The 
-	AllInMemoryTableSize = 10240 << 20
+	// AllInMemoryTableSize is 6144 MB. The
+	AllInMemoryTableSize = 6144 << 20
 
 	// PerformanceLogValueSize is 1024 MB.
-	AllInMemoryLogValueSize = 1024 << 20
+	AllInMemoryLogValueSize = 512 << 20
 
 	// DefaultCompressionMode is the default block
 	// compression setting.
