@@ -58,6 +58,13 @@ func WithTableSize(size int64) BadgerOption {
 	}
 }
 
+func WithValueLogFileSize(size int64) BadgerOption {
+	size = size << 20
+	return func(b *BadgerDatabase) {
+		b.badgerOptions.ValueLogFileSize = size
+	}
+}
+
 // WithCustomSettings allows for overriding all default BadgerDB
 // options with custom settings.
 func WithCustomSettings(settings badger.Options) BadgerOption {
@@ -73,12 +80,5 @@ func WithCustomSettings(settings badger.Options) BadgerOption {
 func WithWriterShards(shards int) BadgerOption {
 	return func(b *BadgerDatabase) {
 		b.writerShards = shards
-	}
-}
-
-// WithInMemory enable the InMemory model
-func WithInMemory() BadgerOption {
-	return func(b *BadgerDatabase) {
-		b.badgerOptions.WithInMemory(true)
 	}
 }
