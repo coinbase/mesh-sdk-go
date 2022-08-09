@@ -65,6 +65,12 @@ const (
 	// PerformanceLogValueSize is 256 MB.
 	PerformanceLogValueSize = 256 << 20
 
+	// AllInMemoryTableSize is 6144 MB.
+	AllInMemoryTableSize = 6144 << 20
+
+	// PerformanceLogValueSize is 512 MB.
+	AllInMemoryLogValueSize = 512 << 20
+
 	// DefaultCompressionMode is the default block
 	// compression setting.
 	DefaultCompressionMode = options.None
@@ -185,6 +191,40 @@ func PerformanceBadgerOptions(dir string) badger.Options {
 	// in-memory, read are faster but the tables will be kept in memory. By default,
 	// this is set to false.
 	opts.KeepL0InMemory = true
+
+	// We don't compact L0 on close as this can greatly delay shutdown time.
+	opts.CompactL0OnClose = false
+
+	// LoadBloomsOnOpen=false will improve the db startup speed. This is also
+	// a waste to enable with a limited index cache size (as many of the loaded bloom
+	// filters will be immediately discarded from the cache).
+	opts.LoadBloomsOnOpen = true
+
+	return opts
+}
+
+// AllInMemoryBadgerOptions are performance geared
+// BadgerDB options that use much more RAM than the
+// default settings and PerformanceBadger settings
+func AllInMemoryBadgerOptions(dir string) badger.Options {
+	opts := badger.DefaultOptions("")
+
+	// By default, we do not compress the table at all. Doing so can
+	// significantly increase memory usage.
+	opts.Compression = DefaultCompressionMode
+
+	// Use an extended table size for larger commits.
+	opts.MaxTableSize = AllInMemoryTableSize
+	opts.ValueLogFileSize = AllInMemoryLogValueSize
+
+	// Load tables into memory and memory map value logs.
+	opts.TableLoadingMode = options.MemoryMap
+	opts.ValueLogLoadingMode = options.MemoryMap
+
+	// This option will have a significant effect the memory. If all the levels are kept
+	// in-memory, read are faster but the tables will be kept in memory. By default,
+	// this is set to false.
+	opts.InMemory = true
 
 	// We don't compact L0 on close as this can greatly delay shutdown time.
 	opts.CompactL0OnClose = false
