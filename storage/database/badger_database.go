@@ -237,7 +237,6 @@ func AllInMemoryBadgerOptions(dir string) badger.Options {
 	return opts
 }
 
-
 // NewBadgerDatabase creates a new BadgerDatabase.
 func NewBadgerDatabase(
 	ctx context.Context,
