@@ -51,6 +51,24 @@ func WithIndexCacheSize(size int64) BadgerOption {
 	}
 }
 
+// WithTableSize override the MaxTableSize
+// setting for the BadgerDB. The size here is in GB.
+func WithTableSize(size int64) BadgerOption {
+	size = size << 30
+	return func(b *BadgerDatabase) {
+		b.badgerOptions.MaxTableSize = size
+	}
+}
+
+// WithTableSize override the ValueLogFileSize
+// setting for the BadgerDB. The size here is in MB.
+func WithValueLogFileSize(size int64) BadgerOption {
+	size = size << 20
+	return func(b *BadgerDatabase) {
+		b.badgerOptions.ValueLogFileSize = size
+	}
+}
+
 // WithCustomSettings allows for overriding all default BadgerDB
 // options with custom settings.
 func WithCustomSettings(settings badger.Options) BadgerOption {
