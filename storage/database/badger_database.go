@@ -65,7 +65,7 @@ const (
 	// PerformanceLogValueSize is 256 MB.
 	PerformanceLogValueSize = 256 << 20
 
-	// AllInMemoryTableSize is 6144 MB. The
+	// AllInMemoryTableSize is 6144 MB.
 	AllInMemoryTableSize = 6144 << 20
 
 	// PerformanceLogValueSize is 512 MB.
@@ -221,7 +221,7 @@ func AllInMemoryBadgerOptions(dir string) badger.Options {
 	opts.TableLoadingMode = options.MemoryMap
 	opts.ValueLogLoadingMode = options.MemoryMap
 
-	// This option will have a significant effect the memory. If the level is kept
+	// This option will have a significant effect the memory. If all the levels are kept
 	// in-memory, read are faster but the tables will be kept in memory. By default,
 	// this is set to false.
 	opts.InMemory = true
