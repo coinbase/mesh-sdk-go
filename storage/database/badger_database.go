@@ -47,9 +47,6 @@ const (
 	// TinyIndexCacheSize is 10 MB.
 	TinyIndexCacheSize = 10 << 20
 
-	// AllInMemoryCacheSize is 4 GB.
-	AllInMemoryCacheSize = 4000 << 20
-
 	// DefaultMaxTableSize is 256 MB. The larger
 	// this value is, the larger database transactions
 	// storage can handle (~15% of the max table size
