@@ -48,7 +48,11 @@ var (
 // a block that is out of order. This typically
 // means the Helper has a bug.
 func ErrOutOfOrder(expected int64, got int64) error {
-	return fmt.Errorf("block processing is out of order, expected block index %d, but got %d", expected, got)
+	return fmt.Errorf(
+		"block processing is out of order, expected block index %d, but got %d",
+		expected,
+		got,
+	)
 }
 
 // Err takes an error as an argument and returns

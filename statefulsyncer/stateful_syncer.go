@@ -298,7 +298,11 @@ func (s *StatefulSyncer) NetworkStatus(
 ) (*types.NetworkStatusResponse, error) {
 	networkStatus, fetchErr := s.fetcher.NetworkStatusRetry(ctx, network, nil)
 	if fetchErr != nil {
-		return nil, fmt.Errorf("failed to get network status of %s with retry: %w", network.Network, fetchErr.Err)
+		return nil, fmt.Errorf(
+			"failed to get network status of %s with retry: %w",
+			network.Network,
+			fetchErr.Err,
+		)
 	}
 
 	return networkStatus, nil
@@ -312,7 +316,12 @@ func (s *StatefulSyncer) Block(
 ) (*types.Block, error) {
 	blockResponse, fetchErr := s.fetcher.BlockRetry(ctx, network, block)
 	if fetchErr != nil {
-		return nil, fmt.Errorf("unable to fetch block %d from network %s with retry: %w", *block.Index, network.Network, fetchErr.Err)
+		return nil, fmt.Errorf(
+			"unable to fetch block %d from network %s with retry: %w",
+			*block.Index,
+			network.Network,
+			fetchErr.Err,
+		)
 	}
 	return blockResponse, nil
 }

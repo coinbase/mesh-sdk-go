@@ -99,7 +99,11 @@ func (s *Syncer) nextSyncableRange(
 		s.network,
 	)
 	if err != nil {
-		return -1, false, fmt.Errorf("unable to get network status of %s: %w", s.network.Network, err)
+		return -1, false, fmt.Errorf(
+			"unable to get network status of %s: %w",
+			s.network.Network,
+			err,
+		)
 	}
 
 	// Update the syncer's known tip
@@ -168,13 +172,21 @@ func (s *Syncer) processBlock(
 
 	shouldRemove, lastBlock, err := s.checkRemove(br)
 	if err != nil {
-		return fmt.Errorf("failed to check if the last block should be removed when processing block %d: %w", br.index, err)
+		return fmt.Errorf(
+			"failed to check if the last block should be removed when processing block %d: %w",
+			br.index,
+			err,
+		)
 	}
 
 	if shouldRemove {
 		err = s.handler.BlockRemoved(ctx, lastBlock)
 		if err != nil {
-			return fmt.Errorf("failed to handle the event of block %d is removed: %w", lastBlock.Index, err)
+			return fmt.Errorf(
+				"failed to handle the event of block %d is removed: %w",
+				lastBlock.Index,
+				err,
+			)
 		}
 		s.pastBlocks = s.pastBlocks[:len(s.pastBlocks)-1]
 		s.nextIndex = lastBlock.Index
@@ -184,7 +196,11 @@ func (s *Syncer) processBlock(
 	block := br.block
 	err = s.handler.BlockAdded(ctx, block)
 	if err != nil {
-		return fmt.Errorf("failed to handle the event of block %d is added: %w", block.BlockIdentifier.Index, err)
+		return fmt.Errorf(
+			"failed to handle the event of block %d is added: %w",
+			block.BlockIdentifier.Index,
+			err,
+		)
 	}
 
 	s.pastBlocks = append(s.pastBlocks, block.BlockIdentifier)
