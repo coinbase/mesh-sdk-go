@@ -16,7 +16,6 @@ package syncer
 
 import (
 	"errors"
-	"fmt"
 
 	utils "github.com/coinbase/rosetta-sdk-go/errors"
 )
@@ -42,18 +41,12 @@ var (
 	// ErrGetCurrentHeadBlockFailed is returned by the syncer when
 	// the current head block index is not able to get
 	ErrGetCurrentHeadBlockFailed = errors.New("unable to get current head block index")
-)
 
-// ErrOutOfOrder is returned when the syncer examines
-// a block that is out of order. This typically
-// means the Helper has a bug.
-func ErrOutOfOrder(expected int64, got int64) error {
-	return fmt.Errorf(
-		"block processing is out of order, expected block index %d, but got %d",
-		expected,
-		got,
-	)
-}
+	// ErrOutOfOrder is returned when the syncer examines
+	// a block that is out of order. This typically
+	// means the Helper has a bug.
+	ErrOutOfOrder = errors.New("block processing is out of order")
+)
 
 // Err takes an error as an argument and returns
 // whether or not the error is one thrown by the syncer package
@@ -63,6 +56,7 @@ func Err(err error) bool {
 		ErrOrphanHead,
 		ErrBlockResultNil,
 		ErrGetCurrentHeadBlockFailed,
+		ErrOutOfOrder,
 	}
 
 	return utils.FindError(syncerErrors, err)

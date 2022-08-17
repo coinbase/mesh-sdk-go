@@ -145,7 +145,12 @@ func (s *Syncer) checkRemove(
 	// Ensure processing correct index
 	block := br.block
 	if block.BlockIdentifier.Index != s.nextIndex {
-		return false, nil, ErrOutOfOrder(s.nextIndex, block.BlockIdentifier.Index)
+		return false, nil, fmt.Errorf(
+			"expected block index %d, but got %d: %w",
+			s.nextIndex,
+			block.BlockIdentifier.Index,
+			ErrOutOfOrder,
+		)
 	}
 
 	// Check if block parent is head
