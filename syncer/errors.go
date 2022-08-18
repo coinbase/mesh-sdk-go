@@ -22,15 +22,10 @@ import (
 
 // Named error types for Syncer errors
 var (
-	// ErrCannotRemoveGenesisBlock is returned when
+	// ErrCannotRemoveGenesisBlock is returned by the syncer when
 	// a Rosetta implementation indicates that the
 	// genesis block should be orphaned.
 	ErrCannotRemoveGenesisBlock = errors.New("cannot remove genesis block")
-
-	// ErrOutOfOrder is returned when the syncer examines
-	// a block that is out of order. This typically
-	// means the Helper has a bug.
-	ErrOutOfOrder = errors.New("out of order")
 
 	// ErrOrphanHead is returned by the Helper when
 	// the current head should be orphaned. In some
@@ -43,14 +38,14 @@ var (
 	// result is nil.
 	ErrBlockResultNil = errors.New("block result is nil")
 
-	ErrGetCurrentHeadBlockFailed   = errors.New("unable to get current head")
-	ErrGetNetworkStatusFailed      = errors.New("unable to get network status")
-	ErrFetchBlockFailed            = errors.New("unable to fetch block")
-	ErrFetchBlockReorgFailed       = errors.New("unable to fetch block during re-org")
-	ErrBlockProcessFailed          = errors.New("unable to process block")
-	ErrBlocksProcessMultipleFailed = errors.New("unable to process blocks")
-	ErrSetStartIndexFailed         = errors.New("unable to set start index")
-	ErrNextSyncableRangeFailed     = errors.New("unable to get next syncable range")
+	// ErrGetCurrentHeadBlockFailed is returned by the syncer when
+	// the current head block index is not able to get
+	ErrGetCurrentHeadBlockFailed = errors.New("unable to get current head block index")
+
+	// ErrOutOfOrder is returned when the syncer examines
+	// a block that is out of order. This typically
+	// means the Helper has a bug.
+	ErrOutOfOrder = errors.New("block processing is out of order")
 )
 
 // Err takes an error as an argument and returns
@@ -58,17 +53,10 @@ var (
 func Err(err error) bool {
 	syncerErrors := []error{
 		ErrCannotRemoveGenesisBlock,
-		ErrOutOfOrder,
 		ErrOrphanHead,
 		ErrBlockResultNil,
 		ErrGetCurrentHeadBlockFailed,
-		ErrGetNetworkStatusFailed,
-		ErrFetchBlockFailed,
-		ErrFetchBlockReorgFailed,
-		ErrBlockProcessFailed,
-		ErrBlocksProcessMultipleFailed,
-		ErrSetStartIndexFailed,
-		ErrNextSyncableRangeFailed,
+		ErrOutOfOrder,
 	}
 
 	return utils.FindError(syncerErrors, err)

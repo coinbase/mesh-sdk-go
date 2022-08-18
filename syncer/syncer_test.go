@@ -227,7 +227,7 @@ func TestProcessBlock(t *testing.T) {
 			&blockResult{block: orphanGenesis},
 		)
 
-		assert.EqualError(t, err, "cannot remove genesis block")
+		assert.Contains(t, err.Error(), ErrCannotRemoveGenesisBlock.Error())
 		assert.Equal(t, int64(1), syncer.nextIndex)
 		assert.Equal(t, blockSequence[0].BlockIdentifier, lastBlockIdentifier(syncer))
 		assert.Equal(
@@ -312,7 +312,7 @@ func TestProcessBlock(t *testing.T) {
 			ctx,
 			&blockResult{block: blockSequence[5]},
 		)
-		assert.Contains(t, err.Error(), "got block 5 instead of 3")
+		assert.Contains(t, err.Error(), "expected block index 3, but got 5")
 		assert.Equal(t, int64(3), syncer.nextIndex)
 		assert.Equal(t, blockSequence[2].BlockIdentifier, lastBlockIdentifier(syncer))
 		assert.Equal(

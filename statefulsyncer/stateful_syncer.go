@@ -142,7 +142,7 @@ func (s *StatefulSyncer) Sync(ctx context.Context, startIndex int64, endIndex in
 	// Ensure storage is in correct state for starting at index
 	if startIndex != -1 { // attempt to remove blocks from storage (without handling)
 		if err := s.blockStorage.SetNewStartIndex(ctx, startIndex); err != nil {
-			return fmt.Errorf("%w: unable to set new start index", err)
+			return fmt.Errorf("unable to set new start index %d: %w", startIndex, err)
 		}
 	} else { // attempt to load last processed index
 		head, err := s.blockStorage.GetHeadBlockIdentifier(ctx)
@@ -183,7 +183,7 @@ func (s *StatefulSyncer) Prune(ctx context.Context, helper PruneHelper) error {
 		// as the time between pruning runs. Using a timer would only guarantee
 		// that the difference between starts of each pruning run are s.pruneSleepTime.
 		if err := utils.ContextSleep(ctx, s.pruneSleepTime); err != nil {
-			return err
+			return fmt.Errorf("context is canceled during context sleep: %w", err)
 		}
 
 		headBlock, err := s.blockStorage.GetHeadBlockIdentifier(ctx)
@@ -192,7 +192,7 @@ func (s *StatefulSyncer) Prune(ctx context.Context, helper PruneHelper) error {
 			continue
 		}
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to get head block: %w", err)
 		}
 
 		oldestIndex, err := s.blockStorage.GetOldestBlockIndex(ctx)
@@ -201,12 +201,12 @@ func (s *StatefulSyncer) Prune(ctx context.Context, helper PruneHelper) error {
 			continue
 		}
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to get the oldest block index: %w", err)
 		}
 
 		pruneableIndex, err := helper.PruneableIndex(ctx, headBlock.Index)
 		if err != nil {
-			return fmt.Errorf("%w: could not determine pruneable index", err)
+			return fmt.Errorf("could not determine pruneable index: %w", err)
 		}
 
 		if pruneableIndex < oldestIndex {
@@ -219,7 +219,7 @@ func (s *StatefulSyncer) Prune(ctx context.Context, helper PruneHelper) error {
 			int64(s.pastBlockLimit)*pruneBuffer, // we should be very cautious about pruning
 		)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to prune with pruneable index %d: %w", pruneableIndex, err)
 		}
 
 		// firstPruned and lastPruned are -1 if there is nothing to prune
@@ -245,10 +245,10 @@ func (s *StatefulSyncer) BlockSeen(ctx context.Context, block *types.Block) erro
 
 	if err := s.blockStorage.SeeBlock(ctx, block); err != nil {
 		return fmt.Errorf(
-			"%w: unable to pre-store block %s:%d",
-			err,
-			block.BlockIdentifier.Hash,
+			"unable to pre-store block %d (block hash: %s): %w",
 			block.BlockIdentifier.Index,
+			block.BlockIdentifier.Hash,
+			err,
 		)
 	}
 
@@ -260,10 +260,10 @@ func (s *StatefulSyncer) BlockAdded(ctx context.Context, block *types.Block) err
 	err := s.blockStorage.AddBlock(ctx, block)
 	if err != nil {
 		return fmt.Errorf(
-			"%w: unable to add block to storage %s:%d",
-			err,
-			block.BlockIdentifier.Hash,
+			"unable to add block %d (block hash: %s) to storage: %w",
 			block.BlockIdentifier.Index,
+			block.BlockIdentifier.Hash,
+			err,
 		)
 	}
 
@@ -279,10 +279,10 @@ func (s *StatefulSyncer) BlockRemoved(
 	err := s.blockStorage.RemoveBlock(ctx, blockIdentifier)
 	if err != nil {
 		return fmt.Errorf(
-			"%w: unable to remove block from storage %s:%d",
-			err,
-			blockIdentifier.Hash,
+			"unable to remove block %d (block hash: %s) from storage: %w",
 			blockIdentifier.Index,
+			blockIdentifier.Hash,
+			err,
 		)
 	}
 
@@ -298,7 +298,11 @@ func (s *StatefulSyncer) NetworkStatus(
 ) (*types.NetworkStatusResponse, error) {
 	networkStatus, fetchErr := s.fetcher.NetworkStatusRetry(ctx, network, nil)
 	if fetchErr != nil {
-		return nil, fetchErr.Err
+		return nil, fmt.Errorf(
+			"failed to get network status of %s with retry: %w",
+			network.Network,
+			fetchErr.Err,
+		)
 	}
 
 	return networkStatus, nil
@@ -312,7 +316,12 @@ func (s *StatefulSyncer) Block(
 ) (*types.Block, error) {
 	blockResponse, fetchErr := s.fetcher.BlockRetry(ctx, network, block)
 	if fetchErr != nil {
-		return nil, fetchErr.Err
+		return nil, fmt.Errorf(
+			"unable to fetch block %d from network %s with retry: %w",
+			*block.Index,
+			network.Network,
+			fetchErr.Err,
+		)
 	}
 	return blockResponse, nil
 }
