@@ -31,7 +31,11 @@ func ConstructionPreprocessResponse(
 
 	for _, accountIdentifier := range response.RequiredPublicKeys {
 		if err := AccountIdentifier(accountIdentifier); err != nil {
-			return fmt.Errorf("account identifier %s is invalid: %w", types.PrintStruct(accountIdentifier), err)
+			return fmt.Errorf(
+				"account identifier %s is invalid: %w",
+				types.PrintStruct(accountIdentifier),
+				err,
+			)
 		}
 	}
 
@@ -52,7 +56,11 @@ func ConstructionMetadataResponse(
 	}
 
 	if err := AssertUniqueAmounts(response.SuggestedFee); err != nil {
-		return fmt.Errorf("suggested fee %s is invalid: %w", types.PrintStruct(response.SuggestedFee), err)
+		return fmt.Errorf(
+			"suggested fee %s is invalid: %w",
+			types.PrintStruct(response.SuggestedFee),
+			err,
+		)
 	}
 
 	return nil
@@ -69,7 +77,11 @@ func TransactionIdentifierResponse(
 	}
 
 	if err := TransactionIdentifier(response.TransactionIdentifier); err != nil {
-		return fmt.Errorf("transaction identifier %s is invalid: %w", types.PrintStruct(response.TransactionIdentifier), err)
+		return fmt.Errorf(
+			"transaction identifier %s is invalid: %w",
+			types.PrintStruct(response.TransactionIdentifier),
+			err,
+		)
 	}
 
 	return nil
@@ -103,7 +115,11 @@ func ConstructionDeriveResponse(
 	}
 
 	if err := AccountIdentifier(response.AccountIdentifier); err != nil {
-		return fmt.Errorf("account identifier %s is invalid: %w", types.PrintStruct(response.AccountIdentifier), err)
+		return fmt.Errorf(
+			"account identifier %s is invalid: %w",
+			types.PrintStruct(response.AccountIdentifier),
+			err,
+		)
 	}
 
 	return nil
@@ -130,7 +146,11 @@ func (a *Asserter) ConstructionParseResponse(
 	}
 
 	if err := a.Operations(response.Operations, true); err != nil {
-		return fmt.Errorf("operations %s are invalid: %w", types.PrintStruct(response.Operations), err)
+		return fmt.Errorf(
+			"operations %s are invalid: %w",
+			types.PrintStruct(response.Operations),
+			err,
+		)
 	}
 
 	if signed && len(response.AccountIdentifierSigners) == 0 {
@@ -143,13 +163,21 @@ func (a *Asserter) ConstructionParseResponse(
 
 	for _, signer := range response.AccountIdentifierSigners {
 		if err := AccountIdentifier(signer); err != nil {
-			return fmt.Errorf("account identifier of signer %s is invalid: %w", types.PrintStruct(signer), err)
+			return fmt.Errorf(
+				"account identifier of signer %s is invalid: %w",
+				types.PrintStruct(signer),
+				err,
+			)
 		}
 	}
 
 	if len(response.AccountIdentifierSigners) > 0 {
 		if err := AccountArray("signers", response.AccountIdentifierSigners); err != nil {
-			return fmt.Errorf("account identifiers of signers %s are invalid: %w", types.PrintStruct(response.AccountIdentifierSigners), err)
+			return fmt.Errorf(
+				"account identifiers of signers %s are invalid: %w",
+				types.PrintStruct(response.AccountIdentifierSigners),
+				err,
+			)
 		}
 	}
 
@@ -203,7 +231,11 @@ func PublicKey(
 	}
 
 	if err := CurveType(publicKey.CurveType); err != nil {
-		return fmt.Errorf("public key curve type %s is invalid: %w", types.PrintStruct(publicKey.CurveType), err)
+		return fmt.Errorf(
+			"public key curve type %s is invalid: %w",
+			types.PrintStruct(publicKey.CurveType),
+			err,
+		)
 	}
 
 	return nil
@@ -234,7 +266,11 @@ func SigningPayload(
 	}
 
 	if err := AccountIdentifier(signingPayload.AccountIdentifier); err != nil {
-		return fmt.Errorf("account identifier %s is invalid: %w", types.PrintStruct(signingPayload.AccountIdentifier), err)
+		return fmt.Errorf(
+			"account identifier %s is invalid: %w",
+			types.PrintStruct(signingPayload.AccountIdentifier),
+			err,
+		)
 	}
 
 	if len(signingPayload.Bytes) == 0 {
@@ -251,7 +287,11 @@ func SigningPayload(
 	}
 
 	if err := SignatureType(signingPayload.SignatureType); err != nil {
-		return fmt.Errorf("signature type %s is invalid: %w", types.PrintStruct(signingPayload.SignatureType), err)
+		return fmt.Errorf(
+			"signature type %s is invalid: %w",
+			types.PrintStruct(signingPayload.SignatureType),
+			err,
+		)
 	}
 
 	return nil
@@ -268,15 +308,27 @@ func Signatures(
 
 	for _, signature := range signatures {
 		if err := SigningPayload(signature.SigningPayload); err != nil {
-			return fmt.Errorf("signing payload %s is invalid: %w", types.PrintStruct(signature.SigningPayload), err)
+			return fmt.Errorf(
+				"signing payload %s is invalid: %w",
+				types.PrintStruct(signature.SigningPayload),
+				err,
+			)
 		}
 
 		if err := PublicKey(signature.PublicKey); err != nil {
-			return fmt.Errorf("public key %s is invalid: %w", types.PrintStruct(signature.PublicKey), err)
+			return fmt.Errorf(
+				"public key %s is invalid: %w",
+				types.PrintStruct(signature.PublicKey),
+				err,
+			)
 		}
 
 		if err := SignatureType(signature.SignatureType); err != nil {
-			return fmt.Errorf("signature type %s is invalid: %w", types.PrintStruct(signature.SignatureType), err)
+			return fmt.Errorf(
+				"signature type %s is invalid: %w",
+				types.PrintStruct(signature.SignatureType),
+				err,
+			)
 		}
 
 		// Return an error if the requested signature type does not match the

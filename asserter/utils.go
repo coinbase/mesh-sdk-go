@@ -58,7 +58,11 @@ func AccountArray(arrName string, arr []*types.AccountIdentifier) error {
 		}
 
 		if _, ok := parsed[types.Hash(s)]; ok {
-			return fmt.Errorf("%s contains a duplicate account identifier %s", arrName, types.PrintStruct(s))
+			return fmt.Errorf(
+				"%s contains a duplicate account identifier %s",
+				arrName,
+				types.PrintStruct(s),
+			)
 		}
 
 		parsed[types.Hash(s)] = struct{}{}

@@ -30,7 +30,11 @@ func BlockEvent(
 	}
 
 	if err := BlockIdentifier(event.BlockIdentifier); err != nil {
-		return fmt.Errorf("block identifier %s is invalid: %w", types.PrintStruct(event.BlockIdentifier), err)
+		return fmt.Errorf(
+			"block identifier %s is invalid: %w",
+			types.PrintStruct(event.BlockIdentifier),
+			err,
+		)
 	}
 
 	switch event.Type {

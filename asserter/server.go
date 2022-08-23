@@ -30,11 +30,19 @@ func SupportedNetworks(supportedNetworks []*types.NetworkIdentifier) error {
 	parsed := make([]*types.NetworkIdentifier, len(supportedNetworks))
 	for i, network := range supportedNetworks {
 		if err := NetworkIdentifier(network); err != nil {
-			return fmt.Errorf("network identifier %s is invalid: %w", types.PrintStruct(network), err)
+			return fmt.Errorf(
+				"network identifier %s is invalid: %w",
+				types.PrintStruct(network),
+				err,
+			)
 		}
 
 		if containsNetworkIdentifier(parsed, network) {
-			return fmt.Errorf("network identifier %s is invalid: %w", types.PrintStruct(network), ErrSupportedNetworksDuplicate)
+			return fmt.Errorf(
+				"network identifier %s is invalid: %w",
+				types.PrintStruct(network),
+				ErrSupportedNetworksDuplicate,
+			)
 		}
 		parsed[i] = network
 	}
@@ -64,11 +72,19 @@ func (a *Asserter) ValidSupportedNetwork(
 	requestNetwork *types.NetworkIdentifier,
 ) error {
 	if err := NetworkIdentifier(requestNetwork); err != nil {
-		return fmt.Errorf("network identifier %s is invalid: %w", types.PrintStruct(requestNetwork), err)
+		return fmt.Errorf(
+			"network identifier %s is invalid: %w",
+			types.PrintStruct(requestNetwork),
+			err,
+		)
 	}
 
 	if err := a.SupportedNetwork(requestNetwork); err != nil {
-		return fmt.Errorf("network identifier %s is not supported: %w", types.PrintStruct(requestNetwork), err)
+		return fmt.Errorf(
+			"network identifier %s is not supported: %w",
+			types.PrintStruct(requestNetwork),
+			err,
+		)
 	}
 
 	return nil
@@ -90,11 +106,19 @@ func (a *Asserter) AccountBalanceRequest(request *types.AccountBalanceRequest) e
 	}
 
 	if err := AccountIdentifier(request.AccountIdentifier); err != nil {
-		return fmt.Errorf("account identifier %s is invalid: %w", types.PrintStruct(request.AccountIdentifier), err)
+		return fmt.Errorf(
+			"account identifier %s is invalid: %w",
+			types.PrintStruct(request.AccountIdentifier),
+			err,
+		)
 	}
 
 	if currency := ContainsDuplicateCurrency(request.Currencies); currency != nil {
-		return fmt.Errorf("currency %s is invalid: %w", types.PrintStruct(currency), ErrDuplicateCurrency)
+		return fmt.Errorf(
+			"currency %s is invalid: %w",
+			types.PrintStruct(currency),
+			ErrDuplicateCurrency,
+		)
 	}
 
 	if request.BlockIdentifier == nil {
@@ -142,7 +166,11 @@ func (a *Asserter) BlockTransactionRequest(request *types.BlockTransactionReques
 	}
 
 	if err := BlockIdentifier(request.BlockIdentifier); err != nil {
-		return fmt.Errorf("block identifier %s is invalid: %w", types.PrintStruct(request.BlockIdentifier), err)
+		return fmt.Errorf(
+			"block identifier %s is invalid: %w",
+			types.PrintStruct(request.BlockIdentifier),
+			err,
+		)
 	}
 
 	return TransactionIdentifier(request.TransactionIdentifier)
@@ -284,7 +312,11 @@ func (a *Asserter) ConstructionPreprocessRequest(
 	}
 
 	if err := a.Operations(request.Operations, true); err != nil {
-		return fmt.Errorf("operations %s are invalid: %w", types.PrintStruct(request.Operations), err)
+		return fmt.Errorf(
+			"operations %s are invalid: %w",
+			types.PrintStruct(request.Operations),
+			err,
+		)
 	}
 
 	if err := AssertUniqueAmounts(request.MaxFee); err != nil {
@@ -318,7 +350,11 @@ func (a *Asserter) ConstructionPayloadsRequest(request *types.ConstructionPayloa
 	}
 
 	if err := a.Operations(request.Operations, true); err != nil {
-		return fmt.Errorf("operations %s are invalid: %w", types.PrintStruct(request.Operations), err)
+		return fmt.Errorf(
+			"operations %s are invalid: %w",
+			types.PrintStruct(request.Operations),
+			err,
+		)
 	}
 
 	for _, publicKey := range request.PublicKeys {
@@ -350,7 +386,11 @@ func (a *Asserter) ConstructionCombineRequest(request *types.ConstructionCombine
 	}
 
 	if err := Signatures(request.Signatures); err != nil {
-		return fmt.Errorf("signatures %s are invalid: %w", types.PrintStruct(request.Signatures), err)
+		return fmt.Errorf(
+			"signatures %s are invalid: %w",
+			types.PrintStruct(request.Signatures),
+			err,
+		)
 	}
 
 	return nil
@@ -456,7 +496,11 @@ func (a *Asserter) AccountCoinsRequest(request *types.AccountCoinsRequest) error
 	}
 
 	if err := AccountIdentifier(request.AccountIdentifier); err != nil {
-		return fmt.Errorf("account identifier %s is invalid: %w", types.PrintStruct(request.AccountIdentifier), err)
+		return fmt.Errorf(
+			"account identifier %s is invalid: %w",
+			types.PrintStruct(request.AccountIdentifier),
+			err,
+		)
 	}
 
 	if request.IncludeMempool && !a.mempoolCoins {
@@ -464,7 +508,11 @@ func (a *Asserter) AccountCoinsRequest(request *types.AccountCoinsRequest) error
 	}
 
 	if currency := ContainsDuplicateCurrency(request.Currencies); currency != nil {
-		return fmt.Errorf("currency %s is invalid: %w", types.PrintStruct(currency), ErrDuplicateCurrency)
+		return fmt.Errorf(
+			"currency %s is invalid: %w",
+			types.PrintStruct(currency),
+			ErrDuplicateCurrency,
+		)
 	}
 
 	return nil
@@ -535,25 +583,41 @@ func (a *Asserter) SearchTransactionsRequest( // nolint:gocognit
 
 	if request.TransactionIdentifier != nil {
 		if err := TransactionIdentifier(request.TransactionIdentifier); err != nil {
-			return fmt.Errorf("transaction identifier %s is invalid: %w", types.PrintStruct(request.TransactionIdentifier), err)
+			return fmt.Errorf(
+				"transaction identifier %s is invalid: %w",
+				types.PrintStruct(request.TransactionIdentifier),
+				err,
+			)
 		}
 	}
 
 	if request.AccountIdentifier != nil {
 		if err := AccountIdentifier(request.AccountIdentifier); err != nil {
-			return fmt.Errorf("account identifier %s is invalid: %w", types.PrintStruct(request.AccountIdentifier), err)
+			return fmt.Errorf(
+				"account identifier %s is invalid: %w",
+				types.PrintStruct(request.AccountIdentifier),
+				err,
+			)
 		}
 	}
 
 	if request.CoinIdentifier != nil {
 		if err := CoinIdentifier(request.CoinIdentifier); err != nil {
-			return fmt.Errorf("coin identifier %s is invalid: %w", types.PrintStruct(request.CoinIdentifier), err)
+			return fmt.Errorf(
+				"coin identifier %s is invalid: %w",
+				types.PrintStruct(request.CoinIdentifier),
+				err,
+			)
 		}
 	}
 
 	if request.Currency != nil {
 		if err := Currency(request.Currency); err != nil {
-			return fmt.Errorf("currency %s is invalid: %w", types.PrintStruct(request.Currency), err)
+			return fmt.Errorf(
+				"currency %s is invalid: %w",
+				types.PrintStruct(request.Currency),
+				err,
+			)
 		}
 	}
 

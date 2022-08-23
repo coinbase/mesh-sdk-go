@@ -438,7 +438,11 @@ func TestNetworkListResponse(t *testing.T) {
 					network3,
 				},
 			},
-			err: fmt.Errorf("network identifier %s is invalid: %w", types.PrintStruct(network3), ErrNetworkIdentifierBlockchainMissing),
+			err: fmt.Errorf(
+				"network identifier %s is invalid: %w",
+				types.PrintStruct(network3),
+				ErrNetworkIdentifierBlockchainMissing,
+			),
 		},
 	}
 

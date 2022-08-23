@@ -107,15 +107,27 @@ func NetworkStatusResponse(response *types.NetworkStatusResponse) error {
 	}
 
 	if err := BlockIdentifier(response.CurrentBlockIdentifier); err != nil {
-		return fmt.Errorf("current block identifier %s is invalid: %w", types.PrintStruct(response.CurrentBlockIdentifier), err)
+		return fmt.Errorf(
+			"current block identifier %s is invalid: %w",
+			types.PrintStruct(response.CurrentBlockIdentifier),
+			err,
+		)
 	}
 
 	if err := Timestamp(response.CurrentBlockTimestamp); err != nil {
-		return fmt.Errorf("current block timestamp %d is invalid: %w", response.CurrentBlockTimestamp, err)
+		return fmt.Errorf(
+			"current block timestamp %d is invalid: %w",
+			response.CurrentBlockTimestamp,
+			err,
+		)
 	}
 
 	if err := BlockIdentifier(response.GenesisBlockIdentifier); err != nil {
-		return fmt.Errorf("genesis block identifier %s is invalid: %w", types.PrintStruct(response.GenesisBlockIdentifier), err)
+		return fmt.Errorf(
+			"genesis block identifier %s is invalid: %w",
+			types.PrintStruct(response.GenesisBlockIdentifier),
+			err,
+		)
 	}
 
 	for _, peer := range response.Peers {
@@ -125,7 +137,11 @@ func NetworkStatusResponse(response *types.NetworkStatusResponse) error {
 	}
 
 	if err := SyncStatus(response.SyncStatus); err != nil {
-		return fmt.Errorf("sync status %s is invalid: %w", types.PrintStruct(response.SyncStatus), err)
+		return fmt.Errorf(
+			"sync status %s is invalid: %w",
+			types.PrintStruct(response.SyncStatus),
+			err,
+		)
 	}
 
 	return nil
@@ -217,7 +233,11 @@ func Errors(rosettaErrors []*types.Error) error {
 func BalanceExemptions(exemptions []*types.BalanceExemption) error {
 	for _, exemption := range exemptions {
 		if exemption == nil {
-			return fmt.Errorf("balance exemption %s is invalid: %w", types.PrintStruct(exemption), ErrBalanceExemptionIsNil)
+			return fmt.Errorf(
+				"balance exemption %s is invalid: %w",
+				types.PrintStruct(exemption),
+				ErrBalanceExemptionIsNil,
+			)
 		}
 
 		switch exemption.ExemptionType {
@@ -231,18 +251,30 @@ func BalanceExemptions(exemptions []*types.BalanceExemption) error {
 		}
 
 		if exemption.Currency == nil && exemption.SubAccountAddress == nil {
-			return fmt.Errorf("balance exemption %s is invalid: %w", types.PrintStruct(exemption), ErrBalanceExemptionMissingSubject)
+			return fmt.Errorf(
+				"balance exemption %s is invalid: %w",
+				types.PrintStruct(exemption),
+				ErrBalanceExemptionMissingSubject,
+			)
 		}
 
 		if exemption.Currency != nil {
 			if err := Currency(exemption.Currency); err != nil {
-				return fmt.Errorf("balance exemption currency %s is invalid: %w", types.PrintStruct(exemption.Currency), err)
+				return fmt.Errorf(
+					"balance exemption currency %s is invalid: %w",
+					types.PrintStruct(exemption.Currency),
+					err,
+				)
 			}
 		}
 
 		if exemption.SubAccountAddress != nil {
 			if len(*exemption.SubAccountAddress) == 0 {
-				return fmt.Errorf("balance exemption sub account address %s is invalid: %w", types.PrintStruct(exemption.SubAccountAddress), ErrBalanceExemptionSubAccountAddressEmpty)
+				return fmt.Errorf(
+					"balance exemption sub account address %s is invalid: %w",
+					types.PrintStruct(exemption.SubAccountAddress),
+					ErrBalanceExemptionSubAccountAddressEmpty,
+				)
 			}
 		}
 	}
@@ -270,7 +302,11 @@ func Allow(allowed *types.Allow) error {
 	}
 
 	if err := OperationStatuses(allowed.OperationStatuses); err != nil {
-		return fmt.Errorf("operation statuses %s are invalid: %w", types.PrintStruct(allowed.OperationStatuses), err)
+		return fmt.Errorf(
+			"operation statuses %s are invalid: %w",
+			types.PrintStruct(allowed.OperationStatuses),
+			err,
+		)
 	}
 
 	if err := OperationTypes(allowed.OperationTypes); err != nil {
@@ -286,7 +322,11 @@ func Allow(allowed *types.Allow) error {
 	}
 
 	if err := BalanceExemptions(allowed.BalanceExemptions); err != nil {
-		return fmt.Errorf("balance exemptions %s are invalid: %w", types.PrintStruct(allowed.BalanceExemptions), err)
+		return fmt.Errorf(
+			"balance exemptions %s are invalid: %w",
+			types.PrintStruct(allowed.BalanceExemptions),
+			err,
+		)
 	}
 
 	if len(allowed.BalanceExemptions) > 0 && !allowed.HistoricalBalanceLookup {
@@ -344,7 +384,11 @@ func NetworkListResponse(response *types.NetworkListResponse) error {
 	seen := make([]*types.NetworkIdentifier, 0)
 	for _, network := range response.NetworkIdentifiers {
 		if err := NetworkIdentifier(network); err != nil {
-			return fmt.Errorf("network identifier %s is invalid: %w", types.PrintStruct(network), err)
+			return fmt.Errorf(
+				"network identifier %s is invalid: %w",
+				types.PrintStruct(network),
+				err,
+			)
 		}
 
 		if containsNetworkIdentifier(seen, network) {

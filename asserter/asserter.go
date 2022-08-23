@@ -85,7 +85,11 @@ func NewServer(
 	}
 
 	if err := SupportedNetworks(supportedNetworks); err != nil {
-		return nil, fmt.Errorf("network identifiers %s are invalid: %w", types.PrintStruct(supportedNetworks), err)
+		return nil, fmt.Errorf(
+			"network identifiers %s are invalid: %w",
+			types.PrintStruct(supportedNetworks),
+			err,
+		)
 	}
 
 	validationConfig, err := getValidationConfig(validationFilePath)
@@ -126,15 +130,27 @@ func NewClientWithResponses(
 	validationFilePath string,
 ) (*Asserter, error) {
 	if err := NetworkIdentifier(network); err != nil {
-		return nil, fmt.Errorf("network identifier %s is invalid: %w", types.PrintStruct(network), err)
+		return nil, fmt.Errorf(
+			"network identifier %s is invalid: %w",
+			types.PrintStruct(network),
+			err,
+		)
 	}
 
 	if err := NetworkStatusResponse(networkStatus); err != nil {
-		return nil, fmt.Errorf("network status response %s is invalid: %w", types.PrintStruct(networkStatus), err)
+		return nil, fmt.Errorf(
+			"network status response %s is invalid: %w",
+			types.PrintStruct(networkStatus),
+			err,
+		)
 	}
 
 	if err := NetworkOptionsResponse(networkOptions); err != nil {
-		return nil, fmt.Errorf("network options response %s is invalid: %w", types.PrintStruct(networkOptions), err)
+		return nil, fmt.Errorf(
+			"network options response %s is invalid: %w",
+			types.PrintStruct(networkOptions),
+			err,
+		)
 	}
 
 	validationConfig, err := getValidationConfig(validationFilePath)
@@ -209,19 +225,35 @@ func NewClientWithOptions(
 	validationConfig *Validations,
 ) (*Asserter, error) {
 	if err := NetworkIdentifier(network); err != nil {
-		return nil, fmt.Errorf("network identifier %s is invalid: %w", types.PrintStruct(network), err)
+		return nil, fmt.Errorf(
+			"network identifier %s is invalid: %w",
+			types.PrintStruct(network),
+			err,
+		)
 	}
 
 	if err := BlockIdentifier(genesisBlockIdentifier); err != nil {
-		return nil, fmt.Errorf("genesis block identifier %s is invalid: %w", types.PrintStruct(genesisBlockIdentifier), err)
+		return nil, fmt.Errorf(
+			"genesis block identifier %s is invalid: %w",
+			types.PrintStruct(genesisBlockIdentifier),
+			err,
+		)
 	}
 
 	if err := OperationStatuses(operationStatuses); err != nil {
-		return nil, fmt.Errorf("operation statuses %s are invalid: %w", types.PrintStruct(operationStatuses), err)
+		return nil, fmt.Errorf(
+			"operation statuses %s are invalid: %w",
+			types.PrintStruct(operationStatuses),
+			err,
+		)
 	}
 
 	if err := OperationTypes(operationTypes); err != nil {
-		return nil, fmt.Errorf("operation types %s are invalid: %w", types.PrintStruct(operationTypes), err)
+		return nil, fmt.Errorf(
+			"operation types %s are invalid: %w",
+			types.PrintStruct(operationTypes),
+			err,
+		)
 	}
 
 	// TimestampStartIndex defaults to genesisIndex + 1 (this
@@ -321,7 +353,11 @@ func getValidationConfig(validationFilePath string) (*Validations, error) {
 		}
 
 		if err := json.Unmarshal(content, validationConfig); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal content of file %s: %w", validationFilePath, err)
+			return nil, fmt.Errorf(
+				"failed to unmarshal content of file %s: %w",
+				validationFilePath,
+				err,
+			)
 		}
 	}
 	return validationConfig, nil

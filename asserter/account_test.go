@@ -321,7 +321,12 @@ func TestAccountBalance(t *testing.T) {
 			balances: []*types.Amount{
 				validAmount,
 			},
-			err: fmt.Errorf("requested block index %d, but got %d: %w", invalidIndex, validBlock.Index, ErrReturnedBlockIndexMismatch),
+			err: fmt.Errorf(
+				"requested block index %d, but got %d: %w",
+				invalidIndex,
+				validBlock.Index,
+				ErrReturnedBlockIndexMismatch,
+			),
 		},
 		"invalid historical request hash": {
 			requestBlock: &types.PartialBlockIdentifier{
@@ -332,7 +337,12 @@ func TestAccountBalance(t *testing.T) {
 			balances: []*types.Amount{
 				validAmount,
 			},
-			err: fmt.Errorf("requested block hash %s, but got %s: %w", invalidHash, validBlock.Hash, ErrReturnedBlockHashMismatch),
+			err: fmt.Errorf(
+				"requested block hash %s, but got %s: %w",
+				invalidHash,
+				validBlock.Hash,
+				ErrReturnedBlockHashMismatch,
+			),
 		},
 	}
 

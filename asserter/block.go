@@ -197,15 +197,30 @@ func (a *Asserter) Operation(
 	}
 
 	if err := OperationIdentifier(operation.OperationIdentifier, index); err != nil {
-		return fmt.Errorf("operation identifier %s is invalid in operation %d: %w", types.PrintStruct(operation.OperationIdentifier), index, err)
+		return fmt.Errorf(
+			"operation identifier %s is invalid in operation %d: %w",
+			types.PrintStruct(operation.OperationIdentifier),
+			index,
+			err,
+		)
 	}
 
 	if err := a.OperationType(operation.Type); err != nil {
-		return fmt.Errorf("operation type %s is invalid in operation %d: %w", types.PrintStruct(operation.Type), index, err)
+		return fmt.Errorf(
+			"operation type %s is invalid in operation %d: %w",
+			types.PrintStruct(operation.Type),
+			index,
+			err,
+		)
 	}
 
 	if err := a.OperationStatus(operation.Status, construction); err != nil {
-		return fmt.Errorf("operation status %s is invalid in operation %d: %w", types.PrintStruct(operation.Status), index, err)
+		return fmt.Errorf(
+			"operation status %s is invalid in operation %d: %w",
+			types.PrintStruct(operation.Status),
+			index,
+			err,
+		)
 	}
 
 	if operation.Amount == nil {
@@ -213,11 +228,21 @@ func (a *Asserter) Operation(
 	}
 
 	if err := AccountIdentifier(operation.Account); err != nil {
-		return fmt.Errorf("operation account identifier %s is invalid in operation %d: %w", types.PrintStruct(operation.Account), index, err)
+		return fmt.Errorf(
+			"operation account identifier %s is invalid in operation %d: %w",
+			types.PrintStruct(operation.Account),
+			index,
+			err,
+		)
 	}
 
 	if err := Amount(operation.Amount); err != nil {
-		return fmt.Errorf("operation amount %s is invalid in operation %d: %w", types.PrintStruct(operation.Amount), index, err)
+		return fmt.Errorf(
+			"operation amount %s is invalid in operation %d: %w",
+			types.PrintStruct(operation.Amount),
+			index,
+			err,
+		)
 	}
 
 	if operation.CoinChange == nil {
@@ -225,7 +250,12 @@ func (a *Asserter) Operation(
 	}
 
 	if err := CoinChange(operation.CoinChange); err != nil {
-		return fmt.Errorf("operation coin change %s is invalid in operation %d: %w", types.PrintStruct(operation.CoinChange), index, err)
+		return fmt.Errorf(
+			"operation coin change %s is invalid in operation %d: %w",
+			types.PrintStruct(operation.CoinChange),
+			index,
+			err,
+		)
 	}
 
 	return nil
@@ -424,7 +454,11 @@ func (a *Asserter) Transaction(
 	}
 
 	if err := TransactionIdentifier(transaction.TransactionIdentifier); err != nil {
-		return fmt.Errorf("transaction identifier %s is invalid: %w", types.PrintStruct(transaction.TransactionIdentifier), err)
+		return fmt.Errorf(
+			"transaction identifier %s is invalid: %w",
+			types.PrintStruct(transaction.TransactionIdentifier),
+			err,
+		)
 	}
 
 	if err := a.Operations(transaction.Operations, false); err != nil {
@@ -543,11 +577,19 @@ func (a *Asserter) Block(
 	}
 
 	if err := BlockIdentifier(block.BlockIdentifier); err != nil {
-		return fmt.Errorf("block identifier %s is invalid: %w", types.PrintStruct(block.BlockIdentifier), err)
+		return fmt.Errorf(
+			"block identifier %s is invalid: %w",
+			types.PrintStruct(block.BlockIdentifier),
+			err,
+		)
 	}
 
 	if err := BlockIdentifier(block.ParentBlockIdentifier); err != nil {
-		return fmt.Errorf("parent block identifier %s is invalid: %w", types.PrintStruct(block.ParentBlockIdentifier), err)
+		return fmt.Errorf(
+			"parent block identifier %s is invalid: %w",
+			types.PrintStruct(block.ParentBlockIdentifier),
+			err,
+		)
 	}
 
 	// Only apply duplicate hash and index checks if the block index is not the
