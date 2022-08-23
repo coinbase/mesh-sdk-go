@@ -341,7 +341,7 @@ func TestNew(t *testing.T) {
 			networkOptions:     negativeStartIndex,
 			validationFilePath: "",
 
-			err: errors.New("TimestampStartIndex is invalid: -1"),
+			err: ErrTimestampStartIndexInvalid,
 		},
 	}
 
@@ -356,7 +356,7 @@ func TestNew(t *testing.T) {
 
 			if test.err != nil {
 				assert.Error(t, err)
-				assert.Contains(t, test.err.Error(), err.Error())
+				assert.Contains(t, err.Error(), test.err.Error())
 				return
 			}
 			assert.NoError(t, err)
@@ -427,7 +427,7 @@ func TestNew(t *testing.T) {
 
 			if test.err != nil {
 				assert.Error(t, err)
-				assert.Contains(t, test.err.Error(), err.Error())
+				assert.Contains(t, err.Error(), test.err.Error())
 				return
 			}
 			assert.NoError(t, err)

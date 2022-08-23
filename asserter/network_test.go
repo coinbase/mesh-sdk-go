@@ -16,6 +16,7 @@ package asserter
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -437,7 +438,7 @@ func TestNetworkListResponse(t *testing.T) {
 					network3,
 				},
 			},
-			err: ErrNetworkIdentifierBlockchainMissing,
+			err: fmt.Errorf("network identifier %s is invalid: %w", types.PrintStruct(network3), ErrNetworkIdentifierBlockchainMissing),
 		},
 	}
 

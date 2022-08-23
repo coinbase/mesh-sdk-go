@@ -36,6 +36,10 @@ var (
 		Network:    "Testnet",
 	}
 
+	missingNetworkNetworkIdentifier = &types.NetworkIdentifier{
+		Blockchain: "blah",
+	}
+
 	validAccountIdentifier = &types.AccountIdentifier{
 		Address: "acct1",
 	}
@@ -51,12 +55,18 @@ var (
 		Hash:  "block 1",
 	}
 
+	emptyBlockIdentifier = &types.BlockIdentifier{}
+
 	validTransactionIdentifier = &types.TransactionIdentifier{
 		Hash: "tx1",
 	}
 
 	validPublicKey = &types.PublicKey{
 		Bytes:     []byte("hello"),
+		CurveType: types.Secp256k1,
+	}
+
+	missingBytesPublicKey = &types.PublicKey{
 		CurveType: types.Secp256k1,
 	}
 
@@ -312,14 +322,14 @@ func TestSupportedNetworks(t *testing.T) {
 					Blockchain: "blah",
 				},
 			},
-			err: ErrNetworkIdentifierNetworkMissing,
+			err: fmt.Errorf("network identifier %s is invalid: %w", types.PrintStruct(missingNetworkNetworkIdentifier), ErrNetworkIdentifierNetworkMissing),
 		},
 		"duplicate networks": {
 			networks: []*types.NetworkIdentifier{
 				validNetworkIdentifier,
 				validNetworkIdentifier,
 			},
-			err: fmt.Errorf("%w: %+v", ErrSupportedNetworksDuplicate, validNetworkIdentifier),
+			err: fmt.Errorf("network identifier %s is invalid: %w", types.PrintStruct(validNetworkIdentifier), ErrSupportedNetworksDuplicate),
 		},
 	}
 
@@ -478,11 +488,7 @@ func TestBlockRequest(t *testing.T) {
 				NetworkIdentifier: wrongNetworkIdentifier,
 				BlockIdentifier:   validPartialBlockIdentifier,
 			},
-			err: fmt.Errorf(
-				"%w: %+v",
-				ErrRequestedNetworkNotSupported,
-				wrongNetworkIdentifier,
-			),
+			err: fmt.Errorf("network identifier %s is not supported: %w", types.PrintStruct(wrongNetworkIdentifier), ErrRequestedNetworkNotSupported),
 		},
 		"nil request": {
 			request: nil,
@@ -492,7 +498,7 @@ func TestBlockRequest(t *testing.T) {
 			request: &types.BlockRequest{
 				BlockIdentifier: validPartialBlockIdentifier,
 			},
-			err: ErrNetworkIdentifierIsNil,
+			err: fmt.Errorf("network identifier %s is invalid: %w", types.PrintStruct(nil), ErrNetworkIdentifierIsNil),
 		},
 		"missing block identifier": {
 			request: &types.BlockRequest{
@@ -536,11 +542,7 @@ func TestBlockTransactionRequest(t *testing.T) {
 				BlockIdentifier:       validBlockIdentifier,
 				TransactionIdentifier: validTransactionIdentifier,
 			},
-			err: fmt.Errorf(
-				"%w: %+v",
-				ErrRequestedNetworkNotSupported,
-				wrongNetworkIdentifier,
-			),
+			err: fmt.Errorf("network identifier %s is not supported: %w", types.PrintStruct(wrongNetworkIdentifier), ErrRequestedNetworkNotSupported),
 		},
 		"nil request": {
 			request: nil,
@@ -551,21 +553,21 @@ func TestBlockTransactionRequest(t *testing.T) {
 				BlockIdentifier:       validBlockIdentifier,
 				TransactionIdentifier: validTransactionIdentifier,
 			},
-			err: ErrNetworkIdentifierIsNil,
+			err: fmt.Errorf("network identifier %s is invalid: %w", types.PrintStruct(nil), ErrNetworkIdentifierIsNil),
 		},
 		"missing block identifier": {
 			request: &types.BlockTransactionRequest{
 				NetworkIdentifier:     validNetworkIdentifier,
 				TransactionIdentifier: validTransactionIdentifier,
 			},
-			err: ErrBlockIdentifierIsNil,
+			err: fmt.Errorf("block identifier %s is invalid: %w", types.PrintStruct(nil), ErrBlockIdentifierIsNil),
 		},
 		"invalid BlockIdentifier request": {
 			request: &types.BlockTransactionRequest{
 				NetworkIdentifier: validNetworkIdentifier,
 				BlockIdentifier:   &types.BlockIdentifier{},
 			},
-			err: ErrBlockIdentifierHashMissing,
+			err: fmt.Errorf("block identifier %s is invalid: %w", types.PrintStruct(emptyBlockIdentifier), ErrBlockIdentifierHashMissing),
 		},
 	}
 
@@ -607,11 +609,7 @@ func TestConstructionMetadataRequest(t *testing.T) {
 				NetworkIdentifier: wrongNetworkIdentifier,
 				Options:           map[string]interface{}{},
 			},
-			err: fmt.Errorf(
-				"%w: %+v",
-				ErrRequestedNetworkNotSupported,
-				wrongNetworkIdentifier,
-			),
+			err: fmt.Errorf("network identifier %s is not supported: %w", types.PrintStruct(wrongNetworkIdentifier), ErrRequestedNetworkNotSupported),
 		},
 		"nil request": {
 			request: nil,
@@ -621,7 +619,7 @@ func TestConstructionMetadataRequest(t *testing.T) {
 			request: &types.ConstructionMetadataRequest{
 				Options: map[string]interface{}{},
 			},
-			err: ErrNetworkIdentifierIsNil,
+			err: fmt.Errorf("network identifier %s is invalid: %w", types.PrintStruct(nil), ErrNetworkIdentifierIsNil),
 		},
 		"missing options": {
 			request: &types.ConstructionMetadataRequest{
@@ -638,7 +636,7 @@ func TestConstructionMetadataRequest(t *testing.T) {
 					},
 				},
 			},
-			err: ErrPublicKeyBytesEmpty,
+			err: fmt.Errorf("public key %s is invalid: %w", types.PrintStruct(missingBytesPublicKey), ErrPublicKeyBytesEmpty),
 		},
 	}
 
@@ -667,11 +665,7 @@ func TestConstructionSubmitRequest(t *testing.T) {
 				NetworkIdentifier: wrongNetworkIdentifier,
 				SignedTransaction: "tx",
 			},
-			err: fmt.Errorf(
-				"%w: %+v",
-				ErrRequestedNetworkNotSupported,
-				wrongNetworkIdentifier,
-			),
+			err: fmt.Errorf("network identifier %s is not supported: %w", types.PrintStruct(wrongNetworkIdentifier), ErrRequestedNetworkNotSupported),
 		},
 		"nil request": {
 			request: nil,
@@ -679,7 +673,7 @@ func TestConstructionSubmitRequest(t *testing.T) {
 		},
 		"empty tx": {
 			request: &types.ConstructionSubmitRequest{},
-			err:     ErrNetworkIdentifierIsNil,
+			err:     fmt.Errorf("network identifier %s is invalid: %w", types.PrintStruct(nil), ErrNetworkIdentifierIsNil),
 		},
 	}
 
@@ -708,11 +702,7 @@ func TestMempoolTransactionRequest(t *testing.T) {
 				NetworkIdentifier:     wrongNetworkIdentifier,
 				TransactionIdentifier: validTransactionIdentifier,
 			},
-			err: fmt.Errorf(
-				"%w: %+v",
-				ErrRequestedNetworkNotSupported,
-				wrongNetworkIdentifier,
-			),
+			err: fmt.Errorf("network identifier %s is not supported: %w", types.PrintStruct(wrongNetworkIdentifier), ErrRequestedNetworkNotSupported),
 		},
 		"nil request": {
 			request: nil,
@@ -722,7 +712,7 @@ func TestMempoolTransactionRequest(t *testing.T) {
 			request: &types.MempoolTransactionRequest{
 				TransactionIdentifier: validTransactionIdentifier,
 			},
-			err: ErrNetworkIdentifierIsNil,
+			err: fmt.Errorf("network identifier %s is invalid: %w", types.PrintStruct(nil), ErrNetworkIdentifierIsNil),
 		},
 		"invalid TransactionIdentifier request": {
 			request: &types.MempoolTransactionRequest{
@@ -779,11 +769,7 @@ func TestNetworkRequest(t *testing.T) {
 			request: &types.NetworkRequest{
 				NetworkIdentifier: wrongNetworkIdentifier,
 			},
-			err: fmt.Errorf(
-				"%w: %+v",
-				ErrRequestedNetworkNotSupported,
-				wrongNetworkIdentifier,
-			),
+			err: fmt.Errorf("network identifier %s is not supported: %w", types.PrintStruct(wrongNetworkIdentifier), ErrRequestedNetworkNotSupported),
 		},
 		"nil request": {
 			request: nil,
@@ -791,7 +777,7 @@ func TestNetworkRequest(t *testing.T) {
 		},
 		"missing network": {
 			request: &types.NetworkRequest{},
-			err:     ErrNetworkIdentifierIsNil,
+			err:     fmt.Errorf("network identifier %s is invalid: %w", types.PrintStruct(nil), ErrNetworkIdentifierIsNil),
 		},
 	}
 
@@ -819,11 +805,7 @@ func TestConstructionDeriveRequest(t *testing.T) {
 			request: &types.ConstructionDeriveRequest{
 				NetworkIdentifier: wrongNetworkIdentifier,
 			},
-			err: fmt.Errorf(
-				"%w: %+v",
-				ErrRequestedNetworkNotSupported,
-				wrongNetworkIdentifier,
-			),
+			err: fmt.Errorf("network identifier %s is not supported: %w", types.PrintStruct(wrongNetworkIdentifier), ErrRequestedNetworkNotSupported),
 		},
 		"nil request": {
 			request: nil,
@@ -906,11 +888,7 @@ func TestConstructionPreprocessRequest(t *testing.T) {
 			request: &types.ConstructionPreprocessRequest{
 				NetworkIdentifier: wrongNetworkIdentifier,
 			},
-			err: fmt.Errorf(
-				"%w: %+v",
-				ErrRequestedNetworkNotSupported,
-				wrongNetworkIdentifier,
-			),
+			err: fmt.Errorf("network identifier %s is not supported: %w", types.PrintStruct(wrongNetworkIdentifier), ErrRequestedNetworkNotSupported),
 		},
 		"nil request": {
 			request: nil,
@@ -943,17 +921,13 @@ func TestConstructionPreprocessRequest(t *testing.T) {
 			},
 			err: ErrOperationStatusNotEmptyForConstruction,
 		},
-		"negaitve suggested fee multiplier": {
+		"negative suggested fee multiplier": {
 			request: &types.ConstructionPreprocessRequest{
 				NetworkIdentifier:      validNetworkIdentifier,
 				Operations:             validOps,
 				SuggestedFeeMultiplier: &negativeFeeMultiplier,
 			},
-			err: fmt.Errorf(
-				"%w: %f",
-				ErrConstructionPreprocessRequestSuggestedFeeMultiplierIsNeg,
-				negativeFeeMultiplier,
-			),
+			err: ErrConstructionPreprocessRequestSuggestedFeeMultiplierIsNeg,
 		},
 		"max fee with duplicate currency": {
 			request: &types.ConstructionPreprocessRequest{
@@ -964,7 +938,7 @@ func TestConstructionPreprocessRequest(t *testing.T) {
 					validAmount,
 				},
 			},
-			err: fmt.Errorf("currency %+v used multiple times", validAmount.Currency),
+			err: ErrCurrencyUsedMultipleTimes,
 		},
 	}
 
@@ -1012,11 +986,7 @@ func TestConstructionPayloadsRequest(t *testing.T) {
 			request: &types.ConstructionPayloadsRequest{
 				NetworkIdentifier: wrongNetworkIdentifier,
 			},
-			err: fmt.Errorf(
-				"%w: %+v",
-				ErrRequestedNetworkNotSupported,
-				wrongNetworkIdentifier,
-			),
+			err: fmt.Errorf("network identifier %s is not supported: %w", types.PrintStruct(wrongNetworkIdentifier), ErrRequestedNetworkNotSupported),
 		},
 		"nil request": {
 			request: nil,
@@ -1130,11 +1100,7 @@ func TestConstructionCombineRequest(t *testing.T) {
 			request: &types.ConstructionCombineRequest{
 				NetworkIdentifier: wrongNetworkIdentifier,
 			},
-			err: fmt.Errorf(
-				"%w: %+v",
-				ErrRequestedNetworkNotSupported,
-				wrongNetworkIdentifier,
-			),
+			err: fmt.Errorf("network identifier %s is not supported: %w", types.PrintStruct(wrongNetworkIdentifier), ErrRequestedNetworkNotSupported),
 		},
 		"nil request": {
 			request: nil,
@@ -1216,11 +1182,7 @@ func TestConstructionHashRequest(t *testing.T) {
 			request: &types.ConstructionHashRequest{
 				NetworkIdentifier: wrongNetworkIdentifier,
 			},
-			err: fmt.Errorf(
-				"%w: %+v",
-				ErrRequestedNetworkNotSupported,
-				wrongNetworkIdentifier,
-			),
+			err: fmt.Errorf("network identifier %s is not supported: %w", types.PrintStruct(wrongNetworkIdentifier), ErrRequestedNetworkNotSupported),
 		},
 		"nil request": {
 			request: nil,
@@ -1263,11 +1225,7 @@ func TestConstructionParseRequest(t *testing.T) {
 			request: &types.ConstructionParseRequest{
 				NetworkIdentifier: wrongNetworkIdentifier,
 			},
-			err: fmt.Errorf(
-				"%w: %+v",
-				ErrRequestedNetworkNotSupported,
-				wrongNetworkIdentifier,
-			),
+			err: fmt.Errorf("network identifier %s is not supported: %w", types.PrintStruct(wrongNetworkIdentifier), ErrRequestedNetworkNotSupported),
 		},
 		"nil request": {
 			request: nil,
@@ -1320,11 +1278,7 @@ func TestCallRequest(t *testing.T) {
 			request: &types.CallRequest{
 				NetworkIdentifier: wrongNetworkIdentifier,
 			},
-			err: fmt.Errorf(
-				"%w: %+v",
-				ErrRequestedNetworkNotSupported,
-				wrongNetworkIdentifier,
-			),
+			err: fmt.Errorf("network identifier %s is not supported: %w", types.PrintStruct(wrongNetworkIdentifier), ErrRequestedNetworkNotSupported),
 		},
 		"unsupported method": {
 			request: &types.CallRequest{
@@ -1485,11 +1439,7 @@ func TestEventsBlocksRequest(t *testing.T) {
 			request: &types.EventsBlocksRequest{
 				NetworkIdentifier: wrongNetworkIdentifier,
 			},
-			err: fmt.Errorf(
-				"%w: %+v",
-				ErrRequestedNetworkNotSupported,
-				wrongNetworkIdentifier,
-			),
+			err: fmt.Errorf("network identifier %s is not supported: %w", types.PrintStruct(wrongNetworkIdentifier), ErrRequestedNetworkNotSupported),
 		},
 		"nil request": {
 			request: nil,
@@ -1547,11 +1497,7 @@ func TestSearchTransactionsRequest(t *testing.T) {
 				NetworkIdentifier: wrongNetworkIdentifier,
 				Operator:          types.OperatorP(types.OR),
 			},
-			err: fmt.Errorf(
-				"%w: %+v",
-				ErrRequestedNetworkNotSupported,
-				wrongNetworkIdentifier,
-			),
+			err: fmt.Errorf("network identifier %s is not supported: %w", types.PrintStruct(wrongNetworkIdentifier), ErrRequestedNetworkNotSupported),
 		},
 		"nil request": {
 			request: nil,

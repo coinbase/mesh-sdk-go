@@ -28,6 +28,8 @@ var (
 
 // Account Balance Errors
 var (
+	ErrCurrencyUsedMultipleTimes = errors.New("currency is used multiple times")
+
 	ErrReturnedBlockHashMismatch = errors.New(
 		"request block hash does not match response block hash",
 	)
@@ -36,6 +38,7 @@ var (
 	)
 
 	AccountBalanceErrs = []error{
+		ErrCurrencyUsedMultipleTimes,
 		ErrReturnedBlockHashMismatch,
 		ErrReturnedBlockIndexMismatch,
 	}
@@ -187,8 +190,7 @@ var (
 	ErrConstructionDeriveResponseIsNil = errors.New(
 		"construction derive response cannot be nil",
 	)
-	ErrConstructionDeriveResponseAddrEmpty = errors.New("address cannot be empty")
-	ErrConstructionParseResponseIsNil      = errors.New(
+	ErrConstructionParseResponseIsNil = errors.New(
 		"construction parse response cannot be nil",
 	)
 	ErrConstructionParseResponseOperationsEmpty        = errors.New("operations cannot be empty")
@@ -198,9 +200,7 @@ var (
 	ErrConstructionParseResponseSignersNonEmptyOnUnsignedTx = errors.New(
 		"signers should be empty for unsigned txs",
 	)
-	ErrConstructionParseResponseSignerEmpty     = errors.New("signer cannot be empty string")
-	ErrConstructionParseResponseDuplicateSigner = errors.New("found duplicate signer")
-	ErrConstructionPayloadsResponseIsNil        = errors.New(
+	ErrConstructionPayloadsResponseIsNil = errors.New(
 		"construction payloads response cannot be nil",
 	)
 	ErrConstructionPayloadsResponseUnsignedTxEmpty = errors.New(
@@ -212,10 +212,7 @@ var (
 	ErrPublicKeyBytesZero                        = errors.New("public key bytes 0")
 	ErrCurveTypeNotSupported                     = errors.New("not a supported CurveType")
 	ErrSigningPayloadIsNil                       = errors.New("signing payload cannot be nil")
-	ErrSigningPayloadAddrEmpty                   = errors.New(
-		"signing payload address cannot be empty",
-	)
-	ErrSigningPayloadBytesEmpty = errors.New(
+	ErrSigningPayloadBytesEmpty                  = errors.New(
 		"signing payload bytes cannot be empty",
 	)
 	ErrSigningPayloadBytesZero = errors.New(
@@ -237,12 +234,10 @@ var (
 		ErrConstructionCombineResponseIsNil,
 		ErrSignedTxEmpty,
 		ErrConstructionDeriveResponseIsNil,
-		ErrConstructionDeriveResponseAddrEmpty,
 		ErrConstructionParseResponseIsNil,
 		ErrConstructionParseResponseOperationsEmpty,
 		ErrConstructionParseResponseSignersEmptyOnSignedTx,
 		ErrConstructionParseResponseSignersNonEmptyOnUnsignedTx,
-		ErrConstructionParseResponseSignerEmpty,
 		ErrConstructionPayloadsResponseIsNil,
 		ErrConstructionPayloadsResponseUnsignedTxEmpty,
 		ErrConstructionPayloadsResponsePayloadsEmpty,
@@ -251,7 +246,6 @@ var (
 		ErrPublicKeyBytesZero,
 		ErrCurveTypeNotSupported,
 		ErrSigningPayloadIsNil,
-		ErrSigningPayloadAddrEmpty,
 		ErrSigningPayloadBytesEmpty,
 		ErrSigningPayloadBytesZero,
 		ErrSignaturesEmpty,
@@ -350,7 +344,7 @@ var (
 		"supported network duplicate",
 	)
 	ErrRequestedNetworkNotSupported = errors.New(
-		"requestNetwork not supported",
+		"requestNetwork is not supported",
 	)
 	ErrAccountBalanceRequestIsNil = errors.New(
 		"AccountBalanceRequest is nil",

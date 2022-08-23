@@ -36,27 +36,27 @@ func (a *Asserter) Error(
 	val, ok := a.errorTypeMap[err.Code]
 	if !ok {
 		return fmt.Errorf(
-			"%w: code %d",
-			ErrErrorUnexpectedCode,
+			"code %d: %w",
 			err.Code,
+			ErrErrorUnexpectedCode,
 		)
 	}
 
 	if val.Message != err.Message {
 		return fmt.Errorf(
-			"%w: expected %s actual %s",
-			ErrErrorMessageMismatch,
+			"expected %s actual %s: %w",
 			val.Message,
 			err.Message,
+			ErrErrorMessageMismatch,
 		)
 	}
 
 	if val.Retriable != err.Retriable {
 		return fmt.Errorf(
-			"%w: expected %s actual %s",
-			ErrErrorRetriableMismatch,
+			"expected %s actual %s: %w",
 			val.Message,
 			err.Message,
+			ErrErrorRetriableMismatch,
 		)
 	}
 

@@ -27,11 +27,11 @@ func Coin(coin *types.Coin) error {
 	}
 
 	if err := CoinIdentifier(coin.CoinIdentifier); err != nil {
-		return fmt.Errorf("%w: coin identifier is invalid", err)
+		return fmt.Errorf("coin identifier %s is invalid: %w", types.PrintStruct(coin.CoinIdentifier), err)
 	}
 
 	if err := Amount(coin.Amount); err != nil {
-		return fmt.Errorf("%w: coin amount is invalid", err)
+		return fmt.Errorf("coin amount %s is invalid: %w", types.PrintStruct(coin.Amount), err)
 	}
 
 	return nil
@@ -45,14 +45,14 @@ func Coins(coins []*types.Coin) error {
 	ids := map[string]struct{}{}
 	for _, coin := range coins {
 		if err := Coin(coin); err != nil {
-			return fmt.Errorf("%w: coin is invalid", err)
+			return fmt.Errorf("coin %s is invalid: %w", types.PrintStruct(coin), err)
 		}
 
 		if _, exists := ids[coin.CoinIdentifier.Identifier]; exists {
 			return fmt.Errorf(
-				"%w: %s",
+				"coin %s is invalid: %w",
+				types.PrintStruct(coin),
 				ErrCoinDuplicate,
-				coin.CoinIdentifier.Identifier,
 			)
 		}
 
@@ -84,11 +84,11 @@ func CoinChange(change *types.CoinChange) error {
 	}
 
 	if err := CoinIdentifier(change.CoinIdentifier); err != nil {
-		return fmt.Errorf("%w: coin identifier is invalid", err)
+		return fmt.Errorf("coin identifier %s is invalid: %w", types.PrintStruct(change.CoinIdentifier), err)
 	}
 
 	if err := CoinAction(change.CoinAction); err != nil {
-		return fmt.Errorf("%w: coin action is invalid", err)
+		return fmt.Errorf("coin action %s is invalid: %w", types.PrintStruct(change.CoinAction), err)
 	}
 
 	return nil
@@ -100,7 +100,7 @@ func CoinAction(action types.CoinAction) error {
 	switch action {
 	case types.CoinCreated, types.CoinSpent:
 	default:
-		return fmt.Errorf("%w: %s", ErrCoinActionInvalid, action)
+		return fmt.Errorf("failed to validate coin action %s: %w", types.PrintStruct(action), ErrCoinActionInvalid)
 	}
 
 	return nil

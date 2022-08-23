@@ -16,7 +16,6 @@ package asserter
 
 import (
 	"errors"
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -102,7 +101,7 @@ func TestConstructionMetadataResponse(t *testing.T) {
 					validAmount,
 				},
 			},
-			err: fmt.Errorf("currency %+v used multiple times", validAmount.Currency),
+			err: ErrCurrencyUsedMultipleTimes,
 		},
 		"nil response": {
 			err: ErrConstructionMetadataResponseIsNil,
@@ -202,14 +201,6 @@ func TestConstructionDeriveResponse(t *testing.T) {
 		"nil response": {
 			err: ErrConstructionDeriveResponseIsNil,
 		},
-		"empty address": {
-			response: &types.ConstructionDeriveResponse{
-				Metadata: map[string]interface{}{
-					"name": "hello",
-				},
-			},
-			err: ErrConstructionDeriveResponseAddrEmpty,
-		},
 	}
 
 	for name, test := range tests {
@@ -258,40 +249,6 @@ func TestConstructionParseResponse(t *testing.T) {
 			},
 			signed: true,
 			err:    nil,
-		},
-		"duplicate signer": {
-			response: &types.ConstructionParseResponse{
-				Operations: []*types.Operation{
-					{
-						OperationIdentifier: &types.OperationIdentifier{
-							Index: int64(0),
-						},
-						Type:    "PAYMENT",
-						Account: validAccount,
-						Amount:  validAmount,
-					},
-					{
-						OperationIdentifier: &types.OperationIdentifier{
-							Index: int64(1),
-						},
-						RelatedOperations: []*types.OperationIdentifier{
-							{Index: int64(0)},
-						},
-						Type:    "PAYMENT",
-						Account: &types.AccountIdentifier{Address: "addr 2"},
-						Amount:  validAmount,
-					},
-				},
-				AccountIdentifierSigners: []*types.AccountIdentifier{
-					validAccount,
-					validAccount,
-				},
-				Metadata: map[string]interface{}{
-					"extra": "stuff",
-				},
-			},
-			signed: true,
-			err:    ErrConstructionParseResponseDuplicateSigner,
 		},
 		"nil response": {
 			err: ErrConstructionParseResponseIsNil,
@@ -357,37 +314,6 @@ func TestConstructionParseResponse(t *testing.T) {
 			},
 			signed: true,
 			err:    ErrConstructionParseResponseSignersEmptyOnSignedTx,
-		},
-		"empty account identifier signer": {
-			response: &types.ConstructionParseResponse{
-				Operations: []*types.Operation{
-					{
-						OperationIdentifier: &types.OperationIdentifier{
-							Index: int64(0),
-						},
-						Type:    "PAYMENT",
-						Account: validAccount,
-						Amount:  validAmount,
-					},
-					{
-						OperationIdentifier: &types.OperationIdentifier{
-							Index: int64(1),
-						},
-						RelatedOperations: []*types.OperationIdentifier{
-							{Index: int64(0)},
-						},
-						Type:    "PAYMENT",
-						Account: validAccount,
-						Amount:  validAmount,
-					},
-				},
-				AccountIdentifierSigners: []*types.AccountIdentifier{{}},
-				Metadata: map[string]interface{}{
-					"extra": "stuff",
-				},
-			},
-			signed: true,
-			err:    ErrConstructionParseResponseSignerEmpty,
 		},
 		"invalid signer unsigned": {
 			response: &types.ConstructionParseResponse{
@@ -564,7 +490,7 @@ func TestConstructionPayloadsResponse(t *testing.T) {
 					},
 				},
 			},
-			err: ErrSigningPayloadAddrEmpty,
+			err: ErrAccountIsNil,
 		},
 	}
 
@@ -659,7 +585,7 @@ func TestSigningPayload(t *testing.T) {
 			signingPayload: &types.SigningPayload{
 				Bytes: []byte("blah"),
 			},
-			err: ErrSigningPayloadAddrEmpty,
+			err: ErrAccountIsNil,
 		},
 		"zero signing payload": {
 			signingPayload: &types.SigningPayload{

@@ -15,6 +15,8 @@
 package asserter
 
 import (
+	"fmt"
+
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
@@ -28,7 +30,7 @@ func BlockEvent(
 	}
 
 	if err := BlockIdentifier(event.BlockIdentifier); err != nil {
-		return err
+		return fmt.Errorf("block identifier %s is invalid: %w", types.PrintStruct(event.BlockIdentifier), err)
 	}
 
 	switch event.Type {
@@ -52,7 +54,7 @@ func EventsBlocksResponse(
 	seq := int64(-1)
 	for i, event := range response.Events {
 		if err := BlockEvent(event); err != nil {
-			return err
+			return fmt.Errorf("block event %s is invalid: %w", types.PrintStruct(event), err)
 		}
 
 		if seq == -1 {

@@ -81,16 +81,16 @@ func NewServer(
 	validationFilePath string,
 ) (*Asserter, error) {
 	if err := OperationTypes(supportedOperationTypes); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("operation types %v are invalid: %w", supportedOperationTypes, err)
 	}
 
 	if err := SupportedNetworks(supportedNetworks); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("network identifiers %s are invalid: %w", types.PrintStruct(supportedNetworks), err)
 	}
 
 	validationConfig, err := getValidationConfig(validationFilePath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("config %s is invalid: %w", validationFilePath, err)
 	}
 
 	callMap := map[string]struct{}{}
@@ -100,7 +100,7 @@ func NewServer(
 		}
 
 		if _, ok := callMap[method]; ok {
-			return nil, fmt.Errorf("%w: %s", ErrCallMethodDuplicate, method)
+			return nil, fmt.Errorf("failed to call method %s: %w", method, ErrCallMethodDuplicate)
 		}
 
 		callMap[method] = struct{}{}
@@ -126,20 +126,20 @@ func NewClientWithResponses(
 	validationFilePath string,
 ) (*Asserter, error) {
 	if err := NetworkIdentifier(network); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("network identifier %s is invalid: %w", types.PrintStruct(network), err)
 	}
 
 	if err := NetworkStatusResponse(networkStatus); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("network status response %s is invalid: %w", types.PrintStruct(networkStatus), err)
 	}
 
 	if err := NetworkOptionsResponse(networkOptions); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("network options response %s is invalid: %w", types.PrintStruct(networkOptions), err)
 	}
 
 	validationConfig, err := getValidationConfig(validationFilePath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("config %s is invalid: %w", validationFilePath, err)
 	}
 
 	return NewClientWithOptions(
@@ -175,12 +175,12 @@ func NewClientWithFile(
 ) (*Asserter, error) {
 	content, err := ioutil.ReadFile(path.Clean(filePath))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to read file %s: %w", filePath, err)
 	}
 
 	config := &Configuration{}
 	if err := json.Unmarshal(content, config); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to unmarshal content of file %s: %w", filePath, err)
 	}
 
 	return NewClientWithOptions(
@@ -209,19 +209,19 @@ func NewClientWithOptions(
 	validationConfig *Validations,
 ) (*Asserter, error) {
 	if err := NetworkIdentifier(network); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("network identifier %s is invalid: %w", types.PrintStruct(network), err)
 	}
 
 	if err := BlockIdentifier(genesisBlockIdentifier); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("genesis block identifier %s is invalid: %w", types.PrintStruct(genesisBlockIdentifier), err)
 	}
 
 	if err := OperationStatuses(operationStatuses); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("operation statuses %s are invalid: %w", types.PrintStruct(operationStatuses), err)
 	}
 
 	if err := OperationTypes(operationTypes); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("operation types %s are invalid: %w", types.PrintStruct(operationTypes), err)
 	}
 
 	// TimestampStartIndex defaults to genesisIndex + 1 (this
@@ -230,9 +230,9 @@ func NewClientWithOptions(
 	if timestampStartIndex != nil {
 		if *timestampStartIndex < 0 {
 			return nil, fmt.Errorf(
-				"%w: %d",
-				ErrTimestampStartIndexInvalid,
+				"failed to validate index %d: %w",
 				*timestampStartIndex,
+				ErrTimestampStartIndexInvalid,
 			)
 		}
 
@@ -304,7 +304,7 @@ func (a *Asserter) OperationSuccessful(operation *types.Operation) (bool, error)
 
 	val, ok := a.operationStatusMap[*operation.Status]
 	if !ok {
-		return false, fmt.Errorf("%s not found", *operation.Status)
+		return false, fmt.Errorf("operation status %s is not found", *operation.Status)
 	}
 
 	return val, nil
@@ -317,11 +317,11 @@ func getValidationConfig(validationFilePath string) (*Validations, error) {
 	if validationFilePath != "" {
 		content, err := ioutil.ReadFile(path.Clean(validationFilePath))
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to read file %s: %w", validationFilePath, err)
 		}
 
 		if err := json.Unmarshal(content, validationConfig); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to unmarshal content of file %s: %w", validationFilePath, err)
 		}
 	}
 	return validationConfig, nil

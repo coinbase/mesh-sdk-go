@@ -15,6 +15,8 @@
 package asserter
 
 import (
+	"fmt"
+
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
@@ -37,11 +39,11 @@ func (a *Asserter) SearchTransactionsResponse(
 
 	for _, blockTransaction := range response.Transactions {
 		if err := BlockIdentifier(blockTransaction.BlockIdentifier); err != nil {
-			return err
+			return fmt.Errorf("block identifier %s is invalid: %w", types.PrintStruct(blockTransaction.BlockIdentifier), err)
 		}
 
 		if err := a.Transaction(blockTransaction.Transaction); err != nil {
-			return err
+			return fmt.Errorf("transaction %s is invalid: %w", types.PrintStruct(blockTransaction.Transaction), err)
 		}
 	}
 
