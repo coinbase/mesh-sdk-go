@@ -31,7 +31,11 @@ func ConstructionPreprocessResponse(
 
 	for _, accountIdentifier := range response.RequiredPublicKeys {
 		if err := AccountIdentifier(accountIdentifier); err != nil {
-			return err
+			return fmt.Errorf(
+				"account identifier %s is invalid: %w",
+				types.PrintStruct(accountIdentifier),
+				err,
+			)
 		}
 	}
 
@@ -52,7 +56,11 @@ func ConstructionMetadataResponse(
 	}
 
 	if err := AssertUniqueAmounts(response.SuggestedFee); err != nil {
-		return fmt.Errorf("%w: duplicate suggested fee currency found", err)
+		return fmt.Errorf(
+			"suggested fee %s is invalid: %w",
+			types.PrintStruct(response.SuggestedFee),
+			err,
+		)
 	}
 
 	return nil
@@ -69,7 +77,11 @@ func TransactionIdentifierResponse(
 	}
 
 	if err := TransactionIdentifier(response.TransactionIdentifier); err != nil {
-		return err
+		return fmt.Errorf(
+			"transaction identifier %s is invalid: %w",
+			types.PrintStruct(response.TransactionIdentifier),
+			err,
+		)
 	}
 
 	return nil
@@ -103,7 +115,11 @@ func ConstructionDeriveResponse(
 	}
 
 	if err := AccountIdentifier(response.AccountIdentifier); err != nil {
-		return fmt.Errorf("%w: %s", ErrConstructionDeriveResponseAddrEmpty, err.Error())
+		return fmt.Errorf(
+			"account identifier %s is invalid: %w",
+			types.PrintStruct(response.AccountIdentifier),
+			err,
+		)
 	}
 
 	return nil
@@ -130,7 +146,11 @@ func (a *Asserter) ConstructionParseResponse(
 	}
 
 	if err := a.Operations(response.Operations, true); err != nil {
-		return fmt.Errorf("%w unable to parse operations", err)
+		return fmt.Errorf(
+			"operations %s are invalid: %w",
+			types.PrintStruct(response.Operations),
+			err,
+		)
 	}
 
 	if signed && len(response.AccountIdentifierSigners) == 0 {
@@ -141,15 +161,23 @@ func (a *Asserter) ConstructionParseResponse(
 		return ErrConstructionParseResponseSignersNonEmptyOnUnsignedTx
 	}
 
-	for i, signer := range response.AccountIdentifierSigners {
+	for _, signer := range response.AccountIdentifierSigners {
 		if err := AccountIdentifier(signer); err != nil {
-			return fmt.Errorf("%w: at index %d", ErrConstructionParseResponseSignerEmpty, i)
+			return fmt.Errorf(
+				"account identifier of signer %s is invalid: %w",
+				types.PrintStruct(signer),
+				err,
+			)
 		}
 	}
 
 	if len(response.AccountIdentifierSigners) > 0 {
 		if err := AccountArray("signers", response.AccountIdentifierSigners); err != nil {
-			return fmt.Errorf("%w: %s", ErrConstructionParseResponseDuplicateSigner, err.Error())
+			return fmt.Errorf(
+				"account identifiers of signers %s are invalid: %w",
+				types.PrintStruct(response.AccountIdentifierSigners),
+				err,
+			)
 		}
 	}
 
@@ -175,9 +203,9 @@ func ConstructionPayloadsResponse(
 		return ErrConstructionPayloadsResponsePayloadsEmpty
 	}
 
-	for i, payload := range response.Payloads {
+	for _, payload := range response.Payloads {
 		if err := SigningPayload(payload); err != nil {
-			return fmt.Errorf("%w: signing payload %d is invalid", err, i)
+			return fmt.Errorf("signing payload %s is invalid: %w", types.PrintStruct(payload), err)
 		}
 	}
 
@@ -203,7 +231,11 @@ func PublicKey(
 	}
 
 	if err := CurveType(publicKey.CurveType); err != nil {
-		return fmt.Errorf("%w public key curve type is not supported", err)
+		return fmt.Errorf(
+			"public key curve type %s is invalid: %w",
+			types.PrintStruct(publicKey.CurveType),
+			err,
+		)
 	}
 
 	return nil
@@ -218,7 +250,7 @@ func CurveType(
 	case types.Secp256k1, types.Secp256r1, types.Edwards25519, types.Tweedle, types.Pallas:
 		return nil
 	default:
-		return fmt.Errorf("%w: %s", ErrCurveTypeNotSupported, curve)
+		return ErrCurveTypeNotSupported
 	}
 }
 
@@ -234,7 +266,11 @@ func SigningPayload(
 	}
 
 	if err := AccountIdentifier(signingPayload.AccountIdentifier); err != nil {
-		return fmt.Errorf("%w: %s", ErrSigningPayloadAddrEmpty, err)
+		return fmt.Errorf(
+			"account identifier %s is invalid: %w",
+			types.PrintStruct(signingPayload.AccountIdentifier),
+			err,
+		)
 	}
 
 	if len(signingPayload.Bytes) == 0 {
@@ -251,7 +287,11 @@ func SigningPayload(
 	}
 
 	if err := SignatureType(signingPayload.SignatureType); err != nil {
-		return fmt.Errorf("%w signature payload signature type is not valid", err)
+		return fmt.Errorf(
+			"signature type %s is invalid: %w",
+			types.PrintStruct(signingPayload.SignatureType),
+			err,
+		)
 	}
 
 	return nil
@@ -266,17 +306,29 @@ func Signatures(
 		return ErrSignaturesEmpty
 	}
 
-	for i, signature := range signatures {
+	for _, signature := range signatures {
 		if err := SigningPayload(signature.SigningPayload); err != nil {
-			return fmt.Errorf("%w: signature %d has invalid signing payload", err, i)
+			return fmt.Errorf(
+				"signing payload %s is invalid: %w",
+				types.PrintStruct(signature.SigningPayload),
+				err,
+			)
 		}
 
 		if err := PublicKey(signature.PublicKey); err != nil {
-			return fmt.Errorf("%w: signature %d has invalid public key", err, i)
+			return fmt.Errorf(
+				"public key %s is invalid: %w",
+				types.PrintStruct(signature.PublicKey),
+				err,
+			)
 		}
 
 		if err := SignatureType(signature.SignatureType); err != nil {
-			return fmt.Errorf("%w: signature %d has invalid signature type", err, i)
+			return fmt.Errorf(
+				"signature type %s is invalid: %w",
+				types.PrintStruct(signature.SignatureType),
+				err,
+			)
 		}
 
 		// Return an error if the requested signature type does not match the
@@ -287,7 +339,7 @@ func Signatures(
 		}
 
 		if len(signature.Bytes) == 0 {
-			return fmt.Errorf("%w: signature %d has 0 bytes", ErrSignatureBytesEmpty, i)
+			return ErrSignatureBytesEmpty
 		}
 
 		if BytesArrayZero(signature.Bytes) {
@@ -307,6 +359,6 @@ func SignatureType(
 	case types.Ecdsa, types.EcdsaRecovery, types.Ed25519, types.Schnorr1, types.SchnorrPoseidon:
 		return nil
 	default:
-		return fmt.Errorf("%w: %s", ErrSignatureTypeNotSupported, signature)
+		return ErrSignatureTypeNotSupported
 	}
 }

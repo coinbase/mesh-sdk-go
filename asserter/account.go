@@ -53,7 +53,7 @@ func ContainsCurrency(currencies []*types.Currency, currency *types.Currency) bo
 
 // AssertUniqueAmounts returns an error if a slice
 // of types.Amount is invalid. It is considered invalid if the same
-// currency is returned multiple times (these shoould be
+// currency is returned multiple times (these should be
 // consolidated) or if a types.Amount is considered invalid.
 func AssertUniqueAmounts(amounts []*types.Amount) error {
 	seen := map[string]struct{}{}
@@ -61,13 +61,18 @@ func AssertUniqueAmounts(amounts []*types.Amount) error {
 		// Ensure a currency is used at most once
 		key := types.Hash(amount.Currency)
 		if _, ok := seen[key]; ok {
-			return fmt.Errorf("currency %+v used multiple times", amount.Currency)
+			return fmt.Errorf(
+				"amount currency %s of amount %s is invalid: %w",
+				types.PrintStruct(amount.Currency),
+				types.PrintStruct(amount),
+				ErrCurrencyUsedMultipleTimes,
+			)
 		}
 		seen[key] = struct{}{}
 
 		// Check amount for validity
 		if err := Amount(amount); err != nil {
-			return err
+			return fmt.Errorf("amount %s is invalid: %w", types.PrintStruct(amount), err)
 		}
 	}
 
@@ -83,11 +88,19 @@ func AccountBalanceResponse(
 	response *types.AccountBalanceResponse,
 ) error {
 	if err := BlockIdentifier(response.BlockIdentifier); err != nil {
-		return fmt.Errorf("%w: block identifier is invalid", err)
+		return fmt.Errorf(
+			"block identifier %s is invalid: %w",
+			types.PrintStruct(response.BlockIdentifier),
+			err,
+		)
 	}
 
 	if err := AssertUniqueAmounts(response.Balances); err != nil {
-		return fmt.Errorf("%w: balance amounts are invalid", err)
+		return fmt.Errorf(
+			"balance amounts %s are invalid: %w",
+			types.PrintStruct(response.Balances),
+			err,
+		)
 	}
 
 	if requestBlock == nil {
@@ -96,19 +109,19 @@ func AccountBalanceResponse(
 
 	if requestBlock.Hash != nil && *requestBlock.Hash != response.BlockIdentifier.Hash {
 		return fmt.Errorf(
-			"%w: requested block hash %s but got %s",
-			ErrReturnedBlockHashMismatch,
+			"requested block hash %s, but got %s: %w",
 			*requestBlock.Hash,
 			response.BlockIdentifier.Hash,
+			ErrReturnedBlockHashMismatch,
 		)
 	}
 
 	if requestBlock.Index != nil && *requestBlock.Index != response.BlockIdentifier.Index {
 		return fmt.Errorf(
-			"%w: requested block index %d but got %d",
-			ErrReturnedBlockIndexMismatch,
+			"requested block index %d, but got %d: %w",
 			*requestBlock.Index,
 			response.BlockIdentifier.Index,
+			ErrReturnedBlockIndexMismatch,
 		)
 	}
 
@@ -121,11 +134,15 @@ func AccountCoinsResponse(
 	response *types.AccountCoinsResponse,
 ) error {
 	if err := BlockIdentifier(response.BlockIdentifier); err != nil {
-		return fmt.Errorf("%w: block identifier is invalid", err)
+		return fmt.Errorf(
+			"block identifier %s is invalid: %w",
+			types.PrintStruct(response.BlockIdentifier),
+			err,
+		)
 	}
 
 	if err := Coins(response.Coins); err != nil {
-		return fmt.Errorf("%w: coins are invalid", err)
+		return fmt.Errorf("coins %s are invalid: %w", types.PrintStruct(response.Coins), err)
 	}
 
 	return nil

@@ -57,7 +57,7 @@ func Amount(amount *types.Amount) error {
 
 	_, ok := new(big.Int).SetString(amount.Value, 10)
 	if !ok {
-		return fmt.Errorf("%w: %s", ErrAmountIsNotInt, amount.Value)
+		return ErrAmountIsNotInt
 	}
 
 	return Currency(amount.Currency)
@@ -76,10 +76,10 @@ func OperationIdentifier(
 
 	if identifier.Index != index {
 		return fmt.Errorf(
-			"%w: expected %d but got %d",
-			ErrOperationIdentifierIndexOutOfOrder,
+			"expected identifier index %d but got %d: %w",
 			index,
 			identifier.Index,
+			ErrOperationIdentifierIndexOutOfOrder,
 		)
 	}
 
@@ -161,7 +161,7 @@ func (a *Asserter) OperationStatus(status *string, construction bool) error {
 	}
 
 	if _, ok := a.operationStatusMap[*status]; !ok {
-		return fmt.Errorf("%w: %s", ErrOperationStatusInvalid, *status)
+		return fmt.Errorf("operation status %s is invalid: %w", *status, ErrOperationStatusInvalid)
 	}
 
 	return nil
@@ -175,7 +175,7 @@ func (a *Asserter) OperationType(t string) error {
 	}
 
 	if t == "" || !containsString(a.operationTypes, t) {
-		return fmt.Errorf("%w: %s", ErrOperationTypeInvalid, t)
+		return fmt.Errorf("operation type %s is invalid: %w", t, ErrOperationTypeInvalid)
 	}
 
 	return nil
@@ -197,15 +197,30 @@ func (a *Asserter) Operation(
 	}
 
 	if err := OperationIdentifier(operation.OperationIdentifier, index); err != nil {
-		return fmt.Errorf("%w: Operation identifier is invalid in operation %d", err, index)
+		return fmt.Errorf(
+			"operation identifier %s is invalid in operation %d: %w",
+			types.PrintStruct(operation.OperationIdentifier),
+			index,
+			err,
+		)
 	}
 
 	if err := a.OperationType(operation.Type); err != nil {
-		return fmt.Errorf("%w: operation type is invalid in operation %d", err, index)
+		return fmt.Errorf(
+			"operation type %s is invalid in operation %d: %w",
+			types.PrintStruct(operation.Type),
+			index,
+			err,
+		)
 	}
 
 	if err := a.OperationStatus(operation.Status, construction); err != nil {
-		return fmt.Errorf("%w: operation status is invalid in operation %d", err, index)
+		return fmt.Errorf(
+			"operation status %s is invalid in operation %d: %w",
+			types.PrintStruct(operation.Status),
+			index,
+			err,
+		)
 	}
 
 	if operation.Amount == nil {
@@ -213,11 +228,21 @@ func (a *Asserter) Operation(
 	}
 
 	if err := AccountIdentifier(operation.Account); err != nil {
-		return fmt.Errorf("%w: account identifier is invalid in operation %d", err, index)
+		return fmt.Errorf(
+			"operation account identifier %s is invalid in operation %d: %w",
+			types.PrintStruct(operation.Account),
+			index,
+			err,
+		)
 	}
 
 	if err := Amount(operation.Amount); err != nil {
-		return fmt.Errorf("%w: amount is invalid in operation %d", err, index)
+		return fmt.Errorf(
+			"operation amount %s is invalid in operation %d: %w",
+			types.PrintStruct(operation.Amount),
+			index,
+			err,
+		)
 	}
 
 	if operation.CoinChange == nil {
@@ -225,7 +250,12 @@ func (a *Asserter) Operation(
 	}
 
 	if err := CoinChange(operation.CoinChange); err != nil {
-		return fmt.Errorf("%w: coin change is invalid in operation %d", err, index)
+		return fmt.Errorf(
+			"operation coin change %s is invalid in operation %d: %w",
+			types.PrintStruct(operation.CoinChange),
+			index,
+			err,
+		)
 	}
 
 	return nil
@@ -301,7 +331,7 @@ func (a *Asserter) Operations( // nolint:gocognit
 	for i, op := range operations {
 		// Ensure operations are sorted
 		if err := a.Operation(op, int64(i), construction); err != nil {
-			return err
+			return fmt.Errorf("operation %s is invalid: %w", types.PrintStruct(op), err)
 		}
 
 		if a.validations.Enabled {
@@ -314,9 +344,10 @@ func (a *Asserter) Operations( // nolint:gocognit
 			if op.Type == a.validations.Fee.Name {
 				if op.RelatedOperations != nil {
 					return fmt.Errorf(
-						"%w: operation index %d",
-						ErrRelatedOperationInFeeNotAllowed,
+						"operation %s is invalid with operation index %d: %w",
+						types.PrintStruct(op),
 						op.OperationIdentifier.Index,
+						ErrRelatedOperationInFeeNotAllowed,
 					)
 				}
 
@@ -328,9 +359,10 @@ func (a *Asserter) Operations( // nolint:gocognit
 				// Validate that fee operation amount is negative
 				if val.Sign() != -1 {
 					return fmt.Errorf(
-						"%w: operation index %d",
-						ErrFeeAmountNotNegative,
+						"operation %s is invalid with operation index %d: %w",
+						types.PrintStruct(op),
 						op.OperationIdentifier.Index,
+						ErrFeeAmountNotNegative,
 					)
 				}
 
@@ -347,19 +379,19 @@ func (a *Asserter) Operations( // nolint:gocognit
 			relatedOpsExists = true
 			if relatedOp.Index >= op.OperationIdentifier.Index {
 				return fmt.Errorf(
-					"%w: related operation index %d >= operation index %d",
-					ErrRelatedOperationIndexOutOfOrder,
+					"related operation index %d >= operation index %d: %w",
 					relatedOp.Index,
 					op.OperationIdentifier.Index,
+					ErrRelatedOperationIndexOutOfOrder,
 				)
 			}
 
 			if containsInt64(relatedIndexes, relatedOp.Index) {
 				return fmt.Errorf(
-					"%w: related operation index %d found for operation index %d",
-					ErrRelatedOperationIndexDuplicate,
+					"related operation index %d found for operation index %d: %w",
 					relatedOp.Index,
 					op.OperationIdentifier.Index,
+					ErrRelatedOperationIndexDuplicate,
 				)
 			}
 			relatedIndexes = append(relatedIndexes, relatedOp.Index)
@@ -422,22 +454,26 @@ func (a *Asserter) Transaction(
 	}
 
 	if err := TransactionIdentifier(transaction.TransactionIdentifier); err != nil {
-		return err
+		return fmt.Errorf(
+			"transaction identifier %s is invalid: %w",
+			types.PrintStruct(transaction.TransactionIdentifier),
+			err,
+		)
 	}
 
 	if err := a.Operations(transaction.Operations, false); err != nil {
 		return fmt.Errorf(
-			"%w invalid operation in transaction %s",
+			"invalid operation in transaction operations %s: %w",
+			types.PrintStruct(transaction.Operations),
 			err,
-			transaction.TransactionIdentifier.Hash,
 		)
 	}
 
 	if err := a.RelatedTransactions(transaction.RelatedTransactions); err != nil {
 		return fmt.Errorf(
-			"%w invalid related transaction in transaction %s",
+			"invalid related transaction in related transactions %s: %w",
+			types.PrintStruct(transaction.RelatedTransactions),
 			err,
-			transaction.TransactionIdentifier.Hash,
 		)
 	}
 
@@ -457,26 +493,29 @@ func (a *Asserter) RelatedTransactions(relatedTransactions []*types.RelatedTrans
 		if relatedTransaction.NetworkIdentifier != nil {
 			if err := NetworkIdentifier(relatedTransaction.NetworkIdentifier); err != nil {
 				return fmt.Errorf(
-					"%w invalid network identifier in related transaction at index %d",
-					err,
+					"network identifier %s is invalid in related transaction at index %d: %w",
+					types.PrintStruct(relatedTransaction.NetworkIdentifier),
 					i,
+					err,
 				)
 			}
 		}
 
 		if err := TransactionIdentifier(relatedTransaction.TransactionIdentifier); err != nil {
 			return fmt.Errorf(
-				"%w invalid transaction identifier in related transaction at index %d",
-				err,
+				"invalid transaction identifier %s in related transaction at index %d: %w",
+				types.PrintStruct(relatedTransaction.TransactionIdentifier),
 				i,
+				err,
 			)
 		}
 
 		if err := a.Direction(relatedTransaction.Direction); err != nil {
 			return fmt.Errorf(
-				"%w invalid direction in related transaction at index %d",
-				err,
+				"invalid direction %s in related transaction at index %d: %w",
+				types.PrintStruct(relatedTransaction.Direction),
 				i,
+				err,
 			)
 		}
 	}
@@ -517,9 +556,9 @@ func (a *Asserter) Direction(direction types.Direction) error {
 func Timestamp(timestamp int64) error {
 	switch {
 	case timestamp < MinUnixEpoch:
-		return fmt.Errorf("%w: %d", ErrTimestampBeforeMin, timestamp)
+		return ErrTimestampBeforeMin
 	case timestamp > MaxUnixEpoch:
-		return fmt.Errorf("%w: %d", ErrTimestampAfterMax, timestamp)
+		return ErrTimestampAfterMax
 	default:
 		return nil
 	}
@@ -538,11 +577,19 @@ func (a *Asserter) Block(
 	}
 
 	if err := BlockIdentifier(block.BlockIdentifier); err != nil {
-		return err
+		return fmt.Errorf(
+			"block identifier %s is invalid: %w",
+			types.PrintStruct(block.BlockIdentifier),
+			err,
+		)
 	}
 
 	if err := BlockIdentifier(block.ParentBlockIdentifier); err != nil {
-		return err
+		return fmt.Errorf(
+			"parent block identifier %s is invalid: %w",
+			types.PrintStruct(block.ParentBlockIdentifier),
+			err,
+		)
 	}
 
 	// Only apply duplicate hash and index checks if the block index is not the
@@ -561,13 +608,13 @@ func (a *Asserter) Block(
 	// the current block index.
 	if a.timestampStartIndex <= block.BlockIdentifier.Index {
 		if err := Timestamp(block.Timestamp); err != nil {
-			return err
+			return fmt.Errorf("timestamp %d is invalid: %w", block.Timestamp, err)
 		}
 	}
 
 	for _, transaction := range block.Transactions {
 		if err := a.Transaction(transaction); err != nil {
-			return err
+			return fmt.Errorf("transaction %s is invalid: %w", types.PrintStruct(transaction), err)
 		}
 	}
 
