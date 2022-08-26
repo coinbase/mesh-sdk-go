@@ -239,7 +239,7 @@ func TestAllow(t *testing.T) {
 			allow: &types.Allow{
 				OperationStatuses: operationStatuses,
 			},
-			err: errors.New("no Allow.OperationTypes found"),
+			err: ErrStringArrayEmpty,
 		},
 		"duplicate call methods": {
 			allow: &types.Allow{

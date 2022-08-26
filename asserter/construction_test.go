@@ -201,6 +201,14 @@ func TestConstructionDeriveResponse(t *testing.T) {
 		"nil response": {
 			err: ErrConstructionDeriveResponseIsNil,
 		},
+		"empty address": {
+			response: &types.ConstructionDeriveResponse{
+				Metadata: map[string]interface{}{
+					"name": "hello",
+				},
+			},
+			err: ErrAccountIsNil,
+		},
 	}
 
 	for name, test := range tests {
@@ -249,6 +257,40 @@ func TestConstructionParseResponse(t *testing.T) {
 			},
 			signed: true,
 			err:    nil,
+		},
+		"duplicate signer": {
+			response: &types.ConstructionParseResponse{
+				Operations: []*types.Operation{
+					{
+						OperationIdentifier: &types.OperationIdentifier{
+							Index: int64(0),
+						},
+						Type:    "PAYMENT",
+						Account: validAccount,
+						Amount:  validAmount,
+					},
+					{
+						OperationIdentifier: &types.OperationIdentifier{
+							Index: int64(1),
+						},
+						RelatedOperations: []*types.OperationIdentifier{
+							{Index: int64(0)},
+						},
+						Type:    "PAYMENT",
+						Account: &types.AccountIdentifier{Address: "addr 2"},
+						Amount:  validAmount,
+					},
+				},
+				AccountIdentifierSigners: []*types.AccountIdentifier{
+					validAccount,
+					validAccount,
+				},
+				Metadata: map[string]interface{}{
+					"extra": "stuff",
+				},
+			},
+			signed: true,
+			err:    ErrAccountArrayDuplicateAccount,
 		},
 		"nil response": {
 			err: ErrConstructionParseResponseIsNil,
@@ -314,6 +356,37 @@ func TestConstructionParseResponse(t *testing.T) {
 			},
 			signed: true,
 			err:    ErrConstructionParseResponseSignersEmptyOnSignedTx,
+		},
+		"empty account identifier signer": {
+			response: &types.ConstructionParseResponse{
+				Operations: []*types.Operation{
+					{
+						OperationIdentifier: &types.OperationIdentifier{
+							Index: int64(0),
+						},
+						Type:    "PAYMENT",
+						Account: validAccount,
+						Amount:  validAmount,
+					},
+					{
+						OperationIdentifier: &types.OperationIdentifier{
+							Index: int64(1),
+						},
+						RelatedOperations: []*types.OperationIdentifier{
+							{Index: int64(0)},
+						},
+						Type:    "PAYMENT",
+						Account: validAccount,
+						Amount:  validAmount,
+					},
+				},
+				AccountIdentifierSigners: []*types.AccountIdentifier{{}},
+				Metadata: map[string]interface{}{
+					"extra": "stuff",
+				},
+			},
+			signed: true,
+			err:    ErrAccountAddrMissing,
 		},
 		"invalid signer unsigned": {
 			response: &types.ConstructionParseResponse{

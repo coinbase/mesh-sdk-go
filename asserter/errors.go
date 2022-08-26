@@ -489,6 +489,16 @@ var (
 	}
 )
 
+// Util Errors
+var (
+	ErrStringArrayEmpty             = errors.New("string array is empty")
+	ErrStringArrayEmptyString       = errors.New("empty string exists in string array")
+	ErrStringArrayDuplicateString   = errors.New("duplicate string exists in string array")
+	ErrAccountArrayEmpty            = errors.New("account array is empty")
+	ErrAccountArrayInvalidAccount   = errors.New("invalid account exists in account array")
+	ErrAccountArrayDuplicateAccount = errors.New("duplicate account exists in account array")
+)
+
 // Err takes an error as an argument and returns
 // whether or not the error is one thrown by the asserter
 // along with the specific source of the error

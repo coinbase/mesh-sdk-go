@@ -25,17 +25,26 @@ import (
 // are non-empty strings and not duplicates.
 func StringArray(arrName string, arr []string) error {
 	if len(arr) == 0 {
-		return fmt.Errorf("no %s found", arrName)
+		return fmt.Errorf("string array %s is empty: %w", arrName, ErrStringArrayEmpty)
 	}
 
 	parsed := map[string]struct{}{}
 	for _, s := range arr {
 		if s == "" {
-			return fmt.Errorf("%s has an empty string", arrName)
+			return fmt.Errorf(
+				"string array %s has an empty string: %w",
+				arrName,
+				ErrStringArrayEmptyString,
+			)
 		}
 
 		if _, ok := parsed[s]; ok {
-			return fmt.Errorf("%s contains a duplicate %s", arrName, s)
+			return fmt.Errorf(
+				"string array %s contains a duplicate %s: %w",
+				arrName,
+				s,
+				ErrStringArrayDuplicateString,
+			)
 		}
 
 		parsed[s] = struct{}{}
@@ -48,20 +57,25 @@ func StringArray(arrName string, arr []string) error {
 // are valid and not duplicates.
 func AccountArray(arrName string, arr []*types.AccountIdentifier) error {
 	if len(arr) == 0 {
-		return fmt.Errorf("no %s found", arrName)
+		return fmt.Errorf("account array %s is empty: %w", arrName, ErrAccountArrayEmpty)
 	}
 
 	parsed := map[string]struct{}{}
 	for _, s := range arr {
 		if err := AccountIdentifier(s); err != nil {
-			return fmt.Errorf("%s has an invalid account identifier", arrName)
+			return fmt.Errorf(
+				"account array %s has an invalid account identifier: %w",
+				arrName,
+				ErrAccountArrayInvalidAccount,
+			)
 		}
 
 		if _, ok := parsed[types.Hash(s)]; ok {
 			return fmt.Errorf(
-				"%s contains a duplicate account identifier %s",
+				"account array %s contains a duplicate account identifier %s: %w",
 				arrName,
 				types.PrintStruct(s),
+				ErrAccountArrayDuplicateAccount,
 			)
 		}
 
