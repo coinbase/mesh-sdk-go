@@ -20,7 +20,7 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
-// SubNetworkIdentifier asserts a types.SubNetworkIdentifer is valid (if not nil).
+// SubNetworkIdentifier asserts a types.SubNetworkIdentifier is valid (if not nil).
 func SubNetworkIdentifier(subNetworkIdentifier *types.SubNetworkIdentifier) error {
 	if subNetworkIdentifier == nil {
 		return nil
@@ -107,25 +107,41 @@ func NetworkStatusResponse(response *types.NetworkStatusResponse) error {
 	}
 
 	if err := BlockIdentifier(response.CurrentBlockIdentifier); err != nil {
-		return err
+		return fmt.Errorf(
+			"current block identifier %s is invalid: %w",
+			types.PrintStruct(response.CurrentBlockIdentifier),
+			err,
+		)
 	}
 
 	if err := Timestamp(response.CurrentBlockTimestamp); err != nil {
-		return err
+		return fmt.Errorf(
+			"current block timestamp %d is invalid: %w",
+			response.CurrentBlockTimestamp,
+			err,
+		)
 	}
 
 	if err := BlockIdentifier(response.GenesisBlockIdentifier); err != nil {
-		return err
+		return fmt.Errorf(
+			"genesis block identifier %s is invalid: %w",
+			types.PrintStruct(response.GenesisBlockIdentifier),
+			err,
+		)
 	}
 
 	for _, peer := range response.Peers {
 		if err := Peer(peer); err != nil {
-			return err
+			return fmt.Errorf("peer %s is invalid: %w", types.PrintStruct(peer), err)
 		}
 	}
 
 	if err := SyncStatus(response.SyncStatus); err != nil {
-		return err
+		return fmt.Errorf(
+			"sync status %s is invalid: %w",
+			types.PrintStruct(response.SyncStatus),
+			err,
+		)
 	}
 
 	return nil
@@ -193,7 +209,7 @@ func Errors(rosettaErrors []*types.Error) error {
 
 	for _, rosettaError := range rosettaErrors {
 		if err := Error(rosettaError); err != nil {
-			return err
+			return fmt.Errorf("error %s is invalid: %w", types.PrintStruct(rosettaError), err)
 		}
 
 		// Error.Details should not be populated
@@ -215,35 +231,50 @@ func Errors(rosettaErrors []*types.Error) error {
 
 // BalanceExemptions ensures []*types.BalanceExemption is valid.
 func BalanceExemptions(exemptions []*types.BalanceExemption) error {
-	for i, exemption := range exemptions {
+	for _, exemption := range exemptions {
 		if exemption == nil {
-			return fmt.Errorf("%w (index %d)", ErrBalanceExemptionIsNil, i)
+			return fmt.Errorf(
+				"balance exemption %s is invalid: %w",
+				types.PrintStruct(exemption),
+				ErrBalanceExemptionIsNil,
+			)
 		}
 
 		switch exemption.ExemptionType {
 		case types.BalanceLessOrEqual, types.BalanceGreaterOrEqual, types.BalanceDynamic:
 		default:
 			return fmt.Errorf(
-				"%w (index %d): %s",
+				"balance exemption type %s is invalid: %w",
+				types.PrintStruct(exemption.ExemptionType),
 				ErrBalanceExemptionTypeInvalid,
-				i,
-				exemption.ExemptionType,
 			)
 		}
 
 		if exemption.Currency == nil && exemption.SubAccountAddress == nil {
-			return fmt.Errorf("%w (index %d)", ErrBalanceExemptionMissingSubject, i)
+			return fmt.Errorf(
+				"balance exemption %s is invalid: %w",
+				types.PrintStruct(exemption),
+				ErrBalanceExemptionMissingSubject,
+			)
 		}
 
 		if exemption.Currency != nil {
 			if err := Currency(exemption.Currency); err != nil {
-				return fmt.Errorf("%w (index %d)", err, i)
+				return fmt.Errorf(
+					"balance exemption currency %s is invalid: %w",
+					types.PrintStruct(exemption.Currency),
+					err,
+				)
 			}
 		}
 
 		if exemption.SubAccountAddress != nil {
 			if len(*exemption.SubAccountAddress) == 0 {
-				return fmt.Errorf("%w (index %d)", ErrBalanceExemptionSubAccountAddressEmpty, i)
+				return fmt.Errorf(
+					"balance exemption sub account address %s is invalid: %w",
+					types.PrintStruct(exemption.SubAccountAddress),
+					ErrBalanceExemptionSubAccountAddressEmpty,
+				)
 			}
 		}
 	}
@@ -258,7 +289,7 @@ func CallMethods(methods []string) error {
 	}
 
 	if err := StringArray("Allow.CallMethods", methods); err != nil {
-		return err
+		return fmt.Errorf("methods %v are invalid: %w", methods, err)
 	}
 
 	return nil
@@ -271,23 +302,31 @@ func Allow(allowed *types.Allow) error {
 	}
 
 	if err := OperationStatuses(allowed.OperationStatuses); err != nil {
-		return err
+		return fmt.Errorf(
+			"operation statuses %s are invalid: %w",
+			types.PrintStruct(allowed.OperationStatuses),
+			err,
+		)
 	}
 
 	if err := OperationTypes(allowed.OperationTypes); err != nil {
-		return err
+		return fmt.Errorf("operation types %v are invalid: %w", allowed.OperationTypes, err)
 	}
 
 	if err := Errors(allowed.Errors); err != nil {
-		return err
+		return fmt.Errorf("errors are %s are invalid: %w", types.PrintStruct(allowed.Errors), err)
 	}
 
 	if err := CallMethods(allowed.CallMethods); err != nil {
-		return err
+		return fmt.Errorf("call methods %v are invalid: %w", allowed.CallMethods, err)
 	}
 
 	if err := BalanceExemptions(allowed.BalanceExemptions); err != nil {
-		return err
+		return fmt.Errorf(
+			"balance exemptions %s are invalid: %w",
+			types.PrintStruct(allowed.BalanceExemptions),
+			err,
+		)
 	}
 
 	if len(allowed.BalanceExemptions) > 0 && !allowed.HistoricalBalanceLookup {
@@ -296,9 +335,9 @@ func Allow(allowed *types.Allow) error {
 
 	if allowed.TimestampStartIndex != nil && *allowed.TimestampStartIndex < 0 {
 		return fmt.Errorf(
-			"%w: %d",
-			ErrTimestampStartIndexInvalid,
+			"timestamp start index %d is invalid: %w",
 			*allowed.TimestampStartIndex,
+			ErrTimestampStartIndexInvalid,
 		)
 	}
 
@@ -345,7 +384,11 @@ func NetworkListResponse(response *types.NetworkListResponse) error {
 	seen := make([]*types.NetworkIdentifier, 0)
 	for _, network := range response.NetworkIdentifiers {
 		if err := NetworkIdentifier(network); err != nil {
-			return err
+			return fmt.Errorf(
+				"network identifier %s is invalid: %w",
+				types.PrintStruct(network),
+				err,
+			)
 		}
 
 		if containsNetworkIdentifier(seen, network) {

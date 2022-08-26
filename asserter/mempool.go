@@ -15,6 +15,8 @@
 package asserter
 
 import (
+	"fmt"
+
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
@@ -27,7 +29,7 @@ func MempoolTransactions(
 ) error {
 	for _, t := range transactions {
 		if err := TransactionIdentifier(t); err != nil {
-			return err
+			return fmt.Errorf("transaction identifier %s is invalid: %w", types.PrintStruct(t), err)
 		}
 	}
 

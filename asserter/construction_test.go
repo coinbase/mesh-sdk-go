@@ -16,7 +16,6 @@ package asserter
 
 import (
 	"errors"
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -102,7 +101,7 @@ func TestConstructionMetadataResponse(t *testing.T) {
 					validAmount,
 				},
 			},
-			err: fmt.Errorf("currency %+v used multiple times", validAmount.Currency),
+			err: ErrCurrencyUsedMultipleTimes,
 		},
 		"nil response": {
 			err: ErrConstructionMetadataResponseIsNil,
@@ -208,7 +207,7 @@ func TestConstructionDeriveResponse(t *testing.T) {
 					"name": "hello",
 				},
 			},
-			err: ErrConstructionDeriveResponseAddrEmpty,
+			err: ErrAccountIsNil,
 		},
 	}
 
@@ -291,7 +290,7 @@ func TestConstructionParseResponse(t *testing.T) {
 				},
 			},
 			signed: true,
-			err:    ErrConstructionParseResponseDuplicateSigner,
+			err:    ErrAccountArrayDuplicateAccount,
 		},
 		"nil response": {
 			err: ErrConstructionParseResponseIsNil,
@@ -387,7 +386,7 @@ func TestConstructionParseResponse(t *testing.T) {
 				},
 			},
 			signed: true,
-			err:    ErrConstructionParseResponseSignerEmpty,
+			err:    ErrAccountAddrMissing,
 		},
 		"invalid signer unsigned": {
 			response: &types.ConstructionParseResponse{
@@ -564,7 +563,7 @@ func TestConstructionPayloadsResponse(t *testing.T) {
 					},
 				},
 			},
-			err: ErrSigningPayloadAddrEmpty,
+			err: ErrAccountIsNil,
 		},
 	}
 
@@ -659,7 +658,7 @@ func TestSigningPayload(t *testing.T) {
 			signingPayload: &types.SigningPayload{
 				Bytes: []byte("blah"),
 			},
-			err: ErrSigningPayloadAddrEmpty,
+			err: ErrAccountIsNil,
 		},
 		"zero signing payload": {
 			signingPayload: &types.SigningPayload{

@@ -15,7 +15,6 @@
 package asserter
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -48,7 +47,7 @@ func TestCoin(t *testing.T) {
 				},
 				Amount: validAmount,
 			},
-			err: errors.New("identifier is invalid"),
+			err: ErrCoinIdentifierNotSet,
 		},
 		"invalid amount": {
 			coin: &types.Coin{
@@ -59,7 +58,7 @@ func TestCoin(t *testing.T) {
 					Value: "100",
 				},
 			},
-			err: errors.New("amount is invalid"),
+			err: ErrAmountCurrencyIsNil,
 		},
 		"nil amount": {
 			coin: &types.Coin{
@@ -67,7 +66,7 @@ func TestCoin(t *testing.T) {
 					Identifier: "coin1",
 				},
 			},
-			err: errors.New("amount is invalid"),
+			err: ErrAmountValueMissing,
 		},
 	}
 

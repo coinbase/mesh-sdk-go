@@ -16,6 +16,7 @@ package asserter
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -238,7 +239,7 @@ func TestAllow(t *testing.T) {
 			allow: &types.Allow{
 				OperationStatuses: operationStatuses,
 			},
-			err: errors.New("no Allow.OperationTypes found"),
+			err: ErrStringArrayEmpty,
 		},
 		"duplicate call methods": {
 			allow: &types.Allow{
@@ -437,7 +438,11 @@ func TestNetworkListResponse(t *testing.T) {
 					network3,
 				},
 			},
-			err: ErrNetworkIdentifierBlockchainMissing,
+			err: fmt.Errorf(
+				"network identifier %s is invalid: %w",
+				types.PrintStruct(network3),
+				ErrNetworkIdentifierBlockchainMissing,
+			),
 		},
 	}
 
