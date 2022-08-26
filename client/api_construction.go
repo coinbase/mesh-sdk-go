@@ -70,18 +70,18 @@ func (a *ConstructionAPIService) ConstructionCombine(
 
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarPostBody, localVarHeaderParams)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("failed to prepare request: %w", err)
 	}
 
 	localVarHTTPResponse, err := a.client.callAPI(ctx, r)
 	if err != nil || localVarHTTPResponse == nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("failed to call API: %w", err)
 	}
 
 	localVarBody, err := _ioutil.ReadAll(localVarHTTPResponse.Body)
 	defer localVarHTTPResponse.Body.Close()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("failed to read response: %w", err)
 	}
 
 	switch localVarHTTPResponse.StatusCode {
@@ -89,7 +89,7 @@ func (a *ConstructionAPIService) ConstructionCombine(
 		var v types.ConstructionCombineResponse
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, fmt.Errorf("failed to decode when hit status code 200, response body %s: %w", string(localVarBody), err)
 		}
 
 		return &v, nil, nil
@@ -97,23 +97,23 @@ func (a *ConstructionAPIService) ConstructionCombine(
 		var v types.Error
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, fmt.Errorf("failed to decode when hit status code 500, response body %s: %w", string(localVarBody), err)
 		}
 
-		return nil, &v, fmt.Errorf("%+v", v)
+		return nil, &v, fmt.Errorf("error %+v", v)
 	case _nethttp.StatusBadGateway,
 		_nethttp.StatusServiceUnavailable,
 		_nethttp.StatusGatewayTimeout,
 		_nethttp.StatusRequestTimeout:
 		return nil, nil, fmt.Errorf(
-			"%w: code: %d body: %s",
-			ErrRetriable,
+			"status code %d, response body %s: %w",
 			localVarHTTPResponse.StatusCode,
 			string(localVarBody),
+			ErrRetriable,
 		)
 	default:
 		return nil, nil, fmt.Errorf(
-			"invalid status code: %d body: %s",
+			"invalid status code %d, response body: %s",
 			localVarHTTPResponse.StatusCode,
 			string(localVarBody),
 		)
@@ -156,18 +156,18 @@ func (a *ConstructionAPIService) ConstructionDerive(
 
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarPostBody, localVarHeaderParams)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("failed to prepare request: %w", err)
 	}
 
 	localVarHTTPResponse, err := a.client.callAPI(ctx, r)
 	if err != nil || localVarHTTPResponse == nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("failed to call API: %w", err)
 	}
 
 	localVarBody, err := _ioutil.ReadAll(localVarHTTPResponse.Body)
 	defer localVarHTTPResponse.Body.Close()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("failed to read response: %w", err)
 	}
 
 	switch localVarHTTPResponse.StatusCode {
@@ -175,7 +175,7 @@ func (a *ConstructionAPIService) ConstructionDerive(
 		var v types.ConstructionDeriveResponse
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, fmt.Errorf("failed to decode when hit status code 200, response body %s: %w", string(localVarBody), err)
 		}
 
 		return &v, nil, nil
@@ -183,23 +183,23 @@ func (a *ConstructionAPIService) ConstructionDerive(
 		var v types.Error
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, fmt.Errorf("failed to decode when hit status code 500, response body %s: %w", string(localVarBody), err)
 		}
 
-		return nil, &v, fmt.Errorf("%+v", v)
+		return nil, &v, fmt.Errorf("error %+v", v)
 	case _nethttp.StatusBadGateway,
 		_nethttp.StatusServiceUnavailable,
 		_nethttp.StatusGatewayTimeout,
 		_nethttp.StatusRequestTimeout:
 		return nil, nil, fmt.Errorf(
-			"%w: code: %d body: %s",
-			ErrRetriable,
+			"status code %d, response body %s: %w",
 			localVarHTTPResponse.StatusCode,
 			string(localVarBody),
+			ErrRetriable,
 		)
 	default:
 		return nil, nil, fmt.Errorf(
-			"invalid status code: %d body: %s",
+			"invalid status code %d, response body: %s",
 			localVarHTTPResponse.StatusCode,
 			string(localVarBody),
 		)
@@ -242,18 +242,18 @@ func (a *ConstructionAPIService) ConstructionHash(
 
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarPostBody, localVarHeaderParams)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("failed to prepare request: %w", err)
 	}
 
 	localVarHTTPResponse, err := a.client.callAPI(ctx, r)
 	if err != nil || localVarHTTPResponse == nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("failed to call API: %w", err)
 	}
 
 	localVarBody, err := _ioutil.ReadAll(localVarHTTPResponse.Body)
 	defer localVarHTTPResponse.Body.Close()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("failed to read response: %w", err)
 	}
 
 	switch localVarHTTPResponse.StatusCode {
@@ -261,7 +261,7 @@ func (a *ConstructionAPIService) ConstructionHash(
 		var v types.TransactionIdentifierResponse
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, fmt.Errorf("failed to decode when hit status code 200, response body %s: %w", string(localVarBody), err)
 		}
 
 		return &v, nil, nil
@@ -269,23 +269,23 @@ func (a *ConstructionAPIService) ConstructionHash(
 		var v types.Error
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, fmt.Errorf("failed to decode when hit status code 500, response body %s: %w", string(localVarBody), err)
 		}
 
-		return nil, &v, fmt.Errorf("%+v", v)
+		return nil, &v, fmt.Errorf("error %+v", v)
 	case _nethttp.StatusBadGateway,
 		_nethttp.StatusServiceUnavailable,
 		_nethttp.StatusGatewayTimeout,
 		_nethttp.StatusRequestTimeout:
 		return nil, nil, fmt.Errorf(
-			"%w: code: %d body: %s",
-			ErrRetriable,
+			"status code %d, response body %s: %w",
 			localVarHTTPResponse.StatusCode,
 			string(localVarBody),
+			ErrRetriable,
 		)
 	default:
 		return nil, nil, fmt.Errorf(
-			"invalid status code: %d body: %s",
+			"invalid status code %d, response body: %s",
 			localVarHTTPResponse.StatusCode,
 			string(localVarBody),
 		)
@@ -335,18 +335,18 @@ func (a *ConstructionAPIService) ConstructionMetadata(
 
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarPostBody, localVarHeaderParams)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("failed to prepare request: %w", err)
 	}
 
 	localVarHTTPResponse, err := a.client.callAPI(ctx, r)
 	if err != nil || localVarHTTPResponse == nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("failed to call API: %w", err)
 	}
 
 	localVarBody, err := _ioutil.ReadAll(localVarHTTPResponse.Body)
 	defer localVarHTTPResponse.Body.Close()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("failed to read response: %w", err)
 	}
 
 	switch localVarHTTPResponse.StatusCode {
@@ -354,7 +354,7 @@ func (a *ConstructionAPIService) ConstructionMetadata(
 		var v types.ConstructionMetadataResponse
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, fmt.Errorf("failed to decode when hit status code 200, response body %s: %w", string(localVarBody), err)
 		}
 
 		return &v, nil, nil
@@ -362,23 +362,23 @@ func (a *ConstructionAPIService) ConstructionMetadata(
 		var v types.Error
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, fmt.Errorf("failed to decode when hit status code 500, response body %s: %w", string(localVarBody), err)
 		}
 
-		return nil, &v, fmt.Errorf("%+v", v)
+		return nil, &v, fmt.Errorf("error %+v", v)
 	case _nethttp.StatusBadGateway,
 		_nethttp.StatusServiceUnavailable,
 		_nethttp.StatusGatewayTimeout,
 		_nethttp.StatusRequestTimeout:
 		return nil, nil, fmt.Errorf(
-			"%w: code: %d body: %s",
-			ErrRetriable,
+			"status code %d, response body %s: %w",
 			localVarHTTPResponse.StatusCode,
 			string(localVarBody),
+			ErrRetriable,
 		)
 	default:
 		return nil, nil, fmt.Errorf(
-			"invalid status code: %d body: %s",
+			"invalid status code %d, response body %s",
 			localVarHTTPResponse.StatusCode,
 			string(localVarBody),
 		)
@@ -422,18 +422,18 @@ func (a *ConstructionAPIService) ConstructionParse(
 
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarPostBody, localVarHeaderParams)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("failed to prepare request: %w", err)
 	}
 
 	localVarHTTPResponse, err := a.client.callAPI(ctx, r)
 	if err != nil || localVarHTTPResponse == nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("failed to call API: %w", err)
 	}
 
 	localVarBody, err := _ioutil.ReadAll(localVarHTTPResponse.Body)
 	defer localVarHTTPResponse.Body.Close()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("failed to read response: %w", err)
 	}
 
 	switch localVarHTTPResponse.StatusCode {
@@ -441,7 +441,7 @@ func (a *ConstructionAPIService) ConstructionParse(
 		var v types.ConstructionParseResponse
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, fmt.Errorf("failed to decode when hit status code 200, response body %s: %w", string(localVarBody), err)
 		}
 
 		return &v, nil, nil
@@ -449,23 +449,23 @@ func (a *ConstructionAPIService) ConstructionParse(
 		var v types.Error
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, fmt.Errorf("failed to decode when hit status code 500, response body %s: %w", string(localVarBody), err)
 		}
 
-		return nil, &v, fmt.Errorf("%+v", v)
+		return nil, &v, fmt.Errorf("error %+v", v)
 	case _nethttp.StatusBadGateway,
 		_nethttp.StatusServiceUnavailable,
 		_nethttp.StatusGatewayTimeout,
 		_nethttp.StatusRequestTimeout:
 		return nil, nil, fmt.Errorf(
-			"%w: code: %d body: %s",
-			ErrRetriable,
+			"status code %d, response body %s: %w",
 			localVarHTTPResponse.StatusCode,
 			string(localVarBody),
+			ErrRetriable,
 		)
 	default:
 		return nil, nil, fmt.Errorf(
-			"invalid status code: %d body: %s",
+			"invalid status code %d, response body %s",
 			localVarHTTPResponse.StatusCode,
 			string(localVarBody),
 		)
@@ -514,18 +514,18 @@ func (a *ConstructionAPIService) ConstructionPayloads(
 
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarPostBody, localVarHeaderParams)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("failed to prepare request: %w", err)
 	}
 
 	localVarHTTPResponse, err := a.client.callAPI(ctx, r)
 	if err != nil || localVarHTTPResponse == nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("failed to call API: %w", err)
 	}
 
 	localVarBody, err := _ioutil.ReadAll(localVarHTTPResponse.Body)
 	defer localVarHTTPResponse.Body.Close()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("failed to read response: %w", err)
 	}
 
 	switch localVarHTTPResponse.StatusCode {
@@ -533,7 +533,7 @@ func (a *ConstructionAPIService) ConstructionPayloads(
 		var v types.ConstructionPayloadsResponse
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, fmt.Errorf("failed to decode when hit status code 200, response body %s: %w", string(localVarBody), err)
 		}
 
 		return &v, nil, nil
@@ -541,23 +541,23 @@ func (a *ConstructionAPIService) ConstructionPayloads(
 		var v types.Error
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, fmt.Errorf("failed to decode when hit status code 500, response body %s: %w", string(localVarBody), err)
 		}
 
-		return nil, &v, fmt.Errorf("%+v", v)
+		return nil, &v, fmt.Errorf("error %+v", v)
 	case _nethttp.StatusBadGateway,
 		_nethttp.StatusServiceUnavailable,
 		_nethttp.StatusGatewayTimeout,
 		_nethttp.StatusRequestTimeout:
 		return nil, nil, fmt.Errorf(
-			"%w: code: %d body: %s",
-			ErrRetriable,
+			"status code %d, response body %s: %w",
 			localVarHTTPResponse.StatusCode,
 			string(localVarBody),
+			ErrRetriable,
 		)
 	default:
 		return nil, nil, fmt.Errorf(
-			"invalid status code: %d body: %s",
+			"invalid status code %d, response body %s",
 			localVarHTTPResponse.StatusCode,
 			string(localVarBody),
 		)
@@ -604,18 +604,18 @@ func (a *ConstructionAPIService) ConstructionPreprocess(
 
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarPostBody, localVarHeaderParams)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("failed to prepare request: %w", err)
 	}
 
 	localVarHTTPResponse, err := a.client.callAPI(ctx, r)
 	if err != nil || localVarHTTPResponse == nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("failed to call API: %w", err)
 	}
 
 	localVarBody, err := _ioutil.ReadAll(localVarHTTPResponse.Body)
 	defer localVarHTTPResponse.Body.Close()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("failed to read response: %w", err)
 	}
 
 	switch localVarHTTPResponse.StatusCode {
@@ -623,7 +623,7 @@ func (a *ConstructionAPIService) ConstructionPreprocess(
 		var v types.ConstructionPreprocessResponse
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, fmt.Errorf("failed to decode when hit status code 200, response body %s: %w", string(localVarBody), err)
 		}
 
 		return &v, nil, nil
@@ -631,23 +631,23 @@ func (a *ConstructionAPIService) ConstructionPreprocess(
 		var v types.Error
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, fmt.Errorf("failed to decode when hit status code 500, response body %s: %w", string(localVarBody), err)
 		}
 
-		return nil, &v, fmt.Errorf("%+v", v)
+		return nil, &v, fmt.Errorf("error %+v", v)
 	case _nethttp.StatusBadGateway,
 		_nethttp.StatusServiceUnavailable,
 		_nethttp.StatusGatewayTimeout,
 		_nethttp.StatusRequestTimeout:
 		return nil, nil, fmt.Errorf(
-			"%w: code: %d body: %s",
-			ErrRetriable,
+			"status code %d, response body %s: %w",
 			localVarHTTPResponse.StatusCode,
 			string(localVarBody),
+			ErrRetriable,
 		)
 	default:
 		return nil, nil, fmt.Errorf(
-			"invalid status code: %d body: %s",
+			"invalid status code %d, response body %s",
 			localVarHTTPResponse.StatusCode,
 			string(localVarBody),
 		)
@@ -693,18 +693,18 @@ func (a *ConstructionAPIService) ConstructionSubmit(
 
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarPostBody, localVarHeaderParams)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("failed to prepare request: %w", err)
 	}
 
 	localVarHTTPResponse, err := a.client.callAPI(ctx, r)
 	if err != nil || localVarHTTPResponse == nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("failed to call API: %w", err)
 	}
 
 	localVarBody, err := _ioutil.ReadAll(localVarHTTPResponse.Body)
 	defer localVarHTTPResponse.Body.Close()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("failed to read response: %w", err)
 	}
 
 	switch localVarHTTPResponse.StatusCode {
@@ -712,7 +712,7 @@ func (a *ConstructionAPIService) ConstructionSubmit(
 		var v types.TransactionIdentifierResponse
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, fmt.Errorf("failed to decode when hit status code 200, response body %s: %w", string(localVarBody), err)
 		}
 
 		return &v, nil, nil
@@ -720,23 +720,23 @@ func (a *ConstructionAPIService) ConstructionSubmit(
 		var v types.Error
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, fmt.Errorf("failed to decode when hit status code 500, response body %s: %w", string(localVarBody), err)
 		}
 
-		return nil, &v, fmt.Errorf("%+v", v)
+		return nil, &v, fmt.Errorf("error %+v", v)
 	case _nethttp.StatusBadGateway,
 		_nethttp.StatusServiceUnavailable,
 		_nethttp.StatusGatewayTimeout,
 		_nethttp.StatusRequestTimeout:
 		return nil, nil, fmt.Errorf(
-			"%w: code: %d body: %s",
-			ErrRetriable,
+			"status code %d, repsonse body %s: %w",
 			localVarHTTPResponse.StatusCode,
 			string(localVarBody),
+			ErrRetriable,
 		)
 	default:
 		return nil, nil, fmt.Errorf(
-			"invalid status code: %d body: %s",
+			"invalid status code %d, response body %s",
 			localVarHTTPResponse.StatusCode,
 			string(localVarBody),
 		)

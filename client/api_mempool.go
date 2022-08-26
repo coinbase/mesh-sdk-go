@@ -68,18 +68,18 @@ func (a *MempoolAPIService) Mempool(
 
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarPostBody, localVarHeaderParams)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("failed to prepare request: %w", err)
 	}
 
 	localVarHTTPResponse, err := a.client.callAPI(ctx, r)
 	if err != nil || localVarHTTPResponse == nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("failed to call API: %w", err)
 	}
 
 	localVarBody, err := _ioutil.ReadAll(localVarHTTPResponse.Body)
 	defer localVarHTTPResponse.Body.Close()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("failed to read response: %w", err)
 	}
 
 	switch localVarHTTPResponse.StatusCode {
@@ -87,7 +87,7 @@ func (a *MempoolAPIService) Mempool(
 		var v types.MempoolResponse
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, fmt.Errorf("failed to decode when hit status code 200, response body %s: %w", string(localVarBody), err)
 		}
 
 		return &v, nil, nil
@@ -95,23 +95,23 @@ func (a *MempoolAPIService) Mempool(
 		var v types.Error
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, fmt.Errorf("failed to decode when hit status code 500, response body %s: %w", string(localVarBody), err)
 		}
 
-		return nil, &v, fmt.Errorf("%+v", v)
+		return nil, &v, fmt.Errorf("error %+v", v)
 	case _nethttp.StatusBadGateway,
 		_nethttp.StatusServiceUnavailable,
 		_nethttp.StatusGatewayTimeout,
 		_nethttp.StatusRequestTimeout:
 		return nil, nil, fmt.Errorf(
-			"%w: code: %d body: %s",
-			ErrRetriable,
+			"status code %d, response body %s: %w",
 			localVarHTTPResponse.StatusCode,
 			string(localVarBody),
+			ErrRetriable,
 		)
 	default:
 		return nil, nil, fmt.Errorf(
-			"invalid status code: %d body: %s",
+			"invalid status code %d, response body %s",
 			localVarHTTPResponse.StatusCode,
 			string(localVarBody),
 		)
@@ -159,18 +159,18 @@ func (a *MempoolAPIService) MempoolTransaction(
 
 	r, err := a.client.prepareRequest(ctx, localVarPath, localVarPostBody, localVarHeaderParams)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("failed to prepare request: %w", err)
 	}
 
 	localVarHTTPResponse, err := a.client.callAPI(ctx, r)
 	if err != nil || localVarHTTPResponse == nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("failed to call API: %w", err)
 	}
 
 	localVarBody, err := _ioutil.ReadAll(localVarHTTPResponse.Body)
 	defer localVarHTTPResponse.Body.Close()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("failed to read response: %w", err)
 	}
 
 	switch localVarHTTPResponse.StatusCode {
@@ -178,7 +178,7 @@ func (a *MempoolAPIService) MempoolTransaction(
 		var v types.MempoolTransactionResponse
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, fmt.Errorf("failed to decode when hit status code 200, response body %s: %w", string(localVarBody), err)
 		}
 
 		return &v, nil, nil
@@ -186,23 +186,23 @@ func (a *MempoolAPIService) MempoolTransaction(
 		var v types.Error
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, fmt.Errorf("failed to decode when hit status code 500, response body %s: %w", string(localVarBody), err)
 		}
 
-		return nil, &v, fmt.Errorf("%+v", v)
+		return nil, &v, fmt.Errorf("error %+v", v)
 	case _nethttp.StatusBadGateway,
 		_nethttp.StatusServiceUnavailable,
 		_nethttp.StatusGatewayTimeout,
 		_nethttp.StatusRequestTimeout:
 		return nil, nil, fmt.Errorf(
-			"%w: code: %d body: %s",
-			ErrRetriable,
+			"status code %d, response body %s: %w",
 			localVarHTTPResponse.StatusCode,
 			string(localVarBody),
+			ErrRetriable,
 		)
 	default:
 		return nil, nil, fmt.Errorf(
-			"invalid status code: %d body: %s",
+			"invalid status code %d, response body %s",
 			localVarHTTPResponse.StatusCode,
 			string(localVarBody),
 		)
