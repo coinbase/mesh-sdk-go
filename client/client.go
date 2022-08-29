@@ -151,7 +151,7 @@ func (c *APIClient) callAPI(ctx context.Context, request *http.Request) (*http.R
 		log.Printf("\n%s\n", string(dump))
 	}
 
-	return resp, err
+	return resp, nil
 }
 
 // ChangeBasePath changes base path to allow switching to mocks
@@ -185,14 +185,14 @@ func (c *APIClient) prepareRequest(
 
 		body, err = setBody(postBody, contentType)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to set body: %w", err)
 		}
 	}
 
 	// Setup path and query parameters
 	url, err := url.Parse(path)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse path %s: %w", path, err)
 	}
 
 	// Override request host, if applicable
@@ -208,7 +208,7 @@ func (c *APIClient) prepareRequest(
 	// Generate a new request
 	localVarRequest, err = http.NewRequest(http.MethodPost, url.String(), body)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to generate new request: %w", err)
 	}
 
 	// add header parameters, if any
@@ -247,7 +247,7 @@ func (c *APIClient) decode(v interface{}, b []byte, contentType string) (err err
 
 	if jsonCheck.MatchString(contentType) {
 		if err = json.Unmarshal(b, v); err != nil {
-			return err
+			return fmt.Errorf("failed to unmarshal: %w", err)
 		}
 		return nil
 	}
@@ -278,8 +278,7 @@ func setBody(body interface{}, contentType string) (bodyBuf *bytes.Buffer, err e
 	}
 
 	if bodyBuf.Len() == 0 {
-		err = fmt.Errorf("invalid body type %s", contentType)
-		return nil, err
+		return nil, fmt.Errorf("invalid body type %s", contentType)
 	}
 	return bodyBuf, nil
 }
