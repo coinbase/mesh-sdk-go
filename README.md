@@ -187,10 +187,11 @@ Helpful commands for development:
 make deps
 ```
 
-### Generate Types and Helpers
+### Generate Types, Client and Server
 ```
 make gen
 ```
+If you want to modify client and server, please modify files under `templates/client` and `templates/server` then run `make gen`
 
 ### Run Tests
 ```
