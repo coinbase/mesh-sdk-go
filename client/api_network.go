@@ -87,7 +87,11 @@ func (a *NetworkAPIService) NetworkList(
 		var v types.NetworkListResponse
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to decode when hit status code 200, response body %s: %w", string(localVarBody), err)
+			return nil, nil, fmt.Errorf(
+				"failed to decode when hit status code 200, response body %s: %w",
+				string(localVarBody),
+				err,
+			)
 		}
 
 		return &v, nil, nil
@@ -95,7 +99,11 @@ func (a *NetworkAPIService) NetworkList(
 		var v types.Error
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to decode when hit status code 500, response body %s: %w", string(localVarBody), err)
+			return nil, nil, fmt.Errorf(
+				"failed to decode when hit status code 500, response body %s: %w",
+				string(localVarBody),
+				err,
+			)
 		}
 
 		return nil, &v, fmt.Errorf("error %+v", v)
@@ -175,7 +183,11 @@ func (a *NetworkAPIService) NetworkOptions(
 		var v types.NetworkOptionsResponse
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to decode when hit status code 200, response body %s: %w", string(localVarBody), err)
+			return nil, nil, fmt.Errorf(
+				"failed to decode when hit status code 200, response body %s: %w",
+				string(localVarBody),
+				err,
+			)
 		}
 
 		return &v, nil, nil
@@ -183,7 +195,11 @@ func (a *NetworkAPIService) NetworkOptions(
 		var v types.Error
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to decode when hit status code 500, response body %s: %w", string(localVarBody), err)
+			return nil, nil, fmt.Errorf(
+				"failed to decode when hit status code 500, response body %s: %w",
+				string(localVarBody),
+				err,
+			)
 		}
 
 		return nil, &v, fmt.Errorf("error %+v", v)
@@ -261,7 +277,11 @@ func (a *NetworkAPIService) NetworkStatus(
 		var v types.NetworkStatusResponse
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to decode when hit status code 200, response body %s: %w", string(localVarBody), err)
+			return nil, nil, fmt.Errorf(
+				"failed to decode when hit status code 200, response body %s: %w",
+				string(localVarBody),
+				err,
+			)
 		}
 
 		return &v, nil, nil
@@ -269,7 +289,11 @@ func (a *NetworkAPIService) NetworkStatus(
 		var v types.Error
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to decode when hit status code 500, response body %s: %w", string(localVarBody), err)
+			return nil, nil, fmt.Errorf(
+				"failed to decode when hit status code 500, response body %s: %w",
+				string(localVarBody),
+				err,
+			)
 		}
 
 		return nil, &v, fmt.Errorf("error %+v", v)

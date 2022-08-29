@@ -92,7 +92,11 @@ func (a *SearchAPIService) SearchTransactions(
 		var v types.SearchTransactionsResponse
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to decode when hit status code 200, response body %s: %w", string(localVarBody), err)
+			return nil, nil, fmt.Errorf(
+				"failed to decode when hit status code 200, response body %s: %w",
+				string(localVarBody),
+				err,
+			)
 		}
 
 		return &v, nil, nil
@@ -100,7 +104,11 @@ func (a *SearchAPIService) SearchTransactions(
 		var v types.Error
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to decode when hit status code 500, response body %s: %w", string(localVarBody), err)
+			return nil, nil, fmt.Errorf(
+				"failed to decode when hit status code 500, response body %s: %w",
+				string(localVarBody),
+				err,
+			)
 		}
 
 		return nil, &v, fmt.Errorf("error %+v", v)

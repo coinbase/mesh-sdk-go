@@ -89,7 +89,11 @@ func (a *ConstructionAPIService) ConstructionCombine(
 		var v types.ConstructionCombineResponse
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to decode when hit status code 200, response body %s: %w", string(localVarBody), err)
+			return nil, nil, fmt.Errorf(
+				"failed to decode when hit status code 200, response body %s: %w",
+				string(localVarBody),
+				err,
+			)
 		}
 
 		return &v, nil, nil
@@ -97,7 +101,11 @@ func (a *ConstructionAPIService) ConstructionCombine(
 		var v types.Error
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to decode when hit status code 500, response body %s: %w", string(localVarBody), err)
+			return nil, nil, fmt.Errorf(
+				"failed to decode when hit status code 500, response body %s: %w",
+				string(localVarBody),
+				err,
+			)
 		}
 
 		return nil, &v, fmt.Errorf("error %+v", v)
@@ -113,7 +121,7 @@ func (a *ConstructionAPIService) ConstructionCombine(
 		)
 	default:
 		return nil, nil, fmt.Errorf(
-			"invalid status code %d, response body: %s",
+			"invalid status code %d, response body %s",
 			localVarHTTPResponse.StatusCode,
 			string(localVarBody),
 		)
@@ -175,7 +183,11 @@ func (a *ConstructionAPIService) ConstructionDerive(
 		var v types.ConstructionDeriveResponse
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to decode when hit status code 200, response body %s: %w", string(localVarBody), err)
+			return nil, nil, fmt.Errorf(
+				"failed to decode when hit status code 200, response body %s: %w",
+				string(localVarBody),
+				err,
+			)
 		}
 
 		return &v, nil, nil
@@ -183,7 +195,11 @@ func (a *ConstructionAPIService) ConstructionDerive(
 		var v types.Error
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to decode when hit status code 500, response body %s: %w", string(localVarBody), err)
+			return nil, nil, fmt.Errorf(
+				"failed to decode when hit status code 500, response body %s: %w",
+				string(localVarBody),
+				err,
+			)
 		}
 
 		return nil, &v, fmt.Errorf("error %+v", v)
@@ -199,7 +215,7 @@ func (a *ConstructionAPIService) ConstructionDerive(
 		)
 	default:
 		return nil, nil, fmt.Errorf(
-			"invalid status code %d, response body: %s",
+			"invalid status code %d, response body %s",
 			localVarHTTPResponse.StatusCode,
 			string(localVarBody),
 		)
@@ -261,7 +277,11 @@ func (a *ConstructionAPIService) ConstructionHash(
 		var v types.TransactionIdentifierResponse
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to decode when hit status code 200, response body %s: %w", string(localVarBody), err)
+			return nil, nil, fmt.Errorf(
+				"failed to decode when hit status code 200, response body %s: %w",
+				string(localVarBody),
+				err,
+			)
 		}
 
 		return &v, nil, nil
@@ -269,7 +289,11 @@ func (a *ConstructionAPIService) ConstructionHash(
 		var v types.Error
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to decode when hit status code 500, response body %s: %w", string(localVarBody), err)
+			return nil, nil, fmt.Errorf(
+				"failed to decode when hit status code 500, response body %s: %w",
+				string(localVarBody),
+				err,
+			)
 		}
 
 		return nil, &v, fmt.Errorf("error %+v", v)
@@ -285,7 +309,7 @@ func (a *ConstructionAPIService) ConstructionHash(
 		)
 	default:
 		return nil, nil, fmt.Errorf(
-			"invalid status code %d, response body: %s",
+			"invalid status code %d, response body %s",
 			localVarHTTPResponse.StatusCode,
 			string(localVarBody),
 		)
@@ -354,7 +378,11 @@ func (a *ConstructionAPIService) ConstructionMetadata(
 		var v types.ConstructionMetadataResponse
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to decode when hit status code 200, response body %s: %w", string(localVarBody), err)
+			return nil, nil, fmt.Errorf(
+				"failed to decode when hit status code 200, response body %s: %w",
+				string(localVarBody),
+				err,
+			)
 		}
 
 		return &v, nil, nil
@@ -362,7 +390,11 @@ func (a *ConstructionAPIService) ConstructionMetadata(
 		var v types.Error
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to decode when hit status code 500, response body %s: %w", string(localVarBody), err)
+			return nil, nil, fmt.Errorf(
+				"failed to decode when hit status code 500, response body %s: %w",
+				string(localVarBody),
+				err,
+			)
 		}
 
 		return nil, &v, fmt.Errorf("error %+v", v)
@@ -441,7 +473,11 @@ func (a *ConstructionAPIService) ConstructionParse(
 		var v types.ConstructionParseResponse
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to decode when hit status code 200, response body %s: %w", string(localVarBody), err)
+			return nil, nil, fmt.Errorf(
+				"failed to decode when hit status code 200, response body %s: %w",
+				string(localVarBody),
+				err,
+			)
 		}
 
 		return &v, nil, nil
@@ -449,7 +485,11 @@ func (a *ConstructionAPIService) ConstructionParse(
 		var v types.Error
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to decode when hit status code 500, response body %s: %w", string(localVarBody), err)
+			return nil, nil, fmt.Errorf(
+				"failed to decode when hit status code 500, response body %s: %w",
+				string(localVarBody),
+				err,
+			)
 		}
 
 		return nil, &v, fmt.Errorf("error %+v", v)
@@ -533,7 +573,11 @@ func (a *ConstructionAPIService) ConstructionPayloads(
 		var v types.ConstructionPayloadsResponse
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to decode when hit status code 200, response body %s: %w", string(localVarBody), err)
+			return nil, nil, fmt.Errorf(
+				"failed to decode when hit status code 200, response body %s: %w",
+				string(localVarBody),
+				err,
+			)
 		}
 
 		return &v, nil, nil
@@ -541,7 +585,11 @@ func (a *ConstructionAPIService) ConstructionPayloads(
 		var v types.Error
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to decode when hit status code 500, response body %s: %w", string(localVarBody), err)
+			return nil, nil, fmt.Errorf(
+				"failed to decode when hit status code 500, response body %s: %w",
+				string(localVarBody),
+				err,
+			)
 		}
 
 		return nil, &v, fmt.Errorf("error %+v", v)
@@ -623,7 +671,11 @@ func (a *ConstructionAPIService) ConstructionPreprocess(
 		var v types.ConstructionPreprocessResponse
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to decode when hit status code 200, response body %s: %w", string(localVarBody), err)
+			return nil, nil, fmt.Errorf(
+				"failed to decode when hit status code 200, response body %s: %w",
+				string(localVarBody),
+				err,
+			)
 		}
 
 		return &v, nil, nil
@@ -631,7 +683,11 @@ func (a *ConstructionAPIService) ConstructionPreprocess(
 		var v types.Error
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to decode when hit status code 500, response body %s: %w", string(localVarBody), err)
+			return nil, nil, fmt.Errorf(
+				"failed to decode when hit status code 500, response body %s: %w",
+				string(localVarBody),
+				err,
+			)
 		}
 
 		return nil, &v, fmt.Errorf("error %+v", v)
@@ -712,7 +768,11 @@ func (a *ConstructionAPIService) ConstructionSubmit(
 		var v types.TransactionIdentifierResponse
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to decode when hit status code 200, response body %s: %w", string(localVarBody), err)
+			return nil, nil, fmt.Errorf(
+				"failed to decode when hit status code 200, response body %s: %w",
+				string(localVarBody),
+				err,
+			)
 		}
 
 		return &v, nil, nil
@@ -720,7 +780,11 @@ func (a *ConstructionAPIService) ConstructionSubmit(
 		var v types.Error
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to decode when hit status code 500, response body %s: %w", string(localVarBody), err)
+			return nil, nil, fmt.Errorf(
+				"failed to decode when hit status code 500, response body %s: %w",
+				string(localVarBody),
+				err,
+			)
 		}
 
 		return nil, &v, fmt.Errorf("error %+v", v)
@@ -729,7 +793,7 @@ func (a *ConstructionAPIService) ConstructionSubmit(
 		_nethttp.StatusGatewayTimeout,
 		_nethttp.StatusRequestTimeout:
 		return nil, nil, fmt.Errorf(
-			"status code %d, repsonse body %s: %w",
+			"status code %d, response body %s: %w",
 			localVarHTTPResponse.StatusCode,
 			string(localVarBody),
 			ErrRetriable,

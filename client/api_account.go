@@ -97,7 +97,11 @@ func (a *AccountAPIService) AccountBalance(
 		var v types.AccountBalanceResponse
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to decode when hit status code 200, response body %s: %w", string(localVarBody), err)
+			return nil, nil, fmt.Errorf(
+				"failed to decode when hit status code 200, response body %s: %w",
+				string(localVarBody),
+				err,
+			)
 		}
 
 		return &v, nil, nil
@@ -105,7 +109,11 @@ func (a *AccountAPIService) AccountBalance(
 		var v types.Error
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to decode when hit status code 500, response body %s: %w", string(localVarBody), err)
+			return nil, nil, fmt.Errorf(
+				"failed to decode when hit status code 500, response body %s: %w",
+				string(localVarBody),
+				err,
+			)
 		}
 
 		return nil, &v, fmt.Errorf("error %+v", v)
@@ -192,7 +200,11 @@ func (a *AccountAPIService) AccountCoins(
 		var v types.AccountCoinsResponse
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to decode when hit status code 200, response body %s: %w", string(localVarBody), err)
+			return nil, nil, fmt.Errorf(
+				"failed to decode when hit status code 200, response body %s: %w",
+				string(localVarBody),
+				err,
+			)
 		}
 
 		return &v, nil, nil
@@ -200,7 +212,11 @@ func (a *AccountAPIService) AccountCoins(
 		var v types.Error
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to decode when hit status code 500, response body %s: %w", string(localVarBody), err)
+			return nil, nil, fmt.Errorf(
+				"failed to decode when hit status code 500, response body %s: %w",
+				string(localVarBody),
+				err,
+			)
 		}
 
 		return nil, &v, fmt.Errorf("error %+v", v)
@@ -216,7 +232,7 @@ func (a *AccountAPIService) AccountCoins(
 		)
 	default:
 		return nil, nil, fmt.Errorf(
-			"invalid status code %d, response body: %s",
+			"invalid status code %d, response body %s",
 			localVarHTTPResponse.StatusCode,
 			string(localVarBody),
 		)
