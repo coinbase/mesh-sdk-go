@@ -30,8 +30,6 @@ import (
 	"reflect"
 	"regexp"
 	"strings"
-
-	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
 var (
@@ -135,20 +133,20 @@ func (c *APIClient) callAPI(ctx context.Context, request *http.Request) (*http.R
 	if c.cfg.Debug {
 		dump, err := httputil.DumpRequestOut(request, true)
 		if err != nil {
-			return nil, fmt.Errorf("failed to dump request %s: %w", types.PrintStruct(request), err)
+			return nil, err
 		}
 		log.Printf("\n%s\n", string(dump))
 	}
 
 	resp, err := c.cfg.HTTPClient.Do(request.WithContext(ctx))
 	if err != nil {
-		return resp, fmt.Errorf("failed to send request %s: %w", types.PrintStruct(request), err)
+		return resp, err
 	}
 
 	if c.cfg.Debug {
 		dump, err := httputil.DumpResponse(resp, true)
 		if err != nil {
-			return resp, fmt.Errorf("failed to dump response %s: %w", types.PrintStruct(resp), err)
+			return resp, err
 		}
 		log.Printf("\n%s\n", string(dump))
 	}
