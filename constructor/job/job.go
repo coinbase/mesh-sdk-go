@@ -63,12 +63,20 @@ func (j *Job) CreateBroadcast() (*Broadcast, error) {
 		return nil, nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal operations of scenario %s: %w", scenario.Name, err)
+		return nil, fmt.Errorf(
+			"failed to unmarshal operations of scenario %s: %w",
+			scenario.Name,
+			err,
+		)
 	}
 
 	confirmationDepth, err := j.unmarshalNumber(scenario.Name, ConfirmationDepth)
 	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal confirmation depth of scenario %s: %w", scenario.Name, err)
+		return nil, fmt.Errorf(
+			"failed to unmarshal confirmation depth of scenario %s: %w",
+			scenario.Name,
+			err,
+		)
 	}
 
 	var network types.NetworkIdentifier
@@ -80,7 +88,11 @@ func (j *Job) CreateBroadcast() (*Broadcast, error) {
 	var metadata map[string]interface{}
 	err = j.unmarshalStruct(scenario.Name, PreprocessMetadata, &metadata)
 	if err != nil && !errors.Is(err, ErrVariableNotFound) {
-		return nil, fmt.Errorf("failed to unmarshal preprocess metadata of scenario %s: %w", scenario.Name, err)
+		return nil, fmt.Errorf(
+			"failed to unmarshal preprocess metadata of scenario %s: %w",
+			scenario.Name,
+			err,
+		)
 	}
 
 	dryRun, err := j.unmarshalBoolean(scenario.Name, DryRun)
@@ -154,7 +166,12 @@ func (j *Job) CheckComplete() bool {
 
 func (j *Job) getBroadcastScenario() (*Scenario, error) {
 	if j.Status != Broadcasting {
-		return nil, fmt.Errorf("job is in %s state instead of %s: %w", j.State, Broadcasting, ErrJobInWrongState)
+		return nil, fmt.Errorf(
+			"job is in %s state instead of %s: %w",
+			j.State,
+			Broadcasting,
+			ErrJobInWrongState,
+		)
 	}
 
 	broadcastIndex := j.Index - 1

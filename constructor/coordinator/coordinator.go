@@ -523,7 +523,11 @@ func (c *Coordinator) process( // nolint:gocognit
 		// the caller can debug their scripts.
 		executionErr.Log()
 
-		return -1, fmt.Errorf("unable to process job %s: %w", types.PrintStruct(j), executionErr.Err)
+		return -1, fmt.Errorf(
+			"unable to process job %s: %w",
+			types.PrintStruct(j),
+			executionErr.Err,
+		)
 	}
 
 	// Update job (or store for the first time)

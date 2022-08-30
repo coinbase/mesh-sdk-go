@@ -217,7 +217,11 @@ func (p *parser) parseAction(
 		}
 
 		if len(missingVariables) > 0 {
-			return nil, fmt.Errorf("the number of missing variables %v > 0: %w", missingVariables, ErrVariableUndefined)
+			return nil, fmt.Errorf(
+				"the number of missing variables %v > 0: %w",
+				missingVariables,
+				ErrVariableUndefined,
+			)
 		}
 
 		// Clean input if in a function or if using native syntax
@@ -272,7 +276,11 @@ func (p *parser) parseScenario(
 	}
 
 	if _, ok := scenarioNames[name]; ok {
-		return nil, false, fmt.Errorf("scenario name %s is incorrect: %w", name, ErrDuplicateScenarioName)
+		return nil, false, fmt.Errorf(
+			"scenario name %s is incorrect: %w",
+			name,
+			ErrDuplicateScenarioName,
+		)
 	}
 
 	actions := []*job.Action{}

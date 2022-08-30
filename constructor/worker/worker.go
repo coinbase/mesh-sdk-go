@@ -208,7 +208,11 @@ func (w *Worker) DeriveWorker(
 	}
 
 	if err := asserter.PublicKey(input.PublicKey); err != nil {
-		return "", fmt.Errorf("public key %s is invalid: %w", types.PrintStruct(input.PublicKey), err)
+		return "", fmt.Errorf(
+			"public key %s is invalid: %w",
+			types.PrintStruct(input.PublicKey),
+			err,
+		)
 	}
 
 	accountIdentifier, metadata, err := w.helper.Derive(
@@ -258,7 +262,11 @@ func (w *Worker) SaveAccountWorker(
 	}
 
 	if err := asserter.AccountIdentifier(input.AccountIdentifier); err != nil {
-		return fmt.Errorf("account identifier %s is invalid: %w", types.PrintStruct(input.AccountIdentifier), err)
+		return fmt.Errorf(
+			"account identifier %s is invalid: %w",
+			types.PrintStruct(input.AccountIdentifier),
+			err,
+		)
 	}
 
 	if err := w.helper.StoreKey(ctx, dbTx, input.AccountIdentifier, input.KeyPair); err != nil {
@@ -309,7 +317,11 @@ func MathWorker(rawInput string) (string, error) {
 	case job.Division:
 		result, err = types.DivideValues(input.LeftValue, input.RightValue)
 	default:
-		return "", fmt.Errorf("math operation %s is invalid: %w", input.Operation, ErrInputOperationIsNotSupported)
+		return "", fmt.Errorf(
+			"math operation %s is invalid: %w",
+			input.Operation,
+			ErrInputOperationIsNotSupported,
+		)
 	}
 	if err != nil {
 		return "", fmt.Errorf("failed to perform math operation: %w", err)
@@ -410,7 +422,12 @@ func (w *Worker) checkAccountCoins(
 ) (string, error) {
 	coins, err := w.helper.Coins(ctx, dbTx, account, input.MinimumBalance.Currency)
 	if err != nil {
-		return "", fmt.Errorf("failed to return coins of account identifier %s in currency %s: %w", types.PrintStruct(account), types.PrintStruct(input.MinimumBalance.Currency), err)
+		return "", fmt.Errorf(
+			"failed to return coins of account identifier %s in currency %s: %w",
+			types.PrintStruct(account),
+			types.PrintStruct(input.MinimumBalance.Currency),
+			err,
+		)
 	}
 
 	disallowedCoins := []string{}
@@ -425,7 +442,12 @@ func (w *Worker) checkAccountCoins(
 
 		diff, err := types.SubtractValues(coin.Amount.Value, input.MinimumBalance.Value)
 		if err != nil {
-			return "", fmt.Errorf("failed to subtract values %s - %s: %w", coin.Amount.Value, input.MinimumBalance.Value, err)
+			return "", fmt.Errorf(
+				"failed to subtract values %s - %s: %w",
+				coin.Amount.Value,
+				input.MinimumBalance.Value,
+				err,
+			)
 		}
 
 		bigIntDiff, err := types.BigInt(diff)
@@ -455,13 +477,23 @@ func (w *Worker) checkAccountBalance(
 ) (string, error) {
 	amount, err := w.helper.Balance(ctx, dbTx, account, input.MinimumBalance.Currency)
 	if err != nil {
-		return "", fmt.Errorf("failed to return balance of account identifier %s in currency %s: %w", types.PrintStruct(account), types.PrintStruct(input.MinimumBalance.Currency), err)
+		return "", fmt.Errorf(
+			"failed to return balance of account identifier %s in currency %s: %w",
+			types.PrintStruct(account),
+			types.PrintStruct(input.MinimumBalance.Currency),
+			err,
+		)
 	}
 
 	// look for amounts > min
 	diff, err := types.SubtractValues(amount.Value, input.MinimumBalance.Value)
 	if err != nil {
-		return "", fmt.Errorf("failed to subtract values %s - %s: %w", amount.Value, input.MinimumBalance.Value, err)
+		return "", fmt.Errorf(
+			"failed to subtract values %s - %s: %w",
+			amount.Value,
+			input.MinimumBalance.Value,
+			err,
+		)
 	}
 
 	bigIntDiff, err := types.BigInt(diff)
@@ -542,7 +574,12 @@ func shouldCreateRandomAccount(
 		utils.OneHundredInt,
 	)
 	if err != nil {
-		return false, fmt.Errorf("failed to return random number in [%d-%d]: %w", utils.ZeroInt, utils.OneHundredInt, err)
+		return false, fmt.Errorf(
+			"failed to return random number in [%d-%d]: %w",
+			utils.ZeroInt,
+			utils.OneHundredInt,
+			err,
+		)
 	}
 
 	if rand.Int64() >= int64(input.CreateProbability) {
@@ -556,12 +593,20 @@ func shouldCreateRandomAccount(
 // is valid.
 func findBalanceWorkerInputValidation(input *job.FindBalanceInput) error {
 	if err := asserter.Amount(input.MinimumBalance); err != nil {
-		return fmt.Errorf("minimum balance %s is invalid: %w", types.PrintStruct(input.MinimumBalance), err)
+		return fmt.Errorf(
+			"minimum balance %s is invalid: %w",
+			types.PrintStruct(input.MinimumBalance),
+			err,
+		)
 	}
 
 	if input.AccountIdentifier != nil {
 		if err := asserter.AccountIdentifier(input.AccountIdentifier); err != nil {
-			return fmt.Errorf("account identifier %s is invalid: %w", types.PrintStruct(input.AccountIdentifier), err)
+			return fmt.Errorf(
+				"account identifier %s is invalid: %w",
+				types.PrintStruct(input.AccountIdentifier),
+				err,
+			)
 		}
 
 		if input.SubAccountIdentifier != nil {
@@ -579,7 +624,11 @@ func findBalanceWorkerInputValidation(input *job.FindBalanceInput) error {
 
 	if len(input.NotAccountIdentifier) > 0 {
 		if err := asserter.AccountArray("not account identifier", input.NotAccountIdentifier); err != nil {
-			return fmt.Errorf("account identifiers of not account identifier %s are invalid: %w", types.PrintStruct(input.NotAccountIdentifier), err)
+			return fmt.Errorf(
+				"account identifiers of not account identifier %s are invalid: %w",
+				types.PrintStruct(input.NotAccountIdentifier),
+				err,
+			)
 		}
 	}
 

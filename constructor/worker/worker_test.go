@@ -1584,7 +1584,9 @@ func TestJob_Failures(t *testing.T) {
 				Workflow: "random",
 				Scenario: "create_send",
 				State:    "{\"create_send\":{\"operations\":[{\"operation_identifier\":{\"index\":0},\"type\":\"\",\"status\":\"\"}]}}", // nolint
-				Err:      fmt.Errorf("failed to unmarshal confirmation depth of scenario create_send"),
+				Err: fmt.Errorf(
+					"failed to unmarshal confirmation depth of scenario create_send",
+				),
 			},
 			helper: &mocks.Helper{},
 		},
@@ -1646,7 +1648,9 @@ func TestJob_Failures(t *testing.T) {
 				Workflow: "random",
 				Scenario: "create_send",
 				State:    "{\"create_send\":{\"operations\":[{\"operation_identifier\":{\"index\":0},\"type\":\"\",\"status\":\"\"}],\"confirmation_depth\":\"10\",\"network\":{\"network\":\"Testnet3\", \"blockchain\":\"Bitcoin\"},\"preprocess_metadata\":\"hello\"}}", // nolint
-				Err:      fmt.Errorf("failed to unmarshal preprocess metadata of scenario create_send"),
+				Err: fmt.Errorf(
+					"failed to unmarshal preprocess metadata of scenario create_send",
+				),
 			},
 			helper: &mocks.Helper{},
 		},
@@ -1793,7 +1797,9 @@ func TestHTTPRequestWorker(t *testing.T) {
 			contentType:     "application/json; charset=UTF-8",
 			response:        `{"money":100}`,
 			statusCode:      http.StatusOK,
-			err:             fmt.Errorf("context deadline exceeded (Client.Timeout exceeded while awaiting headers)"),
+			err: fmt.Errorf(
+				"context deadline exceeded (Client.Timeout exceeded while awaiting headers)",
+			),
 		},
 		"error": {
 			input: &job.HTTPRequestInput{
