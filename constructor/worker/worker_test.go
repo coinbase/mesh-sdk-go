@@ -31,6 +31,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/tidwall/gjson"
 
+	"github.com/coinbase/rosetta-sdk-go/asserter"
 	"github.com/coinbase/rosetta-sdk-go/constructor/job"
 	mocks "github.com/coinbase/rosetta-sdk-go/mocks/constructor/worker"
 	"github.com/coinbase/rosetta-sdk-go/storage/database"
@@ -922,7 +923,7 @@ func TestFindBalanceWorker(t *testing.T) {
 				CreateLimit: 2,
 			},
 			mockHelper: &mocks.Helper{},
-			err:        ErrInvalidInput,
+			err:        asserter.ErrAmountValueMissing,
 		},
 		"invalid currency": {
 			input: &job.FindBalanceInput{
@@ -943,7 +944,7 @@ func TestFindBalanceWorker(t *testing.T) {
 				CreateLimit: 2,
 			},
 			mockHelper: &mocks.Helper{},
-			err:        ErrInvalidInput,
+			err:        asserter.ErrAmountCurrencySymbolEmpty,
 		},
 	}
 
@@ -1282,7 +1283,7 @@ func TestJob_Failures(t *testing.T) {
 					Input: `"hello"`,
 				},
 				ProcessedInput: `"hello"`,
-				Err:            ErrInvalidInput,
+				Err:            fmt.Errorf("hello is not an integer"),
 			},
 			helper: &mocks.Helper{},
 		},
@@ -1326,7 +1327,7 @@ func TestJob_Failures(t *testing.T) {
 					Input: `{"currency":{"decimals":8}}`,
 				},
 				ProcessedInput: `{"currency":{"decimals":8}}`,
-				Err:            ErrInvalidInput,
+				Err:            asserter.ErrAmountCurrencySymbolEmpty,
 			},
 			helper: &mocks.Helper{},
 		},
@@ -1348,7 +1349,7 @@ func TestJob_Failures(t *testing.T) {
 					Input: `{"currency":{"symbol":"BTC", "decimals":8},"amounts":[{"value":"100","currency":{"symbol":"BTC", "decimals":8}},{"value":"100","currency":{"symbol":"BTC", "decimals":8}}]}`, // nolint
 				},
 				ProcessedInput: `{"currency":{"symbol":"BTC", "decimals":8},"amounts":[{"value":"100","currency":{"symbol":"BTC", "decimals":8}},{"value":"100","currency":{"symbol":"BTC", "decimals":8}}]}`, // nolint
-				Err:            ErrInvalidInput,
+				Err:            asserter.ErrCurrencyUsedMultipleTimes,
 			},
 			helper: &mocks.Helper{},
 		},
@@ -1431,7 +1432,7 @@ func TestJob_Failures(t *testing.T) {
 			},
 			helper: &mocks.Helper{},
 		},
-		"invalid input: negtive difference in random amount": {
+		"invalid input: negative difference in random amount": {
 			scenario: &job.Scenario{
 				Name: "random_number",
 				Actions: []*job.Action{
@@ -1449,7 +1450,7 @@ func TestJob_Failures(t *testing.T) {
 					Input: `{"minimum":"-100", "maximum":"-200"}`,
 				},
 				ProcessedInput: `{"minimum":"-100", "maximum":"-200"}`,
-				Err:            ErrActionFailed,
+				Err:            fmt.Errorf("maximum value -200 < minimum value -100"),
 			},
 			helper: &mocks.Helper{},
 		},
@@ -1497,7 +1498,7 @@ func TestJob_Failures(t *testing.T) {
 					OutputPath: "address",
 				},
 				ProcessedInput: `{"public_key": {}}`,
-				Err:            ErrInvalidInput,
+				Err:            asserter.ErrPublicKeyBytesEmpty,
 			},
 			helper: &mocks.Helper{},
 		},
@@ -1519,7 +1520,7 @@ func TestJob_Failures(t *testing.T) {
 					Input: `{}`,
 				},
 				ProcessedInput: `{}`,
-				Err:            ErrInvalidInput,
+				Err:            asserter.ErrAccountIsNil,
 			},
 			helper: &mocks.Helper{},
 		},
@@ -1541,7 +1542,7 @@ func TestJob_Failures(t *testing.T) {
 					Input: `{"operation":"addition", "left_value":"1", "right_value":"B"}`,
 				},
 				ProcessedInput: `{"operation":"addition", "left_value":"1", "right_value":"B"}`,
-				Err:            ErrActionFailed,
+				Err:            fmt.Errorf("B is not an integer"),
 			},
 			helper: &mocks.Helper{},
 		},
@@ -1562,7 +1563,7 @@ func TestJob_Failures(t *testing.T) {
 				Workflow: "random",
 				Scenario: "create_send",
 				State:    "{\"create_send\":{\"operations\":[{\"operation_identifier\":{\"index\":0},\"type\":\"\",\"statsbf\":\"\"}]}}", // nolint
-				Err:      job.ErrOperationFormat,
+				Err:      fmt.Errorf("failed to unmarshal operations of scenario create_send"),
 			},
 			helper: &mocks.Helper{},
 		},
@@ -1583,7 +1584,7 @@ func TestJob_Failures(t *testing.T) {
 				Workflow: "random",
 				Scenario: "create_send",
 				State:    "{\"create_send\":{\"operations\":[{\"operation_identifier\":{\"index\":0},\"type\":\"\",\"status\":\"\"}]}}", // nolint
-				Err:      job.ErrConfirmationDepthInvalid,
+				Err:      fmt.Errorf("failed to unmarshal confirmation depth of scenario create_send"),
 			},
 			helper: &mocks.Helper{},
 		},
@@ -1609,7 +1610,7 @@ func TestJob_Failures(t *testing.T) {
 				Workflow: "random",
 				Scenario: "create_send",
 				State:    "{\"create_send\":{\"operations\":[{\"operation_identifier\":{\"index\":0},\"type\":\"\",\"status\":\"\"}],\"confirmation_depth\":\"10\"}}", // nolint
-				Err:      job.ErrNetworkInvalid,
+				Err:      fmt.Errorf("failed to unmarshal network of scenario create_send"),
 			},
 			helper: &mocks.Helper{},
 		},
@@ -1645,7 +1646,7 @@ func TestJob_Failures(t *testing.T) {
 				Workflow: "random",
 				Scenario: "create_send",
 				State:    "{\"create_send\":{\"operations\":[{\"operation_identifier\":{\"index\":0},\"type\":\"\",\"status\":\"\"}],\"confirmation_depth\":\"10\",\"network\":{\"network\":\"Testnet3\", \"blockchain\":\"Bitcoin\"},\"preprocess_metadata\":\"hello\"}}", // nolint
-				Err:      job.ErrMetadataInvalid,
+				Err:      fmt.Errorf("failed to unmarshal preprocess metadata of scenario create_send"),
 			},
 			helper: &mocks.Helper{},
 		},
@@ -1681,7 +1682,7 @@ func TestJob_Failures(t *testing.T) {
 
 			b, executionErr := worker.Process(ctx, dbTx, j)
 			assert.Nil(t, b)
-			assert.True(t, errors.Is(executionErr.Err, test.executionErr.Err))
+			assert.Contains(t, executionErr.Err.Error(), test.executionErr.Err.Error())
 			executionErr.Err = test.executionErr.Err // makes equality check easier
 			assert.Equal(t, test.executionErr, executionErr)
 
@@ -1767,7 +1768,7 @@ func TestHTTPRequestWorker(t *testing.T) {
 				Body:    `{"address":"123"}`,
 			},
 			dontPrependURL: true,
-			err:            ErrInvalidInput,
+			err:            fmt.Errorf("empty url"),
 		},
 		"invalid url": {
 			input: &job.HTTPRequestInput{
@@ -1777,7 +1778,7 @@ func TestHTTPRequestWorker(t *testing.T) {
 				Body:    `{"address":"123"}`,
 			},
 			dontPrependURL: true,
-			err:            ErrInvalidInput,
+			err:            fmt.Errorf("invalid URI for request"),
 		},
 		"timeout": {
 			input: &job.HTTPRequestInput{
@@ -1792,7 +1793,7 @@ func TestHTTPRequestWorker(t *testing.T) {
 			contentType:     "application/json; charset=UTF-8",
 			response:        `{"money":100}`,
 			statusCode:      http.StatusOK,
-			err:             ErrActionFailed,
+			err:             fmt.Errorf("context deadline exceeded (Client.Timeout exceeded while awaiting headers)"),
 		},
 		"error": {
 			input: &job.HTTPRequestInput{
@@ -1853,7 +1854,7 @@ func TestHTTPRequestWorker(t *testing.T) {
 			output, err := HTTPRequestWorker(types.PrintStruct(test.input))
 			if test.err != nil {
 				assert.Equal(t, "", output)
-				assert.True(t, errors.Is(err, test.err))
+				assert.Contains(t, err.Error(), test.err.Error())
 			} else {
 				assert.NoError(t, err)
 				assert.Equal(t, test.output, output)

@@ -63,29 +63,29 @@ func (j *Job) CreateBroadcast() (*Broadcast, error) {
 		return nil, nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("%w: %s", ErrOperationFormat, err.Error())
+		return nil, fmt.Errorf("failed to unmarshal operations of scenario %s: %w", scenario.Name, err)
 	}
 
 	confirmationDepth, err := j.unmarshalNumber(scenario.Name, ConfirmationDepth)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %s", ErrConfirmationDepthInvalid, err.Error())
+		return nil, fmt.Errorf("failed to unmarshal confirmation depth of scenario %s: %w", scenario.Name, err)
 	}
 
 	var network types.NetworkIdentifier
 	err = j.unmarshalStruct(scenario.Name, Network, &network)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %s", ErrNetworkInvalid, err.Error())
+		return nil, fmt.Errorf("failed to unmarshal network of scenario %s: %w", scenario.Name, err)
 	}
 
 	var metadata map[string]interface{}
 	err = j.unmarshalStruct(scenario.Name, PreprocessMetadata, &metadata)
 	if err != nil && !errors.Is(err, ErrVariableNotFound) {
-		return nil, fmt.Errorf("%w: %s", ErrMetadataInvalid, err.Error())
+		return nil, fmt.Errorf("failed to unmarshal preprocess metadata of scenario %s: %w", scenario.Name, err)
 	}
 
 	dryRun, err := j.unmarshalBoolean(scenario.Name, DryRun)
 	if err != nil && !errors.Is(err, ErrVariableNotFound) {
-		return nil, fmt.Errorf("%w: %s", ErrMetadataInvalid, err.Error())
+		return nil, fmt.Errorf("failed to unmarshal dry run of scenario %s: %w", scenario.Name, err)
 	}
 
 	j.Status = Broadcasting
@@ -154,7 +154,7 @@ func (j *Job) CheckComplete() bool {
 
 func (j *Job) getBroadcastScenario() (*Scenario, error) {
 	if j.Status != Broadcasting {
-		return nil, fmt.Errorf("job is in %s state, not %s", j.State, Broadcasting)
+		return nil, fmt.Errorf("job is in %s state instead of %s: %w", j.State, Broadcasting, ErrJobInWrongState)
 	}
 
 	broadcastIndex := j.Index - 1
@@ -177,7 +177,7 @@ func (j *Job) injectKeyAndMarkReady(
 		obj,
 	)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to set a raw json value: %w", err)
 	}
 	j.State = newState
 
@@ -199,7 +199,7 @@ func (j *Job) BroadcastComplete(
 ) error {
 	scenario, err := j.getBroadcastScenario()
 	if err != nil {
-		return fmt.Errorf("%w: %s", ErrUnableToHandleBroadcast, err.Error())
+		return fmt.Errorf("failed to get broadcast scenario: %w", err)
 	}
 
 	if transaction == nil {
@@ -213,8 +213,7 @@ func (j *Job) BroadcastComplete(
 		types.PrintStruct(transaction),
 	); err != nil {
 		return fmt.Errorf(
-			"%w: unable to store transaction result in state %s",
-			ErrUnableToHandleBroadcast,
+			"unable to store transaction result: %w",
 			err,
 		)
 	}
@@ -230,7 +229,7 @@ func (j *Job) DryRunComplete(
 ) error {
 	scenario, err := j.getBroadcastScenario()
 	if err != nil {
-		return fmt.Errorf("%w: %s", ErrUnableToHandleDryRun, err.Error())
+		return fmt.Errorf("unable to get broadcast scenario: %w", err)
 	}
 
 	if err := j.injectKeyAndMarkReady(
@@ -239,8 +238,7 @@ func (j *Job) DryRunComplete(
 		types.PrintStruct(suggestedFee),
 	); err != nil {
 		return fmt.Errorf(
-			"%w: unable to store suggested fee result in state %s",
-			ErrUnableToHandleDryRun,
+			"unable to store suggested fee result: %w",
 			err,
 		)
 	}

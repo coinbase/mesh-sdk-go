@@ -36,7 +36,7 @@ func PopulateInput(state string, input string) (string, error) {
 
 		value := gjson.Get(state, match)
 		if !value.Exists() {
-			err = fmt.Errorf("%w: %s is not present in state", ErrVariableNotFound, match)
+			err = fmt.Errorf("%s is not present in state: %w", match, ErrVariableNotFound)
 			return ""
 		}
 

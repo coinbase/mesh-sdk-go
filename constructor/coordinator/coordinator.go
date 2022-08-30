@@ -114,9 +114,8 @@ func (c *Coordinator) findJob(
 	ready, err := c.storage.Ready(ctx, dbTx)
 	if err != nil {
 		return nil, fmt.Errorf(
-			"%w: %s",
-			ErrJobsUnretrievable,
-			err.Error(),
+			"failed to return ready jobs: %w",
+			err,
 		)
 	}
 	for _, job := range ready {
@@ -144,9 +143,9 @@ func (c *Coordinator) findJob(
 		processing, err := c.storage.Processing(ctx, dbTx, workflow.Name)
 		if err != nil {
 			return nil, fmt.Errorf(
-				"%w: %s",
-				ErrJobsUnretrievable,
-				err.Error(),
+				"failed to return processing jobs for workflow %s: %w",
+				workflow.Name,
+				err,
 			)
 		}
 
@@ -161,9 +160,8 @@ func (c *Coordinator) findJob(
 	allBroadcasts, err := c.storage.Broadcasting(ctx, dbTx)
 	if err != nil {
 		return nil, fmt.Errorf(
-			"%w: %s",
-			ErrBroadcastsUnretrievable,
-			err.Error(),
+			"failed to return broadcasting jobs: %w",
+			err,
 		)
 	}
 
@@ -173,9 +171,9 @@ func (c *Coordinator) findJob(
 		processing, err := c.storage.Processing(ctx, dbTx, string(job.CreateAccount))
 		if err != nil {
 			return nil, fmt.Errorf(
-				"%w: %s",
-				ErrJobsUnretrievable,
-				err.Error(),
+				"failed to return processing jobs for workflow %s: %w",
+				string(job.CreateAccount),
+				err,
 			)
 		}
 
@@ -201,9 +199,9 @@ func (c *Coordinator) findJob(
 		processing, err := c.storage.Processing(ctx, dbTx, string(job.RequestFunds))
 		if err != nil {
 			return nil, fmt.Errorf(
-				"%w: %s",
-				ErrJobsUnretrievable,
-				err.Error(),
+				"failed to return processing jobs for workflow %s: %w",
+				string(job.RequestFunds),
+				err,
 			)
 		}
 
@@ -230,7 +228,7 @@ func (c *Coordinator) createTransaction(
 		broadcast.Metadata,
 	)
 	if err != nil {
-		return nil, "", nil, fmt.Errorf("%w: unable to preprocess", err)
+		return nil, "", nil, fmt.Errorf("unable to preprocess: %w", err)
 	}
 
 	publicKeys := make([]*types.PublicKey, len(requiredPublicKeys))
@@ -238,9 +236,9 @@ func (c *Coordinator) createTransaction(
 		keyPair, err := c.helper.GetKey(ctx, dbTx, accountIdentifier)
 		if err != nil {
 			return nil, "", nil, fmt.Errorf(
-				"%w: unable to find key for address %s",
-				err,
+				"unable to get key for address %s: %w",
 				accountIdentifier.Address,
+				err,
 			)
 		}
 
@@ -254,7 +252,7 @@ func (c *Coordinator) createTransaction(
 		publicKeys,
 	)
 	if err != nil {
-		return nil, "", nil, fmt.Errorf("%w: unable to construct metadata", err)
+		return nil, "", nil, fmt.Errorf("unable to construct metadata: %w", err)
 	}
 
 	if broadcast.DryRun {
@@ -269,7 +267,7 @@ func (c *Coordinator) createTransaction(
 		publicKeys,
 	)
 	if err != nil {
-		return nil, "", nil, fmt.Errorf("%w: unable to construct payloads", err)
+		return nil, "", nil, fmt.Errorf("unable to construct payloads: %w", err)
 	}
 
 	parsedOps, signers, _, err := c.helper.Parse(
@@ -279,14 +277,11 @@ func (c *Coordinator) createTransaction(
 		unsignedTransaction,
 	)
 	if err != nil {
-		return nil, "", nil, fmt.Errorf("%w: unable to parse unsigned transaction", err)
+		return nil, "", nil, fmt.Errorf("unable to parse unsigned transaction: %w", err)
 	}
 
 	if len(signers) != 0 {
-		return nil, "", nil, fmt.Errorf(
-			"signers should be empty in unsigned transaction but found %d",
-			len(signers),
-		)
+		return nil, "", nil, ErrSignersNotEmpty
 	}
 
 	if err := c.parser.ExpectedOperations(broadcast.Intent, parsedOps, false, false); err != nil {
@@ -295,12 +290,12 @@ func (c *Coordinator) createTransaction(
 			types.PrintStruct(broadcast.Intent),
 			types.PrintStruct(parsedOps),
 		)
-		return nil, "", nil, fmt.Errorf("%w: unsigned parsed ops do not match intent", err)
+		return nil, "", nil, fmt.Errorf("unsigned parsed ops do not match intent: %w", err)
 	}
 
 	signatures, err := c.helper.Sign(ctx, payloads)
 	if err != nil {
-		return nil, "", nil, fmt.Errorf("%w: unable to sign payloads", err)
+		return nil, "", nil, fmt.Errorf("unable to sign payloads: %w", err)
 	}
 
 	networkTransaction, err := c.helper.Combine(
@@ -310,7 +305,7 @@ func (c *Coordinator) createTransaction(
 		signatures,
 	)
 	if err != nil {
-		return nil, "", nil, fmt.Errorf("%w: unable to combine signatures", err)
+		return nil, "", nil, fmt.Errorf("unable to combine signatures: %w", err)
 	}
 
 	signedParsedOps, signers, _, err := c.helper.Parse(
@@ -320,7 +315,7 @@ func (c *Coordinator) createTransaction(
 		networkTransaction,
 	)
 	if err != nil {
-		return nil, "", nil, fmt.Errorf("%w: unable to parse signed transaction", err)
+		return nil, "", nil, fmt.Errorf("unable to parse signed transaction: %w", err)
 	}
 
 	if err := c.parser.ExpectedOperations(broadcast.Intent, signedParsedOps, false, false); err != nil {
@@ -329,11 +324,11 @@ func (c *Coordinator) createTransaction(
 			types.PrintStruct(broadcast.Intent),
 			types.PrintStruct(signedParsedOps),
 		)
-		return nil, "", nil, fmt.Errorf("%w: signed parsed ops do not match intent", err)
+		return nil, "", nil, fmt.Errorf("signed parsed ops do not match intent: %w", err)
 	}
 
 	if err := parser.ExpectedSigners(payloads, signers); err != nil {
-		return nil, "", nil, fmt.Errorf("%w: signed transactions signers do not match intent", err)
+		return nil, "", nil, fmt.Errorf("signed transactions signers do not match intent: %w", err)
 	}
 
 	transactionIdentifier, err := c.helper.Hash(
@@ -342,7 +337,7 @@ func (c *Coordinator) createTransaction(
 		networkTransaction,
 	)
 	if err != nil {
-		return nil, "", nil, fmt.Errorf("%w: unable to get transaction hash", err)
+		return nil, "", nil, fmt.Errorf("unable to get transaction hash: %w", err)
 	}
 
 	return transactionIdentifier, networkTransaction, nil, nil
@@ -360,18 +355,18 @@ func (c *Coordinator) BroadcastComplete(
 	j, err := c.storage.Get(ctx, dbTx, jobIdentifier)
 	if err != nil {
 		return fmt.Errorf(
-			"%w: %s",
-			ErrJobMissing,
-			err.Error(),
+			"failed to get job %s: %w",
+			types.PrintStruct(jobIdentifier),
+			err,
 		)
 	}
 
 	if err := j.BroadcastComplete(ctx, transaction); err != nil {
-		return fmt.Errorf("%w: unable to mark broadcast complete", err)
+		return fmt.Errorf("unable to mark broadcast complete: %w", err)
 	}
 
 	if _, err := c.storage.Update(ctx, dbTx, j); err != nil {
-		return fmt.Errorf("%w: unable to update job", err)
+		return fmt.Errorf("unable to update job %s: %w", types.PrintStruct(j), err)
 	}
 
 	// We are optimistically resetting all vars here
@@ -409,13 +404,13 @@ func (c *Coordinator) BroadcastComplete(
 		},
 	}, false)
 	if err != nil {
-		return fmt.Errorf("%w: unable to calculate balance changes", err)
+		return fmt.Errorf("unable to calculate balance changes: %w", err)
 	}
 
 	for _, balanceChange := range balanceChanges {
 		parsedDiff, err := types.BigInt(balanceChange.Difference)
 		if err != nil {
-			return fmt.Errorf("%w: unable to parse Difference", err)
+			return fmt.Errorf("unable to parse balance change difference: %w", err)
 		}
 
 		statusString = fmt.Sprintf(
@@ -451,13 +446,13 @@ func (c *Coordinator) invokeHandlersAndBroadcast(
 ) error {
 	if transactionCreated != nil {
 		if err := c.handler.TransactionCreated(ctx, jobIdentifier, transactionCreated); err != nil {
-			return fmt.Errorf("%w: unable to handle transaction created", err)
+			return fmt.Errorf("unable to handle transaction created: %w", err)
 		}
 	}
 
 	// Run Broadcast all after transaction committed.
 	if err := c.helper.BroadcastAll(ctx); err != nil {
-		return fmt.Errorf("%w: unable to broadcast all transactions", err)
+		return fmt.Errorf("unable to broadcast all transactions: %w", err)
 	}
 
 	return nil
@@ -503,7 +498,7 @@ func (c *Coordinator) process( // nolint:gocognit
 		return -1, nil
 	}
 	if err != nil {
-		return -1, fmt.Errorf("%w: unable to find job", err)
+		return -1, fmt.Errorf("unable to find job: %w", err)
 	}
 
 	statusMessage := fmt.Sprintf(`processing workflow "%s"`, j.Workflow)
@@ -528,7 +523,7 @@ func (c *Coordinator) process( // nolint:gocognit
 		// the caller can debug their scripts.
 		executionErr.Log()
 
-		return -1, fmt.Errorf("%w: unable to process job", executionErr.Err)
+		return -1, fmt.Errorf("unable to process job %s: %w", types.PrintStruct(j), executionErr.Err)
 	}
 
 	// Update job (or store for the first time)
@@ -538,7 +533,7 @@ func (c *Coordinator) process( // nolint:gocognit
 	// we've done in JobStorage.
 	jobIdentifier, err := c.storage.Update(ctx, dbTx, j)
 	if err != nil {
-		return -1, fmt.Errorf("%w: unable to update job", err)
+		return -1, fmt.Errorf("unable to update job %s: %w", types.PrintStruct(j), err)
 	}
 	j.Identifier = jobIdentifier
 
@@ -551,18 +546,18 @@ func (c *Coordinator) process( // nolint:gocognit
 			broadcast,
 		)
 		if err != nil {
-			return -1, fmt.Errorf("%w: unable to create transaction", err)
+			return -1, fmt.Errorf("unable to create transaction: %w", err)
 		}
 
 		if broadcast.DryRun {
 			// Update the job with the result of the dry run. This will
 			// mark it as ready!
 			if err := j.DryRunComplete(ctx, suggestedFees); err != nil {
-				return -1, fmt.Errorf("%w: unable to mark dry run complete", err)
+				return -1, fmt.Errorf("unable to mark dry run complete: %w", err)
 			}
 
 			if _, err := c.storage.Update(ctx, dbTx, j); err != nil {
-				return -1, fmt.Errorf("%w: unable to update job after dry run", err)
+				return -1, fmt.Errorf("unable to update job after dry run: %w", err)
 			}
 		} else {
 			// Invoke Broadcast storage (in same TX as update job)
@@ -577,7 +572,7 @@ func (c *Coordinator) process( // nolint:gocognit
 				broadcast.ConfirmationDepth,
 				broadcast.Metadata,
 			); err != nil {
-				return -1, fmt.Errorf("%w: unable to enqueue broadcast", err)
+				return -1, fmt.Errorf("unable to enqueue broadcast: %w", err)
 			}
 
 			transactionCreated = transactionIdentifier
@@ -595,12 +590,12 @@ func (c *Coordinator) process( // nolint:gocognit
 
 	// Commit db transaction
 	if err := dbTx.Commit(ctx); err != nil {
-		return -1, fmt.Errorf("%w: unable to commit job update", err)
+		return -1, fmt.Errorf("unable to commit job update: %w", err)
 	}
 
 	// Invoke handlers and broadcast
 	if err := c.invokeHandlersAndBroadcast(ctx, jobIdentifier, transactionCreated); err != nil {
-		return -1, fmt.Errorf("%w: unable to handle job success", err)
+		return -1, fmt.Errorf("unable to handle job %s success: %w", jobIdentifier, err)
 	}
 
 	return 0, nil

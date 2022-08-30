@@ -16,7 +16,7 @@ package dsl
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"path"
 	"testing"
 
@@ -216,7 +216,7 @@ func TestParse(t *testing.T) {
 		},
 		"workflow error: non-integer concurrency": {
 			file:                "invalid_concurrency.ros",
-			expectedErr:         ErrParsingWorkflowConcurrency,
+			expectedErr:         fmt.Errorf("failed to convert string hello to int"),
 			expectedErrLine:     1,
 			expectedErrContents: "request_funds(hello){",
 		},
@@ -324,7 +324,7 @@ func TestParse(t *testing.T) {
 		},
 		"file error: file does not exist": {
 			file:        "blah_blah.ros",
-			expectedErr: ErrCannotOpenFile,
+			expectedErr: fmt.Errorf("no such file or directory"),
 		},
 		"file error: bad extension": {
 			file:        "blah_blah.txt",
@@ -371,7 +371,7 @@ func TestParse(t *testing.T) {
 			if test.expectedErr != nil {
 				assert.NotNil(t, err)
 				err.Log()
-				assert.True(t, errors.Is(err.Err, test.expectedErr))
+				assert.Contains(t, err.Err.Error(), test.expectedErr.Error())
 				assert.Equal(t, test.expectedErrLine, err.Line)
 				assert.Equal(t, test.expectedErrContents, err.LineContents)
 			} else {
