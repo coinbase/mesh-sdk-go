@@ -73,7 +73,7 @@ func (f *Fetcher) fetchChannelTransactions(
 	// We keep the lock for all transactions we fetch in this goroutine.
 	if err := f.connectionSemaphore.Acquire(ctx, semaphoreRequestWeight); err != nil {
 		return &Error{
-			Err: fmt.Errorf("%w: %s", ErrCouldNotAcquireSemaphore, err.Error()),
+			Err: fmt.Errorf("failed to acquire semaphore: %w", err),
 		}
 	}
 	defer f.connectionSemaphore.Release(semaphoreRequestWeight)
@@ -215,7 +215,7 @@ func (f *Fetcher) UnsafeBlock(
 ) (*types.Block, *Error) {
 	if err := f.connectionSemaphore.Acquire(ctx, semaphoreRequestWeight); err != nil {
 		return nil, &Error{
-			Err: fmt.Errorf("%w: %s", ErrCouldNotAcquireSemaphore, err.Error()),
+			Err: fmt.Errorf("failed to acquire semaphore: %w", err),
 		}
 	}
 	defer f.connectionSemaphore.Release(semaphoreRequestWeight)
@@ -274,7 +274,7 @@ func (f *Fetcher) Block(
 
 	if err := f.Asserter.Block(block); err != nil {
 		fetcherErr := &Error{
-			Err: fmt.Errorf("%w: /block", err),
+			Err: fmt.Errorf("/block response is invalid: %w", err),
 		}
 		return nil, fetcherErr
 	}
@@ -314,7 +314,7 @@ func (f *Fetcher) BlockRetry(
 
 		if is, _ := asserter.Err(err.Err); is {
 			fetcherErr := &Error{
-				Err:       fmt.Errorf("%w: /block not attempting retry", err.Err),
+				Err:       fmt.Errorf("/block not attempting retry: %w", err.Err),
 				ClientErr: err.ClientErr,
 			}
 			return nil, fetcherErr

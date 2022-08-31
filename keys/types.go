@@ -17,6 +17,7 @@ package keys
 import (
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
@@ -39,7 +40,7 @@ func (k *KeyPair) MarshalJSON() ([]byte, error) {
 		Alias:      (*Alias)(k),
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to marshal key pair: %w", err)
 	}
 	return j, nil
 }
@@ -56,11 +57,11 @@ func (k *KeyPair) UnmarshalJSON(b []byte) error {
 	}
 	err := json.Unmarshal(b, &r)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to unmarshal key pair: %w", err)
 	}
 	bytes, err := hex.DecodeString(r.PrivateKey)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to decode private key: %w", err)
 	}
 	k.PrivateKey = bytes
 	return nil
