@@ -38,17 +38,17 @@ func Parse(ctx context.Context, file string) ([]*job.Workflow, *Error) {
 	if fileExtension != RosettaFileExtension {
 		return nil, &Error{
 			Err: fmt.Errorf(
-				"%w: expected %s, got %s",
-				ErrIncorrectExtension,
+				"expected file extension %s, got %s: %w",
 				RosettaFileExtension,
 				fileExtension,
+				ErrIncorrectExtension,
 			),
 		}
 	}
 
 	f, err := os.Open(cleanedPath) // #nosec G304
 	if err != nil {
-		return nil, &Error{Err: fmt.Errorf("%w (%s): %s", ErrCannotOpenFile, cleanedPath, err)}
+		return nil, &Error{Err: fmt.Errorf("can't open file %s: %w", cleanedPath, err)}
 	}
 	defer func() {
 		if err := f.Close(); err != nil {

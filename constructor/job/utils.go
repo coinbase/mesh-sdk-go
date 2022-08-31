@@ -29,7 +29,7 @@ func UnmarshalInput(input []byte, output interface{}) error {
 	dec.DisallowUnknownFields()
 
 	if err := dec.Decode(&output); err != nil {
-		return fmt.Errorf("%w: unable to unmarshal", err)
+		return fmt.Errorf("unable to decode: %w", err)
 	}
 
 	return nil

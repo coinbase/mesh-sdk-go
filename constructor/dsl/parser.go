@@ -82,7 +82,7 @@ func checkForVariables(
 
 		tokens = strings.SplitN(tokens[1], closeDoubleBracket, split2)
 		if len(tokens) != split2 {
-			return nil, fmt.Errorf("%w: variable is missing }}", ErrSyntax)
+			return nil, fmt.Errorf("variable is missing }}: %w", ErrSyntax)
 		}
 
 		if _, ok := variables[rootOutputPath(tokens[0])]; !ok {
@@ -194,10 +194,10 @@ func (p *parser) parseAction(
 			var err error
 			line, err = p.readLine(ctx)
 			if errors.Is(err, ErrEOF) {
-				return nil, fmt.Errorf("%w (action parsing): %s", ErrUnexpectedEOF, err.Error())
+				return nil, ErrUnexpectedEOF
 			}
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("failed to read action: %w", err)
 			}
 		}
 
@@ -206,7 +206,7 @@ func (p *parser) parseAction(
 			var err error
 			actionType, outputPath, line, err = parseActionType(line)
 			if err != nil {
-				return nil, fmt.Errorf("%w: action type parsing failed", err)
+				return nil, fmt.Errorf("failed to parse action type: %w", err)
 			}
 		}
 
@@ -217,7 +217,11 @@ func (p *parser) parseAction(
 		}
 
 		if len(missingVariables) > 0 {
-			return nil, fmt.Errorf("%w: %v", ErrVariableUndefined, missingVariables)
+			return nil, fmt.Errorf(
+				"the number of missing variables %v > 0: %w",
+				missingVariables,
+				ErrVariableUndefined,
+			)
 		}
 
 		// Clean input if in a function or if using native syntax
@@ -239,7 +243,7 @@ func (p *parser) parseAction(
 func parseScenarioName(line string) (string, error) {
 	tokens := strings.SplitN(line, openBrakcet, split2)
 	if len(tokens) != split2 {
-		return "", fmt.Errorf("%w: scenario entrypoint does not contain {", ErrSyntax)
+		return "", fmt.Errorf("scenario entrypoint does not contain {: %w", ErrSyntax)
 	}
 
 	if len(tokens[0]) == 0 {
@@ -247,7 +251,7 @@ func parseScenarioName(line string) (string, error) {
 	}
 
 	if len(tokens[1]) != 0 {
-		return "", fmt.Errorf("%w: scenario entrypoint ends with %s, not {", ErrSyntax, tokens[1])
+		return "", fmt.Errorf("scenario entrypoint ends with %s, not {: %w", tokens[1], ErrSyntax)
 	}
 
 	return tokens[0], nil
@@ -260,26 +264,30 @@ func (p *parser) parseScenario(
 ) (*job.Scenario, bool, error) {
 	line, err := p.readLine(ctx)
 	if errors.Is(err, ErrEOF) {
-		return nil, false, fmt.Errorf("%w (scenario parsing): %s", ErrUnexpectedEOF, err.Error())
+		return nil, false, ErrUnexpectedEOF
 	}
 	if err != nil {
-		return nil, false, err
+		return nil, false, fmt.Errorf("failed to read scenario: %w", err)
 	}
 
 	name, err := parseScenarioName(line)
 	if err != nil {
-		return nil, false, fmt.Errorf("%w: unable to parse scenario name", err)
+		return nil, false, fmt.Errorf("failed to parse scenario name: %w", err)
 	}
 
 	if _, ok := scenarioNames[name]; ok {
-		return nil, false, fmt.Errorf("%w: %s", ErrDuplicateScenarioName, name)
+		return nil, false, fmt.Errorf(
+			"scenario name %s is incorrect: %w",
+			name,
+			ErrDuplicateScenarioName,
+		)
 	}
 
 	actions := []*job.Action{}
 	for ctx.Err() == nil {
 		line, err := p.readLine(ctx)
 		if err != nil {
-			return nil, false, fmt.Errorf("%w: scenario parsing failed", err)
+			return nil, false, fmt.Errorf("failed to read scenario: %w", err)
 		}
 		if line == closeBracket {
 			return &job.Scenario{
@@ -296,7 +304,7 @@ func (p *parser) parseScenario(
 
 		action, err := p.parseAction(ctx, variables, line)
 		if err != nil {
-			return nil, false, fmt.Errorf("%w: unable to parse action", err)
+			return nil, false, fmt.Errorf("failed to parse action: %w", err)
 		}
 
 		actions = append(actions, action)
@@ -327,14 +335,14 @@ func parseWorkflowName(line string) (string, int, error) {
 
 	workflowConcurrency, err = strconv.Atoi(tokens[0])
 	if err != nil {
-		return "", -1, fmt.Errorf("%w: %s", ErrParsingWorkflowConcurrency, err.Error())
+		return "", -1, fmt.Errorf("failed to convert string %s to int: %w", tokens[0], err)
 	}
 
 	if tokens[1] != openBrakcet {
 		return "", -1, fmt.Errorf(
-			"%w: workflow entrypoint ends with %s, not {",
-			ErrSyntax,
+			"workflow entrypoint ends with %s, not {: %w",
 			tokens[1],
+			ErrSyntax,
 		)
 	}
 
@@ -352,11 +360,11 @@ func (p *parser) parseWorkflow(
 
 	name, concurrency, err := parseWorkflowName(line)
 	if err != nil {
-		return nil, fmt.Errorf("%w: could not parse workflow name", err)
+		return nil, fmt.Errorf("failed to parse workflow name: %w", err)
 	}
 
 	if _, ok := workflowNames[name]; ok {
-		return nil, fmt.Errorf("%w: %s", ErrDuplicateWorkflowName, name)
+		return nil, fmt.Errorf("workflow name %s is incorrect: %w", name, ErrDuplicateWorkflowName)
 	}
 
 	scenarios := []*job.Scenario{}
@@ -381,17 +389,17 @@ func (p *parser) parseWorkflow(
 
 		line, err := p.readLine(ctx)
 		if errors.Is(err, ErrEOF) {
-			return nil, fmt.Errorf("%w (scenario parsing): %s", ErrUnexpectedEOF, err.Error())
+			return nil, ErrUnexpectedEOF
 		}
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to parse scenario: %w", err)
 		}
 
 		if line != closeBracket {
 			return nil, fmt.Errorf(
-				"%w: expected workflow to end with }, but got %s",
-				ErrSyntax,
+				"expected workflow to end with }, but got %s: %w",
 				line,
+				ErrSyntax,
 			)
 		}
 
@@ -426,7 +434,7 @@ func (p *parser) readLine(ctx context.Context) (string, error) {
 		}
 
 		if p.scannerError() != nil {
-			return "", fmt.Errorf("%w: %s", ErrScanner, p.scannerError().Error())
+			return "", fmt.Errorf("%s: %w", p.scannerError().Error(), ErrScanner)
 		}
 
 		return "", ErrEOF

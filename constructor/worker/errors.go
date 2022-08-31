@@ -57,6 +57,10 @@ var (
 	// are no pending broadcasts, this usually means that we need
 	// to request funds.
 	ErrUnsatisfiable = errors.New("unsatisfiable balance")
+
+	// ErrInputOperationIsNotSupported is returned when the input operation
+	// is not supported.
+	ErrInputOperationIsNotSupported = errors.New("the input operation is not supported")
 )
 
 // Error is returned by worker execution.
