@@ -102,7 +102,7 @@ func (w *Worker) actions(
 				ActionIndex: i,
 				Action:      action,
 				State:       state,
-				Err:         fmt.Errorf("%w: unable to populate variables", err),
+				Err:         fmt.Errorf("unable to populate variables: %w", err),
 			}
 		}
 
@@ -113,7 +113,7 @@ func (w *Worker) actions(
 				Action:         action,
 				ProcessedInput: processedInput,
 				State:          state,
-				Err:            fmt.Errorf("%w: unable to process action", err),
+				Err:            fmt.Errorf("unable to process action: %w", err),
 			}
 		}
 
@@ -131,7 +131,7 @@ func (w *Worker) actions(
 				ProcessedInput: processedInput,
 				Output:         output,
 				State:          oldState,
-				Err:            fmt.Errorf("%w: unable to update state", err),
+				Err:            fmt.Errorf("unable to update state: %w", err),
 			}
 		}
 	}
@@ -188,7 +188,7 @@ func (w *Worker) Process(
 			ScenarioIndex: scenarioIndex,
 			Scenario:      j.Scenarios[scenarioIndex].Name,
 			State:         j.State,
-			Err:           fmt.Errorf("%w: unable to create broadcast", err),
+			Err:           fmt.Errorf("unable to create broadcast: %w", err),
 		}
 	}
 
@@ -204,11 +204,15 @@ func (w *Worker) DeriveWorker(
 	var input types.ConstructionDeriveRequest
 	err := job.UnmarshalInput([]byte(rawInput), &input)
 	if err != nil {
-		return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
+		return "", fmt.Errorf("failed to unmarshal input %s: %w", rawInput, err)
 	}
 
 	if err := asserter.PublicKey(input.PublicKey); err != nil {
-		return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
+		return "", fmt.Errorf(
+			"public key %s is invalid: %w",
+			types.PrintStruct(input.PublicKey),
+			err,
+		)
 	}
 
 	accountIdentifier, metadata, err := w.helper.Derive(
@@ -218,7 +222,7 @@ func (w *Worker) DeriveWorker(
 		input.Metadata,
 	)
 	if err != nil {
-		return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
+		return "", fmt.Errorf("failed to derive account identifier: %w", err)
 	}
 
 	return types.PrintStruct(&types.ConstructionDeriveResponse{
@@ -238,7 +242,7 @@ func GenerateKeyWorker(rawInput string) (string, error) {
 
 	kp, err := keys.GenerateKeypair(input.CurveType)
 	if err != nil {
-		return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
+		return "", fmt.Errorf("failed to generate key pair: %w", err)
 	}
 
 	return types.PrintStruct(kp), nil
@@ -254,15 +258,19 @@ func (w *Worker) SaveAccountWorker(
 	var input job.SaveAccountInput
 	err := job.UnmarshalInput([]byte(rawInput), &input)
 	if err != nil {
-		return fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
+		return fmt.Errorf("failed to unmarshal input %s: %w", rawInput, err)
 	}
 
 	if err := asserter.AccountIdentifier(input.AccountIdentifier); err != nil {
-		return fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
+		return fmt.Errorf(
+			"account identifier %s is invalid: %w",
+			types.PrintStruct(input.AccountIdentifier),
+			err,
+		)
 	}
 
 	if err := w.helper.StoreKey(ctx, dbTx, input.AccountIdentifier, input.KeyPair); err != nil {
-		return fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
+		return fmt.Errorf("failed to store key: %w", err)
 	}
 
 	return nil
@@ -279,12 +287,12 @@ func RandomStringWorker(rawInput string) (string, error) {
 	var input job.RandomStringInput
 	err := job.UnmarshalInput([]byte(rawInput), &input)
 	if err != nil {
-		return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
+		return "", fmt.Errorf("failed to unmarshal input %s: %w", rawInput, err)
 	}
 
 	output, err := reggen.Generate(input.Regex, input.Limit)
 	if err != nil {
-		return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
+		return "", fmt.Errorf("failed to generate a string with the provide regex input: %w", err)
 	}
 
 	return marshalString(output), nil
@@ -309,10 +317,14 @@ func MathWorker(rawInput string) (string, error) {
 	case job.Division:
 		result, err = types.DivideValues(input.LeftValue, input.RightValue)
 	default:
-		return "", fmt.Errorf("%s is not a supported math operation", input.Operation)
+		return "", fmt.Errorf(
+			"math operation %s is invalid: %w",
+			input.Operation,
+			ErrInputOperationIsNotSupported,
+		)
 	}
 	if err != nil {
-		return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
+		return "", fmt.Errorf("failed to perform math operation: %w", err)
 	}
 
 	return marshalString(result), nil
@@ -324,22 +336,22 @@ func RandomNumberWorker(rawInput string) (string, error) {
 	var input job.RandomNumberInput
 	err := job.UnmarshalInput([]byte(rawInput), &input)
 	if err != nil {
-		return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
+		return "", fmt.Errorf("failed to unmarshal input %s: %w", rawInput, err)
 	}
 
 	min, err := types.BigInt(input.Minimum)
 	if err != nil {
-		return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
+		return "", fmt.Errorf("failed to convert string %s to big int: %w", input.Minimum, err)
 	}
 
 	max, err := types.BigInt(input.Maximum)
 	if err != nil {
-		return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
+		return "", fmt.Errorf("failed to convert string %s to big int: %w", input.Maximum, err)
 	}
 
 	randNum, err := utils.RandomNumber(min, max)
 	if err != nil {
-		return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
+		return "", fmt.Errorf("failed to return random number in [%d-%d]: %w", min, max, err)
 	}
 
 	return marshalString(randNum.String()), nil
@@ -410,7 +422,12 @@ func (w *Worker) checkAccountCoins(
 ) (string, error) {
 	coins, err := w.helper.Coins(ctx, dbTx, account, input.MinimumBalance.Currency)
 	if err != nil {
-		return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
+		return "", fmt.Errorf(
+			"failed to return coins of account identifier %s in currency %s: %w",
+			types.PrintStruct(account),
+			types.PrintStruct(input.MinimumBalance.Currency),
+			err,
+		)
 	}
 
 	disallowedCoins := []string{}
@@ -425,12 +442,17 @@ func (w *Worker) checkAccountCoins(
 
 		diff, err := types.SubtractValues(coin.Amount.Value, input.MinimumBalance.Value)
 		if err != nil {
-			return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
+			return "", fmt.Errorf(
+				"failed to subtract values %s - %s: %w",
+				coin.Amount.Value,
+				input.MinimumBalance.Value,
+				err,
+			)
 		}
 
 		bigIntDiff, err := types.BigInt(diff)
 		if err != nil {
-			return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
+			return "", fmt.Errorf("failed to convert string %s to big int: %w", diff, err)
 		}
 
 		if bigIntDiff.Sign() < 0 {
@@ -455,18 +477,28 @@ func (w *Worker) checkAccountBalance(
 ) (string, error) {
 	amount, err := w.helper.Balance(ctx, dbTx, account, input.MinimumBalance.Currency)
 	if err != nil {
-		return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
+		return "", fmt.Errorf(
+			"failed to return balance of account identifier %s in currency %s: %w",
+			types.PrintStruct(account),
+			types.PrintStruct(input.MinimumBalance.Currency),
+			err,
+		)
 	}
 
 	// look for amounts > min
 	diff, err := types.SubtractValues(amount.Value, input.MinimumBalance.Value)
 	if err != nil {
-		return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
+		return "", fmt.Errorf(
+			"failed to subtract values %s - %s: %w",
+			amount.Value,
+			input.MinimumBalance.Value,
+			err,
+		)
 	}
 
 	bigIntDiff, err := types.BigInt(diff)
 	if err != nil {
-		return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
+		return "", fmt.Errorf("failed to convert string %s to big int: %w", diff, err)
 	}
 
 	if bigIntDiff.Sign() < 0 {
@@ -492,9 +524,8 @@ func (w *Worker) availableAccounts(
 	accounts, err := w.helper.AllAccounts(ctx, dbTx)
 	if err != nil {
 		return nil, nil, fmt.Errorf(
-			"%w: unable to get all accounts %s",
-			ErrActionFailed,
-			err.Error(),
+			"unable to get all accounts: %w",
+			err,
 		)
 	}
 
@@ -508,7 +539,7 @@ func (w *Worker) availableAccounts(
 	unlockedAccounts := []*types.AccountIdentifier{}
 	lockedAccounts, err := w.helper.LockedAccounts(ctx, dbTx)
 	if err != nil {
-		return nil, nil, fmt.Errorf("%w: unable to get locked accounts %s", ErrActionFailed, err)
+		return nil, nil, fmt.Errorf("unable to get locked accounts: %w", err)
 	}
 
 	// Convert to a map so can do fast lookups
@@ -543,7 +574,12 @@ func shouldCreateRandomAccount(
 		utils.OneHundredInt,
 	)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf(
+			"failed to return random number in [%d-%d]: %w",
+			utils.ZeroInt,
+			utils.OneHundredInt,
+			err,
+		)
 	}
 
 	if rand.Int64() >= int64(input.CreateProbability) {
@@ -557,12 +593,20 @@ func shouldCreateRandomAccount(
 // is valid.
 func findBalanceWorkerInputValidation(input *job.FindBalanceInput) error {
 	if err := asserter.Amount(input.MinimumBalance); err != nil {
-		return fmt.Errorf("%w: minimum balance invalid", err)
+		return fmt.Errorf(
+			"minimum balance %s is invalid: %w",
+			types.PrintStruct(input.MinimumBalance),
+			err,
+		)
 	}
 
 	if input.AccountIdentifier != nil {
 		if err := asserter.AccountIdentifier(input.AccountIdentifier); err != nil {
-			return err
+			return fmt.Errorf(
+				"account identifier %s is invalid: %w",
+				types.PrintStruct(input.AccountIdentifier),
+				err,
+			)
 		}
 
 		if input.SubAccountIdentifier != nil {
@@ -580,7 +624,11 @@ func findBalanceWorkerInputValidation(input *job.FindBalanceInput) error {
 
 	if len(input.NotAccountIdentifier) > 0 {
 		if err := asserter.AccountArray("not account identifier", input.NotAccountIdentifier); err != nil {
-			return err
+			return fmt.Errorf(
+				"account identifiers of not account identifier %s are invalid: %w",
+				types.PrintStruct(input.NotAccountIdentifier),
+				err,
+			)
 		}
 	}
 
@@ -630,26 +678,26 @@ func (w *Worker) FindBalanceWorker(
 	var input job.FindBalanceInput
 	err := job.UnmarshalInput([]byte(rawInput), &input)
 	if err != nil {
-		return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
+		return "", fmt.Errorf("failed to unmarshal input %s: %w", rawInput, err)
 	}
 
 	// Validate that input is properly formatted
 	if err := findBalanceWorkerInputValidation(&input); err != nil {
-		return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
+		return "", fmt.Errorf("failed to validate the input of find balance worker: %w", err)
 	}
 
 	log.Println(balanceMessage(&input))
 
 	accounts, availableAccounts, err := w.availableAccounts(ctx, dbTx)
 	if err != nil {
-		return "", fmt.Errorf("%w: unable to get available accounts", err)
+		return "", fmt.Errorf("unable to get available accounts: %w", err)
 	}
 
 	// Randomly, we choose to generate a new account. If we didn't do this,
 	// we would never grow past 2 accounts for mocking transfers.
 	shouldCreate, err := shouldCreateRandomAccount(&input, len(accounts))
 	if err != nil {
-		return "", fmt.Errorf("%w: unable to determine if should create", err)
+		return "", fmt.Errorf("unable to determine if should create: %w", err)
 	}
 
 	if shouldCreate {
@@ -671,7 +719,7 @@ func (w *Worker) FindBalanceWorker(
 			output, err = w.checkAccountBalance(ctx, dbTx, &input, account)
 		}
 		if err != nil {
-			return "", err
+			return "", fmt.Errorf("failed to check account coins or balance: %w", err)
 		}
 
 		// If we did not fund a match, we should continue.
@@ -713,16 +761,16 @@ func AssertWorker(rawInput string) error {
 	var input string
 	err := job.UnmarshalInput([]byte(rawInput), &input)
 	if err != nil {
-		return fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
+		return fmt.Errorf("failed to unmarshal input %s: %w", rawInput, err)
 	}
 
 	val, err := types.BigInt(input)
 	if err != nil {
-		return fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
+		return fmt.Errorf("failed to convert string %s to big int: %w", input, err)
 	}
 
 	if val.Sign() < 0 {
-		return fmt.Errorf("%w: %s < 0", ErrActionFailed, val.String())
+		return fmt.Errorf("%s < 0: %w", val.String(), ErrActionFailed)
 	}
 
 	return nil
@@ -734,15 +782,15 @@ func FindCurrencyAmountWorker(rawInput string) (string, error) {
 	var input job.FindCurrencyAmountInput
 	err := job.UnmarshalInput([]byte(rawInput), &input)
 	if err != nil {
-		return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
+		return "", fmt.Errorf("failed to unmarshal input %s: %w", rawInput, err)
 	}
 
 	if err := asserter.Currency(input.Currency); err != nil {
-		return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
+		return "", fmt.Errorf("currency %s is invalid: %w", types.PrintStruct(input.Currency), err)
 	}
 
 	if err := asserter.AssertUniqueAmounts(input.Amounts); err != nil {
-		return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
+		return "", fmt.Errorf("amount %s is invalid: %w", types.PrintStruct(input.Amounts), err)
 	}
 
 	for _, amount := range input.Amounts {
@@ -754,9 +802,9 @@ func FindCurrencyAmountWorker(rawInput string) (string, error) {
 	}
 
 	return "", fmt.Errorf(
-		"%w: unable to find currency %s",
-		ErrActionFailed,
+		"unable to find currency %s: %w",
 		types.PrintStruct(input.Currency),
+		ErrActionFailed,
 	)
 }
 
@@ -768,7 +816,7 @@ func LoadEnvWorker(rawInput string) (string, error) {
 	var input string
 	err := job.UnmarshalInput([]byte(rawInput), &input)
 	if err != nil {
-		return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
+		return "", fmt.Errorf("failed to unmarshal input %s: %w", rawInput, err)
 	}
 
 	return os.Getenv(input), nil
@@ -780,15 +828,15 @@ func HTTPRequestWorker(rawInput string) (string, error) {
 	var input job.HTTPRequestInput
 	err := job.UnmarshalInput([]byte(rawInput), &input)
 	if err != nil {
-		return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
+		return "", fmt.Errorf("failed to unmarshal input %s: %w", rawInput, err)
 	}
 
 	if input.Timeout <= 0 {
-		return "", fmt.Errorf("%w: %d is not a valid timeout", ErrInvalidInput, input.Timeout)
+		return "", fmt.Errorf("%d is not a valid timeout: %w", input.Timeout, ErrInvalidInput)
 	}
 
 	if _, err := url.ParseRequestURI(input.URL); err != nil {
-		return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
+		return "", fmt.Errorf("failed to parse request URI %s: %w", input.URL, err)
 	}
 
 	client := &http.Client{Timeout: time.Duration(input.Timeout) * time.Second}
@@ -797,7 +845,7 @@ func HTTPRequestWorker(rawInput string) (string, error) {
 	case job.MethodGet:
 		request, err = http.NewRequest(http.MethodGet, input.URL, nil)
 		if err != nil {
-			return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
+			return "", fmt.Errorf("failed to generate new request: %w", err)
 		}
 		request.Header.Set("Accept", "application/json")
 	case job.MethodPost:
@@ -807,27 +855,27 @@ func HTTPRequestWorker(rawInput string) (string, error) {
 			bytes.NewBufferString(input.Body),
 		)
 		if err != nil {
-			return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
+			return "", fmt.Errorf("failed to generate new request: %w", err)
 		}
 		request.Header.Set("Content-Type", "application/json")
 		request.Header.Set("Accept", "application/json")
 	default:
 		return "", fmt.Errorf(
-			"%w: %s is not a supported HTTP method",
-			ErrInvalidInput,
+			"%s is not a supported HTTP method: %w",
 			input.Method,
+			ErrInvalidInput,
 		)
 	}
 
 	resp, err := client.Do(request)
 	if err != nil {
-		return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
+		return "", fmt.Errorf("failed to send request: %w", err)
 	}
 	defer resp.Body.Close()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
+		return "", fmt.Errorf("failed to read response: %w", err)
 	}
 
 	if resp.StatusCode != http.StatusOK {
@@ -852,14 +900,14 @@ func (w *Worker) SetBlobWorker(
 	var input job.SetBlobInput
 	err := job.UnmarshalInput([]byte(rawInput), &input)
 	if err != nil {
-		return fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
+		return fmt.Errorf("failed to unmarshal input %s: %w", rawInput, err)
 	}
 
 	// By using interface{} for key, we can ensure that JSON
 	// objects with the same keys but in a different order are
 	// treated as equal.
 	if err := w.helper.SetBlob(ctx, dbTx, types.Hash(input.Key), input.Value); err != nil {
-		return fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
+		return fmt.Errorf("failed to set blob: %w", err)
 	}
 
 	return nil
@@ -875,7 +923,7 @@ func (w *Worker) GetBlobWorker(
 	var input job.GetBlobInput
 	err := job.UnmarshalInput([]byte(rawInput), &input)
 	if err != nil {
-		return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
+		return "", fmt.Errorf("failed to unmarshal input %s: %w", rawInput, err)
 	}
 
 	// By using interface{} for key, we can ensure that JSON
@@ -883,14 +931,14 @@ func (w *Worker) GetBlobWorker(
 	// treated as equal.
 	exists, val, err := w.helper.GetBlob(ctx, dbTx, types.Hash(input.Key))
 	if err != nil {
-		return "", fmt.Errorf("%w: %s", ErrActionFailed, err.Error())
+		return "", fmt.Errorf("failed to get blob: %w", err)
 	}
 
 	if !exists {
 		return "", fmt.Errorf(
-			"%w: key %s does not exist",
-			ErrActionFailed,
+			"key %s does not exist: %w",
 			types.PrintStruct(input.Key),
+			ErrActionFailed,
 		)
 	}
 

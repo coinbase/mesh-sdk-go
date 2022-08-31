@@ -23,7 +23,6 @@ import (
 
 // DSL Errors
 var (
-	ErrCannotOpenFile     = errors.New("file cannot be opened")
 	ErrIncorrectExtension = errors.New("expected .ros file extension")
 
 	ErrEOF     = errors.New("reached end of file")

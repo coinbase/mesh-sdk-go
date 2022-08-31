@@ -30,33 +30,11 @@ var (
 	// instead of a string).
 	ErrVariableIncorrectFormat = errors.New("variable in incorrect format")
 
-	// ErrUnableToHandleBroadcast is returned if a Job cannot handle a
-	// broadcast completion (usually because there is no broadcast to confirm).
-	ErrUnableToHandleBroadcast = errors.New("unable to handle broadcast")
-
-	// ErrUnableToHandleDryRun is returned if a Job cannot handle a
-	// dry run completion.
-	ErrUnableToHandleDryRun = errors.New("unable to handle dry run")
-
 	// ErrUnableToCreateBroadcast is returned when it is not possible
 	// to create a broadcast or check if a broadcast should be created
 	// from a job.
 	ErrUnableToCreateBroadcast = errors.New("unable to create broadcast")
 
-	// ErrOperationFormat is returned when []*types.Operation cannot be unmarshaled
-	// from <scenario_name>.operations.
-	ErrOperationFormat = errors.New("operation format")
-
-	// ErrConfirmationDepthInvalid is returned when <scenario_name>.operations
-	// are populated, but confirmation depth is missing or invalid.
-	ErrConfirmationDepthInvalid = errors.New("invalid confirmation depth")
-
-	// ErrNetworkInvalid is returned when <scenario_name>.operations
-	// are populated, but network is missing or invalid.
-	ErrNetworkInvalid = errors.New("network invalid")
-
-	// ErrMetadataInvalid is returned when <scenario_name>.operations
-	// are populated, but construction preprocess metadata is
-	// invalid (ok to be missing).
-	ErrMetadataInvalid = errors.New("metadata invalid")
+	// ErrJobInWrongState is returned when a job is in wrong state
+	ErrJobInWrongState = errors.New("job in wrong state")
 )
