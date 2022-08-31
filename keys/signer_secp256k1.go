@@ -77,7 +77,11 @@ func (s *SignerSecp256k1) Sign(
 			return nil, fmt.Errorf("failed to sign for %v: %w", types.Schnorr1, err)
 		}
 	default:
-		return nil, fmt.Errorf("signature type %s is invalid: %w", types.PrintStruct(sigType), ErrSignUnsupportedSignatureType)
+		return nil, fmt.Errorf(
+			"signature type %s is invalid: %w",
+			types.PrintStruct(sigType),
+			ErrSignUnsupportedSignatureType,
+		)
 	}
 
 	return &types.Signature{
@@ -110,7 +114,11 @@ func (s *SignerSecp256k1) Verify(signature *types.Signature) error {
 	case types.Schnorr1:
 		verify = zil_schnorr.VerifySignature(pubKey, message, sig)
 	default:
-		return fmt.Errorf("signature type %s is invalid: %w", types.PrintStruct(signature.SignatureType), ErrVerifyUnsupportedSignatureType)
+		return fmt.Errorf(
+			"signature type %s is invalid: %w",
+			types.PrintStruct(signature.SignatureType),
+			ErrVerifyUnsupportedSignatureType,
+		)
 	}
 
 	if !verify {
