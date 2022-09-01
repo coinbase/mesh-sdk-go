@@ -28,28 +28,28 @@ import (
 func ExpectedOperation(intent *types.Operation, observed *types.Operation) error {
 	if types.Hash(intent.Account) != types.Hash(observed.Account) {
 		return fmt.Errorf(
-			"%w: expected %s but got %s",
-			ErrExpectedOperationAccountMismatch,
+			"expected operation account identifier %s but got %s: %w",
 			types.PrettyPrintStruct(intent.Account),
 			types.PrettyPrintStruct(observed.Account),
+			ErrExpectedOperationAccountMismatch,
 		)
 	}
 
 	if types.Hash(intent.Amount) != types.Hash(observed.Amount) {
 		return fmt.Errorf(
-			"%w: expected %s but got %s",
-			ErrExpectedOperationAmountMismatch,
+			"expected operation amount %s but got %s: %w",
 			types.PrettyPrintStruct(intent.Amount),
 			types.PrettyPrintStruct(observed.Amount),
+			ErrExpectedOperationAmountMismatch,
 		)
 	}
 
 	if intent.Type != observed.Type {
 		return fmt.Errorf(
-			"%w: expected %s but got %s",
-			ErrExpectedOperationTypeMismatch,
+			"expected operation type %s but got %s: %w",
 			intent.Type,
 			observed.Type,
+			ErrExpectedOperationTypeMismatch,
 		)
 	}
 
@@ -89,7 +89,11 @@ func (p *Parser) ExpectedOperations(
 			if confirmSuccess {
 				obsSuccess, err := p.Asserter.OperationSuccessful(obs)
 				if err != nil {
-					return fmt.Errorf("%w: unable to check operation success", err)
+					return fmt.Errorf(
+						"failed to check the status of operation %s: %w",
+						types.PrintStruct(obs),
+						err,
+					)
 				}
 
 				if !obsSuccess {
@@ -168,9 +172,9 @@ func ExpectedSigners(intent []*types.SigningPayload, observed []*types.AccountId
 		hash := types.Hash(payload.AccountIdentifier)
 		if _, exists := seenSigners[hash]; !exists {
 			return fmt.Errorf(
-				"%w: %s",
-				ErrExpectedSignerMissing,
+				"payload account identifier %s is invalid: %w",
 				types.PrintStruct(payload.AccountIdentifier),
+				ErrExpectedSignerMissing,
 			)
 		}
 	}
@@ -179,9 +183,9 @@ func ExpectedSigners(intent []*types.SigningPayload, observed []*types.AccountId
 	// were not expected.
 	if len(unmatched) != 0 {
 		return fmt.Errorf(
-			"%w: %s",
+			"unmatched signers are %s: %w",
+			types.PrintStruct(unmatched),
 			ErrExpectedSignerUnexpectedSigner,
-			types.PrettyPrintStruct(unmatched),
 		)
 	}
 
