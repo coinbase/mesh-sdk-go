@@ -46,15 +46,15 @@ func (s *SignerSecp256k1) Sign(
 ) (*types.Signature, error) {
 	err := s.KeyPair.IsValid()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("key pair is invalid: %w", err)
 	}
 	privKeyBytes := s.KeyPair.PrivateKey
 
 	if !(payload.SignatureType == sigType || payload.SignatureType == "") {
 		return nil, fmt.Errorf(
-			"%w: %v",
-			ErrSignUnsupportedPayloadSignatureType,
+			"signing payload signature type %v is invalid: %w",
 			payload.SignatureType,
+			ErrSignUnsupportedPayloadSignatureType,
 		)
 	}
 
@@ -63,21 +63,25 @@ func (s *SignerSecp256k1) Sign(
 	case types.EcdsaRecovery:
 		sig, err = secp256k1.Sign(payload.Bytes, privKeyBytes)
 		if err != nil {
-			return nil, fmt.Errorf("%w: %s", ErrSignFailed, err.Error())
+			return nil, fmt.Errorf("failed to sign for %v: %w", types.EcdsaRecovery, err)
 		}
 	case types.Ecdsa:
 		sig, err = secp256k1.Sign(payload.Bytes, privKeyBytes)
 		if err != nil {
-			return nil, fmt.Errorf("%w: %s", ErrSignFailed, err.Error())
+			return nil, fmt.Errorf("failed to sign for %v: %w", types.Ecdsa, err)
 		}
 		sig = sig[:EcdsaSignatureLen]
 	case types.Schnorr1:
 		sig, err = zil_schnorr.SignMessage(privKeyBytes, s.KeyPair.PublicKey.Bytes, payload.Bytes)
 		if err != nil {
-			return nil, fmt.Errorf("%w: %s", ErrSignFailed, err.Error())
+			return nil, fmt.Errorf("failed to sign for %v: %w", types.Schnorr1, err)
 		}
 	default:
-		return nil, fmt.Errorf("%w: %v", ErrSignUnsupportedSignatureType, err)
+		return nil, fmt.Errorf(
+			"signature type %s is invalid: %w",
+			types.PrintStruct(sigType),
+			ErrSignUnsupportedSignatureType,
+		)
 	}
 
 	return &types.Signature{
@@ -97,7 +101,7 @@ func (s *SignerSecp256k1) Verify(signature *types.Signature) error {
 
 	err := asserter.Signatures([]*types.Signature{signature})
 	if err != nil {
-		return err
+		return fmt.Errorf("signature is invalid: %w", err)
 	}
 
 	var verify bool
@@ -110,7 +114,11 @@ func (s *SignerSecp256k1) Verify(signature *types.Signature) error {
 	case types.Schnorr1:
 		verify = zil_schnorr.VerifySignature(pubKey, message, sig)
 	default:
-		return fmt.Errorf("%w: %s", ErrVerifyUnsupportedSignatureType, signature.SignatureType)
+		return fmt.Errorf(
+			"signature type %s is invalid: %w",
+			types.PrintStruct(signature.SignatureType),
+			ErrVerifyUnsupportedSignatureType,
+		)
 	}
 
 	if !verify {

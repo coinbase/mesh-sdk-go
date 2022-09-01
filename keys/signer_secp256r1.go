@@ -52,23 +52,23 @@ func (s *SignerSecp256r1) Sign(
 	sigType types.SignatureType,
 ) (*types.Signature, error) {
 	if err := s.KeyPair.IsValid(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("key pair is invalid: %w", err)
 	}
 
 	if !(payload.SignatureType == sigType || payload.SignatureType == "") {
 		return nil, fmt.Errorf(
-			"%w: %v",
-			ErrSignUnsupportedPayloadSignatureType,
+			"signing payload signature type %v is invalid: %w",
 			payload.SignatureType,
+			ErrSignUnsupportedPayloadSignatureType,
 		)
 	}
 
 	if sigType != types.Ecdsa {
 		return nil, fmt.Errorf(
-			"%w: expected %v but got %v",
-			ErrSignUnsupportedSignatureType,
+			"expected signature type %v but got %v: %w",
 			types.Ecdsa,
 			sigType,
+			ErrSignUnsupportedSignatureType,
 		)
 	}
 
@@ -90,7 +90,7 @@ func (s *SignerSecp256r1) Sign(
 
 	sigR, sigS, err := ecdsa.Sign(rand.Reader, &privKey, payload.Bytes)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %s", ErrSignFailed, err.Error())
+		return nil, fmt.Errorf("failed to sign: %w", err)
 	}
 	sig := sigR.Bytes()
 	sig = append(sig, sigS.Bytes()...)
@@ -108,15 +108,15 @@ func (s *SignerSecp256r1) Sign(
 func (s *SignerSecp256r1) Verify(signature *types.Signature) error {
 	if signature.SignatureType != types.Ecdsa {
 		return fmt.Errorf(
-			"%w: expected %v but got %v",
-			ErrVerifyUnsupportedSignatureType,
+			"expected signing payload signature type %v but got %v: %w",
 			types.Ecdsa,
 			signature.SignatureType,
+			ErrVerifyUnsupportedSignatureType,
 		)
 	}
 
 	if err := asserter.Signatures([]*types.Signature{signature}); err != nil {
-		return err
+		return fmt.Errorf("signature is invalid: %w", err)
 	}
 
 	message := signature.SigningPayload.Bytes

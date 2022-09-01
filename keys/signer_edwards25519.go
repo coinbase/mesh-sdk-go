@@ -41,24 +41,24 @@ func (s *SignerEdwards25519) Sign(
 ) (*types.Signature, error) {
 	err := s.KeyPair.IsValid()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("key pair is invalid: %w", err)
 	}
 
 	if !(payload.SignatureType == types.Ed25519 || payload.SignatureType == "") {
 		return nil, fmt.Errorf(
-			"%w: expected %v but got %v",
-			ErrSignUnsupportedPayloadSignatureType,
+			"expected signing payload signature type %v but got %v: %w",
 			types.Ed25519,
 			payload.SignatureType,
+			ErrSignUnsupportedPayloadSignatureType,
 		)
 	}
 
 	if sigType != types.Ed25519 {
 		return nil, fmt.Errorf(
-			"%w: expected %v but got %v",
-			ErrSignUnsupportedSignatureType,
+			"expected signature type %v but got %v: %w",
 			types.Ed25519,
 			sigType,
+			ErrSignUnsupportedSignatureType,
 		)
 	}
 
@@ -79,10 +79,10 @@ func (s *SignerEdwards25519) Sign(
 func (s *SignerEdwards25519) Verify(signature *types.Signature) error {
 	if signature.SignatureType != types.Ed25519 {
 		return fmt.Errorf(
-			"%w: expected %v but got %v",
-			ErrVerifyUnsupportedPayloadSignatureType,
+			"expected signing payload signature type %v but got %v: %w",
 			types.Ed25519,
 			signature.SignatureType,
+			ErrVerifyUnsupportedPayloadSignatureType,
 		)
 	}
 
@@ -91,7 +91,7 @@ func (s *SignerEdwards25519) Verify(signature *types.Signature) error {
 	sig := signature.Bytes
 	err := asserter.Signatures([]*types.Signature{signature})
 	if err != nil {
-		return err
+		return fmt.Errorf("signature is invalid: %w", err)
 	}
 
 	verify := ed25519.Verify(pubKey, message, sig)

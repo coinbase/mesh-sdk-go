@@ -35,7 +35,7 @@ func (f *Fetcher) ConstructionCombine(
 ) (string, *Error) {
 	if err := f.connectionSemaphore.Acquire(ctx, semaphoreRequestWeight); err != nil {
 		return "", &Error{
-			Err: fmt.Errorf("%w: %s", ErrCouldNotAcquireSemaphore, err.Error()),
+			Err: fmt.Errorf("failed to acquire semaphore: %w", err),
 		}
 	}
 	defer f.connectionSemaphore.Release(semaphoreRequestWeight)
@@ -53,7 +53,7 @@ func (f *Fetcher) ConstructionCombine(
 
 	if err := asserter.ConstructionCombineResponse(response); err != nil {
 		fetcherErr := &Error{
-			Err: fmt.Errorf("%w: /construction/combine", err),
+			Err: fmt.Errorf("/construction/combine response is invalid: %w", err),
 		}
 		return "", fetcherErr
 	}
@@ -74,7 +74,7 @@ func (f *Fetcher) ConstructionDerive(
 ) (*types.AccountIdentifier, map[string]interface{}, *Error) {
 	if err := f.connectionSemaphore.Acquire(ctx, semaphoreRequestWeight); err != nil {
 		return nil, nil, &Error{
-			Err: fmt.Errorf("%w: %s", ErrCouldNotAcquireSemaphore, err.Error()),
+			Err: fmt.Errorf("failed to acquire semaphore: %w", err),
 		}
 	}
 	defer f.connectionSemaphore.Release(semaphoreRequestWeight)
@@ -92,7 +92,7 @@ func (f *Fetcher) ConstructionDerive(
 
 	if err := asserter.ConstructionDeriveResponse(response); err != nil {
 		fetcherErr := &Error{
-			Err: fmt.Errorf("%w: /construction/derive", err),
+			Err: fmt.Errorf("/construction/derive response is invalid: %w", err),
 		}
 		return nil, nil, fetcherErr
 	}
@@ -109,7 +109,7 @@ func (f *Fetcher) ConstructionHash(
 ) (*types.TransactionIdentifier, *Error) {
 	if err := f.connectionSemaphore.Acquire(ctx, semaphoreRequestWeight); err != nil {
 		return nil, &Error{
-			Err: fmt.Errorf("%w: %s", ErrCouldNotAcquireSemaphore, err.Error()),
+			Err: fmt.Errorf("failed to acquire semaphore: %w", err),
 		}
 	}
 	defer f.connectionSemaphore.Release(semaphoreRequestWeight)
@@ -126,7 +126,7 @@ func (f *Fetcher) ConstructionHash(
 
 	if err := asserter.TransactionIdentifierResponse(response); err != nil {
 		fetcherErr := &Error{
-			Err: fmt.Errorf("%w: /construction/hash", err),
+			Err: fmt.Errorf("/construction/hash response is invalid: %w", err),
 		}
 		return nil, fetcherErr
 	}
@@ -144,7 +144,7 @@ func (f *Fetcher) ConstructionMetadata(
 ) (map[string]interface{}, []*types.Amount, *Error) {
 	if err := f.connectionSemaphore.Acquire(ctx, semaphoreRequestWeight); err != nil {
 		return nil, nil, &Error{
-			Err: fmt.Errorf("%w: %s", ErrCouldNotAcquireSemaphore, err.Error()),
+			Err: fmt.Errorf("failed to acquire semaphore: %w", err),
 		}
 	}
 	defer f.connectionSemaphore.Release(semaphoreRequestWeight)
@@ -162,7 +162,7 @@ func (f *Fetcher) ConstructionMetadata(
 
 	if err := asserter.ConstructionMetadataResponse(metadata); err != nil {
 		fetcherErr := &Error{
-			Err: fmt.Errorf("%w: /construction/metadata", err),
+			Err: fmt.Errorf("/construction/metadata response is invalid: %w", err),
 		}
 		return nil, nil, fetcherErr
 	}
@@ -183,7 +183,7 @@ func (f *Fetcher) ConstructionParse(
 ) ([]*types.Operation, []*types.AccountIdentifier, map[string]interface{}, *Error) {
 	if err := f.connectionSemaphore.Acquire(ctx, semaphoreRequestWeight); err != nil {
 		return nil, nil, nil, &Error{
-			Err: fmt.Errorf("%w: %s", ErrCouldNotAcquireSemaphore, err.Error()),
+			Err: fmt.Errorf("failed to acquire semaphore: %w", err),
 		}
 	}
 	defer f.connectionSemaphore.Release(semaphoreRequestWeight)
@@ -201,7 +201,7 @@ func (f *Fetcher) ConstructionParse(
 
 	if err := f.Asserter.ConstructionParseResponse(response, signed); err != nil {
 		fetcherErr := &Error{
-			Err: fmt.Errorf("%w: /construction/parse", err),
+			Err: fmt.Errorf("/construction/parse response is invalid: %w", err),
 		}
 		return nil, nil, nil, fetcherErr
 	}
@@ -229,7 +229,7 @@ func (f *Fetcher) ConstructionPayloads(
 ) (string, []*types.SigningPayload, *Error) {
 	if err := f.connectionSemaphore.Acquire(ctx, semaphoreRequestWeight); err != nil {
 		return "", nil, &Error{
-			Err: fmt.Errorf("%w: %s", ErrCouldNotAcquireSemaphore, err.Error()),
+			Err: fmt.Errorf("failed to acquire semaphore: %w", err),
 		}
 	}
 	defer f.connectionSemaphore.Release(semaphoreRequestWeight)
@@ -249,7 +249,7 @@ func (f *Fetcher) ConstructionPayloads(
 
 	if err := asserter.ConstructionPayloadsResponse(response); err != nil {
 		fetcherErr := &Error{
-			Err: fmt.Errorf("%w: /construction/payloads", err),
+			Err: fmt.Errorf("/construction/payloads response is invalid: %w", err),
 		}
 		return "", nil, fetcherErr
 	}
@@ -272,7 +272,7 @@ func (f *Fetcher) ConstructionPreprocess(
 ) (map[string]interface{}, []*types.AccountIdentifier, *Error) {
 	if err := f.connectionSemaphore.Acquire(ctx, semaphoreRequestWeight); err != nil {
 		return nil, nil, &Error{
-			Err: fmt.Errorf("%w: %s", ErrCouldNotAcquireSemaphore, err.Error()),
+			Err: fmt.Errorf("failed to acquire semaphore: %w", err),
 		}
 	}
 	defer f.connectionSemaphore.Release(semaphoreRequestWeight)
@@ -291,7 +291,7 @@ func (f *Fetcher) ConstructionPreprocess(
 
 	if err := asserter.ConstructionPreprocessResponse(response); err != nil {
 		fetcherErr := &Error{
-			Err: fmt.Errorf("%w: /construction/preprocess", err),
+			Err: fmt.Errorf("/construction/preprocess response is invalid: %w", err),
 		}
 		return nil, nil, fetcherErr
 	}
@@ -308,7 +308,7 @@ func (f *Fetcher) ConstructionSubmit(
 ) (*types.TransactionIdentifier, map[string]interface{}, *Error) {
 	if err := f.connectionSemaphore.Acquire(ctx, semaphoreRequestWeight); err != nil {
 		return nil, nil, &Error{
-			Err: fmt.Errorf("%w: %s", ErrCouldNotAcquireSemaphore, err.Error()),
+			Err: fmt.Errorf("failed to acquire semaphore: %w", err),
 		}
 	}
 	defer f.connectionSemaphore.Release(semaphoreRequestWeight)
@@ -326,7 +326,7 @@ func (f *Fetcher) ConstructionSubmit(
 
 	if err := asserter.TransactionIdentifierResponse(submitResponse); err != nil {
 		fetcherErr := &Error{
-			Err: fmt.Errorf("%w: /construction/submit", err),
+			Err: fmt.Errorf("/construction/submit response is invalid: %w", err),
 		}
 		return nil, nil, fetcherErr
 	}

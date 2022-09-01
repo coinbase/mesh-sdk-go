@@ -55,7 +55,7 @@ func (f *Fetcher) RequestFailedError(
 	}
 
 	return &Error{
-		Err:       fmt.Errorf("%w: %s %s", ErrRequestFailed, message, err.Error()),
+		Err:       fmt.Errorf("%s %s: %w", message, err.Error(), ErrRequestFailed),
 		ClientErr: rosettaErr,
 		Retry: ((rosettaErr != nil && rosettaErr.Retriable) || transientError(err) || f.forceRetry) &&
 			!errors.Is(err, context.Canceled),
@@ -78,10 +78,6 @@ var (
 	// ErrExhaustedRetries is returned when a request with retries
 	// fails because it was attempted too many times.
 	ErrExhaustedRetries = errors.New("retries exhausted")
-
-	// ErrCouldNotAcquireSemaphore is returned when acquiring
-	// the connection semaphore returns an error.
-	ErrCouldNotAcquireSemaphore = errors.New("could not acquire semaphore")
 )
 
 // Err takes an error as an argument and returns
@@ -92,7 +88,6 @@ func Err(err error) bool {
 		ErrNetworkMissing,
 		ErrRequestFailed,
 		ErrExhaustedRetries,
-		ErrCouldNotAcquireSemaphore,
 	}
 
 	return utils.FindError(fetcherErrors, err)

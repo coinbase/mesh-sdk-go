@@ -43,24 +43,24 @@ func (s *SignerPallas) Sign(
 ) (*types.Signature, error) {
 	err := s.KeyPair.IsValid()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("key pair is invalid: %w", err)
 	}
 
 	if !(payload.SignatureType == types.SchnorrPoseidon || payload.SignatureType == "") {
 		return nil, fmt.Errorf(
-			"%w: expected %v but got %v",
-			ErrSignUnsupportedPayloadSignatureType,
+			"expected signing payload signature type %v but got %v: %w",
 			types.SchnorrPoseidon,
 			payload.SignatureType,
+			ErrSignUnsupportedPayloadSignatureType,
 		)
 	}
 
 	if sigType != types.SchnorrPoseidon {
 		return nil, fmt.Errorf(
-			"%w: expected %v but got %v",
-			ErrSignUnsupportedSignatureType,
+			"expected signature type %v but got %v: %w",
 			types.SchnorrPoseidon,
 			sigType,
+			ErrSignUnsupportedSignatureType,
 		)
 	}
 
@@ -71,12 +71,12 @@ func (s *SignerPallas) Sign(
 
 	tx, err := ParseSigningPayload(payload)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse signing payload: %w", err)
 	}
 
 	sig, err := privKey.SignTransaction(tx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to sign transaction: %w", err)
 	}
 	sigBytes, _ := sig.MarshalBinary()
 
@@ -93,10 +93,10 @@ func (s *SignerPallas) Sign(
 func (s *SignerPallas) Verify(signature *types.Signature) error {
 	if signature.SignatureType != types.SchnorrPoseidon {
 		return fmt.Errorf(
-			"%w: expected %v but got %v",
-			ErrVerifyUnsupportedPayloadSignatureType,
+			"expected signing payload signature type %v but got %v: %w",
 			types.SchnorrPoseidon,
 			signature.SignatureType,
+			ErrVerifyUnsupportedPayloadSignatureType,
 		)
 	}
 
@@ -110,17 +110,17 @@ func (s *SignerPallas) Verify(signature *types.Signature) error {
 
 	err := asserter.Signatures([]*types.Signature{signature})
 	if err != nil {
-		return fmt.Errorf("%w: %s", ErrVerifyFailed, err)
+		return fmt.Errorf("signature is invalid: %w", err)
 	}
 
 	transaction, err := ParseSigningPayload(signature.SigningPayload)
 	if err != nil {
-		return fmt.Errorf("%w: %s", ErrVerifyFailed, err)
+		return fmt.Errorf("failed to parse signing payload: %w", err)
 	}
 
-	verifyErr := pubKey.VerifyTransaction(sig, transaction)
-	if verifyErr != nil {
-		return fmt.Errorf("%w: %s", ErrVerifyFailed, verifyErr)
+	err = pubKey.VerifyTransaction(sig, transaction)
+	if err != nil {
+		return fmt.Errorf("failed to verify transaction: %w", err)
 	}
 
 	return nil
@@ -146,20 +146,18 @@ func ParseSigningPayload(rawPayload *types.SigningPayload) (*mina.Transaction, e
 
 	err := json.Unmarshal(rawPayload.Bytes, &signingPayload)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to unmarshal payload: %w", err)
 	}
 
 	if signingPayload.Payment != nil {
 		payloadFields = *signingPayload.Payment
 	} else {
-		return nil, errors.New(
-			"payment not found in signingPayload",
-		)
+		return nil, ErrPaymentNotFound
 	}
 
 	transaction, err := constructTransaction(&payloadFields)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to construct transaction: %w", err)
 	}
 	return transaction, nil
 }
@@ -167,17 +165,17 @@ func ParseSigningPayload(rawPayload *types.SigningPayload) (*mina.Transaction, e
 func constructTransaction(p *PayloadFields) (*mina.Transaction, error) {
 	var fromPublicKey mina.PublicKey
 	if err := fromPublicKey.ParseAddress(p.From); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse \"from\" address: %w", err)
 	}
 
 	var toPublicKey mina.PublicKey
 	if err := toPublicKey.ParseAddress(p.To); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse \"to\" address: %w", err)
 	}
 
 	fee, err := strconv.ParseUint(p.Fee, 10, 64)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse uint for fee: %w", err)
 	}
 
 	// amount is a field that only exists in a Payment transaction
@@ -185,20 +183,20 @@ func constructTransaction(p *PayloadFields) (*mina.Transaction, error) {
 	if p.Amount != nil {
 		amount, err = strconv.ParseUint(*p.Amount, 10, 64)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to parse uint for amount: %w", err)
 		}
 	}
 
 	nonce, err := strconv.ParseUint(p.Nonce, 10, 32)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse uint for nonce: %w", err)
 	}
 
 	validUntil := uint64(0)
 	if p.ValidUntil != nil {
 		validUntil, err = strconv.ParseUint(*p.ValidUntil, 10, 32)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to parse uint for valid until memo: %w", err)
 		}
 	}
 

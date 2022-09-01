@@ -27,18 +27,6 @@ var (
 	ErrPrivKeyZero          = errors.New("privkey cannot be 0")
 	ErrPubKeyNotOnCurve     = errors.New("pubkey is not on the curve")
 
-	ErrKeyGenSecp256k1Failed = errors.New(
-		"keygen: error generating key pair for secp256k1 curve type",
-	)
-	ErrKeyGenEdwards25519Failed = errors.New(
-		"keygen: error generating key pair for edwards25519 curve type",
-	)
-	ErrKeyGenSecp256r1Failed = errors.New(
-		"keygen: error generating key pair for secp256r1 curve type",
-	)
-	ErrKeyGenPallasFailed = errors.New(
-		"keygen: error generating key pair for pallas curve type",
-	)
 	ErrCurveTypeNotSupported = errors.New("not a supported CurveType")
 
 	ErrSignUnsupportedPayloadSignatureType = errors.New(
@@ -47,7 +35,6 @@ var (
 	ErrSignUnsupportedSignatureType = errors.New(
 		"sign: unexpected Signature type while signing",
 	)
-	ErrSignFailed = errors.New("sign: unable to sign")
 
 	ErrVerifyUnsupportedPayloadSignatureType = errors.New(
 		"verify: unexpected payload.SignatureType while verifying",
@@ -56,6 +43,8 @@ var (
 		"verify: unexpected Signature type while verifying",
 	)
 	ErrVerifyFailed = errors.New("verify: verify returned false")
+
+	ErrPaymentNotFound = errors.New("payment not found in signingPayload")
 )
 
 // Err takes an error as an argument and returns
@@ -66,14 +55,9 @@ func Err(err error) bool {
 		ErrPrivKeyLengthInvalid,
 		ErrPrivKeyZero,
 		ErrPubKeyNotOnCurve,
-		ErrKeyGenSecp256k1Failed,
-		ErrKeyGenSecp256r1Failed,
-		ErrKeyGenEdwards25519Failed,
-		ErrKeyGenPallasFailed,
 		ErrCurveTypeNotSupported,
 		ErrSignUnsupportedPayloadSignatureType,
 		ErrSignUnsupportedSignatureType,
-		ErrSignFailed,
 		ErrVerifyUnsupportedPayloadSignatureType,
 		ErrVerifyUnsupportedSignatureType,
 		ErrVerifyFailed,

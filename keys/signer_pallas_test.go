@@ -16,6 +16,7 @@ package keys
 
 import (
 	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/coinbase/kryptology/pkg/signatures/schnorr/mina"
@@ -293,7 +294,7 @@ func TestVerifyPallas(t *testing.T) {
 			types.SchnorrPoseidon,
 			signerPallas.PublicKey(),
 			simpleBytes,
-			testSignature.Bytes), ErrVerifyFailed},
+			testSignature.Bytes), fmt.Errorf("failed to parse signing payload")},
 	}
 
 	for _, test := range signatureTests {

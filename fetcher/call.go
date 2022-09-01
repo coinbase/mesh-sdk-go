@@ -32,7 +32,7 @@ func (f *Fetcher) Call(
 ) (map[string]interface{}, bool, *Error) {
 	if err := f.connectionSemaphore.Acquire(ctx, semaphoreRequestWeight); err != nil {
 		return nil, false, &Error{
-			Err: fmt.Errorf("%w: %s", ErrCouldNotAcquireSemaphore, err.Error()),
+			Err: fmt.Errorf("failed to acquire semaphore: %w", err),
 		}
 	}
 	defer f.connectionSemaphore.Release(semaphoreRequestWeight)
@@ -84,7 +84,7 @@ func (f *Fetcher) CallRetry(
 
 		if is, _ := asserter.Err(err.Err); is {
 			fetcherErr := &Error{
-				Err:       fmt.Errorf("%w: /call not attempting retry", err.Err),
+				Err:       fmt.Errorf("/call not attempting retry: %w", err.Err),
 				ClientErr: err.ClientErr,
 			}
 			return nil, false, fetcherErr
