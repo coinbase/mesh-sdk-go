@@ -30,7 +30,7 @@ func (f *Fetcher) SearchTransactions(
 ) (*int64, []*types.BlockTransaction, *Error) {
 	if err := f.connectionSemaphore.Acquire(ctx, semaphoreRequestWeight); err != nil {
 		return nil, nil, &Error{
-			Err: fmt.Errorf("%w: %s", ErrCouldNotAcquireSemaphore, err.Error()),
+			Err: fmt.Errorf("failed to acquire semaphore: %w", err),
 		}
 	}
 	defer f.connectionSemaphore.Release(semaphoreRequestWeight)
@@ -45,7 +45,7 @@ func (f *Fetcher) SearchTransactions(
 	); err != nil {
 		fetcherErr := &Error{
 			Err: fmt.Errorf(
-				"%w: /search/transactions",
+				"/search/transactions response is invalid: %w",
 				err,
 			),
 		}
@@ -83,7 +83,7 @@ func (f *Fetcher) SearchTransactionsRetry(
 
 		if is, _ := asserter.Err(err.Err); is {
 			fetcherErr := &Error{
-				Err:       fmt.Errorf("%w: /search/transactions not attempting retry", err.Err),
+				Err:       fmt.Errorf("/search/transactions not attempting retry: %w", err.Err),
 				ClientErr: err.ClientErr,
 			}
 			return nil, nil, fetcherErr

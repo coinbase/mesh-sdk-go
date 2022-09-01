@@ -32,7 +32,7 @@ func (f *Fetcher) EventsBlocks(
 ) (int64, []*types.BlockEvent, *Error) {
 	if err := f.connectionSemaphore.Acquire(ctx, semaphoreRequestWeight); err != nil {
 		return -1, nil, &Error{
-			Err: fmt.Errorf("%w: %s", ErrCouldNotAcquireSemaphore, err.Error()),
+			Err: fmt.Errorf("failed to acquire semaphore: %w", err),
 		}
 	}
 	defer f.connectionSemaphore.Release(semaphoreRequestWeight)
@@ -53,7 +53,7 @@ func (f *Fetcher) EventsBlocks(
 	); err != nil {
 		fetcherErr := &Error{
 			Err: fmt.Errorf(
-				"%w: /events/blocks",
+				"/events/blocks response is invalid: %w",
 				err,
 			),
 		}
@@ -95,7 +95,7 @@ func (f *Fetcher) EventsBlocksRetry(
 
 		if is, _ := asserter.Err(err.Err); is {
 			fetcherErr := &Error{
-				Err:       fmt.Errorf("%w: /events/blocks not attempting retry", err.Err),
+				Err:       fmt.Errorf("/events/blocks not attempting retry: %w", err.Err),
 				ClientErr: err.ClientErr,
 			}
 			return -1, nil, fetcherErr

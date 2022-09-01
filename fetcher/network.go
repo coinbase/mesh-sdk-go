@@ -31,7 +31,7 @@ func (f *Fetcher) NetworkStatus(
 ) (*types.NetworkStatusResponse, *Error) {
 	if err := f.connectionSemaphore.Acquire(ctx, semaphoreRequestWeight); err != nil {
 		return nil, &Error{
-			Err: fmt.Errorf("%w: %s", ErrCouldNotAcquireSemaphore, err.Error()),
+			Err: fmt.Errorf("failed to acquire semaphore: %w", err),
 		}
 	}
 	defer f.connectionSemaphore.Release(semaphoreRequestWeight)
@@ -49,7 +49,7 @@ func (f *Fetcher) NetworkStatus(
 
 	if err := asserter.NetworkStatusResponse(networkStatus); err != nil {
 		fetcherErr := &Error{
-			Err: fmt.Errorf("%w: /network/status", err),
+			Err: fmt.Errorf("/network/status response is invalid: %w", err),
 		}
 		return nil, fetcherErr
 	}
@@ -87,7 +87,7 @@ func (f *Fetcher) NetworkStatusRetry(
 
 		if is, _ := asserter.Err(err.Err); is {
 			fetcherErr := &Error{
-				Err:       fmt.Errorf("%w: /network/status not attempting retry", err.Err),
+				Err:       fmt.Errorf("/network/status not attempting retry: %w", err.Err),
 				ClientErr: err.ClientErr,
 			}
 			return nil, fetcherErr
@@ -111,7 +111,7 @@ func (f *Fetcher) NetworkList(
 ) (*types.NetworkListResponse, *Error) {
 	if err := f.connectionSemaphore.Acquire(ctx, semaphoreRequestWeight); err != nil {
 		return nil, &Error{
-			Err: fmt.Errorf("%w: %s", ErrCouldNotAcquireSemaphore, err.Error()),
+			Err: fmt.Errorf("failed to acquire semaphore: %w", err),
 		}
 	}
 	defer f.connectionSemaphore.Release(semaphoreRequestWeight)
@@ -129,7 +129,7 @@ func (f *Fetcher) NetworkList(
 
 	if err := asserter.NetworkListResponse(networkList); err != nil {
 		fetcherErr := &Error{
-			Err: fmt.Errorf("%w: /network/list", err),
+			Err: fmt.Errorf("/network/list response is invalid: %w", err),
 		}
 		return nil, fetcherErr
 	}
@@ -165,7 +165,7 @@ func (f *Fetcher) NetworkListRetry(
 
 		if is, _ := asserter.Err(err.Err); is {
 			fetcherErr := &Error{
-				Err:       fmt.Errorf("%w: /network/list not attempting retry", err.Err),
+				Err:       fmt.Errorf("/network/list not attempting retry: %w", err.Err),
 				ClientErr: err.ClientErr,
 			}
 			return nil, fetcherErr
@@ -186,7 +186,7 @@ func (f *Fetcher) NetworkOptions(
 ) (*types.NetworkOptionsResponse, *Error) {
 	if err := f.connectionSemaphore.Acquire(ctx, semaphoreRequestWeight); err != nil {
 		return nil, &Error{
-			Err: fmt.Errorf("%w: %s", ErrCouldNotAcquireSemaphore, err.Error()),
+			Err: fmt.Errorf("failed to acquire semaphore: %w", err),
 		}
 	}
 	defer f.connectionSemaphore.Release(semaphoreRequestWeight)
@@ -205,7 +205,7 @@ func (f *Fetcher) NetworkOptions(
 
 	if err := asserter.NetworkOptionsResponse(networkOptions); err != nil {
 		fetcherErr := &Error{
-			Err: fmt.Errorf("%w: /network/options", err),
+			Err: fmt.Errorf("/network/options response is invalid: %w", err),
 		}
 		return nil, fetcherErr
 	}
@@ -243,7 +243,7 @@ func (f *Fetcher) NetworkOptionsRetry(
 
 		if is, _ := asserter.Err(err.Err); is {
 			fetcherErr := &Error{
-				Err:       fmt.Errorf("%w: /network/options not attempting retry", err.Err),
+				Err:       fmt.Errorf("/network/options not attempting retry: %w", err.Err),
 				ClientErr: err.ClientErr,
 			}
 			return nil, fetcherErr

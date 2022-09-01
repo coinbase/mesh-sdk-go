@@ -174,10 +174,10 @@ func (f *Fetcher) InitializeAsserter(
 		if !exists {
 			return nil, nil, &Error{
 				Err: fmt.Errorf(
-					"%w: %s not in %s",
-					ErrNetworkMissing,
+					"%s not in %s: %w",
 					types.PrintStruct(networkIdentifier),
 					types.PrintStruct(supportedNetworks),
+					ErrNetworkMissing,
 				),
 			}
 		}

@@ -30,7 +30,7 @@ func (f *Fetcher) Mempool(
 ) ([]*types.TransactionIdentifier, *Error) {
 	if err := f.connectionSemaphore.Acquire(ctx, semaphoreRequestWeight); err != nil {
 		return nil, &Error{
-			Err: fmt.Errorf("%w: %s", ErrCouldNotAcquireSemaphore, err.Error()),
+			Err: fmt.Errorf("failed to acquire semaphore: %w", err),
 		}
 	}
 	defer f.connectionSemaphore.Release(semaphoreRequestWeight)
@@ -48,7 +48,7 @@ func (f *Fetcher) Mempool(
 	mempool := response.TransactionIdentifiers
 	if err := asserter.MempoolTransactions(mempool); err != nil {
 		fetcherErr := &Error{
-			Err: fmt.Errorf("%w: /mempool", err),
+			Err: fmt.Errorf("/mempool response is invalid: %w", err),
 		}
 		return nil, fetcherErr
 	}
@@ -65,7 +65,7 @@ func (f *Fetcher) MempoolTransaction(
 ) (*types.Transaction, map[string]interface{}, *Error) {
 	if err := f.connectionSemaphore.Acquire(ctx, semaphoreRequestWeight); err != nil {
 		return nil, nil, &Error{
-			Err: fmt.Errorf("%w: %s", ErrCouldNotAcquireSemaphore, err.Error()),
+			Err: fmt.Errorf("failed to acquire semaphore: %w", err),
 		}
 	}
 	defer f.connectionSemaphore.Release(semaphoreRequestWeight)
@@ -84,7 +84,7 @@ func (f *Fetcher) MempoolTransaction(
 	mempoolTransaction := response.Transaction
 	if err := f.Asserter.Transaction(mempoolTransaction); err != nil {
 		fetcherErr := &Error{
-			Err: fmt.Errorf("%w: /mempool/transaction", err),
+			Err: fmt.Errorf("/mempool/transaction response is invalid: %w", err),
 		}
 		return nil, nil, fetcherErr
 	}

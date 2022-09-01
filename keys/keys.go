@@ -39,10 +39,10 @@ func privateKeyValid(privateKey []byte) error {
 	// PrivKeyBytesLen.
 	if len(privateKey) != PrivKeyBytesLen {
 		return fmt.Errorf(
-			"%w: expected %d bytes but got %v",
-			ErrPrivKeyLengthInvalid,
+			"expected %d bytes for private key but got %d: %w",
 			PrivKeyBytesLen,
 			len(privateKey),
+			ErrPrivKeyLengthInvalid,
 		)
 	}
 
@@ -57,14 +57,14 @@ func privateKeyValid(privateKey []byte) error {
 func ImportPrivateKey(privKeyHex string, curve types.CurveType) (*KeyPair, error) {
 	privKey, err := hex.DecodeString(privKeyHex)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %s", ErrPrivKeyUndecodable, privKeyHex)
+		return nil, fmt.Errorf("failed to decode private key hex: %w", ErrPrivKeyUndecodable)
 	}
 
 	// We check the parsed private key length to ensure we don't panic (most
 	// crypto libraries panic with incorrect private key lengths instead of
 	// throwing an error).
 	if err := privateKeyValid(privKey); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("private key is invalid: %w", err)
 	}
 
 	var keyPair *KeyPair
@@ -134,13 +134,17 @@ func ImportPrivateKey(privKeyHex string, curve types.CurveType) (*KeyPair, error
 		}
 
 	default:
-		return nil, fmt.Errorf("%w: %s", ErrCurveTypeNotSupported, curve)
+		return nil, fmt.Errorf(
+			"curve type %s is invalid: %w",
+			types.PrintStruct(curve),
+			ErrCurveTypeNotSupported,
+		)
 	}
 
 	// We test for validity before returning
 	// the new KeyPair.
 	if err := keyPair.IsValid(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("key pair is invalid: %w", err)
 	}
 
 	return keyPair, nil
@@ -154,7 +158,10 @@ func GenerateKeypair(curve types.CurveType) (*KeyPair, error) {
 	case types.Secp256k1:
 		rawPrivKey, err := btcec.NewPrivateKey(btcec.S256())
 		if err != nil {
-			return nil, fmt.Errorf("%w: %v", ErrKeyGenSecp256k1Failed, err)
+			return nil, fmt.Errorf(
+				"failed to generate private key for secp256k1 curve type: %w",
+				err,
+			)
 		}
 		rawPubKey := rawPrivKey.PubKey()
 
@@ -170,7 +177,10 @@ func GenerateKeypair(curve types.CurveType) (*KeyPair, error) {
 	case types.Edwards25519:
 		rawPubKey, rawPrivKey, err := ed25519.GenerateKey(nil)
 		if err != nil {
-			return nil, fmt.Errorf("%w: %v", ErrKeyGenEdwards25519Failed, err)
+			return nil, fmt.Errorf(
+				"failed to generate key pair for edwards25519 curve type: %w",
+				err,
+			)
 		}
 
 		pubKey := &types.PublicKey{
@@ -186,7 +196,10 @@ func GenerateKeypair(curve types.CurveType) (*KeyPair, error) {
 		crv := elliptic.P256()
 		rawPrivKey, err := ecdsa.GenerateKey(crv, rand.Reader)
 		if err != nil {
-			return nil, fmt.Errorf("%w: %v", ErrKeyGenSecp256r1Failed, err)
+			return nil, fmt.Errorf(
+				"failed to generate private key for secp256r1 curve type: %w",
+				err,
+			)
 		}
 		rawPubKey := rawPrivKey.PublicKey
 		pubKey := &types.PublicKey{
@@ -203,7 +216,7 @@ func GenerateKeypair(curve types.CurveType) (*KeyPair, error) {
 		rawPubKeyBytes, _ := rawPubKey.MarshalBinary()
 		rawPrivKeyBytes, _ := rawPrivKey.MarshalBinary()
 		if err != nil {
-			return nil, fmt.Errorf("%w: %v", ErrKeyGenPallasFailed, err)
+			return nil, fmt.Errorf("failed to generate key pair for pallas curve type: %w", err)
 		}
 		pubKey := &types.PublicKey{
 			Bytes:     rawPubKeyBytes,
@@ -215,13 +228,17 @@ func GenerateKeypair(curve types.CurveType) (*KeyPair, error) {
 			PrivateKey: rawPrivKeyBytes,
 		}
 	default:
-		return nil, fmt.Errorf("%w: %s", ErrCurveTypeNotSupported, curve)
+		return nil, fmt.Errorf(
+			"curve type %s is invalid: %w",
+			types.PrintStruct(curve),
+			ErrCurveTypeNotSupported,
+		)
 	}
 
 	// We test for validity before returning
 	// the new KeyPair.
 	if err := keyPair.IsValid(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("key pair is invalid: %w", err)
 	}
 
 	return keyPair, nil
@@ -230,11 +247,11 @@ func GenerateKeypair(curve types.CurveType) (*KeyPair, error) {
 // IsValid checks the validity of a KeyPair.
 func (k *KeyPair) IsValid() error {
 	if err := asserter.PublicKey(k.PublicKey); err != nil {
-		return err
+		return fmt.Errorf("public key is invalid: %w", err)
 	}
 
 	if err := privateKeyValid(k.PrivateKey); err != nil {
-		return err
+		return fmt.Errorf("private key is invalid: %w", err)
 	}
 
 	return nil
@@ -253,6 +270,10 @@ func (k *KeyPair) Signer() (Signer, error) {
 	case types.Pallas:
 		return &SignerPallas{k}, nil
 	default:
-		return nil, fmt.Errorf("%w: %s", ErrCurveTypeNotSupported, k.PublicKey.CurveType)
+		return nil, fmt.Errorf(
+			"curve type %s is invalid: %w",
+			types.PrintStruct(k.PublicKey.CurveType),
+			ErrCurveTypeNotSupported,
+		)
 	}
 }

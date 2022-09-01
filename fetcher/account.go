@@ -34,7 +34,7 @@ func (f *Fetcher) AccountBalance(
 ) (*types.BlockIdentifier, []*types.Amount, map[string]interface{}, *Error) {
 	if err := f.connectionSemaphore.Acquire(ctx, semaphoreRequestWeight); err != nil {
 		return nil, nil, nil, &Error{
-			Err: fmt.Errorf("%w: %s", ErrCouldNotAcquireSemaphore, err.Error()),
+			Err: fmt.Errorf("failed to acquire semaphore: %w", err),
 		}
 	}
 	defer f.connectionSemaphore.Release(semaphoreRequestWeight)
@@ -57,7 +57,7 @@ func (f *Fetcher) AccountBalance(
 	); err != nil {
 		fetcherErr := &Error{
 			Err: fmt.Errorf(
-				"%w: /account/balance",
+				"/account/balance response is invalid: %w",
 				err,
 			),
 		}
@@ -102,7 +102,7 @@ func (f *Fetcher) AccountBalanceRetry(
 
 		if is, _ := asserter.Err(err.Err); is {
 			fetcherErr := &Error{
-				Err:       fmt.Errorf("%w: /account/balance not attempting retry", err.Err),
+				Err:       fmt.Errorf("/account/balance not attempting retry: %w", err.Err),
 				ClientErr: err.ClientErr,
 			}
 			return nil, nil, nil, fetcherErr
@@ -129,7 +129,7 @@ func (f *Fetcher) AccountCoins(
 ) (*types.BlockIdentifier, []*types.Coin, map[string]interface{}, *Error) {
 	if err := f.connectionSemaphore.Acquire(ctx, semaphoreRequestWeight); err != nil {
 		return nil, nil, nil, &Error{
-			Err: fmt.Errorf("%w: %s", ErrCouldNotAcquireSemaphore, err.Error()),
+			Err: fmt.Errorf("failed to acquire semaphore: %w", err),
 		}
 	}
 	defer f.connectionSemaphore.Release(semaphoreRequestWeight)
@@ -151,7 +151,7 @@ func (f *Fetcher) AccountCoins(
 	); err != nil {
 		fetcherErr := &Error{
 			Err: fmt.Errorf(
-				"%w: /account/coins",
+				"/account/coins response is invalid: %w",
 				err,
 			),
 		}
@@ -195,7 +195,7 @@ func (f *Fetcher) AccountCoinsRetry(
 
 		if is, _ := asserter.Err(err.Err); is {
 			fetcherErr := &Error{
-				Err:       fmt.Errorf("%w: /account/coins not attempting retry", err.Err),
+				Err:       fmt.Errorf("/account/coins not attempting retry: %w", err.Err),
 				ClientErr: err.ClientErr,
 			}
 			return nil, nil, nil, fetcherErr
