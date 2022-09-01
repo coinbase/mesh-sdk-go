@@ -42,7 +42,7 @@ func (p *Parser) skipOperation(op *types.Operation) (bool, error) {
 	successful, err := p.Asserter.OperationSuccessful(op)
 	if err != nil {
 		// Should only occur if responses not validated
-		return false, err
+		return false, fmt.Errorf("failed to check the status of operation %s: %w", types.PrintStruct(op), err)
 	}
 
 	if !successful {
@@ -82,7 +82,7 @@ func (p *Parser) BalanceChanges(
 		for _, op := range tx.Operations {
 			skip, err := p.skipOperation(op)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("failed to skip operation %s: %w", types.PrintStruct(op), err)
 			}
 			if skip {
 				continue
@@ -96,7 +96,7 @@ func (p *Parser) BalanceChanges(
 			if blockRemoved {
 				negatedValue, err := types.NegateValue(amountValue)
 				if err != nil {
-					return nil, err
+					return nil, fmt.Errorf("failed to flip the sign of %s: %w", amountValue, err)
 				}
 				amountValue = negatedValue
 			}
@@ -121,7 +121,7 @@ func (p *Parser) BalanceChanges(
 
 			newDifference, err := types.AddValues(val.Difference, amountValue)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("failed to add %s and %s: %w", val.Difference, amountValue, err)
 			}
 			val.Difference = newDifference
 			balanceChanges[key] = val

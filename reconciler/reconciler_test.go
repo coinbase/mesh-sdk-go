@@ -334,10 +334,10 @@ func TestCompareBalance(t *testing.T) {
 		assert.Equal(t, "", cachedBalance)
 		assert.Equal(t, int64(0), headIndex)
 		assert.EqualError(t, err, fmt.Errorf(
-			"%w live block %d > head block %d",
-			ErrHeadBlockBehindLive,
+			"live block %d > head block %d: %w",
 			1,
 			0,
+			ErrHeadBlockBehindLive,
 		).Error())
 		mtxn.AssertExpectations(t)
 	})
@@ -1348,7 +1348,7 @@ func TestReconcile_FailureOnlyActive(t *testing.T) {
 			go func() {
 				err := r.Reconcile(ctx)
 				assert.Error(t, err)
-				assert.Contains(t, "reconciliation failed", err.Error())
+				assert.Contains(t, err.Error(), "reconciliation failed")
 			}()
 
 			time.Sleep(1 * time.Second)
@@ -1810,7 +1810,7 @@ func TestReconcile_NotExemptOnlyActive(t *testing.T) {
 			go func() {
 				err := r.Reconcile(ctx)
 				assert.Error(t, err)
-				assert.Contains(t, "reconciliation failed", err.Error())
+				assert.Contains(t, err.Error(), "reconciliation failed")
 			}()
 
 			err := r.QueueChanges(ctx, block, []*parser.BalanceChange{
@@ -1903,7 +1903,7 @@ func TestReconcile_NotExemptAddressOnlyActive(t *testing.T) {
 			go func() {
 				err := r.Reconcile(ctx)
 				assert.Error(t, err)
-				assert.Contains(t, "reconciliation failed", err.Error())
+				assert.Contains(t, err.Error(), "reconciliation failed")
 			}()
 
 			err := r.QueueChanges(ctx, block, []*parser.BalanceChange{
@@ -2000,7 +2000,7 @@ func TestReconcile_NotExemptWrongAddressOnlyActive(t *testing.T) {
 			go func() {
 				err := r.Reconcile(ctx)
 				assert.Error(t, err)
-				assert.Contains(t, "reconciliation failed", err.Error())
+				assert.Contains(t, err.Error(), "reconciliation failed")
 			}()
 
 			err := r.QueueChanges(ctx, block, []*parser.BalanceChange{
@@ -2220,7 +2220,7 @@ func TestReconcile_FailureOnlyInactive(t *testing.T) {
 
 			err := r.Reconcile(ctx)
 			assert.Error(t, err)
-			assert.Contains(t, "reconciliation failed", err.Error())
+			assert.Contains(t, err.Error(), "reconciliation failed")
 
 			mockHelper.AssertExpectations(t)
 			mockHandler.AssertExpectations(t)
@@ -2418,7 +2418,8 @@ func TestReconcile_ActiveNotIndexAtTipError(t *testing.T) {
 
 	go func() {
 		err := r.Reconcile(ctx)
-		assert.True(t, errors.Is(err, ErrLiveBalanceLookupFailed))
+		expectErr := fmt.Errorf("failed to lookup balance for currency %s of account %s at height %d", types.PrintStruct(accountCurrency.Currency), types.PrintStruct(accountCurrency.Account), int64(1))
+		assert.Contains(t, err.Error(), expectErr.Error())
 	}()
 
 	err := r.QueueChanges(ctx, block, []*parser.BalanceChange{
@@ -2482,7 +2483,8 @@ func TestReconcile_ActiveErrorIndexAtTipError(t *testing.T) {
 
 	go func() {
 		err := r.Reconcile(ctx)
-		assert.True(t, errors.Is(err, ErrLiveBalanceLookupFailed))
+		expectErr := fmt.Errorf("failed to lookup balance for currency %s of account %s at height %d", types.PrintStruct(accountCurrency.Currency), types.PrintStruct(accountCurrency.Account), int64(1))
+		assert.Contains(t, err.Error(), expectErr.Error())
 	}()
 
 	err := r.QueueChanges(ctx, block, []*parser.BalanceChange{
@@ -2633,7 +2635,8 @@ func TestReconcile_FailureNotIndexAtTipInactive(t *testing.T) {
 
 	go func() {
 		err := r.Reconcile(ctx)
-		assert.True(t, errors.Is(err, ErrLiveBalanceLookupFailed))
+		expectErr := fmt.Errorf("failed to lookup balance for currency %s of account %s at height %d", types.PrintStruct(accountCurrency.Currency), types.PrintStruct(accountCurrency.Account), int64(1))
+		assert.Contains(t, err.Error(), expectErr.Error())
 	}()
 
 	time.Sleep(1 * time.Second)
@@ -2697,7 +2700,8 @@ func TestReconcile_FailureErrorIndexAtTipInactive(t *testing.T) {
 
 	go func() {
 		err := r.Reconcile(ctx)
-		assert.True(t, errors.Is(err, ErrLiveBalanceLookupFailed))
+		expectErr := fmt.Errorf("failed to lookup balance for currency %s of account %s at height %d", types.PrintStruct(accountCurrency.Currency), types.PrintStruct(accountCurrency.Account), int64(1))
+		assert.Contains(t, err.Error(), expectErr.Error())
 	}()
 
 	time.Sleep(1 * time.Second)
