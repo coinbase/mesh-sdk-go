@@ -348,7 +348,12 @@ func (r *Reconciler) CompareBalance(
 
 	difference, err := types.SubtractValues(liveBalance, computedBalance.Value)
 	if err != nil {
-		return "", "", -1, fmt.Errorf("failed to subtract values %s - %s: %w", liveBalance, computedBalance.Value, err)
+		return "", "", -1, fmt.Errorf(
+			"failed to subtract values %s - %s: %w",
+			liveBalance,
+			computedBalance.Value,
+			err,
+		)
 	}
 
 	return difference, computedBalance.Value, head.Index, nil
@@ -762,7 +767,13 @@ func (r *Reconciler) reconcileActiveAccounts(ctx context.Context) error { // nol
 					fmt.Printf("%v: could not determine if at tip\n", tErr)
 				}
 
-				return fmt.Errorf("failed to lookup balance for currency %s of account %s at height %d: %w", types.PrintStruct(balanceChange.Currency), types.PrintStruct(balanceChange.Account), balanceChange.Block.Index, err)
+				return fmt.Errorf(
+					"failed to lookup balance for currency %s of account %s at height %d: %w",
+					types.PrintStruct(balanceChange.Currency),
+					types.PrintStruct(balanceChange.Account),
+					balanceChange.Block.Index,
+					err,
+				)
 			}
 
 			err = r.accountReconciliation(
@@ -926,7 +937,13 @@ func (r *Reconciler) reconcileInactiveAccounts( // nolint:gocognit
 					fmt.Printf("%v: could not determine if at tip\n", tErr)
 				}
 
-				return fmt.Errorf("failed to lookup balance for currency %s of account %s at height %d: %w", types.PrintStruct(nextAcct.Entry.Currency), types.PrintStruct(nextAcct.Entry.Account), head.Index, err)
+				return fmt.Errorf(
+					"failed to lookup balance for currency %s of account %s at height %d: %w",
+					types.PrintStruct(nextAcct.Entry.Currency),
+					types.PrintStruct(nextAcct.Entry.Account),
+					head.Index,
+					err,
+				)
 			}
 
 			err = r.accountReconciliation(

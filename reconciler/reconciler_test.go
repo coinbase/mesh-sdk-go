@@ -2418,7 +2418,12 @@ func TestReconcile_ActiveNotIndexAtTipError(t *testing.T) {
 
 	go func() {
 		err := r.Reconcile(ctx)
-		expectErr := fmt.Errorf("failed to lookup balance for currency %s of account %s at height %d", types.PrintStruct(accountCurrency.Currency), types.PrintStruct(accountCurrency.Account), int64(1))
+		expectErr := fmt.Errorf(
+			"failed to lookup balance for currency %s of account %s at height %d",
+			types.PrintStruct(accountCurrency.Currency),
+			types.PrintStruct(accountCurrency.Account),
+			int64(1),
+		)
 		assert.Contains(t, err.Error(), expectErr.Error())
 	}()
 
@@ -2483,7 +2488,12 @@ func TestReconcile_ActiveErrorIndexAtTipError(t *testing.T) {
 
 	go func() {
 		err := r.Reconcile(ctx)
-		expectErr := fmt.Errorf("failed to lookup balance for currency %s of account %s at height %d", types.PrintStruct(accountCurrency.Currency), types.PrintStruct(accountCurrency.Account), int64(1))
+		expectErr := fmt.Errorf(
+			"failed to lookup balance for currency %s of account %s at height %d",
+			types.PrintStruct(accountCurrency.Currency),
+			types.PrintStruct(accountCurrency.Account),
+			int64(1),
+		)
 		assert.Contains(t, err.Error(), expectErr.Error())
 	}()
 
@@ -2635,7 +2645,12 @@ func TestReconcile_FailureNotIndexAtTipInactive(t *testing.T) {
 
 	go func() {
 		err := r.Reconcile(ctx)
-		expectErr := fmt.Errorf("failed to lookup balance for currency %s of account %s at height %d", types.PrintStruct(accountCurrency.Currency), types.PrintStruct(accountCurrency.Account), int64(1))
+		expectErr := fmt.Errorf(
+			"failed to lookup balance for currency %s of account %s at height %d",
+			types.PrintStruct(accountCurrency.Currency),
+			types.PrintStruct(accountCurrency.Account),
+			int64(1),
+		)
 		assert.Contains(t, err.Error(), expectErr.Error())
 	}()
 
@@ -2700,7 +2715,12 @@ func TestReconcile_FailureErrorIndexAtTipInactive(t *testing.T) {
 
 	go func() {
 		err := r.Reconcile(ctx)
-		expectErr := fmt.Errorf("failed to lookup balance for currency %s of account %s at height %d", types.PrintStruct(accountCurrency.Currency), types.PrintStruct(accountCurrency.Account), int64(1))
+		expectErr := fmt.Errorf(
+			"failed to lookup balance for currency %s of account %s at height %d",
+			types.PrintStruct(accountCurrency.Currency),
+			types.PrintStruct(accountCurrency.Account),
+			int64(1),
+		)
 		assert.Contains(t, err.Error(), expectErr.Error())
 	}()
 

@@ -89,7 +89,11 @@ func (p *Parser) ExpectedOperations(
 			if confirmSuccess {
 				obsSuccess, err := p.Asserter.OperationSuccessful(obs)
 				if err != nil {
-					return fmt.Errorf("failed to check the status of operation %s: %w", types.PrintStruct(obs), err)
+					return fmt.Errorf(
+						"failed to check the status of operation %s: %w",
+						types.PrintStruct(obs),
+						err,
+					)
 				}
 
 				if !obsSuccess {
