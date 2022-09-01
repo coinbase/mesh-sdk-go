@@ -219,7 +219,7 @@ func (r *Reconciler) queueChanges(
 		err := r.inactiveAccountQueue(false, acctCurrency, block, true)
 		r.inactiveQueueMutex.Unlock()
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to enqueue inactive account: %w", err)
 		}
 
 		// All changes will have the same block. Continue
@@ -232,7 +232,7 @@ func (r *Reconciler) queueChanges(
 				change.Currency,
 				HeadBehind,
 			); err != nil {
-				return err
+				return fmt.Errorf("failed to call \"reconciliation skip\" action: %w", err)
 			}
 
 			continue
@@ -288,8 +288,7 @@ func (r *Reconciler) CompareBalance(
 	head, err := r.helper.CurrentBlock(ctx, dbTx)
 	if err != nil {
 		return zeroString, "", 0, fmt.Errorf(
-			"%w: %v",
-			ErrGetCurrentBlockFailed,
+			"failed to get current block: %w",
 			err,
 		)
 	}
@@ -297,10 +296,10 @@ func (r *Reconciler) CompareBalance(
 	// Check if live block is < head (or wait)
 	if liveBlock.Index > head.Index {
 		return zeroString, "", head.Index, fmt.Errorf(
-			"%w live block %d > head block %d",
-			ErrHeadBlockBehindLive,
+			"live block %d > head block %d: %w",
 			liveBlock.Index,
 			head.Index,
+			ErrHeadBlockBehindLive,
 		)
 	}
 
@@ -308,17 +307,16 @@ func (r *Reconciler) CompareBalance(
 	canonical, err := r.helper.CanonicalBlock(ctx, dbTx, liveBlock)
 	if err != nil {
 		return zeroString, "", 0, fmt.Errorf(
-			"%w: %v: on live block %+v",
-			ErrBlockExistsFailed,
+			"unable to check if live block %s is in canonical chain: %w",
+			types.PrintStruct(liveBlock),
 			err,
-			liveBlock,
 		)
 	}
 	if !canonical {
 		return zeroString, "", head.Index, fmt.Errorf(
-			"%w %+v",
+			"live block %s is invalid: %w",
+			types.PrintStruct(liveBlock),
 			ErrBlockGone,
-			liveBlock,
 		)
 	}
 
@@ -333,25 +331,29 @@ func (r *Reconciler) CompareBalance(
 	if err != nil {
 		if errors.Is(err, storageErrors.ErrAccountMissing) {
 			return zeroString, "", head.Index, fmt.Errorf(
-				"%w for %+v:%+v",
+				"account %s is invalid for currency %s: %w",
+				types.PrintStruct(account),
+				types.PrintStruct(currency),
 				storageErrors.ErrAccountMissing,
-				account,
-				currency,
 			)
 		}
 
 		return zeroString, "", head.Index, fmt.Errorf(
-			"%w for %+v:%+v: %v",
-			ErrGetComputedBalanceFailed,
-			account,
-			currency,
+			"failed to get computed balance for currency %s of account %s: %w",
+			types.PrintStruct(currency),
+			types.PrintStruct(account),
 			err,
 		)
 	}
 
 	difference, err := types.SubtractValues(liveBalance, computedBalance.Value)
 	if err != nil {
-		return "", "", -1, err
+		return "", "", -1, fmt.Errorf(
+			"failed to subtract values %s - %s: %w",
+			liveBalance,
+			computedBalance.Value,
+			err,
+		)
 	}
 
 	return difference, computedBalance.Value, head.Index, nil
@@ -383,11 +385,11 @@ func (r *Reconciler) bestLiveBalance(
 	)
 	if err != nil {
 		return nil, nil, fmt.Errorf(
-			"%w: unable to get live balance for %s %s at %d",
-			err,
-			types.PrintStruct(account),
+			"unable to get live balance for currency %s of account %s at %d: %w",
 			types.PrintStruct(currency),
+			types.PrintStruct(account),
 			lookupIndex,
+			err,
 		)
 	}
 
@@ -441,7 +443,7 @@ func (r *Reconciler) handleBalanceMismatch(
 		block,
 	)
 	if err != nil { // error only returned if we should exit on failure
-		return err
+		return fmt.Errorf("failed to call \"reconciliation fail\" action: %w", err)
 	}
 
 	return nil
@@ -548,7 +550,7 @@ func (r *Reconciler) accountReconciliation(
 				)
 			}
 
-			return err
+			return fmt.Errorf("failed to compare computed balance with live balance: %w", err)
 		}
 
 		if difference != zeroString {
@@ -654,7 +656,7 @@ func (r *Reconciler) skipAndPrune(
 		change.Currency,
 		skipCause,
 	); err != nil {
-		return err
+		return fmt.Errorf("failed to call \"reconciliation skip\" action: %w", err)
 	}
 
 	return r.updateQueueMap(
@@ -765,7 +767,13 @@ func (r *Reconciler) reconcileActiveAccounts(ctx context.Context) error { // nol
 					fmt.Printf("%v: could not determine if at tip\n", tErr)
 				}
 
-				return fmt.Errorf("%w: %v", ErrLiveBalanceLookupFailed, err)
+				return fmt.Errorf(
+					"failed to lookup balance for currency %s of account %s at height %d: %w",
+					types.PrintStruct(balanceChange.Currency),
+					types.PrintStruct(balanceChange.Account),
+					balanceChange.Block.Index,
+					err,
+				)
 			}
 
 			err = r.accountReconciliation(
@@ -817,14 +825,14 @@ func (r *Reconciler) shouldAttemptInactiveReconciliation(
 	// When first start syncing, this loop may run before the genesis block is synced.
 	// If this is the case, we should sleep and try again later instead of exiting.
 	if err != nil {
-		r.debugLog("waiting to start intactive reconciliation until a block is synced...")
+		r.debugLog("waiting to start inactive reconciliation until a block is synced...")
 
 		return false, nil
 	}
 
 	if head.Index < r.highWaterMark {
 		r.debugLog(
-			"waiting to continue intactive reconciliation until reaching high water mark...",
+			"waiting to continue inactive reconciliation until reaching high water mark...",
 		)
 
 		return false, nil
@@ -912,7 +920,7 @@ func (r *Reconciler) reconcileInactiveAccounts( // nolint:gocognit
 						nextAcct.Entry.Currency,
 						TipFailure,
 					); err != nil {
-						return err
+						return fmt.Errorf("failed to call \"reconciliation skip\" action: %w", err)
 					}
 
 					if err := r.updateQueueMap(
@@ -921,7 +929,7 @@ func (r *Reconciler) reconcileInactiveAccounts( // nolint:gocognit
 						head.Index,
 						pruneInactiveReconciliation,
 					); err != nil {
-						return err
+						return fmt.Errorf("failed to update queue map: %w", err)
 					}
 
 					continue
@@ -929,7 +937,13 @@ func (r *Reconciler) reconcileInactiveAccounts( // nolint:gocognit
 					fmt.Printf("%v: could not determine if at tip\n", tErr)
 				}
 
-				return fmt.Errorf("%w: %v", ErrLiveBalanceLookupFailed, err)
+				return fmt.Errorf(
+					"failed to lookup balance for currency %s of account %s at height %d: %w",
+					types.PrintStruct(nextAcct.Entry.Currency),
+					types.PrintStruct(nextAcct.Entry.Account),
+					head.Index,
+					err,
+				)
 			}
 
 			err = r.accountReconciliation(
