@@ -229,7 +229,11 @@ func CheckNetworkTip(ctx context.Context,
 	// NetworkStatusRetry call.
 	status, fetchErr := f.NetworkStatusRetry(ctx, network, nil)
 	if fetchErr != nil {
-		return false, nil, fmt.Errorf("unable to fetch network status of network %s: %w", types.PrintStruct(network), fetchErr.Err)
+		return false, nil, fmt.Errorf(
+			"unable to fetch network status of network %s: %w",
+			types.PrintStruct(network),
+			fetchErr.Err,
+		)
 	}
 
 	// if the block timestamp is within tip delay of current time,
@@ -321,7 +325,11 @@ func CheckNetworkSupported(
 		nil,
 	)
 	if fetchErr != nil {
-		return nil, fmt.Errorf("unable to fetch network status of network %s: %w", types.PrintStruct(networkIdentifier), fetchErr.Err)
+		return nil, fmt.Errorf(
+			"unable to fetch network status of network %s: %w",
+			types.PrintStruct(networkIdentifier),
+			fetchErr.Err,
+		)
 	}
 
 	return status, nil
@@ -440,7 +448,12 @@ func CurrencyBalance(
 		[]*types.Currency{currency},
 	)
 	if fetchErr != nil {
-		return nil, nil, fmt.Errorf("unable to fetch account balance for currency %s of account %s: %w", types.PrintStruct([]*types.Currency{currency}), types.PrintStruct(account), fetchErr.Err)
+		return nil, nil, fmt.Errorf(
+			"unable to fetch account balance for currency %s of account %s: %w",
+			types.PrintStruct([]*types.Currency{currency}),
+			types.PrintStruct(account),
+			fetchErr.Err,
+		)
 	}
 
 	liveAmount := types.ExtractAmount(liveBalances, currency)
@@ -473,7 +486,11 @@ func AllCurrencyBalance(
 		nil,
 	)
 	if fetchErr != nil {
-		return nil, nil, fmt.Errorf("unable to fetch account balance for all currencies of account %s: %w", types.PrintStruct(account), fetchErr.Err)
+		return nil, nil, fmt.Errorf(
+			"unable to fetch account balance for all currencies of account %s: %w",
+			types.PrintStruct(account),
+			fetchErr.Err,
+		)
 	}
 
 	return liveBalances, liveBlock, nil
@@ -585,7 +602,12 @@ func GetAccountCoins(
 		)
 
 		if err != nil {
-			return nil, fmt.Errorf("unable to fetch account coin for currency %s of account %s: %w", types.PrintStruct(req.Currencies), types.PrintStruct(req.Account), err.Err)
+			return nil, fmt.Errorf(
+				"unable to fetch account coin for currency %s of account %s: %w",
+				types.PrintStruct(req.Currencies),
+				types.PrintStruct(req.Account),
+				err.Err,
+			)
 		}
 
 		resp := &AccountCoinsResponse{

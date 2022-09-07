@@ -502,7 +502,11 @@ func (b *BadgerTransaction) Get(
 		return err
 	})
 	if err != nil {
-		return false, nil, fmt.Errorf("unable to get the value from the item for key %s: %w", string(key), err)
+		return false, nil, fmt.Errorf(
+			"unable to get the value from the item for key %s: %w",
+			string(key),
+			err,
+		)
 	}
 
 	return true, value.Bytes(), nil
@@ -545,7 +549,11 @@ func (b *BadgerTransaction) Scan(
 			return nil
 		})
 		if err != nil {
-			return -1, fmt.Errorf("unable to get the value from the item for key %s: %w", string(k), err)
+			return -1, fmt.Errorf(
+				"unable to get the value from the item for key %s: %w",
+				string(k),
+				err,
+			)
 		}
 
 		entries++
@@ -568,7 +576,12 @@ func decompressAndSave(
 	// encoded using dictionary compression.
 	decompressed, err := encoder.DecodeRaw(namespace, v)
 	if err != nil {
-		return -1, -1, fmt.Errorf("unable to decompress for namespace %s and input %s: %w", namespace, string(v), err)
+		return -1, -1, fmt.Errorf(
+			"unable to decompress for namespace %s and input %s: %w",
+			namespace,
+			string(v),
+			err,
+		)
 	}
 
 	err = ioutil.WriteFile(
@@ -577,7 +590,11 @@ func decompressAndSave(
 		os.FileMode(utils.DefaultFilePermissions),
 	)
 	if err != nil {
-		return -1, -1, fmt.Errorf("unable to write decompress file %s: %w", path.Join(tmpDir, types.Hash(string(k))), err)
+		return -1, -1, fmt.Errorf(
+			"unable to write decompress file %s: %w",
+			path.Join(tmpDir, types.Hash(string(k))),
+			err,
+		)
 	}
 
 	return float64(len(decompressed)), float64(len(v)), nil
@@ -643,7 +660,12 @@ func recompress(
 		func(k []byte, v []byte) error {
 			decompressed, err := badgerDb.Encoder().DecodeRaw(namespace, v)
 			if err != nil {
-				return fmt.Errorf("unable to decompress for namespace %s and input %s: %w", namespace, string(v), err)
+				return fmt.Errorf(
+					"unable to decompress for namespace %s and input %s: %w",
+					namespace,
+					string(v),
+					err,
+				)
 			}
 
 			newCompressed, err := newCompressor.EncodeRaw(namespace, decompressed)

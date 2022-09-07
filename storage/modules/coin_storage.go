@@ -134,7 +134,11 @@ func (c *CoinStorage) AddCoins(
 
 		err = c.addCoin(ctx, accountCoin.Account, accountCoin.Coin, dbTransaction)
 		if err != nil {
-			return fmt.Errorf("unable to add coin for account %s: %w", types.PrintStruct(accountCoin.Account), err)
+			return fmt.Errorf(
+				"unable to add coin for account %s: %w",
+				types.PrintStruct(accountCoin.Account),
+				err,
+			)
 		}
 	}
 
@@ -243,7 +247,11 @@ func (c *CoinStorage) skipOperation(
 
 	success, err := c.asserter.OperationSuccessful(operation)
 	if err != nil {
-		return false, fmt.Errorf("unable to successfully parse operation %s: %w", types.PrintStruct(operation), err)
+		return false, fmt.Errorf(
+			"unable to successfully parse operation %s: %w",
+			types.PrintStruct(operation),
+			err,
+		)
 	}
 
 	if !success {
@@ -277,7 +285,11 @@ func (c *CoinStorage) updateCoins( // nolint:gocognit
 		for _, operation := range txn.Operations {
 			skip, err := c.skipOperation(operation)
 			if err != nil {
-				return fmt.Errorf("unable to skip operation %s: %w", types.PrintStruct(operation), err)
+				return fmt.Errorf(
+					"unable to skip operation %s: %w",
+					types.PrintStruct(operation),
+					err,
+				)
 			}
 			if skip {
 				continue
@@ -292,7 +304,11 @@ func (c *CoinStorage) updateCoins( // nolint:gocognit
 			}
 
 			if _, ok := coinDict[identifier]; ok {
-				return fmt.Errorf("coin identifier %s is invalid: %w", identifier, errors.ErrDuplicateCoinFound)
+				return fmt.Errorf(
+					"coin identifier %s is invalid: %w",
+					identifier,
+					errors.ErrDuplicateCoinFound,
+				)
 			}
 
 			coinDict[identifier] = operation
@@ -318,7 +334,11 @@ func (c *CoinStorage) updateCoins( // nolint:gocognit
 				},
 				dbTx,
 			); err != nil {
-				return fmt.Errorf("unable to add coin for account %s: %w", types.PrintStruct(op.Account), err)
+				return fmt.Errorf(
+					"unable to add coin for account %s: %w",
+					types.PrintStruct(op.Account),
+					err,
+				)
 			}
 
 			return nil
@@ -341,7 +361,11 @@ func (c *CoinStorage) updateCoins( // nolint:gocognit
 				op.CoinChange.CoinIdentifier,
 				dbTx,
 			); err != nil {
-				return fmt.Errorf("unable to remove coin for account %s: %w", types.PrintStruct(op.Account), err)
+				return fmt.Errorf(
+					"unable to remove coin for account %s: %w",
+					types.PrintStruct(op.Account),
+					err,
+				)
 			}
 
 			return nil
@@ -379,7 +403,11 @@ func (c *CoinStorage) GetCoinsTransactional(
 ) ([]*types.Coin, *types.BlockIdentifier, error) {
 	coins, err := getAndDecodeCoins(ctx, dbTx, accountIdentifier)
 	if err != nil {
-		return nil, nil, fmt.Errorf("unable to get and decode coins for account %s: %w", types.PrintStruct(accountIdentifier), err)
+		return nil, nil, fmt.Errorf(
+			"unable to get and decode coins for account %s: %w",
+			types.PrintStruct(accountIdentifier),
+			err,
+		)
 	}
 
 	headBlockIdentifier, err := c.helper.CurrentBlockIdentifier(ctx, dbTx)
@@ -395,7 +423,11 @@ func (c *CoinStorage) GetCoinsTransactional(
 			&types.CoinIdentifier{Identifier: coinIdentifier},
 		)
 		if err != nil {
-			return nil, nil, fmt.Errorf("unable to get and decode coin %s: %w", types.PrintStruct(coinIdentifier), err)
+			return nil, nil, fmt.Errorf(
+				"unable to get and decode coin %s: %w",
+				types.PrintStruct(coinIdentifier),
+				err,
+			)
 		}
 
 		if !exists {
@@ -428,7 +460,11 @@ func (c *CoinStorage) GetCoinTransactional(
 ) (*types.Coin, *types.AccountIdentifier, error) {
 	exists, coin, owner, err := c.getAndDecodeCoin(ctx, dbTx, coinIdentifier)
 	if err != nil {
-		return nil, nil, fmt.Errorf("unable to get and decode coin %s: %w", types.PrintStruct(coinIdentifier), err)
+		return nil, nil, fmt.Errorf(
+			"unable to get and decode coin %s: %w",
+			types.PrintStruct(coinIdentifier),
+			err,
+		)
 	}
 
 	if !exists {
@@ -507,7 +543,11 @@ func (c *CoinStorage) SetCoinsImported(
 	// Request array length should always equal response array length.
 	// But we still check it for sure.
 	if len(accts) != len(acctCoinsResp) {
-		return fmt.Errorf("the length of coin request %d and coin response %d are not equal", len(accts), len(acctCoinsResp))
+		return fmt.Errorf(
+			"the length of coin request %d and coin response %d are not equal",
+			len(accts),
+			len(acctCoinsResp),
+		)
 	}
 
 	var acctCoins []*types.AccountCoin

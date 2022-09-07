@@ -520,7 +520,11 @@ func (b *BlockStorage) CanonicalBlockTransactional(
 		return false, nil
 	}
 	if err != nil {
-		return false, fmt.Errorf("unable to get block %s: %w", types.PrintStruct(blockIdentifier), err)
+		return false, fmt.Errorf(
+			"unable to get block %s: %w",
+			types.PrintStruct(blockIdentifier),
+			err,
+		)
 	}
 
 	if block == nil {
@@ -539,7 +543,11 @@ func (b *BlockStorage) GetBlockTransactional(
 ) (*types.Block, error) {
 	blockResponse, err := b.GetBlockLazyTransactional(ctx, blockIdentifier, dbTx)
 	if err != nil {
-		return nil, fmt.Errorf("unable to get block %s: %w", types.PrintStruct(blockIdentifier), err)
+		return nil, fmt.Errorf(
+			"unable to get block %s: %w",
+			types.PrintStruct(blockIdentifier),
+			err,
+		)
 	}
 
 	if len(blockResponse.OtherTransactions) == 0 {
@@ -643,7 +651,11 @@ func (b *BlockStorage) storeBlock(
 	}
 
 	if err := b.StoreHeadBlockIdentifier(ctx, transaction, blockIdentifier); err != nil {
-		return fmt.Errorf("unable to update head block identifier %s: %w", types.PrintStruct(blockIdentifier), err)
+		return fmt.Errorf(
+			"unable to update head block identifier %s: %w",
+			types.PrintStruct(blockIdentifier),
+			err,
+		)
 	}
 
 	if err := b.setOldestBlockIndex(ctx, transaction, false, blockIdentifier.Index); err != nil {
@@ -742,7 +754,11 @@ func (b *BlockStorage) AddBlock(
 	// Store block
 	err := b.storeBlock(ctx, transaction, block.BlockIdentifier)
 	if err != nil {
-		return fmt.Errorf("unable to store block %s: %w", types.PrintStruct(block.BlockIdentifier), err)
+		return fmt.Errorf(
+			"unable to store block %s: %w",
+			types.PrintStruct(block.BlockIdentifier),
+			err,
+		)
 	}
 
 	return b.callWorkersAndCommit(ctx, block, transaction, true)
@@ -1045,7 +1061,11 @@ func (b *BlockStorage) modifyBackwardRelations(
 		// skip if related block not found
 		block, _, err := b.FindTransaction(ctx, relatedTx.TransactionIdentifier, transaction)
 		if err != nil {
-			return fmt.Errorf("unable to find backward relation transaction %s: %w", types.PrintStruct(relatedTx.TransactionIdentifier), err)
+			return fmt.Errorf(
+				"unable to find backward relation transaction %s: %w",
+				types.PrintStruct(relatedTx.TransactionIdentifier),
+				err,
+			)
 		}
 		if block == nil {
 			continue

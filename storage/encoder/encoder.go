@@ -277,7 +277,10 @@ func (e *Encoder) EncodeAccountCoin( // nolint:gocognit
 		return nil, fmt.Errorf("unable to write unicode record separator to buffer: %w", err)
 	}
 	if _, err := output.WriteString(accountCoin.Coin.Amount.Currency.Symbol); err != nil {
-		return nil, fmt.Errorf("unable to write account coin amount currency symbol to buffer: %w", err)
+		return nil, fmt.Errorf(
+			"unable to write account coin amount currency symbol to buffer: %w",
+			err,
+		)
 	}
 	if _, err := output.WriteRune(unicodeRecordSeparator); err != nil {
 		return nil, fmt.Errorf("unable to write unicode record separator to buffer: %w", err)
@@ -285,7 +288,10 @@ func (e *Encoder) EncodeAccountCoin( // nolint:gocognit
 	if _, err := output.WriteString(
 		strconv.FormatInt(int64(accountCoin.Coin.Amount.Currency.Decimals), 10),
 	); err != nil {
-		return nil, fmt.Errorf("unable to write account coin amount currency decimals to buffer: %w", err)
+		return nil, fmt.Errorf(
+			"unable to write account coin amount currency decimals to buffer: %w",
+			err,
+		)
 	}
 
 	// Exit early if we don't have any complex data to record (this helps
@@ -302,7 +308,10 @@ func (e *Encoder) EncodeAccountCoin( // nolint:gocognit
 	}
 	if accountCoin.Account.Metadata != nil {
 		if err := e.encodeAndWrite(output, accountCoin.Account.Metadata); err != nil {
-			return nil, fmt.Errorf("unable to encode and write account coin account metadata to buffer: %w", err)
+			return nil, fmt.Errorf(
+				"unable to encode and write account coin account metadata to buffer: %w",
+				err,
+			)
 		}
 	}
 	if _, err := output.WriteRune(unicodeRecordSeparator); err != nil {
@@ -311,7 +320,10 @@ func (e *Encoder) EncodeAccountCoin( // nolint:gocognit
 
 	if accountCoin.Account.SubAccount != nil {
 		if _, err := output.WriteString(accountCoin.Account.SubAccount.Address); err != nil {
-			return nil, fmt.Errorf("unable to write account coin account sub account address: %w", err)
+			return nil, fmt.Errorf(
+				"unable to write account coin account sub account address: %w",
+				err,
+			)
 		}
 	}
 	if _, err := output.WriteRune(unicodeRecordSeparator); err != nil {
@@ -320,7 +332,10 @@ func (e *Encoder) EncodeAccountCoin( // nolint:gocognit
 
 	if accountCoin.Account.SubAccount != nil && accountCoin.Account.SubAccount.Metadata != nil {
 		if err := e.encodeAndWrite(output, accountCoin.Account.SubAccount.Metadata); err != nil {
-			return nil, fmt.Errorf("unable to encode and write account coin account sub account metadata to buffer: %w", err)
+			return nil, fmt.Errorf(
+				"unable to encode and write account coin account sub account metadata to buffer: %w",
+				err,
+			)
 		}
 	}
 	if _, err := output.WriteRune(unicodeRecordSeparator); err != nil {
@@ -329,7 +344,10 @@ func (e *Encoder) EncodeAccountCoin( // nolint:gocognit
 
 	if accountCoin.Coin.Amount.Metadata != nil {
 		if err := e.encodeAndWrite(output, accountCoin.Coin.Amount.Metadata); err != nil {
-			return nil, fmt.Errorf("unable to encode and write account coin amount metadata to buffer: %w", err)
+			return nil, fmt.Errorf(
+				"unable to encode and write account coin amount metadata to buffer: %w",
+				err,
+			)
 		}
 	}
 	if _, err := output.WriteRune(unicodeRecordSeparator); err != nil {
@@ -337,7 +355,10 @@ func (e *Encoder) EncodeAccountCoin( // nolint:gocognit
 	}
 	if accountCoin.Coin.Amount.Currency.Metadata != nil {
 		if err := e.encodeAndWrite(output, accountCoin.Coin.Amount.Currency.Metadata); err != nil {
-			return nil, fmt.Errorf("unable to encode and write account coin amount currency metadata: %w", err)
+			return nil, fmt.Errorf(
+				"unable to encode and write account coin amount currency metadata: %w",
+				err,
+			)
 		}
 	}
 
@@ -486,13 +507,19 @@ func (e *Encoder) EncodeAccountCurrency( // nolint:gocognit
 ) ([]byte, error) {
 	output := e.pool.Get()
 	if _, err := output.WriteString(accountCurrency.Account.Address); err != nil {
-		return nil, fmt.Errorf("unable to write account currency account address to buffer: %w", err)
+		return nil, fmt.Errorf(
+			"unable to write account currency account address to buffer: %w",
+			err,
+		)
 	}
 	if _, err := output.WriteRune(unicodeRecordSeparator); err != nil {
 		return nil, fmt.Errorf("unable to write unicode record separator to buffer: %w", err)
 	}
 	if _, err := output.WriteString(accountCurrency.Currency.Symbol); err != nil {
-		return nil, fmt.Errorf("unable to write account currency currency symbol to buffer: %w", err)
+		return nil, fmt.Errorf(
+			"unable to write account currency currency symbol to buffer: %w",
+			err,
+		)
 	}
 	if _, err := output.WriteRune(unicodeRecordSeparator); err != nil {
 		return nil, fmt.Errorf("unable to write unicode record separator to buffer: %w", err)
@@ -500,7 +527,10 @@ func (e *Encoder) EncodeAccountCurrency( // nolint:gocognit
 	if _, err := output.WriteString(
 		strconv.FormatInt(int64(accountCurrency.Currency.Decimals), 10),
 	); err != nil {
-		return nil, fmt.Errorf("unable to write account currency currency decimals to buffer: %w", err)
+		return nil, fmt.Errorf(
+			"unable to write account currency currency decimals to buffer: %w",
+			err,
+		)
 	}
 
 	// Exit early if we don't have any complex data to record (this helps
@@ -516,7 +546,10 @@ func (e *Encoder) EncodeAccountCurrency( // nolint:gocognit
 	}
 	if accountCurrency.Account.Metadata != nil {
 		if err := e.encodeAndWrite(output, accountCurrency.Account.Metadata); err != nil {
-			return nil, fmt.Errorf("unable to encode and write account currency account metadata to buffer: %w", err)
+			return nil, fmt.Errorf(
+				"unable to encode and write account currency account metadata to buffer: %w",
+				err,
+			)
 		}
 	}
 	if _, err := output.WriteRune(unicodeRecordSeparator); err != nil {
@@ -525,7 +558,10 @@ func (e *Encoder) EncodeAccountCurrency( // nolint:gocognit
 
 	if accountCurrency.Account.SubAccount != nil {
 		if _, err := output.WriteString(accountCurrency.Account.SubAccount.Address); err != nil {
-			return nil, fmt.Errorf("unable to write account currency account sub account to buffer: %w", err)
+			return nil, fmt.Errorf(
+				"unable to write account currency account sub account to buffer: %w",
+				err,
+			)
 		}
 	}
 	if _, err := output.WriteRune(unicodeRecordSeparator); err != nil {
@@ -535,7 +571,10 @@ func (e *Encoder) EncodeAccountCurrency( // nolint:gocognit
 	if accountCurrency.Account.SubAccount != nil &&
 		accountCurrency.Account.SubAccount.Metadata != nil {
 		if err := e.encodeAndWrite(output, accountCurrency.Account.SubAccount.Metadata); err != nil {
-			return nil, fmt.Errorf("unable to encode and write account currency account sub account metadata to buffer: %w", err)
+			return nil, fmt.Errorf(
+				"unable to encode and write account currency account sub account metadata to buffer: %w",
+				err,
+			)
 		}
 	}
 	if _, err := output.WriteRune(unicodeRecordSeparator); err != nil {
@@ -544,7 +583,10 @@ func (e *Encoder) EncodeAccountCurrency( // nolint:gocognit
 
 	if accountCurrency.Currency.Metadata != nil {
 		if err := e.encodeAndWrite(output, accountCurrency.Currency.Metadata); err != nil {
-			return nil, fmt.Errorf("unable to write account currency currency metadata to buffer: %w", err)
+			return nil, fmt.Errorf(
+				"unable to write account currency currency metadata to buffer: %w",
+				err,
+			)
 		}
 	}
 

@@ -232,7 +232,10 @@ func (b *BalanceStorage) AddingBlock(
 
 	if pending > 0 {
 		if err := b.handler.AccountsReconciled(ctx, transaction, pending); err != nil {
-			return nil, fmt.Errorf("unable to update the total accounts reconciled by count: %w", err)
+			return nil, fmt.Errorf(
+				"unable to update the total accounts reconciled by count: %w",
+				err,
+			)
 		}
 	}
 
@@ -254,7 +257,11 @@ func (b *BalanceStorage) RemovingBlock(
 
 	changes, err := b.parser.BalanceChanges(ctx, block, true)
 	if err != nil {
-		return nil, fmt.Errorf("unable to calculate balance changes for block %s: %w", types.PrintStruct(block), err)
+		return nil, fmt.Errorf(
+			"unable to calculate balance changes for block %s: %w",
+			types.PrintStruct(block),
+			err,
+		)
 	}
 
 	// staleAccounts should be removed because the orphaned
@@ -335,7 +342,11 @@ func (b *BalanceStorage) SetBalance(
 		account,
 		amount.Currency,
 	); err != nil {
-		return fmt.Errorf("unable to delete account records for account %s: %w", types.PrintStruct(account), err)
+		return fmt.Errorf(
+			"unable to delete account records for account %s: %w",
+			types.PrintStruct(account),
+			err,
+		)
 	}
 
 	// Mark as new account seen
@@ -349,7 +360,12 @@ func (b *BalanceStorage) SetBalance(
 		Currency: amount.Currency,
 	})
 	if err != nil {
-		return fmt.Errorf("unable to encode account currency for currency %s of account %s: %w", types.PrintStruct(amount.Currency), types.PrintStruct(account), err)
+		return fmt.Errorf(
+			"unable to encode account currency for currency %s of account %s: %w",
+			types.PrintStruct(amount.Currency),
+			types.PrintStruct(account),
+			err,
+		)
 	}
 
 	// Set account
@@ -373,7 +389,12 @@ func (b *BalanceStorage) SetBalance(
 	// Set historical balance
 	key = GetHistoricalBalanceKey(account, amount.Currency, block.Index)
 	if err := dbTransaction.Set(ctx, key, valueBytes, true); err != nil {
-		return fmt.Errorf("unable to set historical balance for currency %s of account %s: %w", types.PrintStruct(amount.Currency), types.PrintStruct(account), err)
+		return fmt.Errorf(
+			"unable to set historical balance for currency %s of account %s: %w",
+			types.PrintStruct(amount.Currency),
+			types.PrintStruct(account),
+			err,
+		)
 	}
 
 	return nil
@@ -686,7 +707,10 @@ func (b *BalanceStorage) deleteAccountRecords(
 
 			if exists {
 				if err := b.handler.AccountsReconciled(ctx, dbTx, -1); err != nil {
-					return fmt.Errorf("unable to update the total accounts reconciled by count: %w", err)
+					return fmt.Errorf(
+						"unable to update the total accounts reconciled by count: %w",
+						err,
+					)
 				}
 			}
 		}
@@ -732,7 +756,12 @@ func (b *BalanceStorage) OrphanBalance(
 	case errors.Is(err, storageErrs.ErrAccountMissing):
 		return true, nil
 	case err != nil:
-		return false, fmt.Errorf("unable to get historical balance for currency %s of account %s: %w", types.PrintStruct(change.Currency), types.PrintStruct(change.Account), err)
+		return false, fmt.Errorf(
+			"unable to get historical balance for currency %s of account %s: %w",
+			types.PrintStruct(change.Currency),
+			types.PrintStruct(change.Account),
+			err,
+		)
 	}
 
 	// Update current balance
@@ -827,7 +856,12 @@ func (b *BalanceStorage) UpdateBalance(
 		currentBalance.String(),
 	)
 	if err != nil {
-		return false, fmt.Errorf("unable to find account existing value for currency %s of account %s: %w", types.PrintStruct(change.Currency), types.PrintStruct(change.Account), err)
+		return false, fmt.Errorf(
+			"unable to find account existing value for currency %s of account %s: %w",
+			types.PrintStruct(change.Currency),
+			types.PrintStruct(change.Account),
+			err,
+		)
 	}
 
 	newVal, err := types.AddValues(change.Difference, existingValue)
@@ -866,7 +900,12 @@ func (b *BalanceStorage) UpdateBalance(
 			Currency: change.Currency,
 		})
 		if err != nil {
-			return false, fmt.Errorf("unable to encode account currency %s of account %s: %w", types.PrintStruct(change.Currency), types.PrintStruct(change.Account), err)
+			return false, fmt.Errorf(
+				"unable to encode account currency %s of account %s: %w",
+				types.PrintStruct(change.Currency),
+				types.PrintStruct(change.Account),
+				err,
+			)
 		}
 		if err := dbTransaction.Set(ctx, key, serialAcc, true); err != nil {
 			return false, fmt.Errorf("unable to set account: %w", err)
@@ -885,7 +924,12 @@ func (b *BalanceStorage) UpdateBalance(
 		change.Block.Index,
 	)
 	if err := dbTransaction.Set(ctx, historicalKey, bigNewVal.Bytes(), true); err != nil {
-		return false, fmt.Errorf("unable to set historical balance for currency %s of account %s: %w", types.PrintStruct(change.Currency), types.PrintStruct(change.Account), err)
+		return false, fmt.Errorf(
+			"unable to set historical balance for currency %s of account %s: %w",
+			types.PrintStruct(change.Currency),
+			types.PrintStruct(change.Account),
+			err,
+		)
 	}
 
 	return newAccount, nil
@@ -969,7 +1013,12 @@ func (b *BalanceStorage) GetBalanceTransactional(
 		}, nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("unable to get historical balance for currency %s of account %s: %w", types.PrintStruct(currency), types.PrintStruct(account), err)
+		return nil, fmt.Errorf(
+			"unable to get historical balance for currency %s of account %s: %w",
+			types.PrintStruct(currency),
+			types.PrintStruct(account),
+			err,
+		)
 	}
 
 	return amount, nil
@@ -984,7 +1033,12 @@ func (b *BalanceStorage) fetchAndSetBalance(
 ) (*types.Amount, error) {
 	amount, err := b.helper.AccountBalance(ctx, account, currency, block)
 	if err != nil {
-		return nil, fmt.Errorf("unable to get account balance for currency %s of account %s: %w", types.PrintStruct(currency), types.PrintStruct(account), err)
+		return nil, fmt.Errorf(
+			"unable to get account balance for currency %s of account %s: %w",
+			types.PrintStruct(currency),
+			types.PrintStruct(account),
+			err,
+		)
 	}
 
 	err = b.SetBalance(
@@ -995,7 +1049,11 @@ func (b *BalanceStorage) fetchAndSetBalance(
 		block,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("unable to set account balance of account %s: %w", types.PrintStruct(account), err)
+		return nil, fmt.Errorf(
+			"unable to set account balance of account %s: %w",
+			types.PrintStruct(account),
+			err,
+		)
 	}
 
 	return amount, nil
@@ -1021,7 +1079,12 @@ func (b *BalanceStorage) GetOrSetBalance(
 		block,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("unable to get balance for currency %s of account %s: %w", types.PrintStruct(currency), types.PrintStruct(account), err)
+		return nil, fmt.Errorf(
+			"unable to get balance for currency %s of account %s: %w",
+			types.PrintStruct(currency),
+			types.PrintStruct(account),
+			err,
+		)
 	}
 
 	// We commit any changes made during the balance lookup.
@@ -1056,13 +1119,23 @@ func (b *BalanceStorage) GetOrSetBalanceTransactional(
 	if errors.Is(err, storageErrs.ErrAccountMissing) {
 		amount, err = b.fetchAndSetBalance(ctx, dbTx, account, currency, block)
 		if err != nil {
-			return nil, fmt.Errorf("unable to set balance for currency %s of account %s: %w", types.PrintStruct(currency), types.PrintStruct(account), err)
+			return nil, fmt.Errorf(
+				"unable to set balance for currency %s of account %s: %w",
+				types.PrintStruct(currency),
+				types.PrintStruct(account),
+				err,
+			)
 		}
 
 		return amount, nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("unable to get balance for currency %s of account %s: %w", types.PrintStruct(currency), types.PrintStruct(account), err)
+		return nil, fmt.Errorf(
+			"unable to get balance for currency %s of account %s: %w",
+			types.PrintStruct(currency),
+			types.PrintStruct(account),
+			err,
+		)
 	}
 
 	return amount, nil
@@ -1134,7 +1207,12 @@ func (b *BalanceStorage) BootstrapBalances(
 			genesisBlockIdentifier,
 		)
 		if err != nil {
-			return fmt.Errorf("unable to set balance for currency %s of account %s: %w", types.PrintStruct(balance.Currency), types.PrintStruct(balance.Account), err)
+			return fmt.Errorf(
+				"unable to set balance for currency %s of account %s: %w",
+				types.PrintStruct(balance.Currency),
+				types.PrintStruct(balance.Account),
+				err,
+			)
 		}
 	}
 
@@ -1227,7 +1305,12 @@ func (b *BalanceStorage) SetBalanceImported(
 			accountBalance.Block,
 		)
 		if err != nil {
-			return fmt.Errorf("unable to set balance for currency %s of account %s: %w", types.PrintStruct(accountBalance.Amount.Currency), types.PrintStruct(accountBalance.Account), err)
+			return fmt.Errorf(
+				"unable to set balance for currency %s of account %s: %w",
+				types.PrintStruct(accountBalance.Amount.Currency),
+				types.PrintStruct(accountBalance.Account),
+				err,
+			)
 		}
 	}
 

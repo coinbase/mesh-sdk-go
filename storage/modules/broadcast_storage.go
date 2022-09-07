@@ -246,7 +246,11 @@ func (b *BroadcastStorage) AddingBlock(
 			transaction,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("unable to find broadcast transaction %s: %w", types.PrintStruct(broadcast.TransactionIdentifier), err)
+			return nil, fmt.Errorf(
+				"unable to find broadcast transaction %s: %w",
+				types.PrintStruct(broadcast.TransactionIdentifier),
+				err,
+			)
 		}
 
 		// Check if we should mark the broadcast as stale
@@ -256,7 +260,11 @@ func (b *BroadcastStorage) AddingBlock(
 			broadcast.LastBroadcast = nil
 			bytes, err := b.db.Encoder().Encode(namespace, broadcast)
 			if err != nil {
-				return nil, fmt.Errorf("unable to encode updated broadcast %s: %w", types.PrintStruct(broadcast), err)
+				return nil, fmt.Errorf(
+					"unable to encode updated broadcast %s: %w",
+					types.PrintStruct(broadcast),
+					err,
+				)
 			}
 
 			if err := transaction.Set(ctx, key, bytes, true); err != nil {
@@ -335,7 +343,11 @@ func (b *BroadcastStorage) Broadcast(
 	}
 
 	if exists {
-		return fmt.Errorf("broadcast is invalid with broadcast transaction %s: %w", transactionIdentifier.Hash, errors.ErrBroadcastAlreadyExists)
+		return fmt.Errorf(
+			"broadcast is invalid with broadcast transaction %s: %w",
+			transactionIdentifier.Hash,
+			errors.ErrBroadcastAlreadyExists,
+		)
 	}
 
 	bytes, err := b.db.Encoder().Encode(namespace, Broadcast{
@@ -509,7 +521,11 @@ func (b *BroadcastStorage) BroadcastAll(ctx context.Context, onlyEligible bool) 
 				broadcast.TransactionIdentifier,
 				broadcast.Intent,
 			); err != nil {
-				return fmt.Errorf("unable to handle broadcast failure for broadcast %s: %w", broadcast.Identifier, err)
+				return fmt.Errorf(
+					"unable to handle broadcast failure for broadcast %s: %w",
+					broadcast.Identifier,
+					err,
+				)
 			}
 
 			if err := txn.Commit(ctx); err != nil {
