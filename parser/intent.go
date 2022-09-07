@@ -109,9 +109,9 @@ func (p *Parser) ExpectedOperations(
 
 		if !foundMatch && errExtra {
 			return fmt.Errorf(
-				"%w: %s",
+				"operation %s: %w",
+				types.PrintStruct(obs),
 				ErrExpectedOperationsExtraOperation,
-				types.PrettyPrintStruct(obs),
 			)
 		}
 	}

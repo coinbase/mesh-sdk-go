@@ -85,7 +85,7 @@ func (w *Worker) invokeWorker(
 	case job.GetBlob:
 		return w.GetBlobWorker(ctx, dbTx, input)
 	default:
-		return "", fmt.Errorf("%w: %s", ErrInvalidActionType, action)
+		return "", ErrInvalidActionType
 	}
 }
 
@@ -237,7 +237,7 @@ func GenerateKeyWorker(rawInput string) (string, error) {
 	var input job.GenerateKeyInput
 	err := job.UnmarshalInput([]byte(rawInput), &input)
 	if err != nil {
-		return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
+		return "", fmt.Errorf("failed to unmarshal input: %w", err)
 	}
 
 	kp, err := keys.GenerateKeypair(input.CurveType)
@@ -303,7 +303,7 @@ func MathWorker(rawInput string) (string, error) {
 	var input job.MathInput
 	err := job.UnmarshalInput([]byte(rawInput), &input)
 	if err != nil {
-		return "", fmt.Errorf("%w: %s", ErrInvalidInput, err.Error())
+		return "", fmt.Errorf("failed to unmarshal input: %w", err)
 	}
 
 	var result string
@@ -880,10 +880,10 @@ func HTTPRequestWorker(rawInput string) (string, error) {
 
 	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf(
-			"%w: status code %d with body %s",
-			ErrActionFailed,
+			"status code %d with body %s: %w",
 			resp.StatusCode,
 			body,
+			ErrActionFailed,
 		)
 	}
 

@@ -345,7 +345,7 @@ func TestBlock(t *testing.T) {
 		firstPruned, lastPruned, err := storage.Prune(ctx, 2, minPruningDepth)
 		assert.Equal(t, int64(-1), firstPruned)
 		assert.Equal(t, int64(-1), lastPruned)
-		assert.True(t, errors.Is(err, storageErrs.ErrPruningFailed))
+		assert.True(t, errors.Is(err, storageErrs.ErrOldestIndexMissing))
 	})
 
 	t.Run("Set genesis block", func(t *testing.T) {
@@ -366,7 +366,6 @@ func TestBlock(t *testing.T) {
 		// Ensure we error if trying to remove genesis
 		err = storage.RemoveBlock(ctx, genesisBlock.BlockIdentifier)
 		assert.Contains(t, err.Error(), storageErrs.ErrCannotRemoveOldest.Error())
-		assert.True(t, errors.Is(err, storageErrs.ErrBlockDeleteFailed))
 	})
 
 	t.Run("Set and get block", func(t *testing.T) {

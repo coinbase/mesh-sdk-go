@@ -43,7 +43,7 @@ func PopulateInput(state string, input string) (string, error) {
 		return value.Raw
 	})
 	if err != nil {
-		return "", fmt.Errorf("%w: unable to insert variables", err)
+		return "", fmt.Errorf("unable to insert variables: %w", err)
 	}
 
 	if !gjson.Valid(input) {

@@ -81,19 +81,13 @@ func (k *KeyStorage) StoreTransactional(
 	exists, _, err := dbTx.Get(ctx, getAccountKey(account))
 	if err != nil {
 		return fmt.Errorf(
-			"%w: %s %v",
-			storageErrs.ErrAddrCheckIfExistsFailed,
-			types.PrintStruct(account),
+			"unable to get key: %w",
 			err,
 		)
 	}
 
 	if exists {
-		return fmt.Errorf(
-			"%w: account %s already exists",
-			storageErrs.ErrAddrExists,
-			types.PrintStruct(account),
-		)
+		return storageErrs.ErrAddrExists
 	}
 
 	val, err := k.db.Encoder().Encode("", &Key{
@@ -101,12 +95,12 @@ func (k *KeyStorage) StoreTransactional(
 		KeyPair: keyPair,
 	})
 	if err != nil {
-		return fmt.Errorf("%w: %v", storageErrs.ErrSerializeKeyFailed, err)
+		return fmt.Errorf("unable to encode key: %w", err)
 	}
 
 	err = dbTx.Set(ctx, getAccountKey(account), val, true)
 	if err != nil {
-		return fmt.Errorf("%w: %v", storageErrs.ErrStoreKeyFailed, err)
+		return fmt.Errorf("unable to set key: %w", err)
 	}
 
 	return nil
@@ -123,11 +117,11 @@ func (k *KeyStorage) Store(
 	defer dbTx.Discard(ctx)
 
 	if err := k.StoreTransactional(ctx, account, keyPair, dbTx); err != nil {
-		return fmt.Errorf("%w: unable to store key", err)
+		return fmt.Errorf("unable to store key for account %s: %w", types.PrintStruct(keyPair), err)
 	}
 
 	if err := dbTx.Commit(ctx); err != nil {
-		return fmt.Errorf("%w: %v", storageErrs.ErrCommitKeyFailed, err)
+		return fmt.Errorf("unable to commit new key: %w", err)
 	}
 
 	return nil
@@ -143,20 +137,18 @@ func (k *KeyStorage) GetTransactional(
 	exists, rawKey, err := dbTx.Get(ctx, getAccountKey(account))
 	if err != nil {
 		return nil, fmt.Errorf(
-			"%w: %s %v",
-			storageErrs.ErrAddrGetFailed,
-			types.PrintStruct(account),
+			"unable to get key: %w",
 			err,
 		)
 	}
 
 	if !exists {
-		return nil, fmt.Errorf("%w: %s", storageErrs.ErrAddrNotFound, types.PrintStruct(account))
+		return nil, storageErrs.ErrAddrNotFound
 	}
 
 	var kp Key
 	if err := k.db.Encoder().Decode("", rawKey, &kp, true); err != nil {
-		return nil, fmt.Errorf("%w: %v", storageErrs.ErrParseSavedKeyFailed, err)
+		return nil, fmt.Errorf("unable to decode key: %w", err)
 	}
 
 	return kp.KeyPair, nil
@@ -187,7 +179,7 @@ func (k *KeyStorage) GetAllAccountsTransactional(
 			var kp Key
 			// We should not reclaim memory during a scan!!
 			if err := k.db.Encoder().Decode("", v, &kp, false); err != nil {
-				return fmt.Errorf("%w: %v", storageErrs.ErrKeyScanFailed, err)
+				return fmt.Errorf("unable to decode key: %w", err)
 			}
 
 			accounts = append(accounts, kp.Account)
@@ -197,7 +189,7 @@ func (k *KeyStorage) GetAllAccountsTransactional(
 		false,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", storageErrs.ErrKeyScanFailed, err)
+		return nil, fmt.Errorf("database scan failed: %w", err)
 	}
 
 	return accounts, nil
@@ -221,8 +213,7 @@ func (k *KeyStorage) Sign(
 		keyPair, err := k.Get(ctx, payload.AccountIdentifier)
 		if err != nil {
 			return nil, fmt.Errorf(
-				"%w for %s: %v",
-				storageErrs.ErrKeyGetFailed,
+				"unable to get key for account %s: %w",
 				types.PrintStruct(payload.AccountIdentifier),
 				err,
 			)
@@ -230,16 +221,16 @@ func (k *KeyStorage) Sign(
 
 		signer, err := keyPair.Signer()
 		if err != nil {
-			return nil, fmt.Errorf("%w: %v", storageErrs.ErrSignerCreateFailed, err)
+			return nil, fmt.Errorf("unable to create signer: %w", err)
 		}
 
 		if len(payload.SignatureType) == 0 {
-			return nil, fmt.Errorf("%w %d", storageErrs.ErrDetermineSigTypeFailed, i)
+			return nil, storageErrs.ErrDetermineSigTypeFailed
 		}
 
 		signature, err := signer.Sign(payload, payload.SignatureType)
 		if err != nil {
-			return nil, fmt.Errorf("%w for %d: %v", storageErrs.ErrSignPayloadFailed, i, err)
+			return nil, fmt.Errorf("unable to to sign payload: %w", err)
 		}
 
 		signatures[i] = signature
@@ -252,7 +243,7 @@ func (k *KeyStorage) Sign(
 func (k *KeyStorage) RandomAccount(ctx context.Context) (*types.AccountIdentifier, error) {
 	accounts, err := k.GetAllAccounts(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", storageErrs.ErrAddrsGetAllFailed, err)
+		return nil, fmt.Errorf("unable to get all accounts: %w", err)
 	}
 
 	if len(accounts) == 0 {
@@ -261,7 +252,7 @@ func (k *KeyStorage) RandomAccount(ctx context.Context) (*types.AccountIdentifie
 
 	randomNumber, err := utils.RandomNumber(big.NewInt(0), big.NewInt(int64(len(accounts))))
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", storageErrs.ErrRandomAddress, err)
+		return nil, fmt.Errorf("unable to generate random account: %w", err)
 	}
 
 	return accounts[randomNumber.Int64()], nil
@@ -272,7 +263,7 @@ func (k *KeyStorage) ImportAccounts(ctx context.Context, accounts []*PrefundedAc
 	for _, acc := range accounts {
 		keyPair, err := keys.ImportPrivateKey(acc.PrivateKeyHex, acc.CurveType)
 		if err != nil {
-			return fmt.Errorf("%w: %v", storageErrs.ErrAddrImportFailed, err)
+			return fmt.Errorf("unable to import prefunded account: %w", err)
 		}
 
 		// Skip if key already exists
@@ -281,7 +272,7 @@ func (k *KeyStorage) ImportAccounts(ctx context.Context, accounts []*PrefundedAc
 			continue
 		}
 		if err != nil {
-			return fmt.Errorf("%w: %v", storageErrs.ErrPrefundedAcctStoreFailed, err)
+			return fmt.Errorf("unable to store prefunded account: %w", err)
 		}
 	}
 	return nil

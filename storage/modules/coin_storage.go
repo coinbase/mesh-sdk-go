@@ -98,7 +98,7 @@ func (c *CoinStorage) getAndDecodeCoin(
 	key := getCoinKey(coinIdentifier)
 	exists, val, err := transaction.Get(ctx, key)
 	if err != nil {
-		return false, nil, nil, fmt.Errorf("%w: %v", errors.ErrCoinQueryFailed, err)
+		return false, nil, nil, fmt.Errorf("unable to get coin: %w", err)
 	}
 
 	if !exists { // this could occur if coin was created before we started syncing
@@ -107,7 +107,7 @@ func (c *CoinStorage) getAndDecodeCoin(
 
 	var accountCoin types.AccountCoin
 	if err := c.db.Encoder().DecodeAccountCoin(val, &accountCoin, true); err != nil {
-		return false, nil, nil, fmt.Errorf("%w: %v", errors.ErrCoinDecodeFailed, err)
+		return false, nil, nil, fmt.Errorf("unable to decode coin: %w", err)
 	}
 
 	return true, accountCoin.Coin, accountCoin.Account, nil
@@ -125,7 +125,7 @@ func (c *CoinStorage) AddCoins(
 	for _, accountCoin := range accountCoins {
 		exists, _, _, err := c.getAndDecodeCoin(ctx, dbTransaction, accountCoin.Coin.CoinIdentifier)
 		if err != nil {
-			return fmt.Errorf("%w: %v", errors.ErrCoinGetFailed, err)
+			return fmt.Errorf("unable to get and decode coin: %w", err)
 		}
 
 		if exists {
@@ -134,12 +134,16 @@ func (c *CoinStorage) AddCoins(
 
 		err = c.addCoin(ctx, accountCoin.Account, accountCoin.Coin, dbTransaction)
 		if err != nil {
-			return fmt.Errorf("%w: %v", errors.ErrCoinAddFailed, err)
+			return fmt.Errorf(
+				"unable to add coin for account %s: %w",
+				types.PrintStruct(accountCoin.Account),
+				err,
+			)
 		}
 	}
 
 	if err := dbTransaction.Commit(ctx); err != nil {
-		return fmt.Errorf("%w: %v", errors.ErrReconciliationUpdateCommitFailed, err)
+		return fmt.Errorf("unable to commit last reconciliation update: %w", err)
 	}
 
 	return nil
@@ -157,11 +161,11 @@ func (c *CoinStorage) addCoin(
 		Coin:    coin,
 	})
 	if err != nil {
-		return fmt.Errorf("%w: %v", errors.ErrCoinDataEncodeFailed, err)
+		return fmt.Errorf("unable to encode coin: %w", err)
 	}
 
 	if err := storeUniqueKey(ctx, transaction, key, encodedResult, true); err != nil {
-		return fmt.Errorf("%w: %v", errors.ErrCoinStoreFailed, err)
+		return fmt.Errorf("unable to store coin: %w", err)
 	}
 
 	if err := storeUniqueKey(
@@ -171,7 +175,7 @@ func (c *CoinStorage) addCoin(
 		[]byte(""),
 		false,
 	); err != nil {
-		return fmt.Errorf("%w: %v", errors.ErrAccountCoinStoreFailed, err)
+		return fmt.Errorf("unable to store account coin: %w", err)
 	}
 
 	return nil
@@ -197,7 +201,7 @@ func getAndDecodeCoins(
 		false,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", errors.ErrAccountCoinQueryFailed, err)
+		return nil, fmt.Errorf("unable to query coins for account: %w", err)
 	}
 
 	return coins, nil
@@ -212,7 +216,7 @@ func (c *CoinStorage) removeCoin(
 	key := getCoinKey(coinIdentifier)
 	exists, _, err := transaction.Get(ctx, key)
 	if err != nil {
-		return fmt.Errorf("%w: %v", errors.ErrCoinQueryFailed, err)
+		return fmt.Errorf("unable to get coin: %w", err)
 	}
 
 	if !exists { // this could occur if coin was created before we started syncing
@@ -220,11 +224,11 @@ func (c *CoinStorage) removeCoin(
 	}
 
 	if err := transaction.Delete(ctx, key); err != nil {
-		return fmt.Errorf("%w: %v", errors.ErrCoinDeleteFailed, err)
+		return fmt.Errorf("unable to delete coin: %w", err)
 	}
 
 	if err := transaction.Delete(ctx, getCoinAccountCoin(account, coinIdentifier)); err != nil {
-		return fmt.Errorf("%w: %v", errors.ErrCoinDeleteFailed, err)
+		return fmt.Errorf("unable to delete account coin: %w", err)
 	}
 
 	return nil
@@ -243,7 +247,11 @@ func (c *CoinStorage) skipOperation(
 
 	success, err := c.asserter.OperationSuccessful(operation)
 	if err != nil {
-		return false, fmt.Errorf("%w: %v", errors.ErrOperationParseFailed, err)
+		return false, fmt.Errorf(
+			"unable to successfully parse operation %s: %w",
+			types.PrintStruct(operation),
+			err,
+		)
 	}
 
 	if !success {
@@ -277,7 +285,11 @@ func (c *CoinStorage) updateCoins( // nolint:gocognit
 		for _, operation := range txn.Operations {
 			skip, err := c.skipOperation(operation)
 			if err != nil {
-				return fmt.Errorf("%w: %v", errors.ErrUnableToDetermineIfSkipOperation, err)
+				return fmt.Errorf(
+					"unable to skip operation %s: %w",
+					types.PrintStruct(operation),
+					err,
+				)
 			}
 			if skip {
 				continue
@@ -292,7 +304,11 @@ func (c *CoinStorage) updateCoins( // nolint:gocognit
 			}
 
 			if _, ok := coinDict[identifier]; ok {
-				return fmt.Errorf("%w %s", errors.ErrDuplicateCoinFound, identifier)
+				return fmt.Errorf(
+					"coin identifier %s is invalid: %w",
+					identifier,
+					errors.ErrDuplicateCoinFound,
+				)
 			}
 
 			coinDict[identifier] = operation
@@ -318,7 +334,11 @@ func (c *CoinStorage) updateCoins( // nolint:gocognit
 				},
 				dbTx,
 			); err != nil {
-				return fmt.Errorf("%w: %v", errors.ErrCoinAddFailed, err)
+				return fmt.Errorf(
+					"unable to add coin for account %s: %w",
+					types.PrintStruct(op.Account),
+					err,
+				)
 			}
 
 			return nil
@@ -341,7 +361,11 @@ func (c *CoinStorage) updateCoins( // nolint:gocognit
 				op.CoinChange.CoinIdentifier,
 				dbTx,
 			); err != nil {
-				return fmt.Errorf("%w: %v", errors.ErrCoinRemoveFailed, err)
+				return fmt.Errorf(
+					"unable to remove coin for account %s: %w",
+					types.PrintStruct(op.Account),
+					err,
+				)
 			}
 
 			return nil
@@ -379,12 +403,16 @@ func (c *CoinStorage) GetCoinsTransactional(
 ) ([]*types.Coin, *types.BlockIdentifier, error) {
 	coins, err := getAndDecodeCoins(ctx, dbTx, accountIdentifier)
 	if err != nil {
-		return nil, nil, fmt.Errorf("%w: %v", errors.ErrAccountIdentifierQueryFailed, err)
+		return nil, nil, fmt.Errorf(
+			"unable to get and decode coins for account %s: %w",
+			types.PrintStruct(accountIdentifier),
+			err,
+		)
 	}
 
 	headBlockIdentifier, err := c.helper.CurrentBlockIdentifier(ctx, dbTx)
 	if err != nil {
-		return nil, nil, fmt.Errorf("%w: %v", errors.ErrCurrentBlockGetFailed, err)
+		return nil, nil, fmt.Errorf("unable to get current block: %w", err)
 	}
 
 	coinArr := []*types.Coin{}
@@ -395,11 +423,15 @@ func (c *CoinStorage) GetCoinsTransactional(
 			&types.CoinIdentifier{Identifier: coinIdentifier},
 		)
 		if err != nil {
-			return nil, nil, fmt.Errorf("%w: %v", errors.ErrCoinQueryFailed, err)
+			return nil, nil, fmt.Errorf(
+				"unable to get and decode coin %s: %w",
+				types.PrintStruct(coinIdentifier),
+				err,
+			)
 		}
 
 		if !exists {
-			return nil, nil, fmt.Errorf("%w %s: %v", errors.ErrCoinGetFailed, coinIdentifier, err)
+			return nil, nil, errors.ErrCoinNotFound
 		}
 
 		coinArr = append(coinArr, coin)
@@ -428,7 +460,11 @@ func (c *CoinStorage) GetCoinTransactional(
 ) (*types.Coin, *types.AccountIdentifier, error) {
 	exists, coin, owner, err := c.getAndDecodeCoin(ctx, dbTx, coinIdentifier)
 	if err != nil {
-		return nil, nil, fmt.Errorf("%w: %v", errors.ErrCoinLookupFailed, err)
+		return nil, nil, fmt.Errorf(
+			"unable to get and decode coin %s: %w",
+			types.PrintStruct(coinIdentifier),
+			err,
+		)
 	}
 
 	if !exists {
@@ -460,8 +496,8 @@ func (c *CoinStorage) GetLargestCoin(
 	coins, blockIdentifier, err := c.GetCoins(ctx, accountIdentifier)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf(
-			"%w for %s: %v",
-			errors.ErrUTXOBalanceGetFailed,
+			"unable to get utxo balance for account %s: %w",
+
 			accountIdentifier.Address,
 			err,
 		)
@@ -481,9 +517,9 @@ func (c *CoinStorage) GetLargestCoin(
 		val, ok := new(big.Int).SetString(coin.Amount.Value, 10)
 		if !ok {
 			return nil, nil, nil, fmt.Errorf(
-				"%w %s",
-				errors.ErrCoinParseFailed,
+				"coin %s is invalid: %w",
 				coin.CoinIdentifier.Identifier,
+				errors.ErrCoinParseFailed,
 			)
 		}
 
@@ -507,7 +543,11 @@ func (c *CoinStorage) SetCoinsImported(
 	// Request array length should always equal response array length.
 	// But we still check it for sure.
 	if len(accts) != len(acctCoinsResp) {
-		return errors.ErrCoinImportFailed
+		return fmt.Errorf(
+			"the length of coin request %d and coin response %d are not equal",
+			len(accts),
+			len(acctCoinsResp),
+		)
 	}
 
 	var acctCoins []*types.AccountCoin
@@ -523,7 +563,7 @@ func (c *CoinStorage) SetCoinsImported(
 	}
 
 	if err := c.AddCoins(ctx, acctCoins); err != nil {
-		return fmt.Errorf("%w: %v", errors.ErrCoinImportFailed, err)
+		return fmt.Errorf("unable to add coins: %w", err)
 	}
 
 	return nil
