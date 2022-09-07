@@ -37,31 +37,6 @@ func TestErr(t *testing.T) {
 			is:     true,
 			source: "block storage error",
 		},
-		"coin storage error": {
-			err:    ErrCoinQueryFailed,
-			is:     true,
-			source: "coin storage error",
-		},
-		"badger storage error": {
-			err:    ErrDatabaseOpenFailed,
-			is:     true,
-			source: "badger storage error",
-		},
-		"broadcast storage error": {
-			err:    ErrBroadcastTxStale,
-			is:     true,
-			source: "broadcast storage error",
-		},
-		"compressor error": {
-			err:    ErrLoadDictFailed,
-			is:     true,
-			source: "compressor error",
-		},
-		"job storage error": {
-			err:    ErrJobsGetAllFailed,
-			is:     true,
-			source: "job storage error",
-		},
 		"key storage error": {
 			err:    ErrAddrExists,
 			is:     true,

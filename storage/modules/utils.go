@@ -36,9 +36,9 @@ func storeUniqueKey(
 
 	if exists {
 		return fmt.Errorf(
-			"%w: duplicate key %s found",
-			errors.ErrDuplicateKey,
+			"key %s is invalid: %w",
 			string(key),
+			errors.ErrDuplicateKey,
 		)
 	}
 

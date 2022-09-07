@@ -121,7 +121,7 @@ func BigIntGet(
 ) (bool, *big.Int, error) {
 	exists, val, err := txn.Get(ctx, key)
 	if err != nil {
-		return false, nil, err
+		return false, nil, fmt.Errorf("unable to get the value for key %s: %w", string(key), err)
 	}
 
 	if !exists {
@@ -147,13 +147,13 @@ func (c *CounterStorage) UpdateTransactional(
 
 	_, val, err := BigIntGet(ctx, getCounterKey(counter), dbTx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to get counter: %w", err)
 	}
 
 	newVal := new(big.Int).Add(val, amount)
 
 	if err := dbTx.Set(ctx, getCounterKey(counter), newVal.Bytes(), false); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to set counter: %w", err)
 	}
 
 	return newVal, nil
@@ -170,11 +170,11 @@ func (c *CounterStorage) Update(
 
 	newVal, err := c.UpdateTransactional(ctx, dbTx, counter, amount)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to update counter: %w", err)
 	}
 
 	if err := dbTx.Commit(ctx); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to commit counter update: %w", err)
 	}
 
 	return newVal, nil
@@ -213,7 +213,7 @@ func (c *CounterStorage) AddingBlock(
 		big.NewInt(1),
 	)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to update block counter: %w", err)
 	}
 
 	_, err = c.UpdateTransactional(
@@ -223,7 +223,7 @@ func (c *CounterStorage) AddingBlock(
 		big.NewInt(int64(len(block.Transactions))),
 	)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to update transaction counter: %w", err)
 	}
 
 	opCount := int64(0)
@@ -237,7 +237,7 @@ func (c *CounterStorage) AddingBlock(
 		big.NewInt(opCount),
 	)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to update operation counter: %w", err)
 	}
 
 	return nil, nil

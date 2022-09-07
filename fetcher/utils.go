@@ -90,9 +90,9 @@ func tryAgain(fetchMsg string, thisBackoff *Backoff, err *Error) *Error {
 	if nextBackoff == backoff.Stop {
 		return &Error{
 			Err: fmt.Errorf(
-				"%w: %s",
-				ErrExhaustedRetries,
+				"fetch message %s: %w",
 				fetchMsg,
+				ErrExhaustedRetries,
 			),
 		}
 	}

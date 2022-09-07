@@ -45,7 +45,7 @@ func hashBytes(data []byte) string {
 	h := sha256.New()
 	_, err := h.Write(data)
 	if err != nil {
-		log.Fatal(fmt.Errorf("%w: unable to hash data %s", err, string(data)))
+		log.Fatal(fmt.Errorf("unable to hash data %s: %w", string(data), err))
 	}
 
 	return fmt.Sprintf("%x", h.Sum(nil))
@@ -65,19 +65,19 @@ func Hash(i interface{}) string {
 	// contains json.RawMessage)
 	a, err := json.Marshal(i)
 	if err != nil {
-		log.Fatal(fmt.Errorf("%w: unable to marshal %+v", err, i))
+		log.Fatal(fmt.Errorf("unable to marshal %+v: %w", i, err))
 	}
 
 	// Convert JSON object to interface (all json.RawMessage converted to go types)
 	var b interface{}
 	if err := json.Unmarshal(a, &b); err != nil {
-		log.Fatal(fmt.Errorf("%w: unable to unmarshal %+v", err, a))
+		log.Fatal(fmt.Errorf("unable to unmarshal %+v: %w", a, err))
 	}
 
 	// Convert interface to JSON object (all map keys ordered)
 	c, err := json.Marshal(b)
 	if err != nil {
-		log.Fatal(fmt.Errorf("%w: unable to marshal %+v", err, b))
+		log.Fatal(fmt.Errorf("unable to marshal %+v: %w", b, err))
 	}
 
 	return hashBytes(c)
