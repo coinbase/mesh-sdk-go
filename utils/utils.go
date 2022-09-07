@@ -88,7 +88,7 @@ var (
 func CreateTempDir() (string, error) {
 	storageDir, err := ioutil.TempDir("", "")
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to create temporary directory: %w", err)
 	}
 
 	color.Cyan("Using temporary directory %s", storageDir)
@@ -108,7 +108,7 @@ func RemoveTempDir(dir string) {
 // a path if they do not exist.
 func EnsurePathExists(path string) error {
 	if err := os.MkdirAll(path, os.FileMode(AllFilePermissions)); err != nil {
-		return fmt.Errorf("%w: unable to create data and network directory", err)
+		return fmt.Errorf("unable to create data and network directory: %w", err)
 	}
 
 	return nil
@@ -129,7 +129,7 @@ func SerializeAndWrite(filePath string, object interface{}) error {
 		os.FileMode(DefaultFilePermissions),
 	)
 	if err != nil {
-		return fmt.Errorf("%w: unable to write to file path %s", err, filePath)
+		return fmt.Errorf("unable to write to file path %s: %w", filePath, err)
 	}
 
 	return nil
@@ -140,7 +140,7 @@ func SerializeAndWrite(filePath string, object interface{}) error {
 func LoadAndParse(filePath string, output interface{}) error {
 	b, err := ioutil.ReadFile(path.Clean(filePath))
 	if err != nil {
-		return fmt.Errorf("%w: unable to load file %s", err, filePath)
+		return fmt.Errorf("unable to load file %s: %w", filePath, err)
 	}
 
 	// To prevent silent erroring, we explicitly
@@ -149,7 +149,7 @@ func LoadAndParse(filePath string, output interface{}) error {
 	dec.DisallowUnknownFields()
 
 	if err := dec.Decode(&output); err != nil {
-		return fmt.Errorf("%w: unable to unmarshal", err)
+		return fmt.Errorf("unable to unmarshal: %w", err)
 	}
 
 	return nil
@@ -166,7 +166,7 @@ func CreateCommandPath(
 ) (string, error) {
 	dataPath := path.Join(dataDirectory, cmd, types.Hash(network))
 	if err := EnsurePathExists(dataPath); err != nil {
-		return "", fmt.Errorf("%w: cannot populate path", err)
+		return "", fmt.Errorf("failed to create path %s: %w", dataPath, err)
 	}
 
 	return dataPath, nil
@@ -229,7 +229,7 @@ func CheckNetworkTip(ctx context.Context,
 	// NetworkStatusRetry call.
 	status, fetchErr := f.NetworkStatusRetry(ctx, network, nil)
 	if fetchErr != nil {
-		return false, nil, fmt.Errorf("%w: unable to fetch network status", fetchErr.Err)
+		return false, nil, fmt.Errorf("unable to fetch network status of network %s: %w", types.PrintStruct(network), fetchErr.Err)
 	}
 
 	// if the block timestamp is within tip delay of current time,
@@ -280,7 +280,7 @@ func CheckStorageTip(ctx context.Context,
 	if fetchErr != nil {
 		return false,
 			nil,
-			fmt.Errorf("%w: unable to fetch network status", fetchErr)
+			fmt.Errorf("unable to check network tip: %w", fetchErr)
 	}
 
 	if networkAtTip && types.Hash(tipBlock) == types.Hash(currentStorageBlock.BlockIdentifier) {
@@ -299,7 +299,7 @@ func CheckNetworkSupported(
 ) (*types.NetworkStatusResponse, error) {
 	networks, fetchErr := helper.NetworkList(ctx, nil)
 	if fetchErr != nil {
-		return nil, fmt.Errorf("%w: unable to fetch network list", fetchErr.Err)
+		return nil, fmt.Errorf("unable to fetch network list: %w", fetchErr.Err)
 	}
 
 	networkMatched, supportedNetworks := fetcher.CheckNetworkListForNetwork(
@@ -309,9 +309,9 @@ func CheckNetworkSupported(
 	if !networkMatched {
 		color.Yellow("Supported networks: %s", types.PrettyPrintStruct(supportedNetworks))
 		return nil, fmt.Errorf(
-			"%w: %s is not available",
+			"network %s is invalid: %w",
+			types.PrintStruct(networkIdentifier),
 			ErrNetworkNotSupported,
-			types.PrettyPrintStruct(networkIdentifier),
 		)
 	}
 
@@ -321,7 +321,7 @@ func CheckNetworkSupported(
 		nil,
 	)
 	if fetchErr != nil {
-		return nil, fmt.Errorf("%w: unable to get network status", fetchErr.Err)
+		return nil, fmt.Errorf("unable to fetch network status of network %s: %w", types.PrintStruct(networkIdentifier), fetchErr.Err)
 	}
 
 	return status, nil
@@ -360,7 +360,7 @@ func RandomNumber(minimum *big.Int, maximum *big.Int) (*big.Int, error) {
 
 	addition, err := rand.Int(rand.Reader, transformed)
 	if err != nil {
-		return nil, fmt.Errorf("cannot get random number: %v", err)
+		return nil, fmt.Errorf("failed to generate random number: %w", err)
 	}
 
 	return new(big.Int).Add(minimum, addition), nil
@@ -440,7 +440,7 @@ func CurrencyBalance(
 		[]*types.Currency{currency},
 	)
 	if fetchErr != nil {
-		return nil, nil, fetchErr.Err
+		return nil, nil, fmt.Errorf("unable to fetch account balance for currency %s of account %s: %w", types.PrintStruct([]*types.Currency{currency}), types.PrintStruct(account), fetchErr.Err)
 	}
 
 	liveAmount := types.ExtractAmount(liveBalances, currency)
@@ -473,7 +473,7 @@ func AllCurrencyBalance(
 		nil,
 	)
 	if fetchErr != nil {
-		return nil, nil, fetchErr.Err
+		return nil, nil, fmt.Errorf("unable to fetch account balance for all currencies of account %s: %w", types.PrintStruct(account), fetchErr.Err)
 	}
 
 	return liveBalances, liveBlock, nil
@@ -516,7 +516,7 @@ func GetAccountBalances(
 				-1,
 			)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("failed to get currency balance: %w", err)
 			}
 
 			accountBalance := &AccountBalance{
@@ -534,7 +534,7 @@ func GetAccountBalances(
 				-1,
 			)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("failed to get all currencies balance: %w", err)
 			}
 
 			for _, amount := range amounts {
@@ -585,7 +585,7 @@ func GetAccountCoins(
 		)
 
 		if err != nil {
-			return nil, err.Err
+			return nil, fmt.Errorf("unable to fetch account coin for currency %s of account %s: %w", types.PrintStruct(req.Currencies), types.PrintStruct(req.Account), err.Err)
 		}
 
 		resp := &AccountCoinsResponse{

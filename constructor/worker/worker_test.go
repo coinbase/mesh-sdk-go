@@ -1474,7 +1474,7 @@ func TestJob_Failures(t *testing.T) {
 					OutputPath: "key",
 				},
 				ProcessedInput: `{"curve_typ": "secp256k1"}`,
-				Err:            ErrInvalidInput,
+				Err:            fmt.Errorf("unknown field \"curve_typ\""),
 			},
 			helper: &mocks.Helper{},
 		},

@@ -486,7 +486,7 @@ func (a *Asserter) Transaction(
 // invalid transaction identifiers, or a direction not defined by the enum.
 func (a *Asserter) RelatedTransactions(relatedTransactions []*types.RelatedTransaction) error {
 	if dup := DuplicateRelatedTransaction(relatedTransactions); dup != nil {
-		return fmt.Errorf("%w: %v", ErrDuplicateRelatedTransaction, dup)
+		return fmt.Errorf("related transaction %s is invalid: %w", types.PrintStruct(dup), ErrDuplicateRelatedTransaction)
 	}
 
 	for i, relatedTransaction := range relatedTransactions {

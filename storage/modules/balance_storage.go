@@ -194,7 +194,7 @@ func (b *BalanceStorage) AddingBlock(
 
 	changes, err := b.parser.BalanceChanges(ctx, block, false)
 	if err != nil {
-		return nil, fmt.Errorf("%w: unable to calculate balance changes", err)
+		return nil, fmt.Errorf("unable to calculate balance changes: %w", err)
 	}
 
 	// Keep track of how many new accounts have been seen so that the counter
@@ -212,7 +212,7 @@ func (b *BalanceStorage) AddingBlock(
 				block.ParentBlockIdentifier,
 			)
 			if err != nil {
-				return err
+				return fmt.Errorf("unable to update balance: %w", err)
 			}
 
 			if !newAccount {
@@ -232,7 +232,7 @@ func (b *BalanceStorage) AddingBlock(
 
 	if pending > 0 {
 		if err := b.handler.AccountsReconciled(ctx, transaction, pending); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("unable to update the total accounts reconciled by count: %w", err)
 		}
 	}
 
@@ -254,7 +254,7 @@ func (b *BalanceStorage) RemovingBlock(
 
 	changes, err := b.parser.BalanceChanges(ctx, block, true)
 	if err != nil {
-		return nil, fmt.Errorf("%w: unable to calculate balance changes", err)
+		return nil, fmt.Errorf("unable to calculate balance changes for block %s: %w", types.PrintStruct(block), err)
 	}
 
 	// staleAccounts should be removed because the orphaned
@@ -295,7 +295,7 @@ func (b *BalanceStorage) RemovingBlock(
 
 	return func(ctx context.Context) error {
 		if err := b.handler.BlockRemoved(ctx, block, changes); err != nil {
-			return err
+			return fmt.Errorf("unable to remove block %s: %w", types.PrintStruct(block), err)
 		}
 
 		if len(staleAccounts) == 0 {
@@ -335,12 +335,12 @@ func (b *BalanceStorage) SetBalance(
 		account,
 		amount.Currency,
 	); err != nil {
-		return err
+		return fmt.Errorf("unable to delete account records for account %s: %w", types.PrintStruct(account), err)
 	}
 
 	// Mark as new account seen
 	if err := b.handler.AccountsSeen(ctx, dbTransaction, 1); err != nil {
-		return err
+		return fmt.Errorf("unable to update the total accounts seen by count: %w", err)
 	}
 
 	// Serialize account entry
@@ -349,13 +349,13 @@ func (b *BalanceStorage) SetBalance(
 		Currency: amount.Currency,
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to encode account currency for currency %s of account %s: %w", types.PrintStruct(amount.Currency), types.PrintStruct(account), err)
 	}
 
 	// Set account
 	key := GetAccountKey(accountNamespace, account, amount.Currency)
 	if err := dbTransaction.Set(ctx, key, serialAcc, true); err != nil {
-		return err
+		return fmt.Errorf("unable to set account: %w", err)
 	}
 
 	// Set current balance
@@ -367,13 +367,13 @@ func (b *BalanceStorage) SetBalance(
 
 	valueBytes := value.Bytes()
 	if err := dbTransaction.Set(ctx, key, valueBytes, false); err != nil {
-		return err
+		return fmt.Errorf("unable to set current balance: %w", err)
 	}
 
 	// Set historical balance
 	key = GetHistoricalBalanceKey(account, amount.Currency, block.Index)
 	if err := dbTransaction.Set(ctx, key, valueBytes, true); err != nil {
-		return err
+		return fmt.Errorf("unable to set historical balance for currency %s of account %s: %w", types.PrintStruct(amount.Currency), types.PrintStruct(account), err)
 	}
 
 	return nil
@@ -397,7 +397,7 @@ func (b *BalanceStorage) Reconciled(
 	acctKey := GetAccountKey(accountNamespace, account, currency)
 	acctExists, _, err := dbTx.Get(ctx, acctKey)
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to get account: %w", err)
 	}
 	if !acctExists {
 		return nil
@@ -405,7 +405,7 @@ func (b *BalanceStorage) Reconciled(
 
 	exists, lastReconciled, err := BigIntGet(ctx, key, dbTx)
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to get reconciliation: %w", err)
 	}
 
 	if exists {
@@ -421,11 +421,11 @@ func (b *BalanceStorage) Reconciled(
 	}
 
 	if err := dbTx.Set(ctx, key, new(big.Int).SetInt64(block.Index).Bytes(), true); err != nil {
-		return err
+		return fmt.Errorf("unable to set reconciliation: %w", err)
 	}
 
 	if err := dbTx.Commit(ctx); err != nil {
-		return fmt.Errorf("%w: unable to commit last reconciliation update", err)
+		return fmt.Errorf("unable to commit last reconciliation update: %w", err)
 	}
 
 	return nil
@@ -445,12 +445,12 @@ func (b *BalanceStorage) EstimatedReconciliationCoverage(ctx context.Context) (f
 
 	reconciled, err := b.helper.AccountsReconciled(ctx, dbTx)
 	if err != nil {
-		return -1, err
+		return -1, fmt.Errorf("unable to update the total accounts reconciled by count: %w", err)
 	}
 
 	accounts, err := b.helper.AccountsSeen(ctx, dbTx)
 	if err != nil {
-		return -1, err
+		return -1, fmt.Errorf("unable to update the total accounts seen by count: %w", err)
 	}
 
 	if accounts.Sign() == 0 {
@@ -477,7 +477,7 @@ func (b *BalanceStorage) ReconciliationCoverage(
 			key := GetAccountKey(reconciliationNamepace, entry.Account, entry.Currency)
 			exists, lastReconciled, err := BigIntGet(ctx, key, txn)
 			if err != nil {
-				return err
+				return fmt.Errorf("unable to get reconciliation: %w", err)
 			}
 
 			if !exists {
@@ -492,7 +492,7 @@ func (b *BalanceStorage) ReconciliationCoverage(
 		},
 	)
 	if err != nil {
-		return -1, fmt.Errorf("%w: unable to get all account entries", err)
+		return -1, fmt.Errorf("unable to get all account entries: %w", err)
 	}
 
 	if seen == 0 {
@@ -540,11 +540,11 @@ func (b *BalanceStorage) existingValue(
 	)
 	if err != nil {
 		return "", fmt.Errorf(
-			"%w: unable to get previous account balance for %s %s at %s",
-			err,
+			"unable to get previous account balance for %s %s at %s: %w",
 			types.PrintStruct(change.Account),
 			types.PrintStruct(change.Currency),
 			types.PrintStruct(parentBlock),
+			err,
 		)
 	}
 
@@ -586,11 +586,11 @@ func (b *BalanceStorage) applyExemptions(
 	)
 	if err != nil {
 		return "", fmt.Errorf(
-			"%w: unable to get current account balance for %s %s at %s",
-			err,
+			"unable to get current account balance for %s %s at %s: %w",
 			types.PrintStruct(change.Account),
 			types.PrintStruct(change.Currency),
 			types.PrintStruct(change.Block),
+			err,
 		)
 	}
 
@@ -599,7 +599,9 @@ func (b *BalanceStorage) applyExemptions(
 	difference, err := types.SubtractValues(liveAmount.Value, newVal)
 	if err != nil {
 		return "", fmt.Errorf(
-			"%w: unable to calculate difference between live and computed balances",
+			"unable to calculate difference between live balance %s and computed balance %s: %w",
+			liveAmount.Value,
+			newVal,
 			err,
 		)
 	}
@@ -610,11 +612,11 @@ func (b *BalanceStorage) applyExemptions(
 	)
 	if exemption == nil {
 		return "", fmt.Errorf(
-			"%w: account %s balance difference (live - computed) %s at %s is not allowed by any balance exemption",
-			storageErrs.ErrInvalidLiveBalance,
+			"account %s balance difference (live - computed) %s at %s is not allowed by any balance exemption: %w",
 			types.PrintStruct(change.Account),
 			difference,
 			types.PrintStruct(change.Block),
+			storageErrs.ErrInvalidLiveBalance,
 		)
 	}
 
@@ -647,7 +649,7 @@ func (b *BalanceStorage) deleteAccountRecords(
 		-1,
 		true, // We want everything >= -1
 	); err != nil {
-		return err
+		return fmt.Errorf("unable to remove historical balances: %w", err)
 	}
 
 	// Remove single key records
@@ -664,12 +666,12 @@ func (b *BalanceStorage) deleteAccountRecords(
 		if namespace == accountNamespace {
 			exists, _, err := dbTx.Get(ctx, key)
 			if err != nil {
-				return err
+				return fmt.Errorf("unable to get account: %w", err)
 			}
 
 			if exists {
 				if err := b.handler.AccountsSeen(ctx, dbTx, -1); err != nil {
-					return err
+					return fmt.Errorf("unable to update the total accounts seen by count: %w", err)
 				}
 			}
 		}
@@ -679,18 +681,18 @@ func (b *BalanceStorage) deleteAccountRecords(
 		if namespace == reconciliationNamepace {
 			exists, _, err := dbTx.Get(ctx, key)
 			if err != nil {
-				return err
+				return fmt.Errorf("unable to get reconciliation: %w", err)
 			}
 
 			if exists {
 				if err := b.handler.AccountsReconciled(ctx, dbTx, -1); err != nil {
-					return err
+					return fmt.Errorf("unable to update the total accounts reconciled by count: %w", err)
 				}
 			}
 		}
 
 		if err := dbTx.Delete(ctx, key); err != nil {
-			return err
+			return fmt.Errorf("unable to delete transaction: %w", err)
 		}
 	}
 
@@ -714,7 +716,7 @@ func (b *BalanceStorage) OrphanBalance(
 		true,
 	)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("unable to remove historical balances: %w", err)
 	}
 
 	// Check if we should remove the account record
@@ -730,14 +732,14 @@ func (b *BalanceStorage) OrphanBalance(
 	case errors.Is(err, storageErrs.ErrAccountMissing):
 		return true, nil
 	case err != nil:
-		return false, err
+		return false, fmt.Errorf("unable to get historical balance for currency %s of account %s: %w", types.PrintStruct(change.Currency), types.PrintStruct(change.Account), err)
 	}
 
 	// Update current balance
 	key := GetAccountKey(balanceNamespace, change.Account, change.Currency)
 	exists, lastBalance, err := BigIntGet(ctx, key, dbTransaction)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("unable to get balance: %w", err)
 	}
 
 	if !exists {
@@ -751,7 +753,7 @@ func (b *BalanceStorage) OrphanBalance(
 
 	newBalance := new(big.Int).Add(lastBalance, difference)
 	if err := dbTransaction.Set(ctx, key, newBalance.Bytes(), true); err != nil {
-		return false, err
+		return false, fmt.Errorf("unable to set current balance: %w", err)
 	}
 
 	return false, nil
@@ -780,11 +782,11 @@ func (b *BalanceStorage) PruneBalances(
 		false,
 	)
 	if err != nil {
-		return fmt.Errorf("%w: unable to remove historical balances", err)
+		return fmt.Errorf("unable to remove historical balances: %w", err)
 	}
 
 	if err := dbTx.Commit(ctx); err != nil {
-		return fmt.Errorf("%w: unable to commit historical balance removal", err)
+		return fmt.Errorf("unable to commit historical balance removal: %w", err)
 	}
 
 	return nil
@@ -800,7 +802,7 @@ func (b *BalanceStorage) UpdateBalance(
 	parentBlock *types.BlockIdentifier,
 ) (bool, error) {
 	if change.Currency == nil {
-		return false, errors.New("invalid currency")
+		return false, storageErrs.ErrInvalidCurrency
 	}
 
 	// If the balance key does not exist, the account
@@ -808,7 +810,7 @@ func (b *BalanceStorage) UpdateBalance(
 	key := GetAccountKey(balanceNamespace, change.Account, change.Currency)
 	exists, currentBalance, err := BigIntGet(ctx, key, dbTransaction)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("unable to get balance: %w", err)
 	}
 
 	// Find account existing value whether the account is new, has an
@@ -825,7 +827,7 @@ func (b *BalanceStorage) UpdateBalance(
 		currentBalance.String(),
 	)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("unable to find account existing value for currency %s of account %s: %w", types.PrintStruct(change.Currency), types.PrintStruct(change.Account), err)
 	}
 
 	newVal, err := types.AddValues(change.Difference, existingValue)
@@ -838,7 +840,7 @@ func (b *BalanceStorage) UpdateBalance(
 	// and *types.Currency.
 	newVal, err = b.applyExemptions(ctx, change, newVal)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("unable to apply exemptions: %w", err)
 	}
 
 	bigNewVal, ok := new(big.Int).SetString(newVal, 10)
@@ -848,12 +850,9 @@ func (b *BalanceStorage) UpdateBalance(
 
 	if bigNewVal.Sign() == -1 {
 		return false, fmt.Errorf(
-			"%w %s:%+v for %+v at %+v",
-			storageErrs.ErrNegativeBalance,
+			"%s is invalid: %w",
 			newVal,
-			change.Currency,
-			change.Account,
-			change.Block,
+			storageErrs.ErrNegativeBalance,
 		)
 	}
 
@@ -867,16 +866,16 @@ func (b *BalanceStorage) UpdateBalance(
 			Currency: change.Currency,
 		})
 		if err != nil {
-			return false, err
+			return false, fmt.Errorf("unable to encode account currency %s of account %s: %w", types.PrintStruct(change.Currency), types.PrintStruct(change.Account), err)
 		}
 		if err := dbTransaction.Set(ctx, key, serialAcc, true); err != nil {
-			return false, err
+			return false, fmt.Errorf("unable to set account: %w", err)
 		}
 	}
 
 	// Update current balance
 	if err := dbTransaction.Set(ctx, key, bigNewVal.Bytes(), true); err != nil {
-		return false, err
+		return false, fmt.Errorf("unable to set current balance: %w", err)
 	}
 
 	// Add a new historical record for the balance.
@@ -886,7 +885,7 @@ func (b *BalanceStorage) UpdateBalance(
 		change.Block.Index,
 	)
 	if err := dbTransaction.Set(ctx, historicalKey, bigNewVal.Bytes(), true); err != nil {
-		return false, err
+		return false, fmt.Errorf("unable to set historical balance for currency %s of account %s: %w", types.PrintStruct(change.Currency), types.PrintStruct(change.Account), err)
 	}
 
 	return newAccount, nil
@@ -911,7 +910,7 @@ func (b *BalanceStorage) GetBalance(
 		index,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("%w: unable to get balance", err)
+		return nil, fmt.Errorf("unable to get balance: %w", err)
 	}
 
 	return amount, nil
@@ -929,7 +928,7 @@ func (b *BalanceStorage) GetBalanceTransactional(
 	key := GetAccountKey(balanceNamespace, account, currency)
 	exists, _, err := dbTx.Get(ctx, key)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to get balance: %w", err)
 	}
 
 	if !exists {
@@ -939,15 +938,15 @@ func (b *BalanceStorage) GetBalanceTransactional(
 	key = GetAccountKey(pruneNamespace, account, currency)
 	exists, lastPruned, err := BigIntGet(ctx, key, dbTx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to get prune: %w", err)
 	}
 
 	if exists && lastPruned.Int64() >= index {
 		return nil, fmt.Errorf(
-			"%w: desired %d last pruned %d",
-			storageErrs.ErrBalancePruned,
+			"desired %d last pruned %d: %w",
 			index,
 			lastPruned.Int64(),
+			storageErrs.ErrBalancePruned,
 		)
 	}
 
@@ -970,7 +969,7 @@ func (b *BalanceStorage) GetBalanceTransactional(
 		}, nil
 	}
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to get historical balance for currency %s of account %s: %w", types.PrintStruct(currency), types.PrintStruct(account), err)
 	}
 
 	return amount, nil
@@ -985,7 +984,7 @@ func (b *BalanceStorage) fetchAndSetBalance(
 ) (*types.Amount, error) {
 	amount, err := b.helper.AccountBalance(ctx, account, currency, block)
 	if err != nil {
-		return nil, fmt.Errorf("%w: unable to get account balance from helper", err)
+		return nil, fmt.Errorf("unable to get account balance for currency %s of account %s: %w", types.PrintStruct(currency), types.PrintStruct(account), err)
 	}
 
 	err = b.SetBalance(
@@ -996,7 +995,7 @@ func (b *BalanceStorage) fetchAndSetBalance(
 		block,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("%w: unable to set account balance", err)
+		return nil, fmt.Errorf("unable to set account balance of account %s: %w", types.PrintStruct(account), err)
 	}
 
 	return amount, nil
@@ -1022,12 +1021,12 @@ func (b *BalanceStorage) GetOrSetBalance(
 		block,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("%w: unable to get balance", err)
+		return nil, fmt.Errorf("unable to get balance for currency %s of account %s: %w", types.PrintStruct(currency), types.PrintStruct(account), err)
 	}
 
 	// We commit any changes made during the balance lookup.
 	if err := dbTx.Commit(ctx); err != nil {
-		return nil, fmt.Errorf("%w: unable to commit account balance transaction", err)
+		return nil, fmt.Errorf("unable to commit account balance transaction: %w", err)
 	}
 
 	return amount, nil
@@ -1057,13 +1056,13 @@ func (b *BalanceStorage) GetOrSetBalanceTransactional(
 	if errors.Is(err, storageErrs.ErrAccountMissing) {
 		amount, err = b.fetchAndSetBalance(ctx, dbTx, account, currency, block)
 		if err != nil {
-			return nil, fmt.Errorf("%w: unable to set balance", err)
+			return nil, fmt.Errorf("unable to set balance for currency %s of account %s: %w", types.PrintStruct(currency), types.PrintStruct(account), err)
 		}
 
 		return amount, nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("%w: unable to get balance", err)
+		return nil, fmt.Errorf("unable to get balance for currency %s of account %s: %w", types.PrintStruct(currency), types.PrintStruct(account), err)
 	}
 
 	return amount, nil
@@ -1090,7 +1089,7 @@ func (b *BalanceStorage) BootstrapBalances(
 	// Read bootstrap file
 	balances := []*BootstrapBalance{}
 	if err := utils.LoadAndParse(bootstrapBalancesFile, &balances); err != nil {
-		return err
+		return fmt.Errorf("unable to load and parse %s: %w", bootstrapBalancesFile, err)
 	}
 
 	// Update balances in database
@@ -1103,7 +1102,7 @@ func (b *BalanceStorage) BootstrapBalances(
 		// contains huge number of accounts.
 		if i != 0 && i%utils.MaxEntrySizePerTxn == 0 {
 			if err := dbTransaction.Commit(ctx); err != nil {
-				return err
+				return fmt.Errorf("unable to commit bootstrap balance update batch")
 			}
 			dbTransaction = b.db.Transaction(ctx)
 		}
@@ -1135,12 +1134,12 @@ func (b *BalanceStorage) BootstrapBalances(
 			genesisBlockIdentifier,
 		)
 		if err != nil {
-			return err
+			return fmt.Errorf("unable to set balance for currency %s of account %s: %w", types.PrintStruct(balance.Currency), types.PrintStruct(balance.Account), err)
 		}
 	}
 
 	if err := dbTransaction.Commit(ctx); err != nil {
-		return err
+		return fmt.Errorf("unable to commit bootstrap balance")
 	}
 
 	log.Printf("%d Balances Bootstrapped\n", len(balances))
@@ -1163,9 +1162,9 @@ func (b *BalanceStorage) getAllAccountEntries(
 			err := b.db.Encoder().DecodeAccountCurrency(v, &accCurrency, false)
 			if err != nil {
 				return fmt.Errorf(
-					"%w: unable to parse balance entry for %s",
-					err,
+					"unable to parse balance entry for %s: %w",
 					string(v),
+					err,
 				)
 			}
 
@@ -1175,7 +1174,7 @@ func (b *BalanceStorage) getAllAccountEntries(
 		false,
 	)
 	if err != nil {
-		return fmt.Errorf("%w: database scan failed", err)
+		return fmt.Errorf("database scan failed: %w", err)
 	}
 
 	return nil
@@ -1194,7 +1193,7 @@ func (b *BalanceStorage) GetAllAccountCurrency(
 		accounts = append(accounts, account)
 		return nil
 	}); err != nil {
-		return nil, fmt.Errorf("%w: unable to get all balance entries", err)
+		return nil, fmt.Errorf("unable to get all balance entries: %w", err)
 	}
 
 	return accounts, nil
@@ -1228,12 +1227,12 @@ func (b *BalanceStorage) SetBalanceImported(
 			accountBalance.Block,
 		)
 		if err != nil {
-			return err
+			return fmt.Errorf("unable to set balance for currency %s of account %s: %w", types.PrintStruct(accountBalance.Amount.Currency), types.PrintStruct(accountBalance.Account), err)
 		}
 	}
 
 	if err := transaction.Commit(ctx); err != nil {
-		return err
+		return fmt.Errorf("unable to commit balance imported")
 	}
 
 	log.Printf("%d Balances Updated\n", len(accountBalances))
@@ -1268,7 +1267,7 @@ func (b *BalanceStorage) getHistoricalBalance(
 		}, nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("%w: database scan failed", err)
+		return nil, fmt.Errorf("database scan failed: %w", err)
 	}
 
 	return nil, storageErrs.ErrAccountMissing
@@ -1312,12 +1311,12 @@ func (b *BalanceStorage) removeHistoricalBalances(
 		!orphan,
 	)
 	if err != nil && !errors.Is(err, errTooManyKeys) {
-		return fmt.Errorf("%w: database scan failed", err)
+		return fmt.Errorf("database scan failed: %w", err)
 	}
 
 	for _, k := range foundKeys {
 		if err := dbTx.Delete(ctx, k); err != nil {
-			return err
+			return fmt.Errorf("unable to delete transaction: %w", err)
 		}
 	}
 
@@ -1331,7 +1330,7 @@ func (b *BalanceStorage) removeHistoricalBalances(
 	key := GetAccountKey(pruneNamespace, account, currency)
 	exists, lastPruned, err := BigIntGet(ctx, key, dbTx)
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to get prune: %w", err)
 	}
 
 	if exists && lastPruned.Int64() > index {
