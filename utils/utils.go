@@ -66,7 +66,7 @@ const (
 
 	// MaxEntrySizePerTxn is the maximum number of entries
 	// in one transaction object. This is used for bootstrap
-	// balances process to avoid TxnTooBig error when memory_limit_disabled=false
+	// balances process to avoid TxnTooBig error when l0_in_memory_enabled=false
 	// as well as reduce the running time.
 	MaxEntrySizePerTxn = 600
 )
