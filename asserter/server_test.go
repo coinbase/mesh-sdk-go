@@ -914,8 +914,6 @@ func TestConstructionDeriveRequest(t *testing.T) {
 }
 
 func TestConstructionPreprocessRequest(t *testing.T) {
-	positiveFeeMultiplier := float64(1.1)
-	negativeFeeMultiplier := float64(-1.1)
 	var tests = map[string]struct {
 		request *types.ConstructionPreprocessRequest
 		err     error
@@ -929,30 +927,8 @@ func TestConstructionPreprocessRequest(t *testing.T) {
 		},
 		"valid request with suggested fee multiplier": {
 			request: &types.ConstructionPreprocessRequest{
-				NetworkIdentifier:      validNetworkIdentifier,
-				Operations:             validOps,
-				SuggestedFeeMultiplier: &positiveFeeMultiplier,
-			},
-			err: nil,
-		},
-		"valid request with max fee": {
-			request: &types.ConstructionPreprocessRequest{
 				NetworkIdentifier: validNetworkIdentifier,
 				Operations:        validOps,
-				MaxFee: []*types.Amount{
-					validAmount,
-				},
-			},
-			err: nil,
-		},
-		"valid request with suggested fee multiplier and max fee": {
-			request: &types.ConstructionPreprocessRequest{
-				NetworkIdentifier: validNetworkIdentifier,
-				Operations:        validOps,
-				MaxFee: []*types.Amount{
-					validAmount,
-				},
-				SuggestedFeeMultiplier: &positiveFeeMultiplier,
 			},
 			err: nil,
 		},
@@ -996,25 +972,6 @@ func TestConstructionPreprocessRequest(t *testing.T) {
 				Operations:        invalidOps,
 			},
 			err: ErrOperationStatusNotEmptyForConstruction,
-		},
-		"negative suggested fee multiplier": {
-			request: &types.ConstructionPreprocessRequest{
-				NetworkIdentifier:      validNetworkIdentifier,
-				Operations:             validOps,
-				SuggestedFeeMultiplier: &negativeFeeMultiplier,
-			},
-			err: ErrConstructionPreprocessRequestSuggestedFeeMultiplierIsNeg,
-		},
-		"max fee with duplicate currency": {
-			request: &types.ConstructionPreprocessRequest{
-				NetworkIdentifier: validNetworkIdentifier,
-				Operations:        validOps,
-				MaxFee: []*types.Amount{
-					validAmount,
-					validAmount,
-				},
-			},
-			err: ErrCurrencyUsedMultipleTimes,
 		},
 	}
 

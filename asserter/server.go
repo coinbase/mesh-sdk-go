@@ -319,18 +319,6 @@ func (a *Asserter) ConstructionPreprocessRequest(
 		)
 	}
 
-	if err := AssertUniqueAmounts(request.MaxFee); err != nil {
-		return fmt.Errorf("max fee %s is invalid: %w", types.PrintStruct(request.MaxFee), err)
-	}
-
-	if request.SuggestedFeeMultiplier != nil && *request.SuggestedFeeMultiplier < 0 {
-		return fmt.Errorf(
-			"suggested fee multiplier %f is invalid: %w",
-			*request.SuggestedFeeMultiplier,
-			ErrConstructionPreprocessRequestSuggestedFeeMultiplierIsNeg,
-		)
-	}
-
 	return nil
 }
 
