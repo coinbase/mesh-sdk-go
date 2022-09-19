@@ -65,8 +65,8 @@ const (
 	// PerformanceLogValueSize is 256 MB.
 	PerformanceLogValueSize = 256 << 20
 
-	// AllInMemoryTableSize is 3072 MB.
-	AllInMemoryTableSize = 3072 << 20
+	// AllInMemoryTableSize is 2048 MB.
+	AllInMemoryTableSize = 2048 << 20
 
 	// PerformanceLogValueSize is 512 MB.
 	AllInMemoryLogValueSize = 512 << 20
