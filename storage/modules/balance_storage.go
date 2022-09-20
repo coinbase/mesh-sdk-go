@@ -884,7 +884,7 @@ func (b *BalanceStorage) UpdateBalance(
 
 	if bigNewVal.Sign() == -1 {
 		return false, fmt.Errorf(
-			"account balance %s of currency %s for account %s at %s is invalid: %w",
+			"account balance %s of currency %s for account %s at block %s is invalid: %w",
 			newVal,
 			types.PrintStruct(change.Currency),
 			types.PrintStruct(change.Account),
