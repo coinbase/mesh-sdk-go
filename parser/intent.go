@@ -131,9 +131,9 @@ func (p *Parser) ExpectedOperations(
 
 		if len(failedMatches) > 0 {
 			errString += fmt.Sprintf(
-				"%s: found matching ops with unsuccessful status %s",
-				errString,
+				"found matching ops with unsuccessful status %s: %s",
 				types.PrettyPrintStruct(failedMatches),
+				errString,
 			)
 		}
 
