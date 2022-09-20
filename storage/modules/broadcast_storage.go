@@ -443,9 +443,9 @@ func (b *BroadcastStorage) performBroadcast(
 	if err != nil {
 		// Don't error on broadcast failure, retries will automatically be handled.
 		log.Printf(
-			"%s: unable to broadcast transaction %s",
-			err.Error(),
+			"unable to broadcast transaction %s: %s",
 			broadcast.TransactionIdentifier.Hash,
+			err.Error(),
 		)
 
 		return nil

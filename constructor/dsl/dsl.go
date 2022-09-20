@@ -52,7 +52,7 @@ func Parse(ctx context.Context, file string) ([]*job.Workflow, *Error) {
 	}
 	defer func() {
 		if err := f.Close(); err != nil {
-			log.Printf("%s: could not close %s\n", err.Error(), cleanedPath)
+			log.Printf("could not close %s: %s\n", cleanedPath, err.Error())
 		}
 	}()
 

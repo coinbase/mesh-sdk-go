@@ -104,11 +104,11 @@ func tryAgain(fetchMsg string, thisBackoff *Backoff, err *Error) *Error {
 
 	thisBackoff.attempts++
 	log.Printf(
-		"%s: retrying fetch for %s after %fs (prior attempts: %d)\n",
-		errMessage,
+		"retrying fetch for %s after %fs (prior attempts: %d): %s\n",
 		fetchMsg,
 		nextBackoff.Seconds(),
 		thisBackoff.attempts,
+		errMessage,
 	)
 	time.Sleep(nextBackoff)
 

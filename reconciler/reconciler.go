@@ -95,7 +95,7 @@ func (r *Reconciler) wrappedActiveEnqueue(
 			change.Currency,
 			BacklogFull,
 		); err != nil {
-			log.Printf("%s: reconciliation skipped handling failed\n", err.Error())
+			log.Printf("reconciliation skipped handling failed: %s\n", err.Error())
 		}
 	}
 }
@@ -106,9 +106,9 @@ func (r *Reconciler) wrappedInactiveEnqueue(
 ) {
 	if err := r.inactiveAccountQueue(true, accountCurrency, liveBlock, false); err != nil {
 		log.Printf(
-			"%s: unable to queue account %s",
-			err.Error(),
+			"unable to queue account %s: %s",
 			types.PrintStruct(accountCurrency),
+			err.Error(),
 		)
 	}
 }
