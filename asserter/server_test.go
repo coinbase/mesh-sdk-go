@@ -57,6 +57,9 @@ var (
 
 	emptyBlockIdentifier = &types.BlockIdentifier{}
 
+	invalidBlockIdentifierHash  string = ""
+	invalidBlockIdentifierIndex int64  = -1
+
 	validTransactionIdentifier = &types.TransactionIdentifier{
 		Hash: "tx1",
 	}
@@ -427,14 +430,27 @@ func TestAccountBalanceRequest(t *testing.T) {
 			allowHistorical: true,
 			err:             nil,
 		},
-		"invalid historical request": {
+		"invalid historical request when block identifier hash is invalid": {
 			request: &types.AccountBalanceRequest{
 				NetworkIdentifier: validNetworkIdentifier,
 				AccountIdentifier: validAccountIdentifier,
-				BlockIdentifier:   &types.PartialBlockIdentifier{},
+				BlockIdentifier: &types.PartialBlockIdentifier{
+					Hash: &invalidBlockIdentifierHash,
+				},
 			},
 			allowHistorical: true,
-			err:             ErrPartialBlockIdentifierFieldsNotSet,
+			err:             ErrPartialBlockIdentifierHashIsEmpty,
+		},
+		"invalid historical request when block identifier index is invalid": {
+			request: &types.AccountBalanceRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+				AccountIdentifier: validAccountIdentifier,
+				BlockIdentifier: &types.PartialBlockIdentifier{
+					Index: &invalidBlockIdentifierIndex,
+				},
+			},
+			allowHistorical: true,
+			err:             ErrPartialBlockIdentifierIndexIsNegative,
 		},
 		"valid historical request when not enabled": {
 			request: &types.AccountBalanceRequest{
@@ -522,12 +538,23 @@ func TestBlockRequest(t *testing.T) {
 			},
 			err: ErrPartialBlockIdentifierIsNil,
 		},
-		"invalid PartialBlockIdentifier request": {
+		"invalid block request when block identifier hash is invalid": {
 			request: &types.BlockRequest{
 				NetworkIdentifier: validNetworkIdentifier,
-				BlockIdentifier:   &types.PartialBlockIdentifier{},
+				BlockIdentifier: &types.PartialBlockIdentifier{
+					Hash: &invalidBlockIdentifierHash,
+				},
 			},
-			err: ErrPartialBlockIdentifierFieldsNotSet,
+			err: ErrPartialBlockIdentifierHashIsEmpty,
+		},
+		"invalid block request when block identifier index is invalid": {
+			request: &types.BlockRequest{
+				NetworkIdentifier: validNetworkIdentifier,
+				BlockIdentifier: &types.PartialBlockIdentifier{
+					Index: &invalidBlockIdentifierIndex,
+				},
+			},
+			err: ErrPartialBlockIdentifierIndexIsNegative,
 		},
 	}
 

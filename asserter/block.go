@@ -286,15 +286,15 @@ func PartialBlockIdentifier(blockIdentifier *types.PartialBlockIdentifier) error
 		return ErrPartialBlockIdentifierIsNil
 	}
 
-	if blockIdentifier.Hash != nil && *blockIdentifier.Hash != "" {
-		return nil
+	if blockIdentifier.Hash != nil && *blockIdentifier.Hash == "" {
+		return ErrPartialBlockIdentifierHashIsEmpty
 	}
 
-	if blockIdentifier.Index != nil && *blockIdentifier.Index >= 0 {
-		return nil
+	if blockIdentifier.Index != nil && *blockIdentifier.Index < 0 {
+		return ErrPartialBlockIdentifierIndexIsNegative
 	}
 
-	return ErrPartialBlockIdentifierFieldsNotSet
+	return nil
 }
 
 // TransactionIdentifier returns an error if a
