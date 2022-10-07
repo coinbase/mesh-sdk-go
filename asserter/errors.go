@@ -83,15 +83,19 @@ var (
 	ErrBlockIdentifierIndexIsNeg             = errors.New("BlockIdentifier.Index is negative")
 	ErrPartialBlockIdentifierIsNil           = errors.New("PartialBlockIdentifier is nil")
 	ErrPartialBlockIdentifierHashIsEmpty     = errors.New("PartialBlockIdentifier hash is empty")
-	ErrPartialBlockIdentifierIndexIsNegative = errors.New("PartialBlockIdentifier index is negative")
-	ErrTxIdentifierIsNil                     = errors.New("TransactionIdentifier is nil")
-	ErrTxIdentifierHashMissing               = errors.New("TransactionIdentifier.Hash is missing")
-	ErrNoOperationsForConstruction           = errors.New("operations cannot be empty for construction")
-	ErrTxIsNil                               = errors.New("Transaction is nil")
-	ErrTimestampBeforeMin                    = errors.New("timestamp is before 01/01/2000")
-	ErrTimestampAfterMax                     = errors.New("timestamp is after 01/01/2040")
-	ErrBlockIsNil                            = errors.New("Block is nil")
-	ErrBlockHashEqualsParentBlockHash        = errors.New(
+	ErrPartialBlockIdentifierIndexIsNegative = errors.New(
+		"PartialBlockIdentifier index is negative",
+	)
+	ErrTxIdentifierIsNil           = errors.New("TransactionIdentifier is nil")
+	ErrTxIdentifierHashMissing     = errors.New("TransactionIdentifier.Hash is missing")
+	ErrNoOperationsForConstruction = errors.New(
+		"operations cannot be empty for construction",
+	)
+	ErrTxIsNil                        = errors.New("Transaction is nil")
+	ErrTimestampBeforeMin             = errors.New("timestamp is before 01/01/2000")
+	ErrTimestampAfterMax              = errors.New("timestamp is after 01/01/2040")
+	ErrBlockIsNil                     = errors.New("Block is nil")
+	ErrBlockHashEqualsParentBlockHash = errors.New(
 		"BlockIdentifier.Hash == ParentBlockIdentifier.Hash",
 	)
 	ErrBlockIndexPrecedesParentBlockIndex = errors.New(
