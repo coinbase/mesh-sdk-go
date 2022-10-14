@@ -488,7 +488,7 @@ func (c *Coordinator) process( // nolint:gocognit
 		return NoJobsWaitTime, nil
 	}
 	if errors.Is(err, ErrStalled) {
-		color.Yellow("processing stalled")
+		color.Yellow("processing stalled, the request_funds and/or create_account workflow(s) are/is not defined properly")
 
 		return -1, ErrStalled
 	}

@@ -44,7 +44,7 @@ var (
 	// ErrStalled is returned when the caller does not define
 	// a CreateAccount and/or RequestFunds workflow and we run out
 	// of available options (i.e. we can't do anything).
-	ErrStalled = errors.New("processing stalled")
+	ErrStalled = errors.New("processing stalled, the request_funds and/or create_account workflow(s) are/is not defined properly")
 
 	// ErrNoWorkflows is returned when no workflows are provided
 	// during initialization.
