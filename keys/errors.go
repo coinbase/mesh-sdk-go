@@ -44,7 +44,7 @@ var (
 	)
 	ErrVerifyFailed = errors.New("verify: verify returned false")
 
-	ErrPaymentNotFound = errors.New("payment not found in signingPayload")
+	ErrEmptyTransaction = errors.New("payment or stakeDelegation field not found in signingPayload")
 )
 
 // Err takes an error as an argument and returns
