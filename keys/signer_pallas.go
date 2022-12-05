@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"strconv"
 
 	"github.com/coinbase/kryptology/pkg/signatures/schnorr/mina"
@@ -192,7 +193,7 @@ func constructTransaction(p *PayloadFields) (*mina.Transaction, error) {
 		return nil, fmt.Errorf("failed to parse uint for nonce: %w", err)
 	}
 
-	validUntil := uint64(0)
+	validUntil := uint64(math.MaxUint64)
 	if p.ValidUntil != nil {
 		validUntil, err = strconv.ParseUint(*p.ValidUntil, 10, 32)
 		if err != nil {
