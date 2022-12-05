@@ -127,7 +127,7 @@ func (s *SignerPallas) Verify(signature *types.Signature) error {
 	return nil
 }
 
-type PayloadFields struct {
+type PayloadFieldsPayment struct {
 	To         string  `json:"to"`
 	From       string  `json:"from"`
 	Fee        string  `json:"fee"`
@@ -137,33 +137,46 @@ type PayloadFields struct {
 	Memo       *string `json:"memo,omitempty"`
 }
 
+type PayloadFieldsDelegation struct {
+	Delegator   string  `json:"delegator"`
+	NewDelegate string  `json:"new_delegate"`
+	Fee         string  `json:"fee"`
+	Nonce       string  `json:"nonce"`
+	ValidUntil  *string `json:"valid_until,omitempty"`
+	Memo        *string `json:"memo,omitempty"`
+}
+
+// Exactly one of the fields should be present.
 type SigningPayload struct {
-	Payment *PayloadFields `json:"payment"`
+	Payment         *PayloadFieldsPayment    `json:"payment"`
+	StakeDelegation *PayloadFieldsDelegation `json:"stakeDelegation"`
 }
 
 func ParseSigningPayload(rawPayload *types.SigningPayload) (*mina.Transaction, error) {
 	var signingPayload SigningPayload
-	var payloadFields PayloadFields
-
 	err := json.Unmarshal(rawPayload.Bytes, &signingPayload)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal payload: %w", err)
 	}
-
+	var transaction *mina.Transaction
 	if signingPayload.Payment != nil {
-		payloadFields = *signingPayload.Payment
+		transaction, err = constructPaymentTransaction(signingPayload.Payment)
+		if err != nil {
+			return nil, fmt.Errorf("failed to construct payment transaction: %w", err)
+		}
+	} else if signingPayload.StakeDelegation != nil {
+		transaction, err = constructDelegationTransaction(signingPayload.StakeDelegation)
+		if err != nil {
+			return nil, fmt.Errorf("failed to construct delegation transaction: %w", err)
+		}
 	} else {
-		return nil, ErrPaymentNotFound
+		return nil, ErrEmptyTransaction
 	}
 
-	transaction, err := constructTransaction(&payloadFields)
-	if err != nil {
-		return nil, fmt.Errorf("failed to construct transaction: %w", err)
-	}
 	return transaction, nil
 }
 
-func constructTransaction(p *PayloadFields) (*mina.Transaction, error) {
+func constructPaymentTransaction(p *PayloadFieldsPayment) (*mina.Transaction, error) {
 	var fromPublicKey mina.PublicKey
 	if err := fromPublicKey.ParseAddress(p.From); err != nil {
 		return nil, fmt.Errorf("failed to parse \"from\" address: %w", err)
@@ -219,6 +232,59 @@ func constructTransaction(p *PayloadFields) (*mina.Transaction, error) {
 		ReceiverPk: &toPublicKey,
 		TokenId:    1,
 		Amount:     amount,
+		Locked:     false,
+		NetworkId:  mina.TestNet,
+	}
+
+	return txn, nil
+}
+
+func constructDelegationTransaction(p *PayloadFieldsDelegation) (*mina.Transaction, error) {
+	var delegatorPublicKey mina.PublicKey
+	if err := delegatorPublicKey.ParseAddress(p.Delegator); err != nil {
+		return nil, fmt.Errorf("failed to parse \"delegator\" address: %w", err)
+	}
+
+	var newDelegatePublicKey mina.PublicKey
+	if err := newDelegatePublicKey.ParseAddress(p.NewDelegate); err != nil {
+		return nil, fmt.Errorf("failed to parse \"new_delegate\" address: %w", err)
+	}
+
+	fee, err := strconv.ParseUint(p.Fee, 10, 64)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse uint for fee: %w", err)
+	}
+
+	nonce, err := strconv.ParseUint(p.Nonce, 10, 32)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse uint for nonce: %w", err)
+	}
+
+	validUntil := uint64(math.MaxUint64)
+	if p.ValidUntil != nil {
+		validUntil, err = strconv.ParseUint(*p.ValidUntil, 10, 32)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse uint for valid until memo: %w", err)
+		}
+	}
+
+	memo := ""
+	if p.Memo != nil {
+		memo = *p.Memo
+	}
+
+	txn := &mina.Transaction{
+		Fee:        fee,
+		FeeToken:   1,
+		FeePayerPk: &delegatorPublicKey,
+		Nonce:      uint32(nonce),
+		ValidUntil: uint32(validUntil),
+		Memo:       memo,
+		Tag:        [3]bool{false, false, true},
+		SourcePk:   &delegatorPublicKey,
+		ReceiverPk: &newDelegatePublicKey,
+		TokenId:    1,
+		Amount:     0,
 		Locked:     false,
 		NetworkId:  mina.TestNet,
 	}
