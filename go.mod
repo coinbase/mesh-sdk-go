@@ -1,4 +1,4 @@
-module github.com/coinbase/rosetta-sdk-go
+module github.com/cosmos/rosetta-sdk-go
 
 go 1.18
 
