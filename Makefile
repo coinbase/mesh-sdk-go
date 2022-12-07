@@ -16,7 +16,7 @@ GOLINES_CMD=golines
 GOVERALLS_INSTALL=go install github.com/mattn/goveralls@latest
 GOVERALLS_CMD=goveralls
 GOLINT_CMD=go run golang.org/x/lint/golint
-GO_PACKAGES=./asserter/... ./fetcher/... ./types/... ./client/... ./server/... \
+GO_PACKAGES=./asserter/... ./fetcher/... ./client/... ./server/... \
 	./parser/... ./syncer/... ./reconciler/... ./keys/... \
 	./statefulsyncer/... ./storage/... ./utils/... ./constructor/... ./errors/...
 GO_FOLDERS=$(shell echo ${GO_PACKAGES} | sed -e "s/\.\///g" | sed -e "s/\/\.\.\.//g")
