@@ -19,7 +19,10 @@ GOLINT_CMD=go run golang.org/x/lint/golint
 GO_PACKAGES=./asserter/... ./fetcher/... ./client/... ./server/... \
 	./parser/... ./syncer/... ./reconciler/... ./keys/... \
 	./statefulsyncer/... ./storage/... ./utils/... ./constructor/... ./errors/...
+
+GO_MOD_PACKAGES=./types/...
 GO_FOLDERS=$(shell echo ${GO_PACKAGES} | sed -e "s/\.\///g" | sed -e "s/\/\.\.\.//g")
+GO_MOD_FOLDERS=$(shell echo ${GO_MOD_PACKAGES} | sed -e "s/\.\///g" | sed -e "s/\/\.\.\.//g")
 TEST_SCRIPT=go test ${GO_PACKAGES}
 LINT_SETTINGS=golint,misspell,gocyclo,gocritic,whitespace,goconst,gocognit,bodyclose,unconvert,lll,unparam
 
@@ -43,6 +46,7 @@ fix-imports:
 
 check-comments:
 	${GOLINT_CMD} -set_exit_status ${GO_FOLDERS} .
+	${GOLINT_CMD} -set_exit_status ${GO_MOD_FOLDERS} .
 
 lint-examples:
 	cd examples; \
@@ -79,6 +83,7 @@ check-license:
 shorten-lines:
 	${GOLINES_INSTALL}
 	${GOLINES_CMD} -w --shorten-comments ${GO_FOLDERS} examples
+	${GOLINES_CMD} -w --shorten-comments ${GO_MOD_FOLDERS}
 
 shellcheck:
 	shellcheck codegen.sh
