@@ -20,7 +20,7 @@ require (
 	github.com/tidwall/sjson v1.2.4
 	github.com/vmihailenco/msgpack/v5 v5.3.5
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	github.com/coinbase/rosetta-sdk-go/types v1.0.0-beta1
+	github.com/coinbase/rosetta-sdk-go/types v1.0.0
 )
 
 require (
