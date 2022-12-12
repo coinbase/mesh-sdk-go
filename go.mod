@@ -2,10 +2,6 @@ module github.com/coinbase/rosetta-sdk-go
 
 go 1.18
 
-require github.com/coinbase/rosetta-sdk-go/types v0.0.0
-
-replace github.com/coinbase/rosetta-sdk-go/types => ./types
-
 require (
 	github.com/DataDog/zstd v1.5.2
 	github.com/Zilliqa/gozilliqa-sdk v1.2.1-0.20201201074141-dd0ecada1be6
@@ -24,6 +20,7 @@ require (
 	github.com/tidwall/sjson v1.2.4
 	github.com/vmihailenco/msgpack/v5 v5.3.5
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
+	github.com/coinbase/rosetta-sdk-go/types v1.0.0-beta1
 )
 
 require (
