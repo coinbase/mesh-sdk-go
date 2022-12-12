@@ -210,6 +210,10 @@ do
   rm "types/${type}.go" && cp "templates/${type}.txt" "types/${type}.go";
 done
 
+cp "templates/go.mod.types" "types/go.mod"
+cd types && go get ./...
+cd ..
+
 # Format client generated code
 FORMAT_GEN="gofmt -w /local/types; gofmt -w /local/client; gofmt -w /local/server"
 GOLANG_VERSION=1.18

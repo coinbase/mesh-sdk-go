@@ -2,6 +2,10 @@ module github.com/coinbase/rosetta-sdk-go
 
 go 1.18
 
+require github.com/coinbase/rosetta-sdk-go/types v0.0.0
+
+replace github.com/coinbase/rosetta-sdk-go/types => ./types
+
 require (
 	github.com/DataDog/zstd v1.5.2
 	github.com/Zilliqa/gozilliqa-sdk v1.2.1-0.20201201074141-dd0ecada1be6
@@ -13,7 +17,6 @@ require (
 	github.com/fatih/color v1.13.0
 	github.com/gorilla/mux v1.8.0
 	github.com/lucasjones/reggen v0.0.0-20180717132126-cdb49ff09d77
-	github.com/mitchellh/mapstructure v1.4.3
 	github.com/neilotoole/errgroup v0.1.6
 	github.com/segmentio/fasthash v1.0.3
 	github.com/stretchr/testify v1.7.2
@@ -38,6 +41,7 @@ require (
 	github.com/klauspost/compress v1.12.3 // indirect
 	github.com/mattn/go-colorable v0.1.9 // indirect
 	github.com/mattn/go-isatty v0.0.14 // indirect
+	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/stretchr/objx v0.1.1 // indirect
