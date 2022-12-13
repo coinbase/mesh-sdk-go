@@ -78,7 +78,7 @@ func (s *ts) TestParseSigningPayload() {
 		validUntil                = "78"
 		memo                      = "memo"
 		signingPayloadWithPayment = SigningPayload{
-			Payment: &PayloadFields{
+			Payment: &PayloadFieldsPayment{
 				To:         toAddress,
 				From:       fromAddress,
 				Fee:        "12",
@@ -88,9 +88,9 @@ func (s *ts) TestParseSigningPayload() {
 				Memo:       &memo,
 			},
 		}
-		signingPayloadWithNoPayment                           = SigningPayload{}
+		signingPayloadWithNoPaymentOrDelegation                           = SigningPayload{}
 		signingPayloadWithPaymentAndNullValidUntilAndNullMemo = SigningPayload{
-			Payment: &PayloadFields{
+			Payment: &PayloadFieldsPayment{
 				To:         toAddress,
 				From:       fromAddress,
 				Fee:        "12",
@@ -101,7 +101,7 @@ func (s *ts) TestParseSigningPayload() {
 			},
 		}
 		signingPayloadWithPaymentAndInvalidFromPublicKey = SigningPayload{
-			Payment: &PayloadFields{
+			Payment: &PayloadFieldsPayment{
 				To:         toAddress,
 				From:       "InvalidFrom",
 				Fee:        "12",
@@ -111,7 +111,7 @@ func (s *ts) TestParseSigningPayload() {
 			},
 		}
 		signingPayloadWithPaymentAndInvalidToPublicKey = SigningPayload{
-			Payment: &PayloadFields{
+			Payment: &PayloadFieldsPayment{
 				To:         "InvalidTo",
 				From:       fromAddress,
 				Fee:        "12",
@@ -154,7 +154,7 @@ func (s *ts) TestParseSigningPayload() {
 		s.Require().Equal(expectedTransactionBinary, transactionBinary)
 	})
 
-	s.Run("failed to parse when payment exists with null valid_until and memo", func() {
+	s.Run("successful to parse when payment exists with null valid_until and memo", func() {
 		payloadBinary, _ := json.Marshal(signingPayloadWithPaymentAndNullValidUntilAndNullMemo)
 		payload := &types.SigningPayload{
 			AccountIdentifier: &types.AccountIdentifier{Address: "test"},
@@ -172,7 +172,7 @@ func (s *ts) TestParseSigningPayload() {
 			FeeToken:   1,
 			FeePayerPk: fromPublicKey,
 			Nonce:      56,
-			ValidUntil: 0,
+			ValidUntil: 4294967295,
 			Memo:       "",
 			Tag:        [3]bool{false, false, false},
 			SourcePk:   fromPublicKey,
@@ -188,7 +188,7 @@ func (s *ts) TestParseSigningPayload() {
 	})
 
 	s.Run("failed to parse when payment or stake delegation does not exist", func() {
-		payloadBinary, _ := json.Marshal(signingPayloadWithNoPayment)
+		payloadBinary, _ := json.Marshal(signingPayloadWithNoPaymentOrDelegation)
 		payload := &types.SigningPayload{
 			AccountIdentifier: &types.AccountIdentifier{Address: "test"},
 			Bytes:             payloadBinary,
