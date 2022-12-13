@@ -120,6 +120,46 @@ func (s *ts) TestParseSigningPayload() {
 				Memo:       &memo,
 			},
 		}
+		signingPayloadWithDelegation = SigningPayload{
+			StakeDelegation: &PayloadFieldsDelegation{
+				NewDelegate: toAddress,
+				Delegator:   fromAddress,
+				Fee:         "12",
+				Nonce:       "56",
+				ValidUntil:  &validUntil,
+				Memo:        &memo,
+			},
+		}
+		signingPayloadWithDelegationAndNullValidUntilAndNullMemo = SigningPayload{
+			StakeDelegation: &PayloadFieldsDelegation{
+				NewDelegate: toAddress,
+				Delegator:   fromAddress,
+				Fee:        "12",
+				Nonce:      "56",
+				ValidUntil: nil,
+				Memo:       nil,
+			},
+		}
+		signingPayloadWithDelegationAndInvalidFromPublicKey = SigningPayload{
+			StakeDelegation: &PayloadFieldsDelegation{
+				NewDelegate: toAddress,
+				Delegator:   "InvalidFrom",
+				Fee:         "12",
+				Nonce:       "56",
+				ValidUntil:  &validUntil,
+				Memo:        &memo,
+			},
+		}
+		signingPayloadWithDelegationAndInvalidToPublicKey = SigningPayload{
+			StakeDelegation: &PayloadFieldsDelegation{
+				NewDelegate: "InvalidTo",
+				Delegator:   fromAddress,
+				Fee:         "12",
+				Nonce:       "56",
+				ValidUntil:  &validUntil,
+				Memo:        &memo,
+			},
+		}
 	)
 
 	s.Run("successful to parse when payment exists", func() {
@@ -225,6 +265,95 @@ func (s *ts) TestParseSigningPayload() {
 
 	s.Run("failed to parse when to public key in payment is invalid", func() {
 		payloadBinary, _ := json.Marshal(signingPayloadWithPaymentAndInvalidToPublicKey)
+		payload := &types.SigningPayload{
+			AccountIdentifier: &types.AccountIdentifier{Address: "test"},
+			Bytes:             payloadBinary,
+			SignatureType:     types.SchnorrPoseidon,
+		}
+		transactionBinary, err := ParseSigningPayload(payload)
+		s.Require().Error(err)
+		s.Require().Nil(transactionBinary)
+	})
+
+	s.Run("successful to parse when stake delegation exists", func() {
+		payloadBinary, _ := json.Marshal(signingPayloadWithDelegation)
+		payload := &types.SigningPayload{
+			AccountIdentifier: &types.AccountIdentifier{Address: "test"},
+			Bytes:             payloadBinary,
+			SignatureType:     types.SchnorrPoseidon,
+		}
+		transaction, err := ParseSigningPayload(payload)
+		s.Require().NoError(err)
+		transactionBinary, err := transaction.MarshalBinary()
+		s.Require().NoError(err)
+
+		expectedTransaction := mina.Transaction{
+			Fee:        12,
+			FeeToken:   1,
+			FeePayerPk: fromPublicKey,
+			Nonce:      56,
+			ValidUntil: 78,
+			Memo:       "memo",
+			Tag:        [3]bool{false, false, true},
+			SourcePk:   fromPublicKey,
+			ReceiverPk: toPublicKey,
+			TokenId:    1,
+			Amount:     0,
+			Locked:     false,
+			NetworkId:  mina.TestNet,
+		}
+		expectedTransactionBinary, err := expectedTransaction.MarshalBinary()
+		s.Require().NoError(err)
+		s.Require().Equal(expectedTransactionBinary, transactionBinary)
+	})
+
+	s.Run("successful to parse when delegation exists with null valid_until and memo", func() {
+		payloadBinary, _ := json.Marshal(signingPayloadWithDelegationAndNullValidUntilAndNullMemo)
+		payload := &types.SigningPayload{
+			AccountIdentifier: &types.AccountIdentifier{Address: "test"},
+			Bytes:             payloadBinary,
+			SignatureType:     types.SchnorrPoseidon,
+		}
+
+		transaction, err := ParseSigningPayload(payload)
+		s.Require().NoError(err)
+		transactionBinary, err := transaction.MarshalBinary()
+		s.Require().NoError(err)
+
+		expectedTransaction := mina.Transaction{
+			Fee:        12,
+			FeeToken:   1,
+			FeePayerPk: fromPublicKey,
+			Nonce:      56,
+			ValidUntil: 4294967295,
+			Memo:       "",
+			Tag:        [3]bool{false, false, true},
+			SourcePk:   fromPublicKey,
+			ReceiverPk: toPublicKey,
+			TokenId:    1,
+			Amount:     0,
+			Locked:     false,
+			NetworkId:  mina.TestNet,
+		}
+		expectedTransactionBinary, err := expectedTransaction.MarshalBinary()
+		s.Require().NoError(err)
+		s.Require().Equal(expectedTransactionBinary, transactionBinary)
+	})
+
+	s.Run("failed to parse when from public key in delegation is invalid", func() {
+		payloadBinary, _ := json.Marshal(signingPayloadWithDelegationAndInvalidFromPublicKey)
+		payload := &types.SigningPayload{
+			AccountIdentifier: &types.AccountIdentifier{Address: "test"},
+			Bytes:             payloadBinary,
+			SignatureType:     types.SchnorrPoseidon,
+		}
+		transactionBinary, err := ParseSigningPayload(payload)
+		s.Require().Error(err)
+		s.Require().Nil(transactionBinary)
+	})
+
+	s.Run("failed to parse when to public key in delegation is invalid", func() {
+		payloadBinary, _ := json.Marshal(signingPayloadWithDelegationAndInvalidToPublicKey)
 		payload := &types.SigningPayload{
 			AccountIdentifier: &types.AccountIdentifier{Address: "test"},
 			Bytes:             payloadBinary,
