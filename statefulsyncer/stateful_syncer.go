@@ -30,6 +30,7 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/syncer"
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/coinbase/rosetta-sdk-go/utils"
+	"github.com/fatih/color"
 )
 
 var _ syncer.Handler = (*StatefulSyncer)(nil)
@@ -72,6 +73,8 @@ type StatefulSyncer struct {
 	// BlockSeen occur concurrently.
 	seenSemaphore     *semaphore.Weighted
 	seenSemaphoreSize int64
+	// store customized metaData
+	metaData string
 }
 
 // Logger is used by the statefulsyncer to
@@ -142,7 +145,9 @@ func (s *StatefulSyncer) Sync(ctx context.Context, startIndex int64, endIndex in
 	// Ensure storage is in correct state for starting at index
 	if startIndex != -1 { // attempt to remove blocks from storage (without handling)
 		if err := s.blockStorage.SetNewStartIndex(ctx, startIndex); err != nil {
-			return fmt.Errorf("unable to set new start index %d: %w", startIndex, err)
+			err = fmt.Errorf("unable to set new start index %d: %w%s", startIndex, err, s.metaData)
+			color.Red(err.Error())
+			return err
 		}
 	} else { // attempt to load last processed index
 		head, err := s.blockStorage.GetHeadBlockIdentifier(ctx)
@@ -166,6 +171,7 @@ func (s *StatefulSyncer) Sync(ctx context.Context, startIndex int64, endIndex in
 		syncer.WithCacheSize(s.cacheSize),
 		syncer.WithMaxConcurrency(s.maxConcurrency),
 		syncer.WithAdjustmentWindow(s.adjustmentWindow),
+		syncer.WithMetaData(s.metaData),
 	)
 
 	return syncer.Sync(ctx, startIndex, endIndex)
@@ -183,7 +189,9 @@ func (s *StatefulSyncer) Prune(ctx context.Context, helper PruneHelper) error {
 		// as the time between pruning runs. Using a timer would only guarantee
 		// that the difference between starts of each pruning run are s.pruneSleepTime.
 		if err := utils.ContextSleep(ctx, s.pruneSleepTime); err != nil {
-			return fmt.Errorf("context is canceled during context sleep: %w", err)
+			err = fmt.Errorf("context is canceled during context sleep: %w%s", err, s.metaData)
+			color.Red(err.Error())
+			return err
 		}
 
 		headBlock, err := s.blockStorage.GetHeadBlockIdentifier(ctx)
@@ -192,7 +200,9 @@ func (s *StatefulSyncer) Prune(ctx context.Context, helper PruneHelper) error {
 			continue
 		}
 		if err != nil {
-			return fmt.Errorf("failed to get head block: %w", err)
+			err = fmt.Errorf("failed to get head block: %w%s", err, s.metaData)
+			color.Red(err.Error())
+			return err
 		}
 
 		oldestIndex, err := s.blockStorage.GetOldestBlockIndex(ctx)
@@ -201,12 +211,16 @@ func (s *StatefulSyncer) Prune(ctx context.Context, helper PruneHelper) error {
 			continue
 		}
 		if err != nil {
-			return fmt.Errorf("failed to get the oldest block index: %w", err)
+			err = fmt.Errorf("failed to get the oldest block index: %w%s", err, s.metaData)
+			color.Red(err.Error())
+			return err
 		}
 
 		pruneableIndex, err := helper.PruneableIndex(ctx, headBlock.Index)
 		if err != nil {
-			return fmt.Errorf("could not determine pruneable index: %w", err)
+			err = fmt.Errorf("could not determine pruneable index: %w%s", err, s.metaData)
+			color.Red(err.Error())
+			return err
 		}
 
 		if pruneableIndex < oldestIndex {
@@ -219,7 +233,9 @@ func (s *StatefulSyncer) Prune(ctx context.Context, helper PruneHelper) error {
 			int64(s.pastBlockLimit)*pruneBuffer, // we should be very cautious about pruning
 		)
 		if err != nil {
-			return fmt.Errorf("failed to prune with pruneable index %d: %w", pruneableIndex, err)
+			err = fmt.Errorf("failed to prune with pruneable index %d: %w%s", pruneableIndex, err, s.metaData)
+			color.Red(err.Error())
+			return err
 		}
 
 		// firstPruned and lastPruned are -1 if there is nothing to prune
@@ -228,7 +244,7 @@ func (s *StatefulSyncer) Prune(ctx context.Context, helper PruneHelper) error {
 			if firstPruned == lastPruned {
 				pruneMessage = fmt.Sprintf("pruned block %d", firstPruned)
 			}
-
+			color.Cyan("%s%s", pruneMessage, s.metaData)
 			log.Println(pruneMessage)
 		}
 	}
@@ -244,12 +260,15 @@ func (s *StatefulSyncer) BlockSeen(ctx context.Context, block *types.Block) erro
 	defer s.seenSemaphore.Release(semaphoreWeight)
 
 	if err := s.blockStorage.SeeBlock(ctx, block); err != nil {
-		return fmt.Errorf(
-			"unable to pre-store block %d (block hash: %s): %w",
+		err = fmt.Errorf(
+			"unable to pre-store block %d (block hash: %s): %w%s",
 			block.BlockIdentifier.Index,
 			block.BlockIdentifier.Hash,
 			err,
+			s.metaData,
 		)
+		color.Red(err.Error())
+		return err
 	}
 
 	return nil
@@ -259,12 +278,15 @@ func (s *StatefulSyncer) BlockSeen(ctx context.Context, block *types.Block) erro
 func (s *StatefulSyncer) BlockAdded(ctx context.Context, block *types.Block) error {
 	err := s.blockStorage.AddBlock(ctx, block)
 	if err != nil {
-		return fmt.Errorf(
-			"unable to add block %d (block hash: %s) to storage: %w",
+		err = fmt.Errorf(
+			"unable to add block %d (block hash: %s) to storage: %w%s",
 			block.BlockIdentifier.Index,
 			block.BlockIdentifier.Hash,
 			err,
+			s.metaData,
 		)
+		color.Red(err.Error())
+		return err
 	}
 
 	_ = s.logger.AddBlockStream(ctx, block)
@@ -278,12 +300,15 @@ func (s *StatefulSyncer) BlockRemoved(
 ) error {
 	err := s.blockStorage.RemoveBlock(ctx, blockIdentifier)
 	if err != nil {
-		return fmt.Errorf(
-			"unable to remove block %d (block hash: %s) from storage: %w",
+		err = fmt.Errorf(
+			"unable to remove block %d (block hash: %s) from storage: %w%s",
 			blockIdentifier.Index,
 			blockIdentifier.Hash,
 			err,
+			s.metaData,
 		)
+		color.Red(err.Error())
+		return err
 	}
 
 	_ = s.logger.RemoveBlockStream(ctx, blockIdentifier)
@@ -298,11 +323,14 @@ func (s *StatefulSyncer) NetworkStatus(
 ) (*types.NetworkStatusResponse, error) {
 	networkStatus, fetchErr := s.fetcher.NetworkStatusRetry(ctx, network, nil)
 	if fetchErr != nil {
-		return nil, fmt.Errorf(
-			"failed to get network status of %s with retry: %w",
+		errForPrint := fmt.Errorf(
+			"failed to get network status of %s with retry: %w%s",
 			network.Network,
 			fetchErr.Err,
+			s.metaData,
 		)
+		color.Red(errForPrint.Error())
+		return nil, errForPrint
 	}
 
 	return networkStatus, nil
@@ -316,12 +344,15 @@ func (s *StatefulSyncer) Block(
 ) (*types.Block, error) {
 	blockResponse, fetchErr := s.fetcher.BlockRetry(ctx, network, block)
 	if fetchErr != nil {
-		return nil, fmt.Errorf(
-			"unable to fetch block %d from network %s with retry: %w",
+		errForPrint := fmt.Errorf(
+			"unable to fetch block %d from network %s with retry: %w%s",
 			*block.Index,
 			network.Network,
 			fetchErr.Err,
+			s.metaData,
 		)
+		color.Red(errForPrint.Error())
+		return nil, errForPrint
 	}
 	return blockResponse, nil
 }

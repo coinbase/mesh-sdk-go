@@ -54,7 +54,7 @@ func WithIndexCacheSize(size int64) BadgerOption {
 // WithTableSize override the MaxTableSize
 // setting for the BadgerDB. The size here is in GB.
 func WithTableSize(size int64) BadgerOption {
-	size = size << 30
+	size = size << 30 // nolint
 	return func(b *BadgerDatabase) {
 		b.badgerOptions.MaxTableSize = size
 	}
@@ -63,7 +63,7 @@ func WithTableSize(size int64) BadgerOption {
 // WithTableSize override the ValueLogFileSize
 // setting for the BadgerDB. The size here is in MB.
 func WithValueLogFileSize(size int64) BadgerOption {
-	size = size << 20
+	size = size << 20 // nolint
 	return func(b *BadgerDatabase) {
 		b.badgerOptions.ValueLogFileSize = size
 	}
@@ -84,5 +84,12 @@ func WithCustomSettings(settings badger.Options) BadgerOption {
 func WithWriterShards(shards int) BadgerOption {
 	return func(b *BadgerDatabase) {
 		b.writerShards = shards
+	}
+}
+
+// add a info map to BadgerDatabase
+func WithMetaData(metaData string) BadgerOption {
+	return func(b *BadgerDatabase) {
+		b.metaData = metaData
 	}
 }

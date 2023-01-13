@@ -158,6 +158,9 @@ type Syncer struct {
 	adjustmentWindow int64
 	concurrencyLock  sync.Mutex
 
+	// store customized info
+	metaData string
+
 	// doneLoading is used to coordinate adding goroutines
 	// when close to the end of syncing a range.
 	doneLoading     bool

@@ -99,3 +99,10 @@ func WithForceRetry() Option {
 		f.forceRetry = true
 	}
 }
+
+// add a metaData map to fetcher
+func WithMetaData(metaData string) Option {
+	return func(f *Fetcher) {
+		f.metaData = metaData
+	}
+}

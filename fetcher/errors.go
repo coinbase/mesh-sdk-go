@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/fatih/color"
 	"log"
 
 	utils "github.com/coinbase/rosetta-sdk-go/errors"
@@ -50,12 +51,16 @@ func (f *Fetcher) RequestFailedError(
 		// If there is a *types.Error assertion error, we log it instead
 		// of exiting. Exiting abruptly here may cause unintended consequences.
 		if assertionErr := f.Asserter.Error(rosettaErr); assertionErr != nil {
-			log.Printf("error %s assertion failed: %s", types.PrintStruct(rosettaErr), assertionErr)
+			msg := fmt.Sprintf("error %s assertion failed: %s%s", types.PrintStruct(rosettaErr), assertionErr, f.metaData)
+			color.Cyan(msg)
+			log.Println(msg)
 		}
 	}
 
+	errForPrint := fmt.Errorf("%s %s: %w%s", message, err.Error(), ErrRequestFailed, f.metaData)
+	color.Red(errForPrint.Error())
 	return &Error{
-		Err:       fmt.Errorf("%s %s: %w", message, err.Error(), ErrRequestFailed),
+		Err:       errForPrint,
 		ClientErr: rosettaErr,
 		Retry: ((rosettaErr != nil && rosettaErr.Retriable) || transientError(err) || f.forceRetry) &&
 			!errors.Is(err, context.Canceled),

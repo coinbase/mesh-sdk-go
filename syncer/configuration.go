@@ -65,3 +65,10 @@ func WithAdjustmentWindow(adjustmentWindow int64) Option {
 		s.adjustmentWindow = adjustmentWindow
 	}
 }
+
+// add a info map to Syncer
+func WithMetaData(metaData string) Option {
+	return func(s *Syncer) {
+		s.metaData = metaData
+	}
+}

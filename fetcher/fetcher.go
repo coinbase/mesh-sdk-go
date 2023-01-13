@@ -27,6 +27,7 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/asserter"
 	"github.com/coinbase/rosetta-sdk-go/client"
 	"github.com/coinbase/rosetta-sdk-go/types"
+	"github.com/fatih/color"
 )
 
 const (
@@ -75,6 +76,7 @@ type Fetcher struct {
 	insecureTLS      bool
 	forceRetry       bool
 	httpTimeout      time.Duration
+	metaData         string
 
 	// connectionSemaphore is used to limit the
 	// number of concurrent requests we make.
@@ -155,6 +157,7 @@ func (f *Fetcher) InitializeAsserter(
 	*Error,
 ) {
 	if f.Asserter != nil {
+		color.Red("asserter already initialized%s", f.metaData)
 		return nil, nil, &Error{Err: errors.New("asserter already initialized")}
 	}
 

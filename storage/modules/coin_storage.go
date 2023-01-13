@@ -514,7 +514,7 @@ func (c *CoinStorage) GetLargestCoin(
 			continue
 		}
 
-		val, ok := new(big.Int).SetString(coin.Amount.Value, 10)
+		val, ok := new(big.Int).SetString(coin.Amount.Value, 10) // nolint
 		if !ok {
 			return nil, nil, nil, fmt.Errorf(
 				"coin %s is invalid: %w",

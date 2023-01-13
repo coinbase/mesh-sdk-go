@@ -25,6 +25,7 @@ import (
 
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/coinbase/rosetta-sdk-go/utils"
+	"github.com/fatih/color"
 )
 
 // New creates a new Syncer. If pastBlocks is left nil, it will
@@ -67,7 +68,9 @@ func (s *Syncer) setStart(
 		s.network,
 	)
 	if err != nil {
-		return fmt.Errorf("unable to get network status of %s: %w", s.network.Network, err)
+		err = fmt.Errorf("unable to get network status of %s: %w%s", s.network.Network, err, s.metaData)
+		color.Red(err.Error())
+		return err
 	}
 
 	s.genesisBlock = networkStatus.GenesisBlockIdentifier
@@ -99,11 +102,9 @@ func (s *Syncer) nextSyncableRange(
 		s.network,
 	)
 	if err != nil {
-		return -1, false, fmt.Errorf(
-			"unable to get network status of %s: %w",
-			s.network.Network,
-			err,
-		)
+		err = fmt.Errorf("unable to get network status of %s: %w%s", s.network.Network, err, s.metaData)
+		color.Red(err.Error())
+		return -1, false, err
 	}
 
 	// Update the syncer's known tip
@@ -145,12 +146,15 @@ func (s *Syncer) checkRemove(
 	// Ensure processing correct index
 	block := br.block
 	if block.BlockIdentifier.Index != s.nextIndex {
-		return false, nil, fmt.Errorf(
-			"expected block index %d, but got %d: %w",
+		errForPrint := fmt.Errorf(
+			"expected block index %d, but got %d: %w%s",
 			s.nextIndex,
 			block.BlockIdentifier.Index,
 			ErrOutOfOrder,
+			s.metaData,
 		)
+		color.Red(errForPrint.Error())
+		return false, nil, errForPrint
 	}
 
 	// Check if block parent is head
@@ -177,21 +181,27 @@ func (s *Syncer) processBlock(
 
 	shouldRemove, lastBlock, err := s.checkRemove(br)
 	if err != nil {
-		return fmt.Errorf(
-			"failed to check if the last block should be removed when processing block %d: %w",
+		err = fmt.Errorf(
+			"failed to check if the last block should be removed when processing block %d: %w%s",
 			br.index,
 			err,
+			s.metaData,
 		)
+		color.Red(err.Error())
+		return err
 	}
 
 	if shouldRemove {
 		err = s.handler.BlockRemoved(ctx, lastBlock)
 		if err != nil {
-			return fmt.Errorf(
-				"failed to handle the event of block %d is removed: %w",
+			err = fmt.Errorf(
+				"failed to handle the event of block %d is removed: %w%s",
 				lastBlock.Index,
 				err,
+				s.metaData,
 			)
+			color.Red(err.Error())
+			return err
 		}
 		s.pastBlocks = s.pastBlocks[:len(s.pastBlocks)-1]
 		s.nextIndex = lastBlock.Index
@@ -201,11 +211,14 @@ func (s *Syncer) processBlock(
 	block := br.block
 	err = s.handler.BlockAdded(ctx, block)
 	if err != nil {
-		return fmt.Errorf(
-			"failed to handle the event of block %d is added: %w",
+		err = fmt.Errorf(
+			"failed to handle the event of block %d is added: %w%s",
 			block.BlockIdentifier.Index,
 			err,
+			s.metaData,
 		)
+		color.Red(err.Error())
+		return err
 	}
 
 	s.pastBlocks = append(s.pastBlocks, block.BlockIdentifier)
@@ -278,13 +291,17 @@ func (s *Syncer) fetchBlockResult(
 	case errors.Is(err, ErrOrphanHead):
 		br.orphanHead = true
 	case err != nil:
-		return nil, fmt.Errorf("unable to fetch block %d: %w", index, err)
+		err = fmt.Errorf("unable to fetch block %d: %w%s", index, err, s.metaData)
+		color.Red(err.Error())
+		return nil, err
 	default:
 		br.block = block
 	}
 
 	if err := s.handleSeenBlock(ctx, br); err != nil {
-		return nil, fmt.Errorf("failed to handle the event of block %d is seen: %w", br.index, err)
+		err = fmt.Errorf("failed to handle the event of block %d is seen: %w%s", br.index, err, s.metaData)
+		color.Red(err.Error())
+		return nil, err
 	}
 
 	return br, nil
@@ -318,7 +335,9 @@ func (s *Syncer) fetchBlocks(
 			b,
 		)
 		if err != nil {
-			return s.safeExit(fmt.Errorf("unable to fetch block %d: %w", b, err))
+			err = fmt.Errorf("unable to fetch block %d: %w%s", b, err, s.metaData)
+			color.Red(err.Error())
+			return s.safeExit(err)
 		}
 
 		select {
@@ -374,7 +393,9 @@ func (s *Syncer) processBlocks(
 				s.nextIndex,
 			)
 			if err != nil {
-				return fmt.Errorf("unable to fetch block %d during re-org: %w", s.nextIndex, err)
+				err = fmt.Errorf("unable to fetch block %d during re-org: %w%s", s.nextIndex, err, s.metaData)
+				color.Red(err.Error())
+				return err
 			}
 		} else {
 			// Anytime we re-fetch an index, we
@@ -435,11 +456,14 @@ func (s *Syncer) adjustWorkers() bool {
 		s.concurrency++
 		s.lastAdjustment = 0
 		shouldCreate = true
-		log.Printf(
-			"increasing syncer concurrency to %d (projected new cache size: %f MB)\n",
+		msg := fmt.Sprintf(
+			"increasing syncer concurrency to %d (projected new cache size: %f MB%s)\n",
 			s.goalConcurrency,
 			utils.BtoMb(max*float64(s.goalConcurrency)),
+			s.metaData,
 		)
+		color.Cyan(msg)
+		log.Print(msg)
 	}
 
 	// If >= cacheSize, decrease concurrency however many necessary to fit max cache size.
@@ -455,11 +479,14 @@ func (s *Syncer) adjustWorkers() bool {
 		if s.goalConcurrency != newGoalConcurrency {
 			s.goalConcurrency = newGoalConcurrency
 			s.lastAdjustment = 0
-			log.Printf(
-				"reducing syncer concurrency to %d (projected new cache size: %f MB)\n",
+			msg := fmt.Sprintf(
+				"reducing syncer concurrency to %d (projected new cache size: %f MB%s)\n",
 				s.goalConcurrency,
 				utils.BtoMb(max*float64(s.goalConcurrency)),
+				s.metaData,
 			)
+			color.Cyan(msg)
+			log.Print(msg)
 		}
 	}
 
@@ -499,7 +526,9 @@ func (s *Syncer) sequenceBlocks( // nolint:golint
 		cache[result.index] = result
 
 		if err := s.processBlocks(ctx, cache, endIndex); err != nil {
-			return fmt.Errorf("unable to process block range %d-%d: %w", s.nextIndex, endIndex, err)
+			err = fmt.Errorf("unable to process block range %d-%d: %w%s", s.nextIndex, endIndex, err, s.metaData)
+			color.Red(err.Error())
+			return err
 		}
 
 		// Determine if concurrency should be adjusted.
@@ -605,11 +634,15 @@ func (s *Syncer) syncRange(
 		fetchedBlocks,
 		endIndex,
 	); err != nil {
-		return fmt.Errorf("failed to sequence block range %d-%d: %w", s.nextIndex, endIndex, err)
+		err = fmt.Errorf("failed to sequence block range %d-%d: %w%s", s.nextIndex, endIndex, err, s.metaData)
+		color.Red(err.Error())
+		return err
 	}
 
 	if err := g.Wait(); err != nil {
-		return fmt.Errorf("unable to sync to %d: %w", endIndex, err)
+		err = fmt.Errorf("unable to sync to %d: %w%s", endIndex, err, s.metaData)
+		color.Red(err.Error())
+		return err
 	}
 
 	return nil
@@ -635,7 +668,9 @@ func (s *Syncer) Sync(
 	endIndex int64,
 ) error {
 	if err := s.setStart(ctx, startIndex); err != nil {
-		return fmt.Errorf("unable to set start index %d: %w", startIndex, err)
+		err = fmt.Errorf("unable to set start index %d: %w%s", startIndex, err, s.metaData)
+		color.Red(err.Error())
+		return err
 	}
 
 	for {
@@ -644,7 +679,9 @@ func (s *Syncer) Sync(
 			endIndex,
 		)
 		if err != nil {
-			return fmt.Errorf("unable to get next syncable range: %w", err)
+			err = fmt.Errorf("unable to get next syncable range: %w%s", err, s.metaData)
+			color.Red(err.Error())
+			return err
 		}
 
 		if halt {
@@ -657,14 +694,20 @@ func (s *Syncer) Sync(
 		}
 
 		if s.nextIndex != rangeEnd {
-			log.Printf("Syncing %d-%d\n", s.nextIndex, rangeEnd)
+			msg := fmt.Sprintf("Syncing %d-%d%s\n", s.nextIndex, rangeEnd, s.metaData)
+			color.Cyan(msg)
+			log.Print(msg)
 		} else {
-			log.Printf("Syncing %d\n", s.nextIndex)
+			msg := fmt.Sprintf("Syncing %d%s\n", s.nextIndex, s.metaData)
+			color.Cyan(msg)
+			log.Print(msg)
 		}
 
 		err = s.syncRange(ctx, rangeEnd)
 		if err != nil {
-			return fmt.Errorf("unable to sync to %d: %w", rangeEnd, err)
+			err = fmt.Errorf("unable to sync to %d: %w%s", rangeEnd, err, s.metaData)
+			color.Red(err.Error())
+			return err
 		}
 
 		if ctx.Err() != nil {
@@ -677,6 +720,8 @@ func (s *Syncer) Sync(
 	}
 
 	s.cancel()
-	log.Printf("Finished syncing %d-%d\n", startIndex, endIndex)
+	msg := fmt.Sprintf("Finished syncing %d-%d%s\n", startIndex, endIndex, s.metaData)
+	color.Cyan(msg)
+	log.Print(msg)
 	return nil
 }

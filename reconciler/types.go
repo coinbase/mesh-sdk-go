@@ -312,4 +312,7 @@ type Reconciler struct {
 	// blocks asynchronously so that we don't slow down the sync
 	// loop.
 	processQueue chan *blockRequest
+
+	// store customized data
+	metaData string
 }
