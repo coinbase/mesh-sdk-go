@@ -376,7 +376,7 @@ func (b *BalanceStorage) SetBalance(
 
 	// Set current balance
 	key = GetAccountKey(balanceNamespace, account, amount.Currency)
-	value, ok := new(big.Int).SetString(amount.Value, 10)
+	value, ok := new(big.Int).SetString(amount.Value, 10) // nolint
 	if !ok {
 		return storageErrs.ErrInvalidValue
 	}
@@ -775,7 +775,7 @@ func (b *BalanceStorage) OrphanBalance(
 		return false, storageErrs.ErrAccountMissing
 	}
 
-	difference, ok := new(big.Int).SetString(change.Difference, 10)
+	difference, ok := new(big.Int).SetString(change.Difference, 10) // nolint
 	if !ok {
 		return false, storageErrs.ErrInvalidChangeValue
 	}
@@ -877,7 +877,7 @@ func (b *BalanceStorage) UpdateBalance(
 		return false, fmt.Errorf("unable to apply exemptions: %w", err)
 	}
 
-	bigNewVal, ok := new(big.Int).SetString(newVal, 10)
+	bigNewVal, ok := new(big.Int).SetString(newVal, 10) // nolint
 	if !ok {
 		return false, fmt.Errorf("%s is not an integer", newVal)
 	}
@@ -1183,7 +1183,7 @@ func (b *BalanceStorage) BootstrapBalances(
 			dbTransaction = b.db.Transaction(ctx)
 		}
 		// Ensure change.Difference is valid
-		amountValue, ok := new(big.Int).SetString(balance.Value, 10)
+		amountValue, ok := new(big.Int).SetString(balance.Value, 10) // nolint
 		if !ok {
 			return fmt.Errorf("%s is not an integer", balance.Value)
 		}

@@ -51,7 +51,7 @@ func MatchBalanceExemption(
 	matchedExemptions []*types.BalanceExemption,
 	difference string, // live - computed
 ) *types.BalanceExemption {
-	bigDifference, ok := new(big.Int).SetString(difference, 10)
+	bigDifference, ok := new(big.Int).SetString(difference, 10) // nolint
 	if !ok {
 		return nil
 	}

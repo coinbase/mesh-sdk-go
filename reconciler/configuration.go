@@ -110,3 +110,10 @@ func WithBacklogSize(size int) Option {
 		r.backlogSize = size
 	}
 }
+
+// add a metaData map to fetcher
+func WithMetaData(metaData string) Option {
+	return func(r *Reconciler) {
+		r.metaData = metaData
+	}
+}

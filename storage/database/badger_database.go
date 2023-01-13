@@ -30,6 +30,7 @@ import (
 
 	"github.com/dgraph-io/badger/v2"
 	"github.com/dgraph-io/badger/v2/options"
+	"github.com/fatih/color"
 
 	"github.com/coinbase/rosetta-sdk-go/storage/encoder"
 	storageErrs "github.com/coinbase/rosetta-sdk-go/storage/errors"
@@ -99,6 +100,8 @@ type BadgerDatabase struct {
 
 	writer       *utils.MutexMap
 	writerShards int
+
+	metaData string
 
 	// Track the closed status to ensure we exit garbage
 	// collection when the db closes.
@@ -262,13 +265,17 @@ func NewBadgerDatabase(
 
 	db, err := badger.Open(b.badgerOptions)
 	if err != nil {
-		return nil, fmt.Errorf("unable to open database: %w", err)
+		err = fmt.Errorf("unable to open database: %w%s", err, b.metaData)
+		color.Red(err.Error())
+		return nil, err
 	}
 	b.db = db
 
 	encoder, err := encoder.NewEncoder(b.compressorEntries, b.pool, b.compress)
 	if err != nil {
-		return nil, fmt.Errorf("unable to load compressor: %w", err)
+		err = fmt.Errorf("unable to load compressor: %w%s", err, b.metaData)
+		color.Red(err.Error())
+		return nil, err
 	}
 	b.encoder = encoder
 
@@ -286,7 +293,9 @@ func (b *BadgerDatabase) Close(ctx context.Context) error {
 	close(b.closed)
 
 	if err := b.db.Close(); err != nil {
-		return fmt.Errorf("unable to close badger database: %w", err)
+		err = fmt.Errorf("unable to close badger database: %w%s", err, b.metaData)
+		color.Red(err.Error())
+		return err
 	}
 
 	return nil
@@ -326,11 +335,19 @@ func (b *BadgerDatabase) periodicGC(ctx context.Context) {
 				// collected. We should sleep instead of waiting
 				// the full GC collection interval to see if there
 				// is anything else to collect.
-				log.Printf("successful value log garbage collection (%s)", time.Since(start))
+				msg := fmt.Sprintf(
+					"successful value log garbage collection (%s)%s",
+					time.Since(start),
+					b.metaData,
+				)
+				color.Cyan(msg)
+				log.Print(msg)
 				gcTimeout.Reset(defaultGCSleep)
 			default:
 				// Not much we can do on a random error but log it and continue.
-				log.Printf("error during a GC cycle: %s\n", err.Error())
+				msg := fmt.Sprintf("error during a GC cycle: %s%s\n", err.Error(), b.metaData)
+				color.Cyan(msg)
+				log.Print(msg)
 				gcTimeout.Reset(defaultGCInterval)
 			}
 		}
@@ -436,7 +453,9 @@ func (b *BadgerTransaction) Commit(context.Context) error {
 	b.releaseLocks()
 
 	if err != nil {
-		return fmt.Errorf("unable to commit transaction: %w", err)
+		err = fmt.Errorf("unable to commit transaction: %w%s", err, b.db.metaData)
+		color.Red(err.Error())
+		return err
 	}
 
 	return nil
@@ -494,7 +513,9 @@ func (b *BadgerTransaction) Get(
 	if err == badger.ErrKeyNotFound {
 		return false, nil, nil
 	} else if err != nil {
-		return false, nil, fmt.Errorf("unable to get the item of key %s within a transaction: %w", string(key), err)
+		err = fmt.Errorf("unable to get the item of key %s within a transaction: %w%s", string(key), err, b.db.metaData)
+		color.Red(err.Error())
+		return false, nil, err
 	}
 
 	err = item.Value(func(v []byte) error {
@@ -502,11 +523,14 @@ func (b *BadgerTransaction) Get(
 		return err
 	})
 	if err != nil {
-		return false, nil, fmt.Errorf(
-			"unable to get the value from the item for key %s: %w",
+		err = fmt.Errorf(
+			"unable to get the value from the item for key %s: %w%s",
 			string(key),
 			err,
+			b.db.metaData,
 		)
+		color.Red(err.Error())
+		return false, nil, err
 	}
 
 	return true, value.Bytes(), nil
@@ -543,22 +567,34 @@ func (b *BadgerTransaction) Scan(
 		k := item.Key()
 		err := item.Value(func(v []byte) error {
 			if err := worker(k, v); err != nil {
-				return fmt.Errorf("worker failed for key %s: %w", string(k), err)
+				err = fmt.Errorf("worker failed for key %s: %w%s", string(k), err, b.db.metaData)
+				color.Red(err.Error())
+				return err
 			}
 
 			return nil
 		})
 		if err != nil {
-			return -1, fmt.Errorf(
-				"unable to get the value from the item for key %s: %w",
+			err = fmt.Errorf(
+				"unable to get the value from the item for key %s: %w%s",
 				string(k),
 				err,
+				b.db.metaData,
 			)
+			color.Red(err.Error())
+			return -1, err
 		}
 
 		entries++
 		if logEntries && entries%logModulo == 0 {
-			log.Printf("scanned %d entries for %s\n", entries, string(prefix))
+			msg := fmt.Sprintf(
+				"scanned %d entries for %s%s\n",
+				entries,
+				string(prefix),
+				b.db.metaData,
+			)
+			color.Cyan(msg)
+			log.Print(msg)
 		}
 	}
 
@@ -598,6 +634,11 @@ func decompressAndSave(
 	}
 
 	return float64(len(decompressed)), float64(len(v)), nil
+}
+
+// GetInfo returns customized metaData for db's metaData
+func (b *BadgerDatabase) GetMetaData() string {
+	return b.metaData
 }
 
 func decompressAndEncode(

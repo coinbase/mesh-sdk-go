@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/fatih/color"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
@@ -72,8 +73,10 @@ func (f *Fetcher) fetchChannelTransactions(
 ) *Error {
 	// We keep the lock for all transactions we fetch in this goroutine.
 	if err := f.connectionSemaphore.Acquire(ctx, semaphoreRequestWeight); err != nil {
+		err = fmt.Errorf("failed to acquire semaphore: %w%s", err, f.metaData)
+		color.Red(err.Error())
 		return &Error{
-			Err: fmt.Errorf("failed to acquire semaphore: %w", err),
+			Err: err,
 		}
 	}
 	defer f.connectionSemaphore.Release(semaphoreRequestWeight)
@@ -111,6 +114,7 @@ func (f *Fetcher) fetchChannelTransactions(
 			))
 
 			txFetchErr := fmt.Sprintf("transaction %s", types.PrintStruct(transactionIdentifier))
+			color.Red("%s%s", txFetchErr, f.metaData)
 			if err := tryAgain(txFetchErr, backoffRetries, fetchErr); err != nil {
 				return err
 			}
@@ -214,8 +218,10 @@ func (f *Fetcher) UnsafeBlock(
 	blockIdentifier *types.PartialBlockIdentifier,
 ) (*types.Block, *Error) {
 	if err := f.connectionSemaphore.Acquire(ctx, semaphoreRequestWeight); err != nil {
+		err = fmt.Errorf("failed to acquire semaphore: %w%s", err, f.metaData)
+		color.Red(err.Error())
 		return nil, &Error{
-			Err: fmt.Errorf("failed to acquire semaphore: %w", err),
+			Err: err,
 		}
 	}
 	defer f.connectionSemaphore.Release(semaphoreRequestWeight)
@@ -273,8 +279,10 @@ func (f *Fetcher) Block(
 	}
 
 	if err := f.Asserter.Block(block); err != nil {
+		err = fmt.Errorf("/block response is invalid: %w%s", err, f.metaData)
+		color.Red(err.Error())
 		fetcherErr := &Error{
-			Err: fmt.Errorf("/block response is invalid: %w", err),
+			Err: err,
 		}
 		return nil, fetcherErr
 	}
@@ -313,14 +321,17 @@ func (f *Fetcher) BlockRetry(
 		}
 
 		if is, _ := asserter.Err(err.Err); is {
+			errForPrint := fmt.Errorf("/block not attempting retry: %w%s", err.Err, f.metaData)
+			color.Red(errForPrint.Error())
 			fetcherErr := &Error{
-				Err:       fmt.Errorf("/block not attempting retry: %w", err.Err),
+				Err:       errForPrint,
 				ClientErr: err.ClientErr,
 			}
 			return nil, fetcherErr
 		}
 
 		blockFetchErr := fmt.Sprintf("block %s", types.PrintStruct(blockIdentifier))
+		color.Red("%s%s", blockFetchErr, f.metaData)
 		if err := tryAgain(blockFetchErr, backoffRetries, err); err != nil {
 			return nil, err
 		}
