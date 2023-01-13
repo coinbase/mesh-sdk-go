@@ -22,6 +22,7 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/fatih/color"
 	"golang.org/x/sync/semaphore"
 
 	"github.com/coinbase/rosetta-sdk-go/fetcher"
@@ -30,7 +31,6 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/syncer"
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/coinbase/rosetta-sdk-go/utils"
-	"github.com/fatih/color"
 )
 
 var _ syncer.Handler = (*StatefulSyncer)(nil)
@@ -233,7 +233,12 @@ func (s *StatefulSyncer) Prune(ctx context.Context, helper PruneHelper) error {
 			int64(s.pastBlockLimit)*pruneBuffer, // we should be very cautious about pruning
 		)
 		if err != nil {
-			err = fmt.Errorf("failed to prune with pruneable index %d: %w%s", pruneableIndex, err, s.metaData)
+			err = fmt.Errorf(
+				"failed to prune with pruneable index %d: %w%s",
+				pruneableIndex,
+				err,
+				s.metaData,
+			)
 			color.Red(err.Error())
 			return err
 		}

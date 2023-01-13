@@ -18,9 +18,10 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/fatih/color"
+
 	"github.com/coinbase/rosetta-sdk-go/asserter"
 	"github.com/coinbase/rosetta-sdk-go/types"
-	"github.com/fatih/color"
 )
 
 // AccountBalance returns the validated response
@@ -201,7 +202,11 @@ func (f *Fetcher) AccountCoinsRetry(
 		}
 
 		if is, _ := asserter.Err(err.Err); is {
-			errForPrint := fmt.Errorf("/account/coins not attempting retry: %w%s", err.Err, f.metaData)
+			errForPrint := fmt.Errorf(
+				"/account/coins not attempting retry: %w%s",
+				err.Err,
+				f.metaData,
+			)
 			color.Red(errForPrint.Error())
 			fetcherErr := &Error{
 				Err:       errForPrint,

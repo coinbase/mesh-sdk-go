@@ -21,11 +21,11 @@ import (
 	"log"
 	"time"
 
+	"github.com/fatih/color"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/coinbase/rosetta-sdk-go/utils"
-	"github.com/fatih/color"
 )
 
 // New creates a new Syncer. If pastBlocks is left nil, it will
@@ -68,7 +68,12 @@ func (s *Syncer) setStart(
 		s.network,
 	)
 	if err != nil {
-		err = fmt.Errorf("unable to get network status of %s: %w%s", s.network.Network, err, s.metaData)
+		err = fmt.Errorf(
+			"unable to get network status of %s: %w%s",
+			s.network.Network,
+			err,
+			s.metaData,
+		)
 		color.Red(err.Error())
 		return err
 	}
@@ -102,7 +107,12 @@ func (s *Syncer) nextSyncableRange(
 		s.network,
 	)
 	if err != nil {
-		err = fmt.Errorf("unable to get network status of %s: %w%s", s.network.Network, err, s.metaData)
+		err = fmt.Errorf(
+			"unable to get network status of %s: %w%s",
+			s.network.Network,
+			err,
+			s.metaData,
+		)
 		color.Red(err.Error())
 		return -1, false, err
 	}
@@ -299,7 +309,12 @@ func (s *Syncer) fetchBlockResult(
 	}
 
 	if err := s.handleSeenBlock(ctx, br); err != nil {
-		err = fmt.Errorf("failed to handle the event of block %d is seen: %w%s", br.index, err, s.metaData)
+		err = fmt.Errorf(
+			"failed to handle the event of block %d is seen: %w%s",
+			br.index,
+			err,
+			s.metaData,
+		)
 		color.Red(err.Error())
 		return nil, err
 	}
@@ -393,7 +408,12 @@ func (s *Syncer) processBlocks(
 				s.nextIndex,
 			)
 			if err != nil {
-				err = fmt.Errorf("unable to fetch block %d during re-org: %w%s", s.nextIndex, err, s.metaData)
+				err = fmt.Errorf(
+					"unable to fetch block %d during re-org: %w%s",
+					s.nextIndex,
+					err,
+					s.metaData,
+				)
 				color.Red(err.Error())
 				return err
 			}
@@ -526,7 +546,13 @@ func (s *Syncer) sequenceBlocks( // nolint:golint
 		cache[result.index] = result
 
 		if err := s.processBlocks(ctx, cache, endIndex); err != nil {
-			err = fmt.Errorf("unable to process block range %d-%d: %w%s", s.nextIndex, endIndex, err, s.metaData)
+			err = fmt.Errorf(
+				"unable to process block range %d-%d: %w%s",
+				s.nextIndex,
+				endIndex,
+				err,
+				s.metaData,
+			)
 			color.Red(err.Error())
 			return err
 		}
@@ -634,7 +660,13 @@ func (s *Syncer) syncRange(
 		fetchedBlocks,
 		endIndex,
 	); err != nil {
-		err = fmt.Errorf("failed to sequence block range %d-%d: %w%s", s.nextIndex, endIndex, err, s.metaData)
+		err = fmt.Errorf(
+			"failed to sequence block range %d-%d: %w%s",
+			s.nextIndex,
+			endIndex,
+			err,
+			s.metaData,
+		)
 		color.Red(err.Error())
 		return err
 	}

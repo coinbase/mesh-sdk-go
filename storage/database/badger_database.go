@@ -101,7 +101,7 @@ type BadgerDatabase struct {
 	writer       *utils.MutexMap
 	writerShards int
 
-	metaData  string
+	metaData string
 
 	// Track the closed status to ensure we exit garbage
 	// collection when the db closes.
@@ -335,7 +335,11 @@ func (b *BadgerDatabase) periodicGC(ctx context.Context) {
 				// collected. We should sleep instead of waiting
 				// the full GC collection interval to see if there
 				// is anything else to collect.
-				msg := fmt.Sprintf("successful value log garbage collection (%s)%s", time.Since(start), b.metaData)
+				msg := fmt.Sprintf(
+					"successful value log garbage collection (%s)%s",
+					time.Since(start),
+					b.metaData,
+				)
 				color.Cyan(msg)
 				log.Print(msg)
 				gcTimeout.Reset(defaultGCSleep)
@@ -583,7 +587,12 @@ func (b *BadgerTransaction) Scan(
 
 		entries++
 		if logEntries && entries%logModulo == 0 {
-			msg := fmt.Sprintf("scanned %d entries for %s%s\n", entries, string(prefix), b.db.metaData)
+			msg := fmt.Sprintf(
+				"scanned %d entries for %s%s\n",
+				entries,
+				string(prefix),
+				b.db.metaData,
+			)
 			color.Cyan(msg)
 			log.Print(msg)
 		}

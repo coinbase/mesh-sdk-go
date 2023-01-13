@@ -22,12 +22,12 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/fatih/color"
 	"golang.org/x/sync/semaphore"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
 	"github.com/coinbase/rosetta-sdk-go/client"
 	"github.com/coinbase/rosetta-sdk-go/types"
-	"github.com/fatih/color"
 )
 
 const (

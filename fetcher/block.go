@@ -18,11 +18,11 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/fatih/color"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/coinbase/rosetta-sdk-go/asserter"
 	"github.com/coinbase/rosetta-sdk-go/types"
-	"github.com/fatih/color"
 )
 
 const (
