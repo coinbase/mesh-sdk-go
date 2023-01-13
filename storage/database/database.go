@@ -48,6 +48,9 @@ type Database interface {
 	// in the database. This *Encoder often performs some
 	// form of compression on data.
 	Encoder() *encoder.Encoder
+
+	// GetMetaData returns customized metaData for db's metaData
+	GetMetaData() string
 }
 
 // Transaction is an interface that provides

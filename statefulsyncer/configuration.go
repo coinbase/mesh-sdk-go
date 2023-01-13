@@ -66,3 +66,10 @@ func WithSeenConcurrency(concurrency int64) Option {
 		s.seenSemaphoreSize = concurrency
 	}
 }
+
+// add a metaData map to fetcher
+func WithMetaData(metaData string) Option {
+	return func(s *StatefulSyncer) {
+		s.metaData = metaData
+	}
+}

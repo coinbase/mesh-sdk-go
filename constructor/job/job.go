@@ -121,7 +121,7 @@ func (j *Job) unmarshalNumber(
 		return nil, ErrVariableNotFound
 	}
 
-	i, ok := new(big.Int).SetString(value.String(), 10)
+	i, ok := new(big.Int).SetString(value.String(), 10) // nolint: gomnd
 	if !ok {
 		return nil, ErrVariableIncorrectFormat
 	}

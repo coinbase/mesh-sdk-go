@@ -18,6 +18,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/fatih/color"
+
 	"github.com/coinbase/rosetta-sdk-go/asserter"
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
@@ -33,8 +35,10 @@ func (f *Fetcher) AccountBalance(
 	currencies []*types.Currency,
 ) (*types.BlockIdentifier, []*types.Amount, map[string]interface{}, *Error) {
 	if err := f.connectionSemaphore.Acquire(ctx, semaphoreRequestWeight); err != nil {
+		err = fmt.Errorf("failed to acquire semaphore: %w%s", err, f.metaData)
+		color.Red(err.Error())
 		return nil, nil, nil, &Error{
-			Err: fmt.Errorf("failed to acquire semaphore: %w", err),
+			Err: err,
 		}
 	}
 	defer f.connectionSemaphore.Release(semaphoreRequestWeight)
@@ -55,11 +59,10 @@ func (f *Fetcher) AccountBalance(
 		block,
 		response,
 	); err != nil {
+		err = fmt.Errorf("/account/balance response is invalid: %w%s", err, f.metaData)
+		color.Red(err.Error())
 		fetcherErr := &Error{
-			Err: fmt.Errorf(
-				"/account/balance response is invalid: %w",
-				err,
-			),
+			Err: err,
 		}
 		return nil, nil, nil, fetcherErr
 	}
@@ -101,15 +104,19 @@ func (f *Fetcher) AccountBalanceRetry(
 		}
 
 		if is, _ := asserter.Err(err.Err); is {
+			errForPrint := fmt.Errorf("/account/balance not attempting retry: %w", err.Err)
+			color.Red(errForPrint.Error())
 			fetcherErr := &Error{
-				Err:       fmt.Errorf("/account/balance not attempting retry: %w", err.Err),
+				Err:       errForPrint,
 				ClientErr: err.ClientErr,
 			}
 			return nil, nil, nil, fetcherErr
 		}
 
+		msg := fmt.Sprintf("/account/balance %s%s", types.PrintStruct(account), f.metaData)
+		color.Cyan(msg)
 		if err := tryAgain(
-			fmt.Sprintf("/account/balance %s", types.PrintStruct(account)),
+			msg,
 			backoffRetries,
 			err,
 		); err != nil {
@@ -128,8 +135,10 @@ func (f *Fetcher) AccountCoins(
 	currencies []*types.Currency,
 ) (*types.BlockIdentifier, []*types.Coin, map[string]interface{}, *Error) {
 	if err := f.connectionSemaphore.Acquire(ctx, semaphoreRequestWeight); err != nil {
+		err = fmt.Errorf("failed to acquire semaphore: %w%s", err, f.metaData)
+		color.Red(err.Error())
 		return nil, nil, nil, &Error{
-			Err: fmt.Errorf("failed to acquire semaphore: %w", err),
+			Err: err,
 		}
 	}
 	defer f.connectionSemaphore.Release(semaphoreRequestWeight)
@@ -149,11 +158,10 @@ func (f *Fetcher) AccountCoins(
 	if err := asserter.AccountCoinsResponse(
 		response,
 	); err != nil {
+		err = fmt.Errorf("/account/coins response is invalid: %w%s", err, f.metaData)
+		color.Red(err.Error())
 		fetcherErr := &Error{
-			Err: fmt.Errorf(
-				"/account/coins response is invalid: %w",
-				err,
-			),
+			Err: err,
 		}
 		return nil, nil, nil, fetcherErr
 	}
@@ -194,15 +202,23 @@ func (f *Fetcher) AccountCoinsRetry(
 		}
 
 		if is, _ := asserter.Err(err.Err); is {
+			errForPrint := fmt.Errorf(
+				"/account/coins not attempting retry: %w%s",
+				err.Err,
+				f.metaData,
+			)
+			color.Red(errForPrint.Error())
 			fetcherErr := &Error{
-				Err:       fmt.Errorf("/account/coins not attempting retry: %w", err.Err),
+				Err:       errForPrint,
 				ClientErr: err.ClientErr,
 			}
 			return nil, nil, nil, fetcherErr
 		}
 
+		msg := fmt.Sprintf("/account/coins %s%s", types.PrintStruct(account), f.metaData)
+		color.Cyan(msg)
 		if err := tryAgain(
-			fmt.Sprintf("/account/coins %s", types.PrintStruct(account)),
+			msg,
 			backoffRetries,
 			err,
 		); err != nil {

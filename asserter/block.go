@@ -55,7 +55,7 @@ func Amount(amount *types.Amount) error {
 		return ErrAmountValueMissing
 	}
 
-	_, ok := new(big.Int).SetString(amount.Value, 10)
+	_, ok := new(big.Int).SetString(amount.Value, 10) // nolint: gomnd
 	if !ok {
 		return ErrAmountIsNotInt
 	}
@@ -336,7 +336,7 @@ func (a *Asserter) Operations( // nolint:gocognit
 
 		if a.validations.Enabled {
 			if op.Type == a.validations.Payment.Name {
-				val, _ := new(big.Int).SetString(op.Amount.Value, 10)
+				val, _ := new(big.Int).SetString(op.Amount.Value, 10) // nolint: gomnd
 				paymentTotal.Add(paymentTotal, val)
 				paymentCount++
 			}
