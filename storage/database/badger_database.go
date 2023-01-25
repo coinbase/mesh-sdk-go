@@ -524,7 +524,7 @@ func (b *BadgerTransaction) Get(
 	})
 	if err != nil {
 		err = fmt.Errorf(
-			"unable to get the value from the item for key %s: %w%s",
+			" %s: %w%s",
 			string(key),
 			err,
 			b.db.metaData,
@@ -567,34 +567,22 @@ func (b *BadgerTransaction) Scan(
 		k := item.Key()
 		err := item.Value(func(v []byte) error {
 			if err := worker(k, v); err != nil {
-				err = fmt.Errorf("worker failed for key %s: %w%s", string(k), err, b.db.metaData)
-				color.Red(err.Error())
-				return err
+				return fmt.Errorf("worker failed for key %s: %w", string(k), err)
 			}
 
 			return nil
 		})
 		if err != nil {
-			err = fmt.Errorf(
-				"unable to get the value from the item for key %s: %w%s",
+			return -1, fmt.Errorf(
+				"unable to get the value from the item for key %s: %w",
 				string(k),
 				err,
-				b.db.metaData,
 			)
-			color.Red(err.Error())
-			return -1, err
 		}
 
 		entries++
 		if logEntries && entries%logModulo == 0 {
-			msg := fmt.Sprintf(
-				"scanned %d entries for %s%s\n",
-				entries,
-				string(prefix),
-				b.db.metaData,
-			)
-			color.Cyan(msg)
-			log.Print(msg)
+			log.Printf("scanned %d entries for %s\n", entries, string(prefix))
 		}
 	}
 
