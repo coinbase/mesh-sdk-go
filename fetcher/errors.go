@@ -64,13 +64,13 @@ func (f *Fetcher) RequestFailedError(
 		}
 	}
 	// if the err is context.Canceled, do not print it
-	// context.Canceled could because of validation succeed, 
+	// context.Canceled could because of validation succeed,
 	// print an error in succeed situation will be confused
 	if !strings.Contains(err.Error(), context.Canceled.Error()) {
 		errForPrint := fmt.Errorf("%s %s: %w%s", message, err.Error(), ErrRequestFailed, f.metaData)
 		color.Red(errForPrint.Error())
 	}
-	
+
 	return &Error{
 		Err:       err,
 		ClientErr: rosettaErr,

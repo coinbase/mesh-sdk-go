@@ -189,7 +189,7 @@ func (s *StatefulSyncer) Prune(ctx context.Context, helper PruneHelper) error {
 		// as the time between pruning runs. Using a timer would only guarantee
 		// that the difference between starts of each pruning run are s.pruneSleepTime.
 		if err := utils.ContextSleep(ctx, s.pruneSleepTime); err != nil {
-			// context.Canceled could because of validation succeed, 
+			// context.Canceled could because of validation succeed,
 			// print an error in succeed situation will be confused
 			if err != context.Canceled {
 				err = fmt.Errorf("context is canceled during context sleep: %w%s", err, s.metaData)
@@ -332,14 +332,14 @@ func (s *StatefulSyncer) NetworkStatus(
 ) (*types.NetworkStatusResponse, error) {
 	networkStatus, fetchErr := s.fetcher.NetworkStatusRetry(ctx, network, nil)
 	if fetchErr != nil {
-		// context.Canceled could because of validation succeed, 
+		// context.Canceled could because of validation succeed,
 		// print an error in succeed situation will be confused
 		if fetchErr.Err != context.Canceled {
 			errForPrint := fmt.Errorf(
-			"failed to get network status of %s with retry: %w%s",
-			network.Network,
-			fetchErr.Err,
-			s.metaData,
+				"failed to get network status of %s with retry: %w%s",
+				network.Network,
+				fetchErr.Err,
+				s.metaData,
 			)
 			color.Red(errForPrint.Error())
 		}
@@ -357,7 +357,7 @@ func (s *StatefulSyncer) Block(
 ) (*types.Block, error) {
 	blockResponse, fetchErr := s.fetcher.BlockRetry(ctx, network, block)
 	if fetchErr != nil {
-		// context.Canceled could because of validation succeed, 
+		// context.Canceled could because of validation succeed,
 		// print an error in succeed situation will be confused
 		if fetchErr.Err != context.Canceled {
 			errForPrint := fmt.Errorf(

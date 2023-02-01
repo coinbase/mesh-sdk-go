@@ -68,14 +68,14 @@ func (s *Syncer) setStart(
 		s.network,
 	)
 	if err != nil {
-		// context.Canceled could because of validation succeed, 
+		// context.Canceled could because of validation succeed,
 		// print an error in succeed situation will be confused
 		if err != context.Canceled {
 			err = fmt.Errorf(
-			"unable to get network status of %s: %w%s",
-			s.network.Network,
-			err,
-			s.metaData,
+				"unable to get network status of %s: %w%s",
+				s.network.Network,
+				err,
+				s.metaData,
 			)
 			color.Red(err.Error())
 		}
@@ -111,14 +111,14 @@ func (s *Syncer) nextSyncableRange(
 		s.network,
 	)
 	if err != nil {
-		// context.Canceled could because of validation succeed, 
+		// context.Canceled could because of validation succeed,
 		// print an error in succeed situation will be confused
 		if err != context.Canceled {
 			err = fmt.Errorf(
-			"unable to get network status of %s: %w%s",
-			s.network.Network,
-			err,
-			s.metaData,
+				"unable to get network status of %s: %w%s",
+				s.network.Network,
+				err,
+				s.metaData,
 			)
 			color.Red(err.Error())
 		}
@@ -309,7 +309,7 @@ func (s *Syncer) fetchBlockResult(
 	case errors.Is(err, ErrOrphanHead):
 		br.orphanHead = true
 	case err != nil:
-		// context.Canceled could because of validation succeed, 
+		// context.Canceled could because of validation succeed,
 		// print an error in succeed situation will be confused
 		if err != context.Canceled {
 			err = fmt.Errorf("unable to fetch block %d: %w%s", index, err, s.metaData)
@@ -362,7 +362,7 @@ func (s *Syncer) fetchBlocks(
 			b,
 		)
 		if err != nil {
-			// context.Canceled could because of validation succeed, 
+			// context.Canceled could because of validation succeed,
 			// print an error in succeed situation will be confused
 			if err != context.Canceled {
 				err = fmt.Errorf("unable to fetch block %d: %w%s", b, err, s.metaData)
@@ -424,14 +424,14 @@ func (s *Syncer) processBlocks(
 				s.nextIndex,
 			)
 			if err != nil {
-				// context.Canceled could because of validation succeed, 
+				// context.Canceled could because of validation succeed,
 				// print an error in succeed situation will be confused
 				if err != context.Canceled {
 					err = fmt.Errorf(
-					"unable to fetch block %d during re-org: %w%s",
-					s.nextIndex,
-					err,
-					s.metaData,
+						"unable to fetch block %d during re-org: %w%s",
+						s.nextIndex,
+						err,
+						s.metaData,
 					)
 					color.Red(err.Error())
 				}
@@ -692,7 +692,7 @@ func (s *Syncer) syncRange(
 	}
 
 	if err := g.Wait(); err != nil {
-		// context.Canceled could because of validation succeed, 
+		// context.Canceled could because of validation succeed,
 		// print an error in succeed situation will be confused
 		if err != context.Canceled {
 			err = fmt.Errorf("unable to sync to %d: %w%s", endIndex, err, s.metaData)
@@ -723,10 +723,10 @@ func (s *Syncer) Sync(
 	startIndex int64,
 	endIndex int64,
 ) error {
-	// context.Canceled could because of validation succeed, 
+	// context.Canceled could because of validation succeed,
 	// print an error in succeed situation will be confused
 	if err := s.setStart(ctx, startIndex); err != nil {
-		// context.Canceled could because of validation succeed, 
+		// context.Canceled could because of validation succeed,
 		// print an error in succeed situation will be confused
 		if err != context.Canceled {
 			err = fmt.Errorf("unable to set start index %d: %w%s", startIndex, err, s.metaData)
@@ -741,7 +741,7 @@ func (s *Syncer) Sync(
 			endIndex,
 		)
 		if err != nil {
-			// context.Canceled could because of validation succeed, 
+			// context.Canceled could because of validation succeed,
 			// print an error in succeed situation will be confused
 			if err != context.Canceled {
 				err = fmt.Errorf("unable to get next syncable range: %w%s", err, s.metaData)
@@ -771,7 +771,7 @@ func (s *Syncer) Sync(
 
 		err = s.syncRange(ctx, rangeEnd)
 		if err != nil {
-			// context.Canceled could because of validation succeed, 
+			// context.Canceled could because of validation succeed,
 			// print an error in succeed situation will be confused
 			if err != context.Canceled {
 				err = fmt.Errorf("unable to sync to %d: %w%s", rangeEnd, err, s.metaData)
