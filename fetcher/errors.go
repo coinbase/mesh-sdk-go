@@ -69,7 +69,7 @@ func (f *Fetcher) RequestFailedError(
 	if !strings.Contains(err.Error(), context.Canceled.Error()) {
 		errForPrint := fmt.Errorf("%s %s: %w%s", message, err.Error(), ErrRequestFailed, f.metaData)
 		color.Red(errForPrint.Error())
-	} 
+	}
 
 	return &Error{
 		Err:       fmt.Errorf("%s %s: %w", message, err.Error(), ErrRequestFailed),
