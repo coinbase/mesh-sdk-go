@@ -69,10 +69,10 @@ func (f *Fetcher) RequestFailedError(
 	if !strings.Contains(err.Error(), context.Canceled.Error()) {
 		errForPrint := fmt.Errorf("%s %s: %w%s", message, err.Error(), ErrRequestFailed, f.metaData)
 		color.Red(errForPrint.Error())
-	}
+	} 
 
 	return &Error{
-		Err:       err,
+		Err:       fmt.Errorf("%s %s: %w", message, err.Error(), ErrRequestFailed),
 		ClientErr: rosettaErr,
 		Retry: ((rosettaErr != nil && rosettaErr.Retriable) || transientError(err) || f.forceRetry) &&
 			!errors.Is(err, context.Canceled),
