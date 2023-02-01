@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/fatih/color"
 
@@ -62,11 +63,16 @@ func (f *Fetcher) RequestFailedError(
 			log.Println(msg)
 		}
 	}
-
-	errForPrint := fmt.Errorf("%s %s: %w%s", message, err.Error(), ErrRequestFailed, f.metaData)
-	color.Red(errForPrint.Error())
+	// if the err is context.Canceled, do not print it
+	// context.Canceled could because of validation succeed, 
+	// print an error in succeed situation will be confused
+	if !strings.Contains(err.Error(), context.Canceled.Error()) {
+		errForPrint := fmt.Errorf("%s %s: %w%s", message, err.Error(), ErrRequestFailed, f.metaData)
+		color.Red(errForPrint.Error())
+	}
+	
 	return &Error{
-		Err:       errForPrint,
+		Err:       err,
 		ClientErr: rosettaErr,
 		Retry: ((rosettaErr != nil && rosettaErr.Retriable) || transientError(err) || f.forceRetry) &&
 			!errors.Is(err, context.Canceled),
