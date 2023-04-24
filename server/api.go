@@ -23,40 +23,40 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
-// AccountApiRouter defines the required methods for binding the api requests to a responses for the
-// AccountApi
-// The AccountApiRouter implementation should parse necessary information from the http request,
-// pass the data to a AccountApiServicer to perform the required actions, then write the service
+// AccountAPIRouter defines the required methods for binding the api requests to a responses for the
+// AccountAPI
+// The AccountAPIRouter implementation should parse necessary information from the http request,
+// pass the data to a AccountAPIServicer to perform the required actions, then write the service
 // results to the http response.
-type AccountApiRouter interface {
+type AccountAPIRouter interface {
 	AccountBalance(http.ResponseWriter, *http.Request)
 	AccountCoins(http.ResponseWriter, *http.Request)
 }
 
-// BlockApiRouter defines the required methods for binding the api requests to a responses for the
-// BlockApi
-// The BlockApiRouter implementation should parse necessary information from the http request,
-// pass the data to a BlockApiServicer to perform the required actions, then write the service
+// BlockAPIRouter defines the required methods for binding the api requests to a responses for the
+// BlockAPI
+// The BlockAPIRouter implementation should parse necessary information from the http request,
+// pass the data to a BlockAPIServicer to perform the required actions, then write the service
 // results to the http response.
-type BlockApiRouter interface {
+type BlockAPIRouter interface {
 	Block(http.ResponseWriter, *http.Request)
 	BlockTransaction(http.ResponseWriter, *http.Request)
 }
 
-// CallApiRouter defines the required methods for binding the api requests to a responses for the
-// CallApi
-// The CallApiRouter implementation should parse necessary information from the http request,
-// pass the data to a CallApiServicer to perform the required actions, then write the service
+// CallAPIRouter defines the required methods for binding the api requests to a responses for the
+// CallAPI
+// The CallAPIRouter implementation should parse necessary information from the http request,
+// pass the data to a CallAPIServicer to perform the required actions, then write the service
 // results to the http response.
-type CallApiRouter interface {
+type CallAPIRouter interface {
 	Call(http.ResponseWriter, *http.Request)
 }
 
-// ConstructionApiRouter defines the required methods for binding the api requests to a responses
-// for the ConstructionApi The ConstructionApiRouter implementation should parse necessary
-// information from the http request, pass the data to a ConstructionApiServicer to perform the
+// ConstructionAPIRouter defines the required methods for binding the api requests to a responses
+// for the ConstructionAPI The ConstructionAPIRouter implementation should parse necessary
+// information from the http request, pass the data to a ConstructionAPIServicer to perform the
 // required actions, then write the service results to the http response.
-type ConstructionApiRouter interface {
+type ConstructionAPIRouter interface {
 	ConstructionCombine(http.ResponseWriter, *http.Request)
 	ConstructionDerive(http.ResponseWriter, *http.Request)
 	ConstructionHash(http.ResponseWriter, *http.Request)
@@ -67,50 +67,50 @@ type ConstructionApiRouter interface {
 	ConstructionSubmit(http.ResponseWriter, *http.Request)
 }
 
-// EventsApiRouter defines the required methods for binding the api requests to a responses for the
-// EventsApi
-// The EventsApiRouter implementation should parse necessary information from the http request,
-// pass the data to a EventsApiServicer to perform the required actions, then write the service
+// EventsAPIRouter defines the required methods for binding the api requests to a responses for the
+// EventsAPI
+// The EventsAPIRouter implementation should parse necessary information from the http request,
+// pass the data to a EventsAPIServicer to perform the required actions, then write the service
 // results to the http response.
-type EventsApiRouter interface {
+type EventsAPIRouter interface {
 	EventsBlocks(http.ResponseWriter, *http.Request)
 }
 
-// MempoolApiRouter defines the required methods for binding the api requests to a responses for the
-// MempoolApi
-// The MempoolApiRouter implementation should parse necessary information from the http request,
-// pass the data to a MempoolApiServicer to perform the required actions, then write the service
+// MempoolAPIRouter defines the required methods for binding the api requests to a responses for the
+// MempoolAPI
+// The MempoolAPIRouter implementation should parse necessary information from the http request,
+// pass the data to a MempoolAPIServicer to perform the required actions, then write the service
 // results to the http response.
-type MempoolApiRouter interface {
+type MempoolAPIRouter interface {
 	Mempool(http.ResponseWriter, *http.Request)
 	MempoolTransaction(http.ResponseWriter, *http.Request)
 }
 
-// NetworkApiRouter defines the required methods for binding the api requests to a responses for the
-// NetworkApi
-// The NetworkApiRouter implementation should parse necessary information from the http request,
-// pass the data to a NetworkApiServicer to perform the required actions, then write the service
+// NetworkAPIRouter defines the required methods for binding the api requests to a responses for the
+// NetworkAPI
+// The NetworkAPIRouter implementation should parse necessary information from the http request,
+// pass the data to a NetworkAPIServicer to perform the required actions, then write the service
 // results to the http response.
-type NetworkApiRouter interface {
+type NetworkAPIRouter interface {
 	NetworkList(http.ResponseWriter, *http.Request)
 	NetworkOptions(http.ResponseWriter, *http.Request)
 	NetworkStatus(http.ResponseWriter, *http.Request)
 }
 
-// SearchApiRouter defines the required methods for binding the api requests to a responses for the
-// SearchApi
-// The SearchApiRouter implementation should parse necessary information from the http request,
-// pass the data to a SearchApiServicer to perform the required actions, then write the service
+// SearchAPIRouter defines the required methods for binding the api requests to a responses for the
+// SearchAPI
+// The SearchAPIRouter implementation should parse necessary information from the http request,
+// pass the data to a SearchAPIServicer to perform the required actions, then write the service
 // results to the http response.
-type SearchApiRouter interface {
+type SearchAPIRouter interface {
 	SearchTransactions(http.ResponseWriter, *http.Request)
 }
 
-// AccountApiServicer defines the api actions for the AccountApi service
+// AccountAPIServicer defines the api actions for the AccountAPI service
 // This interface intended to stay up to date with the openapi yaml used to generate it,
 // while the service implementation can ignored with the .openapi-generator-ignore file
 // and updated with the logic required for the API.
-type AccountApiServicer interface {
+type AccountAPIServicer interface {
 	AccountBalance(
 		context.Context,
 		*types.AccountBalanceRequest,
@@ -121,11 +121,11 @@ type AccountApiServicer interface {
 	) (*types.AccountCoinsResponse, *types.Error)
 }
 
-// BlockApiServicer defines the api actions for the BlockApi service
+// BlockAPIServicer defines the api actions for the BlockAPI service
 // This interface intended to stay up to date with the openapi yaml used to generate it,
 // while the service implementation can ignored with the .openapi-generator-ignore file
 // and updated with the logic required for the API.
-type BlockApiServicer interface {
+type BlockAPIServicer interface {
 	Block(context.Context, *types.BlockRequest) (*types.BlockResponse, *types.Error)
 	BlockTransaction(
 		context.Context,
@@ -133,19 +133,19 @@ type BlockApiServicer interface {
 	) (*types.BlockTransactionResponse, *types.Error)
 }
 
-// CallApiServicer defines the api actions for the CallApi service
+// CallAPIServicer defines the api actions for the CallAPI service
 // This interface intended to stay up to date with the openapi yaml used to generate it,
 // while the service implementation can ignored with the .openapi-generator-ignore file
 // and updated with the logic required for the API.
-type CallApiServicer interface {
+type CallAPIServicer interface {
 	Call(context.Context, *types.CallRequest) (*types.CallResponse, *types.Error)
 }
 
-// ConstructionApiServicer defines the api actions for the ConstructionApi service
+// ConstructionAPIServicer defines the api actions for the ConstructionAPI service
 // This interface intended to stay up to date with the openapi yaml used to generate it,
 // while the service implementation can ignored with the .openapi-generator-ignore file
 // and updated with the logic required for the API.
-type ConstructionApiServicer interface {
+type ConstructionAPIServicer interface {
 	ConstructionCombine(
 		context.Context,
 		*types.ConstructionCombineRequest,
@@ -180,22 +180,22 @@ type ConstructionApiServicer interface {
 	) (*types.TransactionIdentifierResponse, *types.Error)
 }
 
-// EventsApiServicer defines the api actions for the EventsApi service
+// EventsAPIServicer defines the api actions for the EventsAPI service
 // This interface intended to stay up to date with the openapi yaml used to generate it,
 // while the service implementation can ignored with the .openapi-generator-ignore file
 // and updated with the logic required for the API.
-type EventsApiServicer interface {
+type EventsAPIServicer interface {
 	EventsBlocks(
 		context.Context,
 		*types.EventsBlocksRequest,
 	) (*types.EventsBlocksResponse, *types.Error)
 }
 
-// MempoolApiServicer defines the api actions for the MempoolApi service
+// MempoolAPIServicer defines the api actions for the MempoolAPI service
 // This interface intended to stay up to date with the openapi yaml used to generate it,
 // while the service implementation can ignored with the .openapi-generator-ignore file
 // and updated with the logic required for the API.
-type MempoolApiServicer interface {
+type MempoolAPIServicer interface {
 	Mempool(context.Context, *types.NetworkRequest) (*types.MempoolResponse, *types.Error)
 	MempoolTransaction(
 		context.Context,
@@ -203,11 +203,11 @@ type MempoolApiServicer interface {
 	) (*types.MempoolTransactionResponse, *types.Error)
 }
 
-// NetworkApiServicer defines the api actions for the NetworkApi service
+// NetworkAPIServicer defines the api actions for the NetworkAPI service
 // This interface intended to stay up to date with the openapi yaml used to generate it,
 // while the service implementation can ignored with the .openapi-generator-ignore file
 // and updated with the logic required for the API.
-type NetworkApiServicer interface {
+type NetworkAPIServicer interface {
 	NetworkList(context.Context, *types.MetadataRequest) (*types.NetworkListResponse, *types.Error)
 	NetworkOptions(
 		context.Context,
@@ -219,11 +219,11 @@ type NetworkApiServicer interface {
 	) (*types.NetworkStatusResponse, *types.Error)
 }
 
-// SearchApiServicer defines the api actions for the SearchApi service
+// SearchAPIServicer defines the api actions for the SearchAPI service
 // This interface intended to stay up to date with the openapi yaml used to generate it,
 // while the service implementation can ignored with the .openapi-generator-ignore file
 // and updated with the logic required for the API.
-type SearchApiServicer interface {
+type SearchAPIServicer interface {
 	SearchTransactions(
 		context.Context,
 		*types.SearchTransactionsRequest,

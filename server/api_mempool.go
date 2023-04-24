@@ -25,26 +25,26 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
-// A MempoolApiController binds http requests to an api service and writes the service results to
+// A MempoolAPIController binds http requests to an api service and writes the service results to
 // the http response
-type MempoolApiController struct {
-	service  MempoolApiServicer
+type MempoolAPIController struct {
+	service  MempoolAPIServicer
 	asserter *asserter.Asserter
 }
 
-// NewMempoolApiController creates a default api controller
-func NewMempoolApiController(
-	s MempoolApiServicer,
+// NewMempoolAPIController creates a default api controller
+func NewMempoolAPIController(
+	s MempoolAPIServicer,
 	asserter *asserter.Asserter,
 ) Router {
-	return &MempoolApiController{
+	return &MempoolAPIController{
 		service:  s,
 		asserter: asserter,
 	}
 }
 
-// Routes returns all of the api route for the MempoolApiController
-func (c *MempoolApiController) Routes() Routes {
+// Routes returns all of the api route for the MempoolAPIController
+func (c *MempoolAPIController) Routes() Routes {
 	return Routes{
 		{
 			"Mempool",
@@ -62,7 +62,7 @@ func (c *MempoolApiController) Routes() Routes {
 }
 
 // Mempool - Get All Mempool Transactions
-func (c *MempoolApiController) Mempool(w http.ResponseWriter, r *http.Request) {
+func (c *MempoolAPIController) Mempool(w http.ResponseWriter, r *http.Request) {
 	networkRequest := &types.NetworkRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&networkRequest); err != nil {
 		EncodeJSONResponse(&types.Error{
@@ -92,7 +92,7 @@ func (c *MempoolApiController) Mempool(w http.ResponseWriter, r *http.Request) {
 }
 
 // MempoolTransaction - Get a Mempool Transaction
-func (c *MempoolApiController) MempoolTransaction(w http.ResponseWriter, r *http.Request) {
+func (c *MempoolAPIController) MempoolTransaction(w http.ResponseWriter, r *http.Request) {
 	mempoolTransactionRequest := &types.MempoolTransactionRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&mempoolTransactionRequest); err != nil {
 		EncodeJSONResponse(&types.Error{

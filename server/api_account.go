@@ -25,26 +25,26 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
-// A AccountApiController binds http requests to an api service and writes the service results to
+// A AccountAPIController binds http requests to an api service and writes the service results to
 // the http response
-type AccountApiController struct {
-	service  AccountApiServicer
+type AccountAPIController struct {
+	service  AccountAPIServicer
 	asserter *asserter.Asserter
 }
 
-// NewAccountApiController creates a default api controller
-func NewAccountApiController(
-	s AccountApiServicer,
+// NewAccountAPIController creates a default api controller
+func NewAccountAPIController(
+	s AccountAPIServicer,
 	asserter *asserter.Asserter,
 ) Router {
-	return &AccountApiController{
+	return &AccountAPIController{
 		service:  s,
 		asserter: asserter,
 	}
 }
 
-// Routes returns all of the api route for the AccountApiController
-func (c *AccountApiController) Routes() Routes {
+// Routes returns all of the api route for the AccountAPIController
+func (c *AccountAPIController) Routes() Routes {
 	return Routes{
 		{
 			"AccountBalance",
@@ -62,7 +62,7 @@ func (c *AccountApiController) Routes() Routes {
 }
 
 // AccountBalance - Get an Account's Balance
-func (c *AccountApiController) AccountBalance(w http.ResponseWriter, r *http.Request) {
+func (c *AccountAPIController) AccountBalance(w http.ResponseWriter, r *http.Request) {
 	accountBalanceRequest := &types.AccountBalanceRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&accountBalanceRequest); err != nil {
 		EncodeJSONResponse(&types.Error{
@@ -92,7 +92,7 @@ func (c *AccountApiController) AccountBalance(w http.ResponseWriter, r *http.Req
 }
 
 // AccountCoins - Get an Account's Unspent Coins
-func (c *AccountApiController) AccountCoins(w http.ResponseWriter, r *http.Request) {
+func (c *AccountAPIController) AccountCoins(w http.ResponseWriter, r *http.Request) {
 	accountCoinsRequest := &types.AccountCoinsRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&accountCoinsRequest); err != nil {
 		EncodeJSONResponse(&types.Error{
