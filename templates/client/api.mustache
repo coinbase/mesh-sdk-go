@@ -7,6 +7,7 @@ import (
   _ioutil "io/ioutil"
   _nethttp "net/http"
   "fmt"
+  "io"
 
   "github.com/coinbase/rosetta-sdk-go/types"
 {{#imports}}	"{{import}}"
@@ -83,7 +84,12 @@ func (a *{{{classname}}}Service) {{{nickname}}}(ctx _context.Context{{#hasParams
 	}
 
 	localVarBody, err := _ioutil.ReadAll(localVarHTTPResponse.Body)
-	defer localVarHTTPResponse.Body.Close()
+	defer func(Body io.ReadCloser) {
+        err := Body.Close()
+        if err != nil {
+            _ = fmt.Sprintf("unable to close response body: %w", err)
+        }
+    }(localVarHTTPResponse.Body)
 	if err != nil {
     return nil, nil, fmt.Errorf("failed to read response: %w", err) 
 	}

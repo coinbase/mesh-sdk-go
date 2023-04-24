@@ -19,6 +19,7 @@ package client
 import (
 	_context "context"
 	"fmt"
+	"io"
 	_ioutil "io/ioutil"
 	_nethttp "net/http"
 
@@ -82,7 +83,12 @@ func (a *SearchAPIService) SearchTransactions(
 	}
 
 	localVarBody, err := _ioutil.ReadAll(localVarHTTPResponse.Body)
-	defer localVarHTTPResponse.Body.Close()
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			_ = fmt.Sprintf("unable to close response body: %w", err)
+		}
+	}(localVarHTTPResponse.Body)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to read response: %w", err)
 	}
