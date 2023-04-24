@@ -25,26 +25,26 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
-// A BlockAPIController binds http requests to an api service and writes the service results to the
+// A BlockApiController binds http requests to an api service and writes the service results to the
 // http response
-type BlockAPIController struct {
-	service  BlockAPIServicer
+type BlockApiController struct {
+	service  BlockApiServicer
 	asserter *asserter.Asserter
 }
 
-// NewBlockAPIController creates a default api controller
-func NewBlockAPIController(
-	s BlockAPIServicer,
+// NewBlockApiController creates a default api controller
+func NewBlockApiController(
+	s BlockApiServicer,
 	asserter *asserter.Asserter,
 ) Router {
-	return &BlockAPIController{
+	return &BlockApiController{
 		service:  s,
 		asserter: asserter,
 	}
 }
 
-// Routes returns all of the api route for the BlockAPIController
-func (c *BlockAPIController) Routes() Routes {
+// Routes returns all of the api route for the BlockApiController
+func (c *BlockApiController) Routes() Routes {
 	return Routes{
 		{
 			"Block",
@@ -62,7 +62,7 @@ func (c *BlockAPIController) Routes() Routes {
 }
 
 // Block - Get a Block
-func (c *BlockAPIController) Block(w http.ResponseWriter, r *http.Request) {
+func (c *BlockApiController) Block(w http.ResponseWriter, r *http.Request) {
 	blockRequest := &types.BlockRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&blockRequest); err != nil {
 		EncodeJSONResponse(&types.Error{
@@ -92,7 +92,7 @@ func (c *BlockAPIController) Block(w http.ResponseWriter, r *http.Request) {
 }
 
 // BlockTransaction - Get a Block Transaction
-func (c *BlockAPIController) BlockTransaction(w http.ResponseWriter, r *http.Request) {
+func (c *BlockApiController) BlockTransaction(w http.ResponseWriter, r *http.Request) {
 	blockTransactionRequest := &types.BlockTransactionRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&blockTransactionRequest); err != nil {
 		EncodeJSONResponse(&types.Error{

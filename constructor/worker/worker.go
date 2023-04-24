@@ -19,6 +19,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -871,7 +872,12 @@ func HTTPRequestWorker(rawInput string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to send request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			_ = fmt.Sprintf("unable to close response body: %w", err)
+		}
+	}(resp.Body)
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {

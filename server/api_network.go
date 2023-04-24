@@ -25,26 +25,26 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
-// A NetworkAPIController binds http requests to an api service and writes the service results to
+// A NetworkApiController binds http requests to an api service and writes the service results to
 // the http response
-type NetworkAPIController struct {
-	service  NetworkAPIServicer
+type NetworkApiController struct {
+	service  NetworkApiServicer
 	asserter *asserter.Asserter
 }
 
-// NewNetworkAPIController creates a default api controller
-func NewNetworkAPIController(
-	s NetworkAPIServicer,
+// NewNetworkApiController creates a default api controller
+func NewNetworkApiController(
+	s NetworkApiServicer,
 	asserter *asserter.Asserter,
 ) Router {
-	return &NetworkAPIController{
+	return &NetworkApiController{
 		service:  s,
 		asserter: asserter,
 	}
 }
 
-// Routes returns all of the api route for the NetworkAPIController
-func (c *NetworkAPIController) Routes() Routes {
+// Routes returns all of the api route for the NetworkApiController
+func (c *NetworkApiController) Routes() Routes {
 	return Routes{
 		{
 			"NetworkList",
@@ -68,7 +68,7 @@ func (c *NetworkAPIController) Routes() Routes {
 }
 
 // NetworkList - Get List of Available Networks
-func (c *NetworkAPIController) NetworkList(w http.ResponseWriter, r *http.Request) {
+func (c *NetworkApiController) NetworkList(w http.ResponseWriter, r *http.Request) {
 	metadataRequest := &types.MetadataRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&metadataRequest); err != nil {
 		EncodeJSONResponse(&types.Error{
@@ -98,7 +98,7 @@ func (c *NetworkAPIController) NetworkList(w http.ResponseWriter, r *http.Reques
 }
 
 // NetworkOptions - Get Network Options
-func (c *NetworkAPIController) NetworkOptions(w http.ResponseWriter, r *http.Request) {
+func (c *NetworkApiController) NetworkOptions(w http.ResponseWriter, r *http.Request) {
 	networkRequest := &types.NetworkRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&networkRequest); err != nil {
 		EncodeJSONResponse(&types.Error{
@@ -128,7 +128,7 @@ func (c *NetworkAPIController) NetworkOptions(w http.ResponseWriter, r *http.Req
 }
 
 // NetworkStatus - Get Network Status
-func (c *NetworkAPIController) NetworkStatus(w http.ResponseWriter, r *http.Request) {
+func (c *NetworkApiController) NetworkStatus(w http.ResponseWriter, r *http.Request) {
 	networkRequest := &types.NetworkRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&networkRequest); err != nil {
 		EncodeJSONResponse(&types.Error{

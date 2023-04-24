@@ -25,26 +25,26 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
-// A ConstructionAPIController binds http requests to an api service and writes the service results
+// A ConstructionApiController binds http requests to an api service and writes the service results
 // to the http response
-type ConstructionAPIController struct {
-	service  ConstructionAPIServicer
+type ConstructionApiController struct {
+	service  ConstructionApiServicer
 	asserter *asserter.Asserter
 }
 
-// NewConstructionAPIController creates a default api controller
-func NewConstructionAPIController(
-	s ConstructionAPIServicer,
+// NewConstructionApiController creates a default api controller
+func NewConstructionApiController(
+	s ConstructionApiServicer,
 	asserter *asserter.Asserter,
 ) Router {
-	return &ConstructionAPIController{
+	return &ConstructionApiController{
 		service:  s,
 		asserter: asserter,
 	}
 }
 
-// Routes returns all of the api route for the ConstructionAPIController
-func (c *ConstructionAPIController) Routes() Routes {
+// Routes returns all of the api route for the ConstructionApiController
+func (c *ConstructionApiController) Routes() Routes {
 	return Routes{
 		{
 			"ConstructionCombine",
@@ -98,7 +98,7 @@ func (c *ConstructionAPIController) Routes() Routes {
 }
 
 // ConstructionCombine - Create Network Transaction from Signatures
-func (c *ConstructionAPIController) ConstructionCombine(w http.ResponseWriter, r *http.Request) {
+func (c *ConstructionApiController) ConstructionCombine(w http.ResponseWriter, r *http.Request) {
 	constructionCombineRequest := &types.ConstructionCombineRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&constructionCombineRequest); err != nil {
 		EncodeJSONResponse(&types.Error{
@@ -128,7 +128,7 @@ func (c *ConstructionAPIController) ConstructionCombine(w http.ResponseWriter, r
 }
 
 // ConstructionDerive - Derive an AccountIdentifier from a PublicKey
-func (c *ConstructionAPIController) ConstructionDerive(w http.ResponseWriter, r *http.Request) {
+func (c *ConstructionApiController) ConstructionDerive(w http.ResponseWriter, r *http.Request) {
 	constructionDeriveRequest := &types.ConstructionDeriveRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&constructionDeriveRequest); err != nil {
 		EncodeJSONResponse(&types.Error{
@@ -158,7 +158,7 @@ func (c *ConstructionAPIController) ConstructionDerive(w http.ResponseWriter, r 
 }
 
 // ConstructionHash - Get the Hash of a Signed Transaction
-func (c *ConstructionAPIController) ConstructionHash(w http.ResponseWriter, r *http.Request) {
+func (c *ConstructionApiController) ConstructionHash(w http.ResponseWriter, r *http.Request) {
 	constructionHashRequest := &types.ConstructionHashRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&constructionHashRequest); err != nil {
 		EncodeJSONResponse(&types.Error{
@@ -188,7 +188,7 @@ func (c *ConstructionAPIController) ConstructionHash(w http.ResponseWriter, r *h
 }
 
 // ConstructionMetadata - Get Metadata for Transaction Construction
-func (c *ConstructionAPIController) ConstructionMetadata(w http.ResponseWriter, r *http.Request) {
+func (c *ConstructionApiController) ConstructionMetadata(w http.ResponseWriter, r *http.Request) {
 	constructionMetadataRequest := &types.ConstructionMetadataRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&constructionMetadataRequest); err != nil {
 		EncodeJSONResponse(&types.Error{
@@ -218,7 +218,7 @@ func (c *ConstructionAPIController) ConstructionMetadata(w http.ResponseWriter, 
 }
 
 // ConstructionParse - Parse a Transaction
-func (c *ConstructionAPIController) ConstructionParse(w http.ResponseWriter, r *http.Request) {
+func (c *ConstructionApiController) ConstructionParse(w http.ResponseWriter, r *http.Request) {
 	constructionParseRequest := &types.ConstructionParseRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&constructionParseRequest); err != nil {
 		EncodeJSONResponse(&types.Error{
@@ -248,7 +248,7 @@ func (c *ConstructionAPIController) ConstructionParse(w http.ResponseWriter, r *
 }
 
 // ConstructionPayloads - Generate an Unsigned Transaction and Signing Payloads
-func (c *ConstructionAPIController) ConstructionPayloads(w http.ResponseWriter, r *http.Request) {
+func (c *ConstructionApiController) ConstructionPayloads(w http.ResponseWriter, r *http.Request) {
 	constructionPayloadsRequest := &types.ConstructionPayloadsRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&constructionPayloadsRequest); err != nil {
 		EncodeJSONResponse(&types.Error{
@@ -278,7 +278,7 @@ func (c *ConstructionAPIController) ConstructionPayloads(w http.ResponseWriter, 
 }
 
 // ConstructionPreprocess - Create a Request to Fetch Metadata
-func (c *ConstructionAPIController) ConstructionPreprocess(w http.ResponseWriter, r *http.Request) {
+func (c *ConstructionApiController) ConstructionPreprocess(w http.ResponseWriter, r *http.Request) {
 	constructionPreprocessRequest := &types.ConstructionPreprocessRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&constructionPreprocessRequest); err != nil {
 		EncodeJSONResponse(&types.Error{
@@ -311,7 +311,7 @@ func (c *ConstructionAPIController) ConstructionPreprocess(w http.ResponseWriter
 }
 
 // ConstructionSubmit - Submit a Signed Transaction
-func (c *ConstructionAPIController) ConstructionSubmit(w http.ResponseWriter, r *http.Request) {
+func (c *ConstructionApiController) ConstructionSubmit(w http.ResponseWriter, r *http.Request) {
 	constructionSubmitRequest := &types.ConstructionSubmitRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&constructionSubmitRequest); err != nil {
 		EncodeJSONResponse(&types.Error{

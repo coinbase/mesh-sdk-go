@@ -57,14 +57,17 @@ ROSETTA_SPEC_VERSION=1.4.12
 curl -L https://github.com/coinbase/rosetta-specifications/releases/download/v${ROSETTA_SPEC_VERSION}/api.json -o api.json;
 
 # Generate client + types code
-GENERATOR_VERSION=v4.3.0
+GENERATOR_VERSION=v6.5.0
 docker run --user "$(id -u):$(id -g)" --rm -v "${PWD}":/local \
   openapitools/openapi-generator-cli:${GENERATOR_VERSION} generate \
   -i /local/api.json \
   -g go \
   -t /local/templates/client \
   --additional-properties packageName=client\
-  -o /local/client_tmp;
+  -o /local/client_tmp \
+  --git-host github.com \
+  --git-user-id coinbase \
+  --git-repo-id rosetta-sdk-go/client;
 
 # Remove unnecessary client files
 rm -f client_tmp/go.mod;

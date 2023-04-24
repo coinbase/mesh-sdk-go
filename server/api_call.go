@@ -25,26 +25,26 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
-// A CallAPIController binds http requests to an api service and writes the service results to the
+// A CallApiController binds http requests to an api service and writes the service results to the
 // http response
-type CallAPIController struct {
-	service  CallAPIServicer
+type CallApiController struct {
+	service  CallApiServicer
 	asserter *asserter.Asserter
 }
 
-// NewCallAPIController creates a default api controller
-func NewCallAPIController(
-	s CallAPIServicer,
+// NewCallApiController creates a default api controller
+func NewCallApiController(
+	s CallApiServicer,
 	asserter *asserter.Asserter,
 ) Router {
-	return &CallAPIController{
+	return &CallApiController{
 		service:  s,
 		asserter: asserter,
 	}
 }
 
-// Routes returns all of the api route for the CallAPIController
-func (c *CallAPIController) Routes() Routes {
+// Routes returns all of the api route for the CallApiController
+func (c *CallApiController) Routes() Routes {
 	return Routes{
 		{
 			"Call",
@@ -56,7 +56,7 @@ func (c *CallAPIController) Routes() Routes {
 }
 
 // Call - Make a Network-Specific Procedure Call
-func (c *CallAPIController) Call(w http.ResponseWriter, r *http.Request) {
+func (c *CallApiController) Call(w http.ResponseWriter, r *http.Request) {
 	callRequest := &types.CallRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&callRequest); err != nil {
 		EncodeJSONResponse(&types.Error{

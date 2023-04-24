@@ -25,26 +25,26 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
-// A SearchAPIController binds http requests to an api service and writes the service results to the
+// A SearchApiController binds http requests to an api service and writes the service results to the
 // http response
-type SearchAPIController struct {
-	service  SearchAPIServicer
+type SearchApiController struct {
+	service  SearchApiServicer
 	asserter *asserter.Asserter
 }
 
-// NewSearchAPIController creates a default api controller
-func NewSearchAPIController(
-	s SearchAPIServicer,
+// NewSearchApiController creates a default api controller
+func NewSearchApiController(
+	s SearchApiServicer,
 	asserter *asserter.Asserter,
 ) Router {
-	return &SearchAPIController{
+	return &SearchApiController{
 		service:  s,
 		asserter: asserter,
 	}
 }
 
-// Routes returns all of the api route for the SearchAPIController
-func (c *SearchAPIController) Routes() Routes {
+// Routes returns all of the api route for the SearchApiController
+func (c *SearchApiController) Routes() Routes {
 	return Routes{
 		{
 			"SearchTransactions",
@@ -56,7 +56,7 @@ func (c *SearchAPIController) Routes() Routes {
 }
 
 // SearchTransactions - [INDEXER] Search for Transactions
-func (c *SearchAPIController) SearchTransactions(w http.ResponseWriter, r *http.Request) {
+func (c *SearchApiController) SearchTransactions(w http.ResponseWriter, r *http.Request) {
 	searchTransactionsRequest := &types.SearchTransactionsRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&searchTransactionsRequest); err != nil {
 		EncodeJSONResponse(&types.Error{

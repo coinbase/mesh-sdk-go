@@ -25,26 +25,26 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
-// A EventsAPIController binds http requests to an api service and writes the service results to the
+// A EventsApiController binds http requests to an api service and writes the service results to the
 // http response
-type EventsAPIController struct {
-	service  EventsAPIServicer
+type EventsApiController struct {
+	service  EventsApiServicer
 	asserter *asserter.Asserter
 }
 
-// NewEventsAPIController creates a default api controller
-func NewEventsAPIController(
-	s EventsAPIServicer,
+// NewEventsApiController creates a default api controller
+func NewEventsApiController(
+	s EventsApiServicer,
 	asserter *asserter.Asserter,
 ) Router {
-	return &EventsAPIController{
+	return &EventsApiController{
 		service:  s,
 		asserter: asserter,
 	}
 }
 
-// Routes returns all of the api route for the EventsAPIController
-func (c *EventsAPIController) Routes() Routes {
+// Routes returns all of the api route for the EventsApiController
+func (c *EventsApiController) Routes() Routes {
 	return Routes{
 		{
 			"EventsBlocks",
@@ -56,7 +56,7 @@ func (c *EventsAPIController) Routes() Routes {
 }
 
 // EventsBlocks - [INDEXER] Get a range of BlockEvents
-func (c *EventsAPIController) EventsBlocks(w http.ResponseWriter, r *http.Request) {
+func (c *EventsApiController) EventsBlocks(w http.ResponseWriter, r *http.Request) {
 	eventsBlocksRequest := &types.EventsBlocksRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&eventsBlocksRequest); err != nil {
 		EncodeJSONResponse(&types.Error{
