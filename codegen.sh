@@ -77,6 +77,7 @@ rm -f client_tmp/go.sum;
 rm -rf client_tmp/api;
 rm -rf client_tmp/test;
 rm -rf client_tmp/docs;
+rm -rf client_tmp/utils.go;
 rm -f client_tmp/git_push.sh;
 rm -f client_tmp/.travis.yml;
 rm -f client_tmp/.gitignore;
@@ -100,15 +101,15 @@ rm -rf server_tmp/.openapi-generator;
 rm -f server_tmp/.openapi-generator-ignore;
 rm -f server_tmp/go.mod;
 rm -f server_tmp/main.go;
-rm -f server_tmp/error.go;
-rm -f server_tmp/helpers.go;
-rm -f server_tmp/impl.go;
 rm -f server_tmp/README.md;
 rm -f server_tmp/Dockerfile;
 mv server_tmp/go/* server_tmp/.;
 rm -rf server_tmp/go;
 rm -f server_tmp/model_*.go
 rm -f server_tmp/*_service.go
+rm -rf server_tmp/error.go;
+rm -rf server_tmp/helpers.go;
+rm -rf server_tmp/impl.go;
 mv server_tmp/* server;
 rm -rf server_tmp;
 
