@@ -115,7 +115,7 @@ func (f *Fetcher) fetchChannelTransactions(
 
 			txFetchErr := fmt.Sprintf("transaction %s", types.PrintStruct(transactionIdentifier))
 			color.Red("%s%s", txFetchErr, f.metaData)
-			if err := tryAgain(txFetchErr, backoffRetries, fetchErr); err != nil {
+			if err := tryAgain(txFetchErr, f.forceRetry, backoffRetries, fetchErr); err != nil {
 				return err
 			}
 		}
@@ -332,7 +332,7 @@ func (f *Fetcher) BlockRetry(
 
 		blockFetchErr := fmt.Sprintf("block %s", types.PrintStruct(blockIdentifier))
 		color.Red("%s%s", blockFetchErr, f.metaData)
-		if err := tryAgain(blockFetchErr, backoffRetries, err); err != nil {
+		if err := tryAgain(blockFetchErr, f.forceRetry, backoffRetries, err); err != nil {
 			return nil, err
 		}
 	}

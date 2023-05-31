@@ -95,6 +95,7 @@ func (f *Fetcher) NetworkStatusRetry(
 
 		if err := tryAgain(
 			fmt.Sprintf("network status %s", types.PrintStruct(network)),
+			f.forceRetry,
 			backoffRetries,
 			err,
 		); err != nil {
@@ -171,7 +172,7 @@ func (f *Fetcher) NetworkListRetry(
 			return nil, fetcherErr
 		}
 
-		if err := tryAgain("NetworkList", backoffRetries, err); err != nil {
+		if err := tryAgain("NetworkList", f.forceRetry, backoffRetries, err); err != nil {
 			return nil, err
 		}
 	}
@@ -251,6 +252,7 @@ func (f *Fetcher) NetworkOptionsRetry(
 
 		if err := tryAgain(
 			fmt.Sprintf("network options %s", types.PrintStruct(network)),
+			f.forceRetry,
 			backoffRetries,
 			err,
 		); err != nil {

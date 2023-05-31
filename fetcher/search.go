@@ -91,6 +91,7 @@ func (f *Fetcher) SearchTransactionsRetry(
 
 		if err := tryAgain(
 			fmt.Sprintf("/search/transactions %s", types.PrintStruct(request)),
+			f.forceRetry,
 			backoffRetries,
 			err,
 		); err != nil {

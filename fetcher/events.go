@@ -103,6 +103,7 @@ func (f *Fetcher) EventsBlocksRetry(
 
 		if err := tryAgain(
 			fmt.Sprintf("/events/blocks %+v %+v", offset, limit),
+			f.forceRetry,
 			backoffRetries,
 			err,
 		); err != nil {

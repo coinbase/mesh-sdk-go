@@ -81,8 +81,8 @@ func transientError(err error) bool {
 
 // tryAgain handles a backoff and prints error messages depending
 // on the fetchMsg.
-func tryAgain(fetchMsg string, thisBackoff *Backoff, err *Error) *Error {
-	if !err.Retry {
+func tryAgain(fetchMsg string, forceRetry bool, thisBackoff *Backoff, err *Error) *Error {
+	if !err.Retry && !forceRetry {
 		return err
 	}
 

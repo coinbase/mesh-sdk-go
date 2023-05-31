@@ -117,6 +117,7 @@ func (f *Fetcher) AccountBalanceRetry(
 		color.Cyan(msg)
 		if err := tryAgain(
 			msg,
+			f.forceRetry,
 			backoffRetries,
 			err,
 		); err != nil {
@@ -219,6 +220,7 @@ func (f *Fetcher) AccountCoinsRetry(
 		color.Cyan(msg)
 		if err := tryAgain(
 			msg,
+			f.forceRetry,
 			backoffRetries,
 			err,
 		); err != nil {

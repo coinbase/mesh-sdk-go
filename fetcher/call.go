@@ -92,6 +92,7 @@ func (f *Fetcher) CallRetry(
 
 		if err := tryAgain(
 			fmt.Sprintf("/call %s:%s", method, types.PrintStruct(parameters)),
+			f.forceRetry,
 			backoffRetries,
 			err,
 		); err != nil {
