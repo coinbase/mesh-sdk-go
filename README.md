@@ -229,7 +229,7 @@ You may contribute to the `rosetta-sdk-go` project in various ways:
 * [Providing Feedback](CONTRIBUTING.md/#providing-feedback)
 * [Reporting Issues](CONTRIBUTING.md/#reporting-issues)
 
-Read our [Contributing](CONTRIBUTING.MD) documentation for more information.
+Read our [Contributing](CONTRIBUTING.md) documentation for more information.
 
 When you've finished an implementation for a blockchain, share your work in the [ecosystem category of the community site](https://community.rosetta-api.org/c/ecosystem). Platforms looking for implementations for certain blockchains will be monitoring this section of the website for high-quality implementations they can use for integration. Make sure that your implementation meets the [expectations](https://www.rosetta-api.org/docs/node_deployment.html) of any implementation.
 
