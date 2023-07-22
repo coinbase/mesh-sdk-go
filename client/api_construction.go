@@ -19,6 +19,7 @@ package client
 import (
 	_context "context"
 	"fmt"
+	"io"
 	_ioutil "io/ioutil"
 	_nethttp "net/http"
 
@@ -79,7 +80,10 @@ func (a *ConstructionAPIService) ConstructionCombine(
 	}
 
 	localVarBody, err := _ioutil.ReadAll(localVarHTTPResponse.Body)
-	defer localVarHTTPResponse.Body.Close()
+	defer func() {
+		_, _ = io.Copy(io.Discard, localVarHTTPResponse.Body)
+		_ = localVarHTTPResponse.Body.Close()
+	}()
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to read response: %w", err)
 	}
@@ -173,7 +177,10 @@ func (a *ConstructionAPIService) ConstructionDerive(
 	}
 
 	localVarBody, err := _ioutil.ReadAll(localVarHTTPResponse.Body)
-	defer localVarHTTPResponse.Body.Close()
+	defer func() {
+		_, _ = io.Copy(io.Discard, localVarHTTPResponse.Body)
+		_ = localVarHTTPResponse.Body.Close()
+	}()
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to read response: %w", err)
 	}
@@ -267,7 +274,10 @@ func (a *ConstructionAPIService) ConstructionHash(
 	}
 
 	localVarBody, err := _ioutil.ReadAll(localVarHTTPResponse.Body)
-	defer localVarHTTPResponse.Body.Close()
+	defer func() {
+		_, _ = io.Copy(io.Discard, localVarHTTPResponse.Body)
+		_ = localVarHTTPResponse.Body.Close()
+	}()
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to read response: %w", err)
 	}
@@ -368,7 +378,10 @@ func (a *ConstructionAPIService) ConstructionMetadata(
 	}
 
 	localVarBody, err := _ioutil.ReadAll(localVarHTTPResponse.Body)
-	defer localVarHTTPResponse.Body.Close()
+	defer func() {
+		_, _ = io.Copy(io.Discard, localVarHTTPResponse.Body)
+		_ = localVarHTTPResponse.Body.Close()
+	}()
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to read response: %w", err)
 	}
@@ -463,7 +476,10 @@ func (a *ConstructionAPIService) ConstructionParse(
 	}
 
 	localVarBody, err := _ioutil.ReadAll(localVarHTTPResponse.Body)
-	defer localVarHTTPResponse.Body.Close()
+	defer func() {
+		_, _ = io.Copy(io.Discard, localVarHTTPResponse.Body)
+		_ = localVarHTTPResponse.Body.Close()
+	}()
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to read response: %w", err)
 	}
@@ -563,7 +579,10 @@ func (a *ConstructionAPIService) ConstructionPayloads(
 	}
 
 	localVarBody, err := _ioutil.ReadAll(localVarHTTPResponse.Body)
-	defer localVarHTTPResponse.Body.Close()
+	defer func() {
+		_, _ = io.Copy(io.Discard, localVarHTTPResponse.Body)
+		_ = localVarHTTPResponse.Body.Close()
+	}()
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to read response: %w", err)
 	}
@@ -661,7 +680,10 @@ func (a *ConstructionAPIService) ConstructionPreprocess(
 	}
 
 	localVarBody, err := _ioutil.ReadAll(localVarHTTPResponse.Body)
-	defer localVarHTTPResponse.Body.Close()
+	defer func() {
+		_, _ = io.Copy(io.Discard, localVarHTTPResponse.Body)
+		_ = localVarHTTPResponse.Body.Close()
+	}()
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to read response: %w", err)
 	}
@@ -758,7 +780,10 @@ func (a *ConstructionAPIService) ConstructionSubmit(
 	}
 
 	localVarBody, err := _ioutil.ReadAll(localVarHTTPResponse.Body)
-	defer localVarHTTPResponse.Body.Close()
+	defer func() {
+		_, _ = io.Copy(io.Discard, localVarHTTPResponse.Body)
+		_ = localVarHTTPResponse.Body.Close()
+	}()
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to read response: %w", err)
 	}
