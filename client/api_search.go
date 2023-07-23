@@ -87,7 +87,6 @@ func (a *SearchAPIService) SearchTransactions(
 		_, _ = io.Copy(io.Discard, localVarHTTPResponse.Body)
 		_ = localVarHTTPResponse.Body.Close()
 	}()
-
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to read response: %w", err)
 	}
