@@ -19,6 +19,7 @@ package client
 import (
 	_context "context"
 	"fmt"
+	"io"
 	_ioutil "io/ioutil"
 	_nethttp "net/http"
 
@@ -77,7 +78,10 @@ func (a *MempoolAPIService) Mempool(
 	}
 
 	localVarBody, err := _ioutil.ReadAll(localVarHTTPResponse.Body)
-	defer localVarHTTPResponse.Body.Close()
+	defer func() {
+		_, _ = io.Copy(io.Discard, localVarHTTPResponse.Body)
+		_ = localVarHTTPResponse.Body.Close()
+	}()
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to read response: %w", err)
 	}
@@ -176,7 +180,10 @@ func (a *MempoolAPIService) MempoolTransaction(
 	}
 
 	localVarBody, err := _ioutil.ReadAll(localVarHTTPResponse.Body)
-	defer localVarHTTPResponse.Body.Close()
+	defer func() {
+		_, _ = io.Copy(io.Discard, localVarHTTPResponse.Body)
+		_ = localVarHTTPResponse.Body.Close()
+	}()
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to read response: %w", err)
 	}

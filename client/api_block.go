@@ -19,6 +19,7 @@ package client
 import (
 	_context "context"
 	"fmt"
+	"io"
 	_ioutil "io/ioutil"
 	_nethttp "net/http"
 
@@ -84,7 +85,10 @@ func (a *BlockAPIService) Block(
 	}
 
 	localVarBody, err := _ioutil.ReadAll(localVarHTTPResponse.Body)
-	defer localVarHTTPResponse.Body.Close()
+	defer func() {
+		_, _ = io.Copy(io.Discard, localVarHTTPResponse.Body)
+		_ = localVarHTTPResponse.Body.Close()
+	}()
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to read response: %w", err)
 	}
@@ -190,7 +194,10 @@ func (a *BlockAPIService) BlockTransaction(
 	}
 
 	localVarBody, err := _ioutil.ReadAll(localVarHTTPResponse.Body)
-	defer localVarHTTPResponse.Body.Close()
+	defer func() {
+		_, _ = io.Copy(io.Discard, localVarHTTPResponse.Body)
+		_ = localVarHTTPResponse.Body.Close()
+	}()
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to read response: %w", err)
 	}

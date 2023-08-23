@@ -39,6 +39,14 @@ const (
 	minRoutines = 1
 )
 
+// FetchedTransaction is a structure that represents a transaction fetched
+// from the network. It includes the TransactionIdentifier which uniquely
+// identifies the transaction on the blockchain, and the Transaction itself.
+type FetchedTransaction struct {
+	TxIdentifier *types.TransactionIdentifier
+	Tx           *types.Transaction
+}
+
 // addTransactionIdentifiers appends a slice of
 // types.TransactionIdentifiers to a channel.
 // When all types.TransactionIdentifiers are added,
@@ -69,7 +77,7 @@ func (f *Fetcher) fetchChannelTransactions(
 	network *types.NetworkIdentifier,
 	block *types.BlockIdentifier,
 	txsToFetch chan *types.TransactionIdentifier,
-	fetchedTxs chan *types.Transaction,
+	fetchedTxs chan *FetchedTransaction,
 ) *Error {
 	// We keep the lock for all transactions we fetch in this goroutine.
 	if err := f.connectionSemaphore.Acquire(ctx, semaphoreRequestWeight); err != nil {
@@ -121,7 +129,10 @@ func (f *Fetcher) fetchChannelTransactions(
 		}
 
 		select {
-		case fetchedTxs <- tx.Transaction:
+		case fetchedTxs <- &FetchedTransaction{
+			TxIdentifier: transactionIdentifier,
+			Tx:           tx.Transaction,
+		}:
 		case <-ctx.Done():
 			return &Error{
 				Err: ctx.Err(),
@@ -149,7 +160,7 @@ func (f *Fetcher) UnsafeTransactions(
 	}
 
 	txsToFetch := make(chan *types.TransactionIdentifier)
-	fetchedTxs := make(chan *types.Transaction)
+	fetchedTxs := make(chan *FetchedTransaction)
 	var fetchErr *Error
 	g, ctx := errgroup.WithContext(ctx)
 	g.Go(func() error {
@@ -188,9 +199,14 @@ func (f *Fetcher) UnsafeTransactions(
 		close(fetchedTxs)
 	}()
 
-	txs := make([]*types.Transaction, 0)
-	for tx := range fetchedTxs {
-		txs = append(txs, tx)
+	fetchedTxMap := make(map[string]*types.Transaction)
+	for fetchedTx := range fetchedTxs {
+		fetchedTxMap[fetchedTx.TxIdentifier.Hash] = fetchedTx.Tx
+	}
+
+	txs := make([]*types.Transaction, len(transactionIdentifiers))
+	for i, txID := range transactionIdentifiers {
+		txs[i] = fetchedTxMap[txID.Hash]
 	}
 
 	if err := g.Wait(); err != nil {
