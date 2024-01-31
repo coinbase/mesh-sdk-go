@@ -33,6 +33,10 @@ func (a *Asserter) Error(
 		return err
 	}
 
+	if a.ignoreRosettaSpecValidation {
+		return nil
+	}
+
 	val, ok := a.errorTypeMap[err.Code]
 	if !ok {
 		return fmt.Errorf(
