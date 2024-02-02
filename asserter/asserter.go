@@ -294,9 +294,9 @@ func NewClientWithOptions(
 	return asserter, nil
 }
 
-// NewClientWithoutRosettaSpec constructs a new Asserter using the provided
+// NewGenericRosettaClient constructs a new Asserter using the provided
 // arguments and without a Rosetta Spec validation. This is used to ignore rosetta spec validation
-func NewClientWithoutRosettaSpec(
+func NewGenericRosettaClient(
 	network *types.NetworkIdentifier,
 	genesisBlockIdentifier *types.BlockIdentifier,
 ) (*Asserter, error) {
@@ -325,12 +325,8 @@ func NewClientWithoutRosettaSpec(
 		ignoreRosettaSpecValidation: true,
 	}
 
-	asserter.operationStatusMap = map[string]bool{}
-	asserter.operationStatusMap["SUCCESS"] = true
-	asserter.operationStatusMap["OK"] = true
-	asserter.operationStatusMap["COMPLETED"] = true
-	asserter.operationStatusMap["FAILED"] = false
-	asserter.operationStatusMap["FAILURE"] = false
+	//init default operation statuses for generic rosetta client
+	InitOperationStatus(asserter)
 
 	return asserter, nil
 }
