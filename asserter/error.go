@@ -1,4 +1,4 @@
-// Copyright 2020 Coinbase, Inc.
+// Copyright 2024 Coinbase, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -31,6 +31,10 @@ func (a *Asserter) Error(
 
 	if err := Error(err); err != nil {
 		return err
+	}
+
+	if a.ignoreRosettaSpecValidation {
+		return nil
 	}
 
 	val, ok := a.errorTypeMap[err.Code]

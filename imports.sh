@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright 2020 Coinbase, Inc.
+# Copyright 2024 Coinbase, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.

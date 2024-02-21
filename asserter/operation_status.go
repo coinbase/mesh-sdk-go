@@ -12,13 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package keys
+package asserter
 
-import "github.com/coinbase/rosetta-sdk-go/types"
+const (
+	OperationStatusSuccess   = "SUCCESS"
+	OperationStatusOk        = "OK"
+	OperationStatusCompleted = "COMPLETED"
+	OperationStatusFailed    = "FAILED"
+	OperationStatusFailure   = "FAILURE"
+)
 
-// Signer is an interface for different curve signers
-type Signer interface {
-	PublicKey() *types.PublicKey
-	Sign(payload *types.SigningPayload, sigType types.SignatureType) (*types.Signature, error)
-	Verify(signature *types.Signature) error
+// InitOperationStatus initializes operation status map for a generic rosetta client
+func InitOperationStatus(asserter *Asserter) {
+	asserter.operationStatusMap = map[string]bool{
+		OperationStatusSuccess:   true,
+		OperationStatusOk:        true,
+		OperationStatusCompleted: true,
+		OperationStatusFailed:    false,
+		OperationStatusFailure:   false,
+	}
 }
