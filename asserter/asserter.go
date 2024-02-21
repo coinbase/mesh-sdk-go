@@ -1,4 +1,4 @@
-// Copyright 2020 Coinbase, Inc.
+// Copyright 2024 Coinbase, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path"
+	"strings"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
@@ -35,11 +36,12 @@ type Asserter struct {
 	timestampStartIndex int64
 
 	// These variables are used for request assertion.
-	historicalBalanceLookup bool
-	supportedNetworks       []*types.NetworkIdentifier
-	callMethods             map[string]struct{}
-	mempoolCoins            bool
-	validations             *Validations
+	historicalBalanceLookup     bool
+	supportedNetworks           []*types.NetworkIdentifier
+	callMethods                 map[string]struct{}
+	mempoolCoins                bool
+	validations                 *Validations
+	ignoreRosettaSpecValidation bool
 }
 
 // Validations is used to define stricter validations
@@ -292,6 +294,43 @@ func NewClientWithOptions(
 	return asserter, nil
 }
 
+// NewGenericRosettaClient constructs a new Asserter using the provided
+// arguments and without a Rosetta Spec validation. This is used to ignore rosetta spec validation
+func NewGenericRosettaClient(
+	network *types.NetworkIdentifier,
+	genesisBlockIdentifier *types.BlockIdentifier,
+) (*Asserter, error) {
+	if err := NetworkIdentifier(network); err != nil {
+		return nil, fmt.Errorf(
+			"network identifier %s is invalid: %w",
+			types.PrintStruct(network),
+			err,
+		)
+	}
+
+	if err := BlockIdentifier(genesisBlockIdentifier); err != nil {
+		return nil, fmt.Errorf(
+			"genesis block identifier %s is invalid: %w",
+			types.PrintStruct(genesisBlockIdentifier),
+			err,
+		)
+	}
+
+	asserter := &Asserter{
+		network:      network,
+		genesisBlock: genesisBlockIdentifier,
+		validations: &Validations{
+			Enabled: false,
+		},
+		ignoreRosettaSpecValidation: true,
+	}
+
+	//init default operation statuses for generic rosetta client
+	InitOperationStatus(asserter)
+
+	return asserter, nil
+}
+
 // ClientConfiguration returns all variables currently set in an Asserter.
 // This function will error if it is called on an uninitialized asserter.
 func (a *Asserter) ClientConfiguration() (*Configuration, error) {
@@ -336,7 +375,10 @@ func (a *Asserter) OperationSuccessful(operation *types.Operation) (bool, error)
 
 	val, ok := a.operationStatusMap[*operation.Status]
 	if !ok {
-		return false, fmt.Errorf("operation status %s is not found", *operation.Status)
+		val, ok = a.operationStatusMap[strings.ToUpper(*operation.Status)]
+		if !ok {
+			return false, fmt.Errorf("operation status %s is not found", *operation.Status)
+		}
 	}
 
 	return val, nil

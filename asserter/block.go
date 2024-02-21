@@ -1,4 +1,4 @@
-// Copyright 2020 Coinbase, Inc.
+// Copyright 2024 Coinbase, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -160,7 +160,7 @@ func (a *Asserter) OperationStatus(status *string, construction bool) error {
 		return ErrOperationStatusNotEmptyForConstruction
 	}
 
-	if _, ok := a.operationStatusMap[*status]; !ok {
+	if _, ok := a.operationStatusMap[*status]; !a.ignoreRosettaSpecValidation && !ok {
 		return fmt.Errorf("operation status %s is invalid: %w", *status, ErrOperationStatusInvalid)
 	}
 
@@ -174,7 +174,7 @@ func (a *Asserter) OperationType(t string) error {
 		return ErrAsserterNotInitialized
 	}
 
-	if t == "" || !containsString(a.operationTypes, t) {
+	if t == "" || (!a.ignoreRosettaSpecValidation && !containsString(a.operationTypes, t)) {
 		return fmt.Errorf("operation type %s is invalid: %w", t, ErrOperationTypeInvalid)
 	}
 
@@ -610,7 +610,7 @@ func (a *Asserter) Block(
 
 	// Only check for timestamp validity if timestamp start index is <=
 	// the current block index.
-	if a.timestampStartIndex <= block.BlockIdentifier.Index {
+	if !a.ignoreRosettaSpecValidation && a.timestampStartIndex <= block.BlockIdentifier.Index {
 		if err := Timestamp(block.Timestamp); err != nil {
 			return fmt.Errorf("timestamp %d is invalid: %w", block.Timestamp, err)
 		}
