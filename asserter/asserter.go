@@ -131,6 +131,7 @@ func NewGenericAsserter(
 	errors []*types.Error,
 	genesisBlockIdentifier *types.BlockIdentifier,
 	timestampStartIndex int64,
+	validationFilePath string,
 ) (*Asserter, error) {
 	if err := OperationTypes(supportedOperationTypes); err != nil {
 		return nil, fmt.Errorf("operation types %v are invalid: %w", supportedOperationTypes, err)
@@ -144,13 +145,16 @@ func NewGenericAsserter(
 		)
 	}
 
+	validationConfig, err := getValidationConfig(validationFilePath)
+	if err != nil {
+		return nil, fmt.Errorf("config %s is invalid: %w", validationFilePath, err)
+	}
+
 	asserter := &Asserter{
 		operationTypes:          supportedOperationTypes,
 		historicalBalanceLookup: historicalBalanceLookup,
 		supportedNetworks:       supportedNetworks,
-		validations: &Validations{
-			Enabled: false,
-		},
+		validations: validationConfig,
 		genesisBlock: genesisBlockIdentifier,
 		timestampStartIndex: timestampStartIndex,
 	}
