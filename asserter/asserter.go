@@ -122,6 +122,55 @@ func NewServer(
 	}, nil
 }
 
+// NewGenericAsserter constructs a new Asserter for generic usage
+func NewGenericAsserter(
+	supportedOperationTypes []string,
+	historicalBalanceLookup bool,
+	supportedNetworks []*types.NetworkIdentifier,
+	operationStatuses []*types.OperationStatus,
+	errors []*types.Error,
+	genesisBlockIdentifier *types.BlockIdentifier,
+	timestampStartIndex int64,
+	validationFilePath string,
+) (*Asserter, error) {
+	if err := OperationTypes(supportedOperationTypes); err != nil {
+		return nil, fmt.Errorf("operation types %v are invalid: %w", supportedOperationTypes, err)
+	}
+
+	if err := SupportedNetworks(supportedNetworks); err != nil {
+		return nil, fmt.Errorf(
+			"network identifiers %s are invalid: %w",
+			types.PrintStruct(supportedNetworks),
+			err,
+		)
+	}
+
+	validationConfig, err := getValidationConfig(validationFilePath)
+	if err != nil {
+		return nil, fmt.Errorf("config %s is invalid: %w", validationFilePath, err)
+	}
+
+	asserter := &Asserter{
+		operationTypes:          supportedOperationTypes,
+		historicalBalanceLookup: historicalBalanceLookup,
+		supportedNetworks:       supportedNetworks,
+		validations:             validationConfig,
+		genesisBlock:            genesisBlockIdentifier,
+		timestampStartIndex:     timestampStartIndex,
+	}
+
+	asserter.errorTypeMap = map[int32]*types.Error{}
+	for _, err := range errors {
+		asserter.errorTypeMap[err.Code] = err
+	}
+	asserter.operationStatusMap = map[string]bool{}
+	for _, status := range operationStatuses {
+		asserter.operationStatusMap[status.Status] = status.Successful
+	}
+
+	return asserter, nil
+}
+
 // NewClientWithResponses constructs a new Asserter
 // from a NetworkStatusResponse and
 // NetworkOptionsResponse.
