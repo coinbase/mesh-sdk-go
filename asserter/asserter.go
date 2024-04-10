@@ -154,9 +154,9 @@ func NewGenericAsserter(
 		operationTypes:          supportedOperationTypes,
 		historicalBalanceLookup: historicalBalanceLookup,
 		supportedNetworks:       supportedNetworks,
-		validations: validationConfig,
-		genesisBlock: genesisBlockIdentifier,
-		timestampStartIndex: timestampStartIndex,
+		validations:             validationConfig,
+		genesisBlock:            genesisBlockIdentifier,
+		timestampStartIndex:     timestampStartIndex,
 	}
 
 	asserter.errorTypeMap = map[int32]*types.Error{}
