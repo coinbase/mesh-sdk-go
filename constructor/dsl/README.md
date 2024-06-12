@@ -1,16 +1,16 @@
-# Rosetta Constructor DSL
-The Rosetta Constructor DSL ([domain-specific language](https://en.wikipedia.org/wiki/Domain-specific_language))
+# Mesh Constructor DSL
+The Mesh Constructor DSL ([domain-specific language](https://en.wikipedia.org/wiki/Domain-specific_language))
 makes it easy to write `Workflows` for the `constructor` package.
 
 This DSL is most commonly used for writing automated Construction API
-tests for the [`rosetta-cli`](https://github.com/coinbase/rosetta-cli#writing-checkconstruction-tests).
+tests for the [`mesh-cli`](https://github.com/coinbase/mesh-cli#writing-checkconstruction-tests).
 
-_Before reading more about the Rosetta Constructor DSL, we recommend learning
+_Before reading more about the Mesh Constructor DSL, we recommend learning
 about the frameworks used in the [`constructor`](/constructor/README.md)
 to coordinate the creation of transactions._
 
 ## Syntax
-At a basic level, the Rosetta Constructor DSL syntax looks like this:
+At a basic level, the Mesh Constructor DSL syntax looks like this:
 ```text
 // line comment
 <workflow name>(<concurrency>){
@@ -147,7 +147,7 @@ would look like:
 ]
 ```
 Note, if you plan to run the automated Construction API tester in CI for `create_account` workflow, you may wish to
-provide [`prefunded accounts`](https://pkg.go.dev/github.com/coinbase/rosetta-cli/configuration#ConstructionConfiguration)
+provide [`prefunded accounts`](https://pkg.go.dev/github.com/coinbase/mesh-cli/configuration#ConstructionConfiguration)
 when running the tester (otherwise you would need to manually fund generated
 accounts).
 
@@ -189,7 +189,7 @@ It is also important to note that `Workflows` containing multiple
 ```
 
 ### Functions
-In the Rosetta Constructor DSL, it is possible to invoke functions (where
+In the Mesh Constructor DSL, it is possible to invoke functions (where
 the function name is an `Action.Type`) but not possible to define your own
 functions (yet!).
 
@@ -198,7 +198,7 @@ The input for all functions is a JSON blob that will be evaluated by
 the `Worker`. It is possible to reference other variables
 in an input using the syntax `{{var}}` where `var` must follow
 [this syntax](https://github.com/tidwall/gjson/blob/master/SYNTAX.md).
-The Rosetta Constructor DSL compiler will automatically check that referenced
+The Mesh Constructor DSL compiler will automatically check that referenced
 variables are previously defined.
 
 #### End Line
@@ -206,7 +206,7 @@ Function invocations can span multiple lines (if you "pretty print" the JSON
 blob) but each function call line must end with a semi-colon.
 
 #### Native Invocation
-The Rosetta Constructor DSL provides optional "native invocation" support for 2 `Action.Types`:
+The Mesh Constructor DSL provides optional "native invocation" support for 2 `Action.Types`:
 * `math`
 * `set_variable`
 
@@ -262,7 +262,7 @@ It is possible to add new line comments of comments at the end of lines
 using a double slash (`//`).
 
 ## Status
-The Rosetta Constructor DSL should be considered `ALPHA` and may
+The Mesh Constructor DSL should be considered `ALPHA` and may
 include breaking changes in later releases. If you have any ideas on how to improve
 the language, please
-[open an issue in `rosetta-sdk-go`](https://github.com/coinbase/rosetta-sdk-go/issues)!
+[open an issue in `mesh-sdk-go`](https://github.com/coinbase/mesh-sdk-go/issues)!
