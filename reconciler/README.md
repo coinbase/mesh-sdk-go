@@ -1,11 +1,11 @@
 # Reconciler
 
-[![GoDoc](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=shield)](https://pkg.go.dev/github.com/coinbase/rosetta-sdk-go/reconciler?tab=doc)
+[![GoDoc](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=shield)](https://pkg.go.dev/github.com/coinbase/mesh-sdk-go/reconciler?tab=doc)
 
 The Reconciler package is used to ensure that balance changes derived from
-parsing Rosetta blocks are equivalent to the balance changes computed by the
+parsing Mesh blocks are equivalent to the balance changes computed by the
 node. If you want to see an example of how to use this package, take
-a look at [rosetta-cli](https://github.com/coinbase/rosetta-cli).
+a look at [mesh-cli](https://github.com/coinbase/mesh-cli).
 
 ## Features
 * Customizable `Helper` and `Handler` to define your own logic for retrieving
@@ -18,7 +18,7 @@ debugging)
 ## Installation
 
 ```shell
-go get github.com/coinbase/rosetta-sdk-go/reconciler
+go get github.com/coinbase/mesh-sdk-go/reconciler
 ```
 
 ## Reconciliation Strategies
@@ -32,5 +32,5 @@ error.
 The reconciler randomly checks the balances of accounts that aren't
 involved in any transactions. The balances of accounts could change
 on the blockchain node without being included in an operation
-returned by the Rosetta Data API. Recall that all balance-changing
-operations must be returned by the Rosetta Data API.
+returned by the Mesh Data API. Recall that all balance-changing
+operations must be returned by the Mesh Data API.

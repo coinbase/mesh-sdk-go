@@ -1,12 +1,12 @@
 # Constructor
 
-[![GoDoc](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=shield)](https://pkg.go.dev/github.com/coinbase/rosetta-sdk-go/constructor?tab=doc)
+[![GoDoc](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=shield)](https://pkg.go.dev/github.com/coinbase/mesh-sdk-go/constructor?tab=doc)
 
 The `constructor` package is used for coordinating the construction
 and broadcast of transactions on any blockchain that implements the
-Rosetta API. It was designed to power automated Construction API
-testing in the [`rosetta-cli (check:construction)`](https://github.com/coinbase/rosetta-cli#checkconstruction-1)
-but could be useful for anyone building a Rosetta API wallet.
+Mesh API. It was designed to power automated Construction API
+testing in the [`mesh-cli (check:construction)`](https://github.com/coinbase/mesh-cli#checkconstruction-1)
+but could be useful for anyone building a Mesh API wallet.
 
 ## Framework
 When first learning about a new topic, it is often useful to understand the
@@ -31,10 +31,10 @@ in other `Scenarios`. The syntax for accessing this shared state can be found
 
 `Actions` are discrete operations that can be performed in the context of a
 `Scenario`.  A full list of all `Actions` that can be performed can be found
-[here](https://pkg.go.dev/github.com/coinbase/rosetta-sdk-go/constructor/job#ActionType).
+[here](https://pkg.go.dev/github.com/coinbase/mesh-sdk-go/constructor/job#ActionType).
 
 If you have suggestions for more actions, please
-[open an issue in `rosetta-sdk-go`](https://github.com/coinbase/rosetta-sdk-go/issues)!
+[open an issue in `mesh-sdk-go`](https://github.com/coinbase/mesh-sdk-go/issues)!
 
 ### Broadcast Invocation
 If you'd like to broadcast a transaction at the end of a `Scenario`,
@@ -59,12 +59,12 @@ a transaction broadcast if you set the follow field:
 
 The suggested fee will then be stored as `<scenario>.suggested_fee` for use by
 other `Scenarios` in the same `Job`. You can find an example of this in the
-[Ethereum configuration](https://github.com/coinbase/rosetta-ethereum/blob/master/rosetta-cli-conf/testnet/ethereum.ros).
+[Ethereum configuration](https://github.com/coinbase/mesh-ethereum/blob/master/mesh-cli-conf/testnet/ethereum.ros).
 
 *If this field is not populated or set to `false`, the transaction
 will be constructed, signed, and broadcast.*
 
-### Using with rosetta-cli
+### Using with mesh-cli
 If you use the `constructor` for automated Construction API testing (without prefunded
 accounts), you MUST implement 2 required `Workflows`:
 * `create_account`
@@ -76,7 +76,7 @@ Please note that `create_account` can contain a transaction broadcast if
 on-chain origination is required for new accounts on your blockchain.
 
 If you plan to run the `constructor` in CI, you may wish to
-provide [`prefunded accounts`](https://pkg.go.dev/github.com/coinbase/rosetta-cli/configuration#ConstructionConfiguration)
+provide [`prefunded accounts`](https://pkg.go.dev/github.com/coinbase/mesh-cli/configuration#ConstructionConfiguration)
 when running the tester (otherwise you would need to manually fund generated
 accounts).
 
@@ -87,7 +87,7 @@ created during testing).
 
 ### Writing Workflows
 It is possible to write `Workflows` from scratch using JSON, however, it is
-highly recommended to use the [Rosetta Constructor DSL](dsl/README.md). You can
+highly recommended to use the [Mesh Constructor DSL](dsl/README.md). You can
 see an example of how these two approaches compare below:
 
 #### Without DSL
