@@ -132,6 +132,9 @@ func New(
 	// Initialize the connection semaphore
 	f.connectionSemaphore = semaphore.NewWeighted(int64(f.maxConnections))
 
+	fmt.Printf("the max retries number in rosetta-sdk-go fetcher is %v\n", f.maxRetries)
+	fmt.Printf("the forceretry in rosetta-sdk-go fetcher is %v\n", f.forceRetry)
+
 	return f
 }
 
