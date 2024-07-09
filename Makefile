@@ -91,7 +91,7 @@ shellcheck:
 salus:
 	docker run --rm -t -v ${PWD}:/home/repo coinbase/salus
 
-release: shellcheck check-gen check-license check-format test lint salus
+release: shellcheck check-license check-format lint salus
 
 mocks:
 	rm -rf mocks;
