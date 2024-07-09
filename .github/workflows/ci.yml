@@ -20,14 +20,14 @@ jobs:
         with:
           go-version: ${{ env.go_version }}
       - run: make build
-  # Test:
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v3
-  #     - uses: actions/setup-go@v3
-  #       with:
-  #         go-version: ${{ env.go_version }}
-  #     - run: make test
+  Test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
+        with:
+          go-version: ${{ env.go_version }}
+      - run: make test
   Lint:
     runs-on: ubuntu-latest
     steps:
@@ -59,13 +59,13 @@ jobs:
           version: latest
       - run: make check-format 
   
-  # Check-Gen:
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v3
-  #       with:
-  #         version: latest
-  #     - run: make check-gen 
+  Check-Gen:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          version: latest
+      - run: make check-gen 
 
   Coverage:
     runs-on: ubuntu-latest
