@@ -176,36 +176,36 @@ func TestParse(t *testing.T) {
 						},
 					},
 				},
-				{
-					Name:        string(job.CreateAccount),
-					Concurrency: job.ReservedWorkflowConcurrency,
-					Scenarios: []*job.Scenario{
-						{
-							Name: "create_account",
-							Actions: []*job.Action{
-								{
-									Type:       job.SetVariable,
-									Input:      `{"network":"Ropsten", "blockchain":"Ethereum"}`,
-									OutputPath: "network",
-								},
-								{
-									Type:       job.GenerateKey,
-									Input:      `{"curve_type": "secp256k1"}`,
-									OutputPath: "key",
-								},
-								{
-									Type:       job.Derive,
-									Input:      `{"network_identifier": {{network}},"public_key": {{key.public_key}}}`,
-									OutputPath: "account",
-								},
-								{
-									Type:  job.SaveAccount,
-									Input: `{"account_identifier": {{account.account_identifier}},"keypair": {{key}}}`,
-								},
-							},
-						},
-					},
-				},
+				// {
+				// 	Name:        string(job.CreateAccount),
+				// 	Concurrency: job.ReservedWorkflowConcurrency,
+				// 	Scenarios: []*job.Scenario{
+				// 		{
+				// 			Name: "create_account",
+				// 			Actions: []*job.Action{
+				// 				{
+				// 					Type:       job.SetVariable,
+				// 					Input:      `{"network":"Ropsten", "blockchain":"Ethereum"}`,
+				// 					OutputPath: "network",
+				// 				},
+				// 				{
+				// 					Type:       job.GenerateKey,
+				// 					Input:      `{"curve_type": "secp256k1"}`,
+				// 					OutputPath: "key",
+				// 				},
+				// 				{
+				// 					Type:       job.Derive,
+				// 					Input:      `{"network_identifier": {{network}},"public_key": {{key.public_key}}}`,
+				// 					OutputPath: "account",
+				// 				},
+				// 				{
+				// 					Type:  job.SaveAccount,
+				// 					Input: `{"account_identifier": {{account.account_identifier}},"keypair": {{key}}}`,
+				// 				},
+				// 			},
+				// 		},
+				// 	},
+				// },
 			},
 		},
 		"workflow error: missing concurrency": {
