@@ -169,6 +169,9 @@ func DefaultBadgerOptions(dir string) badger.Options {
 	// Don't cache blocks in memory. All reads should go to disk.
 	opts.BlockCacheSize = DefaultBlockCacheSize
 
+	//https://github.com/dgraph-io/badger/issues/1353
+	opts.Truncate = true
+
 	return opts
 }
 
