@@ -17,6 +17,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"strings"
@@ -28,18 +29,21 @@ import (
 // A BlockAPIController binds http requests to an api service and writes the service results to the
 // http response
 type BlockAPIController struct {
-	service  BlockAPIServicer
-	asserter *asserter.Asserter
+	service            BlockAPIServicer
+	asserter           *asserter.Asserter
+	contextFromRequest func(*http.Request) context.Context
 }
 
 // NewBlockAPIController creates a default api controller
 func NewBlockAPIController(
 	s BlockAPIServicer,
 	asserter *asserter.Asserter,
+	contextFromRequest func(*http.Request) context.Context,
 ) Router {
 	return &BlockAPIController{
-		service:  s,
-		asserter: asserter,
+		service:            s,
+		asserter:           asserter,
+		contextFromRequest: contextFromRequest,
 	}
 }
 
@@ -59,6 +63,16 @@ func (c *BlockAPIController) Routes() Routes {
 			c.BlockTransaction,
 		},
 	}
+}
+
+func (c *BlockAPIController) ContextFromRequest(r *http.Request) context.Context {
+	ctx := r.Context()
+
+	if c.contextFromRequest != nil {
+		ctx = c.contextFromRequest(r)
+	}
+
+	return ctx
 }
 
 // Block - Get a Block
@@ -81,7 +95,7 @@ func (c *BlockAPIController) Block(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, serviceErr := c.service.Block(r.Context(), blockRequest)
+	result, serviceErr := c.service.Block(c.ContextFromRequest(r), blockRequest)
 	if serviceErr != nil {
 		EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
 
@@ -111,7 +125,7 @@ func (c *BlockAPIController) BlockTransaction(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	result, serviceErr := c.service.BlockTransaction(r.Context(), blockTransactionRequest)
+	result, serviceErr := c.service.BlockTransaction(c.ContextFromRequest(r), blockTransactionRequest)
 	if serviceErr != nil {
 		EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
 
