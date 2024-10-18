@@ -105,16 +105,6 @@ func (c *AccountAPIController) AccountBalance(w http.ResponseWriter, r *http.Req
 	EncodeJSONResponse(result, http.StatusOK, w)
 }
 
-func (c *AccountAPIController) ContextFromRequest(r *http.Request) context.Context {
-	ctx := r.Context()
-
-	if c.contextFromRequest != nil {
-		ctx = c.contextFromRequest(r)
-	}
-
-	return ctx
-}
-
 // AccountCoins - Get an Account's Unspent Coins
 func (c *AccountAPIController) AccountCoins(w http.ResponseWriter, r *http.Request) {
 	accountCoinsRequest := &types.AccountCoinsRequest{}

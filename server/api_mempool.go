@@ -105,16 +105,6 @@ func (c *MempoolAPIController) Mempool(w http.ResponseWriter, r *http.Request) {
 	EncodeJSONResponse(result, http.StatusOK, w)
 }
 
-func (c *MempoolAPIController) ContextFromRequest(r *http.Request) context.Context {
-	ctx := r.Context()
-
-	if c.contextFromRequest != nil {
-		ctx = c.contextFromRequest(r)
-	}
-
-	return ctx
-}
-
 // MempoolTransaction - Get a Mempool Transaction
 func (c *MempoolAPIController) MempoolTransaction(w http.ResponseWriter, r *http.Request) {
 	mempoolTransactionRequest := &types.MempoolTransactionRequest{}

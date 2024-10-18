@@ -111,16 +111,6 @@ func (c *NetworkAPIController) NetworkList(w http.ResponseWriter, r *http.Reques
 	EncodeJSONResponse(result, http.StatusOK, w)
 }
 
-func (c *NetworkAPIController) ContextFromRequest(r *http.Request) context.Context {
-	ctx := r.Context()
-
-	if c.contextFromRequest != nil {
-		ctx = c.contextFromRequest(r)
-	}
-
-	return ctx
-}
-
 // NetworkOptions - Get Network Options
 func (c *NetworkAPIController) NetworkOptions(w http.ResponseWriter, r *http.Request) {
 	networkRequest := &types.NetworkRequest{}
@@ -149,16 +139,6 @@ func (c *NetworkAPIController) NetworkOptions(w http.ResponseWriter, r *http.Req
 	}
 
 	EncodeJSONResponse(result, http.StatusOK, w)
-}
-
-func (c *NetworkAPIController) ContextFromRequest(r *http.Request) context.Context {
-	ctx := r.Context()
-
-	if c.contextFromRequest != nil {
-		ctx = c.contextFromRequest(r)
-	}
-
-	return ctx
 }
 
 // NetworkStatus - Get Network Status

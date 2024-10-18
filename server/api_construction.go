@@ -144,16 +144,6 @@ func (c *ConstructionAPIController) ConstructionCombine(w http.ResponseWriter, r
 	EncodeJSONResponse(result, http.StatusOK, w)
 }
 
-func (c *ConstructionAPIController) ContextFromRequest(r *http.Request) context.Context {
-	ctx := r.Context()
-
-	if c.contextFromRequest != nil {
-		ctx = c.contextFromRequest(r)
-	}
-
-	return ctx
-}
-
 // ConstructionDerive - Derive an AccountIdentifier from a PublicKey
 func (c *ConstructionAPIController) ConstructionDerive(w http.ResponseWriter, r *http.Request) {
 	constructionDeriveRequest := &types.ConstructionDeriveRequest{}
@@ -185,16 +175,6 @@ func (c *ConstructionAPIController) ConstructionDerive(w http.ResponseWriter, r 
 	}
 
 	EncodeJSONResponse(result, http.StatusOK, w)
-}
-
-func (c *ConstructionAPIController) ContextFromRequest(r *http.Request) context.Context {
-	ctx := r.Context()
-
-	if c.contextFromRequest != nil {
-		ctx = c.contextFromRequest(r)
-	}
-
-	return ctx
 }
 
 // ConstructionHash - Get the Hash of a Signed Transaction
@@ -230,16 +210,6 @@ func (c *ConstructionAPIController) ConstructionHash(w http.ResponseWriter, r *h
 	EncodeJSONResponse(result, http.StatusOK, w)
 }
 
-func (c *ConstructionAPIController) ContextFromRequest(r *http.Request) context.Context {
-	ctx := r.Context()
-
-	if c.contextFromRequest != nil {
-		ctx = c.contextFromRequest(r)
-	}
-
-	return ctx
-}
-
 // ConstructionMetadata - Get Metadata for Transaction Construction
 func (c *ConstructionAPIController) ConstructionMetadata(w http.ResponseWriter, r *http.Request) {
 	constructionMetadataRequest := &types.ConstructionMetadataRequest{}
@@ -271,16 +241,6 @@ func (c *ConstructionAPIController) ConstructionMetadata(w http.ResponseWriter, 
 	}
 
 	EncodeJSONResponse(result, http.StatusOK, w)
-}
-
-func (c *ConstructionAPIController) ContextFromRequest(r *http.Request) context.Context {
-	ctx := r.Context()
-
-	if c.contextFromRequest != nil {
-		ctx = c.contextFromRequest(r)
-	}
-
-	return ctx
 }
 
 // ConstructionParse - Parse a Transaction
@@ -316,16 +276,6 @@ func (c *ConstructionAPIController) ConstructionParse(w http.ResponseWriter, r *
 	EncodeJSONResponse(result, http.StatusOK, w)
 }
 
-func (c *ConstructionAPIController) ContextFromRequest(r *http.Request) context.Context {
-	ctx := r.Context()
-
-	if c.contextFromRequest != nil {
-		ctx = c.contextFromRequest(r)
-	}
-
-	return ctx
-}
-
 // ConstructionPayloads - Generate an Unsigned Transaction and Signing Payloads
 func (c *ConstructionAPIController) ConstructionPayloads(w http.ResponseWriter, r *http.Request) {
 	constructionPayloadsRequest := &types.ConstructionPayloadsRequest{}
@@ -359,16 +309,6 @@ func (c *ConstructionAPIController) ConstructionPayloads(w http.ResponseWriter, 
 	EncodeJSONResponse(result, http.StatusOK, w)
 }
 
-func (c *ConstructionAPIController) ContextFromRequest(r *http.Request) context.Context {
-	ctx := r.Context()
-
-	if c.contextFromRequest != nil {
-		ctx = c.contextFromRequest(r)
-	}
-
-	return ctx
-}
-
 // ConstructionPreprocess - Create a Request to Fetch Metadata
 func (c *ConstructionAPIController) ConstructionPreprocess(w http.ResponseWriter, r *http.Request) {
 	constructionPreprocessRequest := &types.ConstructionPreprocessRequest{}
@@ -400,16 +340,6 @@ func (c *ConstructionAPIController) ConstructionPreprocess(w http.ResponseWriter
 	}
 
 	EncodeJSONResponse(result, http.StatusOK, w)
-}
-
-func (c *ConstructionAPIController) ContextFromRequest(r *http.Request) context.Context {
-	ctx := r.Context()
-
-	if c.contextFromRequest != nil {
-		ctx = c.contextFromRequest(r)
-	}
-
-	return ctx
 }
 
 // ConstructionSubmit - Submit a Signed Transaction
