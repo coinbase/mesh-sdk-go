@@ -1,7 +1,6 @@
 package headerforwarder
 
 import (
-	"fmt"
 	"net/http"
 )
 
@@ -9,10 +8,12 @@ import (
 // native node requests. It implements several interfaces to achieve that:
 //   - http.RoundTripper: this can be used to create an http Client that will automatically save headers
 //     if necessary
+//   - func(http.Handler) http.Handler: this can be used to wrap an http.Handler to set headers
+//     on the response
 //
 // the headers can be requested later.
 //
-// TODO: this needs to expire entries after a certain amount of time
+// TODO: this should expire entries after a certain amount of time
 type HeaderForwarder struct {
 	requestHeaders     map[string]http.Header
 	interestingHeaders []string
@@ -34,16 +35,14 @@ func (hf *HeaderForwarder) RoundTrip(req *http.Request) (*http.Response, error) 
 
 	if err == nil && hf.shouldRememberHeaders(req, resp) {
 		hf.rememberHeaders(req, resp)
-	} else {
-		fmt.Println("not remembering headers", resp.Header)
 	}
 
 	return resp, err
 }
 
-// shouldRememberHeaders is called to determine if response headers should be remembered for a given request.
-// Response headers will only be remembered if the request does not contain all of the interesting
-// headers and the response contains at least one of the interesting headers.
+// shouldRememberHeaders is called to determine if response headers should be remembered for a
+// given request. Response headers will only be remembered if the request does not contain all of
+// the interesting headers and the response contains at least one of the interesting headers.
 //
 // It should be noted that the request and response here are for a request to the native node,
 // not a request to the Rosetta server.
@@ -66,27 +65,34 @@ func (hf *HeaderForwarder) shouldRememberHeaders(req *http.Request, resp *http.R
 
 	// only remember headers if the request does not contain all of the interesting headers and the
 	// response contains at least one
-
 	return !requestHasAllHeaders && responseHasSomeHeaders
 }
 
 // rememberHeaders is called to save the native node response headers. The request object
 // here is a native node request (constructed by go-ethereum for geth-based rosetta implementations).
 // The response object is a native node response.
-//
-// TODO: only remember interesting headers
 func (hf *HeaderForwarder) rememberHeaders(req *http.Request, resp *http.Response) {
 	ctx := req.Context()
 	// rosettaRequestID := services.osettaIdFromContext(ctx)
 	rosettaRequestID := RosettaIDFromContext(ctx)
-	fmt.Printf("remembering headers for request id %s: %v\n", rosettaRequestID, resp.Header)
 
-	hf.requestHeaders[rosettaRequestID] = resp.Header
+	// Only remember interesting headers
+	headersToRemember := make(http.Header)
+	for _, interestingHeader := range hf.interestingHeaders {
+		headersToRemember.Set(interestingHeader, resp.Header.Get(interestingHeader))
+	}
+
+	hf.requestHeaders[rosettaRequestID] = headersToRemember
 }
 
 // GetResponseHeaders returns any native node response headers that were recorded for a request ID.
 func (hf *HeaderForwarder) getResponseHeaders(rosettaRequestID string) (http.Header, bool) {
 	headers, ok := hf.requestHeaders[rosettaRequestID]
+
+	// Delete the headers from the map after they are retrieved
+	// This is safe to call even if the key doesn't exist
+	delete(hf.requestHeaders, rosettaRequestID)
+
 	return headers, ok
 }
 
