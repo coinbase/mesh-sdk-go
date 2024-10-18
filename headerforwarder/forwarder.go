@@ -115,7 +115,6 @@ func (hf *HeaderForwarder) getResponseHeaders(rosettaRequestID string) (http.Hea
 // those headers on the response
 func (hf *HeaderForwarder) HeaderForwarderHandler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
 		// add a unique ID to the request context, and make a new request for it
 		requestWithID := hf.WithRequestID(r)
 
@@ -123,7 +122,7 @@ func (hf *HeaderForwarder) HeaderForwarderHandler(next http.Handler) http.Handle
 		// NOTE: ResponseWriter::WriteHeader() WILL be called here, so we can't set headers after this happens
 		// We include a wrapper around the response writer that allows us to set headers just before
 		// WriteHeader is called
-		wrappedResponseWriter := NewHeaderForwarderResponseWriter(
+		wrappedResponseWriter := NewResponseWriter(
 			w,
 			RosettaIDFromRequest(requestWithID),
 			hf.getResponseHeaders,
