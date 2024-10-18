@@ -131,7 +131,10 @@ func (c *ConstructionAPIController) ConstructionCombine(w http.ResponseWriter, r
 		return
 	}
 
-	result, serviceErr := c.service.ConstructionCombine(c.ContextFromRequest(r), constructionCombineRequest)
+	result, serviceErr := c.service.ConstructionCombine(
+		c.ContextFromRequest(r),
+		constructionCombineRequest,
+	)
 	if serviceErr != nil {
 		EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
 
@@ -139,6 +142,16 @@ func (c *ConstructionAPIController) ConstructionCombine(w http.ResponseWriter, r
 	}
 
 	EncodeJSONResponse(result, http.StatusOK, w)
+}
+
+func (c *ConstructionAPIController) ContextFromRequest(r *http.Request) context.Context {
+	ctx := r.Context()
+
+	if c.contextFromRequest != nil {
+		ctx = c.contextFromRequest(r)
+	}
+
+	return ctx
 }
 
 // ConstructionDerive - Derive an AccountIdentifier from a PublicKey
@@ -161,7 +174,10 @@ func (c *ConstructionAPIController) ConstructionDerive(w http.ResponseWriter, r 
 		return
 	}
 
-	result, serviceErr := c.service.ConstructionDerive(c.ContextFromRequest(r), constructionDeriveRequest)
+	result, serviceErr := c.service.ConstructionDerive(
+		c.ContextFromRequest(r),
+		constructionDeriveRequest,
+	)
 	if serviceErr != nil {
 		EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
 
@@ -169,6 +185,16 @@ func (c *ConstructionAPIController) ConstructionDerive(w http.ResponseWriter, r 
 	}
 
 	EncodeJSONResponse(result, http.StatusOK, w)
+}
+
+func (c *ConstructionAPIController) ContextFromRequest(r *http.Request) context.Context {
+	ctx := r.Context()
+
+	if c.contextFromRequest != nil {
+		ctx = c.contextFromRequest(r)
+	}
+
+	return ctx
 }
 
 // ConstructionHash - Get the Hash of a Signed Transaction
@@ -191,7 +217,10 @@ func (c *ConstructionAPIController) ConstructionHash(w http.ResponseWriter, r *h
 		return
 	}
 
-	result, serviceErr := c.service.ConstructionHash(c.ContextFromRequest(r), constructionHashRequest)
+	result, serviceErr := c.service.ConstructionHash(
+		c.ContextFromRequest(r),
+		constructionHashRequest,
+	)
 	if serviceErr != nil {
 		EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
 
@@ -199,6 +228,16 @@ func (c *ConstructionAPIController) ConstructionHash(w http.ResponseWriter, r *h
 	}
 
 	EncodeJSONResponse(result, http.StatusOK, w)
+}
+
+func (c *ConstructionAPIController) ContextFromRequest(r *http.Request) context.Context {
+	ctx := r.Context()
+
+	if c.contextFromRequest != nil {
+		ctx = c.contextFromRequest(r)
+	}
+
+	return ctx
 }
 
 // ConstructionMetadata - Get Metadata for Transaction Construction
@@ -221,7 +260,10 @@ func (c *ConstructionAPIController) ConstructionMetadata(w http.ResponseWriter, 
 		return
 	}
 
-	result, serviceErr := c.service.ConstructionMetadata(c.ContextFromRequest(r), constructionMetadataRequest)
+	result, serviceErr := c.service.ConstructionMetadata(
+		c.ContextFromRequest(r),
+		constructionMetadataRequest,
+	)
 	if serviceErr != nil {
 		EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
 
@@ -229,6 +271,16 @@ func (c *ConstructionAPIController) ConstructionMetadata(w http.ResponseWriter, 
 	}
 
 	EncodeJSONResponse(result, http.StatusOK, w)
+}
+
+func (c *ConstructionAPIController) ContextFromRequest(r *http.Request) context.Context {
+	ctx := r.Context()
+
+	if c.contextFromRequest != nil {
+		ctx = c.contextFromRequest(r)
+	}
+
+	return ctx
 }
 
 // ConstructionParse - Parse a Transaction
@@ -251,7 +303,10 @@ func (c *ConstructionAPIController) ConstructionParse(w http.ResponseWriter, r *
 		return
 	}
 
-	result, serviceErr := c.service.ConstructionParse(c.ContextFromRequest(r), constructionParseRequest)
+	result, serviceErr := c.service.ConstructionParse(
+		c.ContextFromRequest(r),
+		constructionParseRequest,
+	)
 	if serviceErr != nil {
 		EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
 
@@ -259,6 +314,16 @@ func (c *ConstructionAPIController) ConstructionParse(w http.ResponseWriter, r *
 	}
 
 	EncodeJSONResponse(result, http.StatusOK, w)
+}
+
+func (c *ConstructionAPIController) ContextFromRequest(r *http.Request) context.Context {
+	ctx := r.Context()
+
+	if c.contextFromRequest != nil {
+		ctx = c.contextFromRequest(r)
+	}
+
+	return ctx
 }
 
 // ConstructionPayloads - Generate an Unsigned Transaction and Signing Payloads
@@ -281,7 +346,10 @@ func (c *ConstructionAPIController) ConstructionPayloads(w http.ResponseWriter, 
 		return
 	}
 
-	result, serviceErr := c.service.ConstructionPayloads(c.ContextFromRequest(r), constructionPayloadsRequest)
+	result, serviceErr := c.service.ConstructionPayloads(
+		c.ContextFromRequest(r),
+		constructionPayloadsRequest,
+	)
 	if serviceErr != nil {
 		EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
 
@@ -289,6 +357,16 @@ func (c *ConstructionAPIController) ConstructionPayloads(w http.ResponseWriter, 
 	}
 
 	EncodeJSONResponse(result, http.StatusOK, w)
+}
+
+func (c *ConstructionAPIController) ContextFromRequest(r *http.Request) context.Context {
+	ctx := r.Context()
+
+	if c.contextFromRequest != nil {
+		ctx = c.contextFromRequest(r)
+	}
+
+	return ctx
 }
 
 // ConstructionPreprocess - Create a Request to Fetch Metadata
@@ -324,6 +402,16 @@ func (c *ConstructionAPIController) ConstructionPreprocess(w http.ResponseWriter
 	EncodeJSONResponse(result, http.StatusOK, w)
 }
 
+func (c *ConstructionAPIController) ContextFromRequest(r *http.Request) context.Context {
+	ctx := r.Context()
+
+	if c.contextFromRequest != nil {
+		ctx = c.contextFromRequest(r)
+	}
+
+	return ctx
+}
+
 // ConstructionSubmit - Submit a Signed Transaction
 func (c *ConstructionAPIController) ConstructionSubmit(w http.ResponseWriter, r *http.Request) {
 	constructionSubmitRequest := &types.ConstructionSubmitRequest{}
@@ -344,7 +432,10 @@ func (c *ConstructionAPIController) ConstructionSubmit(w http.ResponseWriter, r 
 		return
 	}
 
-	result, serviceErr := c.service.ConstructionSubmit(c.ContextFromRequest(r), constructionSubmitRequest)
+	result, serviceErr := c.service.ConstructionSubmit(
+		c.ContextFromRequest(r),
+		constructionSubmitRequest,
+	)
 	if serviceErr != nil {
 		EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
 

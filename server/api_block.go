@@ -105,6 +105,16 @@ func (c *BlockAPIController) Block(w http.ResponseWriter, r *http.Request) {
 	EncodeJSONResponse(result, http.StatusOK, w)
 }
 
+func (c *BlockAPIController) ContextFromRequest(r *http.Request) context.Context {
+	ctx := r.Context()
+
+	if c.contextFromRequest != nil {
+		ctx = c.contextFromRequest(r)
+	}
+
+	return ctx
+}
+
 // BlockTransaction - Get a Block Transaction
 func (c *BlockAPIController) BlockTransaction(w http.ResponseWriter, r *http.Request) {
 	blockTransactionRequest := &types.BlockTransactionRequest{}
@@ -125,7 +135,10 @@ func (c *BlockAPIController) BlockTransaction(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	result, serviceErr := c.service.BlockTransaction(c.ContextFromRequest(r), blockTransactionRequest)
+	result, serviceErr := c.service.BlockTransaction(
+		c.ContextFromRequest(r),
+		blockTransactionRequest,
+	)
 	if serviceErr != nil {
 		EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
 

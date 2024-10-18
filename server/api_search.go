@@ -89,7 +89,10 @@ func (c *SearchAPIController) SearchTransactions(w http.ResponseWriter, r *http.
 		return
 	}
 
-	result, serviceErr := c.service.SearchTransactions(c.contextFromRequest(r), searchTransactionsRequest)
+	result, serviceErr := c.service.SearchTransactions(
+		c.ContextFromRequest(r),
+		searchTransactionsRequest,
+	)
 	if serviceErr != nil {
 		EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
 
