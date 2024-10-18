@@ -2,6 +2,7 @@
 package {{packageName}}
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"strings"
@@ -12,18 +13,21 @@ import (
 
 // A {{classname}}Controller binds http requests to an api service and writes the service results to the http response
 type {{classname}}Controller struct {
-	service {{classname}}Servicer
-  asserter *asserter.Asserter
+	service            {{classname}}Servicer
+  asserter           *asserter.Asserter
+	contextFromRequest func(*http.Request) context.Context
 }
 
 // New{{classname}}Controller creates a default api controller
 func New{{classname}}Controller(
   s {{classname}}Servicer,
   asserter *asserter.Asserter,
+	contextFromRequest func(*http.Request) context.Context,
 ) Router {
 	return &{{classname}}Controller{
     service: s,
     asserter: asserter,
+		contextFromRequest: contextFromRequest,
   }
 }
 
@@ -38,6 +42,16 @@ func (c *{{classname}}Controller) Routes() Routes {
 		},{{/operation}}{{/operations}}
 	}
 }{{#operations}}{{#operation}}
+
+func (c *{{classname}}Controller) ContextFromRequest(r *http.Request) context.Context {
+	ctx := r.Context()
+
+	if c.contextFromRequest != nil {
+		ctx = c.contextFromRequest(r)
+	}
+
+	return ctx
+}
 
 // {{nickname}} - {{{summary}}}
 func (c *{{classname}}Controller) {{nickname}}(w http.ResponseWriter, r *http.Request) { {{#allParams}}{{#isHeaderParam}}
@@ -61,12 +75,12 @@ func (c *{{classname}}Controller) {{nickname}}(w http.ResponseWriter, r *http.Re
   }
 
 	{{/isBodyParam}}{{/allParams}}
-	result, serviceErr := c.service.{{nickname}}(r.Context(), {{#allParams}}{{paramName}}{{#hasMore}}, {{/hasMore}}{{/allParams}})
+	result, serviceErr := c.service.{{nickname}}(c.ContextFromRequest(r), {{#allParams}}{{paramName}}{{#hasMore}}, {{/hasMore}}{{/allParams}})
 	if serviceErr != nil {
     EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
 
 		return
 	}
-	
+
 	EncodeJSONResponse(result, http.StatusOK, w)
 }{{/operation}}{{/operations}}
