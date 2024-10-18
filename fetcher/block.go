@@ -254,7 +254,7 @@ func (f *Fetcher) UnsafeBlock(
 	}
 
 	// Exit early if no need to fetch txs
-	if blockResponse.OtherTransactions == nil || len(blockResponse.OtherTransactions) == 0 {
+	if len(blockResponse.OtherTransactions) == 0 {
 		return blockResponse.Block, nil
 	}
 

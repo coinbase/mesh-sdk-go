@@ -17,6 +17,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 
@@ -37,6 +38,7 @@ type Routes []Route
 // Router defines the required methods for retrieving api routes
 type Router interface {
 	Routes() Routes
+	ContextFromRequest(*http.Request) context.Context
 }
 
 // CorsMiddleware handles CORS and ensures OPTIONS requests are

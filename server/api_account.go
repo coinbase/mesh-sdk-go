@@ -17,6 +17,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"strings"
@@ -28,18 +29,21 @@ import (
 // A AccountAPIController binds http requests to an api service and writes the service results to
 // the http response
 type AccountAPIController struct {
-	service  AccountAPIServicer
-	asserter *asserter.Asserter
+	service            AccountAPIServicer
+	asserter           *asserter.Asserter
+	contextFromRequest func(*http.Request) context.Context
 }
 
 // NewAccountAPIController creates a default api controller
 func NewAccountAPIController(
 	s AccountAPIServicer,
 	asserter *asserter.Asserter,
+	contextFromRequest func(*http.Request) context.Context,
 ) Router {
 	return &AccountAPIController{
-		service:  s,
-		asserter: asserter,
+		service:            s,
+		asserter:           asserter,
+		contextFromRequest: contextFromRequest,
 	}
 }
 
@@ -59,6 +63,16 @@ func (c *AccountAPIController) Routes() Routes {
 			c.AccountCoins,
 		},
 	}
+}
+
+func (c *AccountAPIController) ContextFromRequest(r *http.Request) context.Context {
+	ctx := r.Context()
+
+	if c.contextFromRequest != nil {
+		ctx = c.contextFromRequest(r)
+	}
+
+	return ctx
 }
 
 // AccountBalance - Get an Account's Balance
@@ -81,7 +95,7 @@ func (c *AccountAPIController) AccountBalance(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	result, serviceErr := c.service.AccountBalance(r.Context(), accountBalanceRequest)
+	result, serviceErr := c.service.AccountBalance(c.ContextFromRequest(r), accountBalanceRequest)
 	if serviceErr != nil {
 		EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
 
@@ -111,7 +125,7 @@ func (c *AccountAPIController) AccountCoins(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	result, serviceErr := c.service.AccountCoins(r.Context(), accountCoinsRequest)
+	result, serviceErr := c.service.AccountCoins(c.ContextFromRequest(r), accountCoinsRequest)
 	if serviceErr != nil {
 		EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
 

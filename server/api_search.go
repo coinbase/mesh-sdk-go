@@ -17,6 +17,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"strings"
@@ -28,18 +29,21 @@ import (
 // A SearchAPIController binds http requests to an api service and writes the service results to the
 // http response
 type SearchAPIController struct {
-	service  SearchAPIServicer
-	asserter *asserter.Asserter
+	service            SearchAPIServicer
+	asserter           *asserter.Asserter
+	contextFromRequest func(*http.Request) context.Context
 }
 
 // NewSearchAPIController creates a default api controller
 func NewSearchAPIController(
 	s SearchAPIServicer,
 	asserter *asserter.Asserter,
+	contextFromRequest func(*http.Request) context.Context,
 ) Router {
 	return &SearchAPIController{
-		service:  s,
-		asserter: asserter,
+		service:            s,
+		asserter:           asserter,
+		contextFromRequest: contextFromRequest,
 	}
 }
 
@@ -53,6 +57,16 @@ func (c *SearchAPIController) Routes() Routes {
 			c.SearchTransactions,
 		},
 	}
+}
+
+func (c *SearchAPIController) ContextFromRequest(r *http.Request) context.Context {
+	ctx := r.Context()
+
+	if c.contextFromRequest != nil {
+		ctx = c.contextFromRequest(r)
+	}
+
+	return ctx
 }
 
 // SearchTransactions - [INDEXER] Search for Transactions
@@ -75,7 +89,10 @@ func (c *SearchAPIController) SearchTransactions(w http.ResponseWriter, r *http.
 		return
 	}
 
-	result, serviceErr := c.service.SearchTransactions(r.Context(), searchTransactionsRequest)
+	result, serviceErr := c.service.SearchTransactions(
+		c.ContextFromRequest(r),
+		searchTransactionsRequest,
+	)
 	if serviceErr != nil {
 		EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
 

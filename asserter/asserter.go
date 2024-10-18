@@ -374,7 +374,7 @@ func NewGenericRosettaClient(
 		ignoreRosettaSpecValidation: true,
 	}
 
-	//init default operation statuses for generic rosetta client
+	// init default operation statuses for generic rosetta client
 	InitOperationStatus(asserter)
 
 	return asserter, nil
