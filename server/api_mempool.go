@@ -17,6 +17,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"strings"
@@ -28,18 +29,21 @@ import (
 // A MempoolAPIController binds http requests to an api service and writes the service results to
 // the http response
 type MempoolAPIController struct {
-	service  MempoolAPIServicer
-	asserter *asserter.Asserter
+	service            MempoolAPIServicer
+	asserter           *asserter.Asserter
+	contextFromRequest func(*http.Request) context.Context
 }
 
 // NewMempoolAPIController creates a default api controller
 func NewMempoolAPIController(
 	s MempoolAPIServicer,
 	asserter *asserter.Asserter,
+	contextFromRequest func(*http.Request) context.Context,
 ) Router {
 	return &MempoolAPIController{
-		service:  s,
-		asserter: asserter,
+		service:            s,
+		asserter:           asserter,
+		contextFromRequest: contextFromRequest,
 	}
 }
 
@@ -59,6 +63,16 @@ func (c *MempoolAPIController) Routes() Routes {
 			c.MempoolTransaction,
 		},
 	}
+}
+
+func (c *MempoolAPIController) ContextFromRequest(r *http.Request) context.Context {
+	ctx := r.Context()
+
+	if c.contextFromRequest != nil {
+		ctx = c.contextFromRequest(r)
+	}
+
+	return ctx
 }
 
 // Mempool - Get All Mempool Transactions
@@ -81,7 +95,7 @@ func (c *MempoolAPIController) Mempool(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, serviceErr := c.service.Mempool(r.Context(), networkRequest)
+	result, serviceErr := c.service.Mempool(c.ContextFromRequest(r), networkRequest)
 	if serviceErr != nil {
 		EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
 
@@ -111,7 +125,10 @@ func (c *MempoolAPIController) MempoolTransaction(w http.ResponseWriter, r *http
 		return
 	}
 
-	result, serviceErr := c.service.MempoolTransaction(r.Context(), mempoolTransactionRequest)
+	result, serviceErr := c.service.MempoolTransaction(
+		c.ContextFromRequest(r),
+		mempoolTransactionRequest,
+	)
 	if serviceErr != nil {
 		EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
 
