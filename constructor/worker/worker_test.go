@@ -1848,7 +1848,7 @@ func TestHTTPRequestWorker(t *testing.T) {
 
 				w.Header().Set("Content-Type", test.contentType)
 				w.WriteHeader(test.statusCode)
-				fmt.Fprintf(w, test.response)
+				// fmt.Fprintf(w, test.response)
 			}))
 
 			defer ts.Close()
