@@ -30,7 +30,12 @@ func ContextWithRosettaID(ctx context.Context) context.Context {
 }
 
 func RosettaIDFromContext(ctx context.Context) string {
-	return ctx.Value(requestIDKey).(string)
+	switch val := ctx.Value(requestIDKey).(type) {
+	case string:
+		return val
+	default:
+		return ""
+	}
 }
 
 func RosettaIDFromRequest(r *http.Request) string {

@@ -15,7 +15,12 @@
 package headerforwarder
 
 import (
+	"context"
+	"fmt"
 	"net/http"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 )
 
 // HeaderExtractingTransport is a utility to help a rosetta server forward headers to and from
@@ -34,27 +39,36 @@ type HeaderForwarder struct {
 	actualTransport    http.RoundTripper
 }
 
-func NewHeaderForwarder(interestingHeaders []string, transport http.RoundTripper) *HeaderForwarder {
+// TODO: make transport an optional parameter, add "WithTransport" style functions to make it easier
+// to add the actual RPC clients to this struct
+func NewHeaderForwarder(interestingHeaders []string, transport http.RoundTripper) (*HeaderForwarder, error) {
+	if len(interestingHeaders) == 0 {
+		return nil, fmt.Errorf("must provide at least one interesting header")
+	}
+
 	return &HeaderForwarder{
 		requestHeaders:     make(map[string]http.Header),
 		interestingHeaders: interestingHeaders,
 		actualTransport:    transport,
-	}
+	}, nil
 }
 
-// RoundTrip implements http.RoundTripper and will be used to construct an http Client which
-// saves the native node response headers if necessary.
-func (hf *HeaderForwarder) RoundTrip(req *http.Request) (*http.Response, error) {
-	resp, err := hf.actualTransport.RoundTrip(req)
-
-	if err == nil && hf.shouldRememberHeaders(req, resp) {
-		hf.rememberHeaders(req, resp)
-	}
-
-	return resp, err
+func (hf *HeaderForwarder) WithTransport(transport http.RoundTripper) *HeaderForwarder {
+	hf.actualTransport = transport
+	return hf
 }
 
-// shouldRememberHeaders is called to determine if response headers should be remembered for a
+// RequestWithRequestID adds a unique ID to the request context. A new request is returned that contains the
+// new context
+func (hf *HeaderForwarder) RequestWithRequestID(req *http.Request) *http.Request {
+	ctx := req.Context()
+	ctxWithID := ContextWithRosettaID(ctx)
+	requestWithID := req.WithContext(ctxWithID)
+
+	return requestWithID
+}
+
+// shouldRememberHeaders reports whether response headers should be remembered for a
 // given request. Response headers will only be remembered if the request does not contain all of
 // the interesting headers and the response contains at least one of the interesting headers.
 //
@@ -82,12 +96,11 @@ func (hf *HeaderForwarder) shouldRememberHeaders(req *http.Request, resp *http.R
 	return !requestHasAllHeaders && responseHasSomeHeaders
 }
 
-// rememberHeaders is called to save the native node response headers. The request object
-// here is a native node request (constructed by go-ethereum for geth-based rosetta implementations).
+// rememberHeaders saves the native node response headers. The request object here is a
+// native node request (e.g. one constructed by go-ethereum for geth-based rosetta implementations).
 // The response object is a native node response.
 func (hf *HeaderForwarder) rememberHeaders(req *http.Request, resp *http.Response) {
 	ctx := req.Context()
-	// rosettaRequestID := services.osettaIdFromContext(ctx)
 	rosettaRequestID := RosettaIDFromContext(ctx)
 
 	// Only remember interesting headers
@@ -99,7 +112,41 @@ func (hf *HeaderForwarder) rememberHeaders(req *http.Request, resp *http.Respons
 	hf.requestHeaders[rosettaRequestID] = headersToRemember
 }
 
-// GetResponseHeaders returns any native node response headers that were recorded for a request ID.
+// shouldRememberMetadata reports whether response metadata should be remembered for a grpc unary
+// RPC call. Response metadata will only be remembered if it contains any of the interesting headers.
+func (hf *HeaderForwarder) shouldRememberMetadata(ctx context.Context, req any, resp metadata.MD) bool {
+	rosettaID := RosettaIDFromContext(ctx)
+	if rosettaID == "" {
+		return false
+	}
+
+	// If any of the interesting headers are in the response metadata, remember it
+	for _, interestingHeader := range hf.interestingHeaders {
+		if _, responseHasHeader := resp[http.CanonicalHeaderKey(interestingHeader)]; responseHasHeader {
+			return true
+		}
+	}
+
+	return false
+}
+
+// rememberMetadata saves the native node response metadata. The response object is metadata retrieved
+// from a native node GRPC unary RPC call.
+func (hf *HeaderForwarder) rememberMetadata(ctx context.Context, req any, resp metadata.MD) {
+	rosettaID := RosettaIDFromContext(ctx)
+
+	headersToRemember := make(http.Header)
+	for _, interestingHeader := range hf.interestingHeaders {
+		for _, value := range resp.Get(interestingHeader) {
+			headersToRemember.Set(interestingHeader, value)
+		}
+	}
+
+	hf.requestHeaders[rosettaID] = headersToRemember
+}
+
+// GetResponseHeaders returns any headers that should be returned to a rosetta response. These
+// consist of native node response headers/metadata that were remembered for a request ID.
 func (hf *HeaderForwarder) getResponseHeaders(rosettaRequestID string) (http.Header, bool) {
 	headers, ok := hf.requestHeaders[rosettaRequestID]
 
@@ -115,13 +162,14 @@ func (hf *HeaderForwarder) getResponseHeaders(rosettaRequestID string) (http.Hea
 // those headers on the response
 func (hf *HeaderForwarder) HeaderForwarderHandler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Println("HeaderForwarder Handler")
 		// add a unique ID to the request context, and make a new request for it
-		requestWithID := hf.WithRequestID(r)
+		requestWithID := hf.RequestWithRequestID(r)
 
 		// Serve the request
-		// NOTE: ResponseWriter::WriteHeader() WILL be called here, so we can't set headers after this happens
-		// We include a wrapper around the response writer that allows us to set headers just before
-		// WriteHeader is called
+		// NOTE: for servers using github.com/coinbase/mesh-geth-sdk, ResponseWriter::WriteHeader() WILL
+		// be called here, so we can't set headers after this happens. We include a wrapper around the
+		// response writer that allows us to set headers just before WriteHeader is called
 		wrappedResponseWriter := NewResponseWriter(
 			w,
 			RosettaIDFromRequest(requestWithID),
@@ -131,12 +179,38 @@ func (hf *HeaderForwarder) HeaderForwarderHandler(next http.Handler) http.Handle
 	})
 }
 
-// WithRequestID adds a unique ID to the request context. A new request is returned that contains the
-// new context
-func (hf *HeaderForwarder) WithRequestID(req *http.Request) *http.Request {
-	ctx := req.Context()
-	ctxWithID := ContextWithRosettaID(ctx)
-	requestWithID := req.WithContext(ctxWithID)
+// RoundTrip implements http.RoundTripper and will be used to construct an http Client which
+// saves the native node response headers if necessary.
+func (hf *HeaderForwarder) RoundTrip(req *http.Request) (*http.Response, error) {
+	fmt.Println("HeaderForwarder RoundTrip")
+	resp, err := hf.actualTransport.RoundTrip(req)
 
-	return requestWithID
+	fmt.Println("HeaderForwarder RoundTrip: response headers", resp.Header)
+
+	if err == nil && hf.shouldRememberHeaders(req, resp) {
+		hf.rememberHeaders(req, resp)
+	}
+
+	return resp, err
+}
+
+func (hf *HeaderForwarder) UnaryClientInterceptor(ctx context.Context, method string, req, reply any, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+	fmt.Println("HeaderForwarder grpc interceptor")
+
+	fmt.Println("request id: ", RosettaIDFromContext(ctx))
+
+	// append a header DialOption to the request
+	var responseMD metadata.MD
+	opts = append(opts, grpc.Header(&responseMD))
+
+	err := invoker(ctx, method, req, reply, cc, opts...)
+
+	if hf.shouldRememberMetadata(ctx, req, responseMD) {
+		hf.rememberMetadata(ctx, req, responseMD)
+	}
+
+	// get headers from response
+	fmt.Println("HeaderForwarder grpc interceptor: headers from response", responseMD)
+
+	return err
 }
