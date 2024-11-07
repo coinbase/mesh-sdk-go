@@ -19,7 +19,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -1840,7 +1840,7 @@ func TestHTTPRequestWorker(t *testing.T) {
 				assert.Equal(t, test.expectedPath, r.URL.RequestURI())
 				defer r.Body.Close()
 
-				body, err := ioutil.ReadAll(r.Body)
+				body, err := io.ReadAll(r.Body)
 				assert.NoError(t, err)
 				assert.Equal(t, test.expectedBody, string(body))
 

@@ -19,7 +19,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -608,7 +607,7 @@ func decompressAndSave(
 		)
 	}
 
-	err = ioutil.WriteFile(
+	err = os.WriteFile(
 		path.Join(tmpDir, types.Hash(string(k))),
 		decompressed,
 		os.FileMode(utils.DefaultFilePermissions),
@@ -634,7 +633,7 @@ func decompressAndEncode(
 	namespace string,
 	encoder *encoder.Encoder,
 ) (float64, float64, float64, error) {
-	decompressed, err := ioutil.ReadFile(path) // #nosec G304
+	decompressed, err := os.ReadFile(path) // #nosec G304
 	if err != nil {
 		return -1, -1, -1, fmt.Errorf(
 			"unable to read decompress file %s: %w",
