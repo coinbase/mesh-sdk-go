@@ -38,7 +38,7 @@ func (c *{{classname}}Controller) Routes() Routes {
 			c.{{operationId}},
 		},{{/operation}}{{/operations}}
 	}
-}
+}{{#operations}}{{#operation}}
 
 // {{nickname}} - {{{summary}}}
 func (c *{{classname}}Controller) {{nickname}}(w http.ResponseWriter, r *http.Request) { {{#allParams}}{{#isHeaderParam}}
