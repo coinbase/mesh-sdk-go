@@ -111,10 +111,7 @@ func (c *BlockAPIController) BlockTransaction(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	result, serviceErr := c.service.BlockTransaction(
-		r.Context(),
-		blockTransactionRequest,
-	)
+	result, serviceErr := c.service.BlockTransaction(r.Context(), blockTransactionRequest)
 	if serviceErr != nil {
 		EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
 
