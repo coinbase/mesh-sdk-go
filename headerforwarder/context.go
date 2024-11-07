@@ -49,6 +49,16 @@ func RosettaIDFromRequest(r *http.Request) string {
 	}
 }
 
+// RequestWithRequestID adds a unique ID to the request context. A new request is returned that contains the
+// new context
+func RequestWithRequestID(req *http.Request) *http.Request {
+	ctx := req.Context()
+	ctxWithID := ContextWithRosettaID(ctx)
+	requestWithID := req.WithContext(ctxWithID)
+
+	return requestWithID
+}
+
 func ContextWithOutgoingHeaders(ctx context.Context, headers http.Header) context.Context {
 	return context.WithValue(ctx, outgoingHeadersKey, headers)
 }
