@@ -17,7 +17,6 @@
 package server
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 	"strings"
@@ -29,21 +28,18 @@ import (
 // A ConstructionAPIController binds http requests to an api service and writes the service results
 // to the http response
 type ConstructionAPIController struct {
-	service            ConstructionAPIServicer
-	asserter           *asserter.Asserter
-	contextFromRequest func(*http.Request) context.Context
+	service  ConstructionAPIServicer
+	asserter *asserter.Asserter
 }
 
 // NewConstructionAPIController creates a default api controller
 func NewConstructionAPIController(
 	s ConstructionAPIServicer,
 	asserter *asserter.Asserter,
-	contextFromRequest func(*http.Request) context.Context,
 ) Router {
 	return &ConstructionAPIController{
-		service:            s,
-		asserter:           asserter,
-		contextFromRequest: contextFromRequest,
+		service:  s,
+		asserter: asserter,
 	}
 }
 
@@ -101,16 +97,6 @@ func (c *ConstructionAPIController) Routes() Routes {
 	}
 }
 
-func (c *ConstructionAPIController) ContextFromRequest(r *http.Request) context.Context {
-	ctx := r.Context()
-
-	if c.contextFromRequest != nil {
-		ctx = c.contextFromRequest(r)
-	}
-
-	return ctx
-}
-
 // ConstructionCombine - Create Network Transaction from Signatures
 func (c *ConstructionAPIController) ConstructionCombine(w http.ResponseWriter, r *http.Request) {
 	constructionCombineRequest := &types.ConstructionCombineRequest{}
@@ -132,7 +118,7 @@ func (c *ConstructionAPIController) ConstructionCombine(w http.ResponseWriter, r
 	}
 
 	result, serviceErr := c.service.ConstructionCombine(
-		c.ContextFromRequest(r),
+		r.Context(),
 		constructionCombineRequest,
 	)
 	if serviceErr != nil {
@@ -165,7 +151,7 @@ func (c *ConstructionAPIController) ConstructionDerive(w http.ResponseWriter, r 
 	}
 
 	result, serviceErr := c.service.ConstructionDerive(
-		c.ContextFromRequest(r),
+		r.Context(),
 		constructionDeriveRequest,
 	)
 	if serviceErr != nil {
@@ -198,7 +184,7 @@ func (c *ConstructionAPIController) ConstructionHash(w http.ResponseWriter, r *h
 	}
 
 	result, serviceErr := c.service.ConstructionHash(
-		c.ContextFromRequest(r),
+		r.Context(),
 		constructionHashRequest,
 	)
 	if serviceErr != nil {
@@ -231,7 +217,7 @@ func (c *ConstructionAPIController) ConstructionMetadata(w http.ResponseWriter, 
 	}
 
 	result, serviceErr := c.service.ConstructionMetadata(
-		c.ContextFromRequest(r),
+		r.Context(),
 		constructionMetadataRequest,
 	)
 	if serviceErr != nil {
@@ -264,7 +250,7 @@ func (c *ConstructionAPIController) ConstructionParse(w http.ResponseWriter, r *
 	}
 
 	result, serviceErr := c.service.ConstructionParse(
-		c.ContextFromRequest(r),
+		r.Context(),
 		constructionParseRequest,
 	)
 	if serviceErr != nil {
@@ -297,7 +283,7 @@ func (c *ConstructionAPIController) ConstructionPayloads(w http.ResponseWriter, 
 	}
 
 	result, serviceErr := c.service.ConstructionPayloads(
-		c.ContextFromRequest(r),
+		r.Context(),
 		constructionPayloadsRequest,
 	)
 	if serviceErr != nil {
@@ -330,7 +316,7 @@ func (c *ConstructionAPIController) ConstructionPreprocess(w http.ResponseWriter
 	}
 
 	result, serviceErr := c.service.ConstructionPreprocess(
-		c.ContextFromRequest(r),
+		r.Context(),
 		constructionPreprocessRequest,
 	)
 	if serviceErr != nil {
@@ -363,7 +349,7 @@ func (c *ConstructionAPIController) ConstructionSubmit(w http.ResponseWriter, r 
 	}
 
 	result, serviceErr := c.service.ConstructionSubmit(
-		c.ContextFromRequest(r),
+		r.Context(),
 		constructionSubmitRequest,
 	)
 	if serviceErr != nil {
