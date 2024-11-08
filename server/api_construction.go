@@ -17,7 +17,6 @@
 package server
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 	"strings"
@@ -29,21 +28,18 @@ import (
 // A ConstructionAPIController binds http requests to an api service and writes the service results
 // to the http response
 type ConstructionAPIController struct {
-	service            ConstructionAPIServicer
-	asserter           *asserter.Asserter
-	contextFromRequest func(*http.Request) context.Context
+	service  ConstructionAPIServicer
+	asserter *asserter.Asserter
 }
 
 // NewConstructionAPIController creates a default api controller
 func NewConstructionAPIController(
 	s ConstructionAPIServicer,
 	asserter *asserter.Asserter,
-	contextFromRequest func(*http.Request) context.Context,
 ) Router {
 	return &ConstructionAPIController{
-		service:            s,
-		asserter:           asserter,
-		contextFromRequest: contextFromRequest,
+		service:  s,
+		asserter: asserter,
 	}
 }
 
@@ -101,16 +97,6 @@ func (c *ConstructionAPIController) Routes() Routes {
 	}
 }
 
-func (c *ConstructionAPIController) ContextFromRequest(r *http.Request) context.Context {
-	ctx := r.Context()
-
-	if c.contextFromRequest != nil {
-		ctx = c.contextFromRequest(r)
-	}
-
-	return ctx
-}
-
 // ConstructionCombine - Create Network Transaction from Signatures
 func (c *ConstructionAPIController) ConstructionCombine(w http.ResponseWriter, r *http.Request) {
 	constructionCombineRequest := &types.ConstructionCombineRequest{}
@@ -131,10 +117,7 @@ func (c *ConstructionAPIController) ConstructionCombine(w http.ResponseWriter, r
 		return
 	}
 
-	result, serviceErr := c.service.ConstructionCombine(
-		c.ContextFromRequest(r),
-		constructionCombineRequest,
-	)
+	result, serviceErr := c.service.ConstructionCombine(r.Context(), constructionCombineRequest)
 	if serviceErr != nil {
 		EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
 
@@ -164,10 +147,7 @@ func (c *ConstructionAPIController) ConstructionDerive(w http.ResponseWriter, r 
 		return
 	}
 
-	result, serviceErr := c.service.ConstructionDerive(
-		c.ContextFromRequest(r),
-		constructionDeriveRequest,
-	)
+	result, serviceErr := c.service.ConstructionDerive(r.Context(), constructionDeriveRequest)
 	if serviceErr != nil {
 		EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
 
@@ -197,10 +177,7 @@ func (c *ConstructionAPIController) ConstructionHash(w http.ResponseWriter, r *h
 		return
 	}
 
-	result, serviceErr := c.service.ConstructionHash(
-		c.ContextFromRequest(r),
-		constructionHashRequest,
-	)
+	result, serviceErr := c.service.ConstructionHash(r.Context(), constructionHashRequest)
 	if serviceErr != nil {
 		EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
 
@@ -230,10 +207,7 @@ func (c *ConstructionAPIController) ConstructionMetadata(w http.ResponseWriter, 
 		return
 	}
 
-	result, serviceErr := c.service.ConstructionMetadata(
-		c.ContextFromRequest(r),
-		constructionMetadataRequest,
-	)
+	result, serviceErr := c.service.ConstructionMetadata(r.Context(), constructionMetadataRequest)
 	if serviceErr != nil {
 		EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
 
@@ -263,10 +237,7 @@ func (c *ConstructionAPIController) ConstructionParse(w http.ResponseWriter, r *
 		return
 	}
 
-	result, serviceErr := c.service.ConstructionParse(
-		c.ContextFromRequest(r),
-		constructionParseRequest,
-	)
+	result, serviceErr := c.service.ConstructionParse(r.Context(), constructionParseRequest)
 	if serviceErr != nil {
 		EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
 
@@ -296,10 +267,7 @@ func (c *ConstructionAPIController) ConstructionPayloads(w http.ResponseWriter, 
 		return
 	}
 
-	result, serviceErr := c.service.ConstructionPayloads(
-		c.ContextFromRequest(r),
-		constructionPayloadsRequest,
-	)
+	result, serviceErr := c.service.ConstructionPayloads(r.Context(), constructionPayloadsRequest)
 	if serviceErr != nil {
 		EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
 
@@ -330,7 +298,7 @@ func (c *ConstructionAPIController) ConstructionPreprocess(w http.ResponseWriter
 	}
 
 	result, serviceErr := c.service.ConstructionPreprocess(
-		c.ContextFromRequest(r),
+		r.Context(),
 		constructionPreprocessRequest,
 	)
 	if serviceErr != nil {
@@ -362,10 +330,7 @@ func (c *ConstructionAPIController) ConstructionSubmit(w http.ResponseWriter, r 
 		return
 	}
 
-	result, serviceErr := c.service.ConstructionSubmit(
-		c.ContextFromRequest(r),
-		constructionSubmitRequest,
-	)
+	result, serviceErr := c.service.ConstructionSubmit(r.Context(), constructionSubmitRequest)
 	if serviceErr != nil {
 		EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
 

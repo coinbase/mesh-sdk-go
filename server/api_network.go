@@ -17,7 +17,6 @@
 package server
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 	"strings"
@@ -29,21 +28,18 @@ import (
 // A NetworkAPIController binds http requests to an api service and writes the service results to
 // the http response
 type NetworkAPIController struct {
-	service            NetworkAPIServicer
-	asserter           *asserter.Asserter
-	contextFromRequest func(*http.Request) context.Context
+	service  NetworkAPIServicer
+	asserter *asserter.Asserter
 }
 
 // NewNetworkAPIController creates a default api controller
 func NewNetworkAPIController(
 	s NetworkAPIServicer,
 	asserter *asserter.Asserter,
-	contextFromRequest func(*http.Request) context.Context,
 ) Router {
 	return &NetworkAPIController{
-		service:            s,
-		asserter:           asserter,
-		contextFromRequest: contextFromRequest,
+		service:  s,
+		asserter: asserter,
 	}
 }
 
@@ -71,16 +67,6 @@ func (c *NetworkAPIController) Routes() Routes {
 	}
 }
 
-func (c *NetworkAPIController) ContextFromRequest(r *http.Request) context.Context {
-	ctx := r.Context()
-
-	if c.contextFromRequest != nil {
-		ctx = c.contextFromRequest(r)
-	}
-
-	return ctx
-}
-
 // NetworkList - Get List of Available Networks
 func (c *NetworkAPIController) NetworkList(w http.ResponseWriter, r *http.Request) {
 	metadataRequest := &types.MetadataRequest{}
@@ -101,7 +87,7 @@ func (c *NetworkAPIController) NetworkList(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	result, serviceErr := c.service.NetworkList(c.ContextFromRequest(r), metadataRequest)
+	result, serviceErr := c.service.NetworkList(r.Context(), metadataRequest)
 	if serviceErr != nil {
 		EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
 
@@ -131,7 +117,7 @@ func (c *NetworkAPIController) NetworkOptions(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	result, serviceErr := c.service.NetworkOptions(c.ContextFromRequest(r), networkRequest)
+	result, serviceErr := c.service.NetworkOptions(r.Context(), networkRequest)
 	if serviceErr != nil {
 		EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
 
@@ -161,7 +147,7 @@ func (c *NetworkAPIController) NetworkStatus(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	result, serviceErr := c.service.NetworkStatus(c.ContextFromRequest(r), networkRequest)
+	result, serviceErr := c.service.NetworkStatus(r.Context(), networkRequest)
 	if serviceErr != nil {
 		EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
 

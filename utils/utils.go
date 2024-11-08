@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"math/big"
 	"os"
@@ -86,7 +85,7 @@ var (
 // CreateTempDir creates a directory in
 // /tmp for usage within testing.
 func CreateTempDir() (string, error) {
-	storageDir, err := ioutil.TempDir("", "")
+	storageDir, err := os.MkdirTemp("", "")
 	if err != nil {
 		return "", fmt.Errorf("failed to create temporary directory: %w", err)
 	}
@@ -123,7 +122,7 @@ func Equal(a interface{}, b interface{}) bool {
 // SerializeAndWrite attempts to serialize the provided object
 // into a file at filePath.
 func SerializeAndWrite(filePath string, object interface{}) error {
-	err := ioutil.WriteFile(
+	err := os.WriteFile(
 		filePath,
 		[]byte(types.PrettyPrintStruct(object)),
 		os.FileMode(DefaultFilePermissions),
@@ -138,7 +137,7 @@ func SerializeAndWrite(filePath string, object interface{}) error {
 // LoadAndParse reads the file at the provided path
 // and attempts to unmarshal it into output.
 func LoadAndParse(filePath string, output interface{}) error {
-	b, err := ioutil.ReadFile(path.Clean(filePath))
+	b, err := os.ReadFile(path.Clean(filePath))
 	if err != nil {
 		return fmt.Errorf("unable to load file %s: %w", filePath, err)
 	}

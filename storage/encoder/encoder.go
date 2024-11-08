@@ -19,8 +19,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
+	"os"
 	"path"
 	"strconv"
 
@@ -66,7 +66,7 @@ func NewEncoder(
 ) (*Encoder, error) {
 	dicts := map[string][]byte{}
 	for _, entry := range entries {
-		b, err := ioutil.ReadFile(path.Clean(entry.DictionaryPath))
+		b, err := os.ReadFile(path.Clean(entry.DictionaryPath))
 		if err != nil {
 			return nil, fmt.Errorf(
 				"unable to load dictionary %s: %w",

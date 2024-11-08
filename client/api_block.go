@@ -20,7 +20,6 @@ import (
 	_context "context"
 	"fmt"
 	"io"
-	_ioutil "io/ioutil"
 	_nethttp "net/http"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
@@ -84,7 +83,7 @@ func (a *BlockAPIService) Block(
 		return nil, nil, fmt.Errorf("failed to call API: %w", err)
 	}
 
-	localVarBody, err := _ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
 	defer func() {
 		_, _ = io.Copy(io.Discard, localVarHTTPResponse.Body)
 		_ = localVarHTTPResponse.Body.Close()
@@ -193,7 +192,7 @@ func (a *BlockAPIService) BlockTransaction(
 		return nil, nil, fmt.Errorf("failed to call API: %w", err)
 	}
 
-	localVarBody, err := _ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
 	defer func() {
 		_, _ = io.Copy(io.Discard, localVarHTTPResponse.Body)
 		_ = localVarHTTPResponse.Body.Close()

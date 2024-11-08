@@ -18,8 +18,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"io/ioutil"
 	"math/big"
+	"os"
 	"path"
 	"testing"
 
@@ -1087,7 +1087,7 @@ func TestBootstrapBalances(t *testing.T) {
 
 	assert.NoError(
 		t,
-		ioutil.WriteFile(bootstrapBalancesFile, file, utils.DefaultFilePermissions),
+		os.WriteFile(bootstrapBalancesFile, file, utils.DefaultFilePermissions),
 	)
 
 	t.Run("run before initializing helper/handler", func(t *testing.T) {
@@ -1170,7 +1170,7 @@ func TestBootstrapBalances(t *testing.T) {
 	t.Run("Invalid file contents", func(t *testing.T) {
 		assert.NoError(
 			t,
-			ioutil.WriteFile(
+			os.WriteFile(
 				bootstrapBalancesFile,
 				[]byte("bad file"),
 				utils.DefaultFilePermissions,
@@ -1205,7 +1205,7 @@ func TestBootstrapBalances(t *testing.T) {
 
 		assert.NoError(
 			t,
-			ioutil.WriteFile(bootstrapBalancesFile, file, utils.DefaultFilePermissions),
+			os.WriteFile(bootstrapBalancesFile, file, utils.DefaultFilePermissions),
 		)
 
 		err = storage.BootstrapBalances(
@@ -1236,7 +1236,7 @@ func TestBootstrapBalances(t *testing.T) {
 
 		assert.NoError(
 			t,
-			ioutil.WriteFile(bootstrapBalancesFile, file, utils.DefaultFilePermissions),
+			os.WriteFile(bootstrapBalancesFile, file, utils.DefaultFilePermissions),
 		)
 
 		err = storage.BootstrapBalances(

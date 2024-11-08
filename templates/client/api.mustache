@@ -4,7 +4,6 @@ package {{packageName}}
 {{#operations}}
 import (
   _context "context"
-  _ioutil "io/ioutil"
   _nethttp "net/http"
   "fmt"
   "io"
@@ -83,13 +82,13 @@ func (a *{{{classname}}}Service) {{{nickname}}}(ctx _context.Context{{#hasParams
     return nil, nil, fmt.Errorf("failed to call API: %w", err)
 	}
 
-	localVarBody, err := _ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
 	defer func() {
 		_, _ = io.Copy(io.Discard, localVarHTTPResponse.Body)
 		_ = localVarHTTPResponse.Body.Close()
 	}()
 	if err != nil {
-    return nil, nil, fmt.Errorf("failed to read response: %w", err) 
+    return nil, nil, fmt.Errorf("failed to read response: %w", err)
 	}
 
 	switch localVarHTTPResponse.StatusCode {

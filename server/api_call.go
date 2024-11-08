@@ -17,7 +17,6 @@
 package server
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 	"strings"
@@ -29,21 +28,18 @@ import (
 // A CallAPIController binds http requests to an api service and writes the service results to the
 // http response
 type CallAPIController struct {
-	service            CallAPIServicer
-	asserter           *asserter.Asserter
-	contextFromRequest func(*http.Request) context.Context
+	service  CallAPIServicer
+	asserter *asserter.Asserter
 }
 
 // NewCallAPIController creates a default api controller
 func NewCallAPIController(
 	s CallAPIServicer,
 	asserter *asserter.Asserter,
-	contextFromRequest func(*http.Request) context.Context,
 ) Router {
 	return &CallAPIController{
-		service:            s,
-		asserter:           asserter,
-		contextFromRequest: contextFromRequest,
+		service:  s,
+		asserter: asserter,
 	}
 }
 
@@ -57,16 +53,6 @@ func (c *CallAPIController) Routes() Routes {
 			c.Call,
 		},
 	}
-}
-
-func (c *CallAPIController) ContextFromRequest(r *http.Request) context.Context {
-	ctx := r.Context()
-
-	if c.contextFromRequest != nil {
-		ctx = c.contextFromRequest(r)
-	}
-
-	return ctx
 }
 
 // Call - Make a Network-Specific Procedure Call
@@ -89,7 +75,7 @@ func (c *CallAPIController) Call(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, serviceErr := c.service.Call(c.ContextFromRequest(r), callRequest)
+	result, serviceErr := c.service.Call(r.Context(), callRequest)
 	if serviceErr != nil {
 		EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
 
