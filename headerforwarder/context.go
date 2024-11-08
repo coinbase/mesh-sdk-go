@@ -25,12 +25,19 @@ type contextKey string
 
 const requestIDKey = contextKey("request_id")
 
+const outgoingHeadersKey = contextKey("outgoing_headers")
+
 func ContextWithRosettaID(ctx context.Context) context.Context {
 	return context.WithValue(ctx, requestIDKey, uuid.NewString())
 }
 
 func RosettaIDFromContext(ctx context.Context) string {
-	return ctx.Value(requestIDKey).(string)
+	switch val := ctx.Value(requestIDKey).(type) {
+	case string:
+		return val
+	default:
+		return ""
+	}
 }
 
 func RosettaIDFromRequest(r *http.Request) string {
@@ -39,5 +46,28 @@ func RosettaIDFromRequest(r *http.Request) string {
 		return value
 	default:
 		return ""
+	}
+}
+
+// RequestWithRequestID adds a unique ID to the request context. A new request is returned that contains the
+// new context
+func RequestWithRequestID(req *http.Request) *http.Request {
+	ctx := req.Context()
+	ctxWithID := ContextWithRosettaID(ctx)
+	requestWithID := req.WithContext(ctxWithID)
+
+	return requestWithID
+}
+
+func ContextWithOutgoingHeaders(ctx context.Context, headers http.Header) context.Context {
+	return context.WithValue(ctx, outgoingHeadersKey, headers)
+}
+
+func OutgoingHeadersFromContext(ctx context.Context) http.Header {
+	switch val := ctx.Value(outgoingHeadersKey).(type) {
+	case http.Header:
+		return val
+	default:
+		return nil
 	}
 }

@@ -20,7 +20,6 @@ import (
 	_context "context"
 	"fmt"
 	"io"
-	_ioutil "io/ioutil"
 	_nethttp "net/http"
 
 	"github.com/coinbase/rosetta-sdk-go/types"
@@ -79,7 +78,7 @@ func (a *ConstructionAPIService) ConstructionCombine(
 		return nil, nil, fmt.Errorf("failed to call API: %w", err)
 	}
 
-	localVarBody, err := _ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
 	defer func() {
 		_, _ = io.Copy(io.Discard, localVarHTTPResponse.Body)
 		_ = localVarHTTPResponse.Body.Close()
@@ -176,7 +175,7 @@ func (a *ConstructionAPIService) ConstructionDerive(
 		return nil, nil, fmt.Errorf("failed to call API: %w", err)
 	}
 
-	localVarBody, err := _ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
 	defer func() {
 		_, _ = io.Copy(io.Discard, localVarHTTPResponse.Body)
 		_ = localVarHTTPResponse.Body.Close()
@@ -273,7 +272,7 @@ func (a *ConstructionAPIService) ConstructionHash(
 		return nil, nil, fmt.Errorf("failed to call API: %w", err)
 	}
 
-	localVarBody, err := _ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
 	defer func() {
 		_, _ = io.Copy(io.Discard, localVarHTTPResponse.Body)
 		_ = localVarHTTPResponse.Body.Close()
@@ -377,7 +376,7 @@ func (a *ConstructionAPIService) ConstructionMetadata(
 		return nil, nil, fmt.Errorf("failed to call API: %w", err)
 	}
 
-	localVarBody, err := _ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
 	defer func() {
 		_, _ = io.Copy(io.Discard, localVarHTTPResponse.Body)
 		_ = localVarHTTPResponse.Body.Close()
@@ -475,7 +474,7 @@ func (a *ConstructionAPIService) ConstructionParse(
 		return nil, nil, fmt.Errorf("failed to call API: %w", err)
 	}
 
-	localVarBody, err := _ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
 	defer func() {
 		_, _ = io.Copy(io.Discard, localVarHTTPResponse.Body)
 		_ = localVarHTTPResponse.Body.Close()
@@ -578,7 +577,7 @@ func (a *ConstructionAPIService) ConstructionPayloads(
 		return nil, nil, fmt.Errorf("failed to call API: %w", err)
 	}
 
-	localVarBody, err := _ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
 	defer func() {
 		_, _ = io.Copy(io.Discard, localVarHTTPResponse.Body)
 		_ = localVarHTTPResponse.Body.Close()
@@ -679,7 +678,7 @@ func (a *ConstructionAPIService) ConstructionPreprocess(
 		return nil, nil, fmt.Errorf("failed to call API: %w", err)
 	}
 
-	localVarBody, err := _ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
 	defer func() {
 		_, _ = io.Copy(io.Discard, localVarHTTPResponse.Body)
 		_ = localVarHTTPResponse.Body.Close()
@@ -779,7 +778,7 @@ func (a *ConstructionAPIService) ConstructionSubmit(
 		return nil, nil, fmt.Errorf("failed to call API: %w", err)
 	}
 
-	localVarBody, err := _ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
 	defer func() {
 		_, _ = io.Copy(io.Discard, localVarHTTPResponse.Body)
 		_ = localVarHTTPResponse.Body.Close()
