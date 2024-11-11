@@ -18,7 +18,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -410,7 +409,7 @@ func TestNew(t *testing.T) {
 				fileConfig.AllowedTimestampStartIndex = fileConfig.GenesisBlockIdentifier.Index + 1
 			}
 
-			tmpfile, err := ioutil.TempFile("", "test.json")
+			tmpfile, err := os.CreateTemp("", "test.json")
 			assert.NoError(t, err)
 			defer os.Remove(tmpfile.Name())
 
@@ -473,7 +472,7 @@ func TestNew(t *testing.T) {
 	})
 
 	t.Run("file not formatted correctly", func(t *testing.T) {
-		tmpfile, err := ioutil.TempFile("", "test.json")
+		tmpfile, err := os.CreateTemp("", "test.json")
 		assert.NoError(t, err)
 		defer os.Remove(tmpfile.Name())
 
@@ -515,7 +514,7 @@ func TestNew(t *testing.T) {
 	})
 
 	t.Run("wrong format of validation file", func(t *testing.T) {
-		tmpfile, err := ioutil.TempFile("", "test.json")
+		tmpfile, err := os.CreateTemp("", "test.json")
 		assert.NoError(t, err)
 		defer os.Remove(tmpfile.Name())
 

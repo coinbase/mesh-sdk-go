@@ -17,7 +17,6 @@
 package server
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 	"strings"
@@ -29,21 +28,18 @@ import (
 // A EventsAPIController binds http requests to an api service and writes the service results to the
 // http response
 type EventsAPIController struct {
-	service            EventsAPIServicer
-	asserter           *asserter.Asserter
-	contextFromRequest func(*http.Request) context.Context
+	service  EventsAPIServicer
+	asserter *asserter.Asserter
 }
 
 // NewEventsAPIController creates a default api controller
 func NewEventsAPIController(
 	s EventsAPIServicer,
 	asserter *asserter.Asserter,
-	contextFromRequest func(*http.Request) context.Context,
 ) Router {
 	return &EventsAPIController{
-		service:            s,
-		asserter:           asserter,
-		contextFromRequest: contextFromRequest,
+		service:  s,
+		asserter: asserter,
 	}
 }
 
@@ -57,16 +53,6 @@ func (c *EventsAPIController) Routes() Routes {
 			c.EventsBlocks,
 		},
 	}
-}
-
-func (c *EventsAPIController) ContextFromRequest(r *http.Request) context.Context {
-	ctx := r.Context()
-
-	if c.contextFromRequest != nil {
-		ctx = c.contextFromRequest(r)
-	}
-
-	return ctx
 }
 
 // EventsBlocks - [INDEXER] Get a range of BlockEvents
@@ -89,7 +75,7 @@ func (c *EventsAPIController) EventsBlocks(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	result, serviceErr := c.service.EventsBlocks(c.ContextFromRequest(r), eventsBlocksRequest)
+	result, serviceErr := c.service.EventsBlocks(r.Context(), eventsBlocksRequest)
 	if serviceErr != nil {
 		EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
 
