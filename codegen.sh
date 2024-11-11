@@ -120,7 +120,7 @@ sed "${SED_IFLAG[@]}" 's/*Case/Case/g' client/* server/*
 
 # Fix CurveTypes, SignatureTypes, CoinActions, ExemptionTypes, Direction, Case
 sed "${SED_IFLAG[@]}" 's/SECP256K1/Secp256k1/g' client/* server/*
-sed "${SED_IFLAG[@]}" 's/Secp256k1_BIP340/Secp256k1Bip340/g' client/* server/*;
+sed "${SED_IFLAG[@]}" 's/Secp256k1_BIP340/Secp256k1Bip340/g' client/* server/*
 sed "${SED_IFLAG[@]}" 's/SECP256R1/Secp256r1/g' client/* server/*
 sed "${SED_IFLAG[@]}" 's/EDWARDS25519/Edwards25519/g' client/* server/*
 sed "${SED_IFLAG[@]}" 's/TWEEDLE/Tweedle/g' client/* server/*
@@ -128,7 +128,7 @@ sed "${SED_IFLAG[@]}" 's/ECDSA_RECOVERY/EcdsaRecovery/g' client/* server/*
 sed "${SED_IFLAG[@]}" 's/ECDSA/Ecdsa/g' client/* server/*
 sed "${SED_IFLAG[@]}" 's/ED25519/Ed25519/g' client/* server/*
 sed "${SED_IFLAG[@]}" 's/SCHNORR_1/Schnorr1/g' client/* server/*
-sed "${SED_IFLAG[@]}" 's/SCHNORR_BIP340/SchnorrBip340/g' client/* server/*;
+sed "${SED_IFLAG[@]}" 's/SCHNORR_BIP340/SchnorrBip340/g' client/* server/*
 sed "${SED_IFLAG[@]}" 's/SCHNORR_POSEIDON/SchnorrPoseidon/g' client/* server/*
 sed "${SED_IFLAG[@]}" 's/PALLAS/Pallas/g' client/* server/*
 sed "${SED_IFLAG[@]}" 's/CREATED/CoinCreated/g' client/* server/*
