@@ -598,7 +598,7 @@ func (a *Asserter) Block(
 
 	// Only apply duplicate hash and index checks if the block index is not the
 	// genesis index.
-	if a.genesisBlock.Index != block.BlockIdentifier.Index {
+	if a.genesisBlock == nil || a.genesisBlock.Index != block.BlockIdentifier.Index {
 		if block.BlockIdentifier.Hash == block.ParentBlockIdentifier.Hash {
 			return ErrBlockHashEqualsParentBlockHash
 		}
