@@ -43,6 +43,7 @@ func TestWriteHeader(t *testing.T) {
 	hfrw.WriteHeader(200)
 
 	result := writer.Result()
+	defer result.Body.Close()
 	assert.Equal(t, 200, result.StatusCode)
 }
 
@@ -53,6 +54,7 @@ func TestWriteHeaderAddsHeaders(t *testing.T) {
 	hfrw.WriteHeader(200)
 
 	result := writer.Result()
+	defer result.Body.Close()
 	assert.Equal(t, 200, result.StatusCode)
 	assert.Equal(t, mockHeader.Values("test-header"), result.Header.Values("test-header"))
 }
@@ -66,6 +68,7 @@ func TestWriteAddsHeaders(t *testing.T) {
 	assert.Nil(t, err)
 
 	result := writer.Result()
+	defer result.Body.Close()
 	assert.Equal(t, 200, result.StatusCode)
 	assert.Equal(t, mockHeader.Values("test-header"), result.Header.Values("test-header"))
 }

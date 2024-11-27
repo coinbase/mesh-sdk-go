@@ -64,7 +64,14 @@ type mockInvoker struct {
 	err           error
 }
 
-func (m *mockInvoker) Invoke(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, opts ...grpc.CallOption) error {
+func (m *mockInvoker) Invoke(
+	ctx context.Context,
+	method string,
+	req,
+	reply interface{},
+	cc *grpc.ClientConn,
+	opts ...grpc.CallOption,
+) error {
 	m.LastRequestMD, _ = metadata.FromOutgoingContext(ctx)
 
 	// add response metadata to pointer from call option
@@ -212,8 +219,10 @@ func TestRoundTrip(t *testing.T) {
 
 			testReq := newRequest(ctx, nil)
 
-			_, err := hf.RoundTrip(testReq)
+			response, err := hf.RoundTrip(testReq)
 			assert.Equal(t, test.ExpectedError, err)
+
+			defer response.Body.Close()
 
 			outgoingReq := mockTransport.(*fakeTransport).LastRequest
 			capturedHeaders, _ := hf.GetResponseHeaders(requestID)
