@@ -263,7 +263,15 @@ func (hf *HeaderForwarder) RoundTrip(req *http.Request) (*http.Response, error) 
 	return resp, err
 }
 
-func (hf *HeaderForwarder) UnaryClientInterceptor(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+func (hf *HeaderForwarder) UnaryClientInterceptor(
+	ctx context.Context,
+	method string,
+	req,
+	reply interface{},
+	cc *grpc.ClientConn,
+	invoker grpc.UnaryInvoker,
+	opts ...grpc.CallOption,
+) error {
 	// Capture incoming headers from the grpc call
 	header := make(metadata.MD)
 	opts = append(opts, grpc.Header(&header))

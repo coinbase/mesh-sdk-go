@@ -62,7 +62,8 @@ func TestWriteAddsHeaders(t *testing.T) {
 	writer := httptest.NewRecorder()
 	hfrw := NewResponseWriter(writer, "test-id", mockGetter("test-id", mockHeader))
 
-	hfrw.Write([]byte("test-bytes"))
+	_, err := hfrw.Write([]byte("test-bytes"))
+	assert.Nil(t, err)
 
 	result := writer.Result()
 	assert.Equal(t, 200, result.StatusCode)
