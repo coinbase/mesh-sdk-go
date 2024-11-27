@@ -33,5 +33,5 @@ type NetworkStatusResponse struct {
 	GenesisBlockIdentifier *BlockIdentifier `json:"genesis_block_identifier"`
 	OldestBlockIdentifier  *BlockIdentifier `json:"oldest_block_identifier,omitempty"`
 	SyncStatus             *SyncStatus      `json:"sync_status,omitempty"`
-	Peers                  []*Peer          `json:"peers"`
+	Peers                  []*Peer          `json:"peers,omitempty"`
 }
