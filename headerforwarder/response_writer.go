@@ -23,6 +23,7 @@ import (
 // responses, and set on the rosetta response.
 type ResponseWriter struct {
 	writer               http.ResponseWriter
+	calledWriteHeaders   bool
 	RosettaRequestID     string
 	GetAdditionalHeaders func(string) (http.Header, bool)
 }
@@ -46,11 +47,16 @@ func (hfrw *ResponseWriter) Header() http.Header {
 
 // Write passes through to the underlying ResponseWriter instance
 func (hfrw *ResponseWriter) Write(b []byte) (int, error) {
+	if !hfrw.calledWriteHeaders {
+		hfrw.AddExtractedHeaders()
+	}
+
 	return hfrw.writer.Write(b)
 }
 
 // WriteHeader will add any final extracted headers, and then pass through to the underlying ResponseWriter instance
 func (hfrw *ResponseWriter) WriteHeader(statusCode int) {
+	hfrw.calledWriteHeaders = true
 	hfrw.AddExtractedHeaders()
 	hfrw.writer.WriteHeader(statusCode)
 }
