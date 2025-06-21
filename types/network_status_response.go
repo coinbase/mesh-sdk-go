@@ -1,4 +1,4 @@
-// Copyright 2024 Coinbase, Inc.
+// Copyright 2025 Coinbase, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -33,5 +33,5 @@ type NetworkStatusResponse struct {
 	GenesisBlockIdentifier *BlockIdentifier `json:"genesis_block_identifier"`
 	OldestBlockIdentifier  *BlockIdentifier `json:"oldest_block_identifier,omitempty"`
 	SyncStatus             *SyncStatus      `json:"sync_status,omitempty"`
-	Peers                  []*Peer          `json:"peers"`
+	Peers                  []*Peer          `json:"peers,omitempty"`
 }
