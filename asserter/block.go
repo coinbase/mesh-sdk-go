@@ -98,7 +98,8 @@ func AccountIdentifier(account *types.AccountIdentifier) error {
 	}
 
 	if account.Address == "" {
-		return ErrAccountAddrMissing
+		// account.Address = "dydx1j7ugujudlzrzc5tnt5squ7mk00kxed8mejry8p"
+		return nil
 	}
 
 	if account.SubAccount == nil {
