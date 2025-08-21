@@ -223,7 +223,7 @@ You may contribute to the `mesh-sdk-go` project in various ways:
 * [Providing Feedback](CONTRIBUTING.md/#providing-feedback)
 * [Reporting Issues](CONTRIBUTING.md/#reporting-issues)
 
-Read our [Contributing](CONTRIBUTING.MD) documentation for more information.
+Read our [Contributing](CONTRIBUTING.md) documentation for more information.
 
 <!-- h2 Documentation links -->
 ## Documentation
