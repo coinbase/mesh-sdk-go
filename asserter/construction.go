@@ -81,11 +81,7 @@ func (a *Asserter) ConstructionPreprocessOperationsResponse(
 	}
 
 	// Metadata is optional raw JSON bytes, no specific validation needed
-	// beyond ensuring it's valid JSON if present
-	if len(response.Metadata) > 0 {
-		// Basic JSON validation could be added here if needed
-		// For now, we accept any byte array as metadata
-	}
+	// We accept any byte array as metadata since it's opaque data from the blockchain
 
 	return nil
 }
