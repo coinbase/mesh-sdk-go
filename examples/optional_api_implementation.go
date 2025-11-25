@@ -112,7 +112,10 @@ func (s *ExampleConstructionService) ConstructionPreprocessOperations(
 	ctx context.Context,
 	request *types.ConstructionPreprocessOperationsRequest,
 ) (*types.ConstructionPreprocessOperationsResponse, *types.Error) {
-	// Option 1: Simple "not implemented" response (minimal effort)
+	// This is an OPTIONAL API - you can simply return "Not Implemented"
+	// if your blockchain doesn't need fallback operation parsing
+
+	// Simple "not implemented" response (recommended for most implementations)
 	return nil, &types.Error{
 		Code:    501, // HTTP 501 Not Implemented
 		Message: "ConstructionPreprocessOperations not supported by this implementation",
@@ -121,37 +124,41 @@ func (s *ExampleConstructionService) ConstructionPreprocessOperations(
 			"suggestion":   "This Rosetta implementation doesn't support fallback operation parsing",
 		},
 	}
+}
 
-	// Option 2: If you want to implement it, you would:
-	// 1. Parse the construct_op (e.g., "transfer", "stake", "delegate")
-	// 2. Convert high-level operation into Rosetta operations
-	// 3. Return operations, max_fee, and metadata
-	//
-	// Example implementation structure:
-	/*
-		switch request.ConstructOp {
-		case "transfer":
-			// Parse transfer operation from request.Options
-			// Create Rosetta operations for the transfer
-			return &types.ConstructionPreprocessOperationsResponse{
-				Operations: []*types.Operation{
-					// ... transfer operations
-				},
-				MaxFee:   calculateMaxFee(request),
-				Metadata: buildMetadata(request),
-			}, nil
+// ExampleFullImplementation shows how to implement ConstructionPreprocessOperations
+// if you want to provide actual operation parsing functionality
+func ExampleFullImplementation(
+	ctx context.Context,
+	request *types.ConstructionPreprocessOperationsRequest,
+) (*types.ConstructionPreprocessOperationsResponse, *types.Error) {
+	// Parse the construct_op and convert to Rosetta operations
+	switch request.ConstructOp {
+	case "transfer":
+		// Parse transfer operation from request.Options
+		// Create Rosetta operations for the transfer
+		return &types.ConstructionPreprocessOperationsResponse{
+			Operations: []*types.Operation{
+				// ... transfer operations would be built here
+			},
+			MaxFee:   nil, // calculateMaxFee(request),
+			Metadata: nil, // buildMetadata(request),
+		}, nil
 
-		case "stake":
-			// Handle staking operations
-			// ...
+	case "stake":
+		// Handle staking operations
+		return &types.ConstructionPreprocessOperationsResponse{
+			Operations: []*types.Operation{
+				// ... staking operations would be built here
+			},
+		}, nil
 
-		default:
-			return nil, &types.Error{
-				Code:    400,
-				Message: fmt.Sprintf("Unsupported construct_op: %s", request.ConstructOp),
-			}
+	default:
+		return nil, &types.Error{
+			Code:    400,
+			Message: "Unsupported construct_op: " + request.ConstructOp,
 		}
-	*/
+	}
 }
 
 func (s *ExampleConstructionService) ConstructionSubmit(
