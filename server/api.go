@@ -175,6 +175,10 @@ type ConstructionAPIServicer interface {
 		context.Context,
 		*types.ConstructionPreprocessRequest,
 	) (*types.ConstructionPreprocessResponse, *types.Error)
+	// ConstructionPreprocessOperations is an OPTIONAL API that provides fallback parsing
+	// for high-level transaction construction operations when local OperationSelector
+	// doesn't support certain construct operations. Implementations can return an error
+	// with code 501 (Not Implemented) if they don't support this functionality.
 	ConstructionPreprocessOperations(
 		context.Context,
 		*types.ConstructionPreprocessOperationsRequest,
