@@ -322,6 +322,30 @@ func (a *Asserter) ConstructionPreprocessRequest(
 	return nil
 }
 
+// ConstructionPreprocessOperationsRequest ensures that a types.ConstructionPreprocessOperationsRequest
+// is well-formatted.
+func (a *Asserter) ConstructionPreprocessOperationsRequest(
+	request *types.ConstructionPreprocessOperationsRequest,
+) error {
+	if a == nil {
+		return ErrAsserterNotInitialized
+	}
+
+	if request == nil {
+		return ErrConstructionPreprocessOperationsRequestIsNil
+	}
+
+	if err := a.ValidSupportedNetwork(request.NetworkIdentifier); err != nil {
+		return err
+	}
+
+	if len(request.ConstructOp) == 0 {
+		return ErrConstructionPreprocessOperationsRequestConstructOpEmpty
+	}
+
+	return nil
+}
+
 // ConstructionPayloadsRequest ensures that a types.ConstructionPayloadsRequest
 // is well-formatted.
 func (a *Asserter) ConstructionPayloadsRequest(request *types.ConstructionPayloadsRequest) error {

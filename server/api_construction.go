@@ -89,6 +89,12 @@ func (c *ConstructionAPIController) Routes() Routes {
 			c.ConstructionPreprocess,
 		},
 		{
+			"ConstructionPreprocessOperations",
+			strings.ToUpper("Post"),
+			"/construction/preprocess_operations",
+			c.ConstructionPreprocessOperations,
+		},
+		{
 			"ConstructionSubmit",
 			strings.ToUpper("Post"),
 			"/construction/submit",
@@ -300,6 +306,39 @@ func (c *ConstructionAPIController) ConstructionPreprocess(w http.ResponseWriter
 	result, serviceErr := c.service.ConstructionPreprocess(
 		r.Context(),
 		constructionPreprocessRequest,
+	)
+	if serviceErr != nil {
+		EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
+
+		return
+	}
+
+	EncodeJSONResponse(result, http.StatusOK, w)
+}
+
+// ConstructionPreprocessOperations - Parse and Validate Operations via Rosetta API
+func (c *ConstructionAPIController) ConstructionPreprocessOperations(w http.ResponseWriter, r *http.Request) {
+	constructionPreprocessOperationsRequest := &types.ConstructionPreprocessOperationsRequest{}
+	if err := json.NewDecoder(r.Body).Decode(&constructionPreprocessOperationsRequest); err != nil {
+		EncodeJSONResponse(&types.Error{
+			Message: err.Error(),
+		}, http.StatusInternalServerError, w)
+
+		return
+	}
+
+	// Assert that ConstructionPreprocessOperationsRequest is correct
+	if err := c.asserter.ConstructionPreprocessOperationsRequest(constructionPreprocessOperationsRequest); err != nil {
+		EncodeJSONResponse(&types.Error{
+			Message: err.Error(),
+		}, http.StatusInternalServerError, w)
+
+		return
+	}
+
+	result, serviceErr := c.service.ConstructionPreprocessOperations(
+		r.Context(),
+		constructionPreprocessOperationsRequest,
 	)
 	if serviceErr != nil {
 		EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)

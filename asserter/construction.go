@@ -42,6 +42,54 @@ func ConstructionPreprocessResponse(
 	return nil
 }
 
+// ConstructionPreprocessOperationsResponse returns an error if
+// the processed operations or required public keys are not valid.
+func (a *Asserter) ConstructionPreprocessOperationsResponse(
+	response *types.ConstructionPreprocessOperationsResponse,
+) error {
+	if a == nil {
+		return ErrAsserterNotInitialized
+	}
+
+	if response == nil {
+		return ErrConstructionPreprocessOperationsResponseIsNil
+	}
+
+	// Validate operations if present
+	if len(response.Operations) > 0 {
+		for i, operation := range response.Operations {
+			if err := a.Operation(operation, int64(i), true); err != nil {
+				return fmt.Errorf(
+					"operation %d %s is invalid: %w",
+					i,
+					types.PrintStruct(operation),
+					err,
+				)
+			}
+		}
+	}
+
+	// Validate max fee if present
+	if response.MaxFee != nil {
+		if err := Amount(response.MaxFee); err != nil {
+			return fmt.Errorf(
+				"max fee %s is invalid: %w",
+				types.PrintStruct(response.MaxFee),
+				err,
+			)
+		}
+	}
+
+	// Metadata is optional raw JSON bytes, no specific validation needed
+	// beyond ensuring it's valid JSON if present
+	if len(response.Metadata) > 0 {
+		// Basic JSON validation could be added here if needed
+		// For now, we accept any byte array as metadata
+	}
+
+	return nil
+}
+
 // ConstructionMetadataResponse returns an error if
 // the metadata is not a JSON object.
 func ConstructionMetadataResponse(

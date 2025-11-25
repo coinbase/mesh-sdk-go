@@ -299,6 +299,48 @@ func (f *Fetcher) ConstructionPreprocess(
 	return response.Options, response.RequiredPublicKeys, nil
 }
 
+// ConstructionPreprocessOperations returns the validated response
+// from the ConstructionPreprocessOperations method. This endpoint
+// allows parsing high-level transaction construction operations into
+// Rosetta operations when the local OperationSelector doesn't support
+// certain operations. The return values match ParseTransactionConstructOp format.
+func (f *Fetcher) ConstructionPreprocessOperations(
+	ctx context.Context,
+	network *types.NetworkIdentifier,
+	fromAddress string,
+	constructOp string,
+	options map[string]interface{},
+) ([]*types.Operation, *types.Amount, []byte, *Error) {
+	if err := f.connectionSemaphore.Acquire(ctx, semaphoreRequestWeight); err != nil {
+		return nil, nil, nil, &Error{
+			Err: fmt.Errorf("failed to acquire semaphore: %w", err),
+		}
+	}
+	defer f.connectionSemaphore.Release(semaphoreRequestWeight)
+
+	response, clientErr, err := f.rosettaClient.ConstructionAPI.ConstructionPreprocessOperations(ctx,
+		&types.ConstructionPreprocessOperationsRequest{
+			NetworkIdentifier: network,
+			FromAddress:       fromAddress,
+			ConstructOp:       constructOp,
+			Options:           options,
+		},
+	)
+
+	if err != nil {
+		return nil, nil, nil, f.RequestFailedError(clientErr, err, "/construction/preprocess_operations")
+	}
+
+	if err := f.Asserter.ConstructionPreprocessOperationsResponse(response); err != nil {
+		fetcherErr := &Error{
+			Err: fmt.Errorf("/construction/preprocess_operations response is invalid: %w", err),
+		}
+		return nil, nil, nil, fetcherErr
+	}
+
+	return response.Operations, response.MaxFee, response.Metadata, nil
+}
+
 // ConstructionSubmit returns the validated response
 // from the ConstructionSubmit method.
 func (f *Fetcher) ConstructionSubmit(

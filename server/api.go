@@ -64,6 +64,7 @@ type ConstructionAPIRouter interface {
 	ConstructionParse(http.ResponseWriter, *http.Request)
 	ConstructionPayloads(http.ResponseWriter, *http.Request)
 	ConstructionPreprocess(http.ResponseWriter, *http.Request)
+	ConstructionPreprocessOperations(http.ResponseWriter, *http.Request)
 	ConstructionSubmit(http.ResponseWriter, *http.Request)
 }
 
@@ -174,6 +175,10 @@ type ConstructionAPIServicer interface {
 		context.Context,
 		*types.ConstructionPreprocessRequest,
 	) (*types.ConstructionPreprocessResponse, *types.Error)
+	ConstructionPreprocessOperations(
+		context.Context,
+		*types.ConstructionPreprocessOperationsRequest,
+	) (*types.ConstructionPreprocessOperationsResponse, *types.Error)
 	ConstructionSubmit(
 		context.Context,
 		*types.ConstructionSubmitRequest,
