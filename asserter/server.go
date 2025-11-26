@@ -322,7 +322,8 @@ func (a *Asserter) ConstructionPreprocessRequest(
 	return nil
 }
 
-// ConstructionPreprocessOperationsRequest ensures that a types.ConstructionPreprocessOperationsRequest
+// ConstructionPreprocessOperationsRequest ensures that a
+// types.ConstructionPreprocessOperationsRequest
 // is well-formatted.
 func (a *Asserter) ConstructionPreprocessOperationsRequest(
 	request *types.ConstructionPreprocessOperationsRequest,

@@ -318,7 +318,8 @@ func (f *Fetcher) ConstructionPreprocessOperations(
 	}
 	defer f.connectionSemaphore.Release(semaphoreRequestWeight)
 
-	response, clientErr, err := f.rosettaClient.ConstructionAPI.ConstructionPreprocessOperations(ctx,
+	response, clientErr, err := f.rosettaClient.ConstructionAPI.ConstructionPreprocessOperations(
+		ctx,
 		&types.ConstructionPreprocessOperationsRequest{
 			NetworkIdentifier: network,
 			FromAddress:       fromAddress,
@@ -328,7 +329,11 @@ func (f *Fetcher) ConstructionPreprocessOperations(
 	)
 
 	if err != nil {
-		return nil, nil, nil, f.RequestFailedError(clientErr, err, "/construction/preprocess_operations")
+		return nil, nil, nil, f.RequestFailedError(
+			clientErr,
+			err,
+			"/construction/preprocess_operations",
+		)
 	}
 
 	if err := f.Asserter.ConstructionPreprocessOperationsResponse(response); err != nil {
