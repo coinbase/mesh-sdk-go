@@ -322,7 +322,7 @@ func (f *Fetcher) ConstructionPreprocessOperations(
 		ctx,
 		&types.ConstructionPreprocessOperationsRequest{
 			NetworkIdentifier: network,
-			FromAddress:       fromAddress,
+			FromAddress:       &fromAddress,
 			ConstructOp:       constructOp,
 			Options:           options,
 		},
@@ -343,7 +343,12 @@ func (f *Fetcher) ConstructionPreprocessOperations(
 		return nil, nil, nil, fetcherErr
 	}
 
-	return response.Operations, response.MaxFee, response.Metadata, nil
+	var metadata []byte
+	if response.Metadata != nil {
+		metadata = []byte(*response.Metadata)
+	}
+
+	return response.Operations, response.MaxFee, metadata, nil
 }
 
 // ConstructionSubmit returns the validated response
