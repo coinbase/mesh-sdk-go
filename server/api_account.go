@@ -58,6 +58,12 @@ func (c *AccountAPIController) Routes() Routes {
 			"/account/coins",
 			c.AccountCoins,
 		},
+		{
+			"AccountAllBalances",
+			strings.ToUpper("Post"),
+			"/account/all_balances",
+			c.AccountAllBalances,
+		},
 	}
 }
 
@@ -112,6 +118,37 @@ func (c *AccountAPIController) AccountCoins(w http.ResponseWriter, r *http.Reque
 	}
 
 	result, serviceErr := c.service.AccountCoins(r.Context(), accountCoinsRequest)
+	if serviceErr != nil {
+		EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
+
+		return
+	}
+
+	EncodeJSONResponse(result, http.StatusOK, w)
+}
+
+
+// AccountAllBalances - Get all Account Balances for all sub-accounts
+func (c *AccountAPIController) AccountAllBalances(w http.ResponseWriter, r *http.Request) {
+	accountAllBalancesRequest := &types.AccountAllBalancesRequest{}
+	if err := json.NewDecoder(r.Body).Decode(&accountAllBalancesRequest); err != nil {
+		EncodeJSONResponse(&types.Error{
+			Message: err.Error(),
+		}, http.StatusInternalServerError, w)
+
+		return
+	}
+
+	// Assert that AccountAllBalancesRequest is correct
+	if err := c.asserter.AccountAllBalancesRequest(accountAllBalancesRequest); err != nil {
+		EncodeJSONResponse(&types.Error{
+			Message: err.Error(),
+		}, http.StatusInternalServerError, w)
+
+		return
+	}
+
+	result, serviceErr := c.service.AccountAllBalances(r.Context(), accountAllBalancesRequest)
 	if serviceErr != nil {
 		EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
 

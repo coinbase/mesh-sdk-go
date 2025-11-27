@@ -31,6 +31,7 @@ import (
 type AccountAPIRouter interface {
 	AccountBalance(http.ResponseWriter, *http.Request)
 	AccountCoins(http.ResponseWriter, *http.Request)
+	AccountAllBalances(http.ResponseWriter, *http.Request)
 }
 
 // BlockAPIRouter defines the required methods for binding the api requests to a responses for the
@@ -119,6 +120,10 @@ type AccountAPIServicer interface {
 		context.Context,
 		*types.AccountCoinsRequest,
 	) (*types.AccountCoinsResponse, *types.Error)
+	AccountAllBalances(
+		context.Context,
+		*types.AccountAllBalancesRequest,
+	) (*types.AccountAllBalancesResponse, *types.Error)
 }
 
 // BlockAPIServicer defines the api actions for the BlockAPI service
