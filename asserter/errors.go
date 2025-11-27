@@ -178,6 +178,9 @@ var (
 	ErrConstructionPreprocessResponseIsNil = errors.New(
 		"ConstructionPreprocessResponse cannot be nil",
 	)
+	ErrConstructionPreprocessOperationsResponseIsNil = errors.New(
+		"ConstructionPreprocessOperationsResponse cannot be nil",
+	)
 	ErrConstructionMetadataResponseIsNil = errors.New(
 		"ConstructionMetadataResponse cannot be nil",
 	)
@@ -232,6 +235,7 @@ var (
 
 	ConstructionErrs = []error{
 		ErrConstructionPreprocessResponseIsNil,
+		ErrConstructionPreprocessOperationsResponseIsNil,
 		ErrConstructionMetadataResponseIsNil,
 		ErrConstructionMetadataResponseMetadataMissing,
 		ErrTxIdentifierResponseIsNil,
@@ -378,6 +382,12 @@ var (
 	ErrConstructionPreprocessRequestIsNil = errors.New(
 		"ConstructionPreprocessRequest is nil",
 	)
+	ErrConstructionPreprocessOperationsRequestIsNil = errors.New(
+		"ConstructionPreprocessOperationsRequest is nil",
+	)
+	ErrConstructionPreprocessOperationsRequestConstructOpEmpty = errors.New(
+		"ConstructionPreprocessOperationsRequest construct_op cannot be empty",
+	)
 	ErrConstructionPreprocessRequestSuggestedFeeMultiplierIsNeg = errors.New(
 		"suggested fee multiplier cannot be less than 0",
 	)
@@ -418,6 +428,8 @@ var (
 		ErrNetworkRequestIsNil,
 		ErrConstructionDeriveRequestIsNil,
 		ErrConstructionPreprocessRequestIsNil,
+		ErrConstructionPreprocessOperationsRequestIsNil,
+		ErrConstructionPreprocessOperationsRequestConstructOpEmpty,
 		ErrConstructionPreprocessRequestSuggestedFeeMultiplierIsNeg,
 		ErrConstructionPayloadsRequestIsNil,
 		ErrConstructionCombineRequestIsNil,
