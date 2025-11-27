@@ -731,6 +731,108 @@ func (a *ConstructionAPIService) ConstructionPreprocess(
 	}
 }
 
+// ConstructionPreprocessOperations PreprocessOperations is called to parse and validate high-level
+// transaction construction operations into Rosetta operations. This endpoint allows the Rosetta
+// implementation to handle operation parsing that might not be supported by local client-side
+// parsers. This endpoint is OPTIONAL and implementations can return HTTP 501 (Not Implemented) if
+// they don&#39;t support this functionality. The input format matches TransactionConstructOpInput
+// used by chainstdio, and the output format matches the return values of
+// ParseTransactionConstructOp to maintain compatibility with existing operation parsing workflows.
+func (a *ConstructionAPIService) ConstructionPreprocessOperations(
+	ctx _context.Context,
+	constructionPreprocessOperationsRequest *types.ConstructionPreprocessOperationsRequest,
+) (*types.ConstructionPreprocessOperationsResponse, *types.Error, error) {
+	var (
+		localVarPostBody interface{}
+	)
+
+	// create path and map variables
+	localVarPath := a.client.cfg.BasePath + "/construction/preprocess_operations"
+	localVarHeaderParams := make(map[string]string)
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{"application/json"}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	// body params
+	localVarPostBody = constructionPreprocessOperationsRequest
+
+	r, err := a.client.prepareRequest(ctx, localVarPath, localVarPostBody, localVarHeaderParams)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to prepare request: %w", err)
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(ctx, r)
+	if err != nil || localVarHTTPResponse == nil {
+		return nil, nil, fmt.Errorf("failed to call API: %w", err)
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	defer func() {
+		_, _ = io.Copy(io.Discard, localVarHTTPResponse.Body)
+		_ = localVarHTTPResponse.Body.Close()
+	}()
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to read response: %w", err)
+	}
+
+	switch localVarHTTPResponse.StatusCode {
+	case _nethttp.StatusOK:
+		var v types.ConstructionPreprocessOperationsResponse
+		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+		if err != nil {
+			return nil, nil, fmt.Errorf(
+				"failed to decode when hit status code 200, response body %s: %w",
+				string(localVarBody),
+				err,
+			)
+		}
+
+		return &v, nil, nil
+	case _nethttp.StatusInternalServerError:
+		var v types.Error
+		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+		if err != nil {
+			return nil, nil, fmt.Errorf(
+				"failed to decode when hit status code 500, response body %s: %w",
+				string(localVarBody),
+				err,
+			)
+		}
+
+		return nil, &v, fmt.Errorf("error %+v", v)
+	case _nethttp.StatusBadGateway,
+		_nethttp.StatusServiceUnavailable,
+		_nethttp.StatusGatewayTimeout,
+		_nethttp.StatusRequestTimeout:
+		return nil, nil, fmt.Errorf(
+			"status code %d, response body %s: %w",
+			localVarHTTPResponse.StatusCode,
+			string(localVarBody),
+			ErrRetriable,
+		)
+	default:
+		return nil, nil, fmt.Errorf(
+			"invalid status code %d, response body %s",
+			localVarHTTPResponse.StatusCode,
+			string(localVarBody),
+		)
+	}
+}
+
 // ConstructionSubmit Submit a pre-signed transaction to the node. This call should not block on the
 // transaction being included in a block. Rather, it should return immediately with an indication of
 // whether or not the transaction was included in the mempool. The transaction submission response
