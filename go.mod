@@ -25,6 +25,8 @@ require (
 	google.golang.org/grpc v1.61.2
 )
 
+replace github.com/coinbase/rosetta-sdk-go/types => ./types
+
 require (
 	filippo.io/edwards25519 v1.0.0-rc.1 // indirect
 	github.com/btcsuite/btcutil v1.0.3-0.20201208143702-a53e38424cce // indirect

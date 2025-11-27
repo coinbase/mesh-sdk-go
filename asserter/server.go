@@ -627,3 +627,38 @@ func (a *Asserter) SearchTransactionsRequest( // nolint:gocognit
 
 	return nil
 }
+
+
+// AccountAllBalancesRequest ensures that a types.AccountAllBalancesRequest
+// is well-formatted.
+func (a *Asserter) AccountAllBalancesRequest(request *types.AccountAllBalancesRequest) error {
+	if a == nil {
+		return ErrAsserterNotInitialized
+	}
+
+	if request == nil {
+		return ErrAccountAllBalancesRequestIsNil
+	}
+
+	if err := a.ValidSupportedNetwork(request.NetworkIdentifier); err != nil {
+		return err
+	}
+
+	if err := AccountIdentifier(request.AccountIdentifier); err != nil {
+		return fmt.Errorf(
+			"account identifier %s is invalid: %w",
+			types.PrintStruct(request.AccountIdentifier),
+			err,
+		)
+	}
+
+	if currency := ContainsDuplicateCurrency(request.Currencies); currency != nil {
+		return fmt.Errorf(
+			"currency %s is invalid: %w",
+			types.PrintStruct(currency),
+			ErrCurrencyUsedMultipleTimes,
+		)
+	}
+
+	return nil
+}
