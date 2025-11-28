@@ -246,17 +246,17 @@ func (a *AccountAPIService) AccountCoins(
 }
 
 
-// AccountAllBalances Get an array of all AccountBalances for all sub-accounts of an AccountIdentifier
+// AllAccountBalances Get an array of all AccountBalances for all sub-accounts of an AccountIdentifier
 // and the BlockIdentifier at which the balance lookup was performed. This endpoint returns balances
 // for the main account and all associated sub-accounts in a single request, eliminating the need to
 // make multiple individual /account/balance calls. The BlockIdentifier must always be returned because
 // some consumers of account balance data need to know specifically at which block the balance was calculated.
 // It is also possible to perform a historical balance lookup (if the server supports it) by passing in an
 // optional BlockIdentifier.
-func (a *AccountAPIService) AccountAllBalances(
+func (a *AccountAPIService) AllAccountBalances(
 	ctx _context.Context,
-	accountAllBalancesRequest *types.AccountAllBalancesRequest,
-) (*types.AccountAllBalancesResponse, *types.Error, error) {
+	accountAllBalancesRequest *types.AllAccountBalancesRequest,
+) (*types.AllAccountBalancesResponse, *types.Error, error) {
 	var (
 		localVarPostBody interface{}
 	)
@@ -306,7 +306,7 @@ func (a *AccountAPIService) AccountAllBalances(
 
 	switch localVarHTTPResponse.StatusCode {
 	case _nethttp.StatusOK:
-		var v types.AccountAllBalancesResponse
+		var v types.AllAccountBalancesResponse
 		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
 		if err != nil {
 			return nil, nil, fmt.Errorf(

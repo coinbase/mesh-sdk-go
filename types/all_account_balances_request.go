@@ -16,12 +16,12 @@
 
 package types
 
-// AccountAllBalancesRequest An AccountAllBalancesRequest is utilized to make a balance request
+// AllAccountBalancesRequest An AllAccountBalancesRequest is utilized to make a balance request
 // for all sub-accounts on the /account/all_balances endpoint. This endpoint returns balances
 // for the main account and all associated sub-accounts in a single request, eliminating the
 // need to make multiple individual /account/balance calls for each sub-account.
 // The endpoint automatically returns all available sub-account types for the given account.
-type AccountAllBalancesRequest struct {
+type AllAccountBalancesRequest struct {
 	NetworkIdentifier *NetworkIdentifier      `json:"network_identifier"`
 	AccountIdentifier *AccountIdentifier      `json:"account_identifier"`
 	BlockIdentifier   *PartialBlockIdentifier `json:"block_identifier,omitempty"`

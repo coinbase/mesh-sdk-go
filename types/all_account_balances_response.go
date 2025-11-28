@@ -16,10 +16,10 @@
 
 package types
 
-// AccountAllBalancesResponse An AccountAllBalancesResponse is returned on the /account/all_balances
+// AllAccountBalancesResponse An AllAccountBalancesResponse is returned on the /account/all_balances
 // endpoint. It contains balances for the main account and all associated sub-accounts, along with
 // their respective sub-account identifiers and balance types.
-type AccountAllBalancesResponse struct {
+type AllAccountBalancesResponse struct {
 	BlockIdentifier *BlockIdentifier `json:"block_identifier"`
 	// Array of account balances including main account and all sub-accounts.
 	// Each balance includes the sub-account identifier and balance type information.

@@ -629,15 +629,15 @@ func (a *Asserter) SearchTransactionsRequest( // nolint:gocognit
 }
 
 
-// AccountAllBalancesRequest ensures that a types.AccountAllBalancesRequest
+// AllAccountBalancesRequest ensures that a types.AllAccountBalancesRequest
 // is well-formatted.
-func (a *Asserter) AccountAllBalancesRequest(request *types.AccountAllBalancesRequest) error {
+func (a *Asserter) AllAccountBalancesRequest(request *types.AllAccountBalancesRequest) error {
 	if a == nil {
 		return ErrAsserterNotInitialized
 	}
 
 	if request == nil {
-		return ErrAccountAllBalancesRequestIsNil
+		return ErrAllAccountBalancesRequestIsNil
 	}
 
 	if err := a.ValidSupportedNetwork(request.NetworkIdentifier); err != nil {

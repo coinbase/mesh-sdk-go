@@ -228,13 +228,13 @@ func (f *Fetcher) AccountCoinsRetry(
 }
 
 
-// AccountAllBalances returns all balances for all sub-accounts of an account, given a network identifier,
+// AllAccountBalances returns all balances for all sub-accounts of an account, given a network identifier,
 // account identifier and partial block identifier. It is important to note that making a balance request
 // for an account without populating the SubAccountIdentifier should not result in the balance of all
 // possible SubAccountIdentifiers being returned. Rather, it should result in the balance pertaining to no
 // SubAccountIdentifiers being returned (sometimes called the liquid balance). This endpoint returns all
 // sub-account balances in a single request.
-func (f *Fetcher) AccountAllBalances(
+func (f *Fetcher) AllAccountBalances(
 	ctx context.Context,
 	network *types.NetworkIdentifier,
 	account *types.AccountIdentifier,
@@ -250,8 +250,8 @@ func (f *Fetcher) AccountAllBalances(
 	}
 	defer f.connectionSemaphore.Release(semaphoreRequestWeight)
 
-	response, clientErr, err := f.rosettaClient.AccountAPI.AccountAllBalances(ctx,
-		&types.AccountAllBalancesRequest{
+	response, clientErr, err := f.rosettaClient.AccountAPI.AllAccountBalances(ctx,
+		&types.AllAccountBalancesRequest{
 			NetworkIdentifier: network,
 			AccountIdentifier: account,
 			BlockIdentifier:   block,
@@ -263,7 +263,7 @@ func (f *Fetcher) AccountAllBalances(
 	}
 
 	if f.Asserter != nil {
-		if err := asserter.AccountAllBalancesResponse(
+		if err := asserter.AllAccountBalancesResponse(
 			block,
 			response,
 		); err != nil {
@@ -277,8 +277,8 @@ func (f *Fetcher) AccountAllBalances(
 	return response.BlockIdentifier, response.AccountBalances, response.Metadata, nil
 }
 
-// AccountAllBalancesRetry retrieves the validated account all balances of an account with a specified number of retries and max elapsed time.
-func (f *Fetcher) AccountAllBalancesRetry(
+// AllAccountBalancesRetry retrieves the validated account all balances of an account with a specified number of retries and max elapsed time.
+func (f *Fetcher) AllAccountBalancesRetry(
 	ctx context.Context,
 	network *types.NetworkIdentifier,
 	account *types.AccountIdentifier,
@@ -291,7 +291,7 @@ func (f *Fetcher) AccountAllBalancesRetry(
 	)
 
 	for {
-		responseBlock, balances, metadata, err := f.AccountAllBalances(
+		responseBlock, balances, metadata, err := f.AllAccountBalances(
 			ctx,
 			network,
 			account,
