@@ -259,7 +259,7 @@ func (f *Fetcher) AllAccountBalances(
 		},
 	)
 	if err != nil {
-		return nil, nil, nil, f.RequestFailedError(clientErr, err, "/account/all_balances")
+		return nil, nil, nil, f.RequestFailedError(clientErr, err, "/account/all-balances")
 	}
 
 	if f.Asserter != nil {
@@ -310,7 +310,7 @@ func (f *Fetcher) AllAccountBalancesRetry(
 		}
 
 		if is, _ := asserter.Err(err.Err); is {
-			errForPrint := fmt.Errorf("/account/all_balances not attempting retry: %w", err.Err)
+			errForPrint := fmt.Errorf("/account/all-balances not attempting retry: %w", err.Err)
 			color.Red(errForPrint.Error())
 			fetcherErr := &Error{
 				Err:       errForPrint,
@@ -319,7 +319,7 @@ func (f *Fetcher) AllAccountBalancesRetry(
 			return nil, nil, nil, fetcherErr
 		}
 
-		msg := fmt.Sprintf("/account/all_balances %s%s", types.PrintStruct(account), f.metaData)
+		msg := fmt.Sprintf("/account/all-balances %s%s", types.PrintStruct(account), f.metaData)
 		color.Cyan(msg)
 		tryAgainErr := tryAgain(msg, backoffRetries, err)
 		if tryAgainErr != nil {
