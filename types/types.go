@@ -18,5 +18,5 @@ const (
 	// RosettaAPIVersion is the version of the Rosetta API
 	// specification used to generate code for this release
 	// of the SDK.
-	RosettaAPIVersion = "1.5.1"
+	RosettaAPIVersion = "1.6.1"
 )
