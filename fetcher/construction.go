@@ -332,13 +332,13 @@ func (f *Fetcher) ConstructionPreprocessOperations(
 		return nil, nil, nil, f.RequestFailedError(
 			clientErr,
 			err,
-			"/construction/preprocess_operations",
+			"/construction/preprocess-operations",
 		)
 	}
 
 	if err := f.Asserter.ConstructionPreprocessOperationsResponse(response); err != nil {
 		fetcherErr := &Error{
-			Err: fmt.Errorf("/construction/preprocess_operations response is invalid: %w", err),
+			Err: fmt.Errorf("/construction/preprocess-operations response is invalid: %w", err),
 		}
 		return nil, nil, nil, fetcherErr
 	}
