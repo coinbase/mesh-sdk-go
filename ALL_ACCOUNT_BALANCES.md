@@ -1,8 +1,8 @@
-# AccountAllBalances API
+# AllAccountBalances API
 
 ## Overview
 
-The `AccountAllBalances` API endpoint provides a more efficient way to retrieve balances for all sub-accounts of a given account in a single request, rather than making multiple individual `/account/balance` calls.
+The `AllAccountBalances` API endpoint provides a more efficient way to retrieve balances for all sub-accounts of a given account in a single request, rather than making multiple individual `/account/balance` calls.
 
 ## Problem Solved
 
@@ -156,7 +156,7 @@ func main() {
     }
 
     // Get all balances in a single call
-    blockID, balances, metadata, err := f.AccountAllBalancesRetry(
+    blockID, balances, metadata, err := f.AllAccountBalancesRetry(
         context.Background(),
         networkID,
         accountID,
@@ -219,7 +219,7 @@ When implementing this endpoint:
 
 ### For Client Applications
 
-Benefits of using `AccountAllBalances`:
+Benefits of using `AllAccountBalances`:
 
 - **Reduced Latency**: Single network request vs multiple requests
 - **Consistency**: All balances from the same block height
@@ -235,7 +235,7 @@ delegatedBalance, _ := fetcher.AccountBalance(ctx, network, delegatedAccount, ni
 unbondingBalance, _ := fetcher.AccountBalance(ctx, network, unbondingAccount, nil, nil)
 
 // New approach - single call
-allBalances, _ := fetcher.AccountAllBalances(ctx, network, account, nil, nil)
+allBalances, _ := fetcher.AllAccountBalances(ctx, network, account, nil, nil)
 ```
 
 ## Compatibility
@@ -263,7 +263,7 @@ The SDK includes comprehensive tests and examples:
 
 This feature adds the following to the Rosetta API specification:
 
-- New request type: `AccountAllBalancesRequest`
-- New response type: `AccountAllBalancesResponse`
+- New request type: `AllAccountBalancesRequest`
+- New response type: `AllAccountBalancesResponse`
 - New composite type: `AccountBalanceWithSubAccount`
 - New endpoint: `POST /account/all_balances`

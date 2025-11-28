@@ -149,13 +149,13 @@ func AccountCoinsResponse(
 }
 
 
-// AccountAllBalancesResponse returns an error if the provided
+// AllAccountBalancesResponse returns an error if the provided
 // types.BlockIdentifier is invalid, if the requestBlock
 // is not nil and not equal to the response block, or
 // if there are any validation errors in the account balances.
-func AccountAllBalancesResponse(
+func AllAccountBalancesResponse(
 	requestBlock *types.PartialBlockIdentifier,
-	response *types.AccountAllBalancesResponse,
+	response *types.AllAccountBalancesResponse,
 ) error {
 	if err := BlockIdentifier(response.BlockIdentifier); err != nil {
 		return fmt.Errorf(

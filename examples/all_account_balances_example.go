@@ -23,9 +23,9 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/types"
 )
 
-// ExampleAccountAllBalances demonstrates how to use the AccountAllBalances API
+// ExampleAllAccountBalances demonstrates how to use the AllAccountBalances API
 // to fetch all balances (main account and all sub-accounts) in a single request.
-func ExampleAccountAllBalances() {
+func ExampleAllAccountBalances() {
 	ctx := context.Background()
 
 	// Setup the fetcher with the server address
@@ -50,7 +50,7 @@ func ExampleAccountAllBalances() {
 	var currencies []*types.Currency = nil
 
 	// Fetch all account balances (main + all sub-accounts) in a single call
-	blockID, accountBalances, metadata, err := f.AccountAllBalancesRetry(
+	blockID, accountBalances, metadata, err := f.AllAccountBalancesRetry(
 		ctx,
 		networkIdentifier,
 		accountIdentifier,
@@ -95,9 +95,9 @@ func ExampleAccountAllBalances() {
 	}
 }
 
-// ExampleAccountAllBalancesVsIndividual demonstrates the difference between
-// using AccountAllBalances (single request) vs multiple AccountBalance calls.
-func ExampleAccountAllBalancesVsIndividual() {
+// ExampleAllAccountBalancesVsIndividual demonstrates the difference between
+// using AllAccountBalances (single request) vs multiple AccountBalance calls.
+func ExampleAllAccountBalancesVsIndividual() {
 	ctx := context.Background()
 	f := fetcher.New("https://rosetta-api.example.com")
 
@@ -110,14 +110,14 @@ func ExampleAccountAllBalancesVsIndividual() {
 		Address: "cosmos1abc123def456ghi789...",
 	}
 
-	fmt.Println("=== Method 1: Single AccountAllBalances Call ===")
+	fmt.Println("=== Method 1: Single AllAccountBalances Call ===")
 
 	// Single call to get all balances
-	blockID, allBalances, _, err := f.AccountAllBalancesRetry(
+	blockID, allBalances, _, err := f.AllAccountBalancesRetry(
 		ctx, networkIdentifier, accountIdentifier, nil, nil,
 	)
 	if err != nil {
-		log.Printf("AccountAllBalances error: %v", err)
+		log.Printf("AllAccountBalances error: %v", err)
 	} else {
 		fmt.Printf("✅ Single call returned %d balances at block %s\n",
 			len(allBalances), blockID.Hash)
@@ -158,14 +158,14 @@ func ExampleAccountAllBalancesVsIndividual() {
 		}
 	}
 
-	fmt.Println("\n💡 AccountAllBalances reduces network calls and provides consistent block context!")
+	fmt.Println("\n💡 AllAccountBalances reduces network calls and provides consistent block context!")
 }
 
 func main() {
-	fmt.Println("AccountAllBalances API Example")
+	fmt.Println("AllAccountBalances API Example")
 	fmt.Println("==============================")
 
 	// Comment out the examples you don't want to run
-	ExampleAccountAllBalances()
-	// ExampleAccountAllBalancesVsIndividual()
+	ExampleAllAccountBalances()
+	// ExampleAllAccountBalancesVsIndividual()
 }
