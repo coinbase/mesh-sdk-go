@@ -148,7 +148,6 @@ func AccountCoinsResponse(
 	return nil
 }
 
-
 // AllAccountBalancesResponse returns an error if the provided
 // types.BlockIdentifier is invalid, if the requestBlock
 // is not nil and not equal to the response block, or

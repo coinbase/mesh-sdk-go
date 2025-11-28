@@ -227,12 +227,12 @@ func (f *Fetcher) AccountCoinsRetry(
 	}
 }
 
-
-// AllAccountBalances returns all balances for all sub-accounts of an account, given a network identifier,
-// account identifier and partial block identifier. It is important to note that making a balance request
-// for an account without populating the SubAccountIdentifier should not result in the balance of all
-// possible SubAccountIdentifiers being returned. Rather, it should result in the balance pertaining to no
-// SubAccountIdentifiers being returned (sometimes called the liquid balance). This endpoint returns all
+// AllAccountBalances returns all balances for all sub-accounts of an account, given a network
+// identifier, account identifier and partial block identifier. It is important to note that making
+// a balance request for an account without populating the SubAccountIdentifier should not result in
+// the balance of all possible SubAccountIdentifiers being returned. Rather, it should result in the
+// balance pertaining to no SubAccountIdentifiers being returned (sometimes called the liquid
+// balance). This endpoint returns all
 // sub-account balances in a single request.
 func (f *Fetcher) AllAccountBalances(
 	ctx context.Context,
@@ -277,7 +277,8 @@ func (f *Fetcher) AllAccountBalances(
 	return response.BlockIdentifier, response.AccountBalances, nil, nil
 }
 
-// AllAccountBalancesRetry retrieves the validated account all balances of an account with a specified number of retries and max elapsed time.
+// AllAccountBalancesRetry retrieves the validated account all balances of an account with a
+// specified number of retries and max elapsed time.
 func (f *Fetcher) AllAccountBalancesRetry(
 	ctx context.Context,
 	network *types.NetworkIdentifier,

@@ -653,7 +653,6 @@ func (a *Asserter) SearchTransactionsRequest( // nolint:gocognit
 	return nil
 }
 
-
 // AllAccountBalancesRequest ensures that a types.AllAccountBalancesRequest
 // is well-formatted.
 func (a *Asserter) AllAccountBalancesRequest(request *types.AllAccountBalancesRequest) error {
