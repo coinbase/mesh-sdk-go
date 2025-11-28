@@ -61,7 +61,7 @@ func (c *AccountAPIController) Routes() Routes {
 		{
 			"AllAccountBalances",
 			strings.ToUpper("Post"),
-			"/account/all_balances",
+			"/account/all-balances",
 			c.AllAccountBalances,
 		},
 	}

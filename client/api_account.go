@@ -262,7 +262,7 @@ func (a *AccountAPIService) AllAccountBalances(
 	)
 
 	// create path and map variables
-	localVarPath := a.client.cfg.BasePath + "/account/all_balances"
+	localVarPath := a.client.cfg.BasePath + "/account/all-balances"
 	localVarHeaderParams := make(map[string]string)
 
 	// to determine the Content-Type header
