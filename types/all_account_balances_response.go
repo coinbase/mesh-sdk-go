@@ -18,23 +18,12 @@ package types
 
 // AllAccountBalancesResponse An AllAccountBalancesResponse is returned on the /account/all-balances
 // endpoint. It contains balances for the main account and all associated sub-accounts, along with
-// their respective sub-account identifiers and balance types.
+// their respective sub-account identifiers and balance types. This response provides all account
+// balances in a single request, eliminating the need for multiple calls to /account/balance with
+// different sub-account identifiers.
 type AllAccountBalancesResponse struct {
 	BlockIdentifier *BlockIdentifier `json:"block_identifier"`
-	// Array of account balances including main account and all sub-accounts.
-	// Each balance includes the sub-account identifier and balance type information.
+	// Array of account balances including main account and all sub-accounts. Each balance includes
+	// the sub-account identifier and balance type information.
 	AccountBalances []*AccountBalanceWithSubAccount `json:"account_balances"`
-}
-
-// AccountBalanceWithSubAccount Represents a balance for a specific account or sub-account,
-// including the sub-account identifier and balance type information.
-type AccountBalanceWithSubAccount struct {
-	// Sub-account identifier. Will be nil for the main account balance.
-	SubAccountIdentifier *SubAccountIdentifier `json:"sub_account_identifier,omitempty"`
-	// A single account/sub-account may have a balance in multiple currencies.
-	Balances []*Amount `json:"balances"`
-	// The type of balance (e.g., spendable, delegated, pending_undelegation, etc.)
-	BalanceType string `json:"balance_type,omitempty"`
-	// Sub-account specific metadata
-	Metadata map[string]interface{} `json:"metadata,omitempty"`
 }

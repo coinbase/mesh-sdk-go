@@ -127,11 +127,10 @@ func (c *AccountAPIController) AccountCoins(w http.ResponseWriter, r *http.Reque
 	EncodeJSONResponse(result, http.StatusOK, w)
 }
 
-
-// AllAccountBalances - Get all Account Balances for all sub-accounts
+// AllAccountBalances - Get All Account Balances
 func (c *AccountAPIController) AllAccountBalances(w http.ResponseWriter, r *http.Request) {
-	accountAllBalancesRequest := &types.AllAccountBalancesRequest{}
-	if err := json.NewDecoder(r.Body).Decode(&accountAllBalancesRequest); err != nil {
+	allAccountBalancesRequest := &types.AllAccountBalancesRequest{}
+	if err := json.NewDecoder(r.Body).Decode(&allAccountBalancesRequest); err != nil {
 		EncodeJSONResponse(&types.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)
@@ -140,7 +139,7 @@ func (c *AccountAPIController) AllAccountBalances(w http.ResponseWriter, r *http
 	}
 
 	// Assert that AllAccountBalancesRequest is correct
-	if err := c.asserter.AllAccountBalancesRequest(accountAllBalancesRequest); err != nil {
+	if err := c.asserter.AllAccountBalancesRequest(allAccountBalancesRequest); err != nil {
 		EncodeJSONResponse(&types.Error{
 			Message: err.Error(),
 		}, http.StatusInternalServerError, w)
@@ -148,7 +147,7 @@ func (c *AccountAPIController) AllAccountBalances(w http.ResponseWriter, r *http
 		return
 	}
 
-	result, serviceErr := c.service.AllAccountBalances(r.Context(), accountAllBalancesRequest)
+	result, serviceErr := c.service.AllAccountBalances(r.Context(), allAccountBalancesRequest)
 	if serviceErr != nil {
 		EncodeJSONResponse(serviceErr, http.StatusInternalServerError, w)
 

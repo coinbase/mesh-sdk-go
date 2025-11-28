@@ -49,9 +49,10 @@ done
 
 rm -rf tmp
 
-# Download spec file from releases
-ROSETTA_SPEC_VERSION=1.6.1
-curl -L https://github.com/coinbase/rosetta-specifications/releases/download/v${ROSETTA_SPEC_VERSION}/api.json -o api.json
+# Use local spec file from mesh-specifications (v1.7.1 tag exists but release not created yet)
+ROSETTA_SPEC_VERSION=1.7.1
+# curl -L https://github.com/coinbase/rosetta-specifications/releases/download/v${ROSETTA_SPEC_VERSION}/api.json -o api.json
+cp /Users/jacquescao/workspace/go/src/staking/acceleration/mesh-specifications/api.json api.json
 
 # Generate client + types code
 GENERATOR_VERSION=v5.4.0
