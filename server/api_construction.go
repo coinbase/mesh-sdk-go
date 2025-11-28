@@ -91,7 +91,7 @@ func (c *ConstructionAPIController) Routes() Routes {
 		{
 			"ConstructionPreprocessOperations",
 			strings.ToUpper("Post"),
-			"/construction/preprocess_operations",
+			"/construction/preprocess-operations",
 			c.ConstructionPreprocessOperations,
 		},
 		{

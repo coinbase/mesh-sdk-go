@@ -747,7 +747,7 @@ func (a *ConstructionAPIService) ConstructionPreprocessOperations(
 	)
 
 	// create path and map variables
-	localVarPath := a.client.cfg.BasePath + "/construction/preprocess_operations"
+	localVarPath := a.client.cfg.BasePath + "/construction/preprocess-operations"
 	localVarHeaderParams := make(map[string]string)
 
 	// to determine the Content-Type header

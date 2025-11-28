@@ -274,7 +274,7 @@ func (f *Fetcher) AllAccountBalances(
 		}
 	}
 
-	return response.BlockIdentifier, response.AccountBalances, response.Metadata, nil
+	return response.BlockIdentifier, response.AccountBalances, nil, nil
 }
 
 // AllAccountBalancesRetry retrieves the validated account all balances of an account with a specified number of retries and max elapsed time.

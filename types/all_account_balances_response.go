@@ -16,7 +16,7 @@
 
 package types
 
-// AllAccountBalancesResponse An AllAccountBalancesResponse is returned on the /account/all_balances
+// AllAccountBalancesResponse An AllAccountBalancesResponse is returned on the /account/all-balances
 // endpoint. It contains balances for the main account and all associated sub-accounts, along with
 // their respective sub-account identifiers and balance types.
 type AllAccountBalancesResponse struct {
@@ -24,10 +24,6 @@ type AllAccountBalancesResponse struct {
 	// Array of account balances including main account and all sub-accounts.
 	// Each balance includes the sub-account identifier and balance type information.
 	AccountBalances []*AccountBalanceWithSubAccount `json:"account_balances"`
-	// Account-based blockchains that utilize a nonce or sequence number should include that number
-	// in the metadata. This number could be unique to the identifier or global across the account
-	// address.
-	Metadata map[string]interface{} `json:"metadata,omitempty"`
 }
 
 // AccountBalanceWithSubAccount Represents a balance for a specific account or sub-account,
