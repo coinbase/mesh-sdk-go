@@ -17,7 +17,7 @@
 package types
 
 // ConstructionPreprocessOperationsRequest ConstructionPreprocessOperationsRequest is passed to the
-// `/construction/preprocess_operations` endpoint so that a Rosetta implementation can parse
+// `/construction/preprocess-operations` endpoint so that a Rosetta implementation can parse
 // high-level transaction construction operations into Rosetta operations. This endpoint allows the
 // Rosetta API to handle operation parsing that might not be supported by the local
 // OperationSelector.

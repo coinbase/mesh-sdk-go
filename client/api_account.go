@@ -244,3 +244,110 @@ func (a *AccountAPIService) AccountCoins(
 		)
 	}
 }
+
+// AllAccountBalances Get an array of all AccountBalances for all sub-accounts of an
+// AccountIdentifier and the BlockIdentifier at which the balance lookup was performed. This
+// endpoint returns balances for the main account and all associated sub-accounts in a single
+// request, eliminating the need to make multiple individual /account/balance calls. The
+// BlockIdentifier must always be returned because some consumers of account balance data need to
+// know specifically at which block the balance was calculated to compare balances they compute from
+// operations with the balance returned by the node. This endpoint automatically returns all
+// available sub-account types for the given account, including the main account balance and all
+// sub-accounts (e.g., delegated, unbonding, rewards, etc.). It is also possible to perform a
+// historical balance lookup (if the server supports it) by passing in an optional BlockIdentifier.
+// This endpoint provides better performance and consistency compared to making multiple individual
+// /account/balance requests, as all balances are guaranteed to be from the same block context.
+func (a *AccountAPIService) AllAccountBalances(
+	ctx _context.Context,
+	allAccountBalancesRequest *types.AllAccountBalancesRequest,
+) (*types.AllAccountBalancesResponse, *types.Error, error) {
+	var (
+		localVarPostBody interface{}
+	)
+
+	// create path and map variables
+	localVarPath := a.client.cfg.BasePath + "/account/all-balances"
+	localVarHeaderParams := make(map[string]string)
+
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{"application/json"}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	// body params
+	localVarPostBody = allAccountBalancesRequest
+
+	r, err := a.client.prepareRequest(ctx, localVarPath, localVarPostBody, localVarHeaderParams)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to prepare request: %w", err)
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(ctx, r)
+	if err != nil || localVarHTTPResponse == nil {
+		return nil, nil, fmt.Errorf("failed to call API: %w", err)
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	defer func() {
+		_, _ = io.Copy(io.Discard, localVarHTTPResponse.Body)
+		_ = localVarHTTPResponse.Body.Close()
+	}()
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to read response: %w", err)
+	}
+
+	switch localVarHTTPResponse.StatusCode {
+	case _nethttp.StatusOK:
+		var v types.AllAccountBalancesResponse
+		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+		if err != nil {
+			return nil, nil, fmt.Errorf(
+				"failed to decode when hit status code 200, response body %s: %w",
+				string(localVarBody),
+				err,
+			)
+		}
+
+		return &v, nil, nil
+	case _nethttp.StatusInternalServerError:
+		var v types.Error
+		err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+		if err != nil {
+			return nil, nil, fmt.Errorf(
+				"failed to decode when hit status code 500, response body %s: %w",
+				string(localVarBody),
+				err,
+			)
+		}
+
+		return nil, &v, fmt.Errorf("error %+v", v)
+	case _nethttp.StatusBadGateway,
+		_nethttp.StatusServiceUnavailable,
+		_nethttp.StatusGatewayTimeout,
+		_nethttp.StatusRequestTimeout:
+		return nil, nil, fmt.Errorf(
+			"status code %d, response body %s: %w",
+			localVarHTTPResponse.StatusCode,
+			string(localVarBody),
+			ErrRetriable,
+		)
+	default:
+		return nil, nil, fmt.Errorf(
+			"invalid status code %d, response body %s",
+			localVarHTTPResponse.StatusCode,
+			string(localVarBody),
+		)
+	}
+}

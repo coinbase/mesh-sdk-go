@@ -147,3 +147,55 @@ func AccountCoinsResponse(
 
 	return nil
 }
+
+// AllAccountBalancesResponse returns an error if the provided
+// types.BlockIdentifier is invalid, if the requestBlock
+// is not nil and not equal to the response block, or
+// if there are any validation errors in the account balances.
+func AllAccountBalancesResponse(
+	requestBlock *types.PartialBlockIdentifier,
+	response *types.AllAccountBalancesResponse,
+) error {
+	if err := BlockIdentifier(response.BlockIdentifier); err != nil {
+		return fmt.Errorf(
+			"block identifier %s is invalid: %w",
+			types.PrintStruct(response.BlockIdentifier),
+			err,
+		)
+	}
+
+	// Validate each account balance in the response
+	for i, accountBalance := range response.AccountBalances {
+		if err := AssertUniqueAmounts(accountBalance.Balances); err != nil {
+			return fmt.Errorf(
+				"account balance %d amounts %s are invalid: %w",
+				i,
+				types.PrintStruct(accountBalance.Balances),
+				err,
+			)
+		}
+	}
+
+	// Validate that request block matches response block if specified
+	if requestBlock != nil {
+		if requestBlock.Hash != nil && *requestBlock.Hash != response.BlockIdentifier.Hash {
+			return fmt.Errorf(
+				"requested block hash %s, but got %s: %w",
+				*requestBlock.Hash,
+				response.BlockIdentifier.Hash,
+				ErrReturnedBlockHashMismatch,
+			)
+		}
+
+		if requestBlock.Index != nil && *requestBlock.Index != response.BlockIdentifier.Index {
+			return fmt.Errorf(
+				"requested block index %d, but got %d: %w",
+				*requestBlock.Index,
+				response.BlockIdentifier.Index,
+				ErrReturnedBlockIndexMismatch,
+			)
+		}
+	}
+
+	return nil
+}

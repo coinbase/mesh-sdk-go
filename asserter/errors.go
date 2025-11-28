@@ -360,6 +360,9 @@ var (
 	ErrAccountBalanceRequestHistoricalBalanceLookupNotSupported = errors.New(
 		"historical balance lookup is not supported",
 	)
+	ErrAllAccountBalancesRequestIsNil = errors.New(
+		"AllAccountBalancesRequest is nil",
+	)
 	ErrBlockRequestIsNil                      = errors.New("BlockRequest is nil")
 	ErrBlockTransactionRequestIsNil           = errors.New("BlockTransactionRequest is nil")
 	ErrConstructionMetadataRequestIsNil       = errors.New("ConstructionMetadataRequest is nil")
@@ -418,6 +421,7 @@ var (
 		ErrRequestedNetworkNotSupported,
 		ErrAccountBalanceRequestIsNil,
 		ErrAccountBalanceRequestHistoricalBalanceLookupNotSupported,
+		ErrAllAccountBalancesRequestIsNil,
 		ErrBlockRequestIsNil,
 		ErrBlockTransactionRequestIsNil,
 		ErrConstructionMetadataRequestIsNil,

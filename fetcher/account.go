@@ -226,3 +226,104 @@ func (f *Fetcher) AccountCoinsRetry(
 		}
 	}
 }
+
+// AllAccountBalances returns all balances for all sub-accounts of an account, given a network
+// identifier, account identifier and partial block identifier. It is important to note that making
+// a balance request for an account without populating the SubAccountIdentifier should not result in
+// the balance of all possible SubAccountIdentifiers being returned. Rather, it should result in the
+// balance pertaining to no SubAccountIdentifiers being returned (sometimes called the liquid
+// balance). This endpoint returns all
+// sub-account balances in a single request.
+func (f *Fetcher) AllAccountBalances(
+	ctx context.Context,
+	network *types.NetworkIdentifier,
+	account *types.AccountIdentifier,
+	block *types.PartialBlockIdentifier,
+	currencies []*types.Currency,
+) (*types.BlockIdentifier, []*types.AccountBalanceWithSubAccount, map[string]interface{}, *Error) {
+	if err := f.connectionSemaphore.Acquire(ctx, semaphoreRequestWeight); err != nil {
+		err = fmt.Errorf("failed to acquire semaphore: %w%s", err, f.metaData)
+		color.Red(err.Error())
+		return nil, nil, nil, &Error{
+			Err: err,
+		}
+	}
+	defer f.connectionSemaphore.Release(semaphoreRequestWeight)
+
+	response, clientErr, err := f.rosettaClient.AccountAPI.AllAccountBalances(ctx,
+		&types.AllAccountBalancesRequest{
+			NetworkIdentifier: network,
+			AccountIdentifier: account,
+			BlockIdentifier:   block,
+			Currencies:        currencies,
+		},
+	)
+	if err != nil {
+		return nil, nil, nil, f.RequestFailedError(clientErr, err, "/account/all-balances")
+	}
+
+	if f.Asserter != nil {
+		if err := asserter.AllAccountBalancesResponse(
+			block,
+			response,
+		); err != nil {
+			fetcherErr := &Error{
+				Err: fmt.Errorf("account all balances response assertion failed: %w", err),
+			}
+			return nil, nil, nil, fetcherErr
+		}
+	}
+
+	return response.BlockIdentifier, response.AccountBalances, nil, nil
+}
+
+// AllAccountBalancesRetry retrieves the validated account all balances of an account with a
+// specified number of retries and max elapsed time.
+func (f *Fetcher) AllAccountBalancesRetry(
+	ctx context.Context,
+	network *types.NetworkIdentifier,
+	account *types.AccountIdentifier,
+	block *types.PartialBlockIdentifier,
+	currencies []*types.Currency,
+) (*types.BlockIdentifier, []*types.AccountBalanceWithSubAccount, map[string]interface{}, *Error) {
+	backoffRetries := backoffRetries(
+		f.retryElapsedTime,
+		f.maxRetries,
+	)
+
+	for {
+		responseBlock, balances, metadata, err := f.AllAccountBalances(
+			ctx,
+			network,
+			account,
+			block,
+			currencies,
+		)
+		if err == nil {
+			return responseBlock, balances, metadata, nil
+		}
+
+		if ctx.Err() != nil {
+			return nil, nil, nil, &Error{
+				Err: ctx.Err(),
+			}
+		}
+
+		if is, _ := asserter.Err(err.Err); is {
+			errForPrint := fmt.Errorf("/account/all-balances not attempting retry: %w", err.Err)
+			color.Red(errForPrint.Error())
+			fetcherErr := &Error{
+				Err:       errForPrint,
+				ClientErr: err.ClientErr,
+			}
+			return nil, nil, nil, fetcherErr
+		}
+
+		msg := fmt.Sprintf("/account/all-balances %s%s", types.PrintStruct(account), f.metaData)
+		color.Cyan(msg)
+		tryAgainErr := tryAgain(msg, backoffRetries, err)
+		if tryAgainErr != nil {
+			return nil, nil, nil, tryAgainErr
+		}
+	}
+}
