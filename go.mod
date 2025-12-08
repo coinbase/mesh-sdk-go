@@ -8,7 +8,7 @@ require (
 	github.com/btcsuite/btcd v0.22.1
 	github.com/cenkalti/backoff v2.2.1+incompatible
 	github.com/coinbase/kryptology v1.8.0
-	github.com/coinbase/rosetta-sdk-go/types v1.6.1
+	github.com/coinbase/rosetta-sdk-go/types v1.7.1
 	github.com/dgraph-io/badger/v2 v2.2007.4
 	github.com/ethereum/go-ethereum v1.10.21
 	github.com/fatih/color v1.13.0
@@ -24,8 +24,6 @@ require (
 	golang.org/x/sync v0.5.0
 	google.golang.org/grpc v1.61.2
 )
-
-replace github.com/coinbase/rosetta-sdk-go/types => ./types
 
 require (
 	filippo.io/edwards25519 v1.0.0-rc.1 // indirect
