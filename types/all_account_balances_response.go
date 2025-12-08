@@ -24,6 +24,6 @@ package types
 type AllAccountBalancesResponse struct {
 	BlockIdentifier *BlockIdentifier `json:"block_identifier"`
 	// Array of account balances including main account and all sub-accounts. Each balance includes
-	// the sub-account identifier and balance type information.
+	// balance type information and metadata.
 	AccountBalances []*AccountBalanceWithSubAccount `json:"account_balances"`
 }
