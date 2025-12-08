@@ -17,8 +17,9 @@
 package types
 
 // AccountBalanceWithSubAccount Represents a balance for a specific account or sub-account,
-// including balance type information and metadata.
+// including the sub-account identifier and balance type information.
 type AccountBalanceWithSubAccount struct {
+	SubAccountIdentifier *SubAccountIdentifier `json:"sub_account_identifier,omitempty"`
 	// A single account/sub-account may have a balance in multiple currencies.
 	Balances []*Amount `json:"balances"`
 	// The type of balance (e.g., spendable, delegated, pending_undelegation, etc.)
