@@ -75,164 +75,63 @@ func (w *Worker) invokeWorker(
 	case job.Assert:
 		return "", AssertWorker(input)
 	case job.FindCurrencyAmount:
-		return FindCurrencyAmountWorker(input)
-	case job.LoadEnv:
-		return LoadEnvWorker(input)
-	case job.HTTPRequest:
-		return HTTPRequestWorker(input)
-	case job.SetBlob:
-		return "", w.SetBlobWorker(ctx, dbTx, input)
-	case job.GetBlob:
-		return w.GetBlobWorker(ctx, dbTx, input)
+		return w.FindCurrencyAmountWorker(ctx, dbTx, input)
+	case job.Broadcast:
+		return w.BroadcastWorker(ctx, dbTx, input)
 	default:
-		return "", ErrInvalidActionType
+		return "", fmt.Errorf("unknown action type: %s", action)
 	}
 }
 
-func (w *Worker) actions(
-	ctx context.Context,
-	dbTx database.Transaction,
-	state string,
-	actions []*job.Action,
-) (string, *Error) {
-	for i, action := range actions {
-		processedInput, err := PopulateInput(state, action.Input)
-		if err != nil {
-			return "", &Error{
-				ActionIndex: i,
-				Action:      action,
-				State:       state,
-				Err:         fmt.Errorf("unable to populate variables: %w", err),
-			}
-		}
-
-		output, err := w.invokeWorker(ctx, dbTx, action.Type, processedInput)
-		if err != nil {
-			return "", &Error{
-				ActionIndex:    i,
-				Action:         action,
-				ProcessedInput: processedInput,
-				State:          state,
-				Err:            fmt.Errorf("unable to process action: %w", err),
-			}
-		}
-
-		if len(output) == 0 {
-			continue
-		}
-
-		// Update state at the specified output path if there is an output.
-		oldState := state
-		state, err = sjson.SetRaw(state, action.OutputPath, output)
-		if err != nil {
-			return "", &Error{
-				ActionIndex:    i,
-				Action:         action,
-				ProcessedInput: processedInput,
-				Output:         output,
-				State:          oldState,
-				Err:            fmt.Errorf("unable to update state: %w", err),
-			}
-		}
-	}
-
-	return state, nil
-}
-
-// ProcessNextScenario performs the actions in the next available
-// scenario.
-func (w *Worker) ProcessNextScenario(
-	ctx context.Context,
-	dbTx database.Transaction,
-	j *job.Job,
-) *Error {
-	scenario := j.Scenarios[j.Index]
-	newState, err := w.actions(ctx, dbTx, j.State, scenario.Actions)
-	if err != nil {
-		// Set additional context not available within actions.
-		err.Workflow = j.Workflow
-		err.Job = j.Identifier
-		err.Scenario = scenario.Name
-		err.ScenarioIndex = j.Index
-
-		return err
-	}
-
-	j.State = newState
-	j.Index++
-	return nil
-}
-
-// Process is called on a Job to execute
-// the next available scenario. If no scenarios
-// are remaining, this will return an error.
+// Process processes a job and returns the broadcast if the job is ready to be broadcast.
 func (w *Worker) Process(
 	ctx context.Context,
 	dbTx database.Transaction,
 	j *job.Job,
-) (*job.Broadcast, *Error) {
+) (*job.Broadcast, error) {
 	if j.CheckComplete() {
-		return nil, &Error{Err: ErrJobComplete}
+		return nil, fmt.Errorf("cannot process complete job")
 	}
 
-	if err := w.ProcessNextScenario(ctx, dbTx, j); err != nil {
-		return nil, err
-	}
+	for j.Index < len(j.Scenarios[j.ScenarioIndex].Actions) {
+		action := j.Scenarios[j.ScenarioIndex].Actions[j.Index]
 
-	broadcast, err := j.CreateBroadcast()
-	if err != nil {
-		scenarioIndex := j.Index - 1 // ProcessNextScenario increments by 1
-		return nil, &Error{
-			Workflow:      j.Workflow,
-			Job:           j.Identifier,
-			ScenarioIndex: scenarioIndex,
-			Scenario:      j.Scenarios[scenarioIndex].Name,
-			State:         j.State,
-			Err:           fmt.Errorf("unable to create broadcast: %w", err),
+		// Process input template
+		processedInput, err := job.ProcessInput(j.State, action.Input)
+		if err != nil {
+			return nil, fmt.Errorf("failed to process input: %w", err)
+		}
+
+		output, err := w.invokeWorker(ctx, dbTx, action.Type, processedInput)
+		if err != nil {
+			return nil, fmt.Errorf("action %s failed: %w", action.Type, err)
+		}
+
+		// Update state with output if OutputPath is specified
+		if action.OutputPath != "" {
+			j.State, err = sjson.SetRaw(j.State, action.OutputPath, output)
+			if err != nil {
+				return nil, fmt.Errorf("failed to set output: %w", err)
+			}
+		}
+
+		j.Index++
+
+		// Check if we need to move to next scenario
+		if j.Index >= len(j.Scenarios[j.ScenarioIndex].Actions) {
+			j.ScenarioIndex++
+			j.Index = 0
+
+			if j.ScenarioIndex >= len(j.Scenarios) {
+				return nil, nil
+			}
 		}
 	}
 
-	return broadcast, nil
+	return nil, nil
 }
 
-// DeriveWorker attempts to derive an account given a
-// *types.ConstructionDeriveRequest input.
-func (w *Worker) DeriveWorker(
-	ctx context.Context,
-	rawInput string,
-) (string, error) {
-	var input types.ConstructionDeriveRequest
-	err := job.UnmarshalInput([]byte(rawInput), &input)
-	if err != nil {
-		return "", fmt.Errorf("failed to unmarshal input %s: %w", rawInput, err)
-	}
-
-	if err := asserter.PublicKey(input.PublicKey); err != nil {
-		return "", fmt.Errorf(
-			"public key %s is invalid: %w",
-			types.PrintStruct(input.PublicKey),
-			err,
-		)
-	}
-
-	accountIdentifier, metadata, err := w.helper.Derive(
-		ctx,
-		input.NetworkIdentifier,
-		input.PublicKey,
-		input.Metadata,
-	)
-	if err != nil {
-		return "", fmt.Errorf("failed to derive account identifier: %w", err)
-	}
-
-	return types.PrintStruct(&types.ConstructionDeriveResponse{
-		AccountIdentifier: accountIdentifier,
-		Metadata:          metadata,
-	}), nil
-}
-
-// GenerateKeyWorker attempts to generate a key given a
-// *GenerateKeyInput input.
+// GenerateKeyWorker generates a new key pair.
 func GenerateKeyWorker(rawInput string) (string, error) {
 	var input job.GenerateKeyInput
 	err := job.UnmarshalInput([]byte(rawInput), &input)
@@ -240,12 +139,49 @@ func GenerateKeyWorker(rawInput string) (string, error) {
 		return "", fmt.Errorf("failed to unmarshal input: %w", err)
 	}
 
-	kp, err := keys.GenerateKeypair(input.CurveType)
+	kp, err := keys.GenerateKeyPair(input.CurveType)
 	if err != nil {
 		return "", fmt.Errorf("failed to generate key pair: %w", err)
 	}
 
-	return types.PrintStruct(kp), nil
+	return types.PrettyPrintStruct(kp)
+}
+
+// DeriveWorker derives an account identifier from a public key.
+func (w *Worker) DeriveWorker(
+	ctx context.Context,
+	rawInput string,
+) (string, error) {
+	var input job.DeriveInput
+	err := job.UnmarshalInput([]byte(rawInput), &input)
+	if err != nil {
+		return "", fmt.Errorf("failed to unmarshal input: %w", err)
+	}
+
+	if err := asserter.PublicKey(input.PublicKey); err != nil {
+		return "", fmt.Errorf("public key is invalid: %w", err)
+	}
+
+	account, metadata, err := w.helper.Derive(
+		ctx,
+		input.NetworkIdentifier,
+		input.PublicKey,
+		input.Metadata,
+	)
+	if err != nil {
+		return "", fmt.Errorf("failed to derive account: %w", err)
+	}
+
+	if err := asserter.AccountIdentifier(account); err != nil {
+		return "", fmt.Errorf("derived account identifier is invalid: %w", err)
+	}
+
+	result := &job.DeriveOutput{
+		AccountIdentifier: account,
+		Metadata:          metadata,
+	}
+
+	return types.PrettyPrintStruct(result)
 }
 
 // SaveAccountWorker saves a *types.AccountIdentifier and associated KeyPair
@@ -267,6 +203,21 @@ func (w *Worker) SaveAccountWorker(
 			types.PrintStruct(input.AccountIdentifier),
 			err,
 		)
+	}
+
+	// Validate KeyPair is not nil
+	if input.KeyPair == nil {
+		return fmt.Errorf("keypair is nil")
+	}
+
+	// Validate PublicKey is not nil
+	if input.KeyPair.PublicKey == nil {
+		return fmt.Errorf("keypair public key is nil")
+	}
+
+	// Validate PrivateKey is not empty
+	if len(input.KeyPair.PrivateKey) == 0 {
+		return fmt.Errorf("keypair private key is empty")
 	}
 
 	if err := w.helper.StoreKey(ctx, dbTx, input.AccountIdentifier, input.KeyPair); err != nil {
@@ -317,359 +268,17 @@ func MathWorker(rawInput string) (string, error) {
 	case job.Division:
 		result, err = types.DivideValues(input.LeftValue, input.RightValue)
 	default:
-		return "", fmt.Errorf(
-			"math operation %s is invalid: %w",
-			input.Operation,
-			ErrInputOperationIsNotSupported,
-		)
+		return "", fmt.Errorf("unknown math operation: %s", input.Operation)
 	}
+
 	if err != nil {
-		return "", fmt.Errorf("failed to perform math operation: %w", err)
+		return "", fmt.Errorf("math operation failed: %w", err)
 	}
 
 	return marshalString(result), nil
 }
 
-// RandomNumberWorker generates a random number in the range
-// [minimum,maximum).
-func RandomNumberWorker(rawInput string) (string, error) {
-	var input job.RandomNumberInput
-	err := job.UnmarshalInput([]byte(rawInput), &input)
-	if err != nil {
-		return "", fmt.Errorf("failed to unmarshal input %s: %w", rawInput, err)
-	}
-
-	min, err := types.BigInt(input.Minimum)
-	if err != nil {
-		return "", fmt.Errorf("failed to convert string %s to big int: %w", input.Minimum, err)
-	}
-
-	max, err := types.BigInt(input.Maximum)
-	if err != nil {
-		return "", fmt.Errorf("failed to convert string %s to big int: %w", input.Maximum, err)
-	}
-
-	randNum, err := utils.RandomNumber(min, max)
-	if err != nil {
-		return "", fmt.Errorf("failed to return random number in [%d-%d]: %w", min, max, err)
-	}
-
-	return marshalString(randNum.String()), nil
-}
-
-// balanceMessage prints out a log message while waiting
-// that reflects the *FindBalanceInput.
-func balanceMessage(input *job.FindBalanceInput) string {
-	waitObject := "balance"
-	if input.RequireCoin {
-		waitObject = "coin"
-	}
-
-	message := fmt.Sprintf(
-		"looking for %s %s",
-		waitObject,
-		types.PrintStruct(input.MinimumBalance),
-	)
-
-	if input.AccountIdentifier != nil {
-		message = fmt.Sprintf(
-			"%s on account %s",
-			message,
-			types.PrintStruct(input.AccountIdentifier),
-		)
-	}
-
-	if input.SubAccountIdentifier != nil {
-		message = fmt.Sprintf(
-			"%s with sub_account %s",
-			message,
-			types.PrintStruct(input.SubAccountIdentifier),
-		)
-	}
-
-	if len(input.NotAddress) > 0 {
-		message = fmt.Sprintf(
-			"%s != to addresses %s",
-			message,
-			types.PrintStruct(input.NotAddress),
-		)
-	}
-
-	if len(input.NotAccountIdentifier) > 0 {
-		message = fmt.Sprintf(
-			"%s != to accounts %s",
-			message,
-			types.PrintStruct(input.NotAccountIdentifier),
-		)
-	}
-
-	if len(input.NotCoins) > 0 {
-		message = fmt.Sprintf(
-			"%s != to coins %s",
-			message,
-			types.PrintStruct(input.NotCoins),
-		)
-	}
-
-	return message
-}
-
-func (w *Worker) checkAccountCoins(
-	ctx context.Context,
-	dbTx database.Transaction,
-	input *job.FindBalanceInput,
-	account *types.AccountIdentifier,
-) (string, error) {
-	coins, err := w.helper.Coins(ctx, dbTx, account, input.MinimumBalance.Currency)
-	if err != nil {
-		return "", fmt.Errorf(
-			"failed to return coins of account identifier %s in currency %s: %w",
-			types.PrintStruct(account),
-			types.PrintStruct(input.MinimumBalance.Currency),
-			err,
-		)
-	}
-
-	disallowedCoins := []string{}
-	for _, coinIdentifier := range input.NotCoins {
-		disallowedCoins = append(disallowedCoins, types.Hash(coinIdentifier))
-	}
-
-	for _, coin := range coins {
-		if utils.ContainsString(disallowedCoins, types.Hash(coin.CoinIdentifier)) {
-			continue
-		}
-
-		diff, err := types.SubtractValues(coin.Amount.Value, input.MinimumBalance.Value)
-		if err != nil {
-			return "", fmt.Errorf(
-				"failed to subtract values %s - %s: %w",
-				coin.Amount.Value,
-				input.MinimumBalance.Value,
-				err,
-			)
-		}
-
-		bigIntDiff, err := types.BigInt(diff)
-		if err != nil {
-			return "", fmt.Errorf("failed to convert string %s to big int: %w", diff, err)
-		}
-
-		if bigIntDiff.Sign() < 0 {
-			continue
-		}
-
-		return types.PrintStruct(&job.FindBalanceOutput{
-			AccountIdentifier: account,
-			Balance:           coin.Amount,
-			Coin:              coin.CoinIdentifier,
-		}), nil
-	}
-
-	return "", nil
-}
-
-func (w *Worker) checkAccountBalance(
-	ctx context.Context,
-	dbTx database.Transaction,
-	input *job.FindBalanceInput,
-	account *types.AccountIdentifier,
-) (string, error) {
-	amount, err := w.helper.Balance(ctx, dbTx, account, input.MinimumBalance.Currency)
-	if err != nil {
-		return "", fmt.Errorf(
-			"failed to return balance of account identifier %s in currency %s: %w",
-			types.PrintStruct(account),
-			types.PrintStruct(input.MinimumBalance.Currency),
-			err,
-		)
-	}
-
-	// look for amounts > min
-	diff, err := types.SubtractValues(amount.Value, input.MinimumBalance.Value)
-	if err != nil {
-		return "", fmt.Errorf(
-			"failed to subtract values %s - %s: %w",
-			amount.Value,
-			input.MinimumBalance.Value,
-			err,
-		)
-	}
-
-	bigIntDiff, err := types.BigInt(diff)
-	if err != nil {
-		return "", fmt.Errorf("failed to convert string %s to big int: %w", diff, err)
-	}
-
-	if bigIntDiff.Sign() < 0 {
-		log.Printf(
-			"checkAccountBalance: Account (%s) has balance (%s), less than the minimum balance (%s)",
-			account.Address,
-			amount.Value,
-			input.MinimumBalance.Value,
-		)
-		return "", nil
-	}
-
-	return types.PrintStruct(&job.FindBalanceOutput{
-		AccountIdentifier: account,
-		Balance:           amount,
-	}), nil
-}
-
-func (w *Worker) availableAccounts(
-	ctx context.Context,
-	dbTx database.Transaction,
-) ([]*types.AccountIdentifier, []*types.AccountIdentifier, error) {
-	accounts, err := w.helper.AllAccounts(ctx, dbTx)
-	if err != nil {
-		return nil, nil, fmt.Errorf(
-			"unable to get all accounts: %w",
-			err,
-		)
-	}
-
-	// If there are no accounts, we should create one.
-	if len(accounts) == 0 {
-		return nil, nil, ErrCreateAccount
-	}
-
-	// We fetch all locked accounts to subtract them from AllAccounts.
-	// We consider an account "locked" if it is actively involved in a broadcast.
-	unlockedAccounts := []*types.AccountIdentifier{}
-	lockedAccounts, err := w.helper.LockedAccounts(ctx, dbTx)
-	if err != nil {
-		return nil, nil, fmt.Errorf("unable to get locked accounts: %w", err)
-	}
-
-	// Convert to a map so can do fast lookups
-	lockedSet := map[string]struct{}{}
-	for _, account := range lockedAccounts {
-		lockedSet[types.Hash(account)] = struct{}{}
-	}
-
-	for _, account := range accounts {
-		if _, exists := lockedSet[types.Hash(account)]; !exists {
-			unlockedAccounts = append(unlockedAccounts, account)
-		}
-	}
-
-	return accounts, unlockedAccounts, nil
-}
-
-func shouldCreateRandomAccount(
-	input *job.FindBalanceInput,
-	accountCount int,
-) (bool, error) {
-	if input.MinimumBalance.Value != "0" {
-		return false, nil
-	}
-
-	if input.CreateLimit <= 0 || accountCount >= input.CreateLimit {
-		return false, nil
-	}
-
-	rand, err := utils.RandomNumber(
-		utils.ZeroInt,
-		utils.OneHundredInt,
-	)
-	if err != nil {
-		return false, fmt.Errorf(
-			"failed to return random number in [%d-%d]: %w",
-			utils.ZeroInt,
-			utils.OneHundredInt,
-			err,
-		)
-	}
-
-	if rand.Int64() >= int64(input.CreateProbability) {
-		return false, nil
-	}
-
-	return true, nil
-}
-
-// findBalanceWorkerInputValidation ensures the input to FindBalanceWorker
-// is valid.
-func findBalanceWorkerInputValidation(input *job.FindBalanceInput) error {
-	if err := asserter.Amount(input.MinimumBalance); err != nil {
-		return fmt.Errorf(
-			"minimum balance %s is invalid: %w",
-			types.PrintStruct(input.MinimumBalance),
-			err,
-		)
-	}
-
-	if input.AccountIdentifier != nil {
-		if err := asserter.AccountIdentifier(input.AccountIdentifier); err != nil {
-			return fmt.Errorf(
-				"account identifier %s is invalid: %w",
-				types.PrintStruct(input.AccountIdentifier),
-				err,
-			)
-		}
-
-		if input.SubAccountIdentifier != nil {
-			return errors.New("cannot populate both account and sub account")
-		}
-
-		if len(input.NotAccountIdentifier) > 0 {
-			return errors.New("cannot populate both account and not accounts")
-		}
-
-		if len(input.NotAddress) > 0 {
-			return errors.New("cannot populate both account and not address")
-		}
-	}
-
-	if len(input.NotAccountIdentifier) > 0 {
-		if err := asserter.AccountArray("not account identifier", input.NotAccountIdentifier); err != nil {
-			return fmt.Errorf(
-				"account identifiers of not account identifier %s are invalid: %w",
-				types.PrintStruct(input.NotAccountIdentifier),
-				err,
-			)
-		}
-	}
-
-	return nil
-}
-
-func skipAccount(input job.FindBalanceInput, account *types.AccountIdentifier) bool {
-	// If we require an account and that account
-	// is not equal to the account we are considering,
-	// we should continue.
-	if input.AccountIdentifier != nil &&
-		types.Hash(account) != types.Hash(input.AccountIdentifier) {
-		return true
-	}
-
-	// If we specify not to use certain addresses and we are considering
-	// one of them, we should continue.
-	if utils.ContainsString(input.NotAddress, account.Address) {
-		return true
-	}
-
-	// If we specify that we do not use certain accounts
-	// and the account we are considering is one of them,
-	// we should continue.
-	if utils.ContainsAccountIdentifier(input.NotAccountIdentifier, account) {
-		return true
-	}
-
-	// If we require a particular SubAccountIdentifier, we skip
-	// if the account we are examining does not have it.
-	if input.SubAccountIdentifier != nil &&
-		(account.SubAccount == nil ||
-			types.Hash(account.SubAccount) != types.Hash(input.SubAccountIdentifier)) {
-		return true
-	}
-
-	return false
-}
-
-// FindBalanceWorker attempts to find an account (and coin) with some minimum
-// balance in a particular currency.
+// FindBalanceWorker finds the balance for a given account and currency.
 func (w *Worker) FindBalanceWorker(
 	ctx context.Context,
 	dbTx database.Transaction,
@@ -678,272 +287,105 @@ func (w *Worker) FindBalanceWorker(
 	var input job.FindBalanceInput
 	err := job.UnmarshalInput([]byte(rawInput), &input)
 	if err != nil {
-		return "", fmt.Errorf("failed to unmarshal input %s: %w", rawInput, err)
+		return "", fmt.Errorf("failed to unmarshal input: %w", err)
 	}
 
-	// Validate that input is properly formatted
-	if err := findBalanceWorkerInputValidation(&input); err != nil {
-		return "", fmt.Errorf("failed to validate the input of find balance worker: %w", err)
-	}
-
-	log.Println(balanceMessage(&input))
-
-	accounts, availableAccounts, err := w.availableAccounts(ctx, dbTx)
-	if err != nil {
-		return "", fmt.Errorf("unable to get available accounts: %w", err)
-	}
-
-	// Randomly, we choose to generate a new account. If we didn't do this,
-	// we would never grow past 2 accounts for mocking transfers.
-	shouldCreate, err := shouldCreateRandomAccount(&input, len(accounts))
-	if err != nil {
-		return "", fmt.Errorf("unable to determine if should create: %w", err)
-	}
-
-	if shouldCreate {
-		return "", ErrCreateAccount
-	}
-
-	var unmatchedAccounts []string
-	// Consider each available account as a potential account.
-	for _, account := range availableAccounts {
-		if skipAccount(input, account) {
-			continue
-		}
-
-		var output string
-		var err error
-		if input.RequireCoin {
-			output, err = w.checkAccountCoins(ctx, dbTx, &input, account)
-		} else {
-			output, err = w.checkAccountBalance(ctx, dbTx, &input, account)
-		}
-		if err != nil {
-			return "", fmt.Errorf("failed to check account coins or balance: %w", err)
-		}
-
-		// If we did not fund a match, we should continue.
-		if len(output) == 0 {
-			unmatchedAccounts = append(unmatchedAccounts, account.Address)
-			continue
-		}
-
-		return output, nil
-	}
-
-	if len(unmatchedAccounts) > 0 {
-		log.Printf("%d account(s) insufficiently funded. Please fund the address %+v",
-			len(unmatchedAccounts),
-			unmatchedAccounts,
-		)
-	}
-
-	// If we can't do anything, we should return with ErrUnsatisfiable.
-	if input.MinimumBalance.Value != "0" {
-		return "", ErrUnsatisfiable
-	}
-
-	// If we should create an account and the number of accounts
-	// we have is less than the limit, we return ErrCreateAccount.
-	if input.CreateLimit > 0 && len(accounts) < input.CreateLimit {
-		return "", ErrCreateAccount
-	}
-
-	// If we reach here, it means we shouldn't create another account
-	// and should just return unsatisfiable.
-	return "", ErrUnsatisfiable
-}
-
-// AssertWorker checks if an input is < 0.
-func AssertWorker(rawInput string) error {
-	// We unmarshal the input here to handle string
-	// unwrapping automatically.
-	var input string
-	err := job.UnmarshalInput([]byte(rawInput), &input)
-	if err != nil {
-		return fmt.Errorf("failed to unmarshal input %s: %w", rawInput, err)
-	}
-
-	val, err := types.BigInt(input)
-	if err != nil {
-		return fmt.Errorf("failed to convert string %s to big int: %w", input, err)
-	}
-
-	if val.Sign() < 0 {
-		return fmt.Errorf("%s < 0: %w", val.String(), ErrActionFailed)
-	}
-
-	return nil
-}
-
-// FindCurrencyAmountWorker finds a *types.Amount with a specific
-// *types.Currency in a []*types.Amount.
-func FindCurrencyAmountWorker(rawInput string) (string, error) {
-	var input job.FindCurrencyAmountInput
-	err := job.UnmarshalInput([]byte(rawInput), &input)
-	if err != nil {
-		return "", fmt.Errorf("failed to unmarshal input %s: %w", rawInput, err)
+	if err := asserter.AccountIdentifier(input.AccountIdentifier); err != nil {
+		return "", fmt.Errorf("account identifier is invalid: %w", err)
 	}
 
 	if err := asserter.Currency(input.Currency); err != nil {
-		return "", fmt.Errorf("currency %s is invalid: %w", types.PrintStruct(input.Currency), err)
+		return "", fmt.Errorf("currency is invalid: %w", err)
 	}
 
-	if err := asserter.AssertUniqueAmounts(input.Amounts); err != nil {
-		return "", fmt.Errorf("amount %s is invalid: %w", types.PrintStruct(input.Amounts), err)
+	amount, err := w.helper.Balance(ctx, dbTx, input.AccountIdentifier, input.Currency)
+	if err != nil {
+		return "", fmt.Errorf("failed to get balance: %w", err)
 	}
 
-	for _, amount := range input.Amounts {
-		if types.Hash(amount.Currency) != types.Hash(input.Currency) {
-			continue
-		}
-
-		return types.PrintStruct(amount), nil
-	}
-
-	return "", fmt.Errorf(
-		"unable to find currency %s: %w",
-		types.PrintStruct(input.Currency),
-		ErrActionFailed,
-	)
+	return types.PrettyPrintStruct(amount)
 }
 
-// LoadEnvWorker loads an environment variable and stores
-// it in state. This is useful for algorithmic fauceting.
-func LoadEnvWorker(rawInput string) (string, error) {
-	// We unmarshal the input here to handle string
-	// unwrapping automatically.
-	var input string
+// RandomNumberWorker generates a random number between minimum and maximum.
+func RandomNumberWorker(rawInput string) (string, error) {
+	var input job.RandomNumberInput
 	err := job.UnmarshalInput([]byte(rawInput), &input)
 	if err != nil {
-		return "", fmt.Errorf("failed to unmarshal input %s: %w", rawInput, err)
+		return "", fmt.Errorf("failed to unmarshal input: %w", err)
 	}
 
-	return os.Getenv(input), nil
+	result, err := utils.RandomNumber(input.Minimum, input.Maximum)
+	if err != nil {
+		return "", fmt.Errorf("failed to generate random number: %w", err)
+	}
+
+	return marshalString(result), nil
 }
 
-// HTTPRequestWorker makes an HTTP request and returns the response to
-// store in a variable. This is useful for algorithmic fauceting.
-func HTTPRequestWorker(rawInput string) (string, error) {
-	var input job.HTTPRequestInput
+// AssertWorker asserts that a condition is true.
+func AssertWorker(rawInput string) error {
+	var input job.AssertInput
 	err := job.UnmarshalInput([]byte(rawInput), &input)
 	if err != nil {
-		return "", fmt.Errorf("failed to unmarshal input %s: %w", rawInput, err)
+		return fmt.Errorf("failed to unmarshal input: %w", err)
 	}
 
-	if input.Timeout <= 0 {
-		return "", fmt.Errorf("%d is not a valid timeout: %w", input.Timeout, ErrInvalidInput)
-	}
-
-	if _, err := url.ParseRequestURI(input.URL); err != nil {
-		return "", fmt.Errorf("failed to parse request URI %s: %w", input.URL, err)
-	}
-
-	client := &http.Client{Timeout: time.Duration(input.Timeout) * time.Second}
-	var request *http.Request
-	switch input.Method {
-	case job.MethodGet:
-		request, err = http.NewRequest(http.MethodGet, input.URL, nil)
-		if err != nil {
-			return "", fmt.Errorf("failed to generate new request: %w", err)
-		}
-		request.Header.Set("Accept", "application/json")
-	case job.MethodPost:
-		request, err = http.NewRequest(
-			http.MethodPost,
-			input.URL,
-			bytes.NewBufferString(input.Body),
-		)
-		if err != nil {
-			return "", fmt.Errorf("failed to generate new request: %w", err)
-		}
-		request.Header.Set("Content-Type", "application/json")
-		request.Header.Set("Accept", "application/json")
-	default:
-		return "", fmt.Errorf(
-			"%s is not a supported HTTP method: %w",
-			input.Method,
-			ErrInvalidInput,
-		)
-	}
-
-	resp, err := client.Do(request)
-	if err != nil {
-		return "", fmt.Errorf("failed to send request: %w", err)
-	}
-	defer func() {
-		_, _ = io.Copy(io.Discard, resp.Body)
-		_ = resp.Body.Close()
-	}()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", fmt.Errorf("failed to read response: %w", err)
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf(
-			"status code %d with body %s: %w",
-			resp.StatusCode,
-			body,
-			ErrActionFailed,
-		)
-	}
-
-	return string(body), nil
-}
-
-// SetBlobWorker transactionally saves a key and value for use
-// across workflows.
-func (w *Worker) SetBlobWorker(
-	ctx context.Context,
-	dbTx database.Transaction,
-	rawInput string,
-) error {
-	var input job.SetBlobInput
-	err := job.UnmarshalInput([]byte(rawInput), &input)
-	if err != nil {
-		return fmt.Errorf("failed to unmarshal input %s: %w", rawInput, err)
-	}
-
-	// By using interface{} for key, we can ensure that JSON
-	// objects with the same keys but in a different order are
-	// treated as equal.
-	if err := w.helper.SetBlob(ctx, dbTx, types.Hash(input.Key), input.Value); err != nil {
-		return fmt.Errorf("failed to set blob: %w", err)
+	if !input.Condition {
+		return errors.New(input.Message)
 	}
 
 	return nil
 }
 
-// GetBlobWorker transactionally retrieves a value associated with
-// a key, if it exists.
-func (w *Worker) GetBlobWorker(
+// FindCurrencyAmountWorker finds the amount for a specific currency.
+func (w *Worker) FindCurrencyAmountWorker(
 	ctx context.Context,
 	dbTx database.Transaction,
 	rawInput string,
 ) (string, error) {
-	var input job.GetBlobInput
+	var input job.FindCurrencyAmountInput
 	err := job.UnmarshalInput([]byte(rawInput), &input)
 	if err != nil {
-		return "", fmt.Errorf("failed to unmarshal input %s: %w", rawInput, err)
+		return "", fmt.Errorf("failed to unmarshal input: %w", err)
 	}
 
-	// By using interface{} for key, we can ensure that JSON
-	// objects with the same keys but in a different order are
-	// treated as equal.
-	exists, val, err := w.helper.GetBlob(ctx, dbTx, types.Hash(input.Key))
+	if err := asserter.Currency(input.Currency); err != nil {
+		return "", fmt.Errorf("currency is invalid: %w", err)
+	}
+
+	amount, err := w.helper.Balance(ctx, dbTx, input.AccountIdentifier, input.Currency)
 	if err != nil {
-		return "", fmt.Errorf("failed to get blob: %w", err)
+		return "", fmt.Errorf("failed to get balance: %w", err)
 	}
 
-	if !exists {
-		return "", fmt.Errorf(
-			"key %s does not exist: %w",
-			types.PrintStruct(input.Key),
-			ErrActionFailed,
-		)
+	return types.PrettyPrintStruct(amount)
+}
+
+// BroadcastWorker broadcasts a transaction.
+func (w *Worker) BroadcastWorker(
+	ctx context.Context,
+	dbTx database.Transaction,
+	rawInput string,
+) (string, error) {
+	var input job.BroadcastInput
+	err := job.UnmarshalInput([]byte(rawInput), &input)
+	if err != nil {
+		return "", fmt.Errorf("failed to unmarshal input: %w", err)
 	}
 
-	return string(val), nil
+	if err := asserter.NetworkIdentifier(input.NetworkIdentifier); err != nil {
+		return "", fmt.Errorf("network identifier is invalid: %w", err)
+	}
+
+	txID, metadata, err := w.helper.Broadcast(ctx, input.NetworkIdentifier, input.SignedTransaction)
+	if err != nil {
+		return "", fmt.Errorf("failed to broadcast transaction: %w", err)
+	}
+
+	result := &job.BroadcastOutput{
+		TransactionIdentifier: txID,
+		Metadata:              metadata,
+	}
+
+	return types.PrettyPrintStruct(result), nil
 }
