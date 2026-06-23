@@ -134,6 +134,7 @@ sed "${SED_IFLAG[@]}" 's/ECDSA_RECOVERY/EcdsaRecovery/g' client/* server/*
 sed "${SED_IFLAG[@]}" 's/ECDSA/Ecdsa/g' client/* server/*
 sed "${SED_IFLAG[@]}" 's/ED25519/Ed25519/g' client/* server/*
 sed "${SED_IFLAG[@]}" 's/SCHNORR_1/Schnorr1/g' client/* server/*
+sed "${SED_IFLAG[@]}" 's/SCHNORR_BIP340/SchnorrBip340/g' client/* server/*
 sed "${SED_IFLAG[@]}" 's/SCHNORR_POSEIDON/SchnorrPoseidon/g' client/* server/*
 sed "${SED_IFLAG[@]}" 's/PALLAS/Pallas/g' client/* server/*
 sed "${SED_IFLAG[@]}" 's/CREATED/CoinCreated/g' client/* server/*

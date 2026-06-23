@@ -35,6 +35,6 @@ const (
 	EcdsaRecovery   SignatureType = "ecdsa_recovery"
 	Ed25519         SignatureType = "ed25519"
 	Schnorr1        SignatureType = "schnorr_1"
-	SCHNORR_BIP340  SignatureType = "schnorr_bip340"
+	SchnorrBip340   SignatureType = "schnorr_bip340"
 	SchnorrPoseidon SignatureType = "schnorr_poseidon"
 )
