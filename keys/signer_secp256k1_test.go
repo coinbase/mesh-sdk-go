@@ -56,7 +56,13 @@ func TestSignSecp256k1(t *testing.T) {
 			ErrSignUnsupportedSignatureType,
 		},
 		{mockPayload(hash("hello1234"), types.Schnorr1), types.Schnorr1, 64, false, nil},
-		{mockPayload(hash("hello1234"), types.SchnorrBip340), types.SchnorrBip340, 64, false, nil},
+		{
+			mockPayload(hash("hello1234"), types.SCHNORR_BIP340),
+			types.SCHNORR_BIP340,
+			64,
+			false,
+			nil,
+		},
 	}
 
 	for _, test := range payloadTests {
@@ -146,11 +152,11 @@ func TestVerifySecp256k1(t *testing.T) {
 	payloadBip340 := &types.SigningPayload{
 		AccountIdentifier: &types.AccountIdentifier{Address: "test"},
 		Bytes:             hash("hello"),
-		SignatureType:     types.SchnorrBip340,
+		SignatureType:     types.SCHNORR_BIP340,
 	}
-	testSignatureBip340, _ := signerSecp256k1.Sign(payloadBip340, types.SchnorrBip340)
+	testSignatureBip340, _ := signerSecp256k1.Sign(payloadBip340, types.SCHNORR_BIP340)
 	goodBip340Signature := mockSignature(
-		types.SchnorrBip340,
+		types.SCHNORR_BIP340,
 		signerSecp256k1.PublicKey(),
 		hash("hello"),
 		testSignatureBip340.Bytes)
@@ -189,11 +195,11 @@ func TestSchnorrBip340_Bip341KeyPathVector(t *testing.T) {
 	payload := &types.SigningPayload{
 		AccountIdentifier: &types.AccountIdentifier{Address: "test"},
 		Bytes:             sighash,
-		SignatureType:     types.SchnorrBip340,
+		SignatureType:     types.SCHNORR_BIP340,
 	}
 
 	// Check 1: sign produces a valid 64-byte signature that self-verifies.
-	sig, err := signer.Sign(payload, types.SchnorrBip340)
+	sig, err := signer.Sign(payload, types.SCHNORR_BIP340)
 	assert.NoError(t, err)
 	assert.Equal(t, 64, len(sig.Bytes))
 	assert.NoError(t, signer.Verify(sig))
@@ -201,7 +207,7 @@ func TestSchnorrBip340_Bip341KeyPathVector(t *testing.T) {
 	// Check 2: our Verify accepts the spec's expected witness bytes, confirming
 	// interoperability with external BIP-340 implementations.
 	specSigBytes, _ := hex.DecodeString(expectedWitnessHex)
-	specSig := mockSignature(types.SchnorrBip340, kp.PublicKey, sighash, specSigBytes)
+	specSig := mockSignature(types.SCHNORR_BIP340, kp.PublicKey, sighash, specSigBytes)
 	assert.NoError(t, signer.Verify(specSig), "Verify must accept the BIP-341 spec witness")
 }
 
@@ -216,24 +222,24 @@ func TestSchnorrBip340_VerifyNegative(t *testing.T) {
 	payload := &types.SigningPayload{
 		AccountIdentifier: &types.AccountIdentifier{Address: "test"},
 		Bytes:             msg,
-		SignatureType:     types.SchnorrBip340,
+		SignatureType:     types.SCHNORR_BIP340,
 	}
-	goodSig, _ := signer.Sign(payload, types.SchnorrBip340)
+	goodSig, _ := signer.Sign(payload, types.SCHNORR_BIP340)
 
 	// Garbage signature bytes (correct length, wrong content).
 	garbageSig := make([]byte, 64)
 	copy(garbageSig, []byte("this is not a valid bip340 signature at all padding padding!!!!"))
-	err := signer.Verify(mockSignature(types.SchnorrBip340, kp.PublicKey, msg, garbageSig))
+	err := signer.Verify(mockSignature(types.SCHNORR_BIP340, kp.PublicKey, msg, garbageSig))
 	assert.Error(t, err, "garbage signature must be rejected")
 
 	// Correct signature, wrong message.
 	wrongMsg := make([]byte, 32)
 	copy(wrongMsg, []byte("different message"))
-	err = signer.Verify(mockSignature(types.SchnorrBip340, kp.PublicKey, wrongMsg, goodSig.Bytes))
+	err = signer.Verify(mockSignature(types.SCHNORR_BIP340, kp.PublicKey, wrongMsg, goodSig.Bytes))
 	assert.Error(t, err, "signature over different message must be rejected")
 
 	// Correct signature, mismatched public key.
 	otherKp, _ := GenerateKeypair(types.Secp256k1)
-	err = signer.Verify(mockSignature(types.SchnorrBip340, otherKp.PublicKey, msg, goodSig.Bytes))
+	err = signer.Verify(mockSignature(types.SCHNORR_BIP340, otherKp.PublicKey, msg, goodSig.Bytes))
 	assert.Error(t, err, "signature verified against wrong public key must be rejected")
 }
