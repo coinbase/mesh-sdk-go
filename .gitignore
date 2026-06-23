@@ -1,5 +1,7 @@
 c.out
 coverage.html
+go.work
+go.work.sum
 
 examples/server/server
 examples/client/client

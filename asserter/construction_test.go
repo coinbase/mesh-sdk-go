@@ -651,6 +651,15 @@ func TestSigningPayload(t *testing.T) {
 				SignatureType: types.Ed25519,
 			},
 		},
+		"valid signing payload with schnorr_bip340": {
+			signingPayload: &types.SigningPayload{
+				AccountIdentifier: &types.AccountIdentifier{
+					Address: "hello",
+				},
+				Bytes:         []byte("blah"),
+				SignatureType: types.SchnorrBip340,
+			},
+		},
 		"nil signing payload": {
 			err: ErrSigningPayloadIsNil,
 		},
