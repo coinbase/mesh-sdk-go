@@ -405,7 +405,7 @@ func SignatureType(
 		types.Ed25519,
 		types.Schnorr1,
 		types.SchnorrPoseidon,
-		types.SCHNORR_BIP340:
+		types.SchnorrBip340:
 		return nil
 	default:
 		return ErrSignatureTypeNotSupported

@@ -657,7 +657,7 @@ func TestSigningPayload(t *testing.T) {
 					Address: "hello",
 				},
 				Bytes:         []byte("blah"),
-				SignatureType: types.SCHNORR_BIP340,
+				SignatureType: types.SchnorrBip340,
 			},
 		},
 		"nil signing payload": {

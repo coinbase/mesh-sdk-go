@@ -9,7 +9,7 @@ require (
 	github.com/btcsuite/btcd/btcec/v2 v2.3.2
 	github.com/cenkalti/backoff v2.2.1+incompatible
 	github.com/coinbase/kryptology v1.8.0
-	github.com/coinbase/rosetta-sdk-go/types v1.7.1
+	github.com/coinbase/rosetta-sdk-go/types v1.7.2
 	github.com/dgraph-io/badger/v2 v2.2007.4
 	github.com/ethereum/go-ethereum v1.10.21
 	github.com/fatih/color v1.13.0
