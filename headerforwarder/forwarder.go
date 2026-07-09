@@ -18,6 +18,8 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/http/cookiejar"
+	"net/url"
 	"strings"
 	"sync"
 
@@ -36,6 +38,8 @@ import (
 //
 // TODO: this should expire entries after a certain amount of time
 type HeaderForwarder struct {
+	cookieJars         map[string]*cookiejar.Jar
+	cookieJarLock      sync.RWMutex
 	incomingHeaders    map[string]http.Header
 	incomingHeaderLock sync.RWMutex
 	outgoingHeaders    map[string]http.Header
@@ -53,6 +57,7 @@ func NewHeaderForwarder(
 	}
 
 	return &HeaderForwarder{
+		cookieJars:         make(map[string]*cookiejar.Jar),
 		incomingHeaders:    make(map[string]http.Header),
 		outgoingHeaders:    make(map[string]http.Header),
 		interestingHeaders: interestingHeaders,
@@ -196,7 +201,7 @@ func (hf *HeaderForwarder) rememberMetadata(ctx context.Context, resp metadata.M
 // consist of native node response headers/metadata that were remembered for a request ID.
 func (hf *HeaderForwarder) GetResponseHeaders(rosettaRequestID string) (http.Header, bool) {
 	hf.incomingHeaderLock.RLock()
-	headers, ok := hf.incomingHeaders[rosettaRequestID]
+	headers, headersExist := hf.incomingHeaders[rosettaRequestID]
 	hf.incomingHeaderLock.RUnlock()
 
 	// Delete the headers from the map after they are retrieved
@@ -210,7 +215,29 @@ func (hf *HeaderForwarder) GetResponseHeaders(rosettaRequestID string) (http.Hea
 	delete(hf.outgoingHeaders, rosettaRequestID)
 	hf.outgoingHeaderLock.Unlock()
 
-	return headers, ok
+	// add the cookie jar to the response
+	hf.cookieJarLock.RLock()
+	jar, ok := hf.cookieJars[rosettaRequestID]
+	hf.cookieJarLock.RUnlock()
+
+	if ok {
+		// TODO: make the url
+		url := &url.URL{
+			Scheme: "https",
+			Host:   "",
+		}
+		cookies := jar.Cookies(url)
+		for _, cookie := range cookies {
+			headers.Set("Set-Cookie", cookie.String())
+		}
+	}
+
+	// delete the cookie jar
+	hf.cookieJarLock.Lock()
+	delete(hf.cookieJars, rosettaRequestID)
+	hf.cookieJarLock.Unlock()
+
+	return headers, headersExist
 }
 
 // HeaderForwarderHandler will allow the next handler to serve the request, and then checks
@@ -238,11 +265,33 @@ func (hf *HeaderForwarder) HeaderForwarderHandler(next http.Handler) http.Handle
 	})
 }
 
+func (hf *HeaderForwarder) GetCookieJar(rosettaRequestID string) http.CookieJar {
+	hf.cookieJarLock.RLock()
+	jar, ok := hf.cookieJars[rosettaRequestID]
+	hf.cookieJarLock.RUnlock()
+
+	if !ok {
+		jar, _ = cookiejar.New(nil)
+		hf.cookieJarLock.Lock()
+		hf.cookieJars[rosettaRequestID] = jar
+		hf.cookieJarLock.Unlock()
+	}
+
+	return jar
+}
+
 // RoundTrip implements http.RoundTripper and will be used to construct an http Client which
 // saves the native node response headers if necessary.
 func (hf *HeaderForwarder) RoundTrip(req *http.Request) (*http.Response, error) {
+	rosettaID := RosettaIDFromRequest(req)
+
+	jar := hf.GetCookieJar(rosettaID)
+	for _, cookie := range jar.Cookies(req.URL) {
+		req.AddCookie(cookie)
+	}
+
 	hf.outgoingHeaderLock.RLock()
-	outgoingHeaders, hasOutgoingHeaders := hf.outgoingHeaders[RosettaIDFromRequest(req)]
+	outgoingHeaders, hasOutgoingHeaders := hf.outgoingHeaders[rosettaID]
 	hf.outgoingHeaderLock.RUnlock()
 
 	// add outgoing headers to the request
@@ -256,8 +305,11 @@ func (hf *HeaderForwarder) RoundTrip(req *http.Request) (*http.Response, error) 
 
 	resp, err := hf.actualTransport.RoundTrip(req)
 
-	if err == nil && hf.shouldRememberHeaders(req, resp) {
-		hf.rememberHeaders(req, resp)
+	if err == nil {
+		jar.SetCookies(req.URL, resp.Cookies())
+		if hf.shouldRememberHeaders(req, resp) {
+			hf.rememberHeaders(req, resp)
+		}
 	}
 
 	return resp, err
