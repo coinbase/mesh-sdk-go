@@ -17,6 +17,7 @@
 package server
 
 import (
+	"bytes"
 	"encoding/json"
 	"net/http"
 
@@ -62,10 +63,10 @@ func CorsMiddleware(next http.Handler) http.Handler {
 
 // NewRouter creates a new router for any number of api routers
 func NewRouter(routers ...Router) http.Handler {
-	router := mux.NewRouter().StrictSlash(true)
+	muxRouter := mux.NewRouter().StrictSlash(true)
 	for _, api := range routers {
 		for _, route := range api.Routes() {
-			router.
+			muxRouter.
 				Methods(route.Method).
 				Path(route.Pattern).
 				Name(route.Name).
@@ -73,16 +74,23 @@ func NewRouter(routers ...Router) http.Handler {
 		}
 	}
 
-	return router
+	return muxRouter
 }
 
 // EncodeJSONResponse uses the json encoder to write an interface to the http response with an
 // optional status code
 func EncodeJSONResponse(i interface{}, status int, w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-	w.WriteHeader(status)
 
-	if err := json.NewEncoder(w).Encode(i); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	// Encode to buffer first to catch any encoding errors before writing headers
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(i); err != nil {
+		// Only write header if we haven't written anything yet
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		return
 	}
+
+	w.WriteHeader(status)
+	buf.WriteTo(w)
 }
