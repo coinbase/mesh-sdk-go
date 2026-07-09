@@ -269,6 +269,8 @@ func (f *Fetcher) ConstructionPreprocess(
 	network *types.NetworkIdentifier,
 	operations []*types.Operation,
 	metadata map[string]interface{},
+	maxFee []*types.Amount,
+	suggestedFeeMultiplier *float64,
 ) (map[string]interface{}, []*types.AccountIdentifier, *Error) {
 	if err := f.connectionSemaphore.Acquire(ctx, semaphoreRequestWeight); err != nil {
 		return nil, nil, &Error{
@@ -279,9 +281,11 @@ func (f *Fetcher) ConstructionPreprocess(
 
 	response, clientErr, err := f.rosettaClient.ConstructionAPI.ConstructionPreprocess(ctx,
 		&types.ConstructionPreprocessRequest{
-			NetworkIdentifier: network,
-			Operations:        operations,
-			Metadata:          metadata,
+			NetworkIdentifier:      network,
+			Operations:             operations,
+			Metadata:               metadata,
+			MaxFee:                 maxFee,
+			SuggestedFeeMultiplier: suggestedFeeMultiplier,
 		},
 	)
 
