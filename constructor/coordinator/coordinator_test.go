@@ -145,7 +145,7 @@ func TestProcess(t *testing.T) {
 						},
 						{
 							Type:  job.SaveAccount,
-							Input: `{"account_identifier": {{account.account_identifier}}, "keypair": {{key.public_key}}}`,
+							Input: `{"account_identifier": {{account.account_identifier}}, "keypair": {{key}}}`,
 						},
 					},
 				},
@@ -1601,7 +1601,7 @@ func TestReturnFunds_NoBalance(t *testing.T) {
 						},
 						{
 							Type:  job.SaveAccount,
-							Input: `{"account_identifier": {{account.account_identifier}}, "keypair": {{key.public_key}}}`,
+							Input: `{"account_identifier": {{account.account_identifier}}, "keypair": {{key}}}`,
 						},
 					},
 				},
@@ -1831,7 +1831,7 @@ func TestReturnFunds_NoWorkflow(t *testing.T) {
 						},
 						{
 							Type:  job.SaveAccount,
-							Input: `{"account_identifier": {{account.account_identifier}}, "keypair": {{key.public_key}}}`,
+							Input: `{"account_identifier": {{account.account_identifier}}, "keypair": {{key}}}`,
 						},
 					},
 				},
@@ -1938,7 +1938,7 @@ func TestReturnFunds(t *testing.T) {
 						},
 						{
 							Type:  job.SaveAccount,
-							Input: `{"account_identifier": {{account.account_identifier}}, "keypair": {{key.public_key}}}`,
+							Input: `{"account_identifier": {{account.account_identifier}}, "keypair": {{key}}}`,
 						},
 					},
 				},
