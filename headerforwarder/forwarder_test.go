@@ -50,6 +50,7 @@ func (f *fakeTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 func newMockTransport(incomingHeaders http.Header, err error) http.RoundTripper {
 	resp := &http.Response{
 		Header: incomingHeaders,
+		Body:   http.NoBody,
 	}
 
 	return &fakeTransport{
@@ -114,11 +115,17 @@ func newRequest(ctx context.Context, header http.Header) *http.Request {
 }
 
 type mockHandler struct {
+	hf            *HeaderForwarder
 	LastRequestID string
+	LastOutgoing  http.Header
 }
 
 func (m *mockHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	m.LastRequestID = RosettaIDFromRequest(r)
+
+	m.hf.outgoingHeaderLock.RLock()
+	m.LastOutgoing = m.hf.outgoingHeaders[m.LastRequestID]
+	m.hf.outgoingHeaderLock.RUnlock()
 }
 
 //
@@ -130,6 +137,8 @@ func TestRoundTrip(t *testing.T) {
 		interestingHeaders []string
 		// a mock for headers already captured from a rosetta request by the forwarder
 		outgoingHeaders http.Header
+		// headers the rosetta implementation set on the node request itself
+		requestHeaders http.Header
 		// a mock for headers coming from a native node response to the forwarder
 		incomingHeaders http.Header
 
@@ -169,6 +178,20 @@ func TestRoundTrip(t *testing.T) {
 			},
 			ExpectedRequestHeaders: map[string][]string{
 				"X-Client-Id": {"test", "test2"},
+			},
+		},
+
+		"outgoing header replaces a value set on the request": {
+			outgoingHeaders: map[string][]string{
+				"X-Client-Id": {"caller"},
+			},
+			requestHeaders: map[string][]string{
+				"X-Client-Id":  {"static"},
+				"Content-Type": {"application/json"},
+			},
+			ExpectedRequestHeaders: map[string][]string{
+				"X-Client-Id":  {"caller"},
+				"Content-Type": {"application/json"},
 			},
 		},
 
@@ -217,7 +240,8 @@ func TestRoundTrip(t *testing.T) {
 				},
 			}
 
-			testReq := newRequest(ctx, nil)
+			testReq := newRequest(ctx, test.requestHeaders)
+			originalHeaders := testReq.Header.Clone()
 
 			response, err := hf.RoundTrip(testReq)
 			assert.Equal(t, test.ExpectedError, err)
@@ -229,6 +253,7 @@ func TestRoundTrip(t *testing.T) {
 
 			assert.Equal(t, test.ExpectedRequestHeaders, outgoingReq.Header)
 			assert.Equal(t, test.ExpectedResponseHeaders, capturedHeaders)
+			assert.Equal(t, originalHeaders, testReq.Header, "caller's request is not modified")
 		})
 	}
 }
@@ -402,7 +427,6 @@ func TestHeaderForwarderHandler(t *testing.T) {
 				test.interestingHeaders = defaultInterestingHeaders
 			}
 
-			mockHandler := &mockHandler{}
 			r := &http.Request{
 				Header: test.requestHeaders,
 			}
@@ -414,6 +438,7 @@ func TestHeaderForwarderHandler(t *testing.T) {
 				outgoingHeaders:    make(map[string]http.Header),
 				actualTransport:    nil,
 			}
+			mockHandler := &mockHandler{hf: hf}
 
 			handler := hf.HeaderForwarderHandler(mockHandler)
 			handler.ServeHTTP(w, r)
@@ -426,7 +451,48 @@ func TestHeaderForwarderHandler(t *testing.T) {
 			_, err := uuid.Parse(requestID)
 			assert.Nil(t, err)
 
-			assert.Equal(t, test.ExpectedOutgoingHeaders, hf.outgoingHeaders[requestID])
+			assert.Equal(t, test.ExpectedOutgoingHeaders, mockHandler.LastOutgoing)
+
+			// nothing is kept once the request is served
+			assert.Empty(t, hf.outgoingHeaders)
+			assert.Empty(t, hf.incomingHeaders)
 		})
 	}
+}
+
+// A node request made outside of a rosetta request (no request ID in context) passes
+// through untouched and leaves nothing behind.
+func TestRoundTripWithoutRequestID(t *testing.T) {
+	mockTransport := newMockTransport(http.Header{"X-Client-Id": {"from-node"}}, nil)
+	hf, err := NewHeaderForwarder(defaultInterestingHeaders, mockTransport)
+	assert.Nil(t, err)
+
+	req := newRequest(context.Background(), http.Header{"X-Client-Id": {"static"}})
+	resp, err := hf.RoundTrip(req)
+	assert.Nil(t, err)
+	defer resp.Body.Close()
+
+	assert.Same(t, req, mockTransport.(*fakeTransport).LastRequest)
+	assert.Equal(t, http.Header{"X-Client-Id": {"static"}}, req.Header)
+	assert.Empty(t, hf.incomingHeaders)
+	assert.Empty(t, hf.outgoingHeaders)
+}
+
+// Later node responses replace earlier ones, so a rosetta request that makes several
+// node calls returns one copy of each header.
+func TestRoundTripLastResponseWins(t *testing.T) {
+	ctx, requestID := contextWithID()
+	hf, err := NewHeaderForwarder([]string{"Set-Cookie"}, nil)
+	assert.Nil(t, err)
+	hf.outgoingHeaders[requestID] = http.Header{}
+
+	for _, cookie := range []string{"a", "b"} {
+		hf.actualTransport = newMockTransport(http.Header{"Set-Cookie": {cookie}}, nil)
+		resp, err := hf.RoundTrip(newRequest(ctx, nil))
+		assert.Nil(t, err)
+		resp.Body.Close()
+	}
+
+	captured, _ := hf.GetResponseHeaders(requestID)
+	assert.Equal(t, http.Header{"Set-Cookie": {"b"}}, captured)
 }
