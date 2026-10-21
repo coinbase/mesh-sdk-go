@@ -119,13 +119,16 @@ func (hf *HeaderForwarder) rememberHeaders(req *http.Request, resp *http.Respons
 	rosettaRequestID := RosettaIDFromContext(ctx)
 
 	// For multiple requests with the same rosetta ID, we want to remember all of the headers
-	// For repeated response headers, later values will overwrite earlier ones
-	hf.incomingHeaderLock.RLock()
-	headersToRemember, exists := hf.incomingHeaders[rosettaRequestID]
-	hf.incomingHeaderLock.RUnlock()
+	// For repeated response headers, later values will overwrite earlier ones.
+	// Node calls for one rosetta request can run concurrently, so the per-request
+	// header map is only touched while holding the lock.
+	hf.incomingHeaderLock.Lock()
+	defer hf.incomingHeaderLock.Unlock()
 
+	headersToRemember, exists := hf.incomingHeaders[rosettaRequestID]
 	if !exists {
 		headersToRemember = make(http.Header)
+		hf.incomingHeaders[rosettaRequestID] = headersToRemember
 	}
 
 	// Only remember interesting headers
@@ -140,10 +143,6 @@ func (hf *HeaderForwarder) rememberHeaders(req *http.Request, resp *http.Respons
 			}
 		}
 	}
-
-	hf.incomingHeaderLock.Lock()
-	hf.incomingHeaders[rosettaRequestID] = headersToRemember
-	hf.incomingHeaderLock.Unlock()
 }
 
 // shouldRememberMetadata reports whether response metadata should be remembered for a grpc unary
@@ -171,13 +170,14 @@ func (hf *HeaderForwarder) rememberMetadata(ctx context.Context, resp metadata.M
 	rosettaID := RosettaIDFromContext(ctx)
 
 	// For multiple requests with the same rosetta ID, we want to remember all of the headers
-	// For repeated response headers, later values will overwrite earlier ones
-	hf.incomingHeaderLock.RLock()
-	headersToRemember, exists := hf.incomingHeaders[rosettaID]
-	hf.incomingHeaderLock.RUnlock()
+	// For repeated response headers, later values will overwrite earlier ones.
+	hf.incomingHeaderLock.Lock()
+	defer hf.incomingHeaderLock.Unlock()
 
+	headersToRemember, exists := hf.incomingHeaders[rosettaID]
 	if !exists {
 		headersToRemember = make(http.Header)
+		hf.incomingHeaders[rosettaID] = headersToRemember
 	}
 
 	for _, interestingHeader := range hf.interestingHeaders {
@@ -188,10 +188,6 @@ func (hf *HeaderForwarder) rememberMetadata(ctx context.Context, resp metadata.M
 			}
 		}
 	}
-
-	hf.incomingHeaderLock.Lock()
-	hf.incomingHeaders[rosettaID] = headersToRemember
-	hf.incomingHeaderLock.Unlock()
 }
 
 // GetResponseHeaders returns any headers that should be returned to a rosetta response. These

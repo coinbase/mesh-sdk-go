@@ -18,6 +18,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 
 	"github.com/google/uuid"
@@ -495,4 +496,36 @@ func TestRoundTripLastResponseWins(t *testing.T) {
 
 	captured, _ := hf.GetResponseHeaders(requestID)
 	assert.Equal(t, http.Header{"Set-Cookie": {"b"}}, captured)
+}
+
+// roundTripFunc is a transport without shared state, safe to call from many goroutines.
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
+
+// Node calls for one rosetta request may complete at the same time; remembering their
+// headers must not race.
+func TestRoundTripConcurrentNodeCalls(t *testing.T) {
+	ctx, requestID := contextWithID()
+	hf, err := NewHeaderForwarder([]string{"Set-Cookie"}, nil)
+	assert.Nil(t, err)
+	hf.outgoingHeaders[requestID] = http.Header{}
+	hf.actualTransport = roundTripFunc(func(*http.Request) (*http.Response, error) {
+		return &http.Response{Header: http.Header{"Set-Cookie": {"a"}}, Body: http.NoBody}, nil
+	})
+
+	var wg sync.WaitGroup
+	for i := 0; i < 50; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			resp, err := hf.RoundTrip(newRequest(ctx, nil))
+			assert.Nil(t, err)
+			resp.Body.Close()
+		}()
+	}
+	wg.Wait()
+
+	captured, _ := hf.GetResponseHeaders(requestID)
+	assert.Equal(t, http.Header{"Set-Cookie": {"a"}}, captured)
 }
