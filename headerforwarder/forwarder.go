@@ -33,8 +33,6 @@ import (
 //     on the response
 //
 // the headers can be requested later.
-//
-// TODO: this should expire entries after a certain amount of time
 type HeaderForwarder struct {
 	incomingHeaders    map[string]http.Header
 	incomingHeaderLock sync.RWMutex
@@ -121,13 +119,16 @@ func (hf *HeaderForwarder) rememberHeaders(req *http.Request, resp *http.Respons
 	rosettaRequestID := RosettaIDFromContext(ctx)
 
 	// For multiple requests with the same rosetta ID, we want to remember all of the headers
-	// For repeated response headers, later values will overwrite earlier ones
-	hf.incomingHeaderLock.RLock()
-	headersToRemember, exists := hf.incomingHeaders[rosettaRequestID]
-	hf.incomingHeaderLock.RUnlock()
+	// For repeated response headers, later values will overwrite earlier ones.
+	// Node calls for one rosetta request can run concurrently, so the per-request
+	// header map is only touched while holding the lock.
+	hf.incomingHeaderLock.Lock()
+	defer hf.incomingHeaderLock.Unlock()
 
+	headersToRemember, exists := hf.incomingHeaders[rosettaRequestID]
 	if !exists {
 		headersToRemember = make(http.Header)
+		hf.incomingHeaders[rosettaRequestID] = headersToRemember
 	}
 
 	// Only remember interesting headers
@@ -136,15 +137,12 @@ func (hf *HeaderForwarder) rememberHeaders(req *http.Request, resp *http.Respons
 
 		// Only remember the header if it is not empty
 		if len(values) > 0 {
+			headersToRemember.Del(interestingHeader)
 			for _, v := range values {
 				headersToRemember.Add(interestingHeader, v)
 			}
 		}
 	}
-
-	hf.incomingHeaderLock.Lock()
-	hf.incomingHeaders[rosettaRequestID] = headersToRemember
-	hf.incomingHeaderLock.Unlock()
 }
 
 // shouldRememberMetadata reports whether response metadata should be remembered for a grpc unary
@@ -172,24 +170,24 @@ func (hf *HeaderForwarder) rememberMetadata(ctx context.Context, resp metadata.M
 	rosettaID := RosettaIDFromContext(ctx)
 
 	// For multiple requests with the same rosetta ID, we want to remember all of the headers
-	// For repeated response headers, later values will overwrite earlier ones
-	hf.incomingHeaderLock.RLock()
-	headersToRemember, exists := hf.incomingHeaders[rosettaID]
-	hf.incomingHeaderLock.RUnlock()
+	// For repeated response headers, later values will overwrite earlier ones.
+	hf.incomingHeaderLock.Lock()
+	defer hf.incomingHeaderLock.Unlock()
 
+	headersToRemember, exists := hf.incomingHeaders[rosettaID]
 	if !exists {
 		headersToRemember = make(http.Header)
+		hf.incomingHeaders[rosettaID] = headersToRemember
 	}
 
 	for _, interestingHeader := range hf.interestingHeaders {
-		for _, value := range resp.Get(strings.ToLower(interestingHeader)) {
-			headersToRemember.Add(interestingHeader, value)
+		if values := resp.Get(strings.ToLower(interestingHeader)); len(values) > 0 {
+			headersToRemember.Del(interestingHeader)
+			for _, value := range values {
+				headersToRemember.Add(interestingHeader, value)
+			}
 		}
 	}
-
-	hf.incomingHeaderLock.Lock()
-	hf.incomingHeaders[rosettaID] = headersToRemember
-	hf.incomingHeaderLock.Unlock()
 }
 
 // GetResponseHeaders returns any headers that should be returned to a rosetta response. These
@@ -213,6 +211,17 @@ func (hf *HeaderForwarder) GetResponseHeaders(rosettaRequestID string) (http.Hea
 	return headers, ok
 }
 
+// forget drops everything remembered for a rosetta request.
+func (hf *HeaderForwarder) forget(rosettaRequestID string) {
+	hf.incomingHeaderLock.Lock()
+	delete(hf.incomingHeaders, rosettaRequestID)
+	hf.incomingHeaderLock.Unlock()
+
+	hf.outgoingHeaderLock.Lock()
+	delete(hf.outgoingHeaders, rosettaRequestID)
+	hf.outgoingHeaderLock.Unlock()
+}
+
 // HeaderForwarderHandler will allow the next handler to serve the request, and then checks
 // if there are any native node response headers recorded for the request. If there are, it will set
 // those headers on the response
@@ -220,6 +229,10 @@ func (hf *HeaderForwarder) HeaderForwarderHandler(next http.Handler) http.Handle
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// add a unique ID to the request context, and make a new request for it
 		requestWithID := RequestWithRequestID(r)
+
+		// The response writer copies remembered headers onto the response on its first
+		// write; whatever is left when the handler returns would otherwise stay forever.
+		defer hf.forget(RosettaIDFromRequest(requestWithID))
 
 		// Capture outgoing interesting headers
 		hf.captureOutgoingHeaders(requestWithID)
@@ -241,13 +254,22 @@ func (hf *HeaderForwarder) HeaderForwarderHandler(next http.Handler) http.Handle
 // RoundTrip implements http.RoundTripper and will be used to construct an http Client which
 // saves the native node response headers if necessary.
 func (hf *HeaderForwarder) RoundTrip(req *http.Request) (*http.Response, error) {
+	rosettaRequestID := RosettaIDFromRequest(req)
+	if rosettaRequestID == "" {
+		// Not made on behalf of a rosetta request: nothing to add, nothing to remember.
+		return hf.actualTransport.RoundTrip(req)
+	}
+
 	hf.outgoingHeaderLock.RLock()
-	outgoingHeaders, hasOutgoingHeaders := hf.outgoingHeaders[RosettaIDFromRequest(req)]
+	outgoingHeaders, hasOutgoingHeaders := hf.outgoingHeaders[rosettaRequestID]
 	hf.outgoingHeaderLock.RUnlock()
 
-	// add outgoing headers to the request
+	// add outgoing headers to the request; the caller's value replaces any value the
+	// rosetta implementation set itself
 	if hasOutgoingHeaders {
+		req = req.Clone(req.Context()) // RoundTrippers must not modify the caller's request
 		for header, values := range outgoingHeaders {
+			req.Header.Del(header)
 			for _, value := range values {
 				req.Header.Add(header, value)
 			}
