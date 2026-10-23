@@ -16,6 +16,8 @@
 
 package types
 
+import "encoding/json"
+
 // Allow Allow specifies supported Operation status, Operation types, and all possible error
 // statuses. This Allow object is used by clients to validate the correctness of a Rosetta Server
 // implementation. It is expected that these clients will error if they receive some response that
@@ -34,24 +36,78 @@ type Allow struct {
 	// the past should set this to true.
 	HistoricalBalanceLookup bool `json:"historical_balance_lookup"`
 	// If populated, `timestamp_start_index` indicates the first block index where block timestamps
-	// are considered valid (i.e. all blocks less than `timestamp_start_index` could have invalid
-	// timestamps). This is useful when the genesis block (or blocks) of a network have timestamp 0.
-	// If not populated, block timestamps are assumed to be valid for all available blocks.
+	// are consistent. This is useful for networks that have had timestamp issues in the past.
 	TimestampStartIndex *int64 `json:"timestamp_start_index,omitempty"`
-	// All methods that are supported by the /call endpoint. Communicating which parameters should
-	// be provided to /call is the responsibility of the implementer (this is en lieu of defining an
-	// entire type system and requiring the implementer to define that in Allow).
-	CallMethods []string `json:"call_methods"`
-	// BalanceExemptions is an array of BalanceExemption indicating which account balances could
-	// change without a corresponding Operation. BalanceExemptions should be used sparingly as they
-	// may introduce significant complexity for integrators that attempt to reconcile all account
-	// balance changes. If your implementation relies on any BalanceExemptions, you MUST implement
-	// historical balance lookup (the ability to query an account balance at any BlockIdentifier).
-	BalanceExemptions []*BalanceExemption `json:"balance_exemptions"`
-	// Any Rosetta implementation that can update an AccountIdentifier's unspent coins based on the
-	// contents of the mempool should populate this field as true. If false, requests to
-	// `/account/coins` that set `include_mempool` as true will be automatically rejected.
-	MempoolCoins        bool `json:"mempool_coins"`
-	BlockHashCase       Case `json:"block_hash_case,omitempty"`
-	TransactionHashCase Case `json:"transaction_hash_case,omitempty"`
+	// All Call.Method this implementation supports. Any method that is returned during parsing
+	// that is not listed here will cause client validation to error.
+	CallMethods []string `json:"call_methods,omitempty"`
+	// BalanceExemptions is an array of BalanceExemption indicating which
+	// SubAccountIdentifiers may not have a balance populated. This is useful
+	// for networks like Bitcoin where some UTXOs may not be spendable.
+	BalanceExemptions []*BalanceExemption `json:"balance_exemptions,omitempty"`
+	// MempoolCoins is a boolean indicating if the implementation supports
+	// returning unconfirmed coins from the mempool. If this is true, the
+	// implementation should return mempool coins in the /account/coins
+	// response.
+	MempoolCoins bool `json:"mempool_coins,omitempty"`
+	// BlockHashSignature indicates whether the implementation supports
+	// signing the block hash. If this is true, the implementation should
+	// support signing the block hash in the /construction/payloads
+	// endpoint.
+	BlockHashSignature bool `json:"block_hash_signature,omitempty"`
+	// RestrictedMetadata is a map of restricted metadata keys and their
+	// descriptions. This is used to indicate which metadata keys are
+	// restricted and should not be used by clients.
+	RestrictedMetadata map[string]string `json:"restricted_metadata,omitempty"`
+}
+
+// MarshalJSON overrides the default JSON marshaler to ensure nil slices
+// are encoded as empty arrays instead of null. This improves cross-language
+// compatibility, as some languages (e.g., JavaScript) may choke on null
+// when expecting an array.
+// See: https://github.com/coinbase/mesh-sdk-go/issues/62
+func (a *Allow) MarshalJSON() ([]byte, error) {
+	type Alias Allow
+	
+	// Ensure nil slices are converted to empty slices
+	operationStatuses := a.OperationStatuses
+	if operationStatuses == nil {
+		operationStatuses = []*OperationStatus{}
+	}
+	
+	operationTypes := a.OperationTypes
+	if operationTypes == nil {
+		operationTypes = []string{}
+	}
+	
+	errors := a.Errors
+	if errors == nil {
+		errors = []*Error{}
+	}
+	
+	callMethods := a.CallMethods
+	if callMethods == nil {
+		callMethods = []string{}
+	}
+	
+	balanceExemptions := a.BalanceExemptions
+	if balanceExemptions == nil {
+		balanceExemptions = []*BalanceExemption{}
+	}
+	
+	return json.Marshal(&struct {
+		OperationStatuses []*OperationStatus `json:"operation_statuses"`
+		OperationTypes    []string           `json:"operation_types"`
+		Errors            []*Error           `json:"errors"`
+		CallMethods       []string           `json:"call_methods,omitempty"`
+		BalanceExemptions []*BalanceExemption `json:"balance_exemptions,omitempty"`
+		*Alias
+	}{
+		OperationStatuses:   operationStatuses,
+		OperationTypes:      operationTypes,
+		Errors:              errors,
+		CallMethods:         callMethods,
+		BalanceExemptions:   balanceExemptions,
+		Alias:               (*Alias)(a),
+	})
 }
