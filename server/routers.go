@@ -17,6 +17,7 @@
 package server
 
 import (
+	"bytes"
 	"encoding/json"
 	"net/http"
 
@@ -80,9 +81,13 @@ func NewRouter(routers ...Router) http.Handler {
 // optional status code
 func EncodeJSONResponse(i interface{}, status int, w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-	w.WriteHeader(status)
 
-	if err := json.NewEncoder(w).Encode(i); err != nil {
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(i); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
+
+	w.WriteHeader(status)
+	w.Write(buf.Bytes())
 }
