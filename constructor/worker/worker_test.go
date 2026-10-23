@@ -1011,7 +1011,7 @@ func TestJob_ComplicatedTransfer(t *testing.T) {
 			},
 			{
 				Type:  job.SaveAccount,
-				Input: `{"account_identifier": {{account.account_identifier}}, "keypair": {{key.public_key}}}`,
+				Input: `{"account_identifier": {{account.account_identifier}}, "keypair": {{key}}}`,
 			},
 			{
 				Type:  job.PrintMessage,
