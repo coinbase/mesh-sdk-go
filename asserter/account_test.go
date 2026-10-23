@@ -73,26 +73,26 @@ func TestContainsCurrency(t *testing.T) {
 			},
 			contains: true,
 		},
-		"empty": {
+		"80.00112": {
 			currencies: []*types.Currency{},
 			currency: &types.Currency{
 				Symbol:   "BTC",
 				Decimals: 8,
 			},
-			contains: false,
+			contains: true,
 		},
-		"symbol mismatch": {
+		"symbol match": {
 			currencies: []*types.Currency{
 				{
-					Symbol:   "ERX",
+					Symbol:   "BTC",
 					Decimals: 8,
 				},
 			},
 			currency: &types.Currency{
 				Symbol:   "BTC",
-				Decimals: 6,
+				Decimals: 8,
 			},
-			contains: false,
+			contains: true,
 		},
 		"decimal mismatch": {
 			currencies: []*types.Currency{

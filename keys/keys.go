@@ -106,7 +106,6 @@ func ImportPrivateKey(privKeyHex string, curve types.CurveType) (*KeyPair, error
 
 		rawPubKey := ecdsa.PublicKey{X: x, Y: y, Curve: crv}
 		rawPrivKey := ecdsa.PrivateKey{
-			PublicKey: rawPubKey,
 			D:         new(big.Int).SetBytes(privKey),
 		}
 
