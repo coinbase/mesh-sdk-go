@@ -17,6 +17,7 @@
 package server
 
 import (
+	"bytes"
 	"encoding/json"
 	"net/http"
 
@@ -79,10 +80,14 @@ func NewRouter(routers ...Router) http.Handler {
 // EncodeJSONResponse uses the json encoder to write an interface to the http response with an
 // optional status code
 func EncodeJSONResponse(i interface{}, status int, w http.ResponseWriter) {
+	// Encode to buffer first to avoid superfluous WriteHeader call on error
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(i); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.WriteHeader(status)
-
-	if err := json.NewEncoder(w).Encode(i); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
+	w.Write(buf.Bytes())
 }
