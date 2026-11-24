@@ -230,7 +230,7 @@ func (k *KeyStorage) Sign(
 
 		signature, err := signer.Sign(payload, payload.SignatureType)
 		if err != nil {
-			return nil, fmt.Errorf("unable to to sign payload: %w", err)
+			return nil, fmt.Errorf("unable to sign payload: %w", err)
 		}
 
 		signatures[i] = signature
