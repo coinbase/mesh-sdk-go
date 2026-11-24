@@ -84,7 +84,7 @@ const (
 	// ReconciledAccounts is the total number of accounts seen.
 	ReconciledAccounts = "reconciled_accounts"
 
-	// counterNamespace is preprended to any counter.
+	// counterNamespace is prepended to any counter.
 	counterNamespace = "counter"
 )
 
